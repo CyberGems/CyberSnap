@@ -154,7 +154,7 @@ public sealed partial class RegionOverlayForm
         {
             // Draw logo icon and name "CyberSnap" to the left of Row 1
             float lx = _toolbarRect.X + pad + UiChrome.ScaleInt(6);
-            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f + UiChrome.ScaleFloat(0.5f); // Visually level logo with buttons
+            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f); // Visually level logo with button icons
             
             if (_brandBitmap != null)
             {
@@ -177,7 +177,7 @@ public sealed partial class RegionOverlayForm
             using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
             {
                 int textX = (int)lx + logoSz + UiChrome.ScaleInt(6);
-                int textY = _toolbarRect.Y + pad + UiChrome.ScaleInt(1); // Offset descender height to visually level text with buttons
+                int textY = _toolbarRect.Y + pad - UiChrome.ScaleInt(1); // Visually level text baseline with button icons
                 int textW = _toolbarButtons[0].X - textX - UiChrome.ScaleInt(6);
                 if (textW > 0)
                 {
