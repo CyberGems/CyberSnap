@@ -12,12 +12,11 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Image x:Name="TitleLogo"
                        Height="17"
-                       Width="0"
+                       Width="17"
+                       Margin="0,0,8,0"
                        Stretch="Uniform"
                        RenderOptions.BitmapScalingMode="HighQuality"
-                       VerticalAlignment="Center"
-                       Opacity="0"
-                       Visibility="Collapsed"/>
+                       VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                            FontSize="12"
                            FontWeight="SemiBold"

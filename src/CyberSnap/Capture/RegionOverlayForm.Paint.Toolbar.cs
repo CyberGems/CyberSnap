@@ -68,10 +68,46 @@ public sealed partial class RegionOverlayForm
             }
         }
 
+        // Draw discrete elegant CyberSnap logo and brand name
         int pad = UiChrome.ScaledToolbarInnerPadding;
         int buttonSize = UiChrome.ScaledToolbarButtonSize;
         int buttonSpacing = UiChrome.ScaledToolbarButtonSpacing;
         int closeIdx = _mainBarTools.Length + 1;
+
+        if (IsVerticalDock)
+        {
+            // Draw logo icon at the top of Column 1 (centered)
+            int logoSz = UiChrome.ScaleInt(16);
+            float lx = _toolbarRect.X + pad + (buttonSize - logoSz) / 2f;
+            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f;
+            FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), UiChrome.AccentColor, 0f);
+        }
+        else
+        {
+            // Draw logo icon and name "CyberSnap" to the left of Row 1
+            int logoSz = UiChrome.ScaleInt(16);
+            float lx = _toolbarRect.X + pad + UiChrome.ScaleInt(6);
+            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f;
+            FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), UiChrome.AccentColor, 0f);
+
+            using (var brandFont = UiChrome.ChromeFont(UiChrome.ChromeBodyBoldSize, FontStyle.Bold))
+            {
+                int textX = (int)lx + logoSz + UiChrome.ScaleInt(6);
+                int textY = _toolbarRect.Y + pad;
+                int textW = _toolbarButtons[0].X - textX - UiChrome.ScaleInt(6);
+                if (textW > 0)
+                {
+                    var textRect = new Rectangle(textX, textY, textW, buttonSize);
+                    TextRenderer.DrawText(
+                        g,
+                        "CyberSnap",
+                        brandFont,
+                        textRect,
+                        UiChrome.SurfaceTextPrimary,
+                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+                }
+            }
+        }
 
         // 1. Divider line splitting Tier 1 from Tier 2
         if (IsVerticalDock)

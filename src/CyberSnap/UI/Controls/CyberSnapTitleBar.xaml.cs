@@ -34,6 +34,8 @@ public partial class CyberSnapTitleBar : UserControl
 
     public void RefreshIcons()
     {
+        var accentColor = System.Drawing.Color.FromArgb(255, Theme.Accent.R, Theme.Accent.G, Theme.Accent.B);
+        TitleLogo.Source = Helpers.FluentIcons.RenderWpf("scan", accentColor, 18);
         var titleIcon = System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
         MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", titleIcon, 18);
 
