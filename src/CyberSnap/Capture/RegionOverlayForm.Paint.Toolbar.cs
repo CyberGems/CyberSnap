@@ -132,7 +132,7 @@ public sealed partial class RegionOverlayForm
             }
 
             // Draw rotated CyberSnap label running vertically downwards
-            using (var brandFont = UiChrome.ChromeFont(6.0f, FontStyle.Bold))
+            using (var brandFont = UiChrome.ChromeFont(5.2f, FontStyle.Bold))
             using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
             {
                 var state = g.Save();
@@ -154,7 +154,7 @@ public sealed partial class RegionOverlayForm
         {
             // Draw logo icon and name "CyberSnap" to the left of Row 1
             float lx = _toolbarRect.X + pad + UiChrome.ScaleInt(6);
-            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f;
+            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f + UiChrome.ScaleFloat(0.5f); // Visually level logo with buttons
             
             if (_brandBitmap != null)
             {
@@ -173,11 +173,11 @@ public sealed partial class RegionOverlayForm
                 FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary), 0f);
             }
 
-            using (var brandFont = UiChrome.ChromeFont(6.8f, FontStyle.Bold))
+            using (var brandFont = UiChrome.ChromeFont(5.8f, FontStyle.Bold))
             using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
             {
                 int textX = (int)lx + logoSz + UiChrome.ScaleInt(6);
-                int textY = _toolbarRect.Y + pad;
+                int textY = _toolbarRect.Y + pad + UiChrome.ScaleInt(1); // Offset descender height to visually level text with buttons
                 int textW = _toolbarButtons[0].X - textX - UiChrome.ScaleInt(6);
                 if (textW > 0)
                 {
