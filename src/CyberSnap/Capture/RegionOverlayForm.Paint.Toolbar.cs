@@ -93,6 +93,7 @@ public sealed partial class RegionOverlayForm
 
         // Grayscale and opacity Matrix (40% opacity in dark mode, 35% in light mode)
         float opacity = UiChrome.IsDark ? 0.35f : 0.40f;
+        float textOpacity = UiChrome.IsDark ? 0.65f : 0.70f; // Thin text characters need more opacity to be readable
         var cm = new ColorMatrix(new float[][]
         {
             new float[] { 0.299f, 0.299f, 0.299f, 0f, 0f },
@@ -129,7 +130,7 @@ public sealed partial class RegionOverlayForm
 
             // Draw rotated CyberSnap label running vertically downwards
             using (var brandFont = UiChrome.ChromeFont(9.5f, FontStyle.Bold))
-            using (var textBrush = new SolidBrush(Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary)))
+            using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
             {
                 var state = g.Save();
                 g.TranslateTransform(_toolbarRect.X + pad + buttonSize / 2f, ly + logoSz + UiChrome.ScaleInt(8));
@@ -182,7 +183,7 @@ public sealed partial class RegionOverlayForm
                         "CyberSnap",
                         brandFont,
                         textRect,
-                        Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary),
+                        Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary),
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
                 }
             }
