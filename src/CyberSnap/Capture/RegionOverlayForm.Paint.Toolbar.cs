@@ -91,37 +91,85 @@ public sealed partial class RegionOverlayForm
             catch { }
         }
 
+        // Grayscale and opacity Matrix (40% opacity in dark mode, 35% in light mode)
+        float opacity = UiChrome.IsDark ? 0.35f : 0.40f;
+        var cm = new ColorMatrix(new float[][]
+        {
+            new float[] { 0.299f, 0.299f, 0.299f, 0f, 0f },
+            new float[] { 0.587f, 0.587f, 0.587f, 0f, 0f },
+            new float[] { 0.114f, 0.114f, 0.114f, 0f, 0f },
+            new float[] { 0f,     0f,     0f,     opacity, 0f },
+            new float[] { 0f,     0f,     0f,     0f, 1f }
+        });
+
+        int logoSz = UiChrome.ScaleInt(13); // Levemente más pequeño as requested
+
         if (IsVerticalDock)
         {
             // Draw logo icon at the top of Column 1 (centered)
-            int logoSz = UiChrome.ScaleInt(18);
             float lx = _toolbarRect.X + pad + (buttonSize - logoSz) / 2f;
-            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f;
+            float ly = _toolbarRect.Y + pad + UiChrome.ScaleInt(6);
+            
             if (_brandBitmap != null)
             {
-                g.DrawImage(_brandBitmap, lx, ly, logoSz, logoSz);
+                using (var ia = new ImageAttributes())
+                {
+                    ia.SetColorMatrix(cm);
+                    g.DrawImage(_brandBitmap, 
+                        new Rectangle((int)lx, (int)ly, logoSz, logoSz), 
+                        0, 0, _brandBitmap.Width, _brandBitmap.Height, 
+                        GraphicsUnit.Pixel, 
+                        ia);
+                }
             }
             else
             {
-                FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), UiChrome.AccentColor, 0f);
+                FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary), 0f);
+            }
+
+            // Draw rotated CyberSnap label running vertically downwards
+            using (var brandFont = UiChrome.ChromeFont(9.5f, FontStyle.Bold))
+            using (var textBrush = new SolidBrush(Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary)))
+            {
+                var state = g.Save();
+                g.TranslateTransform(_toolbarRect.X + pad + buttonSize / 2f, ly + logoSz + UiChrome.ScaleInt(8));
+                g.RotateTransform(90);
+                
+                var sf = new StringFormat
+                {
+                    Alignment = StringAlignment.Near,
+                    LineAlignment = StringAlignment.Center,
+                    FormatFlags = StringFormatFlags.NoWrap
+                };
+                
+                g.DrawString("CyberSnap", brandFont, textBrush, 0f, 0f, sf);
+                g.Restore(state);
             }
         }
         else
         {
             // Draw logo icon and name "CyberSnap" to the left of Row 1
-            int logoSz = UiChrome.ScaleInt(18);
             float lx = _toolbarRect.X + pad + UiChrome.ScaleInt(6);
             float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f;
+            
             if (_brandBitmap != null)
             {
-                g.DrawImage(_brandBitmap, lx, ly, logoSz, logoSz);
+                using (var ia = new ImageAttributes())
+                {
+                    ia.SetColorMatrix(cm);
+                    g.DrawImage(_brandBitmap, 
+                        new Rectangle((int)lx, (int)ly, logoSz, logoSz), 
+                        0, 0, _brandBitmap.Width, _brandBitmap.Height, 
+                        GraphicsUnit.Pixel, 
+                        ia);
+                }
             }
             else
             {
-                FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), UiChrome.AccentColor, 0f);
+                FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary), 0f);
             }
 
-            using (var brandFont = UiChrome.ChromeFont(UiChrome.ChromeBodyBoldSize, FontStyle.Bold))
+            using (var brandFont = UiChrome.ChromeFont(10f, FontStyle.Bold))
             {
                 int textX = (int)lx + logoSz + UiChrome.ScaleInt(6);
                 int textY = _toolbarRect.Y + pad;
@@ -134,7 +182,7 @@ public sealed partial class RegionOverlayForm
                         "CyberSnap",
                         brandFont,
                         textRect,
-                        UiChrome.SurfaceTextPrimary,
+                        Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary),
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
                 }
             }
