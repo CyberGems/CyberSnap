@@ -1,0 +1,182 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+html, body {
+  background: #F4F1EA;
+  color: #171512;
+  font-family: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  text-transform: lowercase;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "ss03";
+  text-rendering: geometricPrecision;
+  overflow-x: hidden;
+}
+
+/* Preserve casing for code, kbd, and href-displaying content */
+code, kbd, samp, pre {
+  text-transform: none;
+}
+
+@theme inline {
+  --font-heading: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist Variable", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  @keyframes spinner-move {
+  to {
+    stroke-dashoffset: -100;
+    }
+  }
+  @keyframes spinner-dash {
+  0%, 100% {
+    stroke-dasharray: 15 85;
+    }
+  50% {
+    stroke-dasharray: 40 60;
+    }
+  }
+}
+
+:root {
+  --background: #F4F1EA;
+  --foreground: #171512;
+  --card: #FFFDF8;
+  --card-foreground: #171512;
+  --popover: #FFFDF8;
+  --popover-foreground: #171512;
+  --primary: #171512;
+  --primary-foreground: #FFFDF8;
+  --secondary: #E6E0D3;
+  --secondary-foreground: #171512;
+  --muted: #E9E4D9;
+  --muted-foreground: #5B554B;
+  --accent: #E3DAC9;
+  --accent-foreground: #171512;
+  --destructive: #7A2C22;
+  --border: #DDD5C7;
+  --input: #DDD5C7;
+  --ring: #171512;
+  --radius: 0.625rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Hide scrollbar for carousel */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+.brand-wordmark {
+  width: min(31rem, 100%);
+}
+
+@media (max-width: 639px) {
+  .brand-wordmark {
+    width: min(18rem, 100%);
+  }
+}
+
+.page-edge-fade {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.page-edge-fade-top {
+  top: 0;
+  height: calc(4.75rem + env(safe-area-inset-top));
+  background: linear-gradient(
+    to bottom,
+    rgba(244, 241, 234, 0.94) 0%,
+    rgba(244, 241, 234, 0.76) 42%,
+    rgba(244, 241, 234, 0.28) 78%,
+    rgba(244, 241, 234, 0) 100%
+  );
+}
+
+.page-edge-fade-bottom {
+  bottom: 0;
+  height: calc(2.75rem + env(safe-area-inset-bottom));
+  background: linear-gradient(
+    to top,
+    rgba(244, 241, 234, 0.88) 0%,
+    rgba(244, 241, 234, 0.32) 58%,
+    rgba(244, 241, 234, 0) 100%
+  );
+}
+
+@media (max-width: 639px) {
+  .page-edge-fade-top {
+    height: calc(4.25rem + env(safe-area-inset-top));
+  }
+
+  .page-edge-fade-bottom {
+    height: calc(2.25rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Inverted selection — black bg, light text */
+::selection { background: #171512; color: #FFFDF8; }
+::-moz-selection { background: #171512; color: #FFFDF8; }
+
+html {
+  scroll-behavior: smooth;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(183, 144, 89, 0.18), transparent 30rem),
+    radial-gradient(circle at 84% 14%, rgba(48, 73, 92, 0.12), transparent 28rem),
+    linear-gradient(135deg, rgba(23, 21, 18, 0.035) 0 1px, transparent 1px 12px);
+}
+
+/* Interactive elements should have a pointer cursor */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary,
+a[href],
+label[for],
+select {
+  cursor: pointer;
+}

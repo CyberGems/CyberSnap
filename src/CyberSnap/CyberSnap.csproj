@@ -1,0 +1,105 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>CyberSnap.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
+    <Authors>jasperdevs</Authors>
+    <AssemblyName>CyberSnap</AssemblyName>
+    <Product>CyberSnap</Product>
+    <Title>CyberSnap</Title>
+    <Description>Screenshot, annotation, OCR, sticker, and recording tool for Windows</Description>
+    <RepositoryUrl></RepositoryUrl>
+    <RepositoryType></RepositoryType>
+    <StartupObject>CyberSnap.App</StartupObject>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Localization\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+    <Resource Include="CyberSnap.ico" />
+    <Resource Include="Assets\amazon.png" />
+    <Resource Include="Assets\CyberSnap_square.png" />
+    <Resource Include="Assets\CyberSnap_wordmark.png" />
+    <Resource Include="Assets\aws_sq.png" />
+    <Resource Include="Assets\aws_official.svg" />
+    <Resource Include="Assets\azure_sq.png" />
+    <Resource Include="Assets\catbox.png" />
+    <Resource Include="Assets\chatgpt_sq.png" />
+    <Resource Include="Assets\claude_sq.png" />
+    <Resource Include="Assets\catbox_sq.png" />
+    <Resource Include="Assets\dropbox_sq.png" />
+    <Resource Include="Assets\catbox_official.png" />
+    <Resource Include="Assets\fileio.png" />
+    <Resource Include="Assets\fileio_sq.png" />
+    <Resource Include="Assets\gdrive_sq.png" />
+    <Resource Include="Assets\gemini_sq.png" />
+    <Resource Include="Assets\gofile_sq.png" />
+    <Resource Include="Assets\googlelens_sq.png" />
+    <Resource Include="Assets\gyazo.png" />
+    <Resource Include="Assets\gyazo_sq.png" />
+    <Resource Include="Assets\gyazo_official.png" />
+    <Resource Include="Assets\kofi_logo.png" />
+    <Resource Include="Assets\imgbb.png" />
+    <Resource Include="Assets\imgbb_sq.png" />
+    <Resource Include="Assets\imgbb_official.png" />
+    <Resource Include="Assets\imgur.png" />
+    <Resource Include="Assets\imgur_sq.png" />
+    <Resource Include="Assets\imgur_official.png" />
+    <Resource Include="Assets\imgpile_sq.png" />
+    <Resource Include="Assets\immich_sq.png" />
+    <Resource Include="Assets\litterbox_sq.png" />
+    <Resource Include="Assets\litterbox_official.png" />
+    <Resource Include="Assets\onedrive_sq.png" />
+    <Resource Include="Assets\paypal.svg" />
+    
+    <Resource Include="Assets\transfer.png" />
+    <Resource Include="Assets\transfer_sq.png" />
+    <Resource Include="Assets\tmpfiles_sq.png" />
+    <Resource Include="Assets\uguu.png" />
+    <Resource Include="Assets\uguu_sq.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CyberSnap.AppModel\CyberSnap.AppModel.csproj" />
+    <PackageReference Include="AnimatedGif" Version="1.0.5" />
+    <PackageReference Include="FluentFTP" Version="52.1.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.10" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="SSH.NET" Version="2024.2.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.10" />
+    <PackageReference Include="Vortice.Direct2D1" Version="3.8.3" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageReference Include="ZXing.Net" Version="0.16.10" />
+    <PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.10" />
+  </ItemGroup>
+
+
+  <Target Name="RemovePublishImportLibraries" AfterTargets="Publish">
+    <ItemGroup>
+      <PublishImportLibraries Include="$(PublishDir)**\*.lib" />
+    </ItemGroup>
+    <Delete Files="@(PublishImportLibraries)" TreatErrorsAsWarnings="true" />
+  </Target>
+
+</Project>
