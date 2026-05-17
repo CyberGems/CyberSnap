@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Text;
 using System.Runtime.InteropServices;
 
@@ -91,7 +91,7 @@ public static class UiChrome
     public static System.Drawing.Color SurfaceTextMuted => IsDark ? System.Drawing.Color.FromArgb(120, 255, 255, 255) : System.Drawing.Color.FromArgb(90, 0, 0, 0);
     public static System.Drawing.Color SurfaceHover => IsDark ? System.Drawing.Color.FromArgb(22, 255, 255, 255) : System.Drawing.Color.FromArgb(14, 0, 0, 0);
     public static System.Drawing.Color SurfacePill => IsDark ? System.Drawing.Color.FromArgb(255, 44, 44, 44) : System.Drawing.Color.FromArgb(255, 255, 255, 255);
-    public static System.Drawing.Color SurfaceTooltip => IsDark ? System.Drawing.Color.FromArgb(255, 48, 48, 48) : System.Drawing.Color.FromArgb(255, 255, 255, 255);
+    public static System.Drawing.Color SurfaceTooltip => IsDark ? System.Drawing.Color.FromArgb(255, 20, 20, 20) : System.Drawing.Color.FromArgb(255, 230, 230, 230);
     public static System.Drawing.Color SurfaceShadow => System.Drawing.Color.FromArgb(IsDark ? 60 : 34, 0, 0, 0);
     public static System.Drawing.Color SurfaceDimOverlay => System.Drawing.Color.FromArgb(IsDark ? 35 : 18, 0, 0, 0);
     public static System.Drawing.Color SurfaceSelectionOverlay => System.Drawing.Color.FromArgb(IsDark ? 100 : 72, 0, 0, 0);

@@ -28,8 +28,17 @@ public sealed partial class RegionOverlayForm
                     ShowMoreToolsDropdown();
                 return;
             }
-            if (btn < _mainBarTools.Length && _mainBarTools[btn].Mode.HasValue)
-                SetTool(_mainBarTools[btn]);
+            if (btn < _mainBarTools.Length)
+            {
+                if (_mainBarTools[btn].Mode.HasValue)
+                    SetTool(_mainBarTools[btn]);
+            }
+            else if (btn >= _mainBarTools.Length + 2)
+            {
+                int flyoutIdx = btn - _mainBarTools.Length - 2;
+                if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length && _flyoutTools[flyoutIdx].Mode.HasValue)
+                    SetTool(_flyoutTools[flyoutIdx]);
+            }
             return;
         }
 

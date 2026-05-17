@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
@@ -90,7 +90,14 @@ public sealed class WindowsToolTip : Form
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-        WindowsDockRenderer.PaintSurface(g, new RectangleF(0, 0, Width, Height), 7f);
+        WindowsDockRenderer.PaintShadow(g, new RectangleF(0, 0, Width, Height), 7f);
+        using (var path = WindowsDockRenderer.RoundedRect(new RectangleF(0, 0, Width, Height), 7f))
+        {
+            using (var brush = new SolidBrush(UiChrome.SurfaceTooltip))
+                g.FillPath(brush, path);
+            using (var pen = new Pen(UiChrome.SurfaceBorderStrong, 1f))
+                g.DrawPath(pen, path);
+        }
 
         var textRect = new Rectangle(PadX, PadY, Width - PadX * 2, Height - PadY * 2);
         TextRenderer.DrawText(
