@@ -93,7 +93,7 @@ public sealed partial class RegionOverlayForm
 
         // Grayscale and opacity Matrix (40% opacity in dark mode, 35% in light mode)
         float opacity = UiChrome.IsDark ? 0.35f : 0.40f;
-        float textOpacity = opacity; // Let textOpacity match the icon opacity exactly for unified discreteness
+        float textOpacity = opacity * 0.80f; // Slightly lower opacity than the solid logo to visually balance thin stroke vs solid block density
         var cm = new ColorMatrix(new float[][]
         {
             new float[] { 0.299f, 0.299f, 0.299f, 0f, 0f },
@@ -103,7 +103,7 @@ public sealed partial class RegionOverlayForm
             new float[] { 0f,     0f,     0f,     0f, 1f }
         });
 
-        int logoSz = UiChrome.ScaleInt(13); // Levemente más pequeño as requested
+        int logoSz = UiChrome.ScaleInt(10); // Reduced by 20% as requested
 
         if (IsVerticalDock)
         {
@@ -129,7 +129,7 @@ public sealed partial class RegionOverlayForm
             }
 
             // Draw rotated CyberSnap label running vertically downwards
-            using (var brandFont = UiChrome.ChromeFont(7.5f, FontStyle.Bold))
+            using (var brandFont = UiChrome.ChromeFont(6.0f, FontStyle.Bold))
             using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
             {
                 var state = g.Save();
@@ -170,7 +170,7 @@ public sealed partial class RegionOverlayForm
                 FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary), 0f);
             }
 
-            using (var brandFont = UiChrome.ChromeFont(8.0f, FontStyle.Bold))
+            using (var brandFont = UiChrome.ChromeFont(6.8f, FontStyle.Bold))
             using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
             {
                 int textX = (int)lx + logoSz + UiChrome.ScaleInt(6);
