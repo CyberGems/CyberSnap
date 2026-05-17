@@ -353,20 +353,20 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("picker",      "Color Picker", '\uE13E', CaptureMode.ColorPicker, 0), // pipette
         new("scan",        "QR/Barcode",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
         new("select",      "Select",       '\uE1E3', CaptureMode.Select,      1), // cursor-click
+        new("draw",        "Draw",         '\uE1F8', CaptureMode.Draw,        1), // pencil
+        new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser
         new("arrow",       "Arrow",        '\uE051', CaptureMode.Arrow,       1), // arrow-up-right
         new("curvedArrow", "Curved Arrow", '\uE146', CaptureMode.CurvedArrow, 1), // redo
-        new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type
-        new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1), // highlighter
-        new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1), // blend
-        new("step",        "Step Number",  '\uE1D0', CaptureMode.StepNumber,  1), // list-ordered
-        new("draw",        "Draw",         '\uE1F8', CaptureMode.Draw,        1), // pencil
         new("line",        "Line",         '\uE11F', CaptureMode.Line,        1), // minus
         new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       1), // ruler
-        new("magnifier",   "Magnifier",    '\uE721', CaptureMode.Magnifier,   1),
+        new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type
+        new("step",        "Step Number",  '\uE1D0', CaptureMode.StepNumber,  1), // list-ordered
         new("rectShape",   "Rectangle",    '\uE16A', CaptureMode.RectShape,   1), // square
         new("circleShape", "Circle",       '\uE07A', CaptureMode.CircleShape, 1), // circle
+        new("magnifier",   "Magnifier",    '\uE721', CaptureMode.Magnifier,   1),
+        new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1), // highlighter
+        new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1), // blend
         new("emoji",       "Emoji",        '\uE167', CaptureMode.Emoji,       1), // smile
-        new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser
     };
 
     public static bool IsCaptureTool(CaptureMode mode) =>

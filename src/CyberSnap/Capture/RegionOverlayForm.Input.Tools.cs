@@ -298,6 +298,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Upscale when _isSelecting:
                 _autoDetectActive = false;
                 _autoDetectTimer.Stop();
+                CheckEvasion(e.Location);
                 var oldSelectionRect = _selectionRect;
                 var oldSelectionCursor = _selectionEnd;
                 var nextSelectionEnd = e.Location;
@@ -588,6 +589,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Sticker when _isSelecting:
             case CaptureMode.Upscale when _isSelecting:
                 _isSelecting = false;
+                ResetEvasion();
                 CloseSelectionAdorner();
                 bool isCenter = _mode == CaptureMode.Center;
                 bool isOcr = _mode == CaptureMode.Ocr;

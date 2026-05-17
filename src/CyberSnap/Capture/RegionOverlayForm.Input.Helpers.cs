@@ -135,6 +135,7 @@ public sealed partial class RegionOverlayForm
         _selectionRect = Rectangle.Empty;
         _lastSelectionRect = Rectangle.Empty;
         _isSelecting = false;
+        ResetEvasion();
         _isBlurring = false;
         _isHighlighting = false;
         _isRectShapeDragging = false;

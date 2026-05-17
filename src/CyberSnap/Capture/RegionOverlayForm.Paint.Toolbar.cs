@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Drawing.Imaging;
@@ -41,32 +41,70 @@ public sealed partial class RegionOverlayForm
 
         WindowsDockRenderer.PaintSurface(g, r, cr);
 
-        // Separator lines at group boundaries
-        foreach (int idx in _sepAfter)
+        int pad = UiChrome.ScaledToolbarInnerPadding;
+        int buttonSize = UiChrome.ScaledToolbarButtonSize;
+        int buttonSpacing = UiChrome.ScaledToolbarButtonSpacing;
+        int closeIdx = _mainBarTools.Length + 1;
+
+        // 1. Divider line splitting Tier 1 from Tier 2
+        if (IsVerticalDock)
         {
-            if (idx < 0 || idx >= _toolbarButtons.Length - 1) continue;
+            int dividerX = _toolbarRect.X + pad + buttonSize + buttonSpacing / 2;
+            int inset = UiChrome.ScaleInt(12);
+            WindowsDockRenderer.PaintDivider(g, new Point(dividerX, r.Y + inset), new Point(dividerX, r.Bottom - inset));
+        }
+        else
+        {
+            int dividerY = _toolbarRect.Y + pad + buttonSize + buttonSpacing / 2;
+            int inset = UiChrome.ScaleInt(12);
+            WindowsDockRenderer.PaintDivider(g, new Point(r.X + inset, dividerY), new Point(r.Right - inset, dividerY));
+        }
+
+        // 2. Tier 1 Dividers: after index 4 (between Capture tools and System tools)
+        if (_toolbarButtons.Length > 4)
+        {
             if (IsVerticalDock)
             {
-                int sy = _toolbarButtons[idx].Bottom + (UiChrome.ScaledToolbarButtonSpacing + GroupGap) / 2;
-                var inset = UiChrome.ScaleInt(10);
-                WindowsDockRenderer.PaintDivider(g, new Point(r.X + inset, sy), new Point(r.Right - inset, sy));
+                int sy = _toolbarButtons[4].Bottom + (buttonSpacing + GroupGap) / 2;
+                int sx1 = _toolbarButtons[4].X + 4;
+                int sx2 = _toolbarButtons[4].Right - 4;
+                WindowsDockRenderer.PaintDivider(g, new Point(sx1, sy), new Point(sx2, sy));
             }
             else
             {
-                int sx = _toolbarButtons[idx].Right + (UiChrome.ScaledToolbarButtonSpacing + GroupGap) / 2;
-                var inset = UiChrome.ScaleInt(12);
-                WindowsDockRenderer.PaintDivider(g, new Point(sx, r.Y + inset), new Point(sx, r.Bottom - inset));
+                int sx = _toolbarButtons[4].Right + (buttonSpacing + GroupGap) / 2;
+                int sy1 = _toolbarButtons[4].Y + 4;
+                int sy2 = _toolbarButtons[4].Bottom - 4;
+                WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
             }
         }
 
-        // Check if active mode is a flyout tool (to highlight the "more" button)
-        bool flyoutToolActive = _flyoutOpen || _flyoutTools.Any(t => string.Equals(t.Id, _activeToolId, StringComparison.OrdinalIgnoreCase));
+        // 3. Tier 2 Dividers: after indices 7, 9, 13, 15, 18, 20
+        int[] tier2Seps = { 7, 9, 13, 15, 18, 20 };
+        foreach (int idx in tier2Seps)
+        {
+            if (idx < 0 || idx >= _toolbarButtons.Length) continue;
+            if (IsVerticalDock)
+            {
+                int sy = _toolbarButtons[idx].Bottom + (buttonSpacing + GroupGap) / 2;
+                int sx1 = _toolbarButtons[idx].X + 4;
+                int sx2 = _toolbarButtons[idx].Right - 4;
+                WindowsDockRenderer.PaintDivider(g, new Point(sx1, sy), new Point(sx2, sy));
+            }
+            else
+            {
+                int sx = _toolbarButtons[idx].Right + (buttonSpacing + GroupGap) / 2;
+                int sy1 = _toolbarButtons[idx].Y + 4;
+                int sy2 = _toolbarButtons[idx].Bottom - 4;
+                WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
+            }
+        }
 
+        // 4. Draw all buttons
         for (int i = 0; i < BtnCount; i++)
         {
             var btn = _toolbarButtons[i];
             bool active = _toolbarModes[i] is { } && string.Equals(_toolbarToolIds[i], _activeToolId, StringComparison.OrdinalIgnoreCase);
-            if (i == _moreButtonIndex) active = flyoutToolActive;
             bool hover = _hoveredButton == i;
 
             // Color dot button
@@ -81,19 +119,9 @@ public sealed partial class RegionOverlayForm
                 continue;
             }
 
-            // "More" button
-            if (_toolbarIcons[i] == "more")
-            {
-                WindowsDockRenderer.PaintButton(g, btn, active, hover);
-                int dotAlpha = active ? 255 : hover ? 240 : 200;
-                var moreColor = Color.FromArgb(dotAlpha, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
-                DrawIcon(g, "more", btn, moreColor, active);
-                continue;
-            }
-
             WindowsDockRenderer.PaintButton(g, btn, active, hover);
 
-            int ia = active ? 255 : hover ? 240 : i >= BtnCount - 1 ? 130 : 200;
+            int ia = active ? 255 : hover ? 240 : i == closeIdx ? 130 : 200;
             var iconColor = UiChrome.SurfaceTextPrimary;
             DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
         }

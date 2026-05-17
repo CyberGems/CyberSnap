@@ -26,13 +26,25 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _selectionRect;
     private bool _hasSelection;
     private bool _hasDragged;
+    private bool _isEvading;
+
+    private CaptureDockSide ActiveDockSide => _isEvading ? GetOppositeDockSide(CaptureDockSide) : CaptureDockSide;
+
+    private static CaptureDockSide GetOppositeDockSide(CaptureDockSide side) => side switch
+    {
+        CaptureDockSide.Top => CaptureDockSide.Bottom,
+        CaptureDockSide.Bottom => CaptureDockSide.Top,
+        CaptureDockSide.Left => CaptureDockSide.Right,
+        CaptureDockSide.Right => CaptureDockSide.Left,
+        _ => side
+    };
 
     // Dynamic toolbar built from enabled tools + fixed buttons (color, close)
     private ToolDef[] _visibleTools = ToolDef.AllTools;
     private ToolDef[] _mainBarTools = Array.Empty<ToolDef>();
     private ToolDef[] _flyoutTools = Array.Empty<ToolDef>();
-    private int BtnCount => _mainBarTools.Length + (_flyoutTools.Length > 0 ? 1 : 0) + 2; // +more +color +close
-    private int ColorButtonIndex => BtnCount - 2;
+    private int BtnCount => _mainBarTools.Length + _flyoutTools.Length + 2; // +color +close
+    private int ColorButtonIndex => _mainBarTools.Length;
     private int _moreButtonIndex = -1; // index of "..." button in _toolbarButtons
     private Rectangle[] _toolbarButtons = Array.Empty<Rectangle>();
     private string[] _toolbarIcons = Array.Empty<string>();
@@ -520,12 +532,23 @@ public sealed partial class RegionOverlayForm : Form
         Rectangle screenBounds = _toolbarAnchorArea.IsEmpty ? _virtualBounds : _toolbarAnchorArea;
 
         BuildToolbarToolSplit(screenBounds, buttonSize, buttonSpacing, pad);
-        bool hasMore = _flyoutTools.Length > 0;
-        _sepAfter = GetToolbarSeparatorIndices(_mainBarTools, hasMore);
+        _sepAfter = Array.Empty<int>(); // dividers drawn manually inside PaintToolbar
 
-        int primarySpan = GetToolbarPrimarySpan(BtnCount, _sepAfter.Length, buttonSize, buttonSpacing, pad);
-        int w = IsVerticalDock ? toolbarHeight : primarySpan;
-        int h = IsVerticalDock ? primarySpan : toolbarHeight;
+        int tier1PrimarySpan = GetToolbarPrimarySpan(7, 1, buttonSize, buttonSpacing, pad);
+        int tier2PrimarySpan = GetToolbarPrimarySpan(15, 6, buttonSize, buttonSpacing, pad);
+        int maxPrimarySpan = tier2PrimarySpan;
+
+        int w, h;
+        if (IsVerticalDock)
+        {
+            w = pad * 2 + buttonSize * 2 + buttonSpacing;
+            h = maxPrimarySpan;
+        }
+        else
+        {
+            w = maxPrimarySpan;
+            h = pad * 2 + buttonSize * 2 + buttonSpacing;
+        }
 
         _toolbarButtons = new Rectangle[BtnCount];
         _toolbarIcons = new string[BtnCount];
@@ -533,6 +556,7 @@ public sealed partial class RegionOverlayForm : Form
         _toolbarToolIds = new string[BtnCount];
         _toolbarModes = new CaptureMode?[BtnCount];
 
+        // 1. Group 0 (Capture tools)
         for (int i = 0; i < _mainBarTools.Length; i++)
         {
             _toolbarIcons[i] = _mainBarTools[i].Id == "crop" ? "rect" : _mainBarTools[i].Id;
@@ -540,29 +564,33 @@ public sealed partial class RegionOverlayForm : Form
             _toolbarToolIds[i] = _mainBarTools[i].Id;
             _toolbarModes[i] = _mainBarTools[i].Mode;
         }
-        int idx = _mainBarTools.Length;
-        if (hasMore)
+
+        // 2. Color picker button
+        int colorIdx = _mainBarTools.Length;
+        _toolbarIcons[colorIdx] = "color";
+        _toolbarLabels[colorIdx] = LocalizationService.Translate("Color");
+        _toolbarToolIds[colorIdx] = "color";
+        _toolbarModes[colorIdx] = null;
+
+        // 3. Close button
+        int closeIdx = _mainBarTools.Length + 1;
+        _toolbarIcons[closeIdx] = "close";
+        _toolbarLabels[closeIdx] = LocalizationService.Translate("Close (Esc)");
+        _toolbarToolIds[closeIdx] = "close";
+        _toolbarModes[closeIdx] = null;
+
+        // 4. Group 1 (Annotation & Drawing tools)
+        int drawingStartIdx = _mainBarTools.Length + 2;
+        for (int i = 0; i < _flyoutTools.Length; i++)
         {
-            _moreButtonIndex = idx;
-            _toolbarIcons[idx] = "more";
-            _toolbarLabels[idx] = LocalizationService.Translate("More tools");
-            _toolbarToolIds[idx] = "more";
-            _toolbarModes[idx] = null;
-            idx++;
+            int btnIdx = drawingStartIdx + i;
+            _toolbarIcons[btnIdx] = _flyoutTools[i].Id;
+            _toolbarLabels[btnIdx] = LocalizationService.Translate(_flyoutTools[i].Label);
+            _toolbarToolIds[btnIdx] = _flyoutTools[i].Id;
+            _toolbarModes[btnIdx] = _flyoutTools[i].Mode;
         }
-        else
-        {
-            _moreButtonIndex = -1;
-        }
-        _toolbarIcons[idx] = "color";
-        _toolbarLabels[idx] = LocalizationService.Translate("Color");
-        _toolbarToolIds[idx] = "color";
-        _toolbarModes[idx] = null;
-        idx++;
-        _toolbarIcons[idx] = "close";
-        _toolbarLabels[idx] = LocalizationService.Translate("Close (Esc)");
-        _toolbarToolIds[idx] = "close";
-        _toolbarModes[idx] = null;
+
+        _moreButtonIndex = -1;
 
         _toolbarRect = ToolbarLayout.GetToolbarRect(
             _virtualBounds,
@@ -571,31 +599,67 @@ public sealed partial class RegionOverlayForm : Form
             h,
             CaptureDockSide,
             UiChrome.ScaledToolbarTopMargin);
-        int cx = _toolbarRect.X + pad;
-        int cy = _toolbarRect.Y + pad;
-        for (int i = 0; i < BtnCount; i++)
-        {
-            _toolbarButtons[i] = IsVerticalDock
-                ? new Rectangle(
-                    _toolbarRect.X + (toolbarHeight - buttonSize) / 2,
-                    cy,
-                    buttonSize,
-                    buttonSize)
-                : new Rectangle(
-                    cx,
-                    _toolbarRect.Y + (toolbarHeight - buttonSize) / 2,
-                    buttonSize,
-                    buttonSize);
 
-            if (IsVerticalDock)
+        if (IsVerticalDock)
+        {
+            // Column 1: Capture & System Tools
+            int col1Height = GetToolbarPrimarySpan(7, 1, buttonSize, buttonSpacing, 0);
+            int col1StartY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - col1Height) / 2;
+            int col1X = _toolbarRect.X + pad;
+
+            int cy = col1StartY;
+            for (int i = 0; i < 5; i++)
             {
+                _toolbarButtons[i] = new Rectangle(col1X, cy, buttonSize, buttonSize);
                 cy += buttonSize + buttonSpacing;
-                if (Array.IndexOf(_sepAfter, i) >= 0) cy += GroupGap;
             }
-            else
+            cy += GroupGap;
+            _toolbarButtons[5] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Color
+            cy += buttonSize + buttonSpacing;
+            _toolbarButtons[6] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Close
+
+            // Column 2: Annotation Tools
+            int col2X = _toolbarRect.X + pad + buttonSize + buttonSpacing;
+            int cy2 = _toolbarRect.Y + pad;
+            int[] tier2Seps = { 0, 2, 6, 8, 11, 13 };
+            for (int i = 0; i < _flyoutTools.Length; i++)
             {
+                int btnIdx = 7 + i;
+                _toolbarButtons[btnIdx] = new Rectangle(col2X, cy2, buttonSize, buttonSize);
+                cy2 += buttonSize + buttonSpacing;
+                if (Array.IndexOf(tier2Seps, i) >= 0)
+                    cy2 += GroupGap;
+            }
+        }
+        else
+        {
+            // Row 1: Capture & System Tools
+            int row1Width = GetToolbarPrimarySpan(7, 1, buttonSize, buttonSpacing, 0);
+            int row1StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row1Width) / 2;
+            int row1Y = _toolbarRect.Y + pad;
+
+            int cx = row1StartX;
+            for (int i = 0; i < 5; i++)
+            {
+                _toolbarButtons[i] = new Rectangle(cx, row1Y, buttonSize, buttonSize);
                 cx += buttonSize + buttonSpacing;
-                if (Array.IndexOf(_sepAfter, i) >= 0) cx += GroupGap;
+            }
+            cx += GroupGap;
+            _toolbarButtons[5] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Color
+            cx += buttonSize + buttonSpacing;
+            _toolbarButtons[6] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Close
+
+            // Row 2: Annotation Tools
+            int row2Y = _toolbarRect.Y + pad + buttonSize + buttonSpacing;
+            int cx2 = _toolbarRect.X + pad;
+            int[] tier2Seps = { 0, 2, 6, 8, 11, 13 };
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                int btnIdx = 7 + i;
+                _toolbarButtons[btnIdx] = new Rectangle(cx2, row2Y, buttonSize, buttonSize);
+                cx2 += buttonSize + buttonSpacing;
+                if (Array.IndexOf(tier2Seps, i) >= 0)
+                    cx2 += GroupGap;
             }
         }
     }
@@ -605,21 +669,6 @@ public sealed partial class RegionOverlayForm : Form
         var flyoutIds = ToolDef.FlyoutToolIds();
         var mainBarTools = _visibleTools.Where(t => !flyoutIds.Contains(t.Id)).ToList();
         var flyoutTools = _visibleTools.Where(t => flyoutIds.Contains(t.Id)).ToList();
-
-        int availablePrimarySpan = Math.Max(1, (IsVerticalDock ? screenBounds.Height : screenBounds.Width) - UiChrome.ScaleInt(16));
-        while (mainBarTools.Count > 1)
-        {
-            bool hasMore = flyoutTools.Count > 0;
-            int buttonCount = mainBarTools.Count + (hasMore ? 1 : 0) + 2;
-            var separators = GetToolbarSeparatorIndices(mainBarTools, hasMore);
-            int span = GetToolbarPrimarySpan(buttonCount, separators.Length, buttonSize, buttonSpacing, pad);
-            if (span <= availablePrimarySpan)
-                break;
-
-            var movedTool = mainBarTools[^1];
-            mainBarTools.RemoveAt(mainBarTools.Count - 1);
-            flyoutTools.Insert(0, movedTool);
-        }
 
         _mainBarTools = mainBarTools.ToArray();
         _flyoutTools = flyoutTools.ToArray();
@@ -640,15 +689,60 @@ public sealed partial class RegionOverlayForm : Form
         return gaps.ToArray();
     }
 
-    private static int GetToolbarPrimarySpan(int buttonCount, int separatorCount, int buttonSize, int buttonSpacing, int pad)
+    private int GetToolbarPrimarySpan(int buttonCount, int separatorsCount, int buttonSize, int buttonSpacing, int pad)
     {
-        if (buttonCount <= 0)
-            return 0;
+        return pad * 2
+            + buttonCount * buttonSize
+            + (buttonCount - 1) * buttonSpacing
+            + separatorsCount * GroupGap;
+    }
 
-        return buttonSize * buttonCount
-             + buttonSpacing * Math.Max(0, buttonCount - 1)
-             + pad * 2
-             + separatorCount * GroupGap;
+    public bool CheckEvasion(Point cursor)
+    {
+        bool wasEvading = _isEvading;
+        float cy = cursor.Y - _virtualBounds.Y;
+        float cx = cursor.X - _virtualBounds.X;
+        float h = _virtualBounds.Height;
+        float w = _virtualBounds.Width;
+
+        if (CaptureDockSide == CaptureDockSide.Top)
+        {
+            if (cy < h * 0.4f) _isEvading = true;
+            else if (cy > h * 0.5f) _isEvading = false;
+        }
+        else if (CaptureDockSide == CaptureDockSide.Bottom)
+        {
+            if (cy > h * 0.6f) _isEvading = true;
+            else if (cy < h * 0.5f) _isEvading = false;
+        }
+        else if (CaptureDockSide == CaptureDockSide.Left)
+        {
+            if (cx < w * 0.4f) _isEvading = true;
+            else if (cx > w * 0.5f) _isEvading = false;
+        }
+        else if (CaptureDockSide == CaptureDockSide.Right)
+        {
+            if (cx > w * 0.6f) _isEvading = true;
+            else if (cx < w * 0.5f) _isEvading = false;
+        }
+
+        if (_isEvading != wasEvading)
+        {
+            CalcToolbar();
+            PositionToolbarForm();
+            return true;
+        }
+        return false;
+    }
+
+    public void ResetEvasion()
+    {
+        if (_isEvading)
+        {
+            _isEvading = false;
+            CalcToolbar();
+            PositionToolbarForm();
+        }
     }
 
     private static Cursor CreateBlankCursor()
