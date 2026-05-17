@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
@@ -580,6 +580,8 @@ public sealed partial class RegionOverlayForm
             _magGfx.Dispose();
             _magBitmap.Dispose();
             _committedAnnotationsBitmap?.Dispose();
+            _brandBitmap?.Dispose();
+            _brandBitmap = null;
             _hexFont.Dispose();
             _rgbFont.Dispose();
             _readoutFont.Dispose();

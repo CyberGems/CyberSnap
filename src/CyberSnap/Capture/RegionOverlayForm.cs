@@ -84,6 +84,7 @@ public sealed partial class RegionOverlayForm : Form
     private Point _pendingAutoDetectPoint = Point.Empty;
 
     private const int TopBarHeight = 110;
+    private Bitmap? _brandBitmap;
 
     // Color picker state
     private readonly Bitmap _magBitmap;

@@ -74,21 +74,52 @@ public sealed partial class RegionOverlayForm
         int buttonSpacing = UiChrome.ScaledToolbarButtonSpacing;
         int closeIdx = _mainBarTools.Length + 1;
 
+        if (_brandBitmap == null)
+        {
+            try
+            {
+                var logoUri = new Uri("pack://application:,,,/Assets/CyberSnap_square.png", UriKind.Absolute);
+                var streamInfo = System.Windows.Application.GetResourceStream(logoUri);
+                if (streamInfo != null)
+                {
+                    using (var s = streamInfo.Stream)
+                    {
+                        _brandBitmap = new Bitmap(s);
+                    }
+                }
+            }
+            catch { }
+        }
+
         if (IsVerticalDock)
         {
             // Draw logo icon at the top of Column 1 (centered)
-            int logoSz = UiChrome.ScaleInt(16);
+            int logoSz = UiChrome.ScaleInt(18);
             float lx = _toolbarRect.X + pad + (buttonSize - logoSz) / 2f;
             float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f;
-            FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), UiChrome.AccentColor, 0f);
+            if (_brandBitmap != null)
+            {
+                g.DrawImage(_brandBitmap, lx, ly, logoSz, logoSz);
+            }
+            else
+            {
+                FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), UiChrome.AccentColor, 0f);
+            }
         }
         else
         {
             // Draw logo icon and name "CyberSnap" to the left of Row 1
-            int logoSz = UiChrome.ScaleInt(16);
+            int logoSz = UiChrome.ScaleInt(18);
             float lx = _toolbarRect.X + pad + UiChrome.ScaleInt(6);
             float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f;
-            FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), UiChrome.AccentColor, 0f);
+            if (_brandBitmap != null)
+            {
+                g.DrawImage(_brandBitmap, lx, ly, logoSz, logoSz);
+            }
+            else
+            {
+                FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), UiChrome.AccentColor, 0f);
+            }
 
             using (var brandFont = UiChrome.ChromeFont(UiChrome.ChromeBodyBoldSize, FontStyle.Bold))
             {
