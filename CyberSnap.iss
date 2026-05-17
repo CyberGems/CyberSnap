@@ -3,13 +3,13 @@
 [Setup]
 AppId={{D8C8A6A5-9231-4A5C-9A52-7F7B7B7B7B7B}
 AppName=CyberSnap
-AppVersion=1.0.0
+AppVersion={#AppVersion}
 AppPublisher=jasperdevs
 DefaultDirName={autopf}\CyberSnap
 DefaultGroupName=CyberSnap
 AllowNoIcons=yes
-OutputDir=.\tests
-OutputBaseFilename=CyberSnap-Setup-1.0.0
+OutputDir=.
+OutputBaseFilename=CyberSnap-Setup-{#AppVersion}
 SetupIconFile=.\src\CyberSnap\CyberSnap.ico
 Compression=lzma
 SolidCompression=yes
@@ -26,7 +26,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startup"; Description: "Run CyberSnap when Windows starts"; GroupDescription: "Options:"; Flags: checkedonce
 
 [Files]
-Source: ".\src\CyberSnap\tests\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: ".\publish-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\CyberSnap"; Filename: "{app}\CyberSnap.exe"
