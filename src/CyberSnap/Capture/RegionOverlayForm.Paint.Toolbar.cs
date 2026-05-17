@@ -93,7 +93,7 @@ public sealed partial class RegionOverlayForm
 
         // Grayscale and opacity Matrix (40% opacity in dark mode, 35% in light mode)
         float opacity = UiChrome.IsDark ? 0.35f : 0.40f;
-        float textOpacity = UiChrome.IsDark ? 0.65f : 0.70f; // Thin text characters need more opacity to be readable
+        float textOpacity = UiChrome.IsDark ? 0.80f : 0.85f; // Opaque-leaning semitransparency for perfect layered-window contrast
         var cm = new ColorMatrix(new float[][]
         {
             new float[] { 0.299f, 0.299f, 0.299f, 0f, 0f },
@@ -171,20 +171,22 @@ public sealed partial class RegionOverlayForm
             }
 
             using (var brandFont = UiChrome.ChromeFont(10f, FontStyle.Bold))
+            using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
             {
                 int textX = (int)lx + logoSz + UiChrome.ScaleInt(6);
                 int textY = _toolbarRect.Y + pad;
                 int textW = _toolbarButtons[0].X - textX - UiChrome.ScaleInt(6);
                 if (textW > 0)
                 {
-                    var textRect = new Rectangle(textX, textY, textW, buttonSize);
-                    TextRenderer.DrawText(
-                        g,
-                        "CyberSnap",
-                        brandFont,
-                        textRect,
-                        Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary),
-                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+                    var textRect = new RectangleF(textX, textY, textW, buttonSize);
+                    var sf = new StringFormat
+                    {
+                        Alignment = StringAlignment.Near,
+                        LineAlignment = StringAlignment.Center,
+                        FormatFlags = StringFormatFlags.NoWrap,
+                        Trimming = StringTrimming.EllipsisCharacter
+                    };
+                    g.DrawString("CyberSnap", brandFont, textBrush, textRect, sf);
                 }
             }
         }
