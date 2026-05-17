@@ -106,7 +106,7 @@ public sealed partial class RegionOverlayForm
         int logoSz = UiChrome.ScaleInt(10); // Reduced by 20% as requested
 
         var oldHint = g.TextRenderingHint;
-        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit; // Force high-resolution anti-aliasing with pixel grid fitting
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit; // Force ClearType subpixel LCD rendering for pristine crispness
 
         if (IsVerticalDock)
         {
