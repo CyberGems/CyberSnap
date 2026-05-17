@@ -41,6 +41,33 @@ public sealed partial class RegionOverlayForm
 
         WindowsDockRenderer.PaintSurface(g, r, cr);
 
+        // Render sleek CyberGems premium accent border outline around the panel
+        using (var path = WindowsDockRenderer.RoundedRect(r, cr))
+        using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 80 : 50, UiChrome.AccentColor), 1f))
+            g.DrawPath(pen, path);
+
+        // Render gorgeous glowing neon accent line along the docked screen edge of the bar
+        using (var pen = new Pen(UiChrome.AccentColor, 2f))
+        {
+            var dock = ActiveDockSide;
+            if (dock == CaptureDockSide.Top)
+            {
+                g.DrawLine(pen, r.X + cr, r.Y + 1f, r.Right - cr, r.Y + 1f);
+            }
+            else if (dock == CaptureDockSide.Bottom)
+            {
+                g.DrawLine(pen, r.X + cr, r.Bottom - 1f, r.Right - cr, r.Bottom - 1f);
+            }
+            else if (dock == CaptureDockSide.Left)
+            {
+                g.DrawLine(pen, r.X + 1f, r.Y + cr, r.X + 1f, r.Bottom - cr);
+            }
+            else if (dock == CaptureDockSide.Right)
+            {
+                g.DrawLine(pen, r.Right - 1f, r.Y + cr, r.Right - 1f, r.Bottom - cr);
+            }
+        }
+
         int pad = UiChrome.ScaledToolbarInnerPadding;
         int buttonSize = UiChrome.ScaledToolbarButtonSize;
         int buttonSpacing = UiChrome.ScaledToolbarButtonSpacing;
@@ -122,7 +149,7 @@ public sealed partial class RegionOverlayForm
             WindowsDockRenderer.PaintButton(g, btn, active, hover);
 
             int ia = active ? 255 : hover ? 240 : i == closeIdx ? 130 : 200;
-            var iconColor = UiChrome.SurfaceTextPrimary;
+            var iconColor = active ? UiChrome.AccentColor : UiChrome.SurfaceTextPrimary;
             DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
         }
 

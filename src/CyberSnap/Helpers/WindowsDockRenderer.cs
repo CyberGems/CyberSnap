@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using CyberSnap.Capture;
 
@@ -86,13 +86,24 @@ public static class WindowsDockRenderer
         if (!active && !hovered)
             return;
 
-        int alpha = active
-            ? (UiChrome.IsDark ? 28 : 20)
-            : (UiChrome.IsDark ? 18 : 14);
         if (radius < 0)
             radius = UiChrome.ScaleFloat(5f);
+
         using var path = RoundedRect(rect, radius);
-        g.FillPath(SketchRenderer.GetToolColorBrush(Color.FromArgb(alpha, 255, 255, 255)), path);
+        if (active)
+        {
+            var accent = UiChrome.AccentColor;
+            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 36 : 28, accent)))
+                g.FillPath(brush, path);
+            using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 140 : 100, accent), 1f))
+                g.DrawPath(pen, path);
+        }
+        else // Hovered
+        {
+            var accent = UiChrome.AccentColor;
+            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 20 : 16, accent)))
+                g.FillPath(brush, path);
+        }
     }
 
     public static void PaintDivider(Graphics g, Point a, Point b)
