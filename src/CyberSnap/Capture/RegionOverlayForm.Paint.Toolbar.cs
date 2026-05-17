@@ -105,6 +105,9 @@ public sealed partial class RegionOverlayForm
 
         int logoSz = UiChrome.ScaleInt(10); // Reduced by 20% as requested
 
+        var oldHint = g.TextRenderingHint;
+        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit; // Force high-resolution anti-aliasing with pixel grid fitting
+
         if (IsVerticalDock)
         {
             // Draw logo icon at the top of Column 1 (centered)
@@ -190,6 +193,8 @@ public sealed partial class RegionOverlayForm
                 }
             }
         }
+
+        g.TextRenderingHint = oldHint;
 
         // 1. Divider line splitting Tier 1 from Tier 2
         if (IsVerticalDock)
