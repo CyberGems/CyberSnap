@@ -35,12 +35,14 @@ public partial class ToastWindow : Window
     private static ToastWindow? _current;
     private static CyberSnap.Models.ToastPosition _position = CyberSnap.Models.ToastPosition.Right;
     private static double _durationSeconds = 2.5;
+    private static double _systemDurationSeconds = 4.0;
     private static bool _fadeOutEnabled;
     private static double _fadeOutSeconds = 1.0;
     private static int _monitorIndex = -1;
     private static Models.AppSettings.ToastButtonLayoutSettings _buttonLayout = new();
 
     private bool _isPinned;
+    private double _activeDurationSeconds = 2.5;
     private string? _savedFilePath;
     private Bitmap? _previewBitmap;
     private bool _isDragging;
@@ -104,7 +106,9 @@ public partial class ToastWindow : Window
         LoadOverlayIcons();
         UiScale.ApplyToWindow(this, OuterShell, scaleWindowBounds: false);
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_durationSeconds) };
+        double baseDuration = spec.PreviewBitmap is not null ? _durationSeconds : _systemDurationSeconds;
+        _activeDurationSeconds = spec.DurationSeconds ?? baseDuration;
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_activeDurationSeconds) };
         _timer.Tick += (_, _) =>
         {
             _timer.Stop();
@@ -143,7 +147,7 @@ public partial class ToastWindow : Window
                 DismissAnimated();
                 return;
             }
-            RestartVisibleTimer(Math.Max(0.1, ProgressScale.ScaleX * _durationSeconds));
+            RestartVisibleTimer(Math.Max(0.1, ProgressScale.ScaleX * _activeDurationSeconds));
         };
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         MouseMove += OnMouseMove;
@@ -198,12 +202,15 @@ public partial class ToastWindow : Window
         UpdateRootClip();
         ApplyPlacement(animateEntry: true, subtleEntry: false);
 
+        double baseDuration = spec.PreviewBitmap is not null ? _durationSeconds : _systemDurationSeconds;
+        _activeDurationSeconds = spec.DurationSeconds ?? baseDuration;
+
         _isHovered = IsMouseOver;
         if (_spec.ShowOverlayButtons && _isHovered)
             AnimateOverlayButtons(1, _isPinned ? 1 : 1);
 
         if (!_isPinned && !_isHovered)
-            RestartVisibleTimer(_durationSeconds);
+            RestartVisibleTimer(_activeDurationSeconds);
 
         return true;
     }
@@ -715,7 +722,7 @@ public partial class ToastWindow : Window
     {
         _timer.Stop();
         var progress = Math.Clamp(ProgressScale.ScaleX, 0, 1);
-        var remaining = GetToastAutoDismissRemainingSeconds(progress, _durationSeconds);
+        var remaining = GetToastAutoDismissRemainingSeconds(progress, _activeDurationSeconds);
         ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
         ProgressScale.ScaleX = progress;
         return remaining;
@@ -1151,8 +1158,8 @@ public partial class ToastWindow : Window
         }
 
         ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
-            new DoubleAnimation { To = 0, Duration = Motion.Sec(_durationSeconds) });
-        _timer.Interval = TimeSpan.FromSeconds(_durationSeconds);
+            new DoubleAnimation { To = 0, Duration = Motion.Sec(_activeDurationSeconds) });
+        _timer.Interval = TimeSpan.FromSeconds(_activeDurationSeconds);
         _timer.Start();
         ApplyToastOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
         RefreshOverlayButtonAccessibility(PinBtn, Helpers.ToastButtonKind.Pin);
@@ -1506,7 +1513,7 @@ public partial class ToastWindow : Window
             ApplyPlacement(animateEntry: true, subtleEntry: false);
 
             if (!_isPinned)
-                RestartVisibleTimer(_durationSeconds);
+                RestartVisibleTimer(_activeDurationSeconds);
         }, DispatcherPriority.Render);
     }
 
@@ -1673,7 +1680,7 @@ public partial class ToastWindow : Window
         _timer.Stop();
         _timer.Interval = TimeSpan.FromSeconds(seconds);
         ProgressBar.Visibility = Visibility.Visible;
-        ProgressScale.ScaleX = Math.Clamp(seconds / _durationSeconds, 0, 1);
+        ProgressScale.ScaleX = Math.Clamp(seconds / _activeDurationSeconds, 0, 1);
         ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
             new DoubleAnimation { To = 0, Duration = Motion.Sec(seconds) });
         _timer.Start();

@@ -1,4 +1,4 @@
-﻿using Bitmap = System.Drawing.Bitmap;
+using Bitmap = System.Drawing.Bitmap;
 using Color = System.Windows.Media.Color;
 using System.Windows.Media;
 using System.Windows;
@@ -27,6 +27,7 @@ internal sealed record ToastSpec
     public double? PreviewMaxHeight { get; init; }
     public int? MaxWidthOverride { get; init; }
     public int? MinWidthOverride { get; init; }
+    public double? DurationSeconds { get; init; }
 
     public static ToastSpec Standard(string title, string body = "", string? filePath = null) => new()
     {

@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Windows.Forms;
@@ -7,18 +7,19 @@ namespace CyberSnap.Helpers;
 
 public static class WindowsMenuRenderer
 {
-    public const int DefaultWidth = 340;
-    public const int RowHeight = 29;
+    public const int DefaultWidth = 260;
+    public const int RowHeight = 38;
 
     public static ContextMenuStrip Create(bool showImages = true, int minWidth = DefaultWidth)
     {
         CyberSnap.UI.Theme.Refresh();
-        var bg = UiChrome.SurfaceElevated;
+        var bg = UiChrome.IsDark ? Color.FromArgb(20, 20, 20) : Color.FromArgb(250, 250, 250);
         var fg = UiChrome.SurfaceTextPrimary;
-        var hover = UiChrome.IsDark ? Color.FromArgb(38, 255, 255, 255) : Color.FromArgb(18, 0, 0, 0);
-        var active = UiChrome.IsDark ? Color.FromArgb(48, 255, 255, 255) : Color.FromArgb(24, 0, 0, 0);
+        var accent = UiChrome.AccentColor;
+        var hover = Color.FromArgb(22, accent.R, accent.G, accent.B);
+        var active = Color.FromArgb(36, accent.R, accent.G, accent.B);
         var muted = UiChrome.SurfaceTextMuted;
-        var sep = UiChrome.SurfaceBorderSubtle;
+        var sep = UiChrome.IsDark ? Color.FromArgb(26, 255, 255, 255) : Color.FromArgb(16, 0, 0, 0);
 
         var menu = new ContextMenuStrip
         {
@@ -26,8 +27,8 @@ public static class WindowsMenuRenderer
             ForeColor = fg,
             ShowImageMargin = showImages,
             ShowCheckMargin = false,
-            Padding = new Padding(4, 5, 4, 5),
-            Font = UiChrome.ChromeFont(8.5f),
+            Padding = new Padding(5, 6, 5, 6),
+            Font = UiChrome.ChromeFont(9.0f),
             DropShadowEnabled = true,
             MinimumSize = new Size(minWidth, 0),
             Renderer = new Renderer(bg, fg, hover, active, muted, sep, showImages)
@@ -123,7 +124,7 @@ public static class WindowsMenuRenderer
         if (menu.Width <= 0 || menu.Height <= 0)
             return;
 
-        using var path = Renderer.RoundedRect(new Rectangle(0, 0, menu.Width, menu.Height), 8);
+        using var path = Renderer.RoundedRect(new Rectangle(0, 0, menu.Width, menu.Height), 12);
         var previous = menu.Region;
         menu.Region = new Region(path);
         previous?.Dispose();
@@ -178,6 +179,17 @@ public static class WindowsMenuRenderer
             using var brush = new SolidBrush(active ? _active : _hover);
             using var path = RoundedRect(rect, 6);
             e.Graphics.FillPath(brush, path);
+
+            if (e.Item.Selected)
+            {
+                int barWidth = 3;
+                int barHeight = e.Item.Height - 16;
+                int barX = 7;
+                int barY = (e.Item.Height - barHeight) / 2;
+                using var accentBrush = new SolidBrush(UiChrome.AccentColor);
+                using var barPath = RoundedRect(new Rectangle(barX, barY, barWidth, barHeight), 1);
+                e.Graphics.FillPath(accentBrush, barPath);
+            }
         }
 
         protected override void OnRenderItemImage(ToolStripItemImageRenderEventArgs e)

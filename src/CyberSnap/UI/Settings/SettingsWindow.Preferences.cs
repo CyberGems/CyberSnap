@@ -366,6 +366,26 @@ public partial class SettingsWindow
             ToastWindow.SetDuration);
     }
 
+    private void SystemToastDurationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToastPreferenceChange) return;
+        if (SystemToastDurationCombo.SelectedItem is not ComboBoxItem item || item.Tag is not string tag)
+            return;
+
+        if (!double.TryParse(tag, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double seconds))
+            return;
+
+        var previous = _settingsService.Settings.SystemToastDurationSeconds;
+        UpdateToastPreference(
+            "settings.system-toast-duration",
+            "System toast duration",
+            previous,
+            seconds,
+            value => _settingsService.Settings.SystemToastDurationSeconds = value,
+            SelectSystemToastDuration,
+            ToastWindow.SetSystemDuration);
+    }
+
     private void CaptureDockSideCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
@@ -533,6 +553,24 @@ public partial class SettingsWindow
             40.0 => 8,
             60.0 => 9,
             _ => 2
+        };
+    }
+
+    private void SelectSystemToastDuration(double seconds)
+    {
+        SystemToastDurationCombo.SelectedIndex = seconds switch
+        {
+            1.5 => 0,
+            2.0 => 1,
+            2.5 => 2,
+            3.0 => 3,
+            4.0 => 4,
+            5.0 => 5,
+            10.0 => 6,
+            20.0 => 7,
+            40.0 => 8,
+            60.0 => 9,
+            _ => 4
         };
     }
 

@@ -214,6 +214,7 @@ public sealed class AppSettings
     public string? HistoryUploadProviderFilter { get; set; }
 
     public double ToastDurationSeconds { get; set; } = 2.5;
+    public double SystemToastDurationSeconds { get; set; } = 4.0;
     public bool ToastFadeOutEnabled { get; set; }
     public double ToastFadeOutSeconds { get; set; } = 1.0;
     public bool AutoPinPreviews { get; set; }

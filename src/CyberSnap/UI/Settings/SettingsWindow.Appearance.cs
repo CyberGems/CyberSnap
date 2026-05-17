@@ -178,6 +178,8 @@ public partial class SettingsWindow
 
             double dur = s.ToastDurationSeconds;
             SelectToastDuration(dur);
+            double sysDur = s.SystemToastDurationSeconds;
+            SelectSystemToastDuration(sysDur);
             ToastFadeOutCheck.IsChecked = s.ToastFadeOutEnabled;
             double fadeDur = s.ToastFadeOutSeconds;
             int fadeDurIdx = fadeDur switch { 1.0 => 0, 2.0 => 1, 3.0 => 2, 5.0 => 3, _ => 2 };

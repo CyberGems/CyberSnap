@@ -2223,12 +2223,12 @@
                                     <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Toast duration" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Set how long previews stay visible." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Capture toast duration" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Set how long screenshot previews stay visible." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="ToastDurationCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
-                                          SelectionChanged="ToastDurationCombo_SelectionChanged">
+                                           VerticalAlignment="Center"
+                                           SelectionChanged="ToastDurationCombo_SelectionChanged">
                                     <ComboBoxItem Content="1.5 seconds" Tag="1.5"
                                                   ToolTip="Hide previews after 1.5 seconds."
                                                   AutomationProperties.Name="1.5 second toast duration"
@@ -2269,6 +2269,65 @@
                                                   ToolTip="Hide previews after 60 seconds."
                                                   AutomationProperties.Name="60 second toast duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 60 seconds."/>
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="System toast duration" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Set how long system alert notifications stay visible." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="SystemToastDurationCombo" Grid.Column="2" MinWidth="150"
+                                           VerticalAlignment="Center"
+                                           SelectionChanged="SystemToastDurationCombo_SelectionChanged">
+                                    <ComboBoxItem Content="1.5 seconds" Tag="1.5"
+                                                  ToolTip="Hide notifications after 1.5 seconds."
+                                                  AutomationProperties.Name="1.5 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 1.5 seconds."/>
+                                    <ComboBoxItem Content="2 seconds" Tag="2"
+                                                  ToolTip="Hide notifications after 2 seconds."
+                                                  AutomationProperties.Name="2 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 2 seconds."/>
+                                    <ComboBoxItem Content="2.5 seconds" Tag="2.5"
+                                                  ToolTip="Hide notifications after 2.5 seconds."
+                                                  AutomationProperties.Name="2.5 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 2.5 seconds."/>
+                                    <ComboBoxItem Content="3 seconds" Tag="3"
+                                                  ToolTip="Hide notifications after 3 seconds."
+                                                  AutomationProperties.Name="3 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 3 seconds."/>
+                                    <ComboBoxItem Content="4 seconds" Tag="4"
+                                                  ToolTip="Hide notifications after 4 seconds."
+                                                  AutomationProperties.Name="4 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 4 seconds."/>
+                                    <ComboBoxItem Content="5 seconds" Tag="5"
+                                                  ToolTip="Hide notifications after 5 seconds."
+                                                  AutomationProperties.Name="5 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 5 seconds."/>
+                                    <ComboBoxItem Content="10 seconds" Tag="10"
+                                                  ToolTip="Hide notifications after 10 seconds."
+                                                  AutomationProperties.Name="10 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 10 seconds."/>
+                                    <ComboBoxItem Content="20 seconds" Tag="20"
+                                                  ToolTip="Hide notifications after 20 seconds."
+                                                  AutomationProperties.Name="20 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 20 seconds."/>
+                                    <ComboBoxItem Content="40 seconds" Tag="40"
+                                                  ToolTip="Hide notifications after 40 seconds."
+                                                  AutomationProperties.Name="40 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 40 seconds."/>
+                                    <ComboBoxItem Content="60 seconds" Tag="60"
+                                                  ToolTip="Hide notifications after 60 seconds."
+                                                  AutomationProperties.Name="60 second system duration"
+                                                  AutomationProperties.HelpText="Keep system notifications visible for 60 seconds."/>
                                 </ComboBox>
                             </Grid>
                             <TextBlock x:Name="ToastPreferenceStatusText"

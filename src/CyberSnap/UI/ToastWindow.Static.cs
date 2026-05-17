@@ -17,6 +17,8 @@ public partial class ToastWindow
     public static void SetPosition(CyberSnap.Models.ToastPosition position) => _position = position;
     public static void SetMonitorIndex(int index) => _monitorIndex = index;
     public static void SetDuration(double seconds) => _durationSeconds = Math.Clamp(seconds, 1, 60);
+    public static void SetSystemDuration(double seconds) => _systemDurationSeconds = Math.Clamp(seconds, 1, 60);
+    public static double GetSystemDuration() => _systemDurationSeconds;
     public static void SetButtonLayout(Models.AppSettings.ToastButtonLayoutSettings? layout)
     {
         _buttonLayout = layout is null
