@@ -74,7 +74,7 @@ public static class UninstallService
 
         key.SetValue("DisplayName", "CyberSnap", RegistryValueKind.String);
         key.SetValue("DisplayVersion", version, RegistryValueKind.String);
-        key.SetValue("Publisher", "jasperdevs", RegistryValueKind.String);
+        key.SetValue("Publisher", "CyberGems", RegistryValueKind.String);
         key.SetValue("InstallLocation", installDir, RegistryValueKind.String);
         key.SetValue("DisplayIcon", exe, RegistryValueKind.String);
         key.SetValue("UninstallString", $"\"{exe}\" --uninstall", RegistryValueKind.String);

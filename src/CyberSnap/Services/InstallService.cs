@@ -576,7 +576,7 @@ public static class InstallService
             if (key is null) return;
             key.SetValue("DisplayName", "CyberSnap");
             key.SetValue("DisplayVersion", version);
-            key.SetValue("Publisher", "jasperdevs");
+            key.SetValue("Publisher", "CyberGems");
             key.SetValue("InstallLocation", installDir);
             key.SetValue("DisplayIcon", exePath);
             key.SetValue("UninstallString", $"\"{exePath}\" --uninstall");
