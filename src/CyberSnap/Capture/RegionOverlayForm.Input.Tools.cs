@@ -160,12 +160,15 @@ public sealed partial class RegionOverlayForm
             if (nb.Width > 5 && nb.Height > 5)
             {
                 var oldRect = _confirmRect;
+                // Snapshot old button positions BEFORE moving _confirmRect so we can
+                // erase the previous paint (prevents ghost/trail during fast drag).
+                var (oldConfirm, oldCancel) = GetConfirmButtonRects();
                 _confirmRect = nb;
                 InvalidateSelectionChromePart(oldRect, Point.Empty);
                 InvalidateSelectionChromePart(_confirmRect, Point.Empty);
                 var (confirm, cancel) = GetConfirmButtonRects();
-                Invalidate(InflateForRepaint(confirm, 20));
-                Invalidate(InflateForRepaint(cancel, 20));
+                Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
+                Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
             }
             return;
         }
@@ -178,12 +181,15 @@ public sealed partial class RegionOverlayForm
             int newX = e.Location.X - _confirmDragOffset.X;
             int newY = e.Location.Y - _confirmDragOffset.Y;
             var oldRect = _confirmRect;
+            // Snapshot old button positions BEFORE moving _confirmRect so we can
+            // erase the previous paint (prevents ghost/trail during fast drag).
+            var (oldConfirm, oldCancel) = GetConfirmButtonRects();
             _confirmRect = new Rectangle(newX, newY, oldRect.Width, oldRect.Height);
             InvalidateSelectionChromePart(oldRect, Point.Empty);
             InvalidateSelectionChromePart(_confirmRect, Point.Empty);
             var (confirm, cancel) = GetConfirmButtonRects();
-            Invalidate(InflateForRepaint(confirm, 20));
-            Invalidate(InflateForRepaint(cancel, 20));
+            Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
+            Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
             return;
         }
 
