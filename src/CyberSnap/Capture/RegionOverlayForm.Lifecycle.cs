@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
+using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
 
@@ -58,7 +59,7 @@ public sealed partial class RegionOverlayForm
 
     private void EnsureToolbarReady()
     {
-        if (IsDisposed || Disposing || !Visible)
+        if (IsDisposed || Disposing || !Visible || _isConfirmingSelection)
             return;
 
         if (_toolbarForm == null || _toolbarForm.IsDisposed)
@@ -238,41 +239,13 @@ public sealed partial class RegionOverlayForm
 
     private void ShowEmojiSearchBox()
     {
-        if (_emojiSearchBox == null)
-        {
-            _emojiSearchBox = new TextBox
-            {
-                BorderStyle = BorderStyle.None,
-                Size = new Size(1, 1),
-            };
-            _emojiSearchBox.TextChanged += (_, _) =>
-            {
-                if (_emojiSearchBox == null) return;
-                _emojiSearch = _emojiSearchBox.Text;
-                _emojiScrollOffset = 0;
-                QueueEmojiWarmup();
-                UpdateToolbarSurfaceOnly();
-            };
-            _emojiSearchBox.KeyDown += (_, e) =>
-            {
-                if (e.KeyCode == Keys.Escape)
-                {
-                    e.SuppressKeyPress = true;
-                    e.Handled = true;
-                    Cancel();
-                }
-            };
-            Controls.Add(_emojiSearchBox);
-        }
-        _emojiSearchBox.Text = _emojiSearch;
-        _emojiSearchBox.Location = new Point(-100, -100);
-        _emojiSearchBox.Visible = true;
-        _emojiSearchBox.Focus();
+        // No-op: keyboard input is now handled directly via OnKeyDown/OnKeyPress
+        // to avoid focus-stealing issues with off-screen TextBox controls.
     }
 
     private void HideEmojiSearchBox()
     {
-        if (_emojiSearchBox != null) { _emojiSearchBox.Visible = false; Focus(); }
+        // No-op: keyboard input is now handled directly via OnKeyDown/OnKeyPress.
     }
 
     private void QueueEmojiWarmup()
@@ -287,27 +260,38 @@ public sealed partial class RegionOverlayForm
         if (!_emojiWarmupPending || !_emojiPickerOpen)
             return;
 
-        var filtered = GetFilteredEmojiPalette();
-        if (_emojiWarmupIndex >= filtered.Length)
+        try
         {
-            _emojiWarmupPending = false;
-            return;
-        }
+            var filtered = GetFilteredEmojiPalette();
+            if (_emojiWarmupIndex >= filtered.Length)
+            {
+                _emojiWarmupPending = false;
+                return;
+            }
 
-        const int batchSize = 8;
-        int rendered = WarmEmojiRange(filtered, _emojiScrollOffset * EmojiPickerColumns, EmojiPickerVisibleRows * EmojiPickerColumns, batchSize);
-        if (rendered < batchSize)
+            const int batchSize = 8;
+            int rendered = WarmEmojiRange(filtered, _emojiScrollOffset * EmojiPickerColumns, EmojiPickerVisibleRows * EmojiPickerColumns, batchSize);
+            if (rendered < batchSize)
+            {
+                int end = Math.Min(filtered.Length, _emojiWarmupIndex + batchSize - rendered);
+                for (int i = _emojiWarmupIndex; i < end; i++)
+                {
+                    try { _emojiRenderer.GetEmoji(filtered[i].emoji, EmojiPickerRenderSize); }
+                    catch { /* Skip individual emoji render failures */ }
+                }
+                _emojiWarmupIndex = end;
+            }
+
+            if (_emojiWarmupIndex >= filtered.Length && IsVisibleEmojiRangeWarm(filtered))
+                _emojiWarmupPending = false;
+
+            UpdateToolbarSurfaceOnly();
+        }
+        catch (Exception ex)
         {
-            int end = Math.Min(filtered.Length, _emojiWarmupIndex + batchSize - rendered);
-            for (int i = _emojiWarmupIndex; i < end; i++)
-                _emojiRenderer.GetEmoji(filtered[i].emoji, EmojiPickerRenderSize);
-            _emojiWarmupIndex = end;
-        }
-
-        if (_emojiWarmupIndex >= filtered.Length && IsVisibleEmojiRangeWarm(filtered))
+            AppDiagnostics.LogError("emoji.warmup-batch", ex);
             _emojiWarmupPending = false;
-
-        UpdateToolbarSurfaceOnly();
+        }
     }
 
     private int WarmEmojiRange((string emoji, string name)[] filtered, int start, int count, int maxRender)
@@ -376,6 +360,11 @@ public sealed partial class RegionOverlayForm
 
     internal void RefreshToolbar()
     {
+        if (_isConfirmingSelection)
+        {
+            HideToolbarImmediately();
+            return;
+        }
         var oldUiBounds = _lastOverlayUiBounds;
         CalcToolbar();
         PositionToolbarForm();
@@ -414,7 +403,6 @@ public sealed partial class RegionOverlayForm
     private void HideToolbarImmediately()
     {
         HideToolbarTooltip();
-        CloseMoreToolsDropdown();
         _colorPickerOpen = false;
         _fontPickerOpen = false;
         _emojiPickerOpen = false;
@@ -567,8 +555,6 @@ public sealed partial class RegionOverlayForm
             WindowDetector.ClearSnapshot();
             if (_toolbarForm != null)
                 WindowDetector.UnregisterIgnoredWindow(_toolbarForm.Handle);
-            CloseMoreToolsDropdown();
-            StopMoreToolsMenuMonitor();
             CloseMagWindow();
             CloseCaptureMagnifier();
             _toolbarForm?.Close();

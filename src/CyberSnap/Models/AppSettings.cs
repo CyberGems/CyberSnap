@@ -197,6 +197,7 @@ public sealed class AppSettings
     public bool ShowCaptureMagnifier { get; set; } = true;
     public bool OverlayCaptureAllMonitors { get; set; } = true;
     public bool DetectWindows { get; set; } = true;
+    public bool ConfirmRegionBeforeCapture { get; set; } = true;
     public bool CompressHistory { get; set; }
     public int JpegQuality { get; set; } = 85;
     public bool HasCompletedSetup { get; set; }

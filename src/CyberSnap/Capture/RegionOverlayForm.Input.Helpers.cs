@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 using CyberSnap.Models;
+using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
 
@@ -122,8 +123,6 @@ public sealed partial class RegionOverlayForm
     {
         if (_isTyping) CommitText();
         bool wasEmoji = _mode == CaptureMode.Emoji && _emojiPickerOpen;
-        if (_flyoutOpen)
-            CloseMoreToolsDropdown();
         _colorPickerOpen = false;
         _fontPickerOpen = false;
         HideFontSearchBox();
@@ -172,28 +171,38 @@ public sealed partial class RegionOverlayForm
         // Emoji mode: toggle picker if already in emoji mode
         if (m == CaptureMode.Emoji)
         {
-            if (wasEmoji)
+            try
             {
-                _emojiPickerOpen = false;
+                if (wasEmoji)
+                {
+                    _emojiPickerOpen = false;
+                    _isPlacingEmoji = false;
+                    _emojiWarmupPending = false;
+                    _emojiWarmupIndex = 0;
+                    HideEmojiSearchBox();
+                    RefreshToolbar();
+                    return;
+                }
+                _emojiPickerOpen = true;
                 _isPlacingEmoji = false;
-                _emojiWarmupPending = false;
-                _emojiWarmupIndex = 0;
-                HideEmojiSearchBox();
-                RefreshToolbar();
-                return;
+                _selectedEmoji = null;
+                _emojiSearch = "";
+                _emojiScrollOffset = 0;
+                int cols = EmojiPickerColumns, emojiSize = EmojiPickerIconSize, pad = EmojiPickerPadding, visibleRows = EmojiPickerVisibleRows;
+                int searchBarH = EmojiPickerSearchBarHeight;
+                int pw = cols * (emojiSize + pad) + pad;
+                int ph = searchBarH + pad + visibleRows * (emojiSize + pad) + pad;
+                _emojiPickerRect = PositionPopupFromAnchor(_toolbarRect, pw, ph);
+                EnsureToolbarReady();
+                ShowEmojiSearchBox();
+                QueueEmojiWarmup();
             }
-            _emojiPickerOpen = true;
-            _isPlacingEmoji = false;
-            _selectedEmoji = null;
-            _emojiSearch = "";
-            _emojiScrollOffset = 0;
-            int cols = EmojiPickerColumns, emojiSize = EmojiPickerIconSize, pad = EmojiPickerPadding, visibleRows = EmojiPickerVisibleRows;
-            int searchBarH = EmojiPickerSearchBarHeight;
-            int pw = cols * (emojiSize + pad) + pad;
-            int ph = searchBarH + pad + visibleRows * (emojiSize + pad) + pad;
-            _emojiPickerRect = PositionPopupFromAnchor(_toolbarRect, pw, ph);
-            ShowEmojiSearchBox();
-            QueueEmojiWarmup();
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("overlay.emoji-mode", ex);
+                _emojiPickerOpen = false;
+                HideEmojiSearchBox();
+            }
         }
         else
         {

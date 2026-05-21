@@ -8,7 +8,7 @@ public sealed partial class RegionOverlayForm
 {
     private void UpdateToolbarTooltip(Point cursor)
     {
-        if (!IsToolbarInteractive() || _flyoutOpen || _hoveredButton < 0 || _hoveredButton >= _toolbarLabels.Length)
+        if (!IsToolbarInteractive() || _hoveredButton < 0 || _hoveredButton >= _toolbarLabels.Length)
         {
             HideToolbarTooltip();
             return;

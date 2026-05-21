@@ -56,7 +56,7 @@ export default function Layout() {
         <div className="mx-auto max-w-[1040px] px-6 sm:px-8 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[13px] text-[#171512]/50">
           <span>CyberSnap is open source under gpl-3.0.</span>
           <div className="flex items-center gap-4">
-            <a href="https://ko-fi.com/jasperdevs" target="_blank" rel="noopener noreferrer" className="hover:text-[#171512] transition-colors">ko-fi</a>
+            <a href="https://buymeacoffee.com/cybergems" target="_blank" rel="noopener noreferrer" className="hover:text-[#171512] transition-colors">BuyMeACoffee</a>
             <Link to="/downloads" className="hover:text-[#171512] transition-colors">downloads</Link>
             <Link to="/privacy" className="hover:text-[#171512] transition-colors">privacy</Link>
           </div>

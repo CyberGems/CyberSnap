@@ -247,6 +247,21 @@ public partial class SettingsWindow
             value => ShowCaptureMagnifierCheck.IsChecked = value);
     }
 
+    private void ConfirmRegionCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
+
+        var previous = _settingsService.Settings.ConfirmRegionBeforeCapture;
+        var selected = ConfirmRegionCheck.IsChecked == true;
+        UpdateCaptureSavePreference(
+            "settings.confirm-region",
+            "Confirm region before capture",
+            previous,
+            selected,
+            value => _settingsService.Settings.ConfirmRegionBeforeCapture = value,
+            value => ConfirmRegionCheck.IsChecked = value);
+    }
+
     private void OverlayAllMonitorsCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;

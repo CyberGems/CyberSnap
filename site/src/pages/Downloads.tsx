@@ -386,8 +386,8 @@ export default function Downloads() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 mb-10">
-        <InputCopy align="left" label="winget install" value="winget install --id JasperDevs.CyberSnap -e" />
-        <InputCopy align="left" label="winget upgrade" value="winget upgrade --id JasperDevs.CyberSnap -e" />
+        <InputCopy align="left" label="winget install" value="winget install --id CyberGems.CyberSnap -e" />
+        <InputCopy align="left" label="winget upgrade" value="winget upgrade --id CyberGems.CyberSnap -e" />
       </div>
 
       {loading ? (

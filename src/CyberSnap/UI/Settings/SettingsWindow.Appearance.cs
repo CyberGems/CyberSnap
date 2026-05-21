@@ -150,6 +150,7 @@ public partial class SettingsWindow
             OcrAutoCopyCheck.IsChecked = s.OcrAutoCopyToClipboard;
             CrosshairGuidesCheck.IsChecked = s.ShowCrosshairGuides;
             ShowCaptureMagnifierCheck.IsChecked = s.ShowCaptureMagnifier;
+            ConfirmRegionCheck.IsChecked = s.ConfirmRegionBeforeCapture;
             OverlayAllMonitorsCheck.IsChecked = s.OverlayCaptureAllMonitors;
             ShowToolNumberBadgesCheck.IsChecked = s.ShowToolNumberBadges;
             AskFileNameCheck.IsChecked = s.AskForFileNameOnSave;

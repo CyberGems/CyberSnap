@@ -4,7 +4,7 @@
 AppId={{D8C8A6A5-9231-4A5C-9A52-7F7B7B7B7B7B}
 AppName=CyberSnap
 AppVersion={#AppVersion}
-AppPublisher=jasperdevs
+AppPublisher=CyberGems
 DefaultDirName={autopf}\CyberSnap
 DefaultGroupName=CyberSnap
 AllowNoIcons=yes

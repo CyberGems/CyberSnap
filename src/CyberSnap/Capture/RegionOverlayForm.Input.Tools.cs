@@ -141,6 +141,52 @@ public sealed partial class RegionOverlayForm
             needsRepaint = true;
         }
 
+        // Confirm-mode handle resize
+        if (_isConfirmingSelection && _confirmHandleDragIndex >= 0)
+        {
+            ClearCrosshairGuides();
+            SetSnapGuides(false, false);
+            int dx = e.Location.X - _confirmDragStart.X;
+            int dy = e.Location.Y - _confirmDragStart.Y;
+            var ob = _confirmDragStartRect;
+            Rectangle nb = _confirmHandleDragIndex switch
+            {
+                0 => Rectangle.FromLTRB(ob.Left + dx, ob.Top + dy, ob.Right, ob.Bottom),  // TL
+                1 => Rectangle.FromLTRB(ob.Left, ob.Top + dy, ob.Right + dx, ob.Bottom),  // TR
+                2 => Rectangle.FromLTRB(ob.Left + dx, ob.Top, ob.Right, ob.Bottom + dy),  // BL
+                3 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + dx, ob.Bottom + dy),  // BR
+                _ => ob
+            };
+            if (nb.Width > 5 && nb.Height > 5)
+            {
+                var oldRect = _confirmRect;
+                _confirmRect = nb;
+                InvalidateSelectionChromePart(oldRect, Point.Empty);
+                InvalidateSelectionChromePart(_confirmRect, Point.Empty);
+                var (confirm, cancel) = GetConfirmButtonRects();
+                Invalidate(InflateForRepaint(confirm, 20));
+                Invalidate(InflateForRepaint(cancel, 20));
+            }
+            return;
+        }
+
+        // Confirm-mode region drag (move entire selection without resizing)
+        if (_isConfirmingSelection && _isConfirmDragging)
+        {
+            ClearCrosshairGuides();
+            SetSnapGuides(false, false);
+            int newX = e.Location.X - _confirmDragOffset.X;
+            int newY = e.Location.Y - _confirmDragOffset.Y;
+            var oldRect = _confirmRect;
+            _confirmRect = new Rectangle(newX, newY, oldRect.Width, oldRect.Height);
+            InvalidateSelectionChromePart(oldRect, Point.Empty);
+            InvalidateSelectionChromePart(_confirmRect, Point.Empty);
+            var (confirm, cancel) = GetConfirmButtonRects();
+            Invalidate(InflateForRepaint(confirm, 20));
+            Invalidate(InflateForRepaint(cancel, 20));
+            return;
+        }
+
         // Select tool resize
         if (_isSelectResizing && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count && _selectResizeOriginalAnnotation is not null)
         {
@@ -226,6 +272,14 @@ public sealed partial class RegionOverlayForm
             else if (GetActiveTextRect().Contains(e.Location)) target = Cursors.SizeAll;
             else target = Cursors.Default;
         }
+        else if (_isConfirmingSelection)
+        {
+            int ch = HitTestConfirmHandle(e.Location);
+            if (ch >= 0) target = ch is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
+            else if (HitTestConfirmButton(e.Location) >= 0) target = Cursors.Hand;
+            else if (_confirmRect.Contains(e.Location)) target = Cursors.SizeAll;
+            else target = Cursors.Cross;
+        }
         else if (_mode == CaptureMode.Select)
         {
             int sh = GetSelectHandle(e.Location);
@@ -260,6 +314,9 @@ public sealed partial class RegionOverlayForm
             UpdateCaptureMagnifier(e.Location);
         else if (_captureMagnifierForm != null && (!ShowCaptureMagnifier || !ToolDef.IsCaptureTool(_mode) || IsPointInOverlayUi(e.Location)))
             CloseCaptureMagnifier();
+
+        if (_isConfirmingSelection)
+            return;
 
         switch (_mode)
         {
@@ -481,6 +538,22 @@ public sealed partial class RegionOverlayForm
         if (e.Button != MouseButtons.Left) return;
         SetSnapGuides(false, false);
 
+        // End confirm-mode handle drag
+        if (_isConfirmingSelection && _confirmHandleDragIndex >= 0)
+        {
+            _confirmHandleDragIndex = -1;
+            Invalidate();
+            return;
+        }
+
+        // End confirm-mode region drag
+        if (_isConfirmingSelection && _isConfirmDragging)
+        {
+            _isConfirmDragging = false;
+            Invalidate();
+            return;
+        }
+
         // End select drag/resize
         if (_isSelectResizing) { CommitSelectTransform(); _isSelectResizing = false; _selectResizeHandle = -1; _selectResizeOriginalAnnotation = null; Invalidate(); return; }
         if (_isSelectDragging) { CommitSelectTransform(); _isSelectDragging = false; Invalidate(); return; }
@@ -600,7 +673,10 @@ public sealed partial class RegionOverlayForm
                 {
                     _autoDetectRect = Rectangle.Empty;
                     _autoDetectActive = false;
-                    RegionSelected?.Invoke(_selectionRect);
+                    if (ConfirmRegionBeforeCapture)
+                        EnterConfirmMode(_selectionRect);
+                    else
+                        RegionSelected?.Invoke(_selectionRect);
                 }
                 else if (isCenter)
                 {
@@ -626,7 +702,9 @@ public sealed partial class RegionOverlayForm
                     var clickRect = (_autoDetectRect.Width > 0 && _autoDetectRect.Height > 0)
                         ? _autoDetectRect
                         : new Rectangle(0, 0, _screenshot.Width, _screenshot.Height);
-                    if (isOcr) OcrRegionSelected?.Invoke(clickRect);
+                    if (ConfirmRegionBeforeCapture)
+                        EnterConfirmMode(clickRect);
+                    else if (isOcr) OcrRegionSelected?.Invoke(clickRect);
                     else if (isScan) ScanRegionSelected?.Invoke(clickRect);
                     else if (isSticker) StickerRegionSelected?.Invoke(clickRect);
                     else if (isUpscale) UpscaleRegionSelected?.Invoke(clickRect);
@@ -636,7 +714,9 @@ public sealed partial class RegionOverlayForm
                 {
                     _autoDetectRect = Rectangle.Empty;
                     _autoDetectActive = false;
-                    if (isOcr) OcrRegionSelected?.Invoke(_selectionRect);
+                    if (ConfirmRegionBeforeCapture)
+                        EnterConfirmMode(_selectionRect);
+                    else if (isOcr) OcrRegionSelected?.Invoke(_selectionRect);
                     else if (isScan) ScanRegionSelected?.Invoke(_selectionRect);
                     else if (isSticker) StickerRegionSelected?.Invoke(_selectionRect);
                     else if (isUpscale) UpscaleRegionSelected?.Invoke(_selectionRect);

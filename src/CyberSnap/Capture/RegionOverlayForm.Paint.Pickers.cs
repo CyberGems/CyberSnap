@@ -56,97 +56,111 @@ public sealed partial class RegionOverlayForm
 
     private void PaintEmojiPicker(Graphics g)
     {
-        // Filter emojis by search
-        var filtered = GetFilteredEmojiPalette();
-
-        int cols = EmojiPickerColumns, emojiSize = EmojiPickerIconSize, pad = EmojiPickerPadding;
-        int visibleRows = EmojiPickerVisibleRows;
-        int totalRows = (filtered.Length + cols - 1) / cols;
-        int gridH = visibleRows * (emojiSize + pad);
-        int searchBarH = EmojiPickerSearchBarHeight;
-        int pw = cols * (emojiSize + pad) + pad;
-        int ph = searchBarH + pad + gridH + pad;
-
-        _emojiPickerRect = PositionPopupFromAnchor(_toolbarRect, pw, ph);
-        int px = _emojiPickerRect.X;
-        int py = _emojiPickerRect.Y;
-
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        WindowsDockRenderer.PaintSurface(g, _emojiPickerRect);
-        EnsurePickerChrome();
-
-        // Search bar
-        var searchRect = new Rectangle(px + pad, py + pad, pw - pad * 2, searchBarH);
-        using (var searchPath = RRect(searchRect, 6))
+        try
         {
-            g.FillPath(_pickerSearchBg!, searchPath);
-            g.DrawPath(_pickerFocusBorder!, searchPath);
-        }
-        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-        var searchFont = GetPickerSearchFont();
-        string searchDisplay = _emojiSearch.Length > 0 ? _emojiSearch : "Search emoji...";
-        var searchBrush = SketchRenderer.GetToolColorBrush(_emojiSearch.Length > 0
-            ? UiChrome.SurfaceTextPrimary
-            : UiChrome.SurfaceTextMuted);
-        g.DrawString(searchDisplay, searchFont, searchBrush, searchRect.X + 10, searchRect.Y + 7);
-        // Text cursor
-        {
-            float cursorX = _emojiSearch.Length > 0
-                ? searchRect.X + 10 + g.MeasureString(_emojiSearch, searchFont).Width - 2
-                : searchRect.X + 10;
-            g.DrawLine(_pickerCursorPen!, cursorX, searchRect.Y + 8, cursorX, searchRect.Bottom - 8);
-        }
+            // Filter emojis by search
+            var filtered = GetFilteredEmojiPalette();
 
-        // Hint text (right aligned)
-        var searchHintFont = GetPickerSearchHintFont();
-        var hintSize = g.MeasureString("Type to search", searchHintFont);
-        g.DrawString("Type to search", searchHintFont, _pickerSearchHintBrush!, searchRect.Right - hintSize.Width - 6, searchRect.Y + 9);
-        g.TextRenderingHint = TextRenderingHint.SystemDefault;
+            int cols = EmojiPickerColumns, emojiSize = EmojiPickerIconSize, pad = EmojiPickerPadding;
+            int visibleRows = EmojiPickerVisibleRows;
+            int totalRows = (filtered.Length + cols - 1) / cols;
+            int gridH = visibleRows * (emojiSize + pad);
+            int searchBarH = EmojiPickerSearchBarHeight;
+            int pw = cols * (emojiSize + pad) + pad;
+            int ph = searchBarH + pad + gridH + pad;
 
-        // Emoji grid
-        int gridY = py + pad + searchBarH + pad;
-        int scrollRow = _emojiScrollOffset;
-        int startIdx = scrollRow * cols;
+            _emojiPickerRect = PositionPopupFromAnchor(_toolbarRect, pw, ph);
+            int px = _emojiPickerRect.X;
+            int py = _emojiPickerRect.Y;
 
-        for (int i = 0; i < visibleRows * cols && (startIdx + i) < filtered.Length; i++)
-        {
-            int idx = startIdx + i;
-            int col = i % cols, row = i / cols;
-            int ex = px + pad + col * (emojiSize + pad);
-            int ey = gridY + row * (emojiSize + pad);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            WindowsDockRenderer.PaintSurface(g, _emojiPickerRect);
+            EnsurePickerChrome();
 
-            bool hovered = _emojiHovered == idx;
-            if (hovered)
+            // Search bar
+            var searchRect = new Rectangle(px + pad, py + pad, pw - pad * 2, searchBarH);
+            using (var searchPath = RRect(searchRect, 6))
             {
-                using var hoverPath = RRect(new RectangleF(ex - 3, ey - 3, emojiSize + 6, emojiSize + 6), 6);
-                g.FillPath(_pickerSearchBg!, hoverPath);
+                g.FillPath(_pickerSearchBg!, searchPath);
+                g.DrawPath(_pickerFocusBorder!, searchPath);
+            }
+            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            var searchFont = GetPickerSearchFont();
+            string searchDisplay = _emojiSearch.Length > 0 ? _emojiSearch : "Search emoji...";
+            var searchBrush = SketchRenderer.GetToolColorBrush(_emojiSearch.Length > 0
+                ? UiChrome.SurfaceTextPrimary
+                : UiChrome.SurfaceTextMuted);
+            g.DrawString(searchDisplay, searchFont, searchBrush, searchRect.X + 10, searchRect.Y + 7);
+            // Text cursor
+            {
+                float cursorX = _emojiSearch.Length > 0
+                    ? searchRect.X + 10 + g.MeasureString(_emojiSearch, searchFont).Width - 2
+                    : searchRect.X + 10;
+                g.DrawLine(_pickerCursorPen!, cursorX, searchRect.Y + 8, cursorX, searchRect.Bottom - 8);
             }
 
-            if (_emojiRenderer.TryGetCachedEmoji(filtered[idx].emoji, EmojiPickerRenderSize, out var emojiBmp))
-            {
-                g.DrawImage(emojiBmp, ex + 2, ey + 2);
-            }
-            else
-            {
-                DrawEmojiPlaceholder(g, ex, ey, emojiSize);
-            }
-        }
+            // Hint text (right aligned)
+            var searchHintFont = GetPickerSearchHintFont();
+            var hintSize = g.MeasureString("Type to search", searchHintFont);
+            g.DrawString("Type to search", searchHintFont, _pickerSearchHintBrush!, searchRect.Right - hintSize.Width - 6, searchRect.Y + 9);
+            g.TextRenderingHint = TextRenderingHint.SystemDefault;
 
-        // Scroll indicator (rounded track + thumb)
-        if (totalRows > visibleRows)
+            // Emoji grid
+            int gridY = py + pad + searchBarH + pad;
+            int scrollRow = _emojiScrollOffset;
+            int startIdx = scrollRow * cols;
+
+            for (int i = 0; i < visibleRows * cols && (startIdx + i) < filtered.Length; i++)
+            {
+                int idx = startIdx + i;
+                int col = i % cols, row = i / cols;
+                int ex = px + pad + col * (emojiSize + pad);
+                int ey = gridY + row * (emojiSize + pad);
+
+                bool hovered = _emojiHovered == idx;
+                if (hovered)
+                {
+                    using var hoverPath = RRect(new RectangleF(ex - 3, ey - 3, emojiSize + 6, emojiSize + 6), 6);
+                    g.FillPath(_pickerSearchBg!, hoverPath);
+                }
+
+                try
+                {
+                    if (_emojiRenderer.TryGetCachedEmoji(filtered[idx].emoji, EmojiPickerRenderSize, out var emojiBmp))
+                    {
+                        g.DrawImage(emojiBmp, ex + 2, ey + 2);
+                    }
+                    else
+                    {
+                        DrawEmojiPlaceholder(g, ex, ey, emojiSize);
+                    }
+                }
+                catch
+                {
+                    DrawEmojiPlaceholder(g, ex, ey, emojiSize);
+                }
+            }
+
+            // Scroll indicator (rounded track + thumb)
+            if (totalRows > visibleRows)
+            {
+                int trackH = gridH - 8;
+                int trackX = px + pw - pad - 4;
+                int trackY = gridY + 4;
+                using var trackPath = RRect(new RectangleF(trackX, trackY, 4, trackH), 2);
+                g.FillPath(_pickerScrollTrackBrush!, trackPath);
+                int thumbH = Math.Max(12, trackH * visibleRows / totalRows);
+                int thumbY = trackY + (int)((float)scrollRow / (totalRows - visibleRows) * (trackH - thumbH));
+                using var thumbPath = RRect(new RectangleF(trackX, trackY, 4, thumbH), 2);
+                g.FillPath(_pickerScrollThumbBrush!, trackPath);
+            }
+
+            g.SmoothingMode = SmoothingMode.Default;
+        }
+        catch (Exception ex)
         {
-            int trackH = gridH - 8;
-            int trackX = px + pw - pad - 4;
-            int trackY = gridY + 4;
-            using var trackPath = RRect(new RectangleF(trackX, trackY, 4, trackH), 2);
-            g.FillPath(_pickerScrollTrackBrush!, trackPath);
-            int thumbH = Math.Max(12, trackH * visibleRows / totalRows);
-            int thumbY = trackY + (int)((float)scrollRow / (totalRows - visibleRows) * (trackH - thumbH));
-            using var thumbPath = RRect(new RectangleF(trackX, thumbY, 4, thumbH), 2);
-            g.FillPath(_pickerScrollThumbBrush!, thumbPath);
+            Services.AppDiagnostics.LogError("emoji.picker-render", ex);
         }
-
-        g.SmoothingMode = SmoothingMode.Default;
     }
 
     private static void DrawEmojiPlaceholder(Graphics g, int x, int y, int size)

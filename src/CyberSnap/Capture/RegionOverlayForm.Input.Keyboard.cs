@@ -11,14 +11,15 @@ public sealed partial class RegionOverlayForm
     {
         if ((keyData & Keys.KeyCode) == Keys.Escape)
         {
+            if (_emojiPickerOpen)
+            {
+                _emojiPickerOpen = false;
+                HideEmojiSearchBox();
+                RefreshToolbar();
+                Invalidate();
+                return true;
+            }
             Cancel();
-            return true;
-        }
-        if (_flyoutOpen && TryHandleAnnotationToolHotkey(keyData & Keys.KeyCode))
-        {
-            CloseMoreToolsDropdown();
-            RefreshToolbar();
-            Invalidate();
             return true;
         }
         return base.ProcessCmdKey(ref msg, keyData);
@@ -30,7 +31,74 @@ public sealed partial class RegionOverlayForm
         {
             e.SuppressKeyPress = true;
             e.Handled = true;
+            if (_emojiPickerOpen)
+            {
+                _emojiPickerOpen = false;
+                HideEmojiSearchBox();
+                RefreshToolbar();
+                Invalidate();
+                return;
+            }
             Cancel();
+            return;
+        }
+
+        // Emoji picker keyboard input (no TextBox needed — avoids focus issues)
+        if (_emojiPickerOpen)
+        {
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+
+            if (e.KeyCode == Keys.Back && _emojiSearch.Length > 0)
+            {
+                _emojiSearch = _emojiSearch[..^1];
+                _emojiScrollOffset = 0;
+                _emojiHovered = -1;
+                InvalidateEmojiCache();
+                QueueEmojiWarmup();
+                UpdateToolbarSurfaceOnly();
+                return;
+            }
+            if (e.KeyCode == Keys.Left)
+            {
+                _emojiHovered = Math.Max(0, _emojiHovered - 1);
+                UpdateToolbarSurfaceOnly();
+                return;
+            }
+            if (e.KeyCode == Keys.Right)
+            {
+                var filtered = GetFilteredEmojiPalette();
+                _emojiHovered = Math.Min(filtered.Length - 1, _emojiHovered + 1);
+                UpdateToolbarSurfaceOnly();
+                return;
+            }
+            if (e.KeyCode == Keys.Up)
+            {
+                _emojiHovered = Math.Max(0, _emojiHovered - EmojiPickerColumns);
+                UpdateToolbarSurfaceOnly();
+                return;
+            }
+            if (e.KeyCode == Keys.Down)
+            {
+                var filtered = GetFilteredEmojiPalette();
+                _emojiHovered = Math.Min(filtered.Length - 1, _emojiHovered + EmojiPickerColumns);
+                UpdateToolbarSurfaceOnly();
+                return;
+            }
+            if (e.KeyCode == Keys.Enter && _emojiHovered >= 0)
+            {
+                var filtered = GetFilteredEmojiPalette();
+                if (_emojiHovered < filtered.Length)
+                {
+                    _selectedEmoji = filtered[_emojiHovered].emoji;
+                    _isPlacingEmoji = true;
+                    _emojiPickerOpen = false;
+                    RefreshToolbar();
+                    Invalidate();
+                }
+                return;
+            }
+            // Printable characters are handled by OnKeyPress
             return;
         }
 
@@ -60,13 +128,10 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        // All search/text input is handled by off-screen TextBoxes
-        if (_emojiPickerOpen) return;
-
         // Emoji placing: Tab re-opens picker
         if (_mode == CaptureMode.Emoji && _isPlacingEmoji)
         {
-            if (e.KeyCode == Keys.Tab) { _emojiPickerOpen = true; _isPlacingEmoji = false; ShowEmojiSearchBox(); QueueEmojiWarmup(); RefreshToolbar(); }
+            if (e.KeyCode == Keys.Tab) { _emojiPickerOpen = true; _isPlacingEmoji = false; QueueEmojiWarmup(); RefreshToolbar(); }
             return;
         }
 
@@ -96,6 +161,22 @@ public sealed partial class RegionOverlayForm
             Invalidate(bounds);
             return;
         }
+    }
+
+    protected override void OnKeyPress(KeyPressEventArgs e)
+    {
+        if (_emojiPickerOpen && !char.IsControl(e.KeyChar))
+        {
+            _emojiSearch += e.KeyChar;
+            _emojiScrollOffset = 0;
+            _emojiHovered = -1;
+            InvalidateEmojiCache();
+            QueueEmojiWarmup();
+            UpdateToolbarSurfaceOnly();
+            e.Handled = true;
+            return;
+        }
+        base.OnKeyPress(e);
     }
 
     private bool TryHandleAnnotationToolHotkey(Keys keyCode)

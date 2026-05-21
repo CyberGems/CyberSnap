@@ -117,6 +117,41 @@ public sealed partial class RegionOverlayForm
         if (!_hasSelection)
             _lastSelectionRect = Rectangle.Empty;
 
+        // Draw confirmation-mode handles and buttons
+        if (_isConfirmingSelection)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            // Draw buttons FIRST (underneath the frame so any overlap is covered)
+            var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+            using (var btnFont = UiChrome.ChromeFont(11f, FontStyle.Bold))
+            using (var textBrush = new SolidBrush(UiChrome.SurfaceTextPrimary))
+            using (var borderPen = new Pen(Color.FromArgb(160, UiChrome.AccentColor), 1.5f))
+            using (var glowPen = new Pen(Color.FromArgb(40, UiChrome.AccentColor), 4f))
+            {
+                var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                float corner = UiChrome.ScaledToolbarCornerRadius;
+
+                // Confirm button — cyberpunk dark surface with accent border
+                WindowsDockRenderer.PaintSurface(g, confirmBtn, corner);
+                g.DrawRectangle(borderPen, confirmBtn);
+                g.DrawRectangle(glowPen, Rectangle.Inflate(confirmBtn, 2, 2));
+                g.DrawString("Confirm", btnFont, textBrush, confirmBtn, sf);
+
+                // Cancel button — same style
+                WindowsDockRenderer.PaintSurface(g, cancelBtn, corner);
+                g.DrawRectangle(borderPen, cancelBtn);
+                g.DrawRectangle(glowPen, Rectangle.Inflate(cancelBtn, 2, 2));
+                g.DrawString("Cancel", btnFont, textBrush, cancelBtn, sf);
+            }
+
+            // Draw selection frame and handles ON TOP of buttons
+            SelectionFrameRenderer.DrawRectangle(g, _confirmRect);
+            var handles = GetConfirmHandleRects();
+            foreach (var h in handles)
+                WindowsHandleRenderer.Paint(g, h);
+        }
+
         g.SmoothingMode = SmoothingMode.Default;
     }
 

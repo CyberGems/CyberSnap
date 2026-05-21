@@ -9,42 +9,26 @@ public sealed partial class RegionOverlayForm
     protected override void OnMouseDown(MouseEventArgs e)
     {
         Focus();
-        if (DateTime.UtcNow < _suppressOverlayClickUntilUtc)
-            return;
-
         if (e.Button == MouseButtons.Right) { Cancel(); return; }
         if (e.Button != MouseButtons.Left) return;
 
         int btn = GetToolbarButtonAt(e.Location);
         if (btn >= 0)
         {
-            if (btn == BtnCount - 1) { Cancel(); return; }     // close
+            int closeIdx = _mainBarTools.Length + 1;
+            if (btn == closeIdx) { Cancel(); return; }     // close
             if (btn == ColorButtonIndex) { ToggleColorPicker(); return; } // color dot
-            if (_moreButtonIndex >= 0 && btn == _moreButtonIndex)
-            {
-                if (_flyoutOpen)
-                    CloseMoreToolsDropdown();
-                else
-                    ShowMoreToolsDropdown();
-                return;
-            }
             if (btn < _mainBarTools.Length)
             {
                 if (_mainBarTools[btn].Mode.HasValue)
                     SetTool(_mainBarTools[btn]);
             }
-            else if (btn >= _mainBarTools.Length + 2)
+            else if (btn >= closeIdx + 1 && btn < BtnCount)
             {
-                int flyoutIdx = btn - _mainBarTools.Length - 2;
+                int flyoutIdx = btn - (closeIdx + 1);
                 if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length && _flyoutTools[flyoutIdx].Mode.HasValue)
                     SetTool(_flyoutTools[flyoutIdx]);
             }
-            return;
-        }
-
-        if (_flyoutOpen)
-        {
-            CloseMoreToolsDropdown();
             return;
         }
 
@@ -247,6 +231,43 @@ public sealed partial class RegionOverlayForm
         {
             ColorPicked?.Invoke(_hexStr);
             return;
+        }
+
+        // Region confirmation mode: handles and buttons take priority
+        if (_isConfirmingSelection)
+        {
+            int ch = HitTestConfirmHandle(e.Location);
+            if (ch >= 0)
+            {
+                _confirmHandleDragIndex = ch;
+                _isConfirmDragging = false;
+                _confirmDragStart = e.Location;
+                _confirmDragStartRect = _confirmRect;
+                return;
+            }
+            int confirmBtnHit = HitTestConfirmButton(e.Location);
+            if (confirmBtnHit == 0)
+            {
+                CommitConfirmedSelection();
+                return;
+            }
+            if (confirmBtnHit == 1)
+            {
+                ExitConfirmMode();
+                return;
+            }
+            if (_confirmRect.Contains(e.Location))
+            {
+                // Start dragging the confirmed region
+                _isConfirmDragging = true;
+                _confirmHandleDragIndex = -1;
+                _confirmDragStart = e.Location;
+                _confirmDragOffset = new Point(e.Location.X - _confirmRect.X, e.Location.Y - _confirmRect.Y);
+                _confirmDragStartRect = _confirmRect;
+                return;
+            }
+            // Click outside: start a new selection (abandon confirmation)
+            ExitConfirmMode();
         }
 
         _hasDragged = false;

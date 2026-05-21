@@ -5,13 +5,13 @@
     [Parameter(Mandatory = $true)]
     [string]$OutputDirectory,
 
-    [string]$PackageIdentifier = 'JasperDevs.CyberSnap',
+    [string]$PackageIdentifier = 'CyberGems.CyberSnap',
     [string]$PackageName = 'CyberSnap',
-    [string]$Publisher = 'JasperDevs',
-    [string]$PublisherUrl = 'https://github.com/jasperdevs/odd-snap',
-    [string]$PublisherSupportUrl = 'https://github.com/jasperdevs/odd-snap/issues',
+    [string]$Publisher = 'CyberGems',
+    [string]$PublisherUrl = 'https://github.com/CyberGems/CyberSnap',
+    [string]$PublisherSupportUrl = 'https://github.com/CyberGems/CyberSnap/issues',
     [string]$License = 'GPL-3.0',
-    [string]$LicenseUrl = 'https://github.com/jasperdevs/odd-snap/blob/main/LICENSE',
+    [string]$LicenseUrl = 'https://github.com/CyberGems/CyberSnap/blob/main/LICENSE',
     [string]$Moniker = 'CyberSnap',
     [string]$Description = 'Screenshot, annotation, OCR, sticker, and recording tool for Windows',
     [string[]]$Tags = @('screenshot', 'capture', 'annotation', 'ocr', 'recording', 'stickers'),

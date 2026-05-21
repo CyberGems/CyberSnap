@@ -178,6 +178,8 @@ public static class ToolListBuilder
                     }
                 };
 
+                hkBox.PreviewTextInput += (_, e) => { e.Handled = true; };
+
                 clearBtn.Click += (_, _) =>
                 {
                     var (previousMod, previousKey) = settingsService.Settings.GetToolHotkey(capturedId);

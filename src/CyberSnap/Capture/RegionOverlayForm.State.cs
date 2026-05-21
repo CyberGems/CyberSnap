@@ -521,4 +521,116 @@ public sealed partial class RegionOverlayForm
         _committedAnnotationsDirty = false;
         return bitmap;
     }
+
+    // ── Region confirmation mode (handles + Confirm/Cancel buttons) ──
+
+    private void EnterConfirmMode(Rectangle rect)
+    {
+        _isConfirmingSelection = true;
+        _confirmRect = rect;
+        _confirmHandleDragIndex = -1;
+        _hasSelection = false;
+        _selectionRect = Rectangle.Empty;
+        _selectionEnd = Point.Empty;
+        EnsureToolbarReady();
+        RefreshToolbar();
+        Invalidate();
+    }
+
+    private void ExitConfirmMode()
+    {
+        _isConfirmingSelection = false;
+        _confirmRect = Rectangle.Empty;
+        _confirmHandleDragIndex = -1;
+        _hasSelection = false;
+        _selectionRect = Rectangle.Empty;
+        _selectionEnd = Point.Empty;
+        EnsureToolbarReady();
+        RefreshToolbar();
+        Invalidate();
+    }
+
+    private void CommitConfirmedSelection()
+    {
+        var rect = _confirmRect;
+        _isConfirmingSelection = false;
+        _confirmRect = Rectangle.Empty;
+        _confirmHandleDragIndex = -1;
+        bool isOcr = _mode == CaptureMode.Ocr;
+        bool isScan = _mode == CaptureMode.Scan;
+        bool isSticker = _mode == CaptureMode.Sticker;
+        bool isUpscale = _mode == CaptureMode.Upscale;
+        if (isOcr) OcrRegionSelected?.Invoke(rect);
+        else if (isScan) ScanRegionSelected?.Invoke(rect);
+        else if (isSticker) StickerRegionSelected?.Invoke(rect);
+        else if (isUpscale) UpscaleRegionSelected?.Invoke(rect);
+        else RegionSelected?.Invoke(rect);
+    }
+
+    private static readonly int ConfirmHandleSize = 10;
+    private static readonly int ConfirmButtonWidth = 90;
+    private static readonly int ConfirmButtonHeight = 32;
+    private static readonly int ConfirmButtonGap = 8;
+
+    private Rectangle[] GetConfirmHandleRects()
+    {
+        int hs = UiChrome.ScaleInt(ConfirmHandleSize);
+        int h2 = hs / 2;
+        var r = _confirmRect;
+        return new[]
+        {
+            new Rectangle(r.Left - h2, r.Top - h2, hs, hs),      // 0 TL
+            new Rectangle(r.Right - h2, r.Top - h2, hs, hs),     // 1 TR
+            new Rectangle(r.Left - h2, r.Bottom - h2, hs, hs),   // 2 BL
+            new Rectangle(r.Right - h2, r.Bottom - h2, hs, hs),  // 3 BR
+        };
+    }
+
+    private (Rectangle confirm, Rectangle cancel) GetConfirmButtonRects()
+    {
+        int bw = UiChrome.ScaleInt(ConfirmButtonWidth);
+        int bh = UiChrome.ScaleInt(ConfirmButtonHeight);
+        int gap = UiChrome.ScaleInt(ConfirmButtonGap);
+        var r = _confirmRect;
+        int totalW = bw * 2 + gap;
+        int x = r.Left + (r.Width - totalW) / 2;
+        int y = r.Bottom + UiChrome.ScaleInt(12);
+        // Clamp y so buttons stay inside client area
+        if (y + bh > ClientSize.Height - 10)
+            y = Math.Max(10, r.Top - bh - UiChrome.ScaleInt(12));
+        return (
+            new Rectangle(x, y, bw, bh),
+            new Rectangle(x + bw + gap, y, bw, bh)
+        );
+    }
+
+    private int HitTestConfirmHandle(Point p)
+    {
+        var handles = GetConfirmHandleRects();
+        for (int i = 0; i < handles.Length; i++)
+            if (handles[i].Contains(p)) return i;
+        return -1;
+    }
+
+    private int HitTestConfirmButton(Point p)
+    {
+        var (confirm, cancel) = GetConfirmButtonRects();
+        if (confirm.Contains(p)) return 0;
+        if (cancel.Contains(p)) return 1;
+        return -1;
+    }
+
+    private Rectangle GetToolbarAnchorClientBounds()
+    {
+        var bounds = _toolbarAnchorArea.IsEmpty
+            ? new Rectangle(0, 0, ClientSize.Width, ClientSize.Height)
+            : new Rectangle(
+                _toolbarAnchorArea.X - _virtualBounds.X,
+                _toolbarAnchorArea.Y - _virtualBounds.Y,
+                _toolbarAnchorArea.Width,
+                _toolbarAnchorArea.Height);
+
+        bounds.Intersect(new Rectangle(0, 0, ClientSize.Width, ClientSize.Height));
+        return bounds.IsEmpty ? new Rectangle(0, 0, ClientSize.Width, ClientSize.Height) : bounds;
+    }
 }

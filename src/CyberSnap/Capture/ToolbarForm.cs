@@ -3,6 +3,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
 
@@ -79,17 +80,26 @@ public sealed class ToolbarForm : Form
         int dy = _owner.Top - Top;
 
         var g = _surfaceGraphics!;
-        g.Clear(Color.Transparent);
-        g.CompositingMode = CompositingMode.SourceOver;
-        g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-        g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-        g.TranslateTransform(dx, dy);
-        _owner.PaintToolbarTo(g);
-        g.ResetTransform();
-        g.Flush(System.Drawing.Drawing2D.FlushIntention.Sync);
+        try
+        {
+            g.Clear(Color.Transparent);
+            g.CompositingMode = CompositingMode.SourceOver;
+            g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+            g.TranslateTransform(dx, dy);
+            _owner.PaintToolbarTo(g);
+            g.ResetTransform();
+            g.Flush(System.Drawing.Drawing2D.FlushIntention.Sync);
+        }
+        catch (Exception ex)
+        {
+            Services.AppDiagnostics.LogError("toolbar.paint-failed", ex);
+            g.Clear(Color.Transparent);
+            g.ResetTransform();
+        }
 
         var screenPt = new Native.User32.POINT { X = Left, Y = Top };
         var size = new Native.User32.SIZE { cx = sz.Width, cy = sz.Height };

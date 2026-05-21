@@ -338,7 +338,8 @@ public partial class App
                     ShowCaptureMagnifier = _settingsService.Settings.ShowCaptureMagnifier,
                     AnnotationStrokeShadow = _settingsService.Settings.AnnotationStrokeShadow,
                     CaptureDockSide = _settingsService.Settings.CaptureDockSide,
-                    UiScale = _settingsService.Settings.UiScale
+                    UiScale = _settingsService.Settings.UiScale,
+                    ConfirmRegionBeforeCapture = _settingsService.Settings.ConfirmRegionBeforeCapture
                 };
                 overlay.SetEnabledTools(_settingsService.Settings.EnabledTools);
                 overlay.SetShowToolNumberBadges(_settingsService.Settings.ShowToolNumberBadges);

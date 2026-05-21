@@ -28,6 +28,17 @@ public sealed partial class RegionOverlayForm : Form
     private bool _hasDragged;
     private bool _isEvading;
 
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ConfirmRegionBeforeCapture { get; set; } = true;
+
+    private bool _isConfirmingSelection;
+    private Rectangle _confirmRect;
+    private int _confirmHandleDragIndex = -1;
+    private bool _isConfirmDragging;
+    private Point _confirmDragStart;
+    private Point _confirmDragOffset;
+    private Rectangle _confirmDragStartRect;
+
     private CaptureDockSide ActiveDockSide => _isEvading ? GetOppositeDockSide(CaptureDockSide) : CaptureDockSide;
 
     private static CaptureDockSide GetOppositeDockSide(CaptureDockSide side) => side switch
@@ -45,7 +56,6 @@ public sealed partial class RegionOverlayForm : Form
     private ToolDef[] _flyoutTools = Array.Empty<ToolDef>();
     private int BtnCount => _mainBarTools.Length + _flyoutTools.Length + 2; // +color +close
     private int ColorButtonIndex => _mainBarTools.Length;
-    private int _moreButtonIndex = -1; // index of "..." button in _toolbarButtons
     private Rectangle[] _toolbarButtons = Array.Empty<Rectangle>();
     private string[] _toolbarIcons = Array.Empty<string>();
     private string[] _toolbarLabels = Array.Empty<string>();
@@ -56,11 +66,6 @@ public sealed partial class RegionOverlayForm : Form
     private int _tooltipButton = -1;
     private WindowsToolTip? _toolbarToolTip;
 
-    // More-tools dropdown state
-    private bool _flyoutOpen;
-    private DateTime _suppressOverlayClickUntilUtc;
-    private System.Windows.Forms.Timer? _moreToolsMenuMonitorTimer;
-    private DateTime? _moreToolsPointerLeftUiUtc;
     private bool _showToolNumberBadges = true;
     private Rectangle _toolbarRect;
     private Rectangle _toolbarAnchorArea;
@@ -244,7 +249,6 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _emojiPickerRect;
     private string _emojiSearch = "";
     private int _emojiHovered = -1;
-    private TextBox? _emojiSearchBox;
     private int _emojiScrollOffset;
     private string? _selectedEmoji;
     private bool _isPlacingEmoji;
@@ -590,8 +594,6 @@ public sealed partial class RegionOverlayForm : Form
             _toolbarToolIds[btnIdx] = _flyoutTools[i].Id;
             _toolbarModes[btnIdx] = _flyoutTools[i].Mode;
         }
-
-        _moreButtonIndex = -1;
 
         _toolbarRect = ToolbarLayout.GetToolbarRect(
             _virtualBounds,
