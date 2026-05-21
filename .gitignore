@@ -1,0 +1,48 @@
+﻿## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.vs/
+.vs/
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+bld/
+
+## NuGet
+*.nupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+
+## IDE
+.idea/
+*.sln.iml
+.vscode/
+
+## Release artifacts
+release-hdr/
+
+## OS
+Thumbs.db
+.DS_Store
+nul
+
+## Publish
+publish/
+
+## Temp icon build artifacts
+src/CyberSnap/CyberSnap_*.png
+
+## Release zips
+*.zip
+.omx/
+.claude/
+site/node_modules/
+*.tsbuildinfo
+site/vite-dev.*.log

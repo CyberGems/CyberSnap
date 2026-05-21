@@ -1,0 +1,771 @@
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Drawing.Text;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using CyberSnap.Helpers;
+using CyberSnap.Models;
+using CyberSnap.Services;
+
+namespace CyberSnap.Capture;
+
+public sealed partial class RegionOverlayForm : Form
+{
+    private readonly Bitmap _screenshot;
+    private int[]? _pixelData;
+    private readonly int _bmpW, _bmpH;
+    private readonly Rectangle _virtualBounds;
+    private readonly WindowDetectionMode _windowDetectionMode;
+    private readonly CenterSelectionAspectRatio _centerSelectionAspectRatio;
+
+    private CaptureMode _mode = CaptureMode.Rectangle;
+    private bool _isSelecting;
+    private Point _selectionStart;
+    private Point _selectionEnd;
+    private Rectangle _selectionRect;
+    private bool _hasSelection;
+    private bool _hasDragged;
+    private bool _isEvading;
+
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ConfirmRegionBeforeCapture { get; set; } = true;
+
+    private bool _isConfirmingSelection;
+    private Rectangle _confirmRect;
+    private int _confirmHandleDragIndex = -1;
+    private bool _isConfirmDragging;
+    private Point _confirmDragStart;
+    private Point _confirmDragOffset;
+    private Rectangle _confirmDragStartRect;
+
+    private CaptureDockSide ActiveDockSide => _isEvading ? GetOppositeDockSide(CaptureDockSide) : CaptureDockSide;
+
+    private static CaptureDockSide GetOppositeDockSide(CaptureDockSide side) => side switch
+    {
+        CaptureDockSide.Top => CaptureDockSide.Bottom,
+        CaptureDockSide.Bottom => CaptureDockSide.Top,
+        CaptureDockSide.Left => CaptureDockSide.Right,
+        CaptureDockSide.Right => CaptureDockSide.Left,
+        _ => side
+    };
+
+    // Dynamic toolbar built from enabled tools + fixed buttons (color, close)
+    private ToolDef[] _visibleTools = ToolDef.AllTools;
+    private ToolDef[] _mainBarTools = Array.Empty<ToolDef>();
+    private ToolDef[] _flyoutTools = Array.Empty<ToolDef>();
+    private int BtnCount => _mainBarTools.Length + _flyoutTools.Length + 2; // +color +close
+    private int ColorButtonIndex => _mainBarTools.Length;
+    private Rectangle[] _toolbarButtons = Array.Empty<Rectangle>();
+    private string[] _toolbarIcons = Array.Empty<string>();
+    private string[] _toolbarLabels = Array.Empty<string>();
+    private string[] _toolbarToolIds = Array.Empty<string>();
+    private CaptureMode?[] _toolbarModes = Array.Empty<CaptureMode?>();
+    private string? _activeToolId;
+    private int _hoveredButton = -1;
+    private int _tooltipButton = -1;
+    private WindowsToolTip? _toolbarToolTip;
+
+    private bool _showToolNumberBadges = true;
+    private Rectangle _toolbarRect;
+    private Rectangle _toolbarAnchorArea;
+    private Rectangle _lastOverlayUiBounds;
+    private int _toolbarRenderVersion;
+    private float _toolbarAnim;
+    private Point _lastCursorPos;
+    private Point _prevCursorPos; // crosshair ghosting fix
+    private Rectangle _lastSelectionRect;
+    private Rectangle _lastAutoDetectRect;
+    private LiveSelectionAdornerForm? _selectionAdorner;
+    private CaptureEscapeKeyHook? _escapeHook;
+    private CrosshairGuideForm? _verticalCrosshairForm;
+    private CrosshairGuideForm? _horizontalCrosshairForm;
+    private readonly System.Windows.Forms.Timer _animTimer;
+    private readonly System.Windows.Forms.Timer _autoDetectTimer;
+    private DateTime _showTime;
+    private ToolbarForm? _toolbarForm;
+    private bool _allowDeactivation;
+    private bool _cancelRequested;
+    private Point _pendingAutoDetectPoint = Point.Empty;
+
+    private const int TopBarHeight = 110;
+    private Bitmap? _brandBitmap;
+
+    // Color picker state
+    private readonly Bitmap _magBitmap;
+    private readonly int[] _magPixels;
+    private readonly Graphics _magGfx;
+    private readonly Font _hexFont = UiChrome.ChromeFont(11f, FontStyle.Bold);
+    private readonly Font _rgbFont = UiChrome.ChromeFont(9f);
+    private readonly Font _readoutFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
+    private readonly SolidBrush _mutedBrush = new(Color.FromArgb(140, 255, 255, 255));
+    private readonly Pen _crossPen = new(Color.FromArgb(210, 255, 255, 255), 1f);
+    private Point _pickerCursorPos;
+    private Point _lastMagnifierSamplePoint = new(-1, -1);
+    private Color _pickedColor = Color.Black;
+    private string _hexStr = "000000";
+    private string _rgbStr = "0, 0, 0";
+    private readonly System.Windows.Forms.Timer _pickerTimer;
+
+    private const int Grid = 11, Cell = 10, Mag = Grid * Cell;
+    private const int InfoH = 0, PPad = 0;
+    private const int PW = Mag, PH = Mag;
+    private const int MagOff = 8, MagMargin = 4;
+
+    // Typed undo stack: all annotations in creation order
+    private readonly List<Annotation> _undoStack = new();
+    private readonly List<Annotation> _redoStack = new();
+    private Bitmap? _committedAnnotationsBitmap;
+    private bool _committedAnnotationsDirty = true;
+
+    // Draw / Blur / Arrow state
+    private List<Point>? _currentStroke;
+    private Point _blurStart;
+    private bool _isBlurring;
+    private Bitmap? _blurPreviewBitmap;
+    private Graphics? _blurPreviewGraphics;
+    private Size _blurPreviewSize;
+
+    private Point _arrowStart;
+    private bool _isArrowDragging;
+
+    // Straight line
+    private Point _lineStart;
+    private bool _isLineDragging;
+
+    // Ruler tool
+    private Point _rulerStart;
+    private bool _isRulerDragging;
+
+    // Tracks the union of pixels painted by the most recent PaintAnnotations call,
+    // so InvalidateLivePreview can always re-clear the previous frame's live overlay
+    // even when a tool's per-frame bounds underestimate the actual paint extent.
+    private Rectangle _lastLivePreviewPaintExtent;
+
+    // Curved arrows: freehand path with arrowhead at end
+    private List<Point>? _currentCurvedArrow;
+    private bool _isCurvedArrowDragging;
+
+    // Highlight rectangles (semi-transparent, yellow default)
+    private Point _highlightStart;
+    private bool _isHighlighting;
+    private static readonly Color DefaultHighlightColor = Color.FromArgb(255, 255, 220, 0);
+
+    // Shape tools
+    private Point _shapeStart;
+    private bool _isRectShapeDragging;
+    private bool _isCircleShapeDragging;
+
+    // Step numbering
+    private int _nextStepNumber = 1;
+
+    // Region auto-detect
+    private Rectangle _autoDetectRect;
+    private bool _autoDetectActive;
+
+    // Color picker popup state
+    private bool _colorPickerOpen;
+    private Rectangle _colorPickerRect;
+    private PickerMagnifierForm? _captureMagnifierForm;
+
+    private static RegionOverlayForm? _currentOverlay;
+
+    // Select tool state
+    private int _selectedAnnotationIndex = -1;
+    private bool _isSelectDragging;
+    private bool _isSelectResizing;
+    private int _selectResizeHandle = -1; // 0=TL,1=TR,2=BL,3=BR
+    private Point _selectDragStart;
+    private Point _selectDragOffset;
+    private Rectangle _selectHandleBounds; // cached bounds for handle hit-testing
+    private Annotation? _selectResizeOriginalAnnotation;
+    private Annotation? _selectPreviewAnnotation;
+    // Index in _undoStack to skip when rebuilding the committed bitmap.
+    // While a select drag/resize is active, the live preview is the only
+    // rendering of that annotation â€” without skipping, you see a ghost at
+    // the original position.
+    private int _renderSkipIndex = -1;
+
+    // Smart eraser state
+    private Point _eraserStart;
+    private Color _eraserColor;
+    private bool _isEraserDragging;
+    private bool _isTyping;
+    private Point _textPos;
+    private string _textBuffer = "";
+    private float _textFontSize = 24f;
+    private bool _textBold = true; // default bold
+    private bool _textItalic;
+    private bool _textStroke = true; // outline stroke enabled by default
+    private bool _textShadow = true; // shadow enabled by default
+    private bool _textBackground;
+    private string _textFontFamily = UiChrome.FallbackFamilyName;
+    private TextBox? _textBox; // real textbox for native text editing
+
+    // Inline text formatting toolbar hit rects (computed during paint)
+    private RectangleF _textToolbarRect;
+    private RectangleF _textBoldBtnRect;
+    private RectangleF _textItalicBtnRect;
+    private RectangleF _textStrokeBtnRect;
+    private RectangleF _textShadowBtnRect;
+    private RectangleF _textBackgroundBtnRect;
+    private RectangleF _textFontBtnRect;
+    private int _hoveredTextBtn = -1; // 0=B, 1=I, 2=S, 3=Sh, 4=Font, -1=none
+    private string _textBtnTooltip = "";
+    private int _textResizeHandle = -1;
+    private bool _textResizing;
+    private Point _textResizeStart;
+    private float _textResizeStartFontSize;
+    private bool _textDragging;
+    private Point _textDragOffset;
+    private Point _lastTextDragLocation = Point.Empty;
+    private DateTime _lastTextDragFrameUtc;
+    private bool _textSelecting;
+    private int _textSelectionAnchor;
+    private RectangleF _activeTextRectCache;
+    private float _activeTextMeasureWidth;
+    private readonly RectangleF[] _activeTextHandleCache = new RectangleF[4];
+    private bool _activeTextLayoutDirty = true;
+    private bool _snapGuideXVisible;
+    private bool _snapGuideYVisible;
+
+    // Font picker popup
+    private bool _fontPickerOpen;
+    private Rectangle _fontPickerRect;
+    private int _fontPickerHovered = -1;
+    private int _fontPickerScroll;
+    private string _fontSearch = "";
+    private string[]? _filteredFonts;
+    private TextBox? _fontSearchBox;
+
+    // Font cache for picker rendering (avoid creating Font objects every paint)
+    private static readonly Dictionary<string, Font> _fontCache = new();
+
+    // Emoji rendering (Direct2D for color emoji)
+    private readonly EmojiRenderer _emojiRenderer = new();
+
+    // Emoji tool state
+    private bool _emojiPickerOpen;
+    private Rectangle _emojiPickerRect;
+    private string _emojiSearch = "";
+    private int _emojiHovered = -1;
+    private int _emojiScrollOffset;
+    private string? _selectedEmoji;
+    private bool _isPlacingEmoji;
+    private float _emojiPlaceSize = 32f;
+    private int _emojiWarmupIndex;
+    private bool _emojiWarmupPending;
+    private const int EmojiPickerColumns = 8;
+    private const int EmojiPickerVisibleRows = 4;
+    private const int EmojiPickerIconSize = 32;
+    private const int EmojiPickerPadding = 8;
+    private const int EmojiPickerSearchBarHeight = 32;
+    private const float EmojiPickerRenderSize = 22f;
+
+    // Full emoji palette (searchable by name - includes semantic tags after |)
+    private static readonly (string emoji, string name)[] EmojiPalette = {
+        // Smileys
+        ("\U0001F600", "grinning|happy face"), ("\U0001F603", "smiley|happy"), ("\U0001F604", "smile|happy"),
+        ("\U0001F601", "grin|happy teeth"), ("\U0001F605", "sweat smile|nervous"), ("\U0001F602", "joy|laugh crying"),
+        ("\U0001F923", "rofl|funny"), ("\U0001F609", "wink|flirt"), ("\U0001F60A", "blush|happy shy"),
+        ("\U0001F607", "innocent|angel halo"), ("\U0001F60D", "heart eyes|love"), ("\U0001F929", "star struck|amazed"),
+        ("\U0001F618", "kiss|love blow"), ("\U0001F617", "kissing"), ("\U0001F61B", "tongue|silly playful"),
+        ("\U0001F92A", "zany|crazy wild"), ("\U0001F60E", "sunglasses|cool"), ("\U0001F913", "nerd|smart glasses"),
+        ("\U0001F914", "thinking|hmm wonder"), ("\U0001F928", "raised eyebrow|skeptical doubt"), ("\U0001F610", "neutral|meh"),
+        ("\U0001F611", "expressionless|blank"), ("\U0001F636", "no mouth|silent quiet"), ("\U0001F644", "rolling eyes|annoyed"),
+        ("\U0001F60F", "smirk|sly"), ("\U0001F62C", "grimacing|awkward cringe"), ("\U0001F925", "lying|pinocchio"),
+        ("\U0001F60C", "relieved|calm peaceful"), ("\U0001F614", "pensive|sad thoughtful"), ("\U0001F62A", "sleepy|tired"),
+        ("\U0001F924", "drooling"), ("\U0001F634", "sleeping|zzz"), ("\U0001F637", "mask|sick covid"),
+        ("\U0001F912", "thermometer|sick fever"), ("\U0001F915", "bandage|hurt injured"), ("\U0001F922", "nauseated|sick gross"),
+        ("\U0001F92E", "vomiting|sick gross"), ("\U0001F927", "sneezing|sick cold"), ("\U0001F975", "hot|warm sweating"),
+        ("\U0001F976", "cold|freezing"), ("\U0001F974", "woozy|drunk"), ("\U0001F635", "dizzy|confused"),
+        ("\U0001F92F", "exploding head|mind blown wow"), ("\U0001F920", "cowboy"), ("\U0001F973", "partying|party celebrate"),
+        ("\U0001F978", "disguise|spy hidden"), ("\U0001F62D", "crying|sob sad tears"),
+        ("\U0001F622", "cry|tear sad"), ("\U0001F625", "sad|disappointed"), ("\U0001F624", "angry huff|frustrated"),
+        ("\U0001F621", "angry|mad"), ("\U0001F620", "rage|furious"), ("\U0001F92C", "swearing|cursing"),
+        ("\U0001F608", "devil|evil"), ("\U0001F47F", "imp|evil"), ("\U0001F480", "skull|dead death"),
+        ("\U0001F4A9", "poop|shit"), ("\U0001F921", "clown|funny"), ("\U0001F47B", "ghost|spooky"),
+        ("\U0001F47D", "alien|space ufo"), ("\U0001F916", "robot|tech"), ("\U0001F63A", "cat smile"),
+        // Gestures & People
+        ("\U0001F44D", "thumbs up|yes good ok like approve"), ("\U0001F44E", "thumbs down|no bad dislike reject"), ("\U0001F44F", "clap|applause bravo"),
+        ("\U0001F64C", "raised hands|hooray celebrate"), ("\U0001F91D", "handshake|deal agree"), ("\U0001F64F", "pray|please thanks hope"),
+        ("\U0000270D", "writing hand|note"), ("\U0001F4AA", "muscle|strong power flex"), ("\U0001F449", "point right|this here"),
+        ("\U0001F448", "point left"), ("\U0001F446", "point up|look above"), ("\U0001F447", "point down|look below"),
+        ("\U0000261D", "index up"), ("\U0000270B", "hand|stop wait high five"), ("\U0001F91A", "back hand"),
+        ("\U0001F596", "vulcan|spock"), ("\U0001F918", "rock|metal"), ("\U0001F919", "call me|phone"),
+        ("\U0001F90C", "pinched"), ("\U0001F90F", "pinch|small tiny"), ("\U0000270C", "peace|victory"),
+        ("\U0001F91E", "crossed fingers|luck hope"), ("\U0001F91F", "love you"), ("\U0001F440", "eyes|look see watch"),
+        ("\U0001F441", "eye|see watch"), ("\U0001F9E0", "brain|smart think idea"), ("\U0001F5E3", "speaking head|talk say"),
+        // Hearts & Symbols
+        ("\U00002764", "heart|love red"), ("\U0001F9E1", "orange heart|love"), ("\U0001F49B", "yellow heart|love"),
+        ("\U0001F49A", "green heart|love"), ("\U0001F499", "blue heart|love"), ("\U0001F49C", "purple heart|love"),
+        ("\U0001F5A4", "black heart|love dark"), ("\U0001F90D", "white heart|love"), ("\U0001F494", "broken heart|sad"),
+        ("\U0001F495", "two hearts|love"), ("\U0001F496", "sparkling heart|love"), ("\U0001F4AF", "100|perfect score"),
+        ("\U0001F4A5", "boom|explosion bang"), ("\U0001F4A2", "anger|mad"), ("\U0001F4AB", "dizzy star"),
+        ("\U0001F4AC", "speech bubble|talk chat message"), ("\U0001F4AD", "thought bubble|think idea"),
+        ("\U00002705", "check|yes done correct complete"), ("\U0000274C", "cross mark|no wrong error delete"), ("\U00002753", "question|help why"),
+        ("\U00002757", "exclamation|important alert"), ("\U000026A0", "warning|caution danger"), ("\U0001F6AB", "prohibited|ban forbidden no"),
+        ("\U0001F6D1", "stop sign|halt"), ("\U0000267B", "recycle|environment green"), ("\U00002B50", "star|favorite rate"),
+        ("\U0001F31F", "glowing star|sparkle shine"), ("\U00002728", "sparkles|magic new clean"), ("\U0001F525", "fire|hot lit trending popular"),
+        ("\U0001F4A3", "bomb|explosive"), ("\U0001F4A1", "light bulb|idea tip hint"), ("\U0001F514", "bell|notification alert ring"),
+        // Objects & Tools
+        ("\U0001F50D", "magnifying glass|search find zoom"), ("\U0001F4CC", "pin|location mark save"), ("\U0001F4CB", "clipboard|copy paste"),
+        ("\U0001F4DD", "memo|note write"), ("\U0001F4C1", "folder|file directory"), ("\U0001F4C2", "open folder|file"),
+        ("\U0001F4C4", "document|page file"), ("\U0001F4C8", "chart up|graph growth increase"), ("\U0001F4C9", "chart down|graph decline decrease"),
+        ("\U0001F4CA", "bar chart|data graph stats"), ("\U0001F4E7", "email|mail message"), ("\U0001F4E2", "loudspeaker|announce"),
+        ("\U0001F4E3", "megaphone|announce"), ("\U0001F512", "lock|secure private"), ("\U0001F513", "unlock|open"),
+        ("\U0001F511", "key|password access"), ("\U0001F527", "wrench|fix repair"), ("\U00002699", "gear|settings config"),
+        ("\U0001F6E0", "tools|fix build"), ("\U0001F5D1", "trash|delete remove"), ("\U0001F4F7", "camera|photo screenshot"),
+        ("\U0001F4F8", "camera flash|photo"), ("\U0001F3A5", "movie camera|video film"), ("\U0001F4F1", "phone|mobile"),
+        ("\U0001F4BB", "laptop|computer"), ("\U0001F5A5", "desktop|computer monitor"), ("\U00002328", "keyboard|type"),
+        ("\U0001F5A8", "printer|print"), ("\U0001F50B", "battery|power energy"), ("\U0001F50C", "plug|electric power"),
+        ("\U000023F0", "alarm clock|time wake"), ("\U0000231A", "watch|time"), ("\U0001F4B0", "money bag|rich cash"),
+        ("\U0001F4B3", "credit card|payment"), ("\U0001F4E6", "package|box delivery"), ("\U0001F381", "gift|present birthday"),
+        ("\U0001F3AF", "target|goal aim bullseye"), ("\U0001F3C6", "trophy|winner champion"), ("\U0001F396", "medal|award"),
+        // Nature & Animals
+        ("\U0001F436", "dog"), ("\U0001F431", "cat"), ("\U0001F42D", "mouse"),
+        ("\U0001F430", "rabbit"), ("\U0001F43B", "bear"), ("\U0001F43C", "panda"),
+        ("\U0001F414", "chicken"), ("\U0001F41B", "bug"), ("\U0001F41D", "bee"),
+        ("\U0001F40D", "snake"), ("\U0001F422", "turtle"), ("\U0001F419", "octopus"),
+        ("\U0001F988", "shark"), ("\U0001F984", "unicorn"), ("\U0001F409", "dragon"),
+        ("\U0001F332", "tree"), ("\U0001F333", "tree2"), ("\U0001F335", "cactus"),
+        ("\U0001F339", "rose"), ("\U0001F33B", "sunflower"), ("\U0001F340", "four leaf"),
+        ("\U0001F30D", "globe"), ("\U0001F30E", "americas"), ("\U0001F30F", "asia"),
+        // Food & Drink
+        ("\U0001F34E", "apple"), ("\U0001F34F", "green apple"), ("\U0001F353", "strawberry"),
+        ("\U0001F352", "cherry"), ("\U0001F349", "watermelon"), ("\U0001F34C", "banana"),
+        ("\U0001F355", "pizza"), ("\U0001F354", "burger"), ("\U0001F35F", "fries"),
+        ("\U0001F32E", "taco"), ("\U0001F370", "cake"), ("\U0001F36D", "lollipop"),
+        ("\U00002615", "coffee"), ("\U0001F37A", "beer"), ("\U0001F377", "wine"),
+        // Travel & Transport
+        ("\U0001F680", "rocket"), ("\U00002708", "airplane"), ("\U0001F697", "car"),
+        ("\U0001F695", "taxi"), ("\U0001F6B2", "bicycle"), ("\U0001F3E0", "house"),
+        ("\U0001F3E2", "office"), ("\U0001F3D7", "construction"), ("\U0001F5FC", "tower"),
+        // Activities & Celebration
+        ("\U0001F389", "party"), ("\U0001F38A", "confetti"), ("\U0001F388", "balloon"),
+        ("\U0001F3B5", "music note"), ("\U0001F3B6", "notes"), ("\U0001F3A8", "palette"),
+        ("\U0001F3AE", "gaming"), ("\U0001F3B2", "dice"), ("\U0001F504", "arrows"),
+        // Flags & misc
+        ("\U0001F6A8", "alert"), ("\U0001F4A8", "dash"), ("\U0001F4A4", "zzz sleep"),
+        ("\U0001F573", "hole"), ("\U0001F648", "see no evil"), ("\U0001F649", "hear no evil"),
+        ("\U0001F64A", "speak no evil"), ("\U0001F4F0", "newspaper"), ("\U0001F5DE", "rolled newspaper"),
+    };
+
+    // Tool color (shared across draw, arrow, text)
+    private Color _toolColor = Color.Red;
+    private static readonly Color[] ToolColors = {
+        Color.Red, Color.FromArgb(255, 136, 0), Color.FromArgb(255, 220, 0),
+        Color.FromArgb(0, 200, 0), Color.FromArgb(0, 136, 255), Color.White
+    };
+    private int _toolColorIndex = 0;
+    private const int ColorPickerColumns = 6;
+    private const int ColorPickerRows = 1;
+    private const int ColorPickerSwatchSize = 28;
+    private const int ColorPickerPadding = 4;
+    private const int GlobalCenterSnapThreshold = 8;
+
+    // (typed _undoStack is defined above with annotation state)
+
+    // Blank cursor for color picker (we draw our own crosshair)
+    private static readonly Cursor _blankCursor = CreateBlankCursor();
+
+    // Events
+    public event Action<Rectangle>? RegionSelected;
+    public event Action<Rectangle>? OcrRegionSelected;
+    public event Action<string>? ColorPicked;
+    public event Action<Rectangle>? ScanRegionSelected;
+    public event Action<Rectangle>? StickerRegionSelected;
+    public event Action<Rectangle>? UpscaleRegionSelected;
+    public event Action? SelectionCancelled;
+
+    public RegionOverlayForm(Bitmap screenshot, Rectangle virtualBounds,
+        CaptureMode initialMode = CaptureMode.Rectangle,
+        WindowDetectionMode windowDetectionMode = WindowDetectionMode.WindowOnly,
+        CenterSelectionAspectRatio centerSelectionAspectRatio = CenterSelectionAspectRatio.Free)
+    {
+        CyberSnap.UI.Theme.Refresh();
+        _screenshot = screenshot;
+        _virtualBounds = virtualBounds;
+        _windowDetectionMode = windowDetectionMode;
+        _centerSelectionAspectRatio = centerSelectionAspectRatio;
+        _bmpW = _screenshot.Width;
+        _bmpH = _screenshot.Height;
+        _mode = initialMode;
+        _activeToolId = ToolDef.AllTools.FirstOrDefault(t => t.Mode == _mode)?.Id;
+        _showTime = DateTime.UtcNow;
+
+        // Magnifier bitmap for color picker
+        _magBitmap = new Bitmap(PW, PH, PixelFormat.Format32bppArgb);
+        _magPixels = new int[PW * PH];
+        _magGfx = Graphics.FromImage(_magBitmap);
+        _magGfx.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+        SetupForm();
+        CalcToolbar();
+
+        _animTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _animTimer.Tick += (_, _) =>
+        {
+            if (UI.Motion.Disabled)
+            {
+                _toolbarAnim = 1f;
+            }
+            else
+            {
+                float elapsed = (float)(DateTime.UtcNow - _showTime).TotalMilliseconds;
+                _toolbarAnim = EaseOutCubic(Math.Min(1f, elapsed / 180f));
+            }
+            UpdateToolbarSurfaceOnly();
+            Invalidate(new Rectangle(_toolbarRect.X - 12, _toolbarRect.Y - 48,
+                _toolbarRect.Width + 24, _toolbarRect.Height + 160));
+            if (_toolbarAnim >= 1f)
+            {
+                _animTimer.Stop();
+            }
+        };
+
+        _pickerTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _pickerTimer.Tick += OnPickerTick;
+        if (_mode == CaptureMode.ColorPicker) _pickerTimer.Start();
+
+        _autoDetectTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _autoDetectTimer.Tick += (_, _) =>
+        {
+            _autoDetectTimer.Stop();
+            if (_isSelecting || !ToolDef.IsCaptureTool(_mode) || _mode == CaptureMode.Center || IsPointInOverlayUi(_pendingAutoDetectPoint))
+                return;
+
+            UpdateAutoDetectRect(_pendingAutoDetectPoint);
+        };
+
+        _currentOverlay = this;
+    }
+
+    public static bool TrySwitchCurrentOverlayMode(CaptureMode mode)
+    {
+        if (!IsOverlaySwitchableMode(mode))
+            return false;
+
+        var overlay = _currentOverlay;
+        if (overlay is null || overlay.IsDisposed || overlay.Disposing)
+            return false;
+        try
+        {
+            if (overlay.InvokeRequired)
+                overlay.BeginInvoke(new Action(() => overlay.SwitchModeFromHotkey(mode)));
+            else
+                overlay.SwitchModeFromHotkey(mode);
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private int[] GetPixelData()
+    {
+        if (_pixelData != null)
+            return _pixelData;
+
+        var pixelData = new int[_bmpW * _bmpH];
+        var bits = _screenshot.LockBits(new Rectangle(0, 0, _bmpW, _bmpH),
+            ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        try
+        {
+            Marshal.Copy(bits.Scan0, pixelData, 0, pixelData.Length);
+        }
+        finally
+        {
+            _screenshot.UnlockBits(bits);
+        }
+
+        _pixelData = pixelData;
+        return pixelData;
+    }
+
+    private static float EaseOutCubic(float t)
+        => 1f - (float)Math.Pow(1f - Math.Clamp(t, 0f, 1f), 3f);
+
+    private void SetupForm()
+    {
+        FormBorderStyle = FormBorderStyle.None;
+        ShowInTaskbar = false;
+        TopMost = true;
+        StartPosition = FormStartPosition.Manual;
+        Text = string.Empty;
+        Bounds = new Rectangle(_virtualBounds.X, _virtualBounds.Y,
+            _virtualBounds.Width, _virtualBounds.Height);
+        MinimumSize = Size.Empty;
+        MinimizeBox = false;
+        MaximizeBox = false;
+        Cursor = Cursors.Cross;
+        BackColor = Color.Black;
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.Opaque, true);
+        KeyPreview = true;
+    }
+
+    private static int GroupGap => UiChrome.ScaledToolbarGroupGap; // spacing between tool groups (includes separator line)
+
+    // Separator indices (computed dynamically based on visible tools)
+    private int[] _sepAfter = Array.Empty<int>();
+
+    private void CalcToolbar()
+    {
+        int pad = UiChrome.ScaledToolbarInnerPadding;
+        int buttonSize = UiChrome.ScaledToolbarButtonSize;
+        int buttonSpacing = UiChrome.ScaledToolbarButtonSpacing;
+        int toolbarHeight = UiChrome.ScaledToolbarHeight;
+        Point? cursorScreenPoint = null;
+        try
+        {
+            var cursorPos = System.Windows.Forms.Cursor.Position;
+            if (_virtualBounds.Contains(cursorPos))
+                cursorScreenPoint = cursorPos;
+        }
+        catch { }
+
+        Rectangle[] screenWorkingAreas = GetScreenWorkingAreas();
+        _toolbarAnchorArea = ToolbarLayout.ResolveToolbarAnchorArea(
+            _virtualBounds,
+            cursorScreenPoint,
+            _toolbarAnchorArea,
+            screenWorkingAreas);
+        Rectangle screenBounds = _toolbarAnchorArea.IsEmpty ? _virtualBounds : _toolbarAnchorArea;
+
+        BuildToolbarToolSplit(screenBounds, buttonSize, buttonSpacing, pad);
+        _sepAfter = Array.Empty<int>(); // dividers drawn manually inside PaintToolbar
+
+        int tier1PrimarySpan = GetToolbarPrimarySpan(7, 1, buttonSize, buttonSpacing, pad);
+        int tier2PrimarySpan = GetToolbarPrimarySpan(15, 6, buttonSize, buttonSpacing, pad);
+        int maxPrimarySpan = tier2PrimarySpan;
+
+        int w, h;
+        if (IsVerticalDock)
+        {
+            w = pad * 2 + buttonSize * 2 + buttonSpacing;
+            h = maxPrimarySpan;
+        }
+        else
+        {
+            w = maxPrimarySpan;
+            h = pad * 2 + buttonSize * 2 + buttonSpacing;
+        }
+
+        _toolbarButtons = new Rectangle[BtnCount];
+        _toolbarIcons = new string[BtnCount];
+        _toolbarLabels = new string[BtnCount];
+        _toolbarToolIds = new string[BtnCount];
+        _toolbarModes = new CaptureMode?[BtnCount];
+
+        // 1. Group 0 (Capture tools)
+        for (int i = 0; i < _mainBarTools.Length; i++)
+        {
+            _toolbarIcons[i] = _mainBarTools[i].Id == "crop" ? "rect" : _mainBarTools[i].Id;
+            _toolbarLabels[i] = LocalizationService.Translate(_mainBarTools[i].Label);
+            _toolbarToolIds[i] = _mainBarTools[i].Id;
+            _toolbarModes[i] = _mainBarTools[i].Mode;
+        }
+
+        // 2. Color picker button
+        int colorIdx = _mainBarTools.Length;
+        _toolbarIcons[colorIdx] = "color";
+        _toolbarLabels[colorIdx] = LocalizationService.Translate("Color");
+        _toolbarToolIds[colorIdx] = "color";
+        _toolbarModes[colorIdx] = null;
+
+        // 3. Close button
+        int closeIdx = _mainBarTools.Length + 1;
+        _toolbarIcons[closeIdx] = "close";
+        _toolbarLabels[closeIdx] = LocalizationService.Translate("Close (Esc)");
+        _toolbarToolIds[closeIdx] = "close";
+        _toolbarModes[closeIdx] = null;
+
+        // 4. Group 1 (Annotation & Drawing tools)
+        int drawingStartIdx = _mainBarTools.Length + 2;
+        for (int i = 0; i < _flyoutTools.Length; i++)
+        {
+            int btnIdx = drawingStartIdx + i;
+            _toolbarIcons[btnIdx] = _flyoutTools[i].Id;
+            _toolbarLabels[btnIdx] = LocalizationService.Translate(_flyoutTools[i].Label);
+            _toolbarToolIds[btnIdx] = _flyoutTools[i].Id;
+            _toolbarModes[btnIdx] = _flyoutTools[i].Mode;
+        }
+
+        _toolbarRect = ToolbarLayout.GetToolbarRect(
+            _virtualBounds,
+            screenBounds,
+            w,
+            h,
+            CaptureDockSide,
+            UiChrome.ScaledToolbarTopMargin);
+
+        if (IsVerticalDock)
+        {
+            // Column 1: Capture & System Tools
+            int col1Height = GetToolbarPrimarySpan(7, 1, buttonSize, buttonSpacing, 0);
+            int col1StartY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - col1Height) / 2;
+            int col1X = _toolbarRect.X + pad;
+
+            int cy = col1StartY;
+            for (int i = 0; i < 5; i++)
+            {
+                _toolbarButtons[i] = new Rectangle(col1X, cy, buttonSize, buttonSize);
+                cy += buttonSize + buttonSpacing;
+            }
+            cy += GroupGap;
+            _toolbarButtons[5] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Color
+            cy += buttonSize + buttonSpacing;
+            _toolbarButtons[6] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Close
+
+            // Column 2: Annotation Tools
+            int col2X = _toolbarRect.X + pad + buttonSize + buttonSpacing;
+            int cy2 = _toolbarRect.Y + pad;
+            int[] tier2Seps = { 0, 2, 6, 8, 11, 13 };
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                int btnIdx = 7 + i;
+                _toolbarButtons[btnIdx] = new Rectangle(col2X, cy2, buttonSize, buttonSize);
+                cy2 += buttonSize + buttonSpacing;
+                if (Array.IndexOf(tier2Seps, i) >= 0)
+                    cy2 += GroupGap;
+            }
+        }
+        else
+        {
+            // Row 1: Capture & System Tools
+            int row1Width = GetToolbarPrimarySpan(7, 1, buttonSize, buttonSpacing, 0);
+            int row1StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row1Width) / 2;
+            int row1Y = _toolbarRect.Y + pad;
+
+            int cx = row1StartX;
+            for (int i = 0; i < 5; i++)
+            {
+                _toolbarButtons[i] = new Rectangle(cx, row1Y, buttonSize, buttonSize);
+                cx += buttonSize + buttonSpacing;
+            }
+            cx += GroupGap;
+            _toolbarButtons[5] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Color
+            cx += buttonSize + buttonSpacing;
+            _toolbarButtons[6] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Close
+
+            // Row 2: Annotation Tools
+            int row2Y = _toolbarRect.Y + pad + buttonSize + buttonSpacing;
+            int cx2 = _toolbarRect.X + pad;
+            int[] tier2Seps = { 0, 2, 6, 8, 11, 13 };
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                int btnIdx = 7 + i;
+                _toolbarButtons[btnIdx] = new Rectangle(cx2, row2Y, buttonSize, buttonSize);
+                cx2 += buttonSize + buttonSpacing;
+                if (Array.IndexOf(tier2Seps, i) >= 0)
+                    cx2 += GroupGap;
+            }
+        }
+    }
+
+    private void BuildToolbarToolSplit(Rectangle screenBounds, int buttonSize, int buttonSpacing, int pad)
+    {
+        var flyoutIds = ToolDef.FlyoutToolIds();
+        var mainBarTools = _visibleTools.Where(t => !flyoutIds.Contains(t.Id)).ToList();
+        var flyoutTools = _visibleTools.Where(t => flyoutIds.Contains(t.Id)).ToList();
+
+        _mainBarTools = mainBarTools.ToArray();
+        _flyoutTools = flyoutTools.ToArray();
+    }
+
+    private static int[] GetToolbarSeparatorIndices(IReadOnlyList<ToolDef> mainBarTools, bool hasMore)
+    {
+        var gaps = new List<int>();
+        for (int i = 0; i < mainBarTools.Count - 1; i++)
+        {
+            if (mainBarTools[i].Group != mainBarTools[i + 1].Group)
+                gaps.Add(i);
+        }
+
+        if (mainBarTools.Count > 0)
+            gaps.Add(mainBarTools.Count - 1 + (hasMore ? 1 : 0));
+
+        return gaps.ToArray();
+    }
+
+    private int GetToolbarPrimarySpan(int buttonCount, int separatorsCount, int buttonSize, int buttonSpacing, int pad)
+    {
+        return pad * 2
+            + buttonCount * buttonSize
+            + (buttonCount - 1) * buttonSpacing
+            + separatorsCount * GroupGap;
+    }
+
+    public bool CheckEvasion(Point cursor)
+    {
+        bool wasEvading = _isEvading;
+        float cy = cursor.Y - _virtualBounds.Y;
+        float cx = cursor.X - _virtualBounds.X;
+        float h = _virtualBounds.Height;
+        float w = _virtualBounds.Width;
+
+        if (CaptureDockSide == CaptureDockSide.Top)
+        {
+            if (cy < h * 0.4f) _isEvading = true;
+            else if (cy > h * 0.5f) _isEvading = false;
+        }
+        else if (CaptureDockSide == CaptureDockSide.Bottom)
+        {
+            if (cy > h * 0.6f) _isEvading = true;
+            else if (cy < h * 0.5f) _isEvading = false;
+        }
+        else if (CaptureDockSide == CaptureDockSide.Left)
+        {
+            if (cx < w * 0.4f) _isEvading = true;
+            else if (cx > w * 0.5f) _isEvading = false;
+        }
+        else if (CaptureDockSide == CaptureDockSide.Right)
+        {
+            if (cx > w * 0.6f) _isEvading = true;
+            else if (cx < w * 0.5f) _isEvading = false;
+        }
+
+        if (_isEvading != wasEvading)
+        {
+            CalcToolbar();
+            PositionToolbarForm();
+            return true;
+        }
+        return false;
+    }
+
+    public void ResetEvasion()
+    {
+        if (_isEvading)
+        {
+            _isEvading = false;
+            CalcToolbar();
+            PositionToolbarForm();
+        }
+    }
+
+    private static Cursor CreateBlankCursor()
+    {
+        using var bmp = new Bitmap(1, 1, PixelFormat.Format32bppArgb);
+        return new Cursor(bmp.GetHicon());
+    }
+
+    private static Rectangle NormRect(Point a, Point b) =>
+        new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
+
+    private static GraphicsPath RRect(RectangleF r, float rad)
+    {
+        var p = new GraphicsPath();
+        float d = rad * 2;
+        p.AddArc(r.X, r.Y, d, d, 180, 90);
+        p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+        p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+        p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+        p.CloseFigure();
+        return p;
+    }
+}

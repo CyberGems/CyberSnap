@@ -1,0 +1,10 @@
+﻿{
+  "profiles": {
+    "CyberSnap.WinUI (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "CyberSnap.WinUI (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

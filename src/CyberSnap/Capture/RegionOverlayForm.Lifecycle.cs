@@ -1,0 +1,586 @@
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Drawing.Text;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using CyberSnap.Helpers;
+using CyberSnap.Models;
+using CyberSnap.Services;
+
+namespace CyberSnap.Capture;
+
+public sealed partial class RegionOverlayForm
+{
+    public static void CloseTransientUi()
+    {
+        var current = _currentOverlay;
+        if (current is null)
+            return;
+
+        try { current.CloseMagWindow(); } catch { }
+        try { current.CloseCaptureMagnifier(); } catch { }
+    }
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        _toolbarAnim = 1f;
+        CaptureWindowExclusion.Apply(this);
+        WindowDetector.RegisterIgnoredWindow(Handle);
+        Native.User32.SetWindowPos(Handle, Native.User32.HWND_TOPMOST,
+            0, 0, 0, 0,
+            Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_SHOWWINDOW);
+        Activate();
+        Focus();
+        _escapeHook = CaptureEscapeKeyHook.Install(this, Cancel);
+        EnsureToolbarReady();
+        Invalidate();
+        Update();
+
+        WindowDetector.ClearSnapshot();
+        if (_windowDetectionMode != WindowDetectionMode.Off)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(220).ConfigureAwait(false);
+                    if (IsDisposed || Disposing || !Visible)
+                        return;
+
+                    WindowDetector.SnapshotWindows(_virtualBounds);
+                }
+                catch { }
+            });
+        }
+    }
+
+    private void EnsureToolbarReady()
+    {
+        if (IsDisposed || Disposing || !Visible || _isConfirmingSelection)
+            return;
+
+        if (_toolbarForm == null || _toolbarForm.IsDisposed)
+        {
+            _toolbarForm = new ToolbarForm(this);
+            PositionToolbarForm();
+            var _ = _toolbarForm.Handle;
+            WindowDetector.RegisterIgnoredWindow(_toolbarForm.Handle);
+            _toolbarForm.Show(this);
+        }
+        else if (!_toolbarForm.Visible)
+        {
+            PositionToolbarForm();
+            _toolbarForm.Show(this);
+        }
+
+        MarkToolbarRenderDirty();
+        _toolbarForm.UpdateSurface();
+        Invalidate(new Rectangle(_toolbarRect.X - 12, _toolbarRect.Y - 48,
+            _toolbarRect.Width + 24, _toolbarRect.Height + 96));
+    }
+
+    protected override void OnDeactivate(EventArgs e)
+    {
+        base.OnDeactivate(e);
+
+        if (_allowDeactivation || IsDisposed || Disposing || !Visible)
+            return;
+
+        BeginInvoke(new Action(() =>
+        {
+            if (_allowDeactivation || IsDisposed || Disposing || !Visible)
+                return;
+
+            Activate();
+            Focus();
+            Native.User32.SetForegroundWindow(Handle);
+        }));
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+    }
+
+    internal void PositionToolbarForm()
+    {
+        if (_toolbarForm is null) return;
+        var uiBounds = GetOverlayUiBounds();
+        if (uiBounds.IsEmpty)
+            uiBounds = InflateForRepaint(_toolbarRect, 24);
+
+        int marginX = Helpers.UiChrome.ScaleInt(IsVerticalDock ? 120 : 260);
+        int marginY = Helpers.UiChrome.ScaleInt(IsVerticalDock ? 120 : 140);
+        uiBounds.Inflate(marginX, marginY);
+        uiBounds.Intersect(new Rectangle(0, 0, ClientSize.Width, ClientSize.Height));
+
+        var bounds = new Rectangle(
+            _virtualBounds.X + uiBounds.X,
+            _virtualBounds.Y + uiBounds.Y,
+            Math.Max(1, uiBounds.Width),
+            Math.Max(1, uiBounds.Height));
+        if (_toolbarForm.Bounds != bounds)
+            _toolbarForm.Bounds = bounds;
+    }
+
+    private static Rectangle[] GetScreenWorkingAreas()
+    {
+        var screens = Screen.AllScreens;
+        var workingAreas = new Rectangle[screens.Length];
+        for (int i = 0; i < screens.Length; i++)
+            workingAreas[i] = screens[i].WorkingArea;
+        return workingAreas;
+    }
+
+    private bool UpdateToolbarAnchorForClientPoint(Point clientPoint)
+    {
+        var screenPoint = new Point(_virtualBounds.X + clientPoint.X, _virtualBounds.Y + clientPoint.Y);
+        var resolved = ToolbarLayout.ResolveToolbarAnchorArea(
+            _virtualBounds,
+            screenPoint,
+            _toolbarAnchorArea,
+            GetScreenWorkingAreas());
+        if (resolved == _toolbarAnchorArea)
+            return false;
+
+        _toolbarAnchorArea = resolved;
+        return true;
+    }
+
+    private void ShowTextBox()
+    {
+        if (_textBox == null)
+        {
+            _textBox = new TextBox
+            {
+                BorderStyle = BorderStyle.None,
+                Multiline = false,
+                ScrollBars = ScrollBars.None,
+                // Hidden off-screen - we only use it for input handling, not display
+                Size = new Size(1, 1),
+            };
+            _textBox.KeyDown += (_, e) =>
+            {
+                if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; CommitText(); }
+                if (e.KeyCode == Keys.Escape)
+                {
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    Cancel();
+                }
+            };
+            _textBox.TextChanged += (_, _) =>
+            {
+                if (_textBox == null) return;
+                var oldRect = Rectangle.Round(GetActiveTextRect());
+                var oldToolbarRect = Rectangle.Round(GetTextToolbarBounds());
+                _textBuffer = _textBox.Text;
+                InvalidateActiveTextLayout();
+                SyncTextBoxSize();
+                var newRect = Rectangle.Round(GetActiveTextRect());
+                var newToolbarRect = Rectangle.Round(GetTextToolbarBounds());
+                var dirty = Rectangle.Union(
+                    Rectangle.Union(InflateForRepaint(oldRect, 16), InflateForRepaint(newRect, 16)),
+                    Rectangle.Union(InflateForRepaint(oldToolbarRect, 16), InflateForRepaint(newToolbarRect, 16)));
+                RefreshOverlayUiChrome();
+                Invalidate(dirty);
+            };
+            Controls.Add(_textBox);
+        }
+        _textBox.Text = _textBuffer;
+        UpdateTextBoxStyle();
+        SyncTextBoxSize();
+        RefreshOverlayUiChrome();
+        _textBox.Visible = true;
+        _textBox.Focus();
+        _textBox.SelectionStart = _textBox.TextLength;
+        _textBox.SelectionLength = 0;
+        _textSelectionAnchor = _textBox.SelectionStart;
+    }
+
+    private void HideTextBox()
+    {
+        if (_textBox != null)
+        {
+            _textBox.Visible = false;
+            RefreshOverlayUiChrome();
+            Focus();
+        }
+    }
+
+    private void UpdateTextBoxStyle()
+    {
+        if (_textBox == null)
+            return;
+
+        var fontStyle = FontStyle.Regular;
+        if (_textBold) fontStyle |= FontStyle.Bold;
+        if (_textItalic) fontStyle |= FontStyle.Italic;
+
+        _textBox.Font = GetAnnotationFont(_textFontFamily, _textFontSize, fontStyle);
+    }
+
+    private void SyncTextBoxSize()
+    {
+        if (_textBox == null)
+            return;
+
+        _textBox.Size = new Size(1, 1);
+        _textBox.Location = new Point(-10000, -10000);
+    }
+
+    private void InvalidateActiveTextLayout()
+    {
+        _activeTextLayoutDirty = true;
+    }
+
+    private void ShowEmojiSearchBox()
+    {
+        // No-op: keyboard input is now handled directly via OnKeyDown/OnKeyPress
+        // to avoid focus-stealing issues with off-screen TextBox controls.
+    }
+
+    private void HideEmojiSearchBox()
+    {
+        // No-op: keyboard input is now handled directly via OnKeyDown/OnKeyPress.
+    }
+
+    private void QueueEmojiWarmup()
+    {
+        _emojiWarmupIndex = 0;
+        _emojiWarmupPending = true;
+        _pickerTimer.Start();
+    }
+
+    private void WarmEmojiPickerCacheBatch()
+    {
+        if (!_emojiWarmupPending || !_emojiPickerOpen)
+            return;
+
+        try
+        {
+            var filtered = GetFilteredEmojiPalette();
+            if (_emojiWarmupIndex >= filtered.Length)
+            {
+                _emojiWarmupPending = false;
+                return;
+            }
+
+            const int batchSize = 8;
+            int rendered = WarmEmojiRange(filtered, _emojiScrollOffset * EmojiPickerColumns, EmojiPickerVisibleRows * EmojiPickerColumns, batchSize);
+            if (rendered < batchSize)
+            {
+                int end = Math.Min(filtered.Length, _emojiWarmupIndex + batchSize - rendered);
+                for (int i = _emojiWarmupIndex; i < end; i++)
+                {
+                    try { _emojiRenderer.GetEmoji(filtered[i].emoji, EmojiPickerRenderSize); }
+                    catch { /* Skip individual emoji render failures */ }
+                }
+                _emojiWarmupIndex = end;
+            }
+
+            if (_emojiWarmupIndex >= filtered.Length && IsVisibleEmojiRangeWarm(filtered))
+                _emojiWarmupPending = false;
+
+            UpdateToolbarSurfaceOnly();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("emoji.warmup-batch", ex);
+            _emojiWarmupPending = false;
+        }
+    }
+
+    private int WarmEmojiRange((string emoji, string name)[] filtered, int start, int count, int maxRender)
+    {
+        int rendered = 0;
+        int end = Math.Min(filtered.Length, start + count);
+        for (int i = Math.Max(0, start); i < end && rendered < maxRender; i++)
+        {
+            if (_emojiRenderer.TryGetCachedEmoji(filtered[i].emoji, EmojiPickerRenderSize, out _))
+                continue;
+            _emojiRenderer.GetEmoji(filtered[i].emoji, EmojiPickerRenderSize);
+            rendered++;
+        }
+        return rendered;
+    }
+
+    private bool IsVisibleEmojiRangeWarm((string emoji, string name)[] filtered)
+    {
+        int start = _emojiScrollOffset * EmojiPickerColumns;
+        int end = Math.Min(filtered.Length, start + EmojiPickerVisibleRows * EmojiPickerColumns);
+        for (int i = start; i < end; i++)
+        {
+            if (!_emojiRenderer.TryGetCachedEmoji(filtered[i].emoji, EmojiPickerRenderSize, out _))
+                return false;
+        }
+        return true;
+    }
+
+    private void ShowFontSearchBox()
+    {
+        if (_fontSearchBox == null)
+        {
+            _fontSearchBox = new TextBox
+            {
+                BorderStyle = BorderStyle.None,
+                Size = new Size(1, 1),
+            };
+            _fontSearchBox.TextChanged += (_, _) =>
+            {
+                if (_fontSearchBox == null) return;
+                _fontSearch = _fontSearchBox.Text;
+                _filteredFonts = null; _fontPickerScroll = 0;
+                RefreshToolbar();
+            };
+            _fontSearchBox.KeyDown += (_, e) =>
+            {
+                if (e.KeyCode == Keys.Escape)
+                {
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    Cancel();
+                }
+            };
+            Controls.Add(_fontSearchBox);
+        }
+        _fontSearchBox.Text = _fontSearch;
+        _fontSearchBox.Location = new Point(-100, -100);
+        _fontSearchBox.Visible = true;
+        _fontSearchBox.Focus();
+    }
+
+    private void HideFontSearchBox()
+    {
+        if (_fontSearchBox != null) { _fontSearchBox.Visible = false; Focus(); }
+    }
+
+    internal void RefreshToolbar()
+    {
+        if (_isConfirmingSelection)
+        {
+            HideToolbarImmediately();
+            return;
+        }
+        var oldUiBounds = _lastOverlayUiBounds;
+        CalcToolbar();
+        PositionToolbarForm();
+        MarkToolbarRenderDirty();
+        _toolbarForm?.UpdateSurface();
+        var newUiBounds = GetOverlayUiBounds();
+        _lastOverlayUiBounds = newUiBounds;
+        if (!oldUiBounds.IsEmpty && !newUiBounds.IsEmpty)
+            Invalidate(Rectangle.Union(InflateForRepaint(oldUiBounds, 20), InflateForRepaint(newUiBounds, 20)));
+        else if (!newUiBounds.IsEmpty)
+            Invalidate(InflateForRepaint(newUiBounds, 20));
+    }
+
+    internal void UpdateToolbarSurfaceOnly()
+    {
+        MarkToolbarRenderDirty();
+        _toolbarForm?.UpdateSurface();
+    }
+
+    private void RefreshOverlayUiChrome()
+    {
+        var oldUiBounds = _lastOverlayUiBounds;
+        PositionToolbarForm();
+        MarkToolbarRenderDirty();
+        _toolbarForm?.UpdateSurface();
+        var newUiBounds = GetOverlayUiBounds();
+        _lastOverlayUiBounds = newUiBounds;
+        if (!oldUiBounds.IsEmpty && !newUiBounds.IsEmpty)
+            Invalidate(Rectangle.Union(InflateForRepaint(oldUiBounds, 20), InflateForRepaint(newUiBounds, 20)));
+        else if (!newUiBounds.IsEmpty)
+            Invalidate(InflateForRepaint(newUiBounds, 20));
+        else if (!oldUiBounds.IsEmpty)
+            Invalidate(InflateForRepaint(oldUiBounds, 20));
+    }
+
+    private void HideToolbarImmediately()
+    {
+        HideToolbarTooltip();
+        _colorPickerOpen = false;
+        _fontPickerOpen = false;
+        _emojiPickerOpen = false;
+        HideFontSearchBox();
+        HideEmojiSearchBox();
+        _hoveredButton = -1;
+
+        if (_toolbarForm is null || _toolbarForm.IsDisposed)
+            return;
+
+        _animTimer.Stop();
+        _toolbarAnim = 1f;
+        _toolbarForm.Hide();
+    }
+
+    private void HideToolbarForCaptureTool()
+    {
+        if (ToolDef.IsCaptureTool(_mode))
+            HideToolbarImmediately();
+    }
+
+    private void EnsureCrosshairForms()
+    {
+        if (_verticalCrosshairForm != null && _horizontalCrosshairForm != null)
+            return;
+
+        var color = Color.FromArgb(72, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
+        if (_verticalCrosshairForm == null)
+        {
+            _verticalCrosshairForm = new CrosshairGuideForm(color);
+            var _ = _verticalCrosshairForm.Handle;
+            WindowDetector.RegisterIgnoredWindow(_verticalCrosshairForm.Handle);
+        }
+
+        if (_horizontalCrosshairForm == null)
+        {
+            _horizontalCrosshairForm = new CrosshairGuideForm(color);
+            var _ = _horizontalCrosshairForm.Handle;
+            WindowDetector.RegisterIgnoredWindow(_horizontalCrosshairForm.Handle);
+        }
+    }
+
+    private void UpdateCrosshairGuides(Point point)
+    {
+        bool shouldShow = ShowCrosshairGuides
+            && _mode != CaptureMode.ColorPicker
+            && point != Point.Empty
+            && !IsPointInOverlayUi(point);
+        if (!shouldShow)
+        {
+            ClearCrosshairGuides();
+            return;
+        }
+
+        EnsureCrosshairForms();
+        if (_verticalCrosshairForm is null || _horizontalCrosshairForm is null)
+            return;
+
+        int screenX = _virtualBounds.X + point.X;
+        int screenY = _virtualBounds.Y + point.Y;
+        _verticalCrosshairForm.UpdateLine(new Rectangle(screenX - 1, _virtualBounds.Top, 3, _virtualBounds.Height));
+        _horizontalCrosshairForm.UpdateLine(new Rectangle(_virtualBounds.Left, screenY - 1, _virtualBounds.Width, 3));
+    }
+
+    private void ClearCrosshairGuides()
+    {
+        _verticalCrosshairForm?.Hide();
+        _horizontalCrosshairForm?.Hide();
+    }
+
+    internal int ToolbarRenderVersion => _toolbarRenderVersion;
+
+    private void MarkToolbarRenderDirty()
+    {
+        unchecked
+        {
+            _toolbarRenderVersion++;
+        }
+    }
+
+    private void EnsureSelectionAdorner()
+    {
+        if (_selectionAdorner is { IsDisposed: false })
+            return;
+
+        _selectionAdorner = new LiveSelectionAdornerForm(_virtualBounds, "");
+        var _ = _selectionAdorner.Handle;
+        WindowDetector.RegisterIgnoredWindow(_selectionAdorner.Handle);
+        _selectionAdorner.Show(this);
+    }
+
+    private void UpdateSelectionAdorner()
+    {
+        EnsureSelectionAdorner();
+        _selectionAdorner?.SetSelection(_selectionRect, GetReadoutCursorPoint());
+    }
+
+    private void CloseSelectionAdorner()
+    {
+        if (_selectionAdorner == null)
+            return;
+
+        try { WindowDetector.UnregisterIgnoredWindow(_selectionAdorner.Handle); } catch { }
+        try { _selectionAdorner.Close(); } catch { }
+        try { _selectionAdorner.Dispose(); } catch { }
+        _selectionAdorner = null;
+    }
+
+    private void Cancel()
+    {
+        if (_cancelRequested)
+            return;
+
+        _cancelRequested = true;
+        _allowDeactivation = true;
+        try { Hide(); } catch { }
+        try { HideToolbarImmediately(); } catch { }
+        try { HideTextBox(); } catch { }
+        try { HideEmojiSearchBox(); } catch { }
+        try { HideFontSearchBox(); } catch { }
+        try { CloseMagWindow(); } catch { }
+        try { CloseCaptureMagnifier(); } catch { }
+        try { CloseSelectionAdorner(); } catch { }
+        try { ClearCrosshairGuides(); } catch { }
+        SelectionCancelled?.Invoke();
+        Close();
+    }
+
+    internal void CancelFromShortcut() => Cancel();
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            if (_currentOverlay == this)
+                _currentOverlay = null;
+            _escapeHook?.Dispose();
+            _escapeHook = null;
+            ClearCrosshairGuides();
+            if (_verticalCrosshairForm != null)
+                WindowDetector.UnregisterIgnoredWindow(_verticalCrosshairForm.Handle);
+            _verticalCrosshairForm?.Close();
+            _verticalCrosshairForm?.Dispose();
+            if (_horizontalCrosshairForm != null)
+                WindowDetector.UnregisterIgnoredWindow(_horizontalCrosshairForm.Handle);
+            _horizontalCrosshairForm?.Close();
+            _horizontalCrosshairForm?.Dispose();
+            CloseSelectionAdorner();
+            WindowDetector.UnregisterIgnoredWindow(Handle);
+            WindowDetector.ClearSnapshot();
+            if (_toolbarForm != null)
+                WindowDetector.UnregisterIgnoredWindow(_toolbarForm.Handle);
+            CloseMagWindow();
+            CloseCaptureMagnifier();
+            _toolbarForm?.Close();
+            _toolbarForm?.Dispose();
+            _toolbarToolTip?.Dispose();
+            _animTimer.Dispose();
+            _pickerTimer.Dispose();
+            _autoDetectTimer.Dispose();
+            _magGfx.Dispose();
+            _magBitmap.Dispose();
+            _committedAnnotationsBitmap?.Dispose();
+            _brandBitmap?.Dispose();
+            _brandBitmap = null;
+            _hexFont.Dispose();
+            _rgbFont.Dispose();
+            _readoutFont.Dispose();
+            _mutedBrush.Dispose();
+            _crossPen.Dispose();
+            foreach (var f in _fontCache.Values) f?.Dispose();
+            _fontCache.Clear();
+            foreach (var f in _annotationFontCache.Values) f?.Dispose();
+            _annotationFontCache.Clear();
+        }
+        base.Dispose(disposing);
+    }
+
+    protected override CreateParams CreateParams
+    { get { var cp = base.CreateParams; cp.ExStyle |= 0x80; return cp; } }
+}
