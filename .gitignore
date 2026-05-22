@@ -46,3 +46,15 @@ src/CyberSnap/CyberSnap_*.png
 site/node_modules/
 *.tsbuildinfo
 site/vite-dev.*.log
+
+
+
+## AI agent instruction files (LOCAL ONLY)
+AGENTS.md
+CLAUDE.md
+.cursorrules
+.cursor/
+.github/copilot-instructions.md
+
+## Local AI/runtime artifacts
+.claude/
