@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
@@ -261,7 +261,7 @@ public sealed partial class RegionOverlayForm
     }
 
     private bool IsSelectionCaptureMode()
-        => _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale;
+        => _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;
 
     private void InvalidateAutoDetectChrome(Rectangle oldDetect, Rectangle newDetect)
     {
@@ -324,7 +324,7 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>Returns the bounding rectangle for any annotation type, for hit-testing.</summary>
-    private static Rectangle GetAnnotationBounds(Annotation a) => a switch
+    private Rectangle GetAnnotationBounds(Annotation a) => a switch
     {
         ArrowAnnotation arr => RectFromPoints(arr.From, arr.To, 8),
         CurvedArrowAnnotation ca => BoundsOfPoints(ca.Points, 8),
@@ -338,7 +338,7 @@ public sealed partial class RegionOverlayForm
         EraserFill ef => ef.Rect,
         StepNumberAnnotation sn => new Rectangle(sn.Pos.X - 14, sn.Pos.Y - 14, 28, 28),
         EmojiAnnotation em => new Rectangle(em.Pos.X, em.Pos.Y, (int)em.Size, (int)em.Size),
-        MagnifierAnnotation mg => GetMagnifierPaintBounds(mg.Pos, mg.SrcRect, Size.Empty),
+        MagnifierAnnotation mg => GetMagnifierVisualBounds(mg),
         TextAnnotation ta => GetTextBounds(ta),
         _ => Rectangle.Empty
     };
@@ -542,6 +542,7 @@ public sealed partial class RegionOverlayForm
         _isConfirmingSelection = false;
         _confirmRect = Rectangle.Empty;
         _confirmHandleDragIndex = -1;
+        _hoveredConfirmButton = -1;
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
         _selectionEnd = Point.Empty;
@@ -556,14 +557,17 @@ public sealed partial class RegionOverlayForm
         _isConfirmingSelection = false;
         _confirmRect = Rectangle.Empty;
         _confirmHandleDragIndex = -1;
+        _hoveredConfirmButton = -1;
         bool isOcr = _mode == CaptureMode.Ocr;
         bool isScan = _mode == CaptureMode.Scan;
         bool isSticker = _mode == CaptureMode.Sticker;
         bool isUpscale = _mode == CaptureMode.Upscale;
+        bool isScroll = _mode == CaptureMode.ScrollCapture;
         if (isOcr) OcrRegionSelected?.Invoke(rect);
         else if (isScan) ScanRegionSelected?.Invoke(rect);
         else if (isSticker) StickerRegionSelected?.Invoke(rect);
         else if (isUpscale) UpscaleRegionSelected?.Invoke(rect);
+        else if (isScroll) ScrollRegionSelected?.Invoke(rect);
         else RegionSelected?.Invoke(rect);
     }
 

@@ -1,4 +1,5 @@
-﻿using System.IO;
+using System.IO;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows;
 using System.Windows.Automation;
@@ -16,7 +17,7 @@ using CyberSnap.Services;
 
 namespace CyberSnap.UI;
 
-public partial class SettingsWindow
+public partial class HistoryWindow
 {
     private static readonly Lazy<BitmapSource> VideoPlaceholder = new(CreateVideoPlaceholder);
     private static readonly Lazy<BitmapSource> ImagePlaceholder = new(CreateImagePlaceholder);

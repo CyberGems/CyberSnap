@@ -28,6 +28,14 @@
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top">
+                <Border x:Name="ActionBtn"
+                        Style="{StaticResource CyberSnapTitleButton}"
+                        MouseLeftButtonDown="ActionBtn_MouseLeftButtonDown"
+                        MouseEnter="TitleBtn_MouseEnter"
+                        MouseLeave="TitleBtn_MouseLeave"
+                        Visibility="Collapsed">
+                    <Image x:Name="ActionIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
+                </Border>
                 <Border x:Name="MinimizeBtn"
                         Style="{StaticResource CyberSnapTitleButton}"
                         MouseLeftButtonDown="MinimizeBtn_MouseLeftButtonDown"

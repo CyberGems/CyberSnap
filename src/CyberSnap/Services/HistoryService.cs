@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.IO;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
@@ -211,6 +211,8 @@ public sealed partial class HistoryService : IDisposable
     public int JpegQuality { get; set; } = 85;
     public CaptureImageFormat CaptureImageFormat { get; set; } = CaptureImageFormat.Png;
     public HistoryRetentionPeriod RetentionPeriod { get; set; } = HistoryRetentionPeriod.Never;
+    public int HistoryCountLimit { get; set; } = 0;
+    public bool HistoryDeleteOriginalOnPrune { get; set; }
 
     public HistoryEntry SaveGifEntry(string gifPath)
         => SaveMediaEntry(gifPath);
@@ -248,6 +250,7 @@ public sealed partial class HistoryService : IDisposable
             _entriesByPath[entry.FilePath] = entry;
             InvalidateFilteredCache();
             QueueEntryUpsert_NoLock(entry);
+            PruneByCount_NoLock(HistoryCountLimit, HistoryDeleteOriginalOnPrune);
             ScheduleFlush_NoLock();
         }
         NotifyChanged();
@@ -280,6 +283,7 @@ public sealed partial class HistoryService : IDisposable
             _entriesByPath[entry.FilePath] = entry;
             InvalidateFilteredCache();
             QueueEntryUpsert_NoLock(entry);
+            PruneByCount_NoLock(HistoryCountLimit, HistoryDeleteOriginalOnPrune);
             ScheduleFlush_NoLock();
         }
 
@@ -313,6 +317,7 @@ public sealed partial class HistoryService : IDisposable
             _entriesByPath[entry.FilePath] = entry;
             InvalidateFilteredCache();
             QueueEntryUpsert_NoLock(entry);
+            PruneByCount_NoLock(HistoryCountLimit, HistoryDeleteOriginalOnPrune);
             ScheduleFlush_NoLock();
         }
         NotifyChanged();
@@ -566,6 +571,7 @@ public sealed partial class HistoryService : IDisposable
                 return false;
 
             TryDeleteManagedThumbnail_NoLock(e.FilePath);
+            TryDeleteHistoryFile_NoLock(e.FilePath, $"clear {kind}");
             _entriesByPath.Remove(e.FilePath);
             removedPaths.Add(e.FilePath);
             return true;

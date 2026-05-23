@@ -54,6 +54,46 @@ public static class WindowsDockRenderer
         return path;
     }
 
+    /// <summary>Path with only bottom corners rounded (for horizontal tier-2 overlay).</summary>
+    public static GraphicsPath RoundedRectBottom(RectangleF rect, float radius)
+    {
+        var path = new GraphicsPath();
+        float d = radius * 2f;
+        float x = rect.X, y = rect.Y, w = rect.Width, h = rect.Height;
+        path.AddLine(x, y, x + w, y);
+        path.AddLine(x + w, y, x + w, y + h - radius);
+        path.AddArc(x + w - d, y + h - d, d, d, 0, 90);
+        path.AddLine(x + w - radius, y + h, x + radius, y + h);
+        path.AddArc(x, y + h - d, d, d, 90, 90);
+        path.AddLine(x, y + h - radius, x, y);
+        path.CloseFigure();
+        return path;
+    }
+
+    /// <summary>Path with only right corners rounded (for vertical tier-2 overlay).</summary>
+    public static GraphicsPath RoundedRectRight(RectangleF rect, float radius)
+    {
+        var path = new GraphicsPath();
+        float d = radius * 2f;
+        float x = rect.X, y = rect.Y, w = rect.Width, h = rect.Height;
+        path.AddLine(x, y, x + w - radius, y);
+        path.AddArc(x + w - d, y, d, d, 270, 90);
+        path.AddLine(x + w, y + radius, x + w, y + h - radius);
+        path.AddArc(x + w - d, y + h - d, d, d, 0, 90);
+        path.AddLine(x + w - radius, y + h, x, y + h);
+        path.AddLine(x, y + h, x, y);
+        path.CloseFigure();
+        return path;
+    }
+
+    /// <summary>Paints the fill only (no shadow) with selective corner rounding for two-tier toolbar overlays.</summary>
+    public static void PaintSurfaceBg(Graphics g, RectangleF rect, Color color, float radius, bool vertical)
+    {
+        using var path = vertical ? RoundedRectRight(rect, radius) : RoundedRectBottom(rect, radius);
+        using var brush = new SolidBrush(color);
+        g.FillPath(brush, path);
+    }
+
     public static void PaintSurface(Graphics g, RectangleF rect, float radius = -1f)
     {
         if (radius < 0)
@@ -81,7 +121,7 @@ public static class WindowsDockRenderer
             g.FillPath(keyBrush, path);
     }
 
-    public static void PaintButton(Graphics g, RectangleF rect, bool active, bool hovered, float radius = -1f)
+    public static void PaintButton(Graphics g, RectangleF rect, bool active, bool hovered, float radius = -1f, Color? accent = null)
     {
         if (!active && !hovered)
             return;
@@ -89,19 +129,18 @@ public static class WindowsDockRenderer
         if (radius < 0)
             radius = UiChrome.ScaleFloat(5f);
 
+        var accentColor = accent ?? UiChrome.AccentColor;
         using var path = RoundedRect(rect, radius);
         if (active)
         {
-            var accent = UiChrome.AccentColor;
-            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 36 : 28, accent)))
+            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 36 : 28, accentColor)))
                 g.FillPath(brush, path);
-            using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 140 : 100, accent), 1f))
+            using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 140 : 100, accentColor), 1f))
                 g.DrawPath(pen, path);
         }
         else // Hovered
         {
-            var accent = UiChrome.AccentColor;
-            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 20 : 16, accent)))
+            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 20 : 16, accentColor)))
                 g.FillPath(brush, path);
         }
     }

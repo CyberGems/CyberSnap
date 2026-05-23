@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Drawing.Drawing2D;
+using CyberSnap.Helpers;
 
 namespace CyberSnap.Capture;
 
@@ -24,6 +25,12 @@ internal static class SelectionFrameRenderer
         var oldSmoothing = g.SmoothingMode;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
+        // Very subtle accent glow behind the frame
+        var glowRect = rect;
+        glowRect.Inflate(2, 2);
+        using (var glowPen = new Pen(Color.FromArgb(22, UiChrome.AccentColor), 5f))
+            g.DrawRectangle(glowPen, glowRect);
+
         if (fill)
             g.FillRectangle(FillBrush, rect);
 
@@ -32,6 +39,58 @@ internal static class SelectionFrameRenderer
         outline.Height = Math.Max(1, outline.Height - 1);
 
         g.DrawRectangle(RectangleStrokePen, outline);
+
+        g.SmoothingMode = oldSmoothing;
+    }
+
+    public static void DrawAutoDetectRectangle(Graphics g, Rectangle rect)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0)
+            return;
+
+        var oldSmoothing = g.SmoothingMode;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        var accent = UiChrome.AccentColor;
+
+        // Strong neon glow behind the frame
+        var glowRect = rect;
+        glowRect.Inflate(4, 4);
+        using (var glowPen = new Pen(Color.FromArgb(70, accent), 8f))
+            g.DrawRectangle(glowPen, glowRect);
+
+        // Barely-there accent fill tint so content stays fully readable
+        using (var fillBrush = new SolidBrush(Color.FromArgb(4, accent.R, accent.G, accent.B)))
+            g.FillRectangle(fillBrush, rect);
+
+        // Accent-colored outline
+        var outline = rect;
+        outline.Width = Math.Max(1, outline.Width - 1);
+        outline.Height = Math.Max(1, outline.Height - 1);
+        using (var accentPen = new Pen(accent, 2f) { LineJoin = LineJoin.Miter })
+            g.DrawRectangle(accentPen, outline);
+
+        // HUD corner brackets
+        const int cornerLen = 10;
+        const int cornerOffset = 4;
+        using (var cornerPen = new Pen(accent, 2f) { LineJoin = LineJoin.Miter })
+        {
+            // Top-left
+            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Y - cornerOffset, outline.X - cornerOffset + cornerLen, outline.Y - cornerOffset);
+            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Y - cornerOffset, outline.X - cornerOffset, outline.Y - cornerOffset + cornerLen);
+
+            // Top-right
+            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Y - cornerOffset, outline.Right + cornerOffset - cornerLen, outline.Y - cornerOffset);
+            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Y - cornerOffset, outline.Right + cornerOffset, outline.Y - cornerOffset + cornerLen);
+
+            // Bottom-left
+            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Bottom + cornerOffset, outline.X - cornerOffset + cornerLen, outline.Bottom + cornerOffset);
+            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Bottom + cornerOffset, outline.X - cornerOffset, outline.Bottom + cornerOffset - cornerLen);
+
+            // Bottom-right
+            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Bottom + cornerOffset, outline.Right + cornerOffset - cornerLen, outline.Bottom + cornerOffset);
+            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Bottom + cornerOffset, outline.Right + cornerOffset, outline.Bottom + cornerOffset - cornerLen);
+        }
 
         g.SmoothingMode = oldSmoothing;
     }

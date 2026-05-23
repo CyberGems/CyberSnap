@@ -98,6 +98,7 @@ public partial class SettingsWindow
             DefaultCaptureModeCombo.SelectedIndex = s.DefaultCaptureMode switch
             {
                 CaptureMode.Center => 1,
+                CaptureMode.Freeform => 2,
                 _ => 0
             };
             CenterAspectRatioCombo.SelectedIndex = Enum.IsDefined(typeof(CenterSelectionAspectRatio), s.CenterSelectionAspectRatio)
@@ -114,6 +115,7 @@ public partial class SettingsWindow
                 _ => 1
             };
             SaveToFileCheck.IsChecked = s.SaveToFile;
+            AutoOpenCapturedImagesCheck.IsChecked = s.AutoOpenCapturedImages;
             CaptureFormatCombo.SelectedIndex = (int)s.CaptureImageFormat;
             JpegQualityCombo.SelectedIndex = s.JpegQuality switch
             {
@@ -138,9 +140,6 @@ public partial class SettingsWindow
             MinimizeToTrayOnCloseCheck.IsChecked = s.MinimizeToTrayOnClose;
             SaveHistoryCheck.IsChecked = s.SaveHistory;
             HistoryRetentionCombo.SelectedIndex = (int)s.HistoryRetention;
-            ImageSearchFileNameCheck.IsChecked = (s.ImageSearchSources & ImageSearchSourceOptions.FileName) != 0;
-            ImageSearchOcrCheck.IsChecked = (s.ImageSearchSources & ImageSearchSourceOptions.OcrText) != 0;
-            ImageSearchExactMatchCheck.IsChecked = s.ImageSearchExactMatch;
             ShowImageSearchBarCheck.IsChecked = s.ShowImageSearchBar;
             ShowImageSearchDiagnosticsCheck.IsChecked = s.ShowImageSearchDiagnostics;
             AutoIndexImagesCheck.IsChecked = s.AutoIndexImages;
@@ -152,6 +151,7 @@ public partial class SettingsWindow
             ShowCaptureMagnifierCheck.IsChecked = s.ShowCaptureMagnifier;
             ConfirmRegionCheck.IsChecked = s.ConfirmRegionBeforeCapture;
             OverlayAllMonitorsCheck.IsChecked = s.OverlayCaptureAllMonitors;
+            AutoCheckUpdateCheck.IsChecked = s.AutoCheckForUpdates;
             ShowToolNumberBadgesCheck.IsChecked = s.ShowToolNumberBadges;
             AskFileNameCheck.IsChecked = s.AskForFileNameOnSave;
             MonthlyFoldersCheck.IsChecked = s.SaveInMonthlyFolders;
@@ -160,10 +160,13 @@ public partial class SettingsWindow
             PopulateToastMonitorOptions();
             SelectToastMonitor(s.ToastMonitorIndex);
             CaptureDockSideCombo.SelectedIndex = (int)s.CaptureDockSide;
-            ScrollingCaptureModeCombo.SelectedIndex = Enum.IsDefined(typeof(ScrollingCaptureMode), s.ScrollingCaptureMode)
-                ? (int)s.ScrollingCaptureMode
-                : 0;
-            WindowDetectionCombo.SelectedIndex = (int)s.WindowDetection;
+            ScrollingCaptureModeCombo.SelectedIndex = s.ScrollingCaptureMode switch
+            {
+                ScrollingCaptureMode.AssistAutoscroll => 1,
+                ScrollingCaptureMode.Manual => 1,
+                _ => 0
+            };
+            WindowDetectionCheck.IsChecked = s.WindowDetection != WindowDetectionMode.Off;
             ShowCursorCheck.IsChecked = s.ShowCursor;
             AnnotationStrokeShadowCheck.IsChecked = s.AnnotationStrokeShadow;
             CaptureDelayCombo.SelectedIndex = s.CaptureDelaySeconds switch { 3 => 1, 5 => 2, 10 => 3, _ => 0 };
@@ -195,11 +198,6 @@ public partial class SettingsWindow
             TryLoadSettingsSection("settings.populate-tool-toggles", PopulateToolToggles);
             TryLoadSettingsSection("settings.update-capture-format-controls", UpdateCaptureFormatControls);
             TryLoadSettingsSection("settings.update-recording-format-visibility", UpdateRecordingFormatVisibility);
-
-            if (HistoryTab.IsChecked == true)
-            {
-                TryLoadSettingsSection("settings.schedule-history-tab-load", () => ScheduleHistoryTabLoad());
-            }
 
             ApplyLocalization();
         }
@@ -409,16 +407,10 @@ public partial class SettingsWindow
         OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         AboutPanel.Visibility = AboutTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        PageTitleText.Text = GetSelectedSettingsPageTitle();
+        PageTitleText.Text = LocalizationService.Translate(GetSelectedSettingsPageTitle());
 
-        if (HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
-            CancelImageSearchWork();
-
-        if (HistoryTab.IsChecked == true)
-            ScheduleHistoryTabLoad(preserveTransientState: true);
         if (OcrTab.IsChecked == true)
             LoadOcrTab();
-        UpdateHistoryMonitorState();
     }
 
     private string GetSelectedSettingsPageTitle()
@@ -431,72 +423,5 @@ public partial class SettingsWindow
         if (HistoryTab.IsChecked == true) return "History";
         if (AboutTab.IsChecked == true) return "About";
         return "General";
-    }
-
-    private void HistoryCategoryCombo_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded) return;
-        UpdateImageSearchUi();
-        ScheduleHistoryTabLoad(preserveTransientState: true);
-    }
-
-    private void HistoryCategoryCombo_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.ComboBox comboBox)
-            return;
-
-        if (comboBox.IsDropDownOpen)
-            return;
-
-        comboBox.IsDropDownOpen = true;
-        e.Handled = true;
-    }
-
-    private void LoadCurrentHistoryTab(bool preserveTransientState = false)
-    {
-        var loadSw = System.Diagnostics.Stopwatch.StartNew();
-        var selectedCategory = HistoryCategoryCombo.SelectedIndex;
-        if (!preserveTransientState)
-        {
-            _selectMode = false;
-            UpdateSelectModeControls();
-            _ocrSearchQuery = "";
-            _colorSearchQuery = "";
-            _codeSearchQuery = "";
-            _imageSearchQuery = "";
-            if (ImageSearchBox != null) ImageSearchBox.Text = "";
-        }
-
-        ImagesPanel.Visibility = Visibility.Collapsed;
-        GifsPanel.Visibility = Visibility.Collapsed;
-        TextPanel.Visibility = Visibility.Collapsed;
-        ColorsPanel.Visibility = Visibility.Collapsed;
-        CodesPanel.Visibility = Visibility.Collapsed;
-        UpdateImageSearchUi();
-
-        if (HistoryCategoryCombo.SelectedIndex != 0)
-            CancelImageSearchWork();
-
-        switch (HistoryCategoryCombo.SelectedIndex)
-        {
-            case 0:
-                ImagesPanel.Visibility = Visibility.Visible;
-                if (CanReuseLoadedImageHistory())
-                    ApplyImageSearchFilter();
-                else
-                    _ = LoadHistoryAsync();
-                break;
-            case 1: TextPanel.Visibility = Visibility.Visible; LoadOcrHistory(); break;
-            case 2: GifsPanel.Visibility = Visibility.Visible; LoadMediaHistory(); break;
-            case 3: ColorsPanel.Visibility = Visibility.Visible; LoadColorHistory(); break;
-            case 4: CodesPanel.Visibility = Visibility.Visible; LoadCodeHistory(); break;
-        }
-
-        UpdateHistoryMonitorState();
-        UpdateHistoryActionButtons();
-        loadSw.Stop();
-        AppDiagnostics.LogInfo(
-            "history.tab-load",
-            $"category={selectedCategory} preserve={preserveTransientState} elapsedMs={loadSw.ElapsedMilliseconds}");
     }
 }

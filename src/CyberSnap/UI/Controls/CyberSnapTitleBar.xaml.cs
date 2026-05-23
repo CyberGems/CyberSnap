@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using CyberSnap.Services;
+using CyberSnap.UI;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using UserControl = System.Windows.Controls.UserControl;
 
@@ -38,11 +39,33 @@ public partial class CyberSnapTitleBar : UserControl
         var titleIcon = System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
         MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", titleIcon, 18);
 
-        string maxIconId = OwnerWindow?.WindowState == WindowState.Maximized ? "restore" : "maximize";
+        string maxIconId = "fullscreen";
         MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, titleIcon, 18);
         MaximizeBtn.ToolTip = OwnerWindow?.WindowState == WindowState.Maximized ? "Restore" : "Maximize";
 
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", titleIcon, 18);
+
+        InitializeActionBtn(titleIcon);
+    }
+
+    private void InitializeActionBtn(System.Drawing.Color titleIcon)
+    {
+        if (OwnerWindow is SettingsWindow)
+        {
+            ActionBtn.Visibility = Visibility.Visible;
+            ActionBtn.ToolTip = LocalizationService.Translate("Capture History");
+            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("folder", titleIcon, 18);
+        }
+        else if (OwnerWindow is HistoryWindow)
+        {
+            ActionBtn.Visibility = Visibility.Visible;
+            ActionBtn.ToolTip = LocalizationService.Translate("Settings");
+            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 18);
+        }
+        else
+        {
+            ActionBtn.Visibility = Visibility.Collapsed;
+        }
     }
 
     private Window? OwnerWindow => Window.GetWindow(this);
@@ -104,5 +127,18 @@ public partial class CyberSnapTitleBar : UserControl
     {
         if (sender is Border border)
             border.Background = System.Windows.Media.Brushes.Transparent;
+    }
+
+    private void ActionBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (OwnerWindow is SettingsWindow)
+        {
+            ((App)Application.Current).ShowHistory();
+        }
+        else if (OwnerWindow is HistoryWindow)
+        {
+            ((App)Application.Current).ShowSettings();
+        }
     }
 }

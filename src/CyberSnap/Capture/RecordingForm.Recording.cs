@@ -20,6 +20,9 @@ public sealed partial class RecordingForm
     private void StartRecording()
     {
         _recordingStopRequested = 0;
+        _totalPausedDuration = TimeSpan.Zero;
+        _pauseStartTime = null;
+        _isPaused = false;
         _magHelper?.Close();
         _selectionAdorner?.Close();
         _selectionAdorner?.Dispose();
@@ -88,6 +91,30 @@ public sealed partial class RecordingForm
         Invalidate(Rectangle.Union(_selection, _toolbarRect));
     }
 
+    private void TogglePause()
+    {
+        if (_state != State.Recording) return;
+        if (_videoRecorder == null) return;
+
+        _isPaused = !_isPaused;
+        if (_isPaused)
+        {
+            _videoRecorder.Pause();
+            _pauseStartTime = DateTime.UtcNow;
+        }
+        else
+        {
+            _videoRecorder.Resume();
+            if (_pauseStartTime.HasValue)
+            {
+                _totalPausedDuration += DateTime.UtcNow - _pauseStartTime.Value;
+                _pauseStartTime = null;
+            }
+        }
+
+        Invalidate(_toolbarRect);
+    }
+
     private void StopRecording()
     {
         if (_state != State.Recording) return;
@@ -149,7 +176,11 @@ public sealed partial class RecordingForm
 
     private void CalcToolbarLayout()
     {
-        int tw = UiChrome.ScaleInt(320), th = WindowsDockRenderer.SurfaceHeight;
+        bool hasPause = _format != Models.RecordingFormat.GIF;
+        int extraWidth = hasPause ? WindowsDockRenderer.IconButtonSize + WindowsDockRenderer.ButtonSpacing : 0;
+        int tw = UiChrome.ScaleInt(320) + extraWidth;
+        int th = WindowsDockRenderer.SurfaceHeight;
+
         // Try to place above the recording region
         int tx = _recordRegion.X + _recordRegion.Width / 2 - tw / 2;
         int ty = _recordRegion.Y - th - UiChrome.ScaleInt(14);
@@ -164,8 +195,15 @@ public sealed partial class RecordingForm
         _toolbarRect = new Rectangle(tx, ty, tw, th);
 
         int btnY = _toolbarRect.Y + (_toolbarRect.Height - WindowsDockRenderer.IconButtonSize) / 2;
-        _discardBtn = new Rectangle(_toolbarRect.Right - WindowsDockRenderer.SurfacePadding - WindowsDockRenderer.IconButtonSize, btnY, WindowsDockRenderer.IconButtonSize, WindowsDockRenderer.IconButtonSize);
-        _stopBtn = new Rectangle(_discardBtn.X - WindowsDockRenderer.ButtonSpacing - WindowsDockRenderer.IconButtonSize, btnY, WindowsDockRenderer.IconButtonSize, WindowsDockRenderer.IconButtonSize);
+        int btnPad = WindowsDockRenderer.SurfacePadding;
+        int btnSize = WindowsDockRenderer.IconButtonSize;
+        int btnGap = WindowsDockRenderer.ButtonSpacing;
+
+        _discardBtn = new Rectangle(_toolbarRect.Right - btnPad - btnSize, btnY, btnSize, btnSize);
+        _stopBtn = new Rectangle(_discardBtn.X - btnGap - btnSize, btnY, btnSize, btnSize);
+        _pauseBtn = hasPause
+            ? new Rectangle(_stopBtn.X - btnGap - btnSize, btnY, btnSize, btnSize)
+            : Rectangle.Empty;
     }
 
     private void TransitionToRecordingSurface()
@@ -182,6 +220,50 @@ public sealed partial class RecordingForm
 
         BackColor = TransKey;
         TransparencyKey = TransKey;
+
+        // Shrink the actual window to a hollow frame around the recording area
+        // plus the toolbar, so the interior recording area remains fully capturable.
+        const int RGN_OR = 2;
+        const int frameThickness = 10; // enough for glow(3) + border(2) + corners(2) + safety
+
+        var rgn = Native.Gdi32.CreateRectRgn(0, 0, 0, 0);
+
+        if (_recordRegion.Width > 0 && _recordRegion.Height > 0)
+        {
+            // Build a hollow frame from 4 bars so the interior is NOT part of the window
+            var topRgn = Native.Gdi32.CreateRectRgn(
+                _recordRegion.Left - frameThickness, _recordRegion.Top - frameThickness,
+                _recordRegion.Right + frameThickness, _recordRegion.Top);
+            var bottomRgn = Native.Gdi32.CreateRectRgn(
+                _recordRegion.Left - frameThickness, _recordRegion.Bottom,
+                _recordRegion.Right + frameThickness, _recordRegion.Bottom + frameThickness);
+            var leftRgn = Native.Gdi32.CreateRectRgn(
+                _recordRegion.Left - frameThickness, _recordRegion.Top,
+                _recordRegion.Left, _recordRegion.Bottom);
+            var rightRgn = Native.Gdi32.CreateRectRgn(
+                _recordRegion.Right, _recordRegion.Top,
+                _recordRegion.Right + frameThickness, _recordRegion.Bottom);
+
+            Native.Gdi32.CombineRgn(rgn, rgn, topRgn, RGN_OR);
+            Native.Gdi32.CombineRgn(rgn, rgn, bottomRgn, RGN_OR);
+            Native.Gdi32.CombineRgn(rgn, rgn, leftRgn, RGN_OR);
+            Native.Gdi32.CombineRgn(rgn, rgn, rightRgn, RGN_OR);
+
+            Native.Gdi32.DeleteObject(topRgn);
+            Native.Gdi32.DeleteObject(bottomRgn);
+            Native.Gdi32.DeleteObject(leftRgn);
+            Native.Gdi32.DeleteObject(rightRgn);
+        }
+
+        if (_toolbarRect.Width > 0 && _toolbarRect.Height > 0)
+        {
+            var tbRgn = Native.Gdi32.CreateRectRgn(_toolbarRect.Left, _toolbarRect.Top, _toolbarRect.Right, _toolbarRect.Bottom);
+            Native.Gdi32.CombineRgn(rgn, rgn, tbRgn, RGN_OR);
+            Native.Gdi32.DeleteObject(tbRgn);
+        }
+
+        Native.User32.SetWindowRgn(Handle, rgn, true);
+
         CaptureWindowExclusion.SetLogicalBounds(Handle, GetRecordingChromeScreenBounds);
         Invalidate();
         Visible = true;

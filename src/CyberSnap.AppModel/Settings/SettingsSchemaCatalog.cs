@@ -1,4 +1,4 @@
-﻿namespace CyberSnap.AppModel.Settings;
+namespace CyberSnap.AppModel.Settings;
 
 public static class SettingsSchemaCatalog
 {
@@ -15,6 +15,7 @@ public static class SettingsSchemaCatalog
                     "How captures are saved by default.",
                     [
                         new SettingDefinition("save_to_file", "Save screenshots to file", SettingsValueKind.Toggle, "Store captures in the configured save folder.", "SaveToFile"),
+                        new SettingDefinition("auto_open_images", "Auto-open image in system viewer", SettingsValueKind.Toggle, "Automatically open newly taken screenshots in the system default viewer.", "AutoOpenCapturedImages"),
                         new SettingDefinition("save_directory", "Save directory", SettingsValueKind.Folder, "Default output folder for screenshots.", "SaveDirectory"),
                         new SettingDefinition("monthly_folders", "Create monthly subfolders", SettingsValueKind.Toggle, "Store captures under yyyy-MM folders inside the save directory.", "SaveInMonthlyFolders"),
                         new SettingDefinition("capture_format", "Image format", SettingsValueKind.Choice, "Default file format for new screenshots.", "CaptureImageFormat",
@@ -47,7 +48,7 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("crosshair", "Show crosshair guides", SettingsValueKind.Toggle, "Render guide lines around the cursor while capturing.", "ShowCrosshairGuides"),
                         new SettingDefinition("magnifier", "Show capture magnifier", SettingsValueKind.Toggle, "Display a zoomed preview near the cursor.", "ShowCaptureMagnifier"),
                         new SettingDefinition("detect_windows", "Detect windows", SettingsValueKind.Toggle, "Offer window-aware selection and detection behavior.", "DetectWindows"),
-                        new SettingDefinition("dock_side", "Toolbar dock side", SettingsValueKind.Choice, "Preferred dock side for the capture toolbar.", "CaptureDockSide"),
+                        new SettingDefinition("dock_side", "Toolbar Position", SettingsValueKind.Choice, "Choose a position for the capture toolbar.", "CaptureDockSide"),
                     ]),
                 new SettingsSectionDefinition(
                     "screenshot_style",

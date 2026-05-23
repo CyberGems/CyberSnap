@@ -107,7 +107,7 @@ public sealed class TrayIcon : IDisposable
         _recordItem = recordItem;
         var scrollItem   = WindowsMenuRenderer.Item(T("Scroll capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
         var settingsItem = WindowsMenuRenderer.Item(T("Settings"), iconId: "gear");
-        var historyItem  = WindowsMenuRenderer.Item(T("History"), iconId: "folder");
+        var historyItem  = WindowsMenuRenderer.Item(T("Capture History"), iconId: "folder");
         var quitItem     = WindowsMenuRenderer.Item(T("Quit"), iconId: "close", danger: true);
 
         captureItem.Click += (_, _) => OnCapture?.Invoke();

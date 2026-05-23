@@ -95,6 +95,8 @@ public partial class App
         WarmDxgiCapture();
         Helpers.FluentIcons.Preload();
 
+        ScheduleAutoUpdateCheck();
+
         if (openSettingsAfterWizard || openSettingsOnStartup)
             ShowSettings();
     }
@@ -123,7 +125,7 @@ public partial class App
             try
             {
                 var historyService = EnsureHistoryService();
-                SettingsWindow.WarmHistoryThumbsInBackground(historyService.ImageEntries, maxCount: 96, immediateCount: 24, batchSize: 12);
+                HistoryWindow.WarmHistoryThumbsInBackground(historyService.ImageEntries, maxCount: 96, immediateCount: 24, batchSize: 12);
             }
             catch (Exception ex)
             {
@@ -141,7 +143,7 @@ public partial class App
         _trayIcon.OnGifRecord += OnGifHotkeyPressed;
         _trayIcon.OnScrollCapture += OnScrollCaptureHotkeyPressed;
         _trayIcon.OnSettings += () => ShowSettings();
-        _trayIcon.OnHistory += ShowHistory;
+        _trayIcon.OnHistory += () => ShowHistory();
         _trayIcon.OnQuit += () => Shutdown();
     }
 
@@ -150,6 +152,42 @@ public partial class App
         _ = Task.Run(() =>
         {
             try { CyberSnap.Capture.DxgiScreenCapture.WarmUp(); } catch (Exception ex) { AppDiagnostics.LogError("startup.dxgi-warmup", ex); }
+        });
+    }
+
+    private void ScheduleAutoUpdateCheck()
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(3000);
+                if (_settingsService is null || !_settingsService.Settings.AutoCheckForUpdates)
+                    return;
+
+                var result = await UpdateService.CheckForUpdatesAsync();
+                if (!result.IsUpdateAvailable)
+                    return;
+
+                if (Application.Current is null) return;
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var spec = new ToastSpec
+                    {
+                        Title = "Update Available",
+                        Body = $"CyberSnap {result.LatestVersionLabel} is out!\nYou're on {UpdateService.GetCurrentVersionLabel()}",
+                        ClickActionUrl = result.ReleaseUrl,
+                        ClickActionLabel = "Download",
+                        DurationSeconds = 12,
+                        SuppressSound = true
+                    };
+                    ToastWindow.Show(spec);
+                });
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("startup.auto-update-check", ex);
+            }
         });
     }
 }

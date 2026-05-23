@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
@@ -32,6 +32,7 @@ public sealed partial class ScrollingCaptureForm : Form
     private readonly Rectangle _virtualBounds;
     private readonly bool _showCursor;
     private readonly ScrollingCaptureMode _captureMode;
+    private readonly Rectangle? _preSelectedRegion;
     private State _state = State.Selecting;
 
     // Selection
@@ -55,6 +56,7 @@ public sealed partial class ScrollingCaptureForm : Form
     private int _bestMatchCount;
     private int _bestMatchIndex;
     private int _bestIgnoreBottomOffset;
+    private int _consecutiveDuplicates;
     private enum FrameCaptureResult { Accepted, Pending, Duplicate, Rejected, Failed }
 
     // Control bar
@@ -74,7 +76,8 @@ public sealed partial class ScrollingCaptureForm : Form
 
     public ScrollingCaptureForm(Bitmap? screenshot, Rectangle virtualBounds, bool showCursor = false,
                                 bool showMagnifier = false,
-                                ScrollingCaptureMode captureMode = ScrollingCaptureMode.Automatic)
+                                ScrollingCaptureMode captureMode = ScrollingCaptureMode.Automatic,
+                                Rectangle? preSelectedRegion = null)
     {
         CyberSnap.UI.Theme.Refresh();
         _screenshot = screenshot;
@@ -82,6 +85,7 @@ public sealed partial class ScrollingCaptureForm : Form
         _showCursor = showCursor;
         _captureMode = Enum.IsDefined(captureMode) ? captureMode : ScrollingCaptureMode.Automatic;
         _showMagnifier = showMagnifier;
+        _preSelectedRegion = preSelectedRegion;
         if (_showMagnifier && screenshot is not null)
         {
             _magHelper = new CaptureMagnifierHelper();
@@ -125,7 +129,16 @@ public sealed partial class ScrollingCaptureForm : Form
         Activate();
         Focus();
         _escapeHook = CaptureEscapeKeyHook.Install(this, HandleEscape);
-        _selectionAdorner?.Show(this);
+
+        if (_preSelectedRegion.HasValue)
+        {
+            _selection = _preSelectedRegion.Value;
+            ShowControlBar();
+        }
+        else
+        {
+            _selectionAdorner?.Show(this);
+        }
     }
 
     // â”€â”€â”€ Input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -236,8 +249,32 @@ public sealed partial class ScrollingCaptureForm : Form
         _state = State.Capturing;
         Services.SoundService.PlayRecordStartSound();
 
+        if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
+        {
+            // Position cursor at the center of the region.
+            int centerX = _screenRegion.Left + _screenRegion.Width / 2;
+            int centerY = _screenRegion.Top + _screenRegion.Height / 2;
+            User32.SetCursorPos(centerX, centerY);
+
+            // Get target window handle and set focus
+            IntPtr targetHwnd = User32.WindowFromPoint(new User32.POINT(centerX, centerY));
+            if (targetHwnd != IntPtr.Zero)
+            {
+                User32.SetForegroundWindow(targetHwnd);
+            }
+
+            _consecutiveDuplicates = 0;
+        }
+
         CaptureFrame(forceAccept: true);
-        if (_captureMode == ScrollingCaptureMode.Automatic)
+
+        if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
+        {
+            // Send the first scroll event so it starts scrolling immediately
+            User32.mouse_event(User32.MOUSEEVENTF_WHEEL, 0, 0, unchecked((uint)-120), 0);
+        }
+
+        if (_captureMode == ScrollingCaptureMode.Automatic || _captureMode == ScrollingCaptureMode.AssistAutoscroll)
             StartAutomaticTimer();
     }
 
@@ -246,9 +283,38 @@ public sealed partial class ScrollingCaptureForm : Form
         if (_captureTimer is not null)
             return;
 
-        _captureTimer = new System.Windows.Forms.Timer { Interval = CaptureIntervalMs };
-        _captureTimer.Tick += (_, _) => CaptureFrame(forceAccept: false);
+        int interval = _captureMode == ScrollingCaptureMode.AssistAutoscroll ? 150 : CaptureIntervalMs;
+        _captureTimer = new System.Windows.Forms.Timer { Interval = interval };
+        _captureTimer.Tick += (_, _) => HandleTimerTick();
         _captureTimer.Start();
+    }
+
+    private void HandleTimerTick()
+    {
+        if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
+        {
+            var result = CaptureFrame(forceAccept: false);
+            if (result == FrameCaptureResult.Accepted)
+            {
+                _consecutiveDuplicates = 0;
+            }
+            else if (result == FrameCaptureResult.Duplicate)
+            {
+                _consecutiveDuplicates++;
+                if (_consecutiveDuplicates >= 3)
+                {
+                    StopCapturing();
+                    return;
+                }
+            }
+
+            // Send next scroll event
+            User32.mouse_event(User32.MOUSEEVENTF_WHEEL, 0, 0, unchecked((uint)-120), 0);
+        }
+        else
+        {
+            CaptureFrame(forceAccept: false);
+        }
     }
 
     private void StopAutomaticTimer()
@@ -704,7 +770,10 @@ public sealed partial class ScrollingCaptureForm : Form
         public CaptureControlBar(Rectangle captureRegion, ScrollingCaptureMode mode)
         {
             _mode = mode;
-            _status = mode == ScrollingCaptureMode.Automatic ? "Auto: scroll now" : "Manual: click capture";
+            if (mode == ScrollingCaptureMode.AssistAutoscroll)
+                _status = "Autoscroll: starting...";
+            else
+                _status = mode == ScrollingCaptureMode.Automatic ? "Auto: scroll now" : "Manual: click capture";
 
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
@@ -875,6 +944,8 @@ public sealed partial class ScrollingCaptureForm : Form
         private string FormatFrameStatus(int count)
         {
             string label = count == 1 ? "frame" : "frames";
+            if (_mode == ScrollingCaptureMode.AssistAutoscroll)
+                return $"Autoscroll: {count} {label}";
             return _mode == ScrollingCaptureMode.Automatic
                 ? $"Auto: {count} {label}"
                 : $"Manual: {count} {label}";

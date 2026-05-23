@@ -7,7 +7,7 @@ namespace CyberSnap.Helpers;
 
 public static class WindowsMenuRenderer
 {
-    public const int DefaultWidth = 260;
+    public const int DefaultWidth = 340;
     public const int RowHeight = 38;
 
     public static ContextMenuStrip Create(bool showImages = true, int minWidth = DefaultWidth)

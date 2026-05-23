@@ -40,7 +40,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Grid x:Name="ImageArea" Grid.Row="0" Visibility="Collapsed" MaxHeight="176" HorizontalAlignment="Center">
+                <Grid x:Name="ImageArea" Grid.Row="0" Visibility="Collapsed" MaxHeight="176" HorizontalAlignment="Stretch">
                     <Border x:Name="ImageFrame" CornerRadius="10,10,0,0" ClipToBounds="True">
                         <Image x:Name="PreviewImage" Stretch="Uniform"
                                UseLayoutRounding="True"
@@ -120,9 +120,9 @@
                     </Border>
                     <Border x:Name="HistoryBtn" Width="32" Height="32" CornerRadius="8"
                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                            ToolTip="Open History"
-                            AutomationProperties.Name="Open History"
-                            AutomationProperties.HelpText="Open the History tab."
+                            ToolTip="Open the History Window"
+                            AutomationProperties.Name="Open the History Window"
+                            AutomationProperties.HelpText="Open the History Window."
                             Cursor="Hand"
                             Focusable="True"
                             KeyDown="HistoryBtn_KeyDown"

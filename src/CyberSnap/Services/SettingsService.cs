@@ -319,7 +319,11 @@ public sealed class SettingsService : IDisposable
         settings.DefaultCaptureMode = NormalizeEnum(settings.DefaultCaptureMode, CaptureMode.Rectangle);
         settings.WindowDetection = NormalizeEnum(settings.WindowDetection, WindowDetectionMode.WindowOnly);
         settings.CaptureDockSide = NormalizeEnum(settings.CaptureDockSide, CaptureDockSide.Top);
-        settings.ScrollingCaptureMode = NormalizeEnum(settings.ScrollingCaptureMode, ScrollingCaptureMode.Automatic);
+        settings.ScrollingCaptureMode = NormalizeEnum(settings.ScrollingCaptureMode, ScrollingCaptureMode.AssistAutoscroll);
+        if (settings.ScrollingCaptureMode == ScrollingCaptureMode.Manual)
+        {
+            settings.ScrollingCaptureMode = ScrollingCaptureMode.AssistAutoscroll;
+        }
         settings.HistoryRetention = NormalizeEnum(settings.HistoryRetention, HistoryRetentionPeriod.Never);
         settings.ToastPosition = NormalizeEnum(settings.ToastPosition, ToastPosition.Right);
         settings.SoundPack = NormalizeEnum(settings.SoundPack, SoundPack.Default);

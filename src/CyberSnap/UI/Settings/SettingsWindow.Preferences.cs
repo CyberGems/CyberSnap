@@ -301,6 +301,21 @@ public partial class SettingsWindow
             });
     }
 
+    private void AutoCheckUpdateCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
+
+        var previous = _settingsService.Settings.AutoCheckForUpdates;
+        var selected = AutoCheckUpdateCheck.IsChecked == true;
+        UpdateCaptureSavePreference(
+            "settings.auto-check-updates",
+            "Auto check for updates",
+            previous,
+            selected,
+            value => _settingsService.Settings.AutoCheckForUpdates = value,
+            value => AutoCheckUpdateCheck.IsChecked = value);
+    }
+
     private void AnnotationStrokeShadowCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
@@ -406,10 +421,10 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
         var previous = _settingsService.Settings.CaptureDockSide;
-        var selected = (CaptureDockSide)Math.Clamp(CaptureDockSideCombo.SelectedIndex, 0, 3);
+        var selected = (CaptureDockSide)Math.Clamp(CaptureDockSideCombo.SelectedIndex, 0, 1);
         UpdateCaptureSavePreference(
             "settings.capture-dock-side",
-            "Capture dock",
+            "Toolbar Position",
             previous,
             selected,
             value => _settingsService.Settings.CaptureDockSide = value,
@@ -421,16 +436,18 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
         var previous = _settingsService.Settings.ScrollingCaptureMode;
-        var selected = ScrollingCaptureModeCombo.SelectedIndex == 1
-            ? ScrollingCaptureMode.Manual
-            : ScrollingCaptureMode.Automatic;
+        var selected = ScrollingCaptureModeCombo.SelectedIndex switch
+        {
+            1 => ScrollingCaptureMode.AssistAutoscroll,
+            _ => ScrollingCaptureMode.Automatic
+        };
         UpdateCaptureSavePreference(
             "settings.scrolling-capture-mode",
             "Scrolling capture mode",
             previous,
             selected,
             value => _settingsService.Settings.ScrollingCaptureMode = value,
-            value => ScrollingCaptureModeCombo.SelectedIndex = value == ScrollingCaptureMode.Manual ? 1 : 0);
+            value => ScrollingCaptureModeCombo.SelectedIndex = value == ScrollingCaptureMode.AssistAutoscroll ? 1 : 0);
     }
 
     private void ToastFadeOutCheck_Changed(object sender, RoutedEventArgs e)
@@ -664,15 +681,7 @@ public partial class SettingsWindow
             value => ShowImageSearchBarCheck.IsChecked = value,
             value =>
             {
-                if (!value)
-                {
-                    if (!string.IsNullOrEmpty(ImageSearchBox.Text))
-                        ImageSearchBox.Clear();
-                    _imageSearchQuery = "";
-                }
-
-                if (HistoryTab.IsChecked == true)
-                    LoadCurrentHistoryTab();
+                ((App)Application.Current).RefreshHistoryWindowIfOpen();
             });
     }
 
@@ -691,8 +700,7 @@ public partial class SettingsWindow
             value => ShowImageSearchDiagnosticsCheck.IsChecked = value,
             _ =>
             {
-                if (HistoryTab.IsChecked == true)
-                    LoadCurrentHistoryTab();
+                ((App)Application.Current).RefreshHistoryWindowIfOpen();
             });
     }
 
@@ -747,8 +755,7 @@ public partial class SettingsWindow
 
         try
         {
-            if (HistoryTab.IsChecked == true)
-                LoadCurrentHistoryTab();
+            ((App)Application.Current).RefreshHistoryWindowIfOpen();
         }
         catch (Exception ex)
         {
@@ -803,8 +810,7 @@ public partial class SettingsWindow
 
             try
             {
-                if (HistoryTab.IsChecked == true)
-                    LoadCurrentHistoryTab();
+                ((App)Application.Current).RefreshHistoryWindowIfOpen();
             }
             catch (Exception ex)
             {
@@ -831,14 +837,14 @@ public partial class SettingsWindow
             : Visibility.Visible;
     }
 
-    private void WindowDetectionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void WindowDetectionCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
         var previous = (Mode: _settingsService.Settings.WindowDetection, DetectWindows: _settingsService.Settings.DetectWindows);
-        var selectedIndex = WindowDetectionCombo.SelectedIndex < 0 ? 1 : WindowDetectionCombo.SelectedIndex;
-        var mode = (WindowDetectionMode)Math.Clamp(selectedIndex, 0, 1);
-        var selected = (Mode: mode, DetectWindows: mode != WindowDetectionMode.Off);
+        var enabled = WindowDetectionCheck.IsChecked == true;
+        var mode = enabled ? WindowDetectionMode.WindowOnly : WindowDetectionMode.Off;
+        var selected = (Mode: mode, DetectWindows: enabled);
         UpdateCaptureSavePreference(
             "settings.window-detection",
             "Window detection",
@@ -849,8 +855,8 @@ public partial class SettingsWindow
                 _settingsService.Settings.WindowDetection = value.Mode;
                 _settingsService.Settings.DetectWindows = value.DetectWindows;
             },
-            value => WindowDetectionCombo.SelectedIndex = (int)value.Mode,
-            () => WindowDetectionCombo.SelectedIndex = (int)mode);
+            value => WindowDetectionCheck.IsChecked = value.DetectWindows,
+            () => WindowDetectionCheck.IsChecked = enabled);
     }
 
     private void CaptureDelayCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)

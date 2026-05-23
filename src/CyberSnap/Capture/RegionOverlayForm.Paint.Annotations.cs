@@ -162,6 +162,15 @@ public sealed partial class RegionOverlayForm
                 _selectedEmoji, _emojiPlaceSize, 0.6f);
         }
 
+        // Magnifier placing preview (follow cursor)
+        if (_mode == CaptureMode.Magnifier && _isPlacingMagnifier)
+        {
+            int srcSz = 50;
+            int sx2 = Math.Clamp(cursorPoint.X - srcSz / 2, 0, _bmpW - srcSz);
+            int sy2 = Math.Clamp(cursorPoint.Y - srcSz / 2, 0, _bmpH - srcSz);
+            PaintMagnifierAt(g, cursorPoint, new Rectangle(sx2, sy2, srcSz, srcSz), 0.65f);
+        }
+
         PaintGlobalSnapGuides(g);
 
         if (_selectPreviewAnnotation is not null)
@@ -230,6 +239,8 @@ public sealed partial class RegionOverlayForm
             r = U(r, GetDrawPreviewBounds());
         if (_mode == CaptureMode.Emoji && _isPlacingEmoji)
             r = U(r, GetEmojiPreviewRect(cursorPoint));
+        if (_mode == CaptureMode.Magnifier && _isPlacingMagnifier)
+            r = U(r, GetMagnifierPreviewRect(cursorPoint));
         if (_isTyping)
             r = U(r, InflateForRepaint(Rectangle.Round(GetActiveTextRect()), 16));
         if (_selectPreviewAnnotation is not null)
@@ -416,6 +427,17 @@ public sealed partial class RegionOverlayForm
     private void PaintPlacedMagnifier(Graphics g, Point pos, Rectangle srcRect)
     {
         PaintMagnifierAt(g, pos, srcRect, 1f);
+    }
+
+    private Rectangle GetMagnifierVisualBounds(MagnifierAnnotation mg)
+    {
+        int zoom = 3;
+        int dstSize = mg.SrcRect.Width * zoom;
+        int px = mg.Pos.X + 20;
+        int py = mg.Pos.Y + 20;
+        if (px + dstSize + 6 > ClientSize.Width) px = mg.Pos.X - 20 - dstSize;
+        if (py + dstSize + 6 > ClientSize.Height) py = mg.Pos.Y - 20 - dstSize;
+        return new Rectangle(px - 6, py - 6, dstSize + 12, dstSize + 12);
     }
 
     private static Rectangle GetMagnifierPaintBounds(Point pos, Rectangle srcRect, Size clientSize)

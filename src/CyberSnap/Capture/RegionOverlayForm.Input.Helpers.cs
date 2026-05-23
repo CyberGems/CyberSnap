@@ -106,7 +106,7 @@ public sealed partial class RegionOverlayForm
             SetMode(mode, tool.Id);
     }
 
-    private void SetToolColor(Color color)
+    public void SetToolColor(Color color)
     {
         _toolColor = color;
         for (int i = 0; i < ToolColors.Length; i++)
@@ -114,9 +114,11 @@ public sealed partial class RegionOverlayForm
             if (ToolColors[i].ToArgb() == color.ToArgb())
             {
                 _toolColorIndex = i;
+                ToolColorChanged?.Invoke(color);
                 return;
             }
         }
+        ToolColorChanged?.Invoke(color);
     }
 
     private void SetMode(CaptureMode m, string? toolId = null)
@@ -144,6 +146,7 @@ public sealed partial class RegionOverlayForm
         _isRulerDragging = false;
         _isCurvedArrowDragging = false;
         _isEraserDragging = false;
+        _isPlacingMagnifier = false;
         if (_isSelectDragging || _isSelectResizing || _renderSkipIndex >= 0)
         {
             _isSelectDragging = false;
@@ -213,6 +216,15 @@ public sealed partial class RegionOverlayForm
             HideEmojiSearchBox();
         }
 
+        if (m == CaptureMode.Magnifier)
+            _isPlacingMagnifier = true;
+
+        if (m == CaptureMode.Record)
+        {
+            RecordingRequested?.Invoke();
+            return;
+        }
+
         Invalidate(Rectangle.Union(InflateForRepaint(GetEmojiPickerBounds(), 12), InflateForRepaint(GetColorPickerBounds(), 12)));
         RefreshToolbar();
     }
@@ -269,7 +281,7 @@ public sealed partial class RegionOverlayForm
     {
         if (cursor == Point.Empty)
             return Rectangle.Empty;
-        const int srcSize = 40;
+        const int srcSize = 50;
         return GetMagnifierPaintBounds(cursor, new Rectangle(cursor.X - srcSize / 2, cursor.Y - srcSize / 2, srcSize, srcSize), ClientSize);
     }
 

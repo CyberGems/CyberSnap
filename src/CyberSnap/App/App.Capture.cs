@@ -177,18 +177,20 @@ public partial class App
         thread.Start();
     }
 
-    private void LaunchScrollingCapture()
+    private void LaunchScrollingCapture(Rectangle? preSelectedRegion = null)
     {
+        _isCapturing = 1;
         var thread = new Thread(() =>
         {
             try
             {
                 Theme.Refresh();
-                bool showCursor = _settingsService!.Settings.ShowCursor;
+                bool showCursor = false;
                 var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
                 var form = new ScrollingCaptureForm(selectionScreenshot, bounds, showCursor,
                     _settingsService!.Settings.ShowCaptureMagnifier,
-                    _settingsService!.Settings.ScrollingCaptureMode);
+                    _settingsService!.Settings.ScrollingCaptureMode,
+                    preSelectedRegion);
 
                 form.CaptureCompleted += result =>
                 {
@@ -343,6 +345,12 @@ public partial class App
                 };
                 overlay.SetEnabledTools(_settingsService.Settings.EnabledTools);
                 overlay.SetShowToolNumberBadges(_settingsService.Settings.ShowToolNumberBadges);
+                overlay.SetToolColor(System.Drawing.Color.FromArgb(_settingsService.Settings.ToolColorArgb));
+                overlay.ToolColorChanged += color =>
+                {
+                    _settingsService!.Settings.ToolColorArgb = color.ToArgb();
+                    _settingsService.Save();
+                };
 
                 overlay.RegionSelected += sel =>
                 {
@@ -365,6 +373,15 @@ public partial class App
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
                     HandleOcrResult(cropped);
+                };
+
+                overlay.ScrollRegionSelected += sel =>
+                {
+                    overlay.Hide();
+                    UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(sel.Right, sel.Bottom));
+                    overlay.Close();
+                    System.Windows.Forms.Application.ExitThread();
+                    Dispatcher.BeginInvoke(() => LaunchScrollingCapture(sel));
                 };
 
                 overlay.ScanRegionSelected += sel =>
@@ -409,6 +426,14 @@ public partial class App
                             scanned.Dispose();
                         }
                     });
+                };
+
+                overlay.RecordingRequested += () =>
+                {
+                    overlay.Hide();
+                    overlay.Close();
+                    System.Windows.Forms.Application.ExitThread();
+                    Dispatcher.BeginInvoke(() => LaunchGifRecording());
                 };
 
                 overlay.ColorPicked += hex =>

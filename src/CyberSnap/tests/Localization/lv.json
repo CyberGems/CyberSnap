@@ -50,7 +50,7 @@
   "Window detection": "Logu noteikÅ¡ana",
   "Off": "IzslÄ“gts",
   "Windows only": "Tikai Windows",
-  "Capture dock": "UzÅ†emÅ¡anas doks",
+  "Toolbar Position": "Rīkjoslas pozīcija",
   "Top": "AugÅ¡Ä",
   "Bottom": "ApakÅ¡Ä",
   "Left": "Pa kreisi",
@@ -223,3 +223,5 @@
   "Update check failed": "AtjauninÄÅ¡anas pÄrbaude neizdevÄs",
   "CyberSnap is up to date": "CyberSnap ir atjauninÄts"
 }
+
+

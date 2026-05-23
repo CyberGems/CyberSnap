@@ -50,7 +50,7 @@
   "Window detection": "ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦æ¤œå‡º",
   "Off": "ã‚ªãƒ•",
   "Windows only": "Windowsã®ã¿",
-  "Capture dock": "ã‚­ãƒ£ãƒ—ãƒãƒ£ãƒ‰ãƒƒã‚¯",
+  "Toolbar Position": "ツールバーの位置",
   "Top": "ãƒˆãƒƒãƒ—ã¸",
   "Bottom": "ä¸‹",
   "Left": "å·¦",
@@ -223,3 +223,5 @@
   "Update check failed": "æ›´æ–°ãƒã‚§ãƒƒã‚¯ã«å¤±æ•—ã—ã¾ã—ãŸ",
   "CyberSnap is up to date": "CyberSnap ã¯æœ€æ–°ã§ã™"
 }
+
+

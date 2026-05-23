@@ -28,7 +28,6 @@ public partial class SettingsWindow
         {
             LoadOcrLanguageOptions();
             LoadTranslateLanguageCombos();
-            SelectTranslationModelCombo(TranslateModelCombo, _settingsService.Settings.TranslationModel);
             GoogleApiKeyBox.Password = _settingsService.Settings.GoogleTranslateApiKey ?? "";
         }
         finally
@@ -298,23 +297,6 @@ public partial class SettingsWindow
             SetTranslationPreferenceStatus);
     }
 
-    private void TranslateModelCombo_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded || _suppressOcrPreferenceChange) return;
-
-        var previous = _settingsService.Settings.TranslationModel;
-        var selected = (int)GetSelectedTranslationModel(TranslateModelCombo);
-        UpdateOcrPreference(
-            "settings.translation-engine",
-            "Translation engine",
-            previous,
-            selected,
-            value => _settingsService.Settings.TranslationModel = value,
-            value => SelectTranslationModelCombo(TranslateModelCombo, value),
-            SetTranslationPreferenceStatus,
-            _ => UpdateTranslationModelUi());
-    }
-
     private bool _argosInstalled;
     private void OpenSourceLocalInstallBtn_Click(object sender, RoutedEventArgs e)
     {
@@ -374,16 +356,8 @@ public partial class SettingsWindow
 
             if (!isUninstall)
             {
-                var previous = _settingsService.Settings.TranslationModel;
-                UpdateOcrPreference(
-                    "settings.open-source-local-translation-engine",
-                    "Translation engine",
-                    previous,
-                    (int)TranslationModel.OpenSourceLocal,
-                    value => _settingsService.Settings.TranslationModel = value,
-                    value => SelectTranslationModelCombo(TranslateModelCombo, value),
-                    SetTranslationPreferenceStatus,
-                    _ => UpdateTranslationModelUi());
+                _settingsService.Settings.TranslationModel = (int)TranslationModel.OpenSourceLocal;
+                _settingsService.Save();
             }
         }
 
@@ -448,16 +422,8 @@ public partial class SettingsWindow
 
             if (!isUninstall)
             {
-                var previous = _settingsService.Settings.TranslationModel;
-                UpdateOcrPreference(
-                    "settings.argos-translation-engine",
-                    "Translation engine",
-                    previous,
-                    (int)TranslationModel.Argos,
-                    value => _settingsService.Settings.TranslationModel = value,
-                    value => SelectTranslationModelCombo(TranslateModelCombo, value),
-                    SetTranslationPreferenceStatus,
-                    _ => UpdateTranslationModelUi());
+                _settingsService.Settings.TranslationModel = (int)TranslationModel.Argos;
+                _settingsService.Save();
             }
         }
 
@@ -612,34 +578,33 @@ public partial class SettingsWindow
 
     private void UpdateTranslationModelUi()
     {
-        // Translation engine runtime details are surfaced in the install/runtime cards below.
+        var activeModel = _settingsService.Settings.TranslationModel;
+        OpenSourceLocalInstallBtn.Opacity = activeModel == (int)TranslationModel.OpenSourceLocal ? 1.0 : 0.6;
+        ArgosInstallBtn.Opacity = activeModel == (int)TranslationModel.Argos ? 1.0 : 0.6;
+        GoogleApiKeyBox.Opacity = activeModel == (int)TranslationModel.Google ? 1.0 : 0.6;
     }
 
-    private static TranslationModel GetSelectedTranslationModel(ComboBox combo)
+    private void EngineRow_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (combo.SelectedItem is ComboBoxItem item &&
-            item.Tag is string tag &&
-            int.TryParse(tag, out var raw) &&
-            Enum.IsDefined(typeof(TranslationModel), raw))
-        {
-            return (TranslationModel)raw;
-        }
+        if (sender is not FrameworkElement element || element.Tag is not string tag)
+            return;
 
-        return TranslationModel.OpenSourceLocal;
-    }
+        if (!int.TryParse(tag, out var modelValue) || !Enum.IsDefined(typeof(TranslationModel), modelValue))
+            return;
 
-    private static void SelectTranslationModelCombo(ComboBox combo, int rawValue)
-    {
-        var selected = combo.Items.OfType<ComboBoxItem>()
-            .FirstOrDefault(item =>
-                item.Tag is string tag &&
-                int.TryParse(tag, out var parsed) &&
-                parsed == rawValue);
+        var previous = _settingsService.Settings.TranslationModel;
+        if (previous == modelValue)
+            return;
 
-        if (selected is not null)
-            combo.SelectedItem = selected;
-        else if (combo.Items.Count > 0)
-            combo.SelectedIndex = 0;
+        UpdateOcrPreference(
+            "settings.translation-engine",
+            "Translation engine",
+            previous,
+            modelValue,
+            value => _settingsService.Settings.TranslationModel = value,
+            value => _settingsService.Settings.TranslationModel = value,
+            SetTranslationPreferenceStatus,
+            _ => UpdateTranslationModelUi());
     }
 
     private void GoogleApiKeyBox_Changed(object sender, RoutedEventArgs e)

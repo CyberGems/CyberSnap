@@ -50,7 +50,7 @@
   "Window detection": "Ablak Ã©rzÃ©kelÃ©s",
   "Off": "Ki",
   "Windows only": "Csak Windows",
-  "Capture dock": "RÃ¶gzÃ­tÃ©si dokkolÃ³",
+  "Toolbar Position": "Eszköztár pozíciója",
   "Top": "Top",
   "Bottom": "Alul",
   "Left": "Balra",
@@ -223,3 +223,5 @@
   "Update check failed": "A frissÃ­tÃ©s ellenÅ‘rzÃ©se sikertelen",
   "CyberSnap is up to date": "Az CyberSnap naprakÃ©sz"
 }
+
+

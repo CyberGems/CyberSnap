@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
@@ -10,7 +10,7 @@ using CyberSnap.Services;
 
 namespace CyberSnap.UI;
 
-public partial class SettingsWindow
+public partial class HistoryWindow
 {
     private void UpdateImageSearchActionButtons()
     {
@@ -91,7 +91,7 @@ public partial class SettingsWindow
             automationName = "Color history search";
             helpText = "Search saved colors by hex value, RGB values, or color names.";
         }
-        else if (HistoryCategoryCombo.SelectedIndex == 5)
+        else if (HistoryCategoryCombo.SelectedIndex == 4)
         {
             placeholder = "Search QR/barcode text, links, or formats";
             automationName = "Code history search";
@@ -294,7 +294,7 @@ public partial class SettingsWindow
                 _colorSearchDebounceTimer.Tick += FlushColorSearchDebounce;
                 _colorSearchDebounceTimer.Start();
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 5)
+            else if (HistoryCategoryCombo.SelectedIndex == 4)
             {
                 _codeSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_codeSearchQuery) && !ImageSearchBox.IsKeyboardFocused
@@ -342,7 +342,7 @@ public partial class SettingsWindow
                 LoadOcrHistory();
             else if (HistoryCategoryCombo.SelectedIndex == 3)
                 LoadColorHistory();
-            else if (HistoryCategoryCombo.SelectedIndex == 5)
+            else if (HistoryCategoryCombo.SelectedIndex == 4)
                 LoadCodeHistory();
             e.Handled = true;
         }
@@ -441,5 +441,98 @@ public partial class SettingsWindow
             if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 0)
                 ImagesPanel.ScrollToVerticalOffset(previousOffset);
         }, System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private void LoadPruneSettings()
+    {
+        _suppressPrunePreferenceChange = true;
+        try
+        {
+            var s = _settingsService.Settings;
+            HistoryRetentionCombo.SelectedIndex = Math.Clamp((int)s.HistoryRetention, 0, 4);
+            HistoryCountLimitCombo.SelectedIndex = s.HistoryCountLimit switch
+            {
+                50 => 1,
+                100 => 2,
+                250 => 3,
+                500 => 4,
+                1000 => 5,
+                _ => 0
+            };
+            HistoryDeleteOriginalOnPruneCheck.IsChecked = s.HistoryDeleteOriginalOnPrune;
+        }
+        finally
+        {
+            _suppressPrunePreferenceChange = false;
+        }
+    }
+
+    private void HistoryRetentionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressPrunePreferenceChange) return;
+
+        try
+        {
+            var selected = (HistoryRetentionPeriod)Math.Clamp(HistoryRetentionCombo.SelectedIndex, 0, 4);
+            _settingsService.Settings.HistoryRetention = selected;
+            _settingsService.Save();
+            _historyService.PruneByRetention(selected);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.history-retention", ex);
+        }
+    }
+
+    private void HistoryCountLimitCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressPrunePreferenceChange) return;
+
+        try
+        {
+            var selected = HistoryCountLimitCombo.SelectedIndex switch
+            {
+                1 => 50,
+                2 => 100,
+                3 => 250,
+                4 => 500,
+                5 => 1000,
+                _ => 0
+            };
+            _settingsService.Settings.HistoryCountLimit = selected;
+            _historyService.HistoryCountLimit = selected;
+            _settingsService.Save();
+            _historyService.PruneByCount(selected, _settingsService.Settings.HistoryDeleteOriginalOnPrune);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.history-count-limit", ex);
+        }
+    }
+
+    private void HistoryDeleteOriginalOnPruneCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressPrunePreferenceChange) return;
+
+        try
+        {
+            var selected = HistoryDeleteOriginalOnPruneCheck.IsChecked == true;
+            _settingsService.Settings.HistoryDeleteOriginalOnPrune = selected;
+            _historyService.HistoryDeleteOriginalOnPrune = selected;
+            _settingsService.Save();
+            if (selected && _settingsService.Settings.HistoryCountLimit > 0)
+            {
+                _historyService.PruneByCount(_settingsService.Settings.HistoryCountLimit, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.history-delete-original-on-prune", ex);
+        }
+    }
+
+    private void DeleteOriginalLabel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        HistoryDeleteOriginalOnPruneCheck.IsChecked = HistoryDeleteOriginalOnPruneCheck.IsChecked != true;
     }
 }

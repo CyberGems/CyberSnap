@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -14,7 +14,7 @@ using WpfPoint = System.Windows.Point;
 
 namespace CyberSnap.UI;
 
-public partial class SettingsWindow
+public partial class HistoryWindow
 {
     private bool _selectMode;
     private List<HistoryItemVM> _historyItems = new();
@@ -121,6 +121,19 @@ public partial class SettingsWindow
             .Select(item => item.Entry.FilePath)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var entries = _historyService.ImageEntries;
+        
+        int oldTotalCount = _allImageHistoryEntries?.Count ?? 0;
+        int newTotalCount = entries.Count;
+        int diff = newTotalCount - oldTotalCount;
+        if (diff > 0)
+        {
+            _historyRenderCount += diff;
+        }
+        else if (newTotalCount < _historyRenderCount)
+        {
+            _historyRenderCount = newTotalCount;
+        }
+
         _allImageHistoryEntries = entries;
         ResetMaterializedImageHistory();
         EnsureMaterializedImageHistoryItems(Math.Min(_historyRenderCount <= 0 ? ImageHistoryPageSize : _historyRenderCount, entries.Count), selectedPaths);
@@ -346,6 +359,9 @@ public partial class SettingsWindow
                     _historyRefreshTimer.Stop();
                     _historyRefreshTimer.Start();
                 }
+
+                if (_pendingNavigateToPath != null)
+                    TryNavigateToPendingItem();
             }
         }
     }
@@ -416,7 +432,7 @@ public partial class SettingsWindow
         var loadedPrefix = totalCount > loadedCount
             ? $"{loadedCount} of {totalCount} captures loaded"
             : $"{loadedCount} capture{(loadedCount == 1 ? "" : "s")}";
-        HistoryCountText.Text = $"{loadedPrefix} Â· {FormatStorageSize(visibleBytes)}";
+        HistoryCountText.Text = $"{loadedPrefix} · {FormatStorageSize(visibleBytes)}";
     }
 
     private void RenderVirtualizedHistoryItems(bool resetScrollPosition)
@@ -605,7 +621,7 @@ public partial class SettingsWindow
         var visibleStatus = ShouldShowHistoryCardStatus(vm.ImageSearchStatusText) ? vm.ImageSearchStatusText : "";
         var timeAndStatus = string.IsNullOrWhiteSpace(visibleStatus)
             ? vm.TimeAgo
-            : $"{vm.TimeAgo} Â· {visibleStatus}";
+            : $"{vm.TimeAgo} · {visibleStatus}";
         var timeStatusBlock = new TextBlock
         {
             Text = timeAndStatus,
@@ -677,7 +693,7 @@ public partial class SettingsWindow
             var visibleStatus = ShouldShowHistoryCardStatus(vm.ImageSearchStatusText) ? vm.ImageSearchStatusText : "";
             var timeAndStatus = string.IsNullOrWhiteSpace(visibleStatus)
                 ? vm.TimeAgo
-                : $"{vm.TimeAgo} Â· {visibleStatus}";
+                : $"{vm.TimeAgo} · {visibleStatus}";
             vm.TimeStatusTextBlock.Text = timeAndStatus;
             vm.TimeStatusTextBlock.ToolTip = timeAndStatus;
             AutomationProperties.SetName(vm.TimeStatusTextBlock, string.IsNullOrWhiteSpace(visibleStatus)
@@ -798,13 +814,13 @@ public partial class SettingsWindow
             ? $"Clear all {totalCount} {totalCategoryLabel} from history (thumbnails + index). Source files on disk are kept."
             : $"No {categoryLabel} to clear in the current category";
         var deleteAllName = totalCount > 0
-            ? $"Clear all {totalCount} {totalCategoryLabel} from history"
+            ? $"Delete all {totalCount} {totalCategoryLabel} in the current history category"
             : $"Clear {categoryLabel}";
         var deleteSelectedHelp = selectedCount > 0
             ? $"Remove {selectedCount} selected {selectedCategoryLabel} from history (thumbnails + index). Source files on disk are kept."
             : $"Select {categoryLabel} before removing selected items";
         var deleteSelectedName = selectedCount > 0
-            ? $"Remove {selectedCount} selected {selectedCategoryLabel} from history"
+            ? $"Delete {selectedCount} selected {selectedCategoryLabel}"
             : $"Remove selected {categoryLabel}";
 
         SelectBtn.ToolTip = selectHelp;
@@ -825,8 +841,7 @@ public partial class SettingsWindow
             1 => count == 1 ? "text capture" : "text captures",
             2 => count == 1 ? "video/GIF" : "videos/GIFs",
             3 => count == 1 ? "color" : "colors",
-            4 => count == 1 ? "sticker" : "stickers",
-            5 => count == 1 ? "QR/barcode scan" : "QR/barcode scans",
+            4 => count == 1 ? "QR/barcode scan" : "QR/barcode scans",
             _ => count == 1 ? "history item" : "history items"
         };
 
@@ -963,7 +978,7 @@ public partial class SettingsWindow
         {
             1 => OcrStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
             3 => ColorStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
-            5 => CodeStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
+            4 => CodeStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
             _ => Enumerable.Empty<Border>()
         };
     }
@@ -980,7 +995,7 @@ public partial class SettingsWindow
             card.Tag = false;
         else if (HistoryCategoryCombo.SelectedIndex == 3)
             card.Tag = null;
-        else if (HistoryCategoryCombo.SelectedIndex == 5)
+        else if (HistoryCategoryCombo.SelectedIndex == 4)
             card.Tag = null;
 
         RefreshSelectableCardSelection(card);
@@ -999,7 +1014,7 @@ public partial class SettingsWindow
         {
             1 => card.Tag is true,
             3 => card.Tag is ColorHistoryEntry,
-            5 => card.Tag is CodeHistoryEntry,
+            4 => card.Tag is CodeHistoryEntry,
             _ => false
         };
 
@@ -1020,15 +1035,13 @@ public partial class SettingsWindow
                 return;
             }
 
-            if (!ThemedConfirmDialog.Confirm(this,
-                    $"Delete all {totalCount} {tab}?",
-                    $"This will delete all {totalCount} {tab} from history. Source files will be kept.",
-                    "Delete", "Cancel"))
-                { SetHistoryDeleteStatus($"Delete canceled. Kept {totalCount} {tab}."); UpdateHistoryActionButtons(); return; }
+            if (!ConfirmDeleteAllStep(1, totalCount, tab)) return;
+            if (!ConfirmDeleteAllStep(2, totalCount, tab)) return;
+            if (!ConfirmDeleteAllStep(3, totalCount, tab)) return;
 
             CancelImageSearchWork();
             if (HistoryCategoryCombo.SelectedIndex == 0) _historyService.ClearImages();
-            else if (HistoryCategoryCombo.SelectedIndex == 2) _historyService.ClearGifs();
+            else if (HistoryCategoryCombo.SelectedIndex == 2) DeleteMediaItems(_allGifItems);
             else if (HistoryCategoryCombo.SelectedIndex == 1) _historyService.ClearOcr();
             else if (HistoryCategoryCombo.SelectedIndex == 3) _historyService.ClearColors();
             else if (HistoryCategoryCombo.SelectedIndex == 4) _historyService.ClearCodes();
@@ -1078,8 +1091,7 @@ public partial class SettingsWindow
             }
             else if (HistoryCategoryCombo.SelectedIndex == 2)
             {
-                var toDelete = GetSelectedEntriesFromVisualTree(GifsPanel);
-                _historyService.RemoveEntries(toDelete);
+                DeleteMediaItems(_filteredGifItems.Where(i => i.IsSelected).ToList());
             }
             else if (HistoryCategoryCombo.SelectedIndex == 1)
             {
@@ -1136,6 +1148,32 @@ public partial class SettingsWindow
         SetHistoryDeleteStatus($"Delete canceled. Kept {selectedCount} selected {categoryLabel}.");
         UpdateHistoryActionButtons();
         return false;
+    }
+
+    private bool ConfirmDeleteAllStep(int step, int totalCount, string categoryLabel)
+    {
+        if (ThemedConfirmDialog.Confirm(this, BuildDeleteAllConfirmationTitle(step, totalCount, categoryLabel), BuildDeleteAllConfirmationMessage(step, totalCount, categoryLabel), "Delete", "Cancel"))
+            return true;
+
+        SetHistoryDeleteStatus($"Delete canceled. Kept {totalCount} {categoryLabel}.");
+        UpdateHistoryActionButtons();
+        return false;
+    }
+
+    private static string BuildDeleteAllConfirmationTitle(int step, int totalCount, string categoryLabel)
+    {
+        return $"Delete {totalCount} {categoryLabel} ({step}/3)";
+    }
+
+    private static string BuildDeleteAllConfirmationMessage(int step, int totalCount, string categoryLabel)
+    {
+        return step switch
+        {
+            1 => $"Delete all {totalCount} {categoryLabel} in this history tab?",
+            2 => $"Really delete all {totalCount} {categoryLabel}?",
+            3 => $"This cannot be undone. Delete all {totalCount} {categoryLabel}?",
+            _ => ""
+        };
     }
 
     private void AppendGroupedHistoryItems(System.Windows.Controls.Panel target, IEnumerable<HistoryItemVM> items, Func<HistoryItemVM, Border> cardFactory)
@@ -1267,10 +1305,10 @@ public partial class SettingsWindow
         if (filterActive)
         {
             var totalLabel = totalCount == 1 ? singularLabel : pluralLabel;
-            return $"{visibleCount} of {totalCount} {totalLabel} shown by filter Â· {sizeText}";
+            return $"{visibleCount} of {totalCount} {totalLabel} shown by filter · {sizeText}";
         }
 
         var visibleLabel = visibleCount == 1 ? singularLabel : pluralLabel;
-        return $"{visibleCount} {visibleLabel} Â· {sizeText}";
+        return $"{visibleCount} {visibleLabel} · {sizeText}";
     }
 }

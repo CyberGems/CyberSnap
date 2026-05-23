@@ -50,7 +50,7 @@
   "Window detection": "Zaznavanje oken",
   "Off": "IzkljuÄeno",
   "Windows only": "Samo Windows",
-  "Capture dock": "Zajem doka",
+  "Toolbar Position": "Položaj orodne vrstice",
   "Top": "Vrh",
   "Bottom": "Spodaj",
   "Left": "levo",
@@ -223,3 +223,5 @@
   "Update check failed": "Preverjanje posodobitve ni uspelo",
   "CyberSnap is up to date": "CyberSnap je posodobljen"
 }
+
+

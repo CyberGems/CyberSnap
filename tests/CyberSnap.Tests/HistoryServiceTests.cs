@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using CyberSnap.Services;
 using System.Reflection;
 
@@ -93,9 +93,54 @@ public sealed class HistoryServiceTests
         var retentionBlock = GetMethodBlock(ioCode, "public void PruneByRetention(HistoryRetentionPeriod retention)");
         Assert.Contains("TryDeleteHistoryFile_NoLock(e.FilePath, \"retention cleanup\");", retentionBlock);
 
+        var pruneCountBlock = GetMethodBlock(ioCode, "private void PruneByCount_NoLock(int maxCount, bool deleteOriginalFiles)");
+        Assert.Contains("TryDeleteHistoryFile_NoLock(entry.FilePath, \"count prune\");", pruneCountBlock);
+
         Assert.DoesNotContain("try { File.Delete(entry.FilePath); } catch { }", serviceCode);
         Assert.DoesNotContain("try { File.Delete(e.FilePath); } catch { }", serviceCode);
         Assert.DoesNotContain("try { File.Delete(e.FilePath); } catch { }", ioCode);
+    }
+
+    [Fact]
+    public void PruneByCount_PrunesCorrectNumberOfNewestEntries()
+    {
+        var service = new HistoryService();
+
+        // Prevent the flush timer from writing to disk/db in test thread
+        var flushTimerField = typeof(HistoryService).GetField("_flushTimer", BindingFlags.NonPublic | BindingFlags.Instance);
+        var oldTimer = flushTimerField?.GetValue(service) as IDisposable;
+        oldTimer?.Dispose();
+        flushTimerField?.SetValue(service, new System.Threading.Timer(_ => { }, null, Timeout.Infinite, Timeout.Infinite));
+
+        // Create test entries
+        var entries = new List<HistoryEntry>
+        {
+            new() { FilePath = "file1.png", CapturedAt = DateTime.Now.AddMinutes(-1) },
+            new() { FilePath = "file2.png", CapturedAt = DateTime.Now.AddMinutes(-2) },
+            new() { FilePath = "file3.png", CapturedAt = DateTime.Now.AddMinutes(-3) },
+            new() { FilePath = "file4.png", CapturedAt = DateTime.Now.AddMinutes(-4) },
+            new() { FilePath = "file5.png", CapturedAt = DateTime.Now.AddMinutes(-5) }
+        };
+
+        // Populate entries using reflection
+        var entriesField = typeof(HistoryService).GetField("_entries", BindingFlags.NonPublic | BindingFlags.Instance);
+        entriesField?.SetValue(service, entries);
+
+        var rebuildMethod = typeof(HistoryService).GetMethod("RebuildEntryLookup_NoLock", BindingFlags.NonPublic | BindingFlags.Instance);
+        rebuildMethod?.Invoke(service, null);
+
+        // Prune to 3 entries
+        service.PruneByCount(3, deleteOriginalFiles: false);
+
+        // Verify the newest 3 entries are kept (which are index 0, 1, 2 in the newest-first list)
+        Assert.Equal(3, service.Entries.Count);
+        Assert.Equal("file1.png", service.Entries[0].FilePath);
+        Assert.Equal("file2.png", service.Entries[1].FilePath);
+        Assert.Equal("file3.png", service.Entries[2].FilePath);
+
+        // Verify that entries 4 and 5 were removed
+        Assert.DoesNotContain(service.Entries, e => e.FilePath == "file4.png");
+        Assert.DoesNotContain(service.Entries, e => e.FilePath == "file5.png");
     }
 
     private static string RepoPath(params string[] parts)

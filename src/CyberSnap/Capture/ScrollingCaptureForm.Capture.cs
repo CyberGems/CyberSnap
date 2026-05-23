@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -115,7 +115,7 @@ public sealed partial class ScrollingCaptureForm
                 int currentLastY = currentImage.Height - 1;
                 for (int offset = 0; offset <= ignoreBottomOffsetMax; offset++)
                 {
-                    if (!RowsEqual(resultData, currentData, resultLastY - offset, currentLastY - offset,
+                    if (!RowsSimilar(resultData, currentData, resultLastY - offset, currentLastY - offset,
                             ignoreSideOffset, compareWidth))
                     {
                         ignoreBottomOffset = offset;
@@ -131,12 +131,14 @@ public sealed partial class ScrollingCaptureForm
             if (resultBottomY < 0)
                 return new ScrollAppendMatch(false, null, 0, 0, 0, ignoreBottomOffset, false);
 
+            int headerLimit = (int)(currentImage.Height * 0.15);
+
             for (int currentY = currentImage.Height - 1; currentY >= 0 && matchCount < matchLimit; currentY--)
             {
                 int currentMatchCount = 0;
-                for (int row = 0; currentY - row >= 0 && resultBottomY - row >= 0 && currentMatchCount < matchLimit; row++)
+                for (int row = 0; currentY - row >= headerLimit && resultBottomY - row >= 0 && currentMatchCount < matchLimit; row++)
                 {
-                    if (!RowsEqual(resultData, currentData, resultBottomY - row, currentY - row,
+                    if (!RowsSimilar(resultData, currentData, resultBottomY - row, currentY - row,
                             ignoreSideOffset, compareWidth))
                         break;
 
@@ -175,18 +177,30 @@ public sealed partial class ScrollingCaptureForm
         return new ScrollAppendMatch(true, null, newContentHeight, matchCount, matchIndex, ignoreBottomOffset, usedBestGuess);
     }
 
-    private static unsafe bool RowsEqual(BitmapData aData, BitmapData bData, int aY, int bY, int x, int width)
+    private static unsafe bool RowsSimilar(BitmapData aData, BitmapData bData, int aY, int bY, int x, int width)
     {
         if (aY < 0 || aY >= aData.Height || bY < 0 || bY >= bData.Height || width <= 0)
             return false;
 
         byte* a = (byte*)aData.Scan0 + aY * aData.Stride + x * 4;
         byte* b = (byte*)bData.Scan0 + bY * bData.Stride + x * 4;
-        int bytes = width * 4;
-        for (int i = 0; i < bytes; i++)
+
+        int mismatches = 0;
+        int allowedMismatches = (int)(width * 0.05); // 5% noise tolerance
+
+        for (int i = 0; i < width; i++)
         {
-            if (a[i] != b[i])
-                return false;
+            int off = i * 4;
+            int db = a[off] - b[off];
+            int dg = a[off + 1] - b[off + 1];
+            int dr = a[off + 2] - b[off + 2];
+
+            if (Math.Abs(db) > 15 || Math.Abs(dg) > 15 || Math.Abs(dr) > 15)
+            {
+                mismatches++;
+                if (mismatches > allowedMismatches)
+                    return false;
+            }
         }
 
         return true;

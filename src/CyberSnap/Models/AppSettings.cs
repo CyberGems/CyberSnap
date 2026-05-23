@@ -95,7 +95,8 @@ public enum CenterSelectionAspectRatio
 public enum ScrollingCaptureMode
 {
     Automatic,
-    Manual
+    Manual,
+    AssistAutoscroll
 }
 
 [Flags]
@@ -141,6 +142,7 @@ public sealed class AppSettings
     public bool TranslationRuntimeInstalled { get; set; }
     public int TranslationModel { get; set; } = 2; // 0 = Argos, 1 = Google, 2 = Open-source local
     public bool AnnotationStrokeShadow { get; set; } = true;
+    public int ToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(0, 136, 255).ToArgb(); // Default blue
 
     // Color picker hotkey: Alt+C
     public uint PickerHotkeyModifiers { get; set; } = Native.User32.MOD_ALT;
@@ -172,6 +174,7 @@ public sealed class AppSettings
     public bool AskForFileNameOnSave { get; set; }
     public string FileNameTemplate { get; set; } = Helpers.FileNameTemplate.DefaultTemplate;
     public CaptureImageFormat CaptureImageFormat { get; set; } = CaptureImageFormat.Png;
+    public bool AutoOpenCapturedImages { get; set; }
     public bool StyleScreenshots { get; set; }
     public bool AddScreenshotShadow { get; set; }
     public bool AddScreenshotStroke { get; set; }
@@ -185,7 +188,7 @@ public sealed class AppSettings
     public CaptureMode LastCaptureMode { get; set; } = CaptureMode.Rectangle;
     public WindowDetectionMode WindowDetection { get; set; } = WindowDetectionMode.WindowOnly;
     public CaptureDockSide CaptureDockSide { get; set; } = CaptureDockSide.Top;
-    public ScrollingCaptureMode ScrollingCaptureMode { get; set; } = ScrollingCaptureMode.Automatic;
+    public ScrollingCaptureMode ScrollingCaptureMode { get; set; } = ScrollingCaptureMode.AssistAutoscroll;
     public int CaptureDelaySeconds { get; set; }
     public bool SaveHistory { get; set; } = true;
     public bool MuteSounds { get; set; }
@@ -207,11 +210,13 @@ public sealed class AppSettings
     public CenterSelectionAspectRatio CenterSelectionAspectRatio { get; set; } = CenterSelectionAspectRatio.Free;
     public bool ShowToolNumberBadges { get; set; } = true;
     public HistoryRetentionPeriod HistoryRetention { get; set; } = HistoryRetentionPeriod.Never;
+    public int HistoryCountLimit { get; set; } = 0;
+    public bool HistoryDeleteOriginalOnPrune { get; set; }
     public ImageSearchSourceOptions ImageSearchSources { get; set; } = ImageSearchSourceOptions.All;
     public bool ShowImageSearchBar { get; set; } = true;
     public bool ImageSearchExactMatch { get; set; }
     public bool ShowImageSearchDiagnostics { get; set; }
-    public bool AutoIndexImages { get; set; } = true;
+    public bool AutoIndexImages { get; set; } = false;
     public string? HistoryUploadProviderFilter { get; set; }
 
     public double ToastDurationSeconds { get; set; } = 2.5;
@@ -257,12 +262,26 @@ public sealed class AppSettings
     /// <summary>Compute annotation tool defaults from stable tool order.</summary>
     private Dictionary<string, uint> GetAnnotationDefaults()
     {
-        var result = new Dictionary<string, uint>();
-        int idx = 0;
+        var result = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["select"] = 0x31,
+            ["arrow"] = 0x32,
+            ["eraser"] = 0x33,
+            ["draw"] = 0x34,
+            ["curvedArrow"] = 0x35,
+            ["line"] = 0x36,
+            ["text"] = 0x37,
+            ["circleShape"] = 0x38,
+            ["rectShape"] = 0x39,
+            ["ruler"] = 0x30,
+        };
+
+        var remainingKeys = AnnotationKeyVks.Where(k => !result.Values.Contains(k)).ToList();
+        int keyIdx = 0;
         foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
         {
-            if (idx < AnnotationKeyVks.Length)
-                result[t.Id] = AnnotationKeyVks[idx++];
+            if (!result.ContainsKey(t.Id) && keyIdx < remainingKeys.Count)
+                result[t.Id] = remainingKeys[keyIdx++];
         }
         return result;
     }
@@ -291,7 +310,7 @@ public sealed class AppSettings
             EnabledTools is { Count: > 0 } &&
             !EnabledTools.Contains(toolId))
             return (0u, 0u);
-        // Fall back to stable annotation tool defaults.
+        // Fall back to stable annotation tool defaults (always full stable order, not filtered by enabled tools).
         var defaults = GetAnnotationDefaults();
         if (defaults.TryGetValue(toolId, out var defKey))
             return (0u, defKey);
@@ -351,22 +370,24 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
     {
         new("rect",        "Rectangle Select", '\uE257', CaptureMode.Rectangle, 0), // scan-line
         new("center",      "Center Select",    '\uE257', CaptureMode.Center,    0),
+        new("scroll",      "Scroll Capture",   '\uE7F0', CaptureMode.ScrollCapture, 0),
         new("ocr",         "OCR",          '\uE53C', CaptureMode.Ocr,         0), // scan-text
-        new("picker",      "Color Picker", '\uE13E', CaptureMode.ColorPicker, 0), // pipette
+        new("picker",      "Color Picker", '\uE2B1', CaptureMode.ColorPicker, 0), // eyedropper
         new("scan",        "QR/Barcode",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
-        new("select",      "Select",       '\uE1E3', CaptureMode.Select,      1), // cursor-click
-        new("draw",        "Draw",         '\uE1F8', CaptureMode.Draw,        1), // pencil
-        new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser
-        new("arrow",       "Arrow",        '\uE051', CaptureMode.Arrow,       1), // arrow-up-right
-        new("curvedArrow", "Curved Arrow", '\uE146', CaptureMode.CurvedArrow, 1), // redo
-        new("line",        "Line",         '\uE11F', CaptureMode.Line,        1), // minus
-        new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       1), // ruler
-        new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type
-        new("step",        "Step Number",  '\uE1D0', CaptureMode.StepNumber,  1), // list-ordered
-        new("rectShape",   "Rectangle",    '\uE16A', CaptureMode.RectShape,   1), // square
-        new("circleShape", "Circle",       '\uE07A', CaptureMode.CircleShape, 1), // circle
-        new("magnifier",   "Magnifier",    '\uE721', CaptureMode.Magnifier,   1),
+        new("record",      "Record",       '\uE7C8', CaptureMode.Record,      0), // video
+        new("select",      "Select",       '\uE1E3', CaptureMode.Select,      1), // cursor-click   → 0x31
+        new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser         → 0x33
+        new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type           → 0x37
+        new("arrow",       "Arrow",        '\uE051', CaptureMode.Arrow,       1), // arrow-up-right → 0x32
+        new("line",        "Line",         '\uE11F', CaptureMode.Line,        1), // minus          → 0x36
+        new("draw",        "FreeHand",     '\uE70F', CaptureMode.Draw,        1), // edit           → 0x34
+        new("curvedArrow", "Curved Arrow", '\uE146', CaptureMode.CurvedArrow, 1), // redo           → 0x35
+        new("circleShape", "Circle",       '\uE07A', CaptureMode.CircleShape, 1), // circle         → 0x38
+        new("rectShape",   "Rectangle",    '\uE16A', CaptureMode.RectShape,   1), // square         → 0x39
         new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1), // highlighter
+        new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       1), // ruler          → 0x30
+        new("step",        "Step Number",  '\uE1D0', CaptureMode.StepNumber,  1), // list-ordered   → 0x3A
+        new("magnifier",   "Magnifier",    '\uE721', CaptureMode.Magnifier,   1),
         new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1), // blend
         new("emoji",       "Emoji",        '\uE167', CaptureMode.Emoji,       1), // smile
     };

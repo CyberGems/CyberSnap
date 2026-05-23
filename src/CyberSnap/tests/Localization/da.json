@@ -50,7 +50,7 @@
   "Window detection": "Vinduesdetektering",
   "Off": "Fra",
   "Windows only": "Kun Windows",
-  "Capture dock": "Capture dock",
+  "Toolbar Position": "Værktøjslinjeposition",
   "Top": "Top",
   "Bottom": "Nederst",
   "Left": "venstre",
@@ -223,3 +223,5 @@
   "Update check failed": "Opdateringstjek mislykkedes",
   "CyberSnap is up to date": "CyberSnap er opdateret"
 }
+
+

@@ -38,8 +38,30 @@ public sealed partial class RegionOverlayForm
             _toolbarRect.Width, _toolbarRect.Height);
 
         float cr = UiChrome.ScaledToolbarCornerRadius;
+        int pad = UiChrome.ScaledToolbarInnerPadding;
+        int buttonSize = UiChrome.ScaledToolbarButtonSize;
+        int buttonSpacing = UiChrome.ScaledToolbarButtonSpacing;
 
-        WindowsDockRenderer.PaintSurface(g, r, cr);
+        // Paint shadow once for the full toolbar, then two-tier black mica backgrounds
+        WindowsDockRenderer.PaintShadow(g, r, cr);
+        using (var path = WindowsDockRenderer.RoundedRect(r, cr))
+        using (var brush = new SolidBrush(UiChrome.SurfaceTier1))
+            g.FillPath(brush, path);
+        if (_flyoutTools.Length > 0)
+        {
+            RectangleF tier2Rect;
+            if (IsVerticalDock)
+            {
+                float dividerX = _toolbarRect.X + pad + buttonSize + buttonSpacing / 2f;
+                tier2Rect = new RectangleF(dividerX, r.Y, r.Right - dividerX, r.Height);
+            }
+            else
+            {
+                float dividerY = _toolbarRect.Y + pad + buttonSize + buttonSpacing / 2f;
+                tier2Rect = new RectangleF(r.X, dividerY, r.Width, r.Bottom - dividerY);
+            }
+            WindowsDockRenderer.PaintSurfaceBg(g, tier2Rect, UiChrome.SurfaceTier2, cr, IsVerticalDock);
+        }
 
         // Render sleek CyberGems premium accent border outline around the panel
         using (var path = WindowsDockRenderer.RoundedRect(r, cr))
@@ -69,9 +91,6 @@ public sealed partial class RegionOverlayForm
         }
 
         // Draw discrete elegant CyberSnap logo and brand name
-        int pad = UiChrome.ScaledToolbarInnerPadding;
-        int buttonSize = UiChrome.ScaledToolbarButtonSize;
-        int buttonSpacing = UiChrome.ScaledToolbarButtonSpacing;
         int closeIdx = _mainBarTools.Length + 1;
 
         if (_brandBitmap == null)
@@ -210,27 +229,49 @@ public sealed partial class RegionOverlayForm
             WindowsDockRenderer.PaintDivider(g, new Point(r.X + inset, dividerY), new Point(r.Right - inset, dividerY));
         }
 
-        // 2. Tier 1 Dividers: after index 4 (between Capture tools and System tools)
-        if (_toolbarButtons.Length > 4)
+        // 2. Tier 1 Dividers: after scroll (2) and last capture tool
+        int[] tier1SepIndices = { 2 };
+        foreach (int idx in tier1SepIndices)
         {
+            if (idx < 0 || idx >= _toolbarButtons.Length) continue;
             if (IsVerticalDock)
             {
-                int sy = _toolbarButtons[4].Bottom + (buttonSpacing + GroupGap) / 2;
-                int sx1 = _toolbarButtons[4].X + 4;
-                int sx2 = _toolbarButtons[4].Right - 4;
+                int sy = _toolbarButtons[idx].Bottom + (buttonSpacing + GroupGap) / 2;
+                int sx1 = _toolbarButtons[idx].X + 4;
+                int sx2 = _toolbarButtons[idx].Right - 4;
                 WindowsDockRenderer.PaintDivider(g, new Point(sx1, sy), new Point(sx2, sy));
             }
             else
             {
-                int sx = _toolbarButtons[4].Right + (buttonSpacing + GroupGap) / 2;
-                int sy1 = _toolbarButtons[4].Y + 4;
-                int sy2 = _toolbarButtons[4].Bottom - 4;
+                int sx = _toolbarButtons[idx].Right + (buttonSpacing + GroupGap) / 2;
+                int sy1 = _toolbarButtons[idx].Y + 4;
+                int sy2 = _toolbarButtons[idx].Bottom - 4;
+                WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
+            }
+        }
+        int lastCaptureIdx = _mainBarTools.Length - 1;
+        if (lastCaptureIdx >= 0 && _toolbarButtons.Length > lastCaptureIdx)
+        {
+            if (IsVerticalDock)
+            {
+                int sy = _toolbarButtons[lastCaptureIdx].Bottom + (buttonSpacing + GroupGap) / 2;
+                int sx1 = _toolbarButtons[lastCaptureIdx].X + 4;
+                int sx2 = _toolbarButtons[lastCaptureIdx].Right - 4;
+                WindowsDockRenderer.PaintDivider(g, new Point(sx1, sy), new Point(sx2, sy));
+            }
+            else
+            {
+                int sx = _toolbarButtons[lastCaptureIdx].Right + (buttonSpacing + GroupGap) / 2;
+                int sy1 = _toolbarButtons[lastCaptureIdx].Y + 4;
+                int sy2 = _toolbarButtons[lastCaptureIdx].Bottom - 4;
                 WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
             }
         }
 
-        // 3. Tier 2 Dividers: after indices 7, 9, 13, 15, 18, 20
-        int[] tier2Seps = { 7, 9, 13, 15, 18, 20 };
+        // 3. Tier 2 Dividers: after indices offset by _mainBarTools.Length + 2
+        int drawingStartIdx = _mainBarTools.Length + 2;
+        int[] tier2Offsets = { 1, 8 };
+        int[] tier2Seps = tier2Offsets.Select(offset => drawingStartIdx + offset).ToArray();
         foreach (int idx in tier2Seps)
         {
             if (idx < 0 || idx >= _toolbarButtons.Length) continue;
@@ -256,24 +297,56 @@ public sealed partial class RegionOverlayForm
             var btn = _toolbarButtons[i];
             bool active = _toolbarModes[i] is { } && string.Equals(_toolbarToolIds[i], _activeToolId, StringComparison.OrdinalIgnoreCase);
             bool hover = _hoveredButton == i;
+            bool isTier2 = i >= 7;
+            var tierAccent = isTier2 ? UiChrome.AccentTier2 : UiChrome.AccentColor;
 
-            // Color dot button
+            // Color dot button (shows active drawing color)
             if (_toolbarIcons[i] == "color")
             {
-                WindowsDockRenderer.PaintButton(g, btn, active, hover);
+                WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
                 int dotSize = 16;
                 float dx = btn.X + (btn.Width - dotSize) / 2f;
                 float dy = btn.Y + (btn.Height - dotSize) / 2f;
                 int colorAlpha = active ? 255 : hover ? 230 : 175;
-                g.FillEllipse(SketchRenderer.GetToolColorBrush(Color.FromArgb(colorAlpha, _toolColor.R, _toolColor.G, _toolColor.B)), dx, dy, dotSize, dotSize);
+                var baseColor = Color.FromArgb(colorAlpha, _toolColor.R, _toolColor.G, _toolColor.B);
+                var lightColor = Color.FromArgb(colorAlpha,
+                    Math.Min(255, _toolColor.R + 80),
+                    Math.Min(255, _toolColor.G + 80),
+                    Math.Min(255, _toolColor.B + 80));
+                using (var path = new GraphicsPath())
+                {
+                    path.AddEllipse(dx, dy, dotSize, dotSize);
+                    using (var pgb = new PathGradientBrush(path))
+                    {
+                        pgb.CenterColor = lightColor;
+                        pgb.SurroundColors = new[] { baseColor };
+                        pgb.CenterPoint = new PointF(dx + dotSize * 0.35f, dy + dotSize * 0.35f);
+                        g.FillEllipse(pgb, dx, dy, dotSize, dotSize);
+                    }
+                }
+                float hlW = dotSize * 0.35f;
+                float hlH = dotSize * 0.25f;
+                float hlX = dx + dotSize * 0.15f;
+                float hlY = dy + dotSize * 0.12f;
+                int glossAlpha = colorAlpha > 200 ? 100 : 70;
+                using (var hlBrush = new SolidBrush(Color.FromArgb(glossAlpha, 255, 255, 255)))
+                    g.FillEllipse(hlBrush, hlX, hlY, hlW, hlH);
                 continue;
             }
 
-            WindowsDockRenderer.PaintButton(g, btn, active, hover);
+            WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
 
             int ia = active ? 255 : hover ? 240 : i == closeIdx ? 130 : 200;
-            var iconColor = active ? UiChrome.AccentColor : UiChrome.SurfaceTextPrimary;
-            DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
+            var iconColor = active ? tierAccent : UiChrome.SurfaceTextPrimary;
+            if (_toolbarIcons[i] == "picker")
+            {
+                var pickerRect = new RectangleF(btn.X, btn.Y - 1, btn.Width, btn.Height * 0.9f);
+                FluentIcons.DrawIcon(g, "picker", pickerRect, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), 7f, active);
+            }
+            else
+            {
+                DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
+            }
         }
 
         g.SmoothingMode = SmoothingMode.Default;
@@ -357,11 +430,13 @@ public sealed partial class RegionOverlayForm
     {
         if (icon == "color") return;
 
+        var iconId = icon == "scroll" ? "scrollCapture" : icon;
+
         // Try Streamline icon first (line=inactive, solid=active)
-        if (FluentIcons.HasIcon(icon))
+        if (FluentIcons.HasIcon(iconId))
         {
             float inset = active ? 6f : 7f;
-            FluentIcons.DrawIcon(g, icon, b, c, inset, active);
+            FluentIcons.DrawIcon(g, iconId, b, c, inset, active);
             return;
         }
 

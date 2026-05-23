@@ -280,11 +280,29 @@ public sealed partial class RegionOverlayForm
         }
         else if (_isConfirmingSelection)
         {
+            int prevHoveredConfirm = _hoveredConfirmButton;
+            _hoveredConfirmButton = -1;
+
             int ch = HitTestConfirmHandle(e.Location);
             if (ch >= 0) target = ch is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
-            else if (HitTestConfirmButton(e.Location) >= 0) target = Cursors.Hand;
-            else if (_confirmRect.Contains(e.Location)) target = Cursors.SizeAll;
-            else target = Cursors.Cross;
+            else
+            {
+                int btnHit = HitTestConfirmButton(e.Location);
+                if (btnHit >= 0)
+                {
+                    target = Cursors.Hand;
+                    _hoveredConfirmButton = btnHit;
+                }
+                else if (_confirmRect.Contains(e.Location)) target = Cursors.SizeAll;
+                else target = Cursors.Cross;
+            }
+
+            if (_hoveredConfirmButton != prevHoveredConfirm)
+            {
+                var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+                Invalidate(InflateForRepaint(confirmBtn, 20));
+                Invalidate(InflateForRepaint(cancelBtn, 20));
+            }
         }
         else if (_mode == CaptureMode.Select)
         {
@@ -327,6 +345,7 @@ public sealed partial class RegionOverlayForm
         switch (_mode)
         {
             case CaptureMode.Rectangle when !_isSelecting:
+            case CaptureMode.ScrollCapture when !_isSelecting:
             case CaptureMode.Center when !_isSelecting:
             case CaptureMode.Ocr when !_isSelecting:
             case CaptureMode.Scan when !_isSelecting:
@@ -354,6 +373,7 @@ public sealed partial class RegionOverlayForm
                 }
                 break;
             case CaptureMode.Rectangle when _isSelecting:
+            case CaptureMode.ScrollCapture when _isSelecting:
             case CaptureMode.Center when _isSelecting:
             case CaptureMode.Ocr when _isSelecting:
             case CaptureMode.Scan when _isSelecting:
@@ -406,6 +426,9 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Emoji when _isPlacingEmoji:
                 InvalidateLivePreview(GetEmojiPreviewRect(oldCursor), GetEmojiPreviewRect(e.Location), 10);
+                break;
+            case CaptureMode.Magnifier when _isPlacingMagnifier:
+                InvalidateLivePreview(GetMagnifierPreviewRect(oldCursor), GetMagnifierPreviewRect(e.Location), 10);
                 break;
             case CaptureMode.Draw when _isSelecting:
                 if (_currentStroke is { Count: > 0 })
@@ -667,6 +690,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Scan when _isSelecting:
             case CaptureMode.Sticker when _isSelecting:
             case CaptureMode.Upscale when _isSelecting:
+            case CaptureMode.ScrollCapture when _isSelecting:
                 _isSelecting = false;
                 ResetEvasion();
                 CloseSelectionAdorner();
@@ -675,6 +699,7 @@ public sealed partial class RegionOverlayForm
                 bool isScan = _mode == CaptureMode.Scan;
                 bool isSticker = _mode == CaptureMode.Sticker;
                 bool isUpscale = _mode == CaptureMode.Upscale;
+                bool isScroll = _mode == CaptureMode.ScrollCapture;
                 if (isCenter && _selectionRect.Width > 2 && _selectionRect.Height > 2)
                 {
                     _autoDetectRect = Rectangle.Empty;
@@ -708,12 +733,11 @@ public sealed partial class RegionOverlayForm
                     var clickRect = (_autoDetectRect.Width > 0 && _autoDetectRect.Height > 0)
                         ? _autoDetectRect
                         : new Rectangle(0, 0, _screenshot.Width, _screenshot.Height);
-                    if (ConfirmRegionBeforeCapture)
-                        EnterConfirmMode(clickRect);
-                    else if (isOcr) OcrRegionSelected?.Invoke(clickRect);
+                    if (isOcr) OcrRegionSelected?.Invoke(clickRect);
                     else if (isScan) ScanRegionSelected?.Invoke(clickRect);
                     else if (isSticker) StickerRegionSelected?.Invoke(clickRect);
                     else if (isUpscale) UpscaleRegionSelected?.Invoke(clickRect);
+                    else if (isScroll) ScrollRegionSelected?.Invoke(clickRect);
                     else RegionSelected?.Invoke(clickRect);
                 }
                 else if (_selectionRect.Width > 2 && _selectionRect.Height > 2)
@@ -726,6 +750,7 @@ public sealed partial class RegionOverlayForm
                     else if (isScan) ScanRegionSelected?.Invoke(_selectionRect);
                     else if (isSticker) StickerRegionSelected?.Invoke(_selectionRect);
                     else if (isUpscale) UpscaleRegionSelected?.Invoke(_selectionRect);
+                    else if (isScroll) ScrollRegionSelected?.Invoke(_selectionRect);
                     else RegionSelected?.Invoke(_selectionRect);
                 }
                 else { _hasSelection = false; Invalidate(); }

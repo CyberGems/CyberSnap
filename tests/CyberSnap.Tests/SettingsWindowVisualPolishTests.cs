@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using CyberSnap.Services;
 using CyberSnap.UI;
@@ -257,8 +257,8 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryLoadFailureEmptyStateOffersRetryAction()
     {
-        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "SettingsWindow.xaml"));
-        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.cs"));
+        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "HistoryWindow.xaml"));
+        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.History.cs"));
 
         Assert.Contains("x:Name=\"HistoryEmptyRetryButton\"", xaml);
         Assert.Contains("Content=\"Retry\"", xaml);
@@ -280,7 +280,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryServiceChangeCallbackFailuresOfferRetryState()
     {
-        var settingsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "SettingsWindow.xaml.cs"));
+        var settingsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "HistoryWindow.xaml.cs"));
 
         var changedBlock = GetMethodBlock(settingsCode, "private void HistoryService_Changed()");
         Assert.Contains("_ = Dispatcher.BeginInvoke(() =>", changedBlock);
@@ -289,7 +289,7 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("_pendingHistoryDataRefresh = true;", changedBlock);
         Assert.Contains("QueueHistoryRefresh(reloadFromDisk: false);", changedBlock);
         Assert.Contains("catch (Exception ex)", changedBlock);
-        Assert.Contains("AppDiagnostics.LogError(\"settings.history-service-changed\", ex);", changedBlock);
+        Assert.Contains("AppDiagnostics.LogError(\"history.history-service-changed\", ex);", changedBlock);
         Assert.Contains("_pendingHistoryDataRefresh = false;", changedBlock);
         Assert.Contains("_pendingHistoryUiRefresh = false;", changedBlock);
         Assert.Contains("_pendingHistoryDiskRefresh = false;", changedBlock);
@@ -551,9 +551,9 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("Use {name} as the default translation source.", ocrCode);
         Assert.Contains("{toName} target language", ocrCode);
         Assert.Contains("Use {toName} as the default translation target.", ocrCode);
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "TranslateModelCombo", "Open-source Local", "Use the fully local open-source translator.", "Open-source local translator", "Translate OCR text locally without a cloud provider.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "TranslateModelCombo", "Argos Translate", "Use the Argos local fallback translator.", "Argos Translate", "Translate OCR text with the local Argos runtime.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "TranslateModelCombo", "Google Translate", "Use Google Translate with an API key.", "Google Translate", "Translate OCR text through Google using the configured API key.");
+        Assert.Contains("GoogleApiKeyBox", xaml);
+        Assert.Contains("OpenSourceLocalStatusText", xaml);
+        Assert.Contains("ArgosStatusText", xaml);
 
         var dynamicOcrItemBlock = GetMethodBlock(ocrCode, "private static ComboBoxItem CreateOcrLanguageItem(string text, string tag, string automationName, string helpText)");
         Assert.Contains("ToolTip = helpText", dynamicOcrItemBlock);
@@ -597,23 +597,22 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("value => _settingsService.Settings.OcrDefaultTranslateTo = value", translateToBlock);
         Assert.Contains("value => SelectComboByTag(TranslateToCombo, value)", translateToBlock);
 
-        var modelBlock = GetMethodBlock(ocrCode, "private void TranslateModelCombo_Changed(object sender, SelectionChangedEventArgs e)");
-        Assert.Contains("if (!IsLoaded || _suppressOcrPreferenceChange) return;", modelBlock);
+        var modelBlock = GetMethodBlock(ocrCode, "private void EngineRow_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)");
         Assert.Contains("var previous = _settingsService.Settings.TranslationModel;", modelBlock);
         Assert.Contains("\"settings.translation-engine\"", modelBlock);
         Assert.Contains("value => _settingsService.Settings.TranslationModel = value", modelBlock);
-        Assert.Contains("value => SelectTranslationModelCombo(TranslateModelCombo, value)", modelBlock);
+        Assert.Contains("SetTranslationPreferenceStatus", modelBlock);
         Assert.Contains("_ => UpdateTranslationModelUi()", modelBlock);
 
         var openSourceInstallBlock = GetMethodBlock(ocrCode, "private void OpenSourceLocalInstallBtn_Click(object sender, RoutedEventArgs e)");
-        Assert.Contains("\"settings.open-source-local-translation-engine\"", openSourceInstallBlock);
-        Assert.Contains("(int)TranslationModel.OpenSourceLocal", openSourceInstallBlock);
-        Assert.Contains("UpdateOcrPreference(", openSourceInstallBlock);
+        Assert.Contains("BackgroundRuntimeJobService.Start(", openSourceInstallBlock);
+        Assert.Contains("OpenSourceLocalTranslationJobKey", openSourceInstallBlock);
+        Assert.Contains("TranslationModel.OpenSourceLocal", openSourceInstallBlock);
 
         var argosInstallBlock = GetMethodBlock(ocrCode, "private void ArgosInstallBtn_Click(object sender, RoutedEventArgs e)");
-        Assert.Contains("\"settings.argos-translation-engine\"", argosInstallBlock);
-        Assert.Contains("(int)TranslationModel.Argos", argosInstallBlock);
-        Assert.Contains("UpdateOcrPreference(", argosInstallBlock);
+        Assert.Contains("BackgroundRuntimeJobService.Start(", argosInstallBlock);
+        Assert.Contains("ArgosTranslationJobKey", argosInstallBlock);
+        Assert.Contains("TranslationModel.Argos", argosInstallBlock);
 
         var googleKeyBlock = GetMethodBlock(ocrCode, "private void GoogleApiKeyBox_Changed(object sender, RoutedEventArgs e)");
         Assert.Contains("if (!IsLoaded || _suppressOcrPreferenceChange) return;", googleKeyBlock);
@@ -683,14 +682,11 @@ public sealed class SettingsWindowVisualPolishTests
         AssertComboBoxItemInNamedComboHasLabel(xaml, "CenterAspectRatioCombo", "4:3", "Lock center selection to standard landscape.", "4:3 center ratio", "Keep center selection in a 4 to 3 landscape ratio.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "CenterAspectRatioCombo", "3:2", "Lock center selection to photo landscape.", "3:2 center ratio", "Keep center selection in a 3 to 2 landscape ratio.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "CenterAspectRatioCombo", "9:16", "Lock center selection to vertical portrait.", "9:16 center ratio", "Keep center selection in a 9 to 16 portrait ratio.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "WindowDetectionCombo", "Off", "Ignore windows while selecting.", "Window detection off", "Do not highlight or snap to windows during selection.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "WindowDetectionCombo", "Windows only", "Detect windows while hovering.", "Windows-only detection", "Highlight detected windows during selection so captures can snap to them.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "CaptureDockSideCombo", "Top", "Show the capture toolbar along the top edge.", "Top capture dock", "Place the capture toolbar at the top of the screen.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "CaptureDockSideCombo", "Bottom", "Show the capture toolbar along the bottom edge.", "Bottom capture dock", "Place the capture toolbar at the bottom of the screen.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "CaptureDockSideCombo", "Left", "Show the capture toolbar along the left edge.", "Left capture dock", "Place the capture toolbar on the left side of the screen.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "CaptureDockSideCombo", "Right", "Show the capture toolbar along the right edge.", "Right capture dock", "Place the capture toolbar on the right side of the screen.");
+        AssertNamedControlHasLabel(xaml, "WindowDetectionCheck", "<CheckBox", "Window detection", "Detect windows when hovering before selection.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "CaptureDockSideCombo", "Top", "Show the capture toolbar along the top edge.", "Toolbar top", "Place the capture toolbar at the top of the screen.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "CaptureDockSideCombo", "Bottom", "Show the capture toolbar along the bottom edge.", "Toolbar bottom", "Place the capture toolbar at the bottom of the screen.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "ScrollingCaptureModeCombo", "Automatic", "Let CyberSnap collect scrolling frames automatically.", "Automatic scrolling capture", "Automatically collect frames while scrolling capture is active.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ScrollingCaptureModeCombo", "Manual", "Capture scrolling frames only when you click.", "Manual scrolling capture", "Only collect a scrolling-capture frame when you press the capture button.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ScrollingCaptureModeCombo", "Autoscroll", "Automatically scroll and capture the window content.", "Autoscroll capture", "Automatically scroll the target window and stitch frames until the end is reached.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "AfterCaptureCombo", "Copy to clipboard", "Copy the capture without opening a preview.", "Copy after capture", "Copy the saved capture to the clipboard and skip the preview window.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "AfterCaptureCombo", "Preview + Copy", "Open a preview and copy the capture.", "Preview and copy after capture", "Open the preview window and also copy the saved capture to the clipboard.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "AfterCaptureCombo", "Preview only", "Open a preview without copying.", "Preview only after capture", "Open the preview window without copying the saved capture to the clipboard.");
@@ -805,15 +801,15 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("var previous = _settingsService.Settings.ScrollingCaptureMode;", scrollingBlock);
         Assert.Contains("\"settings.scrolling-capture-mode\"", scrollingBlock);
         Assert.Contains("value => _settingsService.Settings.ScrollingCaptureMode = value", scrollingBlock);
-        Assert.Contains("value => ScrollingCaptureModeCombo.SelectedIndex = value == ScrollingCaptureMode.Manual ? 1 : 0", scrollingBlock);
+        Assert.Contains("value => ScrollingCaptureModeCombo.SelectedIndex = value == ScrollingCaptureMode.AssistAutoscroll ? 1 : 0", scrollingBlock);
 
-        var windowDetectionBlock = GetMethodBlock(preferencesCode, "private void WindowDetectionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)");
+        var windowDetectionBlock = GetMethodBlock(preferencesCode, "private void WindowDetectionCheck_Changed(object sender, RoutedEventArgs e)");
         Assert.Contains("if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;", windowDetectionBlock);
         Assert.Contains("var previous = (Mode: _settingsService.Settings.WindowDetection, DetectWindows: _settingsService.Settings.DetectWindows);", windowDetectionBlock);
         Assert.Contains("\"settings.window-detection\"", windowDetectionBlock);
         Assert.Contains("_settingsService.Settings.WindowDetection = value.Mode;", windowDetectionBlock);
         Assert.Contains("_settingsService.Settings.DetectWindows = value.DetectWindows;", windowDetectionBlock);
-        Assert.Contains("value => WindowDetectionCombo.SelectedIndex = (int)value.Mode", windowDetectionBlock);
+        Assert.Contains("value => WindowDetectionCheck.IsChecked = value.DetectWindows", windowDetectionBlock);
 
         var delayBlock = GetMethodBlock(preferencesCode, "private void CaptureDelayCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)");
         Assert.Contains("if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;", delayBlock);
@@ -1017,10 +1013,7 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("\"settings.show-image-search-bar\"", searchBarBlock);
         Assert.Contains("value => _settingsService.Settings.ShowImageSearchBar = value", searchBarBlock);
         Assert.Contains("value => ShowImageSearchBarCheck.IsChecked = value", searchBarBlock);
-        Assert.Contains("if (!value)", searchBarBlock);
-        Assert.Contains("ImageSearchBox.Clear();", searchBarBlock);
-        Assert.Contains("_imageSearchQuery = \"\";", searchBarBlock);
-        Assert.Contains("LoadCurrentHistoryTab();", searchBarBlock);
+        Assert.Contains("((App)Application.Current).RefreshHistoryWindowIfOpen();", searchBarBlock);
 
         var searchDiagnosticsBlock = GetMethodBlock(preferencesCode, "private void ShowImageSearchDiagnosticsCheck_Changed(object sender, RoutedEventArgs e)");
         Assert.Contains("if (!IsLoaded || _suppressGeneralPreferenceChange) return;", searchDiagnosticsBlock);
@@ -1028,7 +1021,7 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("\"settings.show-image-search-diagnostics\"", searchDiagnosticsBlock);
         Assert.Contains("value => _settingsService.Settings.ShowImageSearchDiagnostics = value", searchDiagnosticsBlock);
         Assert.Contains("value => ShowImageSearchDiagnosticsCheck.IsChecked = value", searchDiagnosticsBlock);
-        Assert.Contains("LoadCurrentHistoryTab();", searchDiagnosticsBlock);
+        Assert.Contains("((App)Application.Current).RefreshHistoryWindowIfOpen();", searchDiagnosticsBlock);
 
         var helperBlock = GetMethodBlock(preferencesCode, "private void UpdateGeneralPreference<T>(");
         Assert.Contains("setValue(current);", helperBlock);
@@ -1287,8 +1280,8 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void ImageHistoryCountsUseCurrentFileSizeFallback()
     {
-        var searchCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.Search.cs"));
-        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.cs"));
+        var searchCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.Search.cs"));
+        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.History.cs"));
 
         Assert.Contains("private static long GetHistoryItemFileSize(HistoryItemVM item)", historyCode);
         Assert.Contains("item.Entry.FileSizeBytes > 0 ? item.Entry.FileSizeBytes : TryGetFileLength(item.Entry.FilePath)", historyCode);
@@ -1309,7 +1302,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void IndexedImageSearchFailuresAreLogged()
     {
-        var searchCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.Search.cs"));
+        var searchCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.Search.cs"));
 
         var indexedBlock = GetMethodBlock(searchCode, "private async Task ApplyIndexedImageSearchAsync(int version, string query, ImageSearchSourceOptions sources, CancellationToken cancellationToken)");
         Assert.Contains("catch (Exception ex)", indexedBlock);
@@ -1322,7 +1315,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void ImageSearchIndexRequestFailuresAreLogged()
     {
-        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.cs"));
+        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.History.cs"));
 
         var loadBlock = GetMethodBlock(historyCode, "private async Task LoadHistoryAsync()");
         Assert.Contains("_imageSearchIndexService.RequestSync(entries, _settingsService.Settings.OcrLanguageTag);", loadBlock);
@@ -1334,7 +1327,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void ImageSearchSourcePreferencesRollBackAndReportFailures()
     {
-        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.Actions.cs"));
+        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.Actions.cs"));
 
         var exactBlock = GetMethodBlock(actionsCode, "private void ImageSearchExactMatchCheck_Changed(object sender, RoutedEventArgs e)");
         Assert.Contains("if (!IsLoaded || _suppressImageSearchSourceEvents)", exactBlock);
@@ -1376,8 +1369,8 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void ImageSearchFilterMenuAndIndexActionHaveAccessibleLabels()
     {
-        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "SettingsWindow.xaml"));
-        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.Actions.cs"));
+        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "HistoryWindow.xaml"));
+        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.Actions.cs"));
 
         AssertNamedControlHasLabel(xaml, "ImageSearchFileNameCheck", "<MenuItem", "Search file names", "Search screenshot file names", "Include screenshot file names in History search results.");
         AssertNamedControlHasLabel(xaml, "ImageSearchOcrCheck", "<MenuItem", "Search OCR text", "Search recognized screenshot text", "Include recognized text from indexed screenshots in History search results.");
@@ -1398,7 +1391,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistorySearchInputMetadataTracksCategory()
     {
-        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.Actions.cs"));
+        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.Actions.cs"));
 
         var block = GetMethodBlock(actionsCode, "private void UpdateImageSearchPlaceholderText()");
         Assert.Contains("placeholder = \"Search text captures\";", block);
@@ -1420,7 +1413,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void VideoThumbnailGenerationDrainsAndLogsFfmpegFailures()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         Assert.Contains("private const int VideoThumbnailDiagnosticMaxLength = 220;", mediaHistoryCode);
 
@@ -1446,7 +1439,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void VideoThumbnailGenerationRejectsBlankFallbacksAndLogsDeleteFailures()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         var ensureBlock = GetMethodBlock(mediaHistoryCode, "private static async Task<string> EnsureVideoThumbnailAsync(string videoPath, string thumbPath)");
         Assert.Contains("TryDeleteVideoThumbnailFile(thumbPath, \"stale video thumbnail\");", ensureBlock);
@@ -1467,8 +1460,8 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void VideoThumbnailGenerationRejectsUnreadableCachedThumbnails()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
-        var mediaHelpersCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHelpers.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
+        var mediaHelpersCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHelpers.cs"));
 
         var ensureBlock = GetMethodBlock(mediaHistoryCode, "private static async Task<string> EnsureVideoThumbnailAsync(string videoPath, string thumbPath)");
         Assert.Contains("if (IsUsableVideoThumbnail(thumbPath))", ensureBlock);
@@ -1495,7 +1488,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void VideoThumbnailFailureCacheInvalidatesWhenFileChanges()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         Assert.Contains("Dictionary<string, (long Length, long LastWriteTicks)> FailedVideoThumbnailPaths", mediaHistoryCode);
 
@@ -1521,7 +1514,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void MediaHistoryMetadataFailuresAreLogged()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         var addInfoBlock = GetMethodBlock(mediaHistoryCode, "private static void AddMediaInfo(StackPanel panel, string fileName, string timeAgo, string filePath)");
         Assert.Contains("var sizeStr = TryGetMediaSizeText(filePath);", addInfoBlock);
@@ -1539,7 +1532,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void ThumbnailBackgroundLoadersLogFailures()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         var loadBlock = GetMethodBlock(mediaHistoryCode, "private static void LoadThumbAsync(System.Windows.Controls.Image img, HistoryItemVM vm, string path, string? sourcePath)");
         Assert.Contains("catch (Exception ex)", loadBlock);
@@ -1557,7 +1550,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void MediaThumbnailPreloadDoesNotTreatPlaceholdersAsLoadedThumbnails()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         var primeMediaBlock = GetMethodBlock(mediaHistoryCode, "private static void PrimeMediaThumbnailLoads(IEnumerable<HistoryItemVM> items)");
         Assert.Contains("item.ThumbnailLoaded && item.ThumbnailSource != null && !IsStaleHistoryPlaceholder(item.ThumbnailSource, item.Entry.Kind)", primeMediaBlock);
@@ -1570,7 +1563,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void ThumbnailCachePlaceholdersDoNotBlockRetry()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         var loadBlock = GetMethodBlock(mediaHistoryCode, "private static void LoadThumbAsync(System.Windows.Controls.Image img, HistoryItemVM vm, string path, string? sourcePath)");
         Assert.Contains("TryGetThumbFromCache(cacheKey, out var cached) && cached is not null && !IsStaleHistoryPlaceholder(cached, vm.Entry.Kind)", loadBlock);
@@ -1582,7 +1575,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void VideoThumbnailWarmupLogsBackgroundFailures()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         var warmupBlock = GetMethodBlock(mediaHistoryCode, "private static void QueueMissingVideoThumbnailWarmup(IEnumerable<HistoryItemVM> items)");
         Assert.Contains("Task.Run(async () =>", warmupBlock);
@@ -1597,7 +1590,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void OrphanVideoThumbnailCleanupLogsFailures()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         var queueBlock = GetMethodBlock(mediaHistoryCode, "private void QueueOrphanVideoThumbnailCleanup(IEnumerable<HistoryItemVM> items)");
         Assert.Contains("Task.Run(() =>", queueBlock);
@@ -1617,7 +1610,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void ThumbnailCacheReadWriteFailuresAreLogged()
     {
-        var mediaHelpersCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHelpers.cs"));
+        var mediaHelpersCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHelpers.cs"));
 
         var loadCachedBlock = GetMethodBlock(mediaHelpersCode, "private static bool TryLoadCachedThumbnailSource(string cacheKey, string thumbPath, string? sourcePath, HistoryKind kind, out BitmapSource? image)");
         Assert.Contains("\"history.thumb-cache.read\"", loadCachedBlock);
@@ -1644,7 +1637,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistorySearchInputFailuresKeepFailureStatusVisible()
     {
-        var actionCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.Actions.cs"));
+        var actionCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.Actions.cs"));
 
         var textChangedBlock = GetMethodBlock(actionCode, "private void ImageSearchBox_TextChanged(object sender, TextChangedEventArgs e)");
         AssertSearchFailureStatusWrittenAfterLoadingStops(textChangedBlock);
@@ -1656,16 +1649,16 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void ImageSearchDispatcherFailuresKeepFailureStatusVisible()
     {
-        var settingsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "SettingsWindow.xaml.cs"));
+        var settingsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "HistoryWindow.xaml.cs"));
         var indexServiceCode = File.ReadAllText(RepoPath("src", "CyberSnap", "Services", "ImageSearchIndexService.Indexing.cs"));
 
         var indexChangedBlock = GetMethodBlock(settingsCode, "private void ImageSearchIndexService_Changed()");
         AssertSearchCallbackFailureStopsLoadingThenSetsStatus(indexChangedBlock);
-        Assert.Contains("AppDiagnostics.LogError(\"settings.image-search-index-changed\", ex);", indexChangedBlock);
+        Assert.Contains("AppDiagnostics.LogError(\"history.image-search-index-changed\", ex);", indexChangedBlock);
 
         var statusChangedBlock = GetMethodBlock(settingsCode, "private void ImageSearchIndexService_StatusChanged(string status)");
         AssertSearchCallbackFailureStopsLoadingThenSetsStatus(statusChangedBlock);
-        Assert.Contains("AppDiagnostics.LogError(\"settings.image-search-status\", ex);", statusChangedBlock);
+        Assert.Contains("AppDiagnostics.LogError(\"history.image-search-status\", ex);", statusChangedBlock);
 
         var syncLoopBlock = GetMethodBlock(indexServiceCode, "private async Task RunSyncLoopSafelyAsync(CancellationToken cancellationToken)");
         Assert.Contains("AppDiagnostics.LogError(\"image-search.indexing\", ex);", syncLoopBlock);
@@ -1676,7 +1669,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryCodeCopyReportsClipboardFailures()
     {
-        var codeHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "SettingsWindow.CodeHistory.cs"));
+        var codeHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.CodeHistory.cs"));
         var cardBlock = GetMethodBlock(codeHistoryCode, "private Border CreateCodeHistoryCard(CodeHistoryEntry entry)");
 
         Assert.Contains("copyBtn.Click += (_, _) =>", cardBlock);
@@ -1697,7 +1690,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryCodeUrlOpenValidatesExternalTargets()
     {
-        var codeHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "SettingsWindow.CodeHistory.cs"));
+        var codeHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.CodeHistory.cs"));
         var cardBlock = GetMethodBlock(codeHistoryCode, "private Border CreateCodeHistoryCard(CodeHistoryEntry entry)");
 
         var normalizeBlock = GetMethodBlock(codeHistoryCode, "private static bool TryNormalizeUrl(string text, out string url)");
@@ -1724,7 +1717,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryTextAndColorCopyReportClipboardFailures()
     {
-        var textColorHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "SettingsWindow.TextColorHistory.cs"));
+        var textColorHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.TextColorHistory.cs"));
 
         var ocrBlock = GetMethodBlock(textColorHistoryCode, "private Border CreateOcrHistoryCard(OcrHistoryEntry entry)");
         Assert.Contains("copyBtn.Click += (_, _) =>", ocrBlock);
@@ -1762,7 +1755,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryCardDefaultOpenReportsFailures()
     {
-        var mediaCardCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaCard.cs"));
+        var mediaCardCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaCard.cs"));
 
         var openBlock = GetMethodBlock(mediaCardCode, "private static bool OpenFileWithDefaultApp(string filePath)");
         Assert.Contains("if (!File.Exists(filePath))", openBlock);
@@ -1782,7 +1775,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryCardActionMenuButtonIsKeyboardAccessible()
     {
-        var mediaCardCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaCard.cs"));
+        var mediaCardCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaCard.cs"));
         var mediaBlock = GetMethodBlock(mediaCardCode, "private MediaCardShell BuildMediaCardShell(HistoryItemVM vm, Action copyAction)");
 
         Assert.Contains("ToolTip = \"Open history item actions\"", mediaBlock);
@@ -1803,9 +1796,9 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryCardBadgesExposeAccessibleLabels()
     {
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
-        var mediaHelpersCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHelpers.cs"));
-        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
+        var mediaHelpersCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHelpers.cs"));
+        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.History.cs"));
 
         var gifBlock = GetMethodBlock(mediaHistoryCode, "private Border CreateGifCard(HistoryItemVM vm)");
         Assert.Contains("ToolTip = \"GIF media type\"", gifBlock);
@@ -1827,8 +1820,8 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryMediaDeleteReloadsOnlyAfterDeleteFlowCompletes()
     {
-        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.cs"));
-        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "Media", "SettingsWindow.MediaHistory.cs"));
+        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.History.cs"));
+        var mediaHistoryCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.MediaHistory.cs"));
 
         var deleteMediaBlock = GetMethodBlock(mediaHistoryCode, "private void DeleteMediaItems(IEnumerable<HistoryItemVM> items)");
         Assert.Contains("var entries = items.Select(item => item.Entry).ToList();", deleteMediaBlock);
@@ -1847,8 +1840,8 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryDeleteActionsLeaveDurableStatusOnSuccessAndFailure()
     {
-        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "SettingsWindow.xaml"));
-        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.cs"));
+        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "HistoryWindow.xaml"));
+        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.History.cs"));
 
         AssertSettingsActionButton(xaml, "SelectBtn", "Select history items", "Select history items", "ToggleSelectMode");
         AssertSettingsActionButton(xaml, "DeleteAllBtn", "Clear current history tab", "Delete all items in the current history tab", "DeleteAllClick");
@@ -1914,7 +1907,7 @@ public sealed class SettingsWindowVisualPolishTests
         var categoryLabelBlock = GetMethodBlock(historyCode, "private string GetCurrentHistoryCategoryLabel(int count)");
         Assert.Contains("0 => count == 1 ? \"screenshot\" : \"screenshots\"", categoryLabelBlock);
         Assert.Contains("1 => count == 1 ? \"text capture\" : \"text captures\"", categoryLabelBlock);
-        Assert.Contains("5 => count == 1 ? \"QR/barcode scan\" : \"QR/barcode scans\"", categoryLabelBlock);
+        Assert.Contains("4 => count == 1 ? \"QR/barcode scan\" : \"QR/barcode scans\"", categoryLabelBlock);
 
         var confirmMessageBlock = GetMethodBlock(historyCode, "private static string BuildDeleteAllConfirmationMessage(int step, int totalCount, string categoryLabel)");
         Assert.Contains("Delete all {totalCount} {categoryLabel} in this history tab?", confirmMessageBlock);
@@ -1925,8 +1918,8 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistorySearchFilterPopoverFocusesFirstOption()
     {
-        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "SettingsWindow.xaml"));
-        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.Actions.cs"));
+        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "HistoryWindow.xaml"));
+        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.Actions.cs"));
 
         var filtersBtnTag = GetOpeningTag(xaml, xaml.IndexOf("x:Name=\"ImageSearchFiltersBtn\"", StringComparison.Ordinal), "<Button");
         Assert.Contains("AutomationProperties.HelpText=\"Open search source and exact-match options for History.\"", filtersBtnTag);
@@ -1957,7 +1950,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryCountAndStatusTextAreLiveRegions()
     {
-        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "SettingsWindow.xaml"));
+        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "HistoryWindow.xaml"));
 
         var countTag = GetOpeningTag(xaml, xaml.IndexOf("x:Name=\"HistoryCountText\"", StringComparison.Ordinal), "<TextBlock");
         Assert.Contains("ToolTip=\"{Binding Text, RelativeSource={RelativeSource Self}}\"", countTag);
@@ -1975,7 +1968,7 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryReindexRefreshFailuresLeaveDurableStatus()
     {
-        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.Actions.cs"));
+        var actionsCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.Actions.cs"));
 
         var reindexBlock = GetMethodBlock(actionsCode, "private void ReindexAllBtn_Click(object sender, RoutedEventArgs e)");
         Assert.Contains("try", reindexBlock);
@@ -1999,8 +1992,8 @@ public sealed class SettingsWindowVisualPolishTests
     [Fact]
     public void HistoryToolbarActionsHaveAccessibleLabels()
     {
-        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "SettingsWindow.xaml"));
-        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "History", "SettingsWindow.History.cs"));
+        var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "HistoryWindow.xaml"));
+        var historyCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "History", "HistoryWindow.History.cs"));
 
         AssertSettingsActionButton(xaml, "SelectBtn", "Select history items", "Select history items", "ToggleSelectMode");
         AssertSettingsActionButton(xaml, "DeleteAllBtn", "Clear current history tab", "Delete all items in the current history tab", "DeleteAllClick");

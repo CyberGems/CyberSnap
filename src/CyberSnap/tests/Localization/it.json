@@ -50,7 +50,7 @@
   "Window detection": "Rilevamento finestre",
   "Off": "Spento",
   "Windows only": "Solo Windows",
-  "Capture dock": "Bacino di cattura",
+  "Toolbar Position": "Posizione della barra degli strumenti",
   "Top": "In alto",
   "Bottom": "In basso",
   "Left": "A sinistra",
@@ -223,3 +223,5 @@
   "Update check failed": "Il controllo dell'aggiornamento non Ã¨ riuscito",
   "CyberSnap is up to date": "CyberSnap Ã¨ aggiornato"
 }
+
+

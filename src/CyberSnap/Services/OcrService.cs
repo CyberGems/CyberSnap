@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
@@ -74,29 +74,92 @@ public static class OcrService
                 if (engine == null)
                     return "";
 
-                // 1. Upscale small captures so Windows OCR can resolve tiny text reliably
-                using var prepared = UpscaleForOcr(bitmap);
+                // 1. Try Simple Pipeline first (no heavy filters, upscale only if very small < 200, crop threshold 180.0)
+                string simpleText = "";
+                using (var croppedAndPaddedSimple = CropBordersAndPad(bitmap, 180.0))
+                using (var preparedSimple = UpscaleForOcrSimple(croppedAndPaddedSimple))
+                {
+                    SoftwareBitmap softwareBitmapSimple;
+                    try
+                    {
+                        softwareBitmapSimple = ConvertBitmapToSoftwareBitmapDirect(preparedSimple);
+                    }
+                    catch
+                    {
+                        softwareBitmapSimple = await ConvertBitmapToSoftwareBitmapFallbackAsync(preparedSimple);
+                    }
 
-                // 2. Apply gamma correction to lighten mid-tones and preserve fine diacritics
-                ApplyGammaCorrection(prepared, gamma: 0.75);
+                    using (softwareBitmapSimple)
+                    {
+                        var result = await engine.RecognizeAsync(softwareBitmapSimple);
+                        if (result != null)
+                        {
+                            var lines = result.Lines
+                                .Select(CreateLineLayout)
+                                .Where(layout => !string.IsNullOrWhiteSpace(layout.Text))
+                                .ToList();
+                            simpleText = CorrectSpanishDiacritics(FormatRecognizedText(lines, result.Text));
+                        }
 
-                // 3. Light sharpening to restore edge definition softened by bicubic upscale
-                ApplySharpening(prepared, amount: 0.4);
+                        // Check if the primary engine missed the clock time (contains am/pm/m. but no colon)
+                        bool missedClockTime = !string.IsNullOrWhiteSpace(simpleText)
+                            && (simpleText.Contains("m.") || simpleText.ToLowerInvariant().Contains("am") || simpleText.ToLowerInvariant().Contains("pm"))
+                            && !simpleText.Contains(":");
 
-                // 4. Convert directly to SoftwareBitmap without lossy PNG roundtrip
-                SoftwareBitmap softwareBitmap;
+                        if (missedClockTime)
+                        {
+                            var fallbackEngine = OcrEngine.TryCreateFromLanguage(new Windows.Globalization.Language("en-US"))
+                                              ?? OcrEngine.TryCreateFromUserProfileLanguages();
+
+                            if (fallbackEngine != null && fallbackEngine.RecognizerLanguage.LanguageTag != engine.RecognizerLanguage.LanguageTag)
+                            {
+                                var fallbackResult = await fallbackEngine.RecognizeAsync(softwareBitmapSimple);
+                                if (fallbackResult != null)
+                                {
+                                    var fallbackLines = fallbackResult.Lines
+                                        .Select(CreateLineLayout)
+                                        .Where(layout => !string.IsNullOrWhiteSpace(layout.Text))
+                                        .ToList();
+                                    string fallbackText = CorrectSpanishDiacritics(FormatRecognizedText(fallbackLines, fallbackResult.Text));
+
+                                    // If fallback recognized more/better text (e.g. contains colons), use it!
+                                    if (!string.IsNullOrWhiteSpace(fallbackText) && fallbackText.Contains(":"))
+                                    {
+                                        simpleText = fallbackText;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // If simple pipeline successfully recognized text (length >= 3), return it immediately!
+                if (!string.IsNullOrWhiteSpace(simpleText) && simpleText.Length >= 3)
+                {
+                    return simpleText;
+                }
+
+                // 2. Fallback to Full Pipeline with all filters (gamma, sharpening, binarization, upscale to 800, crop threshold 50.0)
+                using var croppedAndPaddedFull = CropBordersAndPad(bitmap, 50.0);
+                using var preparedFull = UpscaleForOcrFull(croppedAndPaddedFull);
+
+                ApplyGammaCorrection(preparedFull, gamma: 0.75);
+                ApplySharpening(preparedFull, amount: 0.4);
+                ApplyBinarization(preparedFull, threshold: 120.0);
+
+                SoftwareBitmap softwareBitmapFull;
                 try
                 {
-                    softwareBitmap = ConvertBitmapToSoftwareBitmapDirect(prepared);
+                    softwareBitmapFull = ConvertBitmapToSoftwareBitmapDirect(preparedFull);
                 }
                 catch
                 {
-                    softwareBitmap = await ConvertBitmapToSoftwareBitmapFallbackAsync(prepared);
+                    softwareBitmapFull = await ConvertBitmapToSoftwareBitmapFallbackAsync(preparedFull);
                 }
 
-                using (softwareBitmap)
+                using (softwareBitmapFull)
                 {
-                    var result = await engine.RecognizeAsync(softwareBitmap);
+                    var result = await engine.RecognizeAsync(softwareBitmapFull);
                     if (result == null)
                         return "";
 
@@ -117,10 +180,9 @@ public static class OcrService
     }
 
     /// <summary>
-    /// Applies gamma correction to a grayscale 32bppArgb bitmap.
-    /// Gamma &lt; 1 brightens mid-tones smoothly without the harsh clipping
-    /// of contrast stretching, which helps preserve fine diacritics (tildes,
-    /// accents) after bicubic upscaling.
+    /// Applies gamma correction to all color channels (Red, Green, Blue) of a 32bppArgb bitmap.
+    /// Gamma &lt; 1 brightens mid-tones smoothly, helping preserve fine diacritics
+    /// and details without crushing colors.
     /// </summary>
     private static unsafe void ApplyGammaCorrection(Bitmap bitmap, double gamma)
     {
@@ -148,13 +210,10 @@ public static class OcrService
                 for (int x = 0; x < width; x++)
                 {
                     byte* px = row + (x * 4);
-                    byte lum = px[0]; // already grayscale, all channels equal
-
-                    byte boosted = lut[lum];
-                    px[0] = boosted;
-                    px[1] = boosted;
-                    px[2] = boosted;
-                    px[3] = 255;
+                    px[0] = lut[px[0]]; // Blue
+                    px[1] = lut[px[1]]; // Green
+                    px[2] = lut[px[2]]; // Red
+                    px[3] = 255;        // Ensure opaque alpha
                 }
             }
         }
@@ -165,9 +224,8 @@ public static class OcrService
     }
 
     /// <summary>
-    /// Applies a very light unsharp-mask sharpening to restore edge crispness
-    /// that bicubic interpolation softens. Amount is intentionally low (0.3-0.5)
-    /// to avoid halo artifacts around already-thin diacritics.
+    /// Applies a light unsharp-mask sharpening to restore edge crispness
+    /// across all color channels independently.
     /// </summary>
     private static unsafe void ApplySharpening(Bitmap bitmap, double amount)
     {
@@ -199,23 +257,17 @@ public static class OcrService
                 for (int x = 1; x < width - 1; x++)
                 {
                     byte* px = dstRow + (x * 4);
-                    // Read luminance from source (grayscale, all channels equal)
-                    byte* srcPx = srcBase + (y * srcStride) + (x * 4);
-                    double val = srcPx[0] * centerWeight;
+                    // Process R, G, B channels independently
+                    for (int c = 0; c < 3; c++)
+                    {
+                        double val = (srcBase + (y * srcStride) + (x * 4))[c] * centerWeight;
+                        val += (srcBase + ((y - 1) * srcStride) + (x * 4))[c] * neighborWeight;
+                        val += (srcBase + ((y + 1) * srcStride) + (x * 4))[c] * neighborWeight;
+                        val += (srcBase + (y * srcStride) + ((x - 1) * 4))[c] * neighborWeight;
+                        val += (srcBase + (y * srcStride) + ((x + 1) * 4))[c] * neighborWeight;
 
-                    // Top
-                    val += (srcBase + ((y - 1) * srcStride) + (x * 4))[0] * neighborWeight;
-                    // Bottom
-                    val += (srcBase + ((y + 1) * srcStride) + (x * 4))[0] * neighborWeight;
-                    // Left
-                    val += (srcBase + (y * srcStride) + ((x - 1) * 4))[0] * neighborWeight;
-                    // Right
-                    val += (srcBase + (y * srcStride) + ((x + 1) * 4))[0] * neighborWeight;
-
-                    byte v = (byte)Math.Clamp(val, 0.0, 255.0);
-                    px[0] = v;
-                    px[1] = v;
-                    px[2] = v;
+                        px[c] = (byte)Math.Clamp(val, 0.0, 255.0);
+                    }
                     px[3] = 255;
                 }
             }
@@ -225,6 +277,43 @@ public static class OcrService
             clone.UnlockBits(srcData);
             bitmap.UnlockBits(dstData);
             clone.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Converts the color image to a high-contrast binary (black & white) image
+    /// using a true Luma threshold calculation.
+    /// </summary>
+    private static unsafe void ApplyBinarization(Bitmap bitmap, double threshold)
+    {
+        var rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+        var data = bitmap.LockBits(rect, ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+        try
+        {
+            byte* basePtr = (byte*)data.Scan0;
+            int stride = data.Stride;
+            int width = bitmap.Width;
+            int height = bitmap.Height;
+
+            for (int y = 0; y < height; y++)
+            {
+                byte* row = basePtr + (y * stride);
+                for (int x = 0; x < width; x++)
+                {
+                    byte* px = row + (x * 4);
+                    // Calculate true Luma: 0.299 * Red + 0.587 * Green + 0.114 * Blue
+                    double luma = 0.299 * px[2] + 0.587 * px[1] + 0.114 * px[0];
+                    byte b = (byte)(luma < threshold ? 0 : 255);
+                    px[0] = b;
+                    px[1] = b;
+                    px[2] = b;
+                    px[3] = 255;
+                }
+            }
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
         }
     }
 
@@ -251,17 +340,29 @@ public static class OcrService
             ["È"] = "É",
             ["ù"] = "ú",
             ["Ù"] = "Ú",
-            ["ñ"] = "ñ", // guard – already correct
-            ["Ñ"] = "Ñ", // guard – already correct
-            ["ä"] = "á", // occasional misread of á
+            ["ñ"] = "ñ",
+            ["Ñ"] = "Ñ",
+            ["ä"] = "á",
             ["Ä"] = "Á",
-            ["ü"] = "ú", // occasional misread of ú
+            ["ü"] = "ú",
             ["Ü"] = "Ú",
         };
 
         var sb = new StringBuilder(text.Length);
-        foreach (char c in text)
+        for (int i = 0; i < text.Length; i++)
         {
+            char c = text[i];
+            if (c == '6' && i > 0 && i < text.Length - 1)
+            {
+                char prev = text[i - 1];
+                char next = text[i + 1];
+                if (char.IsLetter(prev) && char.IsLetter(next))
+                {
+                    sb.Append('ó');
+                    continue;
+                }
+            }
+
             if (corrections.TryGetValue(c.ToString(), out string? replacement))
                 sb.Append(replacement);
             else
@@ -271,11 +372,41 @@ public static class OcrService
     }
 
     /// <summary>
-    /// Scales small captures up to a minimum longest-edge so that tiny text
-    /// is large enough for the Windows OCR engine to read reliably.
+    /// Scales small captures up to a minimum longest-edge using sharp NearestNeighbor interpolation.
+    /// Only scales if the longest edge is less than 200.
     /// Always returns a new mutable 32bppArgb bitmap.
     /// </summary>
-    private static Bitmap UpscaleForOcr(Bitmap source)
+    private static Bitmap UpscaleForOcrSimple(Bitmap source)
+    {
+        const int MinLongEdge = 200;
+        int longest = Math.Max(source.Width, source.Height);
+        if (longest >= MinLongEdge)
+        {
+            return (Bitmap)source.Clone();
+        }
+
+        double scale = MinLongEdge / (double)longest;
+        int width = Math.Max(1, (int)Math.Round(source.Width * scale));
+        int height = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+        var result = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+        result.SetResolution(source.HorizontalResolution, source.VerticalResolution);
+        using var g = Graphics.FromImage(result);
+        g.CompositingMode = CompositingMode.SourceCopy;
+        g.CompositingQuality = CompositingQuality.HighQuality;
+        g.InterpolationMode = InterpolationMode.NearestNeighbor;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.SmoothingMode = SmoothingMode.HighQuality;
+        g.DrawImage(source, new Rectangle(0, 0, width, height));
+        return result;
+    }
+
+    /// <summary>
+    /// Scales small captures up to a minimum longest-edge using Bicubic interpolation.
+    /// Scales to 800px.
+    /// Always returns a new mutable 32bppArgb bitmap.
+    /// </summary>
+    private static Bitmap UpscaleForOcrFull(Bitmap source)
     {
         const int MinLongEdge = 800;
         int longest = Math.Max(source.Width, source.Height);
@@ -289,6 +420,7 @@ public static class OcrService
             : source.Height;
 
         var result = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+        result.SetResolution(source.HorizontalResolution, source.VerticalResolution);
         using var g = Graphics.FromImage(result);
         g.CompositingMode = CompositingMode.SourceCopy;
         g.CompositingQuality = CompositingQuality.HighQuality;
@@ -297,6 +429,98 @@ public static class OcrService
         g.SmoothingMode = SmoothingMode.HighQuality;
         g.DrawImage(source, new Rectangle(0, 0, width, height));
         return result;
+    }
+
+    /// <summary>
+    /// Detects the content bounding box to crop out dark/black borders,
+    /// and pads the image with the average color of its corners to avoid clipping.
+    /// Uses the provided luma threshold.
+    /// </summary>
+    private static unsafe Bitmap CropBordersAndPad(Bitmap source, double threshold)
+    {
+        int w = source.Width;
+        int h = source.Height;
+        if (w == 0 || h == 0) return (Bitmap)source.Clone();
+
+        int minX = w;
+        int maxX = 0;
+        int minY = h;
+        int maxY = 0;
+        bool foundContent = false;
+
+        var rect = new Rectangle(0, 0, w, h);
+        var data = source.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        try
+        {
+            byte* basePtr = (byte*)data.Scan0;
+            int stride = data.Stride;
+
+            for (int y = 0; y < h; y++)
+            {
+                byte* row = basePtr + (y * stride);
+                for (int x = 0; x < w; x++)
+                {
+                    byte* px = row + (x * 4);
+                    // B: px[0], G: px[1], R: px[2]
+                    double luma = 0.299 * px[2] + 0.587 * px[1] + 0.114 * px[0];
+                    if (luma > threshold)
+                    {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        foundContent = true;
+                    }
+                }
+            }
+        }
+        finally
+        {
+            source.UnlockBits(data);
+        }
+
+        if (!foundContent || minX > maxX || minY > maxY)
+        {
+            return (Bitmap)source.Clone();
+        }
+
+        int croppedW = maxX - minX + 1;
+        int croppedH = maxY - minY + 1;
+
+        var cropped = new Bitmap(croppedW, croppedH, PixelFormat.Format32bppArgb);
+        cropped.SetResolution(source.HorizontalResolution, source.VerticalResolution);
+        using (var g = Graphics.FromImage(cropped))
+        {
+            g.DrawImage(source, new Rectangle(0, 0, croppedW, croppedH), new Rectangle(minX, minY, croppedW, croppedH), GraphicsUnit.Pixel);
+        }
+
+        Color c1 = cropped.GetPixel(0, 0);
+        Color c2 = cropped.GetPixel(croppedW - 1, 0);
+        Color c3 = cropped.GetPixel(0, croppedH - 1);
+        Color c4 = cropped.GetPixel(croppedW - 1, croppedH - 1);
+
+        int avgR = (c1.R + c2.R + c3.R + c4.R) / 4;
+        int avgG = (c1.G + c2.G + c3.G + c4.G) / 4;
+        int avgB = (c1.B + c2.B + c3.B + c4.B) / 4;
+        Color bgColor = Color.FromArgb(255, avgR, avgG, avgB);
+
+        const int pad = 20;
+        int newW = croppedW + pad * 2;
+        int newH = croppedH + pad * 2;
+
+        var padded = new Bitmap(newW, newH, PixelFormat.Format32bppArgb);
+        padded.SetResolution(source.HorizontalResolution, source.VerticalResolution);
+        using (var g = Graphics.FromImage(padded))
+        {
+            using (var brush = new SolidBrush(bgColor))
+            {
+                g.FillRectangle(brush, 0, 0, newW, newH);
+            }
+            g.DrawImage(cropped, pad, pad);
+        }
+
+        cropped.Dispose();
+        return padded;
     }
 
     /// <summary>

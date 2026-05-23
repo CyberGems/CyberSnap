@@ -210,7 +210,7 @@ public partial class ToastWindow : Window
             AnimateOverlayButtons(1, _isPinned ? 1 : 1);
 
         if (!_isPinned && !_isHovered)
-            RestartVisibleTimer(_activeDurationSeconds);
+            RestartVisibleTimer(_durationSeconds);
 
         return true;
     }
@@ -547,7 +547,7 @@ public partial class ToastWindow : Window
             Helpers.ToastButtonKind.Delete => _isDeletingSavedFile
                 ? ("Deleting file", "Delete is already running.")
                 : ("Delete file", "Delete the saved file for this preview."),
-            Helpers.ToastButtonKind.History => ("Open History", "Open the History tab."),
+            Helpers.ToastButtonKind.History => ("Open the History Window", "Open the History Window."),
             _ => ("Toast action", "Run this toast action.")
         };
         SetToastElementAccessibility(button, name, helpText);
@@ -637,7 +637,7 @@ public partial class ToastWindow : Window
 
     private void OpenHistory()
     {
-        ((App)Application.Current).ShowHistory();
+        ((App)Application.Current).ShowHistory(_savedFilePath);
         DismissAnimated();
     }
 

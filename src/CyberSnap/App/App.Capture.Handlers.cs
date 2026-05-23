@@ -78,6 +78,22 @@ public partial class App
                         ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
                     }
 
+                    if (settings.AutoOpenCapturedImages && !string.IsNullOrEmpty(persisted.FilePath) && File.Exists(persisted.FilePath))
+                    {
+                        try
+                        {
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = persisted.FilePath,
+                                UseShellExecute = true
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            AppDiagnostics.LogError("capture.auto-open", ex);
+                        }
+                    }
+
                     ScheduleIdleMemoryTrim();
                 });
             }, TaskScheduler.Default);
@@ -134,7 +150,7 @@ public partial class App
                 }
 
                 if (historyEntry is not null)
-                    SettingsWindow.WarmRecentHistoryThumbs(new[] { historyEntry }, maxCount: 1);
+                    HistoryWindow.WarmRecentHistoryThumbs(new[] { historyEntry }, maxCount: 1);
 
                 return new PersistedCaptureResult
                 {

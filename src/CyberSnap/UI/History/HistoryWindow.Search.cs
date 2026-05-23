@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,7 +9,7 @@ using CyberSnap.Services;
 
 namespace CyberSnap.UI;
 
-public partial class SettingsWindow
+public partial class HistoryWindow
 {
     private void RefreshImageSearchTexts()
     {
@@ -104,7 +104,7 @@ public partial class SettingsWindow
             var loadedPrefix = totalCount > loadedCount
                 ? $"{loadedCount} of {totalCount} captures loaded"
                 : $"{loadedCount} capture{(loadedCount == 1 ? "" : "s")}";
-            HistoryCountText.Text = $"{loadedPrefix} Â· {sizeStr}";
+            HistoryCountText.Text = $"{loadedPrefix} · {sizeStr}";
         }
 
         if (_filteredHistoryItems.Count == 0)
@@ -290,20 +290,20 @@ public partial class SettingsWindow
     private static string FormatImageSearchVisibleCountText(int visibleCount, int matchedCount, string sizeText)
     {
         var matchLabel = matchedCount == 1 ? "match" : "matches";
-        return $"{visibleCount} visible of {matchedCount} {matchLabel} Â· {sizeText}";
+        return $"{visibleCount} visible of {matchedCount} {matchLabel} · {sizeText}";
     }
 
     private static string FormatImageSearchMatchCountText(int matchedCount, bool uploadFilterActive, string sizeText)
     {
         var sourceLabel = "search";
         var matchLabel = matchedCount == 1 ? "match" : "matches";
-        return $"{matchedCount} {sourceLabel} {matchLabel} Â· {sizeText}";
+        return $"{matchedCount} {sourceLabel} {matchLabel} · {sizeText}";
     }
 
     private static string FormatImageUploadFilterCountText(int filteredCount, int totalCount, string sizeText)
     {
         var captureLabel = totalCount == 1 ? "capture" : "captures";
-        return $"{filteredCount} of {totalCount} {captureLabel} shown by filter Â· {sizeText}";
+        return $"{filteredCount} of {totalCount} {captureLabel} shown by filter · {sizeText}";
     }
 
     private List<HistoryItemVM> FilterSearchResultsForLoadedThumbnails(List<HistoryItemVM> rankedItems, string query)
@@ -439,7 +439,7 @@ public partial class SettingsWindow
         var isImages = HistoryCategoryCombo.SelectedIndex == 0;
         var isText = HistoryCategoryCombo.SelectedIndex == 1;
         var isColors = HistoryCategoryCombo.SelectedIndex == 3;
-        var isCodes = HistoryCategoryCombo.SelectedIndex == 5;
+        var isCodes = HistoryCategoryCombo.SelectedIndex == 4;
         var showSearch = (isImages && _settingsService.Settings.ShowImageSearchBar && !_imageSearchRowAutoHidden) ||
                          isText ||
                          isColors ||
@@ -493,5 +493,4 @@ public partial class SettingsWindow
         _imageSearchRowAutoHidden = hidden;
         UpdateImageSearchUi();
     }
-
 }

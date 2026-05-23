@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using CyberSnap.Models;
@@ -117,6 +117,21 @@ public sealed partial class ImageSearchIndexService
         _ => "Indexed"
     };
 
+    private static string CleanWhitespace(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var words = value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return string.Join(" ", words);
+    }
+
+    private static string TrimForDiagnostics(string value)
+    {
+        var cleaned = CleanWhitespace(value);
+        return cleaned.Length <= 220 ? cleaned : $"{cleaned[..217]}...";
+    }
+
     private static string BuildDiagnosticsText(ImageSearchIndexRecord? record, string fallbackFileName)
     {
         if (record is null)
@@ -132,12 +147,28 @@ public sealed partial class ImageSearchIndexService
             parts.Add($"OCR retries: {record.OcrRetryCount}");
         if (record.NextOcrRetryUtcTicks > 0)
             parts.Add($"Next retry: {new DateTime(record.NextOcrRetryUtcTicks, DateTimeKind.Utc).ToLocalTime():g}");
-        if (!string.IsNullOrWhiteSpace(record.OcrText))
-            parts.Add($"OCR: {TrimForDiagnostics(record.OcrText)}");
-        if (!string.IsNullOrWhiteSpace(record.LastError))
-            parts.Add($"Last error: {TrimForDiagnostics(record.LastError)}");
 
-        return string.Join("\n", parts);
+        var diagnosticsText = string.Join("\n", parts);
+
+        if (!string.IsNullOrWhiteSpace(record.OcrText))
+        {
+            var trimmedOcr = TrimForDiagnostics(record.OcrText);
+            if (!string.IsNullOrWhiteSpace(trimmedOcr))
+            {
+                diagnosticsText += $"\n\nText detected:\n\"{trimmedOcr}\"";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(record.LastError))
+        {
+            var trimmedError = TrimForDiagnostics(record.LastError);
+            if (!string.IsNullOrWhiteSpace(trimmedError))
+            {
+                diagnosticsText += $"\n\nLast error:\n{trimmedError}";
+            }
+        }
+
+        return diagnosticsText;
     }
 
     private static string DescribeMatch(ImageSearchIndexRecord? record, string fallbackFileName, string query, ImageSearchSourceOptions sources, bool exactMatch)
@@ -159,12 +190,6 @@ public sealed partial class ImageSearchIndexService
             matchedSources.Add("OCR");
 
         return matchedSources.Count == 0 ? "" : $"Match: {string.Join(" + ", matchedSources)}";
-    }
-
-    private static string TrimForDiagnostics(string value)
-    {
-        var trimmed = value.Trim();
-        return trimmed.Length <= 220 ? trimmed : $"{trimmed[..217]}...";
     }
 
     private void InvalidateSearchCaches_NoLock()

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Automation;
@@ -14,7 +14,7 @@ using Button = System.Windows.Controls.Button;
 
 namespace CyberSnap.UI;
 
-public partial class SettingsWindow
+public partial class HistoryWindow
 {
     private string _codeSearchQuery = "";
     private List<CodeHistoryEntry> _filteredCodeEntries = new();
@@ -83,7 +83,7 @@ public partial class SettingsWindow
         AppendCodeHistoryEntries(_filteredCodeEntries, previousCount, _codeRenderCount - previousCount);
         _ = Dispatcher.BeginInvoke(() =>
         {
-            if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 5)
+            if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 4)
                 CodesPanel.ScrollToVerticalOffset(previousOffset);
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -91,7 +91,7 @@ public partial class SettingsWindow
     private void FlushCodeSearchDebounce(object? sender, EventArgs e)
     {
         _codeSearchDebounceTimer.Stop();
-        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 5)
+        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 4)
             LoadCodeHistory();
     }
 
@@ -216,7 +216,7 @@ public partial class SettingsWindow
         AutomationProperties.SetHelpText(primary, entry.Text);
         infoStack.Children.Add(primary);
 
-        var metadataText = $"{formatLabel} Â· {FormatTimeAgo(entry.CapturedAt)}";
+        var metadataText = $"{formatLabel} · {FormatTimeAgo(entry.CapturedAt)}";
         var metadata = new TextBlock
         {
             Text = metadataText,

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text.Json;
 using CyberSnap.Models;
 
@@ -271,6 +271,41 @@ public sealed partial class HistoryService
             ScheduleFlush_NoLock();
         }
         NotifyChanged();
+    }
+
+    public void PruneByCount(int maxCount, bool deleteOriginalFiles)
+    {
+        if (maxCount <= 0)
+            return;
+
+        lock (_gate)
+        {
+            PruneByCount_NoLock(maxCount, deleteOriginalFiles);
+        }
+        NotifyChanged();
+    }
+
+    private void PruneByCount_NoLock(int maxCount, bool deleteOriginalFiles)
+    {
+        if (maxCount <= 0 || _entries.Count <= maxCount)
+            return;
+
+        var entriesToRemove = _entries.Skip(maxCount).ToList();
+
+        foreach (var entry in entriesToRemove)
+        {
+            _entriesByPath.Remove(entry.FilePath);
+            TryDeleteManagedThumbnail_NoLock(entry.FilePath);
+            if (deleteOriginalFiles)
+            {
+                TryDeleteHistoryFile_NoLock(entry.FilePath, "count prune");
+            }
+        }
+
+        _entries.RemoveRange(maxCount, _entries.Count - maxCount);
+        InvalidateFilteredCache();
+        QueueEntryDeletes_NoLock(entriesToRemove.Select(e => e.FilePath));
+        ScheduleFlush_NoLock();
     }
 
     public void SaveIndex()

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -15,7 +15,7 @@ using CyberSnap.Services;
 
 namespace CyberSnap.UI;
 
-public partial class SettingsWindow
+public partial class HistoryWindow
 {
     private const string VideoThumbnailSeekOffset = "0.40";
     private const int VideoThumbnailDiagnosticMaxLength = 220;

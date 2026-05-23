@@ -26,6 +26,7 @@ internal static partial class User32
     public const uint KEYEVENTF_KEYUP = 0x0002;
     public const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
     public const uint MOUSEEVENTF_LEFTUP = 0x0004;
+    public const uint MOUSEEVENTF_WHEEL = 0x0800;
 
     public const int SRCCOPY = 0x00CC0020;
     public const int WH_KEYBOARD_LL = 13;

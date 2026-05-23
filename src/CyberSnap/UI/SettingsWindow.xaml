@@ -179,6 +179,8 @@
             <Setter Property="Margin" Value="0,2,0,0"/>
         </Style>
 
+
+
         <Style TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
@@ -358,13 +360,13 @@
                         <Border x:Name="Track"
                                 Width="40"
                                 Height="20"
-                                CornerRadius="4"
+                                CornerRadius="10"
                                 Background="#00000000"
                                 BorderBrush="{DynamicResource ThemeTextSecondaryBrush}"
                                 BorderThickness="1"
                                 SnapsToDevicePixels="True">
                             <Rectangle x:Name="Thumb"
-                                     Width="10"
+                                     Width="12"
                                      Height="12"
                                      Margin="4,0"
                                      HorizontalAlignment="Left"
@@ -676,10 +678,6 @@
                     <TextBlock Text="Settings" FontSize="18" FontWeight="Bold" FontFamily="Segoe UI Variable Display"
                                Foreground="{DynamicResource ThemeTextPrimaryBrush}" Margin="10,0,10,16"/>
                     
-                    <TextBlock Text="SYSTEM" FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
-                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.5" Margin="10,4,10,6"
-                               TextOptions.TextFormattingMode="Display"/>
-                    
                     <RadioButton x:Name="SettingsTab" Content="General" GroupName="Main"
                                  IsChecked="True" Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="ToastTab" Content="Toast" GroupName="Main"
@@ -693,10 +691,6 @@
                     <RadioButton x:Name="OcrTab" Content="OCR" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     
-                    <TextBlock Text="WORKSPACE" FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
-                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.5" Margin="10,20,10,6"
-                               TextOptions.TextFormattingMode="Display"/>
-                    
                     <RadioButton x:Name="HistoryTab" Content="History" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="AboutTab" Content="About" GroupName="Main"
@@ -709,7 +703,7 @@
                 <TextBlock x:Name="PageTitleText"
                            Text="General"
                            Margin="18,10,18,0"
-                           FontSize="22"
+                           FontSize="20"
                            FontWeight="Bold"
                            FontFamily="Segoe UI Variable Display"
                            Foreground="{DynamicResource ThemeAccentBrush}"
@@ -746,19 +740,23 @@
                                     <TextBlock Text="Choose which selection mode opens first." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="DefaultCaptureModeCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Default capture tool"
-                                          ToolTip="Choose which selection mode opens first."
-                                          SelectionChanged="DefaultCaptureModeCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Rectangle"
-                                                  ToolTip="Drag from corner to corner."
-                                                  AutomationProperties.Name="Rectangle selection"
-                                                  AutomationProperties.HelpText="Start captures with the standard rectangular selection tool."/>
-                                    <ComboBoxItem Content="Center"
-                                                  ToolTip="Drag outward from a center point."
-                                                  AutomationProperties.Name="Center selection"
-                                                  AutomationProperties.HelpText="Start captures with a center-based selection tool."/>
-                                </ComboBox>
+                                           VerticalAlignment="Center"
+                                           AutomationProperties.Name="Default capture tool"
+                                           ToolTip="Choose which selection mode opens first."
+                                           SelectionChanged="DefaultCaptureModeCombo_SelectionChanged">
+                                     <ComboBoxItem Content="Rectangle"
+                                                   ToolTip="Drag from corner to corner."
+                                                   AutomationProperties.Name="Rectangle selection"
+                                                   AutomationProperties.HelpText="Start captures with the standard rectangular selection tool."/>
+                                     <ComboBoxItem Content="Center"
+                                                   ToolTip="Drag outward from a center point."
+                                                   AutomationProperties.Name="Center selection"
+                                                   AutomationProperties.HelpText="Start captures with a center-based selection tool."/>
+                                     <ComboBoxItem Content="Freeform"
+                                                   ToolTip="Draw an irregular capture outline."
+                                                   AutomationProperties.Name="Freeform selection"
+                                                   AutomationProperties.HelpText="Start captures with the freeform selection tool."/>
+                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -822,7 +820,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Show cursor in captures and recordings" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Include the pointer in saved media." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Include the pointer in saved media. Scrolling captures never include the cursor." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="ShowCursorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           ToolTip="Include the pointer in saved media"
@@ -943,20 +941,10 @@
                                     <TextBlock Text="Window detection" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Detect windows when hovering before selection." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
-                                <ComboBox x:Name="WindowDetectionCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
+                                <CheckBox x:Name="WindowDetectionCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Window detection"
                                           ToolTip="Detect windows when hovering before selection."
-                                          SelectionChanged="WindowDetectionCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Off"
-                                                  ToolTip="Ignore windows while selecting."
-                                                  AutomationProperties.Name="Window detection off"
-                                                  AutomationProperties.HelpText="Do not highlight or snap to windows during selection."/>
-                                    <ComboBoxItem Content="Windows only"
-                                                  ToolTip="Detect windows while hovering."
-                                                  AutomationProperties.Name="Windows-only detection"
-                                                  AutomationProperties.HelpText="Highlight detected windows during selection so captures can snap to them."/>
-                                </ComboBox>
+                                          Checked="WindowDetectionCheck_Changed" Unchecked="WindowDetectionCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -969,30 +957,22 @@
                                     <TextBlock Text="&#xE8A7;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Capture dock" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Position the capture toolbar around the screen." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Toolbar Position" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Choose a position for the capture toolbar" Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="CaptureDockSideCombo" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Center"
-                                          AutomationProperties.Name="Capture dock"
-                                          ToolTip="Position the capture toolbar around the screen."
+                                          AutomationProperties.Name="Toolbar Position"
+                                          ToolTip="Choose a position for the capture toolbar"
                                           SelectionChanged="CaptureDockSideCombo_SelectionChanged">
                                     <ComboBoxItem Content="Top"
                                                   ToolTip="Show the capture toolbar along the top edge."
-                                                  AutomationProperties.Name="Top capture dock"
+                                                  AutomationProperties.Name="Toolbar top"
                                                   AutomationProperties.HelpText="Place the capture toolbar at the top of the screen."/>
                                     <ComboBoxItem Content="Bottom"
                                                   ToolTip="Show the capture toolbar along the bottom edge."
-                                                  AutomationProperties.Name="Bottom capture dock"
+                                                  AutomationProperties.Name="Toolbar bottom"
                                                   AutomationProperties.HelpText="Place the capture toolbar at the bottom of the screen."/>
-                                    <ComboBoxItem Content="Left"
-                                                  ToolTip="Show the capture toolbar along the left edge."
-                                                  AutomationProperties.Name="Left capture dock"
-                                                  AutomationProperties.HelpText="Place the capture toolbar on the left side of the screen."/>
-                                    <ComboBoxItem Content="Right"
-                                                  ToolTip="Show the capture toolbar along the right edge."
-                                                  AutomationProperties.Name="Right capture dock"
-                                                  AutomationProperties.HelpText="Place the capture toolbar on the right side of the screen."/>
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -1018,10 +998,10 @@
                                                   ToolTip="Let CyberSnap collect scrolling frames automatically."
                                                   AutomationProperties.Name="Automatic scrolling capture"
                                                   AutomationProperties.HelpText="Automatically collect frames while scrolling capture is active."/>
-                                    <ComboBoxItem Content="Manual"
-                                                  ToolTip="Capture scrolling frames only when you click."
-                                                  AutomationProperties.Name="Manual scrolling capture"
-                                                  AutomationProperties.HelpText="Only collect a scrolling-capture frame when you press the capture button."/>
+                                    <ComboBoxItem Content="Autoscroll"
+                                                  ToolTip="Automatically scroll and capture the window content."
+                                                  AutomationProperties.Name="Autoscroll capture"
+                                                  AutomationProperties.HelpText="Automatically scroll the target window and stitch frames until the end is reached."/>
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -1118,6 +1098,25 @@
                                           ToolTip="Write screenshots to the configured save folder"
                                           AutomationProperties.Name="Save screenshots to file"
                                           Checked="SaveToFileCheck_Changed" Unchecked="SaveToFileCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE7AC;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Auto-open image in system viewer" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Automatically open newly taken screenshots in the system default viewer (such as CyberViewer)." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="AutoOpenCapturedImagesCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Automatically open newly taken screenshots in the system default viewer (such as CyberViewer)."
+                                          AutomationProperties.Name="Auto-open image in system viewer"
+                                          Checked="AutoOpenCapturedImagesCheck_Changed" Unchecked="AutoOpenCapturedImagesCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -1334,75 +1333,6 @@
                                                   AutomationProperties.HelpText="Resize oversized captures so the longest edge is at most 480 pixels."/>
                                 </ComboBox>
                             </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="History" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE81C;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Save capture history" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Keep captures available in the History page." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="SaveHistoryCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Keep captures available in the History page"
-                                          AutomationProperties.Name="Save capture history"
-                                          Checked="SaveHistoryCheck_Changed" Unchecked="SaveHistoryCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Auto-clear history" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Automatically prune old capture entries." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="HistoryRetentionCombo" Grid.Column="2" MinWidth="125"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Auto-clear history"
-                                          ToolTip="Automatically prune old capture entries."
-                                          SelectionChanged="HistoryRetentionCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Never"
-                                                  ToolTip="Keep history until manually cleared"
-                                                  AutomationProperties.Name="Never auto-clear history"
-                                                  AutomationProperties.HelpText="Keep saved capture history until you clear it manually."/>
-                                    <ComboBoxItem Content="1 day"
-                                                  ToolTip="Keep history for 1 day"
-                                                  AutomationProperties.Name="Keep history for 1 day"
-                                                  AutomationProperties.HelpText="Automatically remove capture history older than 1 day."/>
-                                    <ComboBoxItem Content="7 days"
-                                                  ToolTip="Keep history for 7 days"
-                                                  AutomationProperties.Name="Keep history for 7 days"
-                                                  AutomationProperties.HelpText="Automatically remove capture history older than 7 days."/>
-                                    <ComboBoxItem Content="30 days"
-                                                  ToolTip="Keep history for 30 days"
-                                                  AutomationProperties.Name="Keep history for 30 days"
-                                                  AutomationProperties.HelpText="Automatically remove capture history older than 30 days."/>
-                                    <ComboBoxItem Content="3 months"
-                                                  ToolTip="Keep history for 3 months"
-                                                  AutomationProperties.Name="Keep history for 3 months"
-                                                  AutomationProperties.HelpText="Automatically remove capture history older than 3 months."/>
-                                </ComboBox>
-                            </Grid>
-                            <TextBlock x:Name="HistoryPreferenceStatusText"
-                                       Style="{StaticResource SettingsStatusText}"
-                                       Visibility="Collapsed"
-                                       Margin="34,5,0,0"/>
                         </StackPanel>
                     </Border>
 
@@ -1733,21 +1663,7 @@
                                 </StackPanel>
                                 <ComboBox x:Name="TranslateModelCombo" Grid.Column="2" MinWidth="145"
                                           VerticalAlignment="Center"
-                                          AutomationProperties.Name="Translation engine"
-                                          ToolTip="Choose which translator handles OCR text."
-                                          SelectionChanged="TranslateModelCombo_Changed">
-                                    <ComboBoxItem Content="Open-source Local" Tag="2"
-                                                  ToolTip="Use the fully local open-source translator."
-                                                  AutomationProperties.Name="Open-source local translator"
-                                                  AutomationProperties.HelpText="Translate OCR text locally without a cloud provider."/>
-                                    <ComboBoxItem Content="Argos Translate" Tag="0"
-                                                  ToolTip="Use the Argos local fallback translator."
-                                                  AutomationProperties.Name="Argos Translate"
-                                                  AutomationProperties.HelpText="Translate OCR text with the local Argos runtime."/>
-                                    <ComboBoxItem Content="Google Translate" Tag="1"
-                                                  ToolTip="Use Google Translate with an API key."
-                                                  AutomationProperties.Name="Google Translate"
-                                                  AutomationProperties.HelpText="Translate OCR text through Google using the configured API key."/>
+                                          Visibility="Collapsed">
                                 </ComboBox>
                             </Grid>
                         </StackPanel>
@@ -2088,94 +2004,6 @@
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="Search" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
-                    <Border x:Name="GeneralImageSearchSettingsCard" Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE721;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Show image search bar" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Display the search bar in the image browser." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="ShowImageSearchBarCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Show image search bar"
-                                          ToolTip="Display the search bar in the image browser."
-                                          Checked="ShowImageSearchBarCheck_Changed" Unchecked="ShowImageSearchBarCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Auto-index images" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Automatically index new images for search." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="AutoIndexImagesCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Auto-index images"
-                                          ToolTip="Automatically index new images for search."
-                                          Checked="AutoIndexImagesCheck_Changed" Unchecked="AutoIndexImagesCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Show search diagnostics" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Show diagnostics and performance info in search." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="ShowImageSearchDiagnosticsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Show search diagnostics"
-                                          ToolTip="Show diagnostics and performance info in search."
-                                          Checked="ShowImageSearchDiagnosticsCheck_Changed" Unchecked="ShowImageSearchDiagnosticsCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8FD;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Image index cache" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Manage or rebuild the search index cache." Style="{StaticResource SettingDescription}"/>
-                                    <TextBlock x:Name="ImageIndexMaintenanceStatusText"
-                                               Style="{StaticResource SettingsStatusText}"
-                                               Visibility="Collapsed"
-                                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                               AutomationProperties.Name="Image index status"
-                                               AutomationProperties.LiveSetting="Polite"
-                                               Margin="0,6,0,0"/>
-                                </StackPanel>
-                                <Button x:Name="ResetImageIndexesBtn" Grid.Column="2" Content="Reset cache"
-                                        MinWidth="120" VerticalAlignment="Center"
-                                        AutomationProperties.Name="Reset image search cache"
-                                        ToolTip="Reset the image search index cache"
-                                        Cursor="Hand" Click="ResetImageIndexesBtn_Click"/>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
 
                 </StackPanel>
             </ScrollViewer>
@@ -2200,16 +2028,24 @@
                                     <TextBlock Text="Toast position" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Choose where screenshot previews appear." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
-                                <ComboBox x:Name="ToastPositionCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Toast position"
-                                          ToolTip="Choose where screenshot previews appear."
-                                          SelectionChanged="ToastPositionCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Right" ToolTip="Show previews near the right edge."/>
-                                    <ComboBoxItem Content="Left" ToolTip="Show previews near the left edge."/>
-                                    <ComboBoxItem Content="Top Left" ToolTip="Show previews in the top-left corner."/>
-                                    <ComboBoxItem Content="Top Right" ToolTip="Show previews in the top-right corner."/>
-                                </ComboBox>
+                                 <ComboBox x:Name="ToastPositionCombo" Grid.Column="2" MinWidth="150"
+                                           VerticalAlignment="Center"
+                                           AutomationProperties.Name="Toast position"
+                                           ToolTip="Choose where screenshot previews appear."
+                                           SelectionChanged="ToastPositionCombo_SelectionChanged">
+                                     <ComboBoxItem Content="Right" ToolTip="Show previews near the right edge."
+                                                   AutomationProperties.Name="Right toast position"
+                                                   AutomationProperties.HelpText="Place screenshot previews near the right edge of the screen."/>
+                                     <ComboBoxItem Content="Left" ToolTip="Show previews near the left edge."
+                                                   AutomationProperties.Name="Left toast position"
+                                                   AutomationProperties.HelpText="Place screenshot previews near the left edge of the screen."/>
+                                     <ComboBoxItem Content="Top Left" ToolTip="Show previews in the top-left corner."
+                                                   AutomationProperties.Name="Top-left toast position"
+                                                   AutomationProperties.HelpText="Place screenshot previews in the top-left corner of the screen."/>
+                                     <ComboBoxItem Content="Top Right" ToolTip="Show previews in the top-right corner."
+                                                   AutomationProperties.Name="Top-right toast position"
+                                                   AutomationProperties.HelpText="Place screenshot previews in the top-right corner of the screen."/>
+                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -2698,23 +2534,24 @@
                                                                RenderOptions.BitmapScalingMode="HighQuality"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
-                                                    <Border x:Name="ToastLayoutHistoryBtn"
-                                                            Width="30" Height="30" CornerRadius="9"
-                                                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                                                            Cursor="Hand"
-                                                            ToolTip="Move the history toast button"
-                                                            AutomationProperties.Name="History toast button"
-                                                            AllowDrop="True"
-                                                            MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
-                                                            MouseMove="ToastLayoutButton_MouseMove"
-                                                            MouseLeftButtonUp="ToastLayoutButton_MouseLeftButtonUp"
-                                                            DragEnter="ToastLayoutButton_DragEnter"
-                                                            Drop="ToastLayoutButton_Drop"
-                                                            Tag="History">
-                                                        <Image x:Name="ToastLayoutHistoryIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
-                                                               RenderOptions.BitmapScalingMode="HighQuality"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
+
+                                                    <Border x:Name="ToastLayoutAiRedirectBtn"
+                                                              Width="30" Height="30" CornerRadius="9"
+                                                              Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                              Cursor="Hand"
+                                                              ToolTip="Move the AI redirect toast button"
+                                                              AutomationProperties.Name="AI redirect toast button"
+                                                              AllowDrop="True"
+                                                              MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
+                                                              MouseMove="ToastLayoutButton_MouseMove"
+                                                              MouseLeftButtonUp="ToastLayoutButton_MouseLeftButtonUp"
+                                                              DragEnter="ToastLayoutButton_DragEnter"
+                                                              Drop="ToastLayoutButton_Drop"
+                                                              Tag="History">
+                                                          <Image x:Name="ToastLayoutAiRedirectIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                                 RenderOptions.BitmapScalingMode="HighQuality"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                      </Border>
                                                 </Grid>
                                             </Border>
 
@@ -2802,6 +2639,169 @@
                 </StackPanel>
             </ScrollViewer>
 
+            <!-- History -->
+            <ScrollViewer x:Name="HistoryPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
+                <StackPanel>
+                    <TextBlock Text="History" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE81C;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Save capture history" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Keep captures available in the History page." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="SaveHistoryCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Keep captures available in the History page"
+                                          AutomationProperties.Name="Save capture history"
+                                          Checked="SaveHistoryCheck_Changed" Unchecked="SaveHistoryCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Auto-clear history" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Automatically prune old capture entries." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="HistoryRetentionCombo" Grid.Column="2" MinWidth="125"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Auto-clear history"
+                                          ToolTip="Automatically prune old capture entries."
+                                          SelectionChanged="HistoryRetentionCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Never"
+                                                  ToolTip="Keep history until manually cleared"
+                                                  AutomationProperties.Name="Never auto-clear history"
+                                                  AutomationProperties.HelpText="Keep saved capture history until you clear it manually."/>
+                                    <ComboBoxItem Content="1 day"
+                                                  ToolTip="Keep history for 1 day"
+                                                  AutomationProperties.Name="Keep history for 1 day"
+                                                  AutomationProperties.HelpText="Automatically remove capture history older than 1 day."/>
+                                    <ComboBoxItem Content="7 days"
+                                                  ToolTip="Keep history for 7 days"
+                                                  AutomationProperties.Name="Keep history for 7 days"
+                                                  AutomationProperties.HelpText="Automatically remove capture history older than 7 days."/>
+                                    <ComboBoxItem Content="30 days"
+                                                  ToolTip="Keep history for 30 days"
+                                                  AutomationProperties.Name="Keep history for 30 days"
+                                                  AutomationProperties.HelpText="Automatically remove capture history older than 30 days."/>
+                                    <ComboBoxItem Content="3 months"
+                                                  ToolTip="Keep history for 3 months"
+                                                  AutomationProperties.Name="Keep history for 3 months"
+                                                  AutomationProperties.HelpText="Automatically remove capture history older than 3 months."/>
+                                </ComboBox>
+                            </Grid>
+                            <TextBlock x:Name="HistoryPreferenceStatusText"
+                                       Style="{StaticResource SettingsStatusText}"
+                                       Visibility="Collapsed"
+                                       Margin="34,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Search" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <Border x:Name="GeneralImageSearchSettingsCard" Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE721;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show image search bar" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Display the search bar in the Capture History window." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ShowImageSearchBarCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Show image search bar"
+                                          ToolTip="Display the search bar in the Capture History window."
+                                          Checked="ShowImageSearchBarCheck_Changed" Unchecked="ShowImageSearchBarCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Auto-index images" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Automatically index new images for search." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="AutoIndexImagesCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Auto-index images"
+                                          ToolTip="Automatically index new images for search."
+                                          Checked="AutoIndexImagesCheck_Changed" Unchecked="AutoIndexImagesCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show search diagnostics" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Show diagnostics and performance info in search." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ShowImageSearchDiagnosticsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Show search diagnostics"
+                                          ToolTip="Show diagnostics and performance info in search."
+                                          Checked="ShowImageSearchDiagnosticsCheck_Changed" Unchecked="ShowImageSearchDiagnosticsCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8FD;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Image index cache" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Manage or rebuild the search index cache." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock x:Name="ImageIndexMaintenanceStatusText"
+                                               Style="{StaticResource SettingsStatusText}"
+                                               Visibility="Collapsed"
+                                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                               AutomationProperties.Name="Image index status"
+                                               AutomationProperties.LiveSetting="Polite"
+                                               Margin="0,6,0,0"/>
+                                </StackPanel>
+                                <Button x:Name="ResetImageIndexesBtn" Grid.Column="2" Content="Reset cache"
+                                        MinWidth="120" VerticalAlignment="Center"
+                                        AutomationProperties.Name="Reset image search cache"
+                                        ToolTip="Reset the image search index cache"
+                                        Cursor="Hand" Click="ResetImageIndexesBtn_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
             <!-- About -->
             <ScrollViewer x:Name="AboutPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
                 <StackPanel MaxWidth="640" HorizontalAlignment="Left">
@@ -2832,259 +2832,45 @@
                         </TextBlock>
                     </Border>
 
-                    <TextBlock Text="Development" Style="{StaticResource SectionLabel}" Margin="0,16,0,6"/>
+
+                    <TextBlock Text="Maintenance" Style="{StaticResource SectionLabel}" Margin="0,16,0,6"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE779;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE7BA;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Created by" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="The Antigravity AI Team" Style="{StaticResource SettingDescription}"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="Check for updates on startup" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Automatically check for new versions when CyberSnap starts." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
+                                <CheckBox x:Name="AutoCheckUpdateCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Check for updates on startup"
+                                          ToolTip="Automatically check for new versions when CyberSnap starts."
+                                          Checked="AutoCheckUpdateCheck_Changed" Unchecked="AutoCheckUpdateCheck_Changed"/>
                             </Grid>
                         </StackPanel>
                     </Border>
-                    
+
                     <TextBlock Text="Resources" Style="{StaticResource SectionLabel}" Margin="0,16,0,6"/>
                     <WrapPanel Orientation="Horizontal">
                         <Button x:Name="GithubBtn" Content="Project Repository" Margin="0,0,10,10" 
+                                AutomationProperties.Name="Project Repository"
                                 ToolTip="View the source code on GitHub" Cursor="Hand" Click="GithubButton_Click"/>
                         <Button x:Name="UpdateBtn" Content="Check for Updates" Margin="0,0,10,10" 
+                                AutomationProperties.Name="Check for Updates"
                                 ToolTip="Check for the latest version" Cursor="Hand" Click="UpdateCheckButton_Click"/>
-                        <Button x:Name="LicenseBtn" Content="View License" Margin="0,0,10,10" 
-                                ToolTip="View open-source licenses" Cursor="Hand" Click="LicenseButton_Click"/>
                     </WrapPanel>
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- History (merged: Screenshots + Text sub-tabs) -->
-            <Grid x:Name="HistoryPanel" Visibility="Collapsed" Margin="22,42,22,10">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <!-- Category dropdown + actions -->
-                <Border Grid.Row="0" Padding="0,0,0,6">
-                    <StackPanel>
-                        <DockPanel>
-                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="SelectBtn" Content="Select" Style="{StaticResource HistoryActionButton}"
-                                         Margin="0,0,6,0" ToolTip="Enter selection mode to select or deselect history items"
-                                         AutomationProperties.Name="Select history items"
-                                         AutomationProperties.HelpText="Select history items"
-                                         Cursor="Hand" Click="ToggleSelectMode"/>
-                                <Button x:Name="DeleteAllBtn" Content="Clear all" Style="{StaticResource HistoryDangerButton}"
-                                        ToolTip="Clear all entries from history (removes thumbnails + index). Source files on disk are kept."
-                                        AutomationProperties.Name="Clear current history tab"
-                                        AutomationProperties.HelpText="Clear all entries from history (removes thumbnails + index). Source files on disk are kept."
-                                        Cursor="Hand" Click="DeleteAllClick"/>
-                                <Button x:Name="DeleteSelectedBtn" Content="Delete selected" Style="{StaticResource HistoryDangerButton}"
-                                         Margin="6,0,0,0" Visibility="Collapsed"
-                                         ToolTip="Remove selected entries from history (removes thumbnails + index). Source files on disk are kept."
-                                         AutomationProperties.Name="Remove selected history items"
-                                         AutomationProperties.HelpText="Remove selected entries from history (removes thumbnails + index). Source files on disk are kept."
-                                         Cursor="Hand" Click="DeleteSelectedClick"/>
-                            </StackPanel>
-                            <ComboBox x:Name="HistoryCategoryCombo"
-                                      MinWidth="130" Margin="0,0,8,0" VerticalAlignment="Center"
-                                      ToolTip="Choose the history category"
-                                      AutomationProperties.Name="History category"
-                                      SelectionChanged="HistoryCategoryCombo_Changed"
-                                      PreviewMouseLeftButtonDown="HistoryCategoryCombo_PreviewMouseLeftButtonDown">
-                                <ComboBoxItem Content="Images" IsSelected="True"
-                                              ToolTip="Show screenshot history"
-                                              AutomationProperties.Name="Image history"
-                                              AutomationProperties.HelpText="Show saved screenshot captures."/>
-                                <ComboBoxItem Content="Text"
-                                              ToolTip="Show OCR text history"
-                                              AutomationProperties.Name="Text history"
-                                              AutomationProperties.HelpText="Show saved OCR text captures."/>
-                                <ComboBoxItem Content="Videos/GIFs"
-                                              ToolTip="Show video and GIF history"
-                                              AutomationProperties.Name="Video and GIF history"
-                                              AutomationProperties.HelpText="Show saved video recordings and GIF captures."/>
-                                <ComboBoxItem Content="Colors"
-                                              ToolTip="Show color history"
-                                              AutomationProperties.Name="Color history"
-                                              AutomationProperties.HelpText="Show saved color picks."/>
-                                <ComboBoxItem Content="Codes"
-                                              ToolTip="Show QR and barcode history"
-                                              AutomationProperties.Name="Code history"
-                                              AutomationProperties.HelpText="Show saved QR and barcode scans."/>
-                            </ComboBox>
-
-                        </DockPanel>
-
-                        <Grid x:Name="ImageSearchRow" Margin="0,8,0,0" Visibility="Visible">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                            <Border Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                    BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                    BorderThickness="1" CornerRadius="7" Padding="10,6">
-                                <StackPanel>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Image x:Name="ImageSearchIcon" Width="14" Height="14" Stretch="Uniform"
-                                               VerticalAlignment="Center" Opacity="0.35"/>
-                                        <Grid Grid.Column="1" Margin="8,0,0,0">
-                                            <TextBox x:Name="ImageSearchBox" BorderThickness="0" Background="Transparent"
-                                                     Padding="0" MinHeight="0" Height="20" VerticalContentAlignment="Center"
-                                                     ToolTip="Search the current history category"
-                                                     AutomationProperties.Name="History search"
-                                                     TextChanged="ImageSearchBox_TextChanged"
-                                                     PreviewKeyDown="ImageSearchBox_PreviewKeyDown"
-                                                     GotKeyboardFocus="ImageSearchBox_FocusChanged"
-                                                     LostKeyboardFocus="ImageSearchBox_FocusChanged"/>
-                                            <TextBlock x:Name="ImageSearchPlaceholder" Text="Search screenshots, OCR text, or filenames..."
-                                                       FontSize="12" Opacity="0.28" VerticalAlignment="Center"
-                                                       IsHitTestVisible="False" Margin="0,0,0,0"/>
-                                        </Grid>
-                                    </Grid>
-
-                                    <TextBlock x:Name="ImageSearchFiltersSummaryText" Visibility="Collapsed"/>
-                                    <StackPanel x:Name="ReindexAllProgressPanel" Orientation="Horizontal" Visibility="Collapsed">
-                                        <ProgressBar x:Name="ReindexAllProgressBar" Width="60" Height="3" IsIndeterminate="True" Visibility="Collapsed"/>
-                                        <Button x:Name="ReindexAllBtn" Content="Index" Style="{StaticResource HistoryActionButton}"
-                                                ToolTip="Refresh the image search index"
-                                                AutomationProperties.Name="Refresh image search index"
-                                                Cursor="Hand" Click="ReindexAllBtn_Click"/>
-                                    </StackPanel>
-                                    <ProgressBar x:Name="ImageSearchLoadingBar" Width="110" Height="3"
-                                                 IsIndeterminate="True" Visibility="Collapsed"
-                                                 Margin="22,6,0,0" HorizontalAlignment="Left"/>
-                                </StackPanel>
-                            </Border>
-                            </StackPanel>
-                            <Button x:Name="ImageSearchFiltersBtn" Grid.Column="1" Content="Filters" Style="{StaticResource HistoryActionButton}"
-                                    Margin="8,0,0,0" VerticalAlignment="Stretch"
-                                    ToolTip="Choose image search sources and exact matching"
-                                    AutomationProperties.Name="Image search filters"
-                                    AutomationProperties.HelpText="Open search source and exact-match options for History."
-                                    Cursor="Hand" Click="ImageSearchFiltersBtn_Click">
-                                <Button.ContextMenu>
-                                    <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
-                                                 AutomationProperties.Name="Image search filter options">
-                                        <MenuItem x:Name="ImageSearchFileNameCheck" Header="File name" IsCheckable="True"
-                                                  ToolTip="Search screenshot file names"
-                                                  AutomationProperties.Name="Search file names"
-                                                  AutomationProperties.HelpText="Include screenshot file names in History search results."
-                                                  Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                        <MenuItem x:Name="ImageSearchOcrCheck" Header="OCR text" IsCheckable="True"
-                                                  ToolTip="Search recognized screenshot text"
-                                                  AutomationProperties.Name="Search OCR text"
-                                                  AutomationProperties.HelpText="Include recognized text from indexed screenshots in History search results."
-                                                  Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                        <Separator/>
-                                        <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
-                                                  ToolTip="Require exact phrase/token matches"
-                                                  AutomationProperties.Name="Exact match search"
-                                                  AutomationProperties.HelpText="Only show History search results that match the exact phrase or token."
-                                                  Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
-                                    </ContextMenu>
-                                </Button.ContextMenu>
-                            </Button>
-                        </Grid>
-
-                    </StackPanel>
-                </Border>
-
-                <!-- Images history -->
-                <ScrollViewer x:Name="ImagesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,10,4"
-                              ScrollChanged="HistoryPanel_ScrollChanged">
-                    <StackPanel x:Name="HistoryStack"/>
-                </ScrollViewer>
-
-                <!-- Videos / GIF history -->
-                <ScrollViewer x:Name="GifsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,10,4"
-                              ScrollChanged="GifPanel_ScrollChanged"
-                              Visibility="Collapsed">
-                    <StackPanel x:Name="GifStack"/>
-                </ScrollViewer>
-
-                <!-- Text history -->
-                <ScrollViewer x:Name="TextPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                              Padding="10,2,10,14" Visibility="Collapsed"
-                              ScrollChanged="OcrPanel_ScrollChanged">
-                    <StackPanel x:Name="OcrStack"/>
-                </ScrollViewer>
-
-                <!-- Color history -->
-                <ScrollViewer x:Name="ColorsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                              Padding="10,2,10,14" Visibility="Collapsed"
-                              ScrollChanged="ColorsPanel_ScrollChanged">
-                    <StackPanel x:Name="ColorStack"/>
-                </ScrollViewer>
-
-                <!-- Code/QR history -->
-                <ScrollViewer x:Name="CodesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                              Padding="10,2,10,14" Visibility="Collapsed"
-                              ScrollChanged="CodesPanel_ScrollChanged">
-                    <StackPanel x:Name="CodeStack"/>
-                </ScrollViewer>
-
-                <!-- Empty states -->
-                <StackPanel x:Name="HistoryEmptyText" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                            Visibility="Collapsed" Margin="0,0,0,40" MaxWidth="300">
-                    <TextBlock x:Name="HistoryEmptyTitle" Text="No captures yet" FontSize="14"
-                               FontFamily="Segoe UI Variable Text" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                               HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Opacity="0.72"
-                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                               AutomationProperties.Name="History empty state title"
-                               AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                               AutomationProperties.LiveSetting="Polite"/>
-                    <TextBlock x:Name="HistoryEmptyLabel" Text="Screenshots will appear here after capture." FontSize="12.5"
-                               FontFamily="Segoe UI Variable Text" Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                               Opacity="0.58" HorizontalAlignment="Center" TextAlignment="Center"
-                               TextWrapping="Wrap" Margin="0,7,0,0"
-                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                               AutomationProperties.Name="History empty state detail"
-                               AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                               AutomationProperties.LiveSetting="Polite"/>
-                    <Button x:Name="HistoryEmptyRetryButton" Content="Retry" Style="{StaticResource HistoryActionButton}"
-                            HorizontalAlignment="Center" Margin="0,14,0,0" Visibility="Collapsed"
-                            ToolTip="Retry loading history"
-                            AutomationProperties.Name="Retry loading history"
-                            AutomationProperties.HelpText="Retry loading history"
-                            Cursor="Hand" Click="HistoryEmptyRetryButton_Click"/>
-                </StackPanel>
-
-                <!-- Bottom bar -->
-                <Border Grid.Row="2" Padding="14,4,14,8">
-                    <DockPanel LastChildFill="False">
-                        <TextBlock x:Name="HistoryCountText" FontSize="11" Opacity="0.4" VerticalAlignment="Center"
-                                   DockPanel.Dock="Left"
-                                   ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                   AutomationProperties.Name="History item count"
-                                   AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                   AutomationProperties.LiveSetting="Polite"/>
-                        <TextBlock x:Name="HistorySearchStatusText" FontSize="11" Opacity="0.35" VerticalAlignment="Center"
-                                   HorizontalAlignment="Right" Margin="12,0,0,0"
-                                   ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                   AutomationProperties.Name="History status"
-                                   AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                   AutomationProperties.LiveSetting="Polite"/>
-                    </DockPanel>
-                </Border>
             </Grid>
-
         </Grid>
-    </Grid>
     </Grid>
     </Border>
     </Border>

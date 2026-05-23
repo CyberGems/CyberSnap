@@ -50,7 +50,7 @@
   "Window detection": "DetecÃ§Ã£o de janela",
   "Off": "Desligado",
   "Windows only": "Somente janelas",
-  "Capture dock": "Doca de captura",
+  "Toolbar Position": "Posição da barra de ferramentas",
   "Top": "Superior",
   "Bottom": "Inferior",
   "Left": "Esquerda",
@@ -223,3 +223,5 @@
   "Update check failed": "Falha na verificaÃ§Ã£o de atualizaÃ§Ã£o",
   "CyberSnap is up to date": "CyberSnap estÃ¡ atualizado"
 }
+
+

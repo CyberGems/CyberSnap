@@ -35,4 +35,10 @@ internal static partial class Gdi32
         int nBottomRect,
         int nWidthEllipse,
         int nHeightEllipse);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial int CombineRgn(IntPtr hrgnDest, IntPtr hrgnSrc1, IntPtr hrgnSrc2, int fnCombineMode);
 }

@@ -50,7 +50,7 @@
   "Window detection": "Detekce oken",
   "Off": "Vypnuto",
   "Windows only": "Pouze Windows",
-  "Capture dock": "ZachyÅ¥te dok",
+  "Toolbar Position": "Poloha panelu nástrojů",
   "Top": "Nahoru",
   "Bottom": "SpodnÃ­",
   "Left": "Vlevo",
@@ -223,3 +223,5 @@
   "Update check failed": "Kontrola aktualizace se nezdaÅ™ila",
   "CyberSnap is up to date": "CyberSnap je aktuÃ¡lnÃ­"
 }
+
+

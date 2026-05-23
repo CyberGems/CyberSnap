@@ -14,6 +14,12 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
+        if (_colorPickerOpen && _hoveredButton == ColorButtonIndex)
+        {
+            HideToolbarTooltip();
+            return;
+        }
+
         if (_tooltipButton == _hoveredButton)
             return;
 

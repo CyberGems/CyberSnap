@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "General",
   "Toast": "Toast",
   "Tools": "Tools",
@@ -49,7 +49,7 @@
   "Window detection": "Window detection",
   "Off": "Off",
   "Windows only": "Windows only",
-  "Capture dock": "Capture dock",
+  "Toolbar Position": "Toolbar Position",
   "Top": "Top",
   "Bottom": "Bottom",
   "Left": "Left",
@@ -225,3 +225,5 @@
   "Update check failed": "Update check failed",
   "CyberSnap is up to date": "CyberSnap is up to date"
 }
+
+

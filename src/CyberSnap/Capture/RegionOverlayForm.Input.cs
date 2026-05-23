@@ -274,6 +274,7 @@ public sealed partial class RegionOverlayForm
         switch (_mode)
         {
             case CaptureMode.Rectangle:
+            case CaptureMode.ScrollCapture:
             case CaptureMode.Center:
             case CaptureMode.Ocr:
             case CaptureMode.Scan:
@@ -340,7 +341,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Magnifier:
                 HideToolbarForCaptureTool();
                 // Place a persistent magnifier at click point
-                int srcSz = 40;
+                int srcSz = 50;
                 int sx2 = Math.Clamp(e.Location.X - srcSz / 2, 0, _bmpW - srcSz);
                 int sy2 = Math.Clamp(e.Location.Y - srcSz / 2, 0, _bmpH - srcSz);
                 AddAnnotation(new MagnifierAnnotation(e.Location, new Rectangle(sx2, sy2, srcSz, srcSz)));

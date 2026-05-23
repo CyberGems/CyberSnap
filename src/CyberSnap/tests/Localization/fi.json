@@ -50,7 +50,7 @@
   "Window detection": "Ikkunan tunnistus",
   "Off": "Pois pÃ¤Ã¤ltÃ¤",
   "Windows only": "Vain Windows",
-  "Capture dock": "Kaappaa telakka",
+  "Toolbar Position": "Työkalupalkin sijainti",
   "Top": "YlÃ¶s",
   "Bottom": "Pohja",
   "Left": "Vasen",
@@ -223,3 +223,5 @@
   "Update check failed": "PÃ¤ivitystarkistus epÃ¤onnistui",
   "CyberSnap is up to date": "CyberSnap on ajan tasalla"
 }
+
+

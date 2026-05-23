@@ -17,18 +17,13 @@ public partial class App
         UninstallService.SetStartupEntry(enabled);
     }
 
-    private void ShowSettings(bool openHistory = false)
+    public void ShowSettings()
     {
         if (_settingsWindow is { IsVisible: true })
         {
-            if (openHistory)
-                _settingsWindow.OpenHistoryFromTray();
             _settingsWindow.Activate();
             return;
         }
-
-        if (openHistory)
-            Interlocked.Exchange(ref _openHistoryWhenSettingsReady, 1);
 
         if (Interlocked.CompareExchange(ref _settingsWindowOpening, 1, 0) != 0)
             return;
@@ -49,8 +44,7 @@ public partial class App
                             return;
                         }
 
-                        var shouldOpenHistory = Interlocked.Exchange(ref _openHistoryWhenSettingsReady, 0) != 0;
-                        ShowSettingsWindow(historyService, imageSearchIndexService, shouldOpenHistory);
+                        ShowSettingsWindow(historyService, imageSearchIndexService);
                     }
                     catch (Exception ex)
                     {
@@ -90,7 +84,7 @@ public partial class App
         }
     }
 
-    private void ShowSettingsWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService, bool openHistory = false)
+    private void ShowSettingsWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService)
     {
         var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService);
         Action hotkeyHandler = RegisterHotkeys;
@@ -108,14 +102,92 @@ public partial class App
             ScheduleIdleMemoryTrim();
         };
         _settingsWindow = win;
-        if (openHistory)
-            win.OpenHistoryFromTray();
         win.Show();
     }
 
-    public void ShowHistory()
+    public void ShowHistory(string? navigateToFilePath = null)
     {
-        ShowSettings(openHistory: true);
+        if (_historyWindow is { IsVisible: true })
+        {
+            _historyWindow.Activate();
+            if (navigateToFilePath != null)
+                _historyWindow.NavigateToItem(navigateToFilePath);
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _historyWindowOpening, 1, 0) != 0)
+            return;
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var historyService = EnsureHistoryService();
+                var imageSearchIndexService = EnsureImageSearchIndexService();
+                _ = Dispatcher.BeginInvoke(() =>
+                {
+                    try
+                    {
+                        if (_historyWindow is { IsVisible: true })
+                        {
+                            _historyWindow.Activate();
+                            if (navigateToFilePath != null)
+                                _historyWindow.NavigateToItem(navigateToFilePath);
+                            return;
+                        }
+
+                        ShowHistoryWindow(historyService, imageSearchIndexService, navigateToFilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _historyWindow = null;
+                        ShowHistoryOpenFailed(ex);
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _historyWindowOpening, 0);
+                    }
+                }, DispatcherPriority.Background);
+            }
+            catch (Exception ex)
+            {
+                _ = Dispatcher.BeginInvoke(() =>
+                {
+                    _historyWindow = null;
+                    ShowHistoryOpenFailed(ex);
+                    Interlocked.Exchange(ref _historyWindowOpening, 0);
+                }, DispatcherPriority.Background);
+            }
+        });
+    }
+
+    private void ShowHistoryWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService, string? navigateToFilePath = null)
+    {
+        var win = new HistoryWindow(_settingsService!, historyService, imageSearchIndexService);
+        win.Closed += (_, _) =>
+        {
+            _historyWindow = null;
+            ScheduleIdleMemoryTrim();
+        };
+        _historyWindow = win;
+        win.Show();
+        if (navigateToFilePath != null)
+            win.NavigateToItem(navigateToFilePath);
+    }
+
+    private static void ShowHistoryOpenFailed(Exception ex)
+    {
+        AppDiagnostics.LogError("lifecycle.show-history", ex);
+        try
+        {
+            ToastWindow.ShowError(
+                "History failed to open",
+                $"CyberSnap could not open History. Try again from the tray menu, or restart CyberSnap if it keeps failing.\n{ex.Message}");
+        }
+        catch (Exception toastEx)
+        {
+            AppDiagnostics.LogError("lifecycle.show-history.toast", toastEx);
+        }
     }
 
     private void BeginUninstall()
@@ -162,6 +234,8 @@ public partial class App
             _historyService.CompressHistory = _settingsService!.Settings.CompressHistory;
             _historyService.JpegQuality = _settingsService.Settings.JpegQuality;
             _historyService.CaptureImageFormat = _settingsService.Settings.CaptureImageFormat;
+            _historyService.HistoryCountLimit = _settingsService.Settings.HistoryCountLimit;
+            _historyService.HistoryDeleteOriginalOnPrune = _settingsService.Settings.HistoryDeleteOriginalOnPrune;
             QueueHistoryMaintenance();
             return _historyService;
         }
@@ -210,6 +284,7 @@ public partial class App
                     }
 
                     _historyService.PruneByRetention(_settingsService.Settings.HistoryRetention);
+                    _historyService.PruneByCount(_settingsService.Settings.HistoryCountLimit, _settingsService.Settings.HistoryDeleteOriginalOnPrune);
 
                     if (_settingsService.Settings.AutoIndexImages && _imageSearchIndexService is not null)
                     {
@@ -313,7 +388,7 @@ public partial class App
 
                 using var process = System.Diagnostics.Process.GetCurrentProcess();
                 var privateBytes = process.PrivateMemorySize64;
-                SettingsWindow.TrimThumbCache(privateBytes >= IdleTrimPrivateBytesThreshold ? 64 : 96);
+                HistoryWindow.TrimThumbCache(privateBytes >= IdleTrimPrivateBytesThreshold ? 64 : 96);
 
                 if (privateBytes < IdleTrimPrivateBytesThreshold)
                 {

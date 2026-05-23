@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -12,7 +12,7 @@ using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace CyberSnap.UI;
 
-public partial class SettingsWindow
+public partial class HistoryWindow
 {
     private static readonly System.Windows.Media.Brush HistoryCardIdleBrush = CreateFrozenHistoryBrush(System.Windows.Media.Color.FromArgb(12, 255, 255, 255));
     private static readonly System.Windows.Media.Brush HistoryCardHoverBrush = CreateFrozenHistoryBrush(System.Windows.Media.Color.FromArgb(24, 255, 255, 255));
@@ -525,8 +525,8 @@ public partial class SettingsWindow
         AutomationProperties.SetHelpText(hexBlock, displayHex);
         infoStack.Children.Add(hexBlock);
         var colorMetadataText = hasValidColor
-            ? $"RGB({r}, {g}, {b}) Â· {FormatTimeAgo(entry.CapturedAt)}"
-            : $"Invalid color Â· {FormatTimeAgo(entry.CapturedAt)}";
+            ? $"RGB({r}, {g}, {b}) · {FormatTimeAgo(entry.CapturedAt)}"
+            : $"Invalid color · {FormatTimeAgo(entry.CapturedAt)}";
         var metadataBlock = new TextBlock
         {
             Text = colorMetadataText,

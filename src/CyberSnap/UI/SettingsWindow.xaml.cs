@@ -35,48 +35,16 @@ public partial class SettingsWindow : Window
         ("{rand}", "Random"),
     ];
     private static readonly SemaphoreSlim ThumbDecodeGate = new(4);
-    private readonly System.Windows.Threading.DispatcherTimer _historyMonitorTimer = new()
-    {
-        Interval = TimeSpan.FromSeconds(2.5)
-    };
-    private readonly System.Windows.Threading.DispatcherTimer _imageIndexRefreshTimer = new()
-    {
-        Interval = TimeSpan.FromSeconds(1.25)
-    };
-    private readonly System.Windows.Threading.DispatcherTimer _historyRefreshTimer = new()
-    {
-        Interval = TimeSpan.FromMilliseconds(300)
-    };
-    private readonly System.Windows.Threading.DispatcherTimer _imageSearchDebounceTimer = new()
-    {
-        Interval = TimeSpan.FromMilliseconds(180)
-    };
     private readonly SettingsService _settingsService;
     private readonly HistoryService _historyService;
     private readonly ImageSearchIndexService _imageSearchIndexService;
-    private string? _lastHistoryFingerprint;
-    private bool _pendingImageSearchTextRefresh;
-    private bool _pendingHistoryDiskRefresh;
-    private bool _pendingHistoryUiRefresh;
-    private bool _pendingHistoryDataRefresh;
-    private bool _historyRefreshInProgress;
-    private CancellationTokenSource? _historyLoadCts;
-    private int _historyLoadVersion;
-    private bool _historyLoadInProgress;
-    private bool _historyImageCacheReady;
-    private bool _deferHistoryMonitor;
-    private bool _pendingTrayHistoryOpen;
-    private bool _trayHistoryOpenScheduled;
-    private int _historyTabLoadVersion;
-    private bool _historyTabLoadScheduled;
-    private bool _historyTabLoadPreserveTransientState;
 
     private bool _suppressCaptureSavePreferenceChange;
     private bool _suppressToastPreferenceChange;
     private bool _suppressGeneralPreferenceChange;
     private bool _suppressRecordingPreferenceChange;
-    private bool _suppressHistoryPreferenceChange;
     private bool _suppressOcrPreferenceChange;
+    private bool _suppressHistoryPreferenceChange;
     private bool ImageIndexResetInProgress { get; set; }
     private bool _openSourceTranslationRuntimeActionInProgress;
     private bool _argosTranslationRuntimeActionInProgress;
@@ -96,29 +64,15 @@ public partial class SettingsWindow : Window
         Theme.Refresh();
         Theme.ApplyTo(Application.Current.Resources);
         ApplyThemeColors();
-        LoadStaticFluentIcons();
         LoadFileNameTokenButtons();
         LoadSettings();
         Loaded += (_, _) => ApplyMicaBackdrop();
-        ContentRendered += (_, _) => TryProcessPendingTrayHistoryOpen();
+        Loaded += (_, _) => EnsureSettingsWindowFitsWorkArea();
         StateChanged += (_, _) => SettingsTitleBar.RefreshIcons();
-        _historyService.Changed += HistoryService_Changed;
-        _imageSearchIndexService.Changed += ImageSearchIndexService_Changed;
-        _imageSearchIndexService.StatusChanged += ImageSearchIndexService_StatusChanged;
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
-        _historyMonitorTimer.Tick += (_, _) => PollHistoryChanges();
-        _historyRefreshTimer.Tick += async (_, _) => await FlushQueuedHistoryRefreshAsync();
-        _imageIndexRefreshTimer.Tick += (_, _) => FlushQueuedImageIndexRefresh();
-        _imageSearchDebounceTimer.Tick += (_, _) => FlushQueuedImageSearchRefresh();
         Activated += (_, _) =>
         {
             ApplyThemeColors();
-            LoadStaticFluentIcons();
-        };
-        SizeChanged += (_, _) =>
-        {
-            if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 0)
-                UpdateVirtualizedHistoryViewport();
         };
         Closing += (s, e) =>
         {
@@ -131,19 +85,7 @@ public partial class SettingsWindow : Window
         };
         Closed += (_, _) =>
         {
-            _historyService.Changed -= HistoryService_Changed;
-            _imageSearchIndexService.Changed -= ImageSearchIndexService_Changed;
-            _imageSearchIndexService.StatusChanged -= ImageSearchIndexService_StatusChanged;
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;
-            _historyLoadCts?.Cancel();
-            _historyLoadCts?.Dispose();
-            CancelImageSearchWork();
-            _imageIndexRefreshTimer.Stop();
-            _historyRefreshTimer.Stop();
-            _imageSearchDebounceTimer.Stop();
-            _ocrSearchDebounceTimer.Stop();
-            _colorSearchDebounceTimer.Stop();
-            _historyMonitorTimer.Stop();
             SaveWindowBounds();
         };
     }
@@ -258,6 +200,11 @@ public partial class SettingsWindow : Window
             bottomRight.Y - topLeft.Y);
 
         const double screenMargin = 12d;
+        var maxWidth = wa.Width - screenMargin * 2;
+        MinWidth = Math.Min(MinWidth, maxWidth);
+        if (Width > maxWidth)
+            Width = maxWidth;
+
         var minLeft = wa.Left + screenMargin;
         var minTop = wa.Top + screenMargin;
         var maxLeft = wa.Right - Width - screenMargin;
@@ -292,315 +239,7 @@ public partial class SettingsWindow : Window
 
     }
 
-    public void OpenHistoryFromTray()
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            _ = Dispatcher.BeginInvoke(OpenHistoryFromTray, System.Windows.Threading.DispatcherPriority.Background);
-            return;
-        }
 
-        _pendingTrayHistoryOpen = true;
-        HistoryTab.IsChecked = true;
-        if (IsLoaded)
-            ApplyMainTabSelection();
-        TryProcessPendingTrayHistoryOpen();
-    }
-
-    private void LoadStaticFluentIcons()
-    {
-        var color = Theme.IsDark
-            ? System.Drawing.Color.FromArgb(210, 255, 255, 255)
-            : System.Drawing.Color.FromArgb(170, 0, 0, 0);
-        ImageSearchIcon.Source = Helpers.FluentIcons.RenderWpf("search", color, 18);
-    }
-
-    private void TryProcessPendingTrayHistoryOpen()
-    {
-        if (!_pendingTrayHistoryOpen || !IsLoaded || !IsVisible || _trayHistoryOpenScheduled)
-            return;
-
-        _trayHistoryOpenScheduled = true;
-        _ = Dispatcher.BeginInvoke(() =>
-        {
-            _trayHistoryOpenScheduled = false;
-            if (!_pendingTrayHistoryOpen || !IsLoaded || !IsVisible)
-                return;
-
-            _pendingTrayHistoryOpen = false;
-            HistoryTab.IsChecked = true;
-            ApplyMainTabSelection();
-            Activate();
-        }, System.Windows.Threading.DispatcherPriority.ContextIdle);
-    }
-
-    private void HistoryService_Changed()
-    {
-        _ = Dispatcher.BeginInvoke(() =>
-        {
-            try
-            {
-                InvalidateHistoryCategoryCaches();
-                _pendingHistoryDataRefresh = true;
-                QueueHistoryRefresh(reloadFromDisk: false);
-            }
-            catch (Exception ex)
-            {
-                AppDiagnostics.LogError("settings.history-service-changed", ex);
-                _pendingHistoryDataRefresh = false;
-                _pendingHistoryUiRefresh = false;
-                _pendingHistoryDiskRefresh = false;
-                _historyRefreshTimer.Stop();
-                if (IsLoaded && HistoryTab.IsChecked == true)
-                    ShowHistoryEmptyState("Couldn't refresh history", "Retry loading history. If it still fails, check the app log.", showRetry: true);
-            }
-        }, System.Windows.Threading.DispatcherPriority.Background);
-    }
-
-    private void ImageSearchIndexService_Changed()
-    {
-        Dispatcher.BeginInvoke(() =>
-        {
-            try
-            {
-                UpdateImageSearchStatus();
-                UpdateImageSearchActionButtons();
-                UpdateImageSearchPlaceholderText();
-                QueueImageIndexRefresh();
-            }
-            catch (Exception ex)
-            {
-                AppDiagnostics.LogError("settings.image-search-index-changed", ex);
-                SetImageSearchLoading(false, forceIndexed: true);
-                HistorySearchStatusText.Text = "Search failed";
-            }
-        });
-    }
-
-    private void ImageSearchIndexService_StatusChanged(string status)
-    {
-        Dispatcher.BeginInvoke(() =>
-        {
-            try
-            {
-                if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
-                    return;
-
-                UpdateImageSearchStatus();
-                UpdateImageSearchActionButtons();
-                UpdateImageSearchPlaceholderText();
-            }
-            catch (Exception ex)
-            {
-                AppDiagnostics.LogError("settings.image-search-status", ex);
-                SetImageSearchLoading(false, forceIndexed: true);
-                HistorySearchStatusText.Text = "Search failed";
-            }
-        });
-    }
-
-    private void QueueImageIndexRefresh()
-    {
-        _pendingImageSearchTextRefresh = true;
-
-        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
-            return;
-
-        _imageIndexRefreshTimer.Stop();
-        _imageIndexRefreshTimer.Start();
-    }
-
-    private void QueueImageSearchRefresh()
-    {
-        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
-            return;
-
-        if (!_settingsService.Settings.ShowImageSearchBar)
-            return;
-
-        _imageSearchDebounceTimer.Stop();
-        _imageSearchDebounceTimer.Start();
-    }
-
-    private void FlushQueuedImageIndexRefresh()
-    {
-        _imageIndexRefreshTimer.Stop();
-
-        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
-            return;
-
-        if (_pendingImageSearchTextRefresh)
-        {
-            var relevantItems = _historyItems.Count > 0
-                ? _historyItems
-                : _filteredHistoryItems.Count > 0
-                    ? _filteredHistoryItems
-                    : _allHistoryItems;
-            RefreshImageSearchTexts(relevantItems);
-            _pendingImageSearchTextRefresh = false;
-        }
-
-        ApplyImageSearchFilter();
-    }
-
-    private void FlushQueuedImageSearchRefresh()
-    {
-        _imageSearchDebounceTimer.Stop();
-
-        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
-            return;
-
-        if (!_settingsService.Settings.ShowImageSearchBar)
-            return;
-
-        ApplyImageSearchFilter();
-    }
-
-    private void PollHistoryChanges()
-    {
-        if (!IsLoaded || HistoryTab.IsChecked != true || _deferHistoryMonitor || _historyLoadInProgress)
-        {
-            _historyMonitorTimer.Stop();
-            return;
-        }
-
-        var fingerprint = _historyService.GetDiskFingerprint(_settingsService.Settings.SaveDirectory);
-        if (fingerprint == _lastHistoryFingerprint)
-            return;
-
-        QueueHistoryRefresh(reloadFromDisk: true);
-    }
-
-    private void RefreshHistoryFromDisk()
-    {
-        _historyService.RecoverFromDirectories(_settingsService.Settings.SaveDirectory);
-        _historyService.PruneByRetention(_settingsService.Settings.HistoryRetention);
-    }
-
-    private void PrimeHistoryFingerprint()
-    {
-        _lastHistoryFingerprint = _historyService.GetDiskFingerprint(_settingsService.Settings.SaveDirectory);
-    }
-
-    private bool CanReuseLoadedImageHistory()
-    {
-        if (!_historyImageCacheReady || _historyLoadInProgress || _pendingHistoryDiskRefresh)
-            return false;
-
-        if (_allHistoryItems.Count == 0)
-            return false;
-
-        var fingerprint = _historyService.GetDiskFingerprint(_settingsService.Settings.SaveDirectory);
-        return string.Equals(fingerprint, _lastHistoryFingerprint, StringComparison.Ordinal);
-    }
-
-    private void UpdateHistoryMonitorState()
-    {
-        if (HistoryTab.IsChecked == true)
-        {
-            if (_deferHistoryMonitor || _historyLoadInProgress)
-            {
-                _historyMonitorTimer.Stop();
-                return;
-            }
-
-            PrimeHistoryFingerprint();
-            if (!_historyMonitorTimer.IsEnabled)
-                _historyMonitorTimer.Start();
-        }
-        else
-        {
-            _historyMonitorTimer.Stop();
-            _lastHistoryFingerprint = null;
-        }
-    }
-
-    private void QueueHistoryRefresh(bool reloadFromDisk)
-    {
-        if (!IsLoaded || HistoryTab.IsChecked != true)
-            return;
-
-        if (reloadFromDisk)
-            _historyImageCacheReady = false;
-
-        _pendingHistoryDiskRefresh |= reloadFromDisk;
-        _pendingHistoryUiRefresh = true;
-        _historyRefreshTimer.Stop();
-        _historyRefreshTimer.Start();
-    }
-
-    private void ScheduleHistoryTabLoad(bool preserveTransientState = false)
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            _ = Dispatcher.BeginInvoke(() => ScheduleHistoryTabLoad(preserveTransientState), System.Windows.Threading.DispatcherPriority.Background);
-            return;
-        }
-
-        _historyTabLoadVersion++;
-        _historyTabLoadPreserveTransientState |= preserveTransientState;
-        if (_historyTabLoadScheduled)
-            return;
-
-        _historyTabLoadScheduled = true;
-        var scheduledVersion = _historyTabLoadVersion;
-        _ = Dispatcher.BeginInvoke(() =>
-        {
-            _historyTabLoadScheduled = false;
-            if (!IsLoaded || HistoryTab.IsChecked != true || scheduledVersion != _historyTabLoadVersion)
-                return;
-
-            var preserveState = _historyTabLoadPreserveTransientState;
-            _historyTabLoadPreserveTransientState = false;
-            LoadCurrentHistoryTab(preserveTransientState: preserveState);
-        }, System.Windows.Threading.DispatcherPriority.ContextIdle);
-    }
-
-    private async Task FlushQueuedHistoryRefreshAsync()
-    {
-        _historyRefreshTimer.Stop();
-
-        if (!IsLoaded || HistoryTab.IsChecked != true)
-            return;
-
-        if (_historyRefreshInProgress || _historyLoadInProgress)
-        {
-            _historyRefreshTimer.Start();
-            return;
-        }
-
-        _historyRefreshInProgress = true;
-        try
-        {
-            var reloadFromDisk = _pendingHistoryDiskRefresh;
-            var refreshLoadedData = _pendingHistoryDataRefresh;
-            _pendingHistoryDiskRefresh = false;
-            _pendingHistoryDataRefresh = false;
-            _pendingHistoryUiRefresh = false;
-
-            if (reloadFromDisk)
-                await Task.Run(RefreshHistoryFromDisk);
-
-            if (!reloadFromDisk &&
-                refreshLoadedData &&
-                HistoryCategoryCombo.SelectedIndex == 0 &&
-                TryRefreshLoadedImageHistoryIncrementally())
-            {
-                PrimeHistoryFingerprint();
-            }
-            else
-            {
-                ScheduleHistoryTabLoad(preserveTransientState: true);
-                PrimeHistoryFingerprint();
-            }
-        }
-        finally
-        {
-            _historyRefreshInProgress = false;
-            if (_pendingHistoryDiskRefresh || _pendingHistoryDataRefresh || _pendingHistoryUiRefresh)
-                _historyRefreshTimer.Start();
-        }
-    }
 
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();
 
@@ -652,6 +291,7 @@ public partial class SettingsWindow : Window
         var selected = DefaultCaptureModeCombo.SelectedIndex switch
         {
             1 => CaptureMode.Center,
+            2 => CaptureMode.Freeform,
             _ => CaptureMode.Rectangle
         };
 
@@ -664,6 +304,7 @@ public partial class SettingsWindow : Window
             value => DefaultCaptureModeCombo.SelectedIndex = value switch
             {
                 CaptureMode.Center => 1,
+                CaptureMode.Freeform => 2,
                 _ => 0
             },
             notifyHotkeyChanged: true);
@@ -705,6 +346,21 @@ public partial class SettingsWindow : Window
                 SaveDirPanel.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
             },
             () => SaveDirPanel.Visibility = selected ? Visibility.Visible : Visibility.Collapsed);
+    }
+
+    private void AutoOpenCapturedImagesCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
+
+        var previous = _settingsService.Settings.AutoOpenCapturedImages;
+        var selected = AutoOpenCapturedImagesCheck.IsChecked == true;
+        UpdateCaptureSavePreference(
+            "settings.auto-open-images",
+            "Auto-open image in system viewer",
+            previous,
+            selected,
+            value => _settingsService.Settings.AutoOpenCapturedImages = value,
+            value => AutoOpenCapturedImagesCheck.IsChecked = value);
     }
 
     private void AskFileNameCheck_Changed(object sender, RoutedEventArgs e)
@@ -1017,7 +673,7 @@ public partial class SettingsWindow : Window
             _suppressStartWithWindowsChange = true;
             try
             {
-                StartWithWindowsCheck.IsChecked = _settingsService.Settings.StartWithWindows;
+                StartWithWindowsCheck.IsChecked = previous;
                 MinimizeToTrayOnCloseCheck.IsChecked = _settingsService.Settings.MinimizeToTrayOnClose;
                 SaveHistoryCheck.IsChecked = _settingsService.Settings.SaveHistory;
             }
@@ -1131,16 +787,23 @@ public partial class SettingsWindow : Window
     }
     private void GithubButton_Click(object sender, RoutedEventArgs e)
     {
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/Antigravity-AI/CyberSnap") { UseShellExecute = true }); } catch { }
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/CyberGems/CyberSnap") { UseShellExecute = true }); } catch { }
     }
 
-    private void UpdateCheckButton_Click(object sender, RoutedEventArgs e)
+    private async void UpdateCheckButton_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("CyberSnap is up to date!", "Check for Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+        var result = await UpdateService.CheckForUpdatesAsync();
+        if (result.IsUpdateAvailable)
+        {
+            var msg = $"{result.StatusMessage}\n\nCurrent: {result.CurrentVersion}\nLatest: {result.LatestVersionLabel}\n\nDownload now?";
+            var choice = MessageBox.Show(msg, "Update Available", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (choice == MessageBoxResult.Yes)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(result.ReleaseUrl) { UseShellExecute = true });
+        }
+        else
+        {
+            MessageBox.Show(result.StatusMessage, "Check for Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
-    private void LicenseButton_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show("CyberSnap is licensed under the MIT License.", "License Information", MessageBoxButton.OK, MessageBoxImage.Information);
-    }
 }

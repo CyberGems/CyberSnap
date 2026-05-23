@@ -5,7 +5,7 @@ namespace CyberSnap.Services;
 public static class OpenSourceTranslationRuntimeService
 {
     private const string PythonLauncherArg = "-3";
-    private const string RuntimeVersion = "m2m100-418m-ct2-v2";
+    private const string RuntimeVersion = "m2m100-418m-ct2-v3";
     private static readonly string[] RuntimePackages =
     [
         "ctranslate2==4.7.1",
@@ -276,7 +276,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from ctranslate2.converters import TransformersConverter
+from huggingface_hub import snapshot_download
 from transformers import AutoTokenizer
 
 model_dir = sys.argv[1]
@@ -288,14 +288,15 @@ if not os.path.exists(os.path.join(model_dir, "model.bin")):
     if os.path.isdir(model_dir):
         shutil.rmtree(model_dir)
     Path(model_dir).parent.mkdir(parents=True, exist_ok=True)
-    converter = TransformersConverter("facebook/m2m100_418M")
-    converter.convert(model_dir, quantization="int8")
-else:
-    Path(model_dir).mkdir(parents=True, exist_ok=True)
+    snapshot_download(
+        repo_id="michaelfeil/ct2fast-m2m100_418M",
+        local_dir=model_dir,
+        local_dir_use_symlinks=False
+    )
 
 if os.path.isdir(tokenizer_dir):
     shutil.rmtree(tokenizer_dir)
-Path(tokenizer_dir).mkdir(parents=True, exist_ok=True)
+Path(tokenizer_dir).parent.mkdir(parents=True, exist_ok=True)
 tokenizer = AutoTokenizer.from_pretrained("facebook/m2m100_418M", use_fast=False)
 tokenizer.save_pretrained(tokenizer_dir)
 

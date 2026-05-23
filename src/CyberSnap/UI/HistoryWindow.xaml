@@ -1,0 +1,576 @@
+<Window x:Class="CyberSnap.UI.HistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        Title="CyberSnap - Capture History"
+        Height="620" Width="820"
+        MinHeight="460" MinWidth="580"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Icon="pack://application:,,,/CyberSnap.ico">
+
+    <Window.Resources>
+        <Style TargetType="CheckBox">
+            <Setter Property="Width" Value="42"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Track"
+                                Width="40"
+                                Height="20"
+                                CornerRadius="10"
+                                Background="#00000000"
+                                BorderBrush="{DynamicResource ThemeTextSecondaryBrush}"
+                                BorderThickness="1"
+                                SnapsToDevicePixels="True">
+                            <Rectangle x:Name="Thumb"
+                                     Width="12"
+                                     Height="12"
+                                     Margin="4,0"
+                                     HorizontalAlignment="Left"
+                                     VerticalAlignment="Center"
+                                     Fill="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Track" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <SolidColorBrush x:Key="ThemeTextPrimaryBrush" Color="#FFF0F0F0"/>
+        <SolidColorBrush x:Key="ThemeTextSecondaryBrush" Color="#FF9A9A9A"/>
+        <SolidColorBrush x:Key="ThemeMutedBrush" Color="#FF686868"/>
+        <SolidColorBrush x:Key="ThemeCardBrush" Color="#FF2D2D2D"/>
+        <SolidColorBrush x:Key="ThemeTabActiveBrush" Color="#18FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeTabHoverBrush" Color="#0EFFFFFF"/>
+        <SolidColorBrush x:Key="ThemeInputBackgroundBrush" Color="#FF1E1E1E"/>
+        <SolidColorBrush x:Key="ThemeInputBorderBrush" Color="#15FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeWindowBorderBrush" Color="#12FFFFFF"/>
+        <SolidColorBrush x:Key="ThemeAccentBrush" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="ThemeSeparatorBrush" Color="#0CFFFFFF"/>
+        <sys:Double x:Key="SettingsControlHeight">30</sys:Double>
+        <Thickness x:Key="SettingsControlPadding">10,5</Thickness>
+        <sys:Double x:Key="SettingsControlFontSize">12</sys:Double>
+        <sys:Double x:Key="SettingsControlMinWidth">88</sys:Double>
+
+        <Style x:Key="HistoryActionButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="MinWidth" Value="{StaticResource SettingsControlMinWidth}"/>
+            <Setter Property="Padding" Value="{StaticResource SettingsControlPadding}"/>
+            <Setter Property="FontSize" Value="{StaticResource SettingsControlFontSize}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="HistoryDangerButton" TargetType="Button" BasedOn="{StaticResource CyberSnapDangerButton}">
+            <Setter Property="Height" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="MinWidth" Value="82"/>
+            <Setter Property="Padding" Value="{StaticResource SettingsControlPadding}"/>
+            <Setter Property="FontSize" Value="{StaticResource SettingsControlFontSize}"/>
+        </Style>
+
+        <Style x:Key="HistoryActionsMenuStyle" TargetType="ContextMenu">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="MinWidth" Value="156"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="HistoryActionsMenuItem" TargetType="MenuItem">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinWidth" Value="148"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd"
+                                MinHeight="{TemplateBinding MinHeight}"
+                                CornerRadius="4"
+                                Background="Transparent"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header"
+                                              RecognizesAccessKey="True"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
+            <Setter Property="Padding" Value="{StaticResource SettingsControlPadding}"/>
+            <Setter Property="FontSize" Value="{StaticResource SettingsControlFontSize}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+            <Setter Property="MaxDropDownHeight" Value="280"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid SnapsToDevicePixels="True">
+                            <ToggleButton x:Name="ToggleSite"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <ContentPresenter/>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <Border x:Name="Bd"
+                                        MinHeight="{TemplateBinding MinHeight}"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="3"
+                                        Padding="{TemplateBinding Padding}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="18"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ContentPresenter x:Name="ContentSite"
+                                                          Content="{TemplateBinding SelectionBoxItem}"
+                                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                          IsHitTestVisible="False"
+                                                          Margin="0,0,6,0"
+                                                          RecognizesAccessKey="True"
+                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                        <Path Grid.Column="1"
+                                              Width="8"
+                                              Height="4"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Data="M 0 0 L 4 4 L 8 0 Z"
+                                              Fill="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                    </Grid>
+                                </Border>
+                            </ToggleButton>
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom"
+                                   PopupAnimation="Fade">
+                                <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        Margin="0,4,0,0"
+                                        Background="{DynamicResource ThemeCardBrush}"
+                                        BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        SnapsToDevicePixels="True">
+                                    <ScrollViewer Padding="4"
+                                                  CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#35FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="9,5"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Margin="1" CornerRadius="12">
+        <Border x:Name="OuterBorder" CornerRadius="12" ClipToBounds="True" BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <controls:CyberSnapTitleBar x:Name="SettingsTitleBar" Grid.Row="0"
+                                            Title="CyberSnap - Capture History"
+                                            CloseRequested="TitleBar_CloseRequested"/>
+
+                <!-- Hidden checked RadioButton for keeping conditional checks in history partial files intact -->
+                <RadioButton x:Name="HistoryTab" IsChecked="True" Visibility="Collapsed"/>
+
+                <!-- History Panel -->
+                <Grid x:Name="HistoryPanel" Grid.Row="1" Visibility="Visible" Margin="22,12,22,10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Category dropdown + actions -->
+                    <Border Grid.Row="0" Padding="0,0,0,6">
+                        <StackPanel>
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button x:Name="SelectBtn" Content="Select" Style="{StaticResource HistoryActionButton}"
+                                             Margin="0,0,6,0" ToolTip="Select history items"
+                                             AutomationProperties.Name="Select history items"
+                                             AutomationProperties.HelpText="Select history items"
+                                             Cursor="Hand" Click="ToggleSelectMode"/>
+                                    <Button x:Name="DeleteAllBtn" Content="Clear all" Style="{StaticResource HistoryDangerButton}"
+                                            ToolTip="Delete all items in the current history tab"
+                                            AutomationProperties.Name="Clear current history tab"
+                                            AutomationProperties.HelpText="Delete all items in the current history tab"
+                                            Cursor="Hand" Click="DeleteAllClick"/>
+                                    <Button x:Name="DeleteSelectedBtn" Content="Delete selected" Style="{StaticResource HistoryDangerButton}"
+                                             Margin="6,0,0,0" Visibility="Collapsed"
+                                             ToolTip="Delete selected history items"
+                                             AutomationProperties.Name="Delete selected history items"
+                                             AutomationProperties.HelpText="Delete selected history items"
+                                             Cursor="Hand" Click="DeleteSelectedClick"/>
+                                </StackPanel>
+                                <ComboBox x:Name="HistoryCategoryCombo"
+                                          MinWidth="130" Margin="0,0,8,0" VerticalAlignment="Center"
+                                          ToolTip="Choose the history category"
+                                          AutomationProperties.Name="History category"
+                                          SelectionChanged="HistoryCategoryCombo_Changed"
+                                          PreviewMouseLeftButtonDown="HistoryCategoryCombo_PreviewMouseLeftButtonDown">
+                                    <ComboBoxItem Content="Images" IsSelected="True"
+                                                  ToolTip="Show screenshot history"
+                                                  AutomationProperties.Name="Image history"
+                                                  AutomationProperties.HelpText="Show saved screenshot captures."/>
+                                    <ComboBoxItem Content="Text"
+                                                  ToolTip="Show OCR text history"
+                                                  AutomationProperties.Name="Text history"
+                                                  AutomationProperties.HelpText="Show saved OCR text captures."/>
+                                    <ComboBoxItem Content="Videos/GIFs"
+                                                  ToolTip="Show video and GIF history"
+                                                  AutomationProperties.Name="Video and GIF history"
+                                                  AutomationProperties.HelpText="Show saved video recordings and GIF captures."/>
+                                    <ComboBoxItem Content="Colors"
+                                                  ToolTip="Show color history"
+                                                  AutomationProperties.Name="Color history"
+                                                  AutomationProperties.HelpText="Show saved color picks."/>
+                                    <ComboBoxItem Content="Codes"
+                                                  ToolTip="Show QR and barcode history"
+                                                  AutomationProperties.Name="Code history"
+                                                  AutomationProperties.HelpText="Show saved QR and barcode scans."/>
+                                </ComboBox>
+                            </DockPanel>
+
+                            <Grid x:Name="ImageSearchRow" Margin="0,8,0,0" Visibility="Visible">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <Border Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                            BorderThickness="1" CornerRadius="7" Padding="10,6">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Image x:Name="ImageSearchIcon" Width="14" Height="14" Stretch="Uniform"
+                                                       VerticalAlignment="Center" Opacity="0.35"/>
+                                                <Grid Grid.Column="1" Margin="8,0,0,0">
+                                                    <TextBox x:Name="ImageSearchBox" BorderThickness="0" Background="Transparent"
+                                                             Padding="0" MinHeight="0" Height="20" VerticalContentAlignment="Center"
+                                                             ToolTip="Search the current history category"
+                                                             AutomationProperties.Name="History search"
+                                                             TextChanged="ImageSearchBox_TextChanged"
+                                                             PreviewKeyDown="ImageSearchBox_PreviewKeyDown"
+                                                             GotKeyboardFocus="ImageSearchBox_FocusChanged"
+                                                             LostKeyboardFocus="ImageSearchBox_FocusChanged"/>
+                                                    <TextBlock x:Name="ImageSearchPlaceholder" Text="Search screenshots, OCR text, or filenames..."
+                                                               FontSize="12" Opacity="0.28" VerticalAlignment="Center"
+                                                               IsHitTestVisible="False" Margin="0,0,0,0"/>
+                                                </Grid>
+                                            </Grid>
+
+                                            <TextBlock x:Name="ImageSearchFiltersSummaryText" Visibility="Collapsed"/>
+                                            <StackPanel x:Name="ReindexAllProgressPanel" Orientation="Horizontal" Visibility="Collapsed">
+                                                <ProgressBar x:Name="ReindexAllProgressBar" Width="60" Height="3" IsIndeterminate="True" Visibility="Collapsed"/>
+                                                <Button x:Name="ReindexAllBtn" Content="Index" Style="{StaticResource HistoryActionButton}"
+                                                        ToolTip="Refresh the image search index"
+                                                        AutomationProperties.Name="Refresh image search index"
+                                                        Cursor="Hand" Click="ReindexAllBtn_Click"/>
+                                            </StackPanel>
+                                            <ProgressBar x:Name="ImageSearchLoadingBar" Width="110" Height="3"
+                                                         IsIndeterminate="True" Visibility="Collapsed"
+                                                         Margin="22,6,0,0" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                                <Button x:Name="ImageSearchFiltersBtn" Grid.Column="1" Content="Filters" Style="{StaticResource HistoryActionButton}"
+                                        Margin="8,0,0,0" VerticalAlignment="Stretch"
+                                        ToolTip="Choose image search sources and exact matching"
+                                        AutomationProperties.Name="Image search filters"
+                                        AutomationProperties.HelpText="Open search source and exact-match options for History."
+                                        Cursor="Hand" Click="ImageSearchFiltersBtn_Click">
+                                    <Button.ContextMenu>
+                                        <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
+                                                     AutomationProperties.Name="Image search filter options">
+                                            <MenuItem x:Name="ImageSearchFileNameCheck" Header="File name" IsCheckable="True"
+                                                      ToolTip="Search screenshot file names"
+                                                      AutomationProperties.Name="Search file names"
+                                                      AutomationProperties.HelpText="Include screenshot file names in History search results."
+                                                      Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                            <MenuItem x:Name="ImageSearchOcrCheck" Header="OCR text" IsCheckable="True"
+                                                      ToolTip="Search recognized screenshot text"
+                                                      AutomationProperties.Name="Search OCR text"
+                                                      AutomationProperties.HelpText="Include recognized text from indexed screenshots in History search results."
+                                                      Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                            <Separator/>
+                                            <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
+                                                      ToolTip="Require exact phrase/token matches"
+                                                      AutomationProperties.Name="Exact match search"
+                                                      AutomationProperties.HelpText="Only show History search results that match the exact phrase or token."
+                                                      Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                </Button>
+                            </Grid>
+
+                            <!-- Auto-Pruning Row -->
+                            <Grid x:Name="AutoPruneRow" Margin="2,10,0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                                    <TextBlock Text="&#xE916;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Auto-Pruning" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource ThemeTextPrimaryBrush}" VerticalAlignment="Center"
+                                               ToolTip="Automatically prune old history items"
+                                               AutomationProperties.Name="Auto pruning title"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Keep:" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                    <ComboBox x:Name="HistoryRetentionCombo" MinWidth="110" MinHeight="26" Height="26" Padding="8,2" FontSize="11" VerticalAlignment="Center"
+                                              ToolTip="Automatically prune old capture entries."
+                                              AutomationProperties.Name="Auto-clear history"
+                                              SelectionChanged="HistoryRetentionCombo_SelectionChanged">
+                                        <ComboBoxItem Content="Never" ToolTip="Keep history until manually cleared"/>
+                                        <ComboBoxItem Content="1 day" ToolTip="Keep history for 1 day"/>
+                                        <ComboBoxItem Content="7 days" ToolTip="Keep history for 7 days"/>
+                                        <ComboBoxItem Content="30 days" ToolTip="Keep history for 30 days"/>
+                                        <ComboBoxItem Content="3 months" ToolTip="Keep history for 3 months"/>
+                                    </ComboBox>
+
+                                    <TextBlock Text="Limit:" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="14,0,6,0"/>
+                                    <ComboBox x:Name="HistoryCountLimitCombo" MinWidth="110" MinHeight="26" Height="26" Padding="8,2" FontSize="11" VerticalAlignment="Center"
+                                              ToolTip="Automatically prune oldest capture entries when count exceeds limit."
+                                              AutomationProperties.Name="Limit history size"
+                                              SelectionChanged="HistoryCountLimitCombo_SelectionChanged">
+                                        <ComboBoxItem Content="Never limit" ToolTip="Do not prune history entries by count."/>
+                                        <ComboBoxItem Content="50 captures" ToolTip="Keep only the 50 newest history entries."/>
+                                        <ComboBoxItem Content="100 captures" ToolTip="Keep only the 100 newest history entries."/>
+                                        <ComboBoxItem Content="250 captures" ToolTip="Keep only the 250 newest history entries."/>
+                                        <ComboBoxItem Content="500 captures" ToolTip="Keep only the 500 newest history entries."/>
+                                        <ComboBoxItem Content="1000 captures" ToolTip="Keep only the 1000 newest history entries."/>
+                                    </ComboBox>
+
+                                    <!-- Delete original files switch -->
+                                    <TextBlock x:Name="DeleteOriginalLabel" Text="Delete original files on prune" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="16,0,8,0" Cursor="Hand" MouseLeftButtonDown="DeleteOriginalLabel_MouseLeftButtonDown"/>
+                                    <CheckBox x:Name="HistoryDeleteOriginalOnPruneCheck" VerticalAlignment="Center" Margin="0,0,0,0"
+                                              ToolTip="Delete the original screenshot/recording files on disk, not just the thumbnails."
+                                              AutomationProperties.Name="Delete original files on prune"
+                                              Checked="HistoryDeleteOriginalOnPruneCheck_Changed" Unchecked="HistoryDeleteOriginalOnPruneCheck_Changed"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Images history -->
+                    <ScrollViewer x:Name="ImagesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,10,4"
+                                  ScrollChanged="HistoryPanel_ScrollChanged">
+                        <StackPanel x:Name="HistoryStack"/>
+                    </ScrollViewer>
+
+                    <!-- Videos / GIF history -->
+                    <ScrollViewer x:Name="GifsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,10,4"
+                                  ScrollChanged="GifPanel_ScrollChanged"
+                                  Visibility="Collapsed">
+                        <StackPanel x:Name="GifStack"/>
+                    </ScrollViewer>
+
+                    <!-- Text history -->
+                    <ScrollViewer x:Name="TextPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                  Padding="10,2,10,14" Visibility="Collapsed"
+                                  ScrollChanged="OcrPanel_ScrollChanged">
+                        <StackPanel x:Name="OcrStack"/>
+                    </ScrollViewer>
+
+                    <!-- Color history -->
+                    <ScrollViewer x:Name="ColorsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                  Padding="10,2,10,14" Visibility="Collapsed"
+                                  ScrollChanged="ColorsPanel_ScrollChanged">
+                        <StackPanel x:Name="ColorStack"/>
+                    </ScrollViewer>
+
+                    <!-- Code/QR history -->
+                    <ScrollViewer x:Name="CodesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                  Padding="10,2,10,14" Visibility="Collapsed"
+                                  ScrollChanged="CodesPanel_ScrollChanged">
+                        <StackPanel x:Name="CodeStack"/>
+                    </ScrollViewer>
+
+                    <!-- Empty states -->
+                    <StackPanel x:Name="HistoryEmptyText" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Visibility="Collapsed" Margin="0,0,0,40" MaxWidth="300">
+                        <TextBlock x:Name="HistoryEmptyTitle" Text="No captures yet" FontSize="14"
+                                   FontFamily="Segoe UI Variable Text" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                   HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Opacity="0.72"
+                                   ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                   AutomationProperties.Name="History empty state title"
+                                   AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                        <TextBlock x:Name="HistoryEmptyLabel" Text="Screenshots will appear here after capture." FontSize="12.5"
+                                   FontFamily="Segoe UI Variable Text" Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                   Opacity="0.58" HorizontalAlignment="Center" TextAlignment="Center"
+                                   TextWrapping="Wrap" Margin="0,7,0,0"
+                                   ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                   AutomationProperties.Name="History empty state detail"
+                                   AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                        <Button x:Name="HistoryEmptyRetryButton" Content="Retry" Style="{StaticResource HistoryActionButton}"
+                                HorizontalAlignment="Center" Margin="0,14,0,0" Visibility="Collapsed"
+                                ToolTip="Retry loading history"
+                                AutomationProperties.Name="Retry loading history"
+                                AutomationProperties.HelpText="Retry loading history"
+                                Cursor="Hand" Click="HistoryEmptyRetryButton_Click"/>
+                    </StackPanel>
+
+                    <!-- Bottom bar -->
+                    <Border Grid.Row="2" Padding="14,4,14,8">
+                        <DockPanel LastChildFill="False">
+                            <TextBlock x:Name="HistoryCountText" FontSize="11" Opacity="0.4" VerticalAlignment="Center"
+                                       DockPanel.Dock="Left"
+                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                       AutomationProperties.Name="History item count"
+                                       AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                       AutomationProperties.LiveSetting="Polite"/>
+                            <TextBlock x:Name="HistorySearchStatusText" FontSize="11" Opacity="0.35" VerticalAlignment="Center"
+                                       HorizontalAlignment="Right" Margin="12,0,0,0"
+                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                       AutomationProperties.Name="History status"
+                                       AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                       AutomationProperties.LiveSetting="Polite"/>
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Border>
+    </Border>
+</Window>

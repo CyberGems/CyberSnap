@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using CyberSnap.Capture;
 using Xunit;
 
@@ -66,6 +66,36 @@ public sealed class ScrollingCaptureFrameTests
         Assert.False(ScrollingCaptureForm.AreFramesDuplicate(previous, current));
     }
 
+    [Fact]
+    public void EstimateNewContentHeight_HandlesNoiseAndColorDifference()
+    {
+        using var previous = CreateScrollableFrame(96, 120, yOffset: 0);
+        using var current = CreateScrollableFrame(96, 120, yOffset: 40);
+
+        // Introduce color difference (less than or equal to 15 per channel)
+        for (int y = 0; y < current.Height; y++)
+        {
+            for (int x = 0; x < current.Width; x++)
+            {
+                var c = current.GetPixel(x, y);
+                current.SetPixel(x, y, Color.FromArgb(
+                    Math.Clamp(c.R + 5, 0, 255),
+                    Math.Clamp(c.G - 5, 0, 255),
+                    Math.Clamp(c.B - 5, 0, 255)));
+            }
+        }
+
+        // Introduce pixel noise (less than 5% of pixels, e.g. 1 pixel in each row of 96 pixels)
+        for (int y = 0; y < current.Height; y++)
+        {
+            current.SetPixel(10, y, Color.FromArgb(255, 255, 255));
+        }
+
+        int newContent = ScrollingCaptureForm.EstimateNewContentHeight(previous, current);
+
+        Assert.InRange(newContent, 36, 44);
+    }
+
     private static Bitmap CreateScrollableFrame(int width, int height, int yOffset)
     {
         var bitmap = new Bitmap(width, height);
@@ -75,9 +105,9 @@ public sealed class ScrollingCaptureFrameTests
             for (int x = 0; x < width; x++)
             {
                 bitmap.SetPixel(x, y, Color.FromArgb(
-                    absoluteY % 256,
-                    (absoluteY * 2 + x) % 256,
-                    (absoluteY * 3 + x * 2) % 256));
+                    (absoluteY * 37) % 256,
+                    (absoluteY * 43 + x) % 256,
+                    (absoluteY * 53 + x * 2) % 256));
             }
         }
 
@@ -116,9 +146,9 @@ public sealed class ScrollingCaptureFrameTests
 
                 int absoluteY = y - headerHeight + yOffset;
                 bitmap.SetPixel(x, y, Color.FromArgb(
-                    absoluteY % 256,
-                    (absoluteY * 2 + x) % 256,
-                    (absoluteY * 3 + x * 2) % 256));
+                    (absoluteY * 37) % 256,
+                    (absoluteY * 43 + x) % 256,
+                    (absoluteY * 53 + x * 2) % 256));
             }
         }
 

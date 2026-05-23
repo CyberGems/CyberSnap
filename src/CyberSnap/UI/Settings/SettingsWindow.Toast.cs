@@ -46,7 +46,7 @@ public partial class SettingsWindow
         ToastLayoutSaveIcon.Source = Helpers.FluentIcons.RenderWpf("download", iconColor, 20);
         ToastLayoutOfficeIcon.Source = Helpers.FluentIcons.RenderWpf("copy", iconColor, 20);
         ToastLayoutDeleteIcon.Source = Helpers.FluentIcons.RenderWpf("trash", iconColor, 20);
-        ToastLayoutHistoryIcon.Source = Helpers.FluentIcons.RenderWpf("history", iconColor, 20);
+        ToastLayoutAiRedirectIcon.Source = Helpers.FluentIcons.RenderWpf("history", iconColor, 20);
     }
 
     private void RefreshToastButtonLayoutDesigner()
@@ -62,7 +62,7 @@ public partial class SettingsWindow
         UpdateToastLayoutButton(ToastLayoutSaveBtn, ToastButtonKind.Save);
         UpdateToastLayoutButton(ToastLayoutOfficeBtn, ToastButtonKind.Office);
         UpdateToastLayoutButton(ToastLayoutDeleteBtn, ToastButtonKind.Delete);
-        UpdateToastLayoutButton(ToastLayoutHistoryBtn, ToastButtonKind.History);
+        UpdateToastLayoutButton(ToastLayoutAiRedirectBtn, ToastButtonKind.History);
         UpdateToastLayoutSlot(ToastSlotTopLeft, ToastButtonSlot.TopLeft);
         UpdateToastLayoutSlot(ToastSlotTopInnerLeft, ToastButtonSlot.TopInnerLeft);
         UpdateToastLayoutSlot(ToastSlotTopInnerRight, ToastButtonSlot.TopInnerRight);
@@ -124,7 +124,7 @@ public partial class SettingsWindow
                 ToastLayoutDeleteIcon.Source = Helpers.FluentIcons.RenderWpf("trash", color, 22, active);
                 break;
             case ToastButtonKind.History:
-                ToastLayoutHistoryIcon.Source = Helpers.FluentIcons.RenderWpf("history", color, 22, active);
+                ToastLayoutAiRedirectIcon.Source = Helpers.FluentIcons.RenderWpf("history", color, 22, active);
                 break;
         }
     }
@@ -509,7 +509,7 @@ public partial class SettingsWindow
         if (IsPointOverElement(ToastLayoutSaveBtn, pos) && ToastLayoutSaveBtn.Visibility == Visibility.Visible) return ToastButtonKind.Save;
         if (IsPointOverElement(ToastLayoutOfficeBtn, pos) && ToastLayoutOfficeBtn.Visibility == Visibility.Visible) return ToastButtonKind.Office;
         if (IsPointOverElement(ToastLayoutDeleteBtn, pos) && ToastLayoutDeleteBtn.Visibility == Visibility.Visible) return ToastButtonKind.Delete;
-        if (IsPointOverElement(ToastLayoutHistoryBtn, pos) && ToastLayoutHistoryBtn.Visibility == Visibility.Visible) return ToastButtonKind.History;
+        if (IsPointOverElement(ToastLayoutAiRedirectBtn, pos) && ToastLayoutAiRedirectBtn.Visibility == Visibility.Visible) return ToastButtonKind.History;
         return null;
     }
 
@@ -638,7 +638,7 @@ public partial class SettingsWindow
         ToastButtonKind.Save => "save",
         ToastButtonKind.Office => "office export",
         ToastButtonKind.Delete => "delete",
-        ToastButtonKind.History => "history",
+        ToastButtonKind.History => "AI redirect",
         _ => "toast"
     };
 

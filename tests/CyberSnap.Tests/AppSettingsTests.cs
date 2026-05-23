@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
@@ -72,11 +72,11 @@ public sealed class AppSettingsTests
     }
 
     [Fact]
-    public void ScrollingCaptureMode_DefaultsToAutomatic()
+    public void ScrollingCaptureMode_DefaultsToAssistAutoscroll()
     {
         var settings = new AppSettings();
 
-        Assert.Equal(ScrollingCaptureMode.Automatic, settings.ScrollingCaptureMode);
+        Assert.Equal(ScrollingCaptureMode.AssistAutoscroll, settings.ScrollingCaptureMode);
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public sealed class AppSettingsTests
     }
 
     [Fact]
-    public void TryDeserialize_NormalizesInvalidScrollingCaptureModeToAutomatic()
+    public void TryDeserialize_NormalizesInvalidScrollingCaptureModeToAssistAutoscroll()
     {
         var json = """
             {
@@ -226,7 +226,7 @@ public sealed class AppSettingsTests
             """;
 
         Assert.True(SettingsService.TryDeserialize(json, out var settings));
-        Assert.Equal(ScrollingCaptureMode.Automatic, settings.ScrollingCaptureMode);
+        Assert.Equal(ScrollingCaptureMode.AssistAutoscroll, settings.ScrollingCaptureMode);
     }
 
     [Fact]
@@ -279,5 +279,41 @@ public sealed class AppSettingsTests
 
         Assert.True(SettingsService.TryDeserialize(json, out var settings));
         Assert.Equal(expected, settings.UiScale, precision: 3);
+    }
+
+    [Fact]
+    public void HistoryCountLimit_DefaultsToZero()
+    {
+        var settings = new AppSettings();
+        Assert.Equal(0, settings.HistoryCountLimit);
+    }
+
+    [Fact]
+    public void HistoryDeleteOriginalOnPrune_DefaultsToFalse()
+    {
+        var settings = new AppSettings();
+        Assert.False(settings.HistoryDeleteOriginalOnPrune);
+    }
+
+    [Fact]
+    public void AutoOpenCapturedImages_DefaultsToFalse()
+    {
+        var settings = new AppSettings();
+        Assert.False(settings.AutoOpenCapturedImages);
+    }
+
+    [Fact]
+    public void TryDeserialize_RestoresHistoryCountLimitAndOriginalPruneOptions()
+    {
+        var json = """
+            {
+              "HistoryCountLimit": 250,
+              "HistoryDeleteOriginalOnPrune": true
+            }
+            """;
+
+        Assert.True(SettingsService.TryDeserialize(json, out var settings));
+        Assert.Equal(250, settings.HistoryCountLimit);
+        Assert.True(settings.HistoryDeleteOriginalOnPrune);
     }
 }

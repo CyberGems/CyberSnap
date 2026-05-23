@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -15,7 +15,7 @@ using CyberSnap.Services;
 
 namespace CyberSnap.UI;
 
-public partial class SettingsWindow
+public partial class HistoryWindow
 {
     private sealed record MediaCardShell(Border Card, Grid ImageContainer, StackPanel InfoPanel, System.Windows.Controls.Image Image, Border SelectionBadge);
 
@@ -81,10 +81,28 @@ public partial class SettingsWindow
         root.Children.Add(imgContainer);
 
         var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
-        Grid.SetRow(info, 1);
-        root.Children.Add(info);
+        var infoBorder = new Border
+        {
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Background = Theme.Brush(Theme.BgSecondary),
+            Child = info
+        };
+        Grid.SetRow(infoBorder, 1);
+        root.Children.Add(infoBorder);
 
-        var cardFocusBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(150, 255, 255, 255));
+        var hoverBorder = new Border
+        {
+            BorderThickness = new Thickness(1),
+            BorderBrush = Brushes.Transparent,
+            CornerRadius = new CornerRadius(7),
+            IsHitTestVisible = false,
+            Background = Brushes.Transparent
+        };
+        Grid.SetRow(hoverBorder, 0);
+        Grid.SetRowSpan(hoverBorder, 2);
+        root.Children.Add(hoverBorder);
+
         var card = new Border
         {
             Width = HistoryCardPreferredWidth,
@@ -104,22 +122,77 @@ public partial class SettingsWindow
         AutomationProperties.SetName(card, $"{kindLabel} history item");
         AutomationProperties.SetHelpText(card, "Press Enter or Space to open this history item. Press Ctrl+C to copy it. In select mode, press Enter or Space to select it.");
 
-        // Context menu on right-click
-        var contextMenu = CreateCardActionMenu();
-        contextMenu.Items.Add(CreateCardActionMenuItem(GetHistoryCopyMenuLabel(vm.Entry), () =>
+        // Context menu
+        var actionMenu = CreateCardActionMenu();
+        if (HasHistoryFilePath(vm.Entry.FilePath))
+        {
+            actionMenu.Items.Add(CreateCardActionMenuItem("Open", () =>
+            {
+                suppressOpenAction = true;
+                OpenFileWithDefaultApp(vm.Entry.FilePath);
+            }, "Open this file with the system default viewer."));
+        }
+        actionMenu.Items.Add(CreateCardActionMenuItem(GetHistoryCopyMenuLabel(vm.Entry), () =>
         {
             suppressOpenAction = true;
             copyAction();
         }, GetHistoryCopyMenuHelpText(vm.Entry, kindLabel)));
+
+        if (vm.Entry.Kind == HistoryKind.Image && HasHistoryFilePath(vm.Entry.FilePath))
+        {
+            actionMenu.Items.Add(CreateCardActionMenuItem("Extract text", async () =>
+            {
+                suppressOpenAction = true;
+                if (!File.Exists(vm.Entry.FilePath))
+                {
+                    ShowHistoryFileMissingError(vm.Entry.FilePath);
+                    return;
+                }
+                try
+                {
+                    string? text = null;
+                    if (_imageSearchIndexService != null &&
+                        _imageSearchIndexService.TryGetRecord(vm.Entry.FilePath, out var record) &&
+                        !string.IsNullOrWhiteSpace(record.OcrText))
+                    {
+                        text = record.OcrText;
+                    }
+                    else
+                    {
+                        using var bmp = new System.Drawing.Bitmap(vm.Entry.FilePath);
+                        var langTag = _settingsService.Settings.OcrLanguageTag;
+                        text = await OcrService.RecognizeAsync(bmp, langTag);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        var window = new OcrResultWindow(text, _settingsService)
+                        {
+                            Owner = this
+                        };
+                        window.Show();
+                    }
+                    else
+                    {
+                        ToastWindow.Show("OCR", "No text found");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ToastWindow.ShowError("OCR failed", $"Failed to extract text: {ex.Message}");
+                }
+            }, "Extract text from this image using OCR."));
+        }
+
         if (HasHistoryFilePath(vm.Entry.FilePath))
         {
-            contextMenu.Items.Add(CreateCardActionMenuItem("Show in folder", () =>
+            actionMenu.Items.Add(CreateCardActionMenuItem("Show in folder", () =>
             {
                 suppressOpenAction = true;
                 ShowFileInFolder(vm.Entry.FilePath);
             }, "Show this file in File Explorer."));
         }
-        contextMenu.Items.Add(CreateCardActionMenuItem("Delete from disk", () =>
+        actionMenu.Items.Add(CreateCardActionMenuItem("Delete from disk", () =>
         {
             suppressOpenAction = true;
             if (!ThemedConfirmDialog.Confirm(this,
@@ -131,13 +204,71 @@ public partial class SettingsWindow
             _historyService.DeleteEntry(vm.Entry);
             LoadCurrentHistoryTab();
         }, "Permanently delete this file from disk and history."));
-        contextMenu.PlacementTarget = card;
+        actionMenu.PlacementTarget = card;
         card.MouseRightButtonUp += (_, e) =>
         {
             e.Handled = true;
             suppressOpenAction = true;
-            contextMenu.IsOpen = true;
+            actionMenu.IsOpen = true;
         };
+
+        var actionMenuBtn = new System.Windows.Controls.Button
+        {
+            ToolTip = "Open history item actions",
+            Focusable = true,
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(210, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            Width = 24,
+            Height = 24,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(6),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 0, 0, 0)),
+            Foreground = Brushes.White,
+            Content = "···",
+            Visibility = Visibility.Collapsed
+        };
+        AutomationProperties.SetName(actionMenuBtn, $"{kindLabel} actions");
+        AutomationProperties.SetHelpText(actionMenuBtn, "Press Enter or Space to open this history item's actions.");
+
+        void UpdateActionMenuBtnVisibility()
+        {
+            if (card.IsMouseOver || card.IsKeyboardFocusWithin || actionMenu.IsOpen)
+            {
+                actionMenuBtn.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                actionMenuBtn.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        void OpenActionMenu()
+        {
+            actionMenu.PlacementTarget = actionMenuBtn;
+            actionMenu.IsOpen = true;
+            UpdateActionMenuBtnVisibility();
+        }
+
+        actionMenuBtn.PreviewMouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
+            OpenActionMenu();
+        };
+
+        actionMenuBtn.KeyDown += (_, e) =>
+        {
+            if (!IsHistoryCardActivationKey(e))
+                return;
+            e.Handled = true;
+            OpenActionMenu();
+        };
+
+        actionMenuBtn.GotKeyboardFocus += (_, _) => UpdateActionMenuBtnVisibility();
+        actionMenuBtn.LostKeyboardFocus += (_, _) => UpdateActionMenuBtnVisibility();
+        actionMenu.Closed += (_, _) => UpdateActionMenuBtnVisibility();
+
+        imgContainer.Children.Add(actionMenuBtn);
 
         card.SizeChanged += (s, _) =>
         {
@@ -149,23 +280,27 @@ public partial class SettingsWindow
 
         card.MouseEnter += (s, _) =>
         {
-            card.BorderBrush = cardFocusBrush;
+            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            UpdateActionMenuBtnVisibility();
         };
         card.MouseLeave += (s, _) =>
         {
             if (!card.IsKeyboardFocusWithin)
-                card.BorderBrush = Brushes.Transparent;
+                hoverBorder.BorderBrush = Brushes.Transparent;
+            UpdateActionMenuBtnVisibility();
         };
         card.GotKeyboardFocus += (_, _) =>
         {
-            card.BorderBrush = cardFocusBrush;
+            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            UpdateActionMenuBtnVisibility();
         };
         card.LostKeyboardFocus += (_, _) =>
         {
+            UpdateActionMenuBtnVisibility();
             if (card.IsKeyboardFocusWithin)
                 return;
 
-            card.BorderBrush = Brushes.Transparent;
+            hoverBorder.BorderBrush = Brushes.Transparent;
         };
 
         void ActivateCard(RoutedEventArgs e)
@@ -275,15 +410,16 @@ public partial class SettingsWindow
 
     private MenuItem CreateCardActionMenuItem(string label, Action action, string? helpText = null)
     {
-        helpText ??= "Run this history action.";
+        var translatedLabel = LocalizationService.Translate(label);
+        var translatedHelpText = helpText != null ? LocalizationService.Translate(helpText) : LocalizationService.Translate("Run this history action.");
         var item = new MenuItem
         {
-            Header = label,
-            ToolTip = helpText
+            Header = translatedLabel,
+            ToolTip = translatedHelpText
         };
         item.SetResourceReference(MenuItem.StyleProperty, "HistoryActionsMenuItem");
-        AutomationProperties.SetName(item, label);
-        AutomationProperties.SetHelpText(item, helpText);
+        AutomationProperties.SetName(item, translatedLabel);
+        AutomationProperties.SetHelpText(item, translatedHelpText);
         item.Click += (_, e) =>
         {
             e.Handled = true;
@@ -398,5 +534,4 @@ public partial class SettingsWindow
             return false;
         }
     }
-
 }

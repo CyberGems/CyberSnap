@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 
 namespace CyberSnap.Tests;
 
@@ -9,7 +9,7 @@ public sealed class AppLifecyclePolishTests
     {
         var source = File.ReadAllText(RepoPath("src", "CyberSnap", "App", "App.Lifecycle.cs"));
 
-        var showSettingsBlock = GetMethodBlock(source, "private void ShowSettings(bool openHistory = false)");
+        var showSettingsBlock = GetMethodBlock(source, "public void ShowSettings()");
         Assert.Contains("ShowSettingsOpenFailed(ex, \"lifecycle.show-settings\", \"lifecycle.show-settings.toast\");", showSettingsBlock);
         Assert.Contains("ShowSettingsOpenFailed(ex, \"lifecycle.show-settings.init\", \"lifecycle.show-settings.init.toast\");", showSettingsBlock);
         Assert.DoesNotContain("ToastWindow.ShowError(\"Settings failed to open\", ex.Message);", showSettingsBlock);

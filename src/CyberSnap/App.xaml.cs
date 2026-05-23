@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Threading;
 using CyberSnap.Services;
 using CyberSnap.UI;
@@ -33,5 +33,16 @@ public partial class App : Application
     private int _settingsHiddenForCapture;
     private int _idleTrimInProgress;
     private DateTime _lastIdleTrimUtc = DateTime.MinValue;
-    private int _openHistoryWhenSettingsReady;
+    private HistoryWindow? _historyWindow;
+    private int _historyWindowOpening;
+
+    public void RefreshHistoryWindowIfOpen()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(RefreshHistoryWindowIfOpen);
+            return;
+        }
+        _historyWindow?.RequestRefresh();
+    }
 }

@@ -50,7 +50,7 @@
   "Window detection": "Raamdetectie",
   "Off": "Uit",
   "Windows only": "Alleen Windows",
-  "Capture dock": "Vastlegdok",
+  "Toolbar Position": "Werkbalkpositie",
   "Top": "Boven",
   "Bottom": "Onderkant",
   "Left": "Links",
@@ -223,3 +223,5 @@
   "Update check failed": "Updatecontrole mislukt",
   "CyberSnap is up to date": "CyberSnap is up-to-date"
 }
+
+

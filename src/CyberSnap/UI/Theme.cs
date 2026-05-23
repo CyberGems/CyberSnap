@@ -80,6 +80,8 @@ public static class Theme
         resources["ThemeWindowBorderBrush"] = Brush(WindowBorder);
         resources["ThemeSeparatorBrush"] = Brush(Separator);
         resources["ThemeAccentBrush"] = Brush(Accent);
+        resources["ThemeTooltipBackgroundBrush"] = Brush(IsDark ? C(20, 20, 20) : C(250, 250, 250));
+        resources["ThemeTooltipBorderBrush"] = Brush(IsDark ? CA(255, 255, 255, 26) : CA(0, 0, 0, 16));
     }
 
     public static void Refresh()

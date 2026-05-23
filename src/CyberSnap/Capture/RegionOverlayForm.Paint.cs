@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using System.Linq;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
+using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
 
@@ -41,7 +42,7 @@ public sealed partial class RegionOverlayForm
 
         bool isOcr = _mode == CaptureMode.Ocr;
         bool isScan = _mode == CaptureMode.Scan;
-        bool isSelectionMode = _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale;
+        bool isSelectionMode = _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;
 
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
@@ -78,7 +79,7 @@ public sealed partial class RegionOverlayForm
             var drawRect = ClampRectToClient(_autoDetectRect);
             if (drawRect.Width > 0 && drawRect.Height > 0)
             {
-                SelectionFrameRenderer.DrawRectangle(g, drawRect);
+                SelectionFrameRenderer.DrawAutoDetectRectangle(g, drawRect);
             }
             _lastAutoDetectRect = _autoDetectRect;
         }
@@ -91,12 +92,14 @@ public sealed partial class RegionOverlayForm
         switch (_mode)
         {
             case CaptureMode.Rectangle when _isSelecting && _hasSelection:
+            case CaptureMode.ScrollCapture when _isSelecting && _hasSelection:
             case CaptureMode.Center when _isSelecting && _hasSelection:
             case CaptureMode.Ocr when _isSelecting && _hasSelection:
             case CaptureMode.Scan when _isSelecting && _hasSelection:
             case CaptureMode.Sticker when _isSelecting && _hasSelection:
             case CaptureMode.Upscale when _isSelecting && _hasSelection:
             case CaptureMode.Rectangle when _hasSelection && !_isSelecting:
+            case CaptureMode.ScrollCapture when _hasSelection && !_isSelecting:
             case CaptureMode.Center when _hasSelection && !_isSelecting:
             case CaptureMode.Ocr when _hasSelection && !_isSelecting:
             case CaptureMode.Scan when _hasSelection && !_isSelecting:
@@ -126,23 +129,51 @@ public sealed partial class RegionOverlayForm
             var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
             using (var btnFont = UiChrome.ChromeFont(11f, FontStyle.Bold))
             using (var textBrush = new SolidBrush(UiChrome.SurfaceTextPrimary))
-            using (var borderPen = new Pen(Color.FromArgb(160, UiChrome.AccentColor), 1.5f))
-            using (var glowPen = new Pen(Color.FromArgb(40, UiChrome.AccentColor), 4f))
             {
                 var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
                 float corner = UiChrome.ScaledToolbarCornerRadius;
+                bool confirmHover = _hoveredConfirmButton == 0;
+                bool cancelHover = _hoveredConfirmButton == 1;
 
-                // Confirm button — cyberpunk dark surface with accent border
+                // ── Confirm button (primary action) ──
                 WindowsDockRenderer.PaintSurface(g, confirmBtn, corner);
-                g.DrawRectangle(borderPen, confirmBtn);
-                g.DrawRectangle(glowPen, Rectangle.Inflate(confirmBtn, 2, 2));
-                g.DrawString("Confirm", btnFont, textBrush, confirmBtn, sf);
+                using (var confirmPath = WindowsDockRenderer.RoundedRect(confirmBtn, corner))
+                {
+                    using var confirmFill = new SolidBrush(confirmHover
+                        ? Color.FromArgb(72, UiChrome.AccentColor)
+                        : Color.FromArgb(46, UiChrome.AccentColor));
+                    g.FillPath(confirmFill, confirmPath);
+                }
+                using (var confirmGlowPen = new Pen(
+                    confirmHover ? Color.FromArgb(65, UiChrome.AccentColor) : Color.FromArgb(40, UiChrome.AccentColor),
+                    confirmHover ? 6f : 5f))
+                using (var confirmGlowPath = WindowsDockRenderer.RoundedRect(
+                    RectangleF.Inflate(confirmBtn, 2, 2), corner))
+                    g.DrawPath(confirmGlowPen, confirmGlowPath);
+                using (var confirmBorderPen = new Pen(
+                    confirmHover ? Color.FromArgb(255, UiChrome.AccentColor) : Color.FromArgb(200, UiChrome.AccentColor), 1.5f))
+                using (var confirmBorderPath = WindowsDockRenderer.RoundedRect(confirmBtn, corner))
+                    g.DrawPath(confirmBorderPen, confirmBorderPath);
+                g.DrawString(LocalizationService.Translate("Confirm"), btnFont, textBrush, confirmBtn, sf);
 
-                // Cancel button — same style
+                // ── Cancel button (secondary action) ──
                 WindowsDockRenderer.PaintSurface(g, cancelBtn, corner);
-                g.DrawRectangle(borderPen, cancelBtn);
-                g.DrawRectangle(glowPen, Rectangle.Inflate(cancelBtn, 2, 2));
-                g.DrawString("Cancel", btnFont, textBrush, cancelBtn, sf);
+                if (cancelHover)
+                {
+                    using (var cancelPath = WindowsDockRenderer.RoundedRect(cancelBtn, corner))
+                    using (var cancelHoverBrush = new SolidBrush(Color.FromArgb(18, UiChrome.SurfaceTextPrimary)))
+                        g.FillPath(cancelHoverBrush, cancelPath);
+                }
+                using (var cancelGlowPen = new Pen(
+                    cancelHover ? Color.FromArgb(20, UiChrome.SurfaceTextPrimary) : Color.FromArgb(10, UiChrome.SurfaceTextPrimary), 4f))
+                using (var cancelGlowPath = WindowsDockRenderer.RoundedRect(
+                    RectangleF.Inflate(cancelBtn, 2, 2), corner))
+                    g.DrawPath(cancelGlowPen, cancelGlowPath);
+                using (var cancelBorderPen = new Pen(
+                    cancelHover ? Color.FromArgb(90, UiChrome.SurfaceTextPrimary) : Color.FromArgb(45, UiChrome.SurfaceTextPrimary), 1.2f))
+                using (var cancelBorderPath = WindowsDockRenderer.RoundedRect(cancelBtn, corner))
+                    g.DrawPath(cancelBorderPen, cancelBorderPath);
+                g.DrawString(LocalizationService.Translate("Cancel"), btnFont, textBrush, cancelBtn, sf);
             }
 
             // Draw selection frame and handles ON TOP of buttons
@@ -315,19 +346,19 @@ public sealed partial class RegionOverlayForm
         if (rect.Width < 3 || rect.Height < 3) return;
         var clamped = Rectangle.Intersect(rect, new Rectangle(0, 0, _bmpW, _bmpH));
         if (clamped.Width < 1 || clamped.Height < 1) return;
-        int blockSize = Math.Clamp(Math.Min(clamped.Width, clamped.Height) / 12, 6, 18);
+        int blockSize = Math.Clamp(Math.Min(clamped.Width, clamped.Height) / 24, 3, 10);
         int sw = Math.Max(1, clamped.Width / blockSize);
         int sh = Math.Max(1, clamped.Height / blockSize);
         var small = GetBlurPreviewGraphics(new Size(sw, sh));
         small.Clear(Color.Transparent);
-        small.InterpolationMode = InterpolationMode.NearestNeighbor;
+        small.InterpolationMode = InterpolationMode.HighQualityBilinear;
         small.PixelOffsetMode = PixelOffsetMode.Half;
         small.DrawImage(_screenshot, new Rectangle(0, 0, sw, sh), clamped, GraphicsUnit.Pixel);
 
         var state = g.Save();
         try
         {
-            g.InterpolationMode = InterpolationMode.NearestNeighbor;
+            g.InterpolationMode = InterpolationMode.HighQualityBilinear;
             g.PixelOffsetMode = PixelOffsetMode.Half;
             g.DrawImage(_blurPreviewBitmap!, clamped);
         }

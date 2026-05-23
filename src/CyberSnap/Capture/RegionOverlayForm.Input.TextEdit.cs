@@ -158,6 +158,7 @@ public sealed partial class RegionOverlayForm
         HideFontSearchBox();
         _isPlacingEmoji = false;
         _colorPickerOpen = !_colorPickerOpen;
+        HideToolbarTooltip();
         Invalidate(InflateForRepaint(GetColorPickerBounds(), 12));
         RefreshToolbar();
     }
@@ -172,6 +173,7 @@ public sealed partial class RegionOverlayForm
                 continue;
 
             SetToolColor(ToolColors[i]);
+            ToolColorChanged?.Invoke(ToolColors[i]);
             _activeToolId = _visibleTools.FirstOrDefault(t => t.Mode == _mode)?.Id ?? _activeToolId;
             _colorPickerOpen = false;
             Invalidate(InflateForRepaint(GetColorPickerBounds(), 12));

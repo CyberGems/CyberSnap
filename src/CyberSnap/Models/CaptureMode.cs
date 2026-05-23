@@ -25,5 +25,7 @@ public enum CaptureMode
     Magnifier = 19,
     Emoji = 20,
     Line = 21,
-    Center = 22
+    Center = 22,
+    ScrollCapture = 23,
+    Record = 24
 }

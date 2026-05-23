@@ -131,7 +131,7 @@ public sealed partial class RegionOverlayForm
         _pendingCapturePickerPoint = overlayPoint;
         _capturePickerUpdateQueued = true;
         bool isSelectingCapture = _isSelecting &&
-            (_mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale);
+            (_mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture);
 
         if (isSelectingCapture)
             ResetCaptureMagnifierPlacementOnDragReversal(overlayPoint);
