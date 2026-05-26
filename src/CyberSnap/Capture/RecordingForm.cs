@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.IO;
@@ -313,9 +313,9 @@ public sealed partial class RecordingForm : Form
             SelectionFrameRenderer.DrawRectangle(g, _selection);
             SelectionSizeReadout.Draw(
                 g,
-                PointToClient(Cursor.Position),
+                _selectionCursor,
                 _selection,
-                _hintFont,
+                _readoutFont,
                 ClientRectangle,
                 GetRecordingReadoutDetails());
         }

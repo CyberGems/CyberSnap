@@ -551,7 +551,7 @@ public partial class SettingsWindow
             SetToastPreferenceStatus($"{label} change was not saved. Previous setting restored.");
             ToastWindow.ShowError(
                 $"{label} failed",
-                $"The previous toast setting was restored. Check Settings -> Toasts and try again.\n{ex.Message}");
+                $"The previous notification setting was restored. Check Settings -> Notifications and try again.\n{ex.Message}");
         }
     }
 
@@ -872,5 +872,99 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.CaptureDelaySeconds = value,
             value => CaptureDelayCombo.SelectedIndex = value switch { 3 => 1, 5 => 2, 10 => 3, _ => 0 });
+    }
+
+    private void ShowCaptureWidgetCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.ShowCaptureWidget;
+        var selected = ShowCaptureWidgetCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.show-capture-widget",
+            "Floating capture widget",
+            previous,
+            selected,
+            value =>
+            {
+                _settingsService.Settings.ShowCaptureWidget = value;
+                UpdateWidgetOptionsVisibility(value);
+            },
+            value =>
+            {
+                ShowCaptureWidgetCheck.IsChecked = value;
+                UpdateWidgetOptionsVisibility(value);
+            },
+            value =>
+            {
+                if (value)
+                    ((App)Application.Current).EnsureWidgetWindowCreated();
+                else
+                    ((App)Application.Current).CloseWidgetWindow();
+            });
+    }
+
+    private void WidgetDockEdgeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.WidgetDockEdge;
+        var selected = (CaptureDockSide)Math.Clamp(WidgetDockEdgeCombo.SelectedIndex, 0, 3);
+        UpdateGeneralPreference(
+            "settings.widget-dock-edge",
+            "Widget dock edge",
+            previous,
+            selected,
+            value => _settingsService.Settings.WidgetDockEdge = value,
+            value => WidgetDockEdgeCombo.SelectedIndex = (int)value,
+            value =>
+            {
+                ((App)Application.Current).RefreshWidgetWindowLayout();
+            });
+    }
+
+    private void WidgetHoverDelayCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        if (WidgetHoverDelayCombo.SelectedItem is not ComboBoxItem item || item.Tag is not string tag)
+            return;
+
+        if (!int.TryParse(tag, out var delayMs))
+            return;
+
+        var previous = _settingsService.Settings.WidgetHoverDelayMs;
+        UpdateGeneralPreference(
+            "settings.widget-hover-delay",
+            "Widget hover delay",
+            previous,
+            delayMs,
+            value => _settingsService.Settings.WidgetHoverDelayMs = value,
+            SelectWidgetHoverDelay,
+            value =>
+            {
+                ((App)Application.Current).RefreshWidgetWindowLayout();
+            });
+    }
+
+    private void SelectWidgetHoverDelay(int delayMs)
+    {
+        WidgetHoverDelayCombo.SelectedIndex = delayMs switch
+        {
+            0 => 0,
+            100 => 1,
+            250 => 2,
+            500 => 3,
+            1000 => 4,
+            _ => 2
+        };
+    }
+
+    private void UpdateWidgetOptionsVisibility(bool visible)
+    {
+        var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        WidgetOptionsSeparator.Visibility = visibility;
+        WidgetDockEdgeRow.Visibility = visibility;
+        WidgetHoverDelaySeparator.Visibility = visibility;
+        WidgetHoverDelayRow.Visibility = visibility;
     }
 }

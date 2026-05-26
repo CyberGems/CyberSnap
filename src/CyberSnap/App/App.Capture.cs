@@ -351,6 +351,11 @@ public partial class App
                     _settingsService!.Settings.ToolColorArgb = color.ToArgb();
                     _settingsService.Save();
                 };
+                overlay.DockSideChanged += dockSide =>
+                {
+                    _settingsService!.Settings.CaptureDockSide = dockSide;
+                    _settingsService.Save();
+                };
 
                 overlay.RegionSelected += sel =>
                 {

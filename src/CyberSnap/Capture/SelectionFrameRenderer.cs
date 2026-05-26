@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using CyberSnap.Helpers;
 
@@ -25,10 +25,10 @@ internal static class SelectionFrameRenderer
         var oldSmoothing = g.SmoothingMode;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        // Very subtle accent glow behind the frame
+        // Premium ambient accent glow behind the selection frame
         var glowRect = rect;
         glowRect.Inflate(2, 2);
-        using (var glowPen = new Pen(Color.FromArgb(22, UiChrome.AccentColor), 5f))
+        using (var glowPen = new Pen(Color.FromArgb(40, UiChrome.AccentColor), 5f))
             g.DrawRectangle(glowPen, glowRect);
 
         if (fill)
@@ -38,7 +38,37 @@ internal static class SelectionFrameRenderer
         outline.Width = Math.Max(1, outline.Width - 1);
         outline.Height = Math.Max(1, outline.Height - 1);
 
-        g.DrawRectangle(RectangleStrokePen, outline);
+        // Draw outer premium neon accent line
+        using (var outerPen = new Pen(UiChrome.AccentColor, 1.5f))
+            g.DrawRectangle(outerPen, outline);
+
+        // Draw inner crisp white line for high contrast
+        var innerOutline = outline;
+        innerOutline.Inflate(-1, -1);
+        using (var innerPen = new Pen(Color.FromArgb(200, 255, 255, 255), 1f))
+            g.DrawRectangle(innerPen, innerOutline);
+
+        // Draw tactical HUD-style corner brackets
+        const int cornerLen = 12;
+        const int cornerOffset = 3;
+        using (var cornerPen = new Pen(UiChrome.AccentColor, 2f) { LineJoin = LineJoin.Miter })
+        {
+            // Top-left
+            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Y - cornerOffset, outline.X - cornerOffset + cornerLen, outline.Y - cornerOffset);
+            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Y - cornerOffset, outline.X - cornerOffset, outline.Y - cornerOffset + cornerLen);
+
+            // Top-right
+            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Y - cornerOffset, outline.Right + cornerOffset - cornerLen, outline.Y - cornerOffset);
+            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Y - cornerOffset, outline.Right + cornerOffset, outline.Y - cornerOffset + cornerLen);
+
+            // Bottom-left
+            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Bottom + cornerOffset, outline.X - cornerOffset + cornerLen, outline.Bottom + cornerOffset);
+            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Bottom + cornerOffset, outline.X - cornerOffset, outline.Bottom + cornerOffset - cornerLen);
+
+            // Bottom-right
+            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Bottom + cornerOffset, outline.Right + cornerOffset - cornerLen, outline.Bottom + cornerOffset);
+            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Bottom + cornerOffset, outline.Right + cornerOffset, outline.Bottom + cornerOffset - cornerLen);
+        }
 
         g.SmoothingMode = oldSmoothing;
     }

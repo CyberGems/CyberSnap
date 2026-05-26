@@ -203,6 +203,7 @@ public sealed partial class RegionOverlayForm
     private bool ShouldShowCaptureMagnifierAt(Point p)
         => ShowCaptureMagnifier
            && ToolDef.IsCaptureTool(_mode)
+           && !_isConfirmingSelection
            && !IsPointInOverlayUi(p);
 
     private Point GetReadoutCursorPoint()
@@ -532,6 +533,7 @@ public sealed partial class RegionOverlayForm
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
         _selectionEnd = Point.Empty;
+        try { CloseCaptureMagnifier(); } catch { }
         EnsureToolbarReady();
         RefreshToolbar();
         Invalidate();

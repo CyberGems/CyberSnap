@@ -1,0 +1,270 @@
+<Window x:Class="CyberSnap.UI.CaptureWidgetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CyberSnap Quick Panel"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        MouseEnter="Window_MouseEnter"
+        MouseLeave="Window_MouseLeave">
+
+    <Window.Resources>
+        <!-- CyberGems / Cyberpunk Styles -->
+        <SolidColorBrush x:Key="WidgetBg" Color="#0D0F1A" Opacity="0.95"/>
+        <SolidColorBrush x:Key="WidgetAccent" Color="#00FFFF"/>
+        <SolidColorBrush x:Key="WidgetAccentHover" Color="#80FFFF"/>
+        <SolidColorBrush x:Key="WidgetText" Color="#E6F0FF"/>
+        <SolidColorBrush x:Key="WidgetTextMuted" Color="#A0B4D2"/>
+        <SolidColorBrush x:Key="WidgetBorder" Color="#2000FFFF"/>
+        <SolidColorBrush x:Key="WidgetBorderActive" Color="#8000FFFF"/>
+        <SolidColorBrush x:Key="CaptureBtnRed" Color="#FF3B30"/>
+        
+        <!-- Glow Effect -->
+        <DropShadowEffect x:Key="CyanGlow" Color="#00FFFF" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
+        <DropShadowEffect x:Key="RedGlow" Color="#FF3B30" BlurRadius="12" ShadowDepth="0" Opacity="0.7"/>
+
+        <!-- Action Button Style (Larger buttons/margins) -->
+        <Style x:Key="WidgetActionButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource WidgetText}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1500FFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#3000FFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Toggle CheckBox Style (Cyberpunk neon look) -->
+        <Style x:Key="WidgetCheckBox" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <BulletDecorator Background="Transparent" SnapsToDevicePixels="true">
+                            <BulletDecorator.Bullet>
+                                <Border x:Name="Border" Width="14" Height="14" CornerRadius="3"
+                                        BorderThickness="1" BorderBrush="{StaticResource WidgetTextMuted}"
+                                        Background="Transparent" Margin="0,1,0,0">
+                                    <Path x:Name="CheckMark" Width="7" Height="7" SnapsToDevicePixels="False"
+                                          Data="M 0 3 L 2 5 L 6 0" Stroke="{StaticResource WidgetAccent}" StrokeThickness="2"
+                                          Visibility="Collapsed"/>
+                                </Border>
+                            </BulletDecorator.Bullet>
+                            <ContentPresenter Margin="6,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </BulletDecorator>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="true">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource WidgetAccent}"/>
+                                <Setter TargetName="Border" Property="Effect" Value="{StaticResource CyanGlow}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource WidgetAccentHover}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- CyberGems Neon Handle Style -->
+        <Style x:Key="CyberHandleStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource WidgetBg}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource WidgetBorderActive}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource WidgetAccent}"/>
+                    <Setter Property="Effect" Value="{StaticResource CyanGlow}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <!-- Main Container -->
+    <Grid x:Name="RootGrid">
+        <!-- RenderTransform for sliding animation -->
+        <Grid.RenderTransform>
+            <TranslateTransform x:Name="SlideTransform" X="0" Y="0"/>
+        </Grid.RenderTransform>
+
+        <!-- The actual layout (RowDefinitions/ColumnDefinitions will be updated programmatically based on dock edge) -->
+        <Grid x:Name="LayoutGrid">
+            <!-- Row/Col definitions added dynamically -->
+            
+            <!-- Dual Handle Container Panel -->
+            <Grid x:Name="HandleContainerPanel">
+                <Grid.RenderTransform>
+                    <TranslateTransform x:Name="HandleSlideTransform" X="0" Y="0"/>
+                </Grid.RenderTransform>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="HandleCol0" Width="*"/>
+                    <ColumnDefinition x:Name="HandleCol1" Width="Auto"/>
+                    <ColumnDefinition x:Name="HandleCol2" Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition x:Name="HandleRow0" Height="*"/>
+                    <RowDefinition x:Name="HandleRow1" Height="Auto"/>
+                    <RowDefinition x:Name="HandleRow2" Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Hover-To-Expand Activator Handle -->
+                <Border x:Name="HandleBorder" Style="{StaticResource CyberHandleStyle}">
+                    <Grid x:Name="HandleContentGrid">
+                        <!-- Small Chevron Indicator -->
+                        <TextBlock x:Name="IndicatorArrow" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                   FontSize="8" Foreground="{StaticResource WidgetAccent}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Text="&#xE0E5;"/>
+                    </Grid>
+                </Border>
+
+                <!-- Dedicated Drag Handle (Grip Tab) -->
+                <Border x:Name="DragHandleBorder" Style="{StaticResource CyberHandleStyle}"
+                        Cursor="SizeAll" MouseLeftButtonDown="DragHandleBorder_MouseLeftButtonDown"
+                        ToolTip="Arrastra aquí para posicionar el panel.">
+                    <Grid x:Name="DragContentGrid" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <!-- Grip Lines/Dots -->
+                        <StackPanel x:Name="GripPanel" Orientation="Horizontal">
+                            <Rectangle x:Name="GripRect1" Width="2" Height="6" Fill="{StaticResource WidgetTextMuted}" Margin="1,0"/>
+                            <Rectangle x:Name="GripRect2" Width="2" Height="6" Fill="{StaticResource WidgetTextMuted}" Margin="1,0"/>
+                            <Rectangle x:Name="GripRect3" Width="2" Height="6" Fill="{StaticResource WidgetTextMuted}" Margin="1,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Main Panel Border -->
+            <Border x:Name="MainPanelBorder" Background="{StaticResource WidgetBg}"
+                    BorderBrush="{StaticResource WidgetBorderActive}" BorderThickness="1" CornerRadius="8"
+                    Visibility="Collapsed">
+                <Border.Effect>
+                    <DropShadowEffect Color="#00FFFF" BlurRadius="6" ShadowDepth="0" Opacity="0.35"/>
+                </Border.Effect>
+                
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Capture Button -->
+                        <RowDefinition Height="Auto"/> <!-- Quick Actions -->
+                        <RowDefinition Height="Auto"/> <!-- Options / Checkbox -->
+                        <RowDefinition Height="Auto"/> <!-- Settings Row -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Big Circular Capture Button -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12" HorizontalAlignment="Center">
+                        <Button x:Name="CaptureButton" Click="CaptureButton_Click" Cursor="Hand" Width="54" Height="54" FocusVisualStyle="{x:Null}"
+                                ToolTip="Captura de pantalla rápida (Selección rectangular)">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Grid>
+                                        <!-- Glow/Outer Ring -->
+                                        <Ellipse x:Name="OuterRing" Stroke="{StaticResource WidgetAccent}" StrokeThickness="2" Fill="Transparent"/>
+                                        <!-- CyberGems Cyan Inner Button -->
+                                        <Ellipse x:Name="InnerCircle" Fill="#0D1F2D" Stroke="{StaticResource WidgetAccent}" StrokeThickness="1.5" Width="36" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Ellipse.Effect>
+                                                <DropShadowEffect Color="#00FFFF" BlurRadius="8" ShadowDepth="0" Opacity="0.5"/>
+                                            </Ellipse.Effect>
+                                        </Ellipse>
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="OuterRing" Property="Effect" Value="{StaticResource CyanGlow}"/>
+                                            <Setter TargetName="OuterRing" Property="StrokeThickness" Value="3"/>
+                                            <Setter TargetName="InnerCircle" Property="Fill" Value="#15354F"/>
+                                            <Setter TargetName="InnerCircle" Property="Effect" Value="{StaticResource CyanGlow}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="InnerCircle" Property="Width" Value="34"/>
+                                            <Setter TargetName="InnerCircle" Property="Height" Value="34"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <!-- Big capture icon as content -->
+                            <Image x:Name="BigCaptureIcon" Width="20" Height="20"/>
+                        </Button>
+                    </Grid>
+
+                    <!-- Quick Action Shortcuts (Larger icons 22x22) -->
+                    <StackPanel Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,0,10">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
+                            <Button Style="{StaticResource WidgetActionButton}" Click="RegionCapture_Click" ToolTip="Selección rectangular">
+                                <Image x:Name="RegionCaptureIcon" Width="22" Height="22"/>
+                            </Button>
+                            <Button Style="{StaticResource WidgetActionButton}" Click="ScrollCapture_Click" ToolTip="Captura con desplazamiento">
+                                <Image x:Name="ScrollCaptureIcon" Width="22" Height="22"/>
+                            </Button>
+                            <Button Style="{StaticResource WidgetActionButton}" Click="GrabText_Click" ToolTip="Extraer texto (OCR)">
+                                <Image x:Name="GrabTextIcon" Width="22" Height="22"/>
+                            </Button>
+                            <Button Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="Escanear QR / Código de barras">
+                                <Image x:Name="QrScanIcon" Width="22" Height="22"/>
+                            </Button>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Style="{StaticResource WidgetActionButton}" Click="ColorPicker_Click" ToolTip="Lector de color">
+                                <Image x:Name="ColorPickerIcon" Width="22" Height="22"/>
+                            </Button>
+                            <Button Style="{StaticResource WidgetActionButton}" Click="ScreenRecord_Click" ToolTip="Grabar pantalla (Video MP4)">
+                                <Image x:Name="ScreenRecordIcon" Width="22" Height="22"/>
+                            </Button>
+                            <Button Style="{StaticResource WidgetActionButton}" Click="GifRecord_Click" ToolTip="Grabar GIF animado">
+                                <Image x:Name="GifRecordIcon" Width="22" Height="22"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Option Checkbox -->
+                    <Grid Grid.Row="2" Margin="4,0,4,8" HorizontalAlignment="Center">
+                        <CheckBox x:Name="DirectCopyCheck" Style="{StaticResource WidgetCheckBox}"
+                                  Checked="DirectCopyCheck_Changed" Unchecked="DirectCopyCheck_Changed"
+                                  ToolTip="Copia o guarda la captura directamente sin abrir el editor.">
+                            <TextBlock Text="Sin editor directo" FontSize="11" Foreground="{StaticResource WidgetTextMuted}" FontFamily="Segoe UI Variable Text"/>
+                        </CheckBox>
+                    </Grid>
+
+                    <!-- Settings Button Row -->
+                    <Grid Grid.Row="3" Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="CyberSnap Quick" FontSize="9.5" FontWeight="SemiBold" 
+                                   Foreground="{StaticResource WidgetTextMuted}" Opacity="0.5" 
+                                   VerticalAlignment="Center" HorizontalAlignment="Left" 
+                                   FontFamily="Segoe UI Variable Display"/>
+                        <Button Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="Settings_Click" ToolTip="Configuración">
+                            <Image x:Name="SettingsIcon" Width="16" Height="16"/>
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

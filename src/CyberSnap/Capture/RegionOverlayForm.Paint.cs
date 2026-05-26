@@ -44,6 +44,41 @@ public sealed partial class RegionOverlayForm
         bool isScan = _mode == CaptureMode.Scan;
         bool isSelectionMode = _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;
 
+        // Dynamic dimming/accent overlay
+        if (isSelectionMode)
+        {
+            var accent = UiChrome.AccentColor;
+            var overlayColor = Color.FromArgb(4, accent.R, accent.G, accent.B);
+
+            if (_isSelecting || _isConfirmingSelection)
+            {
+                var activeSelectionRect = _isConfirmingSelection ? _confirmRect : _selectionRect;
+                var state = g.Save();
+                try
+                {
+                    if (activeSelectionRect.Width > 0 && activeSelectionRect.Height > 0)
+                    {
+                        g.ExcludeClip(activeSelectionRect);
+                    }
+                    using (var dimBrush = new SolidBrush(overlayColor))
+                    {
+                        g.FillRectangle(dimBrush, ClientRectangle);
+                    }
+                }
+                finally
+                {
+                    g.Restore(state);
+                }
+            }
+            else if (!_hasSelection && !_autoDetectActive)
+            {
+                using (var dimBrush = new SolidBrush(overlayColor))
+                {
+                    g.FillRectangle(dimBrush, ClientRectangle);
+                }
+            }
+        }
+
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
         // Live tool previews (active drawing in progress)
@@ -128,7 +163,6 @@ public sealed partial class RegionOverlayForm
             // Draw buttons FIRST (underneath the frame so any overlap is covered)
             var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
             using (var btnFont = UiChrome.ChromeFont(11f, FontStyle.Bold))
-            using (var textBrush = new SolidBrush(UiChrome.SurfaceTextPrimary))
             {
                 var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
                 float corner = UiChrome.ScaledToolbarCornerRadius;
@@ -136,44 +170,60 @@ public sealed partial class RegionOverlayForm
                 bool cancelHover = _hoveredConfirmButton == 1;
 
                 // ── Confirm button (primary action) ──
-                WindowsDockRenderer.PaintSurface(g, confirmBtn, corner);
                 using (var confirmPath = WindowsDockRenderer.RoundedRect(confirmBtn, corner))
                 {
-                    using var confirmFill = new SolidBrush(confirmHover
-                        ? Color.FromArgb(72, UiChrome.AccentColor)
-                        : Color.FromArgb(46, UiChrome.AccentColor));
+                    // Solid base to completely block background letters
+                    int baseVal = UiChrome.IsDark ? 16 : 240;
+                    using var baseFill = new SolidBrush(Color.FromArgb(255, baseVal, baseVal, baseVal));
+                    g.FillPath(baseFill, confirmPath);
+
+                    // Solid premium accent fill
+                    using var confirmFill = new SolidBrush(Color.FromArgb(confirmHover ? 255 : 215, UiChrome.AccentColor));
                     g.FillPath(confirmFill, confirmPath);
                 }
                 using (var confirmGlowPen = new Pen(
-                    confirmHover ? Color.FromArgb(65, UiChrome.AccentColor) : Color.FromArgb(40, UiChrome.AccentColor),
+                    confirmHover ? Color.FromArgb(90, UiChrome.AccentColor) : Color.FromArgb(50, UiChrome.AccentColor),
                     confirmHover ? 6f : 5f))
                 using (var confirmGlowPath = WindowsDockRenderer.RoundedRect(
                     RectangleF.Inflate(confirmBtn, 2, 2), corner))
                     g.DrawPath(confirmGlowPen, confirmGlowPath);
                 using (var confirmBorderPen = new Pen(
-                    confirmHover ? Color.FromArgb(255, UiChrome.AccentColor) : Color.FromArgb(200, UiChrome.AccentColor), 1.5f))
+                    confirmHover ? Color.FromArgb(255, UiChrome.AccentColor) : Color.FromArgb(210, UiChrome.AccentColor), 1.5f))
                 using (var confirmBorderPath = WindowsDockRenderer.RoundedRect(confirmBtn, corner))
                     g.DrawPath(confirmBorderPen, confirmBorderPath);
-                g.DrawString(LocalizationService.Translate("Confirm"), btnFont, textBrush, confirmBtn, sf);
+                
+                // Clear high-contrast text
+                using (var confirmTextBrush = new SolidBrush(Color.White))
+                    g.DrawString(LocalizationService.Translate("Confirm"), btnFont, confirmTextBrush, confirmBtn, sf);
 
                 // ── Cancel button (secondary action) ──
-                WindowsDockRenderer.PaintSurface(g, cancelBtn, corner);
-                if (cancelHover)
+                using (var cancelPath = WindowsDockRenderer.RoundedRect(cancelBtn, corner))
                 {
-                    using (var cancelPath = WindowsDockRenderer.RoundedRect(cancelBtn, corner))
-                    using (var cancelHoverBrush = new SolidBrush(Color.FromArgb(18, UiChrome.SurfaceTextPrimary)))
+                    // Solid base fill with dark red in dark mode, light red in light mode
+                    var cancelBgColor = UiChrome.IsDark
+                        ? Color.FromArgb(255, 45, 12, 12)
+                        : Color.FromArgb(255, 250, 230, 230);
+                    using var cancelFill = new SolidBrush(cancelBgColor);
+                    g.FillPath(cancelFill, cancelPath);
+                    if (cancelHover)
+                    {
+                        using var cancelHoverBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 30 : 20, 239, 68, 68));
                         g.FillPath(cancelHoverBrush, cancelPath);
+                    }
                 }
+                var neonRedColor = Color.FromArgb(239, 68, 68);
                 using (var cancelGlowPen = new Pen(
-                    cancelHover ? Color.FromArgb(20, UiChrome.SurfaceTextPrimary) : Color.FromArgb(10, UiChrome.SurfaceTextPrimary), 4f))
+                    cancelHover ? Color.FromArgb(40, neonRedColor) : Color.FromArgb(12, neonRedColor), 4f))
                 using (var cancelGlowPath = WindowsDockRenderer.RoundedRect(
                     RectangleF.Inflate(cancelBtn, 2, 2), corner))
                     g.DrawPath(cancelGlowPen, cancelGlowPath);
                 using (var cancelBorderPen = new Pen(
-                    cancelHover ? Color.FromArgb(90, UiChrome.SurfaceTextPrimary) : Color.FromArgb(45, UiChrome.SurfaceTextPrimary), 1.2f))
+                    cancelHover ? neonRedColor : Color.FromArgb(UiChrome.IsDark ? 100 : 70, neonRedColor), 1.2f))
                 using (var cancelBorderPath = WindowsDockRenderer.RoundedRect(cancelBtn, corner))
                     g.DrawPath(cancelBorderPen, cancelBorderPath);
-                g.DrawString(LocalizationService.Translate("Cancel"), btnFont, textBrush, cancelBtn, sf);
+
+                using (var cancelTextBrush = new SolidBrush(cancelHover ? neonRedColor : UiChrome.SurfaceTextPrimary))
+                    g.DrawString(LocalizationService.Translate("Cancel"), btnFont, cancelTextBrush, cancelBtn, sf);
             }
 
             // Draw selection frame and handles ON TOP of buttons
@@ -267,8 +317,12 @@ public sealed partial class RegionOverlayForm
     private static void EnsureRulerChrome()
     {
         var text = UiChrome.SurfaceTextPrimary;
-        var pill = UiChrome.SurfacePill;
-        var border = UiChrome.SurfaceBorderSubtle;
+        var pill = UiChrome.IsDark
+            ? System.Drawing.Color.FromArgb(26, 27, 31)
+            : System.Drawing.Color.FromArgb(252, 252, 252);
+        var border = UiChrome.IsDark
+            ? System.Drawing.Color.FromArgb(160, 0, 200, 215)
+            : System.Drawing.Color.FromArgb(160, 0, 110, 205);
         int key = HashCode.Combine(text.ToArgb(), pill.ToArgb(), border.ToArgb());
         if (_rulerLinePen != null && _rulerThemeKey == key) return;
 
@@ -281,7 +335,7 @@ public sealed partial class RegionOverlayForm
         _rulerLinePen = new Pen(text, 1.8f) { StartCap = LineCap.Flat, EndCap = LineCap.Flat };
         _rulerTickPen = new Pen(text, 1.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
         _rulerBgBrush = new SolidBrush(pill);
-        _rulerBorderPen = new Pen(border, 1.4f);
+        _rulerBorderPen = new Pen(border, 1.0f);
         _rulerFgBrush = new SolidBrush(text);
         _rulerFont ??= UiChrome.ChromeFont(9.5f);
         _rulerThemeKey = key;
@@ -313,7 +367,46 @@ public sealed partial class RegionOverlayForm
         string text = $"{(int)dist}px  \u00b7  {Math.Abs(dx):0} \u00d7 {Math.Abs(dy):0}  \u00b7  {angle:0.0}\u00b0";
         var sz = g.MeasureString(text, _rulerFont!);
         var mid = new PointF((from.X + to.X) / 2f, (from.Y + to.Y) / 2f);
-        var label = new RectangleF(mid.X - sz.Width / 2f - 10, mid.Y - sz.Height - 14, sz.Width + 20, sz.Height + 10);
+
+        // Determine preferred label normal direction (pointing up, or left if horizontal)
+        float lnx = 0, lny = -1;
+        if (dist > 1)
+        {
+            lnx = -dy / dist;
+            lny = dx / dist;
+            if (lny > 0 || (lny == 0 && lnx > 0))
+            {
+                lnx = -lnx;
+                lny = -lny;
+            }
+        }
+
+        float w = sz.Width + 20;
+        float h = sz.Height + 10;
+        float ext = MathF.Abs(lnx * w / 2f) + MathF.Abs(lny * h / 2f);
+        float d = ext + 14f;
+
+        var labelCenter = new PointF(mid.X + lnx * d, mid.Y + lny * d);
+        var label = new RectangleF(labelCenter.X - w / 2f, labelCenter.Y - h / 2f, w, h);
+
+        // If preferred direction goes off top/left, try the opposite side of the line
+        if (label.Left < 4 || label.Top < 4)
+        {
+            var altCenter = new PointF(mid.X - lnx * d, mid.Y - lny * d);
+            var altLabel = new RectangleF(altCenter.X - w / 2f, altCenter.Y - h / 2f, w, h);
+            if (altLabel.Left >= 4 && altLabel.Top >= 4 &&
+                altLabel.Right <= ClientRectangle.Width - 4 &&
+                altLabel.Bottom <= ClientRectangle.Height - 4)
+            {
+                label = altLabel;
+            }
+        }
+
+        // Clamp to client bounds to ensure it never goes off-screen
+        float lx = Math.Clamp(label.X, 4f, ClientRectangle.Width - w - 4f);
+        float ly = Math.Clamp(label.Y, 4f, ClientRectangle.Height - h - 4f);
+        label = new RectangleF(lx, ly, w, h);
+
         PaintShadow(g, label, 8f, 48, 1f);
         using var path = RRect(label, 8f);
         g.FillPath(_rulerBgBrush!, path);

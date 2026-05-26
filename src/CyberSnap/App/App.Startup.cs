@@ -96,6 +96,7 @@ public partial class App
         Helpers.FluentIcons.Preload();
 
         ScheduleAutoUpdateCheck();
+        EnsureWidgetWindowCreated();
 
         if (openSettingsAfterWizard || openSettingsOnStartup)
             ShowSettings();

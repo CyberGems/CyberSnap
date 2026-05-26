@@ -172,6 +172,10 @@ public partial class SettingsWindow
             CaptureDelayCombo.SelectedIndex = s.CaptureDelaySeconds switch { 3 => 1, 5 => 2, 10 => 3, _ => 0 };
             AutoPinPreviewsCheck.IsChecked = s.AutoPinPreviews;
             SoundPackCombo.SelectedIndex = (int)s.SoundPack;
+            ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
+            WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
+            SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
+            UpdateWidgetOptionsVisibility(s.ShowCaptureWidget);
             RecordingFormatCombo.SelectedIndex = (int)s.RecordingFormat;
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
             SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
@@ -415,7 +419,7 @@ public partial class SettingsWindow
 
     private string GetSelectedSettingsPageTitle()
     {
-        if (ToastTab.IsChecked == true) return "Toast";
+        if (ToastTab.IsChecked == true) return "Notifications";
         if (HotkeysTab.IsChecked == true) return "Tools";
         if (CaptureTab.IsChecked == true) return "Capture";
         if (RecordingTab.IsChecked == true) return "Recording";

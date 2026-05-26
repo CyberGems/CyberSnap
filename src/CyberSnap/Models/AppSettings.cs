@@ -228,6 +228,14 @@ public sealed class AppSettings
     public Dictionary<string, string> OpenWithApps { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public SoundPack SoundPack { get; set; } = SoundPack.Default;
 
+    // Floating Quick-Capture Widget Settings
+    public bool ShowCaptureWidget { get; set; } = true;
+    public CaptureDockSide WidgetDockEdge { get; set; } = CaptureDockSide.Top;
+    public int WidgetMonitorIndex { get; set; } = -1;
+    public double WidgetDockPositionOffset { get; set; } = 0.5;
+    public bool WidgetDirectCopy { get; set; } = false;
+    public int WidgetHoverDelayMs { get; set; } = 250;
+
     // Window bounds
     public double SettingsWindowLeft { get; set; } = -1;
     public double SettingsWindowTop { get; set; } = -1;
