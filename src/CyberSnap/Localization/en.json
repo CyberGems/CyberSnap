@@ -1,6 +1,5 @@
-{
+﻿{
   "General": "General",
-  "Toast": "Toast",
   "Tools": "Tools",
   "Capture": "Capture",
   "Recording": "Recording",
@@ -118,15 +117,11 @@
   "Install": "Install",
   "Checking install state...": "Checking install state...",
   "Placement": "Placement",
-  "Toast position": "Position",
-  "Toast monitor": "Toast monitor",
   "Choose which monitor to show previews on.": "Choose which monitor to show previews on.",
   "Top Left": "Top Left",
   "Top Right": "Top Right",
   "Duration": "Duration",
-  "Capture toast duration": "Capture toast duration",
   "Set how long screenshot previews stay visible.": "Set how long screenshot previews stay visible.",
-  "System toast duration": "System toast duration",
   "Set how long system alert notifications stay visible.": "Set how long system alert notifications stay visible.",
   "Fade out": "Fade out",
   "Button layout": "Button layout",
@@ -264,7 +259,14 @@
   "Copy this video history item.": "Copy this video history item.",
   "Copy this sticker history item.": "Copy this sticker history item.",
   "Extract text": "Extract text",
-  "Extract text from this image using OCR.": "Extract text from this image using OCR."
-}
-
-
+  "Extract text from this image using OCR.": "Extract text from this image using OCR.",
+  "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Left-click to activate / Right-click for menu",
+  "Start capture": "Start capture",
+  "Text extraction (OCR)": "Text extraction (OCR)",
+  "Record screen": "Record screen",
+  "Notifications": "Notifications",
+  "Notification position": "Notification position",
+  "Notification monitor": "Notification monitor",
+  "Capture notification duration": "Capture notification duration",
+  "System notification duration": "System notification duration"
+}

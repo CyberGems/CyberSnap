@@ -120,7 +120,7 @@ public sealed class SettingsWindowVisualPolishTests
         AssertSettingsActionButton(xaml, "OpenSourceLocalInstallBtn", "Install open-source local translator", "Install or remove the open-source local translation runtime", "OpenSourceLocalInstallBtn_Click");
         AssertSettingsActionButton(xaml, "ArgosInstallBtn", "Install Argos Translate", "Install or remove the Argos local translation runtime", "ArgosInstallBtn_Click");
         AssertSettingsActionButton(xaml, "ResetImageIndexesBtn", "Reset image search cache", "Reset the image search index cache", "ResetImageIndexesBtn_Click");
-        AssertSettingsActionButton(xaml, "ResetToastButtonsBtn", "Reset toast button layout", "Restore the default toast button layout", "ResetToastButtonsBtn_Click");
+        AssertSettingsActionButton(xaml, "ResetToastButtonsBtn", "Reset notification button layout", "Restore the default notification button layout", "ResetToastButtonsBtn_Click");
 
         foreach (Match match in Regex.Matches(xaml, @"<TextBox\b[^>]*x:Name=""[^""]+""[^>]*>", RegexOptions.Singleline))
         {
@@ -142,7 +142,7 @@ public sealed class SettingsWindowVisualPolishTests
         var toastCode = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "Settings", "SettingsWindow.Toast.cs"));
         var xaml = File.ReadAllText(RepoPath("src", "CyberSnap", "UI", "SettingsWindow.xaml"));
 
-        AssertDynamicStatusTextBlock(xaml, "ToastLayoutSelectionText", "Toast layout selection", isLive: true);
+        AssertDynamicStatusTextBlock(xaml, "ToastLayoutSelectionText", "notification layout selection", isLive: true);
         var selectionTag = GetOpeningTag(xaml, xaml.IndexOf("x:Name=\"ToastLayoutSelectionText\"", StringComparison.Ordinal), "<TextBlock");
         Assert.Contains("AutomationProperties.HelpText=\"{Binding Text, RelativeSource={RelativeSource Self}}\"", selectionTag);
 
@@ -153,29 +153,29 @@ public sealed class SettingsWindowVisualPolishTests
 
         var buttonBlock = GetMethodBlock(toastCode, "private void UpdateToastLayoutButton(Border border, ToastButtonKind button)");
         Assert.Contains("border.Focusable = true;", buttonBlock);
-        Assert.Contains("AutomationProperties.SetName(border, $\"{label} toast button\");", buttonBlock);
+        Assert.Contains("AutomationProperties.SetName(border, $\"{label} notification button\");", buttonBlock);
         Assert.Contains("AutomationProperties.SetHelpText(border, \"Press Enter or Space to move the selected button here.\");", buttonBlock);
         Assert.Contains("border.KeyDown -= ToastLayoutButton_KeyDown;", buttonBlock);
         Assert.Contains("border.KeyDown += ToastLayoutButton_KeyDown;", buttonBlock);
 
         var slotBlock = GetMethodBlock(toastCode, "private void UpdateToastLayoutSlot(Border slotBorder, ToastButtonSlot slot)");
         Assert.Contains("slotBorder.Focusable = true;", slotBlock);
-        Assert.Contains("AutomationProperties.SetName(slotBorder, $\"{label} toast slot\");", slotBlock);
-        Assert.Contains("AutomationProperties.SetHelpText(slotBorder, \"Press Enter or Space to place the selected toast button here.\");", slotBlock);
+        Assert.Contains("AutomationProperties.SetName(slotBorder, $\"{label} notification slot\");", slotBlock);
+        Assert.Contains("AutomationProperties.SetHelpText(slotBorder, \"Press Enter or Space to place the selected notification button here.\");", slotBlock);
         Assert.Contains("slotBorder.KeyDown -= ToastLayoutSlot_KeyDown;", slotBlock);
         Assert.Contains("slotBorder.KeyDown += ToastLayoutSlot_KeyDown;", slotBlock);
 
         var shelfBlock = GetMethodBlock(toastCode, "private void RefreshToastHiddenShelf()");
         Assert.Contains("ToastHiddenShelf.Focusable = true;", shelfBlock);
-        Assert.Contains("AutomationProperties.SetName(ToastHiddenShelf, \"Hidden toast button shelf\");", shelfBlock);
-        Assert.Contains("AutomationProperties.SetHelpText(ToastHiddenShelf, \"Press Enter or Space to hide the selected toast button.\");", shelfBlock);
+        Assert.Contains("AutomationProperties.SetName(ToastHiddenShelf, \"Hidden notification button shelf\");", shelfBlock);
+        Assert.Contains("AutomationProperties.SetHelpText(ToastHiddenShelf, \"Press Enter or Space to hide the selected notification button.\");", shelfBlock);
         Assert.Contains("ToastHiddenShelf.KeyDown -= ToastHiddenShelf_KeyDown;", shelfBlock);
         Assert.Contains("ToastHiddenShelf.KeyDown += ToastHiddenShelf_KeyDown;", shelfBlock);
 
         var hiddenChipBlock = GetMethodBlock(toastCode, "private Border CreateHiddenToastButtonChip(ToastButtonKind button)");
         Assert.Contains("Focusable = true,", hiddenChipBlock);
-        Assert.Contains("ToolTip = $\"Select hidden {label} toast button\",", hiddenChipBlock);
-        Assert.Contains("AutomationProperties.SetName(chip, $\"Hidden {label} toast button\");", hiddenChipBlock);
+        Assert.Contains("ToolTip = $\"Select hidden {label} notification button\",", hiddenChipBlock);
+        Assert.Contains("AutomationProperties.SetName(chip, $\"Hidden {label} notification button\");", hiddenChipBlock);
         Assert.Contains("AutomationProperties.SetHelpText(chip, \"Press Enter or Space to select this hidden button, then choose a slot.\");", hiddenChipBlock);
         Assert.Contains("chip.KeyDown += ToastHiddenButton_KeyDown;", hiddenChipBlock);
 
@@ -938,13 +938,13 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("private bool _suppressGeneralPreferenceChange;", settingsCode);
         Assert.Contains("x:Name=\"GeneralPreferenceStatusText\"", xaml);
         AssertNamedTextBlockUsesStyle(xaml, "GeneralPreferenceStatusText", "SettingsStatusText");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "80%", "Scale CyberSnap UI to 80%.", "80 percent UI scale", "Make CyberSnap windows, toasts, and capture controls smaller.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "90%", "Scale CyberSnap UI to 90%.", "90 percent UI scale", "Make CyberSnap windows, toasts, and capture controls slightly smaller.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "100%", "Use normal CyberSnap UI scale.", "100 percent UI scale", "Use the default CyberSnap window, toast, and capture-control size.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "110%", "Scale CyberSnap UI to 110%.", "110 percent UI scale", "Make CyberSnap windows, toasts, and capture controls slightly larger.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "120%", "Scale CyberSnap UI to 120%.", "120 percent UI scale", "Make CyberSnap windows, toasts, and capture controls larger.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "130%", "Scale CyberSnap UI to 130%.", "130 percent UI scale", "Make CyberSnap windows, toasts, and capture controls much larger.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "140%", "Scale CyberSnap UI to 140%.", "140 percent UI scale", "Make CyberSnap windows, toasts, and capture controls extra large.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "80%", "Scale CyberSnap UI to 80%.", "80 percent UI scale", "Make CyberSnap windows, notifications, and capture controls smaller.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "90%", "Scale CyberSnap UI to 90%.", "90 percent UI scale", "Make CyberSnap windows, notifications, and capture controls slightly smaller.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "100%", "Use normal CyberSnap UI scale.", "100 percent UI scale", "Use the default CyberSnap window, notification, and capture-control size.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "110%", "Scale CyberSnap UI to 110%.", "110 percent UI scale", "Make CyberSnap windows, notifications, and capture controls slightly larger.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "120%", "Scale CyberSnap UI to 120%.", "120 percent UI scale", "Make CyberSnap windows, notifications, and capture controls larger.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "130%", "Scale CyberSnap UI to 130%.", "130 percent UI scale", "Make CyberSnap windows, notifications, and capture controls much larger.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "UiScaleCombo", "140%", "Scale CyberSnap UI to 140%.", "140 percent UI scale", "Make CyberSnap windows, notifications, and capture controls extra large.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "SoundPackCombo", "Default", "Use the default notification sounds.", "Default sound pack", "Use CyberSnap's standard notification sounds.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "SoundPackCombo", "Soft", "Use quieter notification sounds.", "Soft sound pack", "Use softer notification sounds for captures and previews.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "SoundPackCombo", "Retro", "Use retro notification sounds.", "Retro sound pack", "Use retro-style notification sounds for captures and previews.");
@@ -1178,33 +1178,33 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("private bool _suppressToastPreferenceChange;", settingsCode);
         Assert.Contains("x:Name=\"ToastPreferenceStatusText\"", xaml);
         AssertNamedTextBlockUsesStyle(xaml, "ToastPreferenceStatusText", "SettingsStatusText");
-        AssertDynamicStatusTextBlock(xaml, "ToastPreferenceStatusText", "Toast preference status", isLive: true);
+        AssertDynamicStatusTextBlock(xaml, "ToastPreferenceStatusText", "notification preference status", isLive: true);
         var toastStatusTag = GetOpeningTag(xaml, xaml.IndexOf("x:Name=\"ToastPreferenceStatusText\"", StringComparison.Ordinal), "<TextBlock");
         Assert.Contains("AutomationProperties.HelpText=\"{Binding Text, RelativeSource={RelativeSource Self}}\"", toastStatusTag);
-        AssertNamedControlHasLabel(xaml, "ToastSlotTopLeft", "<Border", "top-left toast slot", "Move selected toast button to top-left", "Press Enter or Space to place the selected toast button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotTopInnerLeft", "<Border", "top inner-left toast slot", "Move selected toast button to top inner-left", "Press Enter or Space to place the selected toast button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotTopInnerRight", "<Border", "top inner-right toast slot", "Move selected toast button to top inner-right", "Press Enter or Space to place the selected toast button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotTopRight", "<Border", "top-right toast slot", "Move selected toast button to top-right", "Press Enter or Space to place the selected toast button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotBottomLeft", "<Border", "bottom-left toast slot", "Move selected toast button to bottom-left", "Press Enter or Space to place the selected toast button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotBottomInnerLeft", "<Border", "bottom inner-left toast slot", "Move selected toast button to bottom inner-left", "Press Enter or Space to place the selected toast button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotBottomInnerRight", "<Border", "bottom inner-right toast slot", "Move selected toast button to bottom inner-right", "Press Enter or Space to place the selected toast button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotBottomRight", "<Border", "bottom-right toast slot", "Move selected toast button to bottom-right", "Press Enter or Space to place the selected toast button here.");
-        AssertNamedControlHasLabel(xaml, "ToastLayoutCloseBtn", "<Border", "Close toast button", "Move the close toast button");
-        AssertNamedControlHasLabel(xaml, "ToastLayoutPinBtn", "<Border", "Pin toast button", "Move the pin toast button");
-        AssertNamedControlHasLabel(xaml, "ToastLayoutSaveBtn", "<Border", "Save toast button", "Move the save toast button");
-        AssertNamedControlHasLabel(xaml, "ToastLayoutOfficeBtn", "<Border", "Office export toast button", "Move the office export toast button");
-        AssertNamedControlHasLabel(xaml, "ToastLayoutAiRedirectBtn", "<Border", "AI redirect toast button", "Move the AI redirect toast button");
-        AssertNamedControlHasLabel(xaml, "ToastLayoutDeleteBtn", "<Border", "Delete toast button", "Move the delete toast button");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Right", "Show previews near the right edge.", "Right toast position", "Place screenshot previews near the right edge of the screen.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Left", "Show previews near the left edge.", "Left toast position", "Place screenshot previews near the left edge of the screen.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Top Left", "Show previews in the top-left corner.", "Top-left toast position", "Place screenshot previews in the top-left corner of the screen.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Top Right", "Show previews in the top-right corner.", "Top-right toast position", "Place screenshot previews in the top-right corner of the screen.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "1.5 seconds", "Hide previews after 1.5 seconds.", "1.5 second toast duration", "Keep screenshot previews visible for 1.5 seconds.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "2 seconds", "Hide previews after 2 seconds.", "2 second toast duration", "Keep screenshot previews visible for 2 seconds.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "2.5 seconds", "Hide previews after 2.5 seconds.", "2.5 second toast duration", "Keep screenshot previews visible for 2.5 seconds.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "3 seconds", "Hide previews after 3 seconds.", "3 second toast duration", "Keep screenshot previews visible for 3 seconds.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "4 seconds", "Hide previews after 4 seconds.", "4 second toast duration", "Keep screenshot previews visible for 4 seconds.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "5 seconds", "Hide previews after 5 seconds.", "5 second toast duration", "Keep screenshot previews visible for 5 seconds.");
+        AssertNamedControlHasLabel(xaml, "ToastSlotTopLeft", "<Border", "top-left notification slot", "Move selected notification button to top-left", "Press Enter or Space to place the selected notification button here.");
+        AssertNamedControlHasLabel(xaml, "ToastSlotTopInnerLeft", "<Border", "top inner-left notification slot", "Move selected notification button to top inner-left", "Press Enter or Space to place the selected notification button here.");
+        AssertNamedControlHasLabel(xaml, "ToastSlotTopInnerRight", "<Border", "top inner-right notification slot", "Move selected notification button to top inner-right", "Press Enter or Space to place the selected notification button here.");
+        AssertNamedControlHasLabel(xaml, "ToastSlotTopRight", "<Border", "top-right notification slot", "Move selected notification button to top-right", "Press Enter or Space to place the selected notification button here.");
+        AssertNamedControlHasLabel(xaml, "ToastSlotBottomLeft", "<Border", "bottom-left notification slot", "Move selected notification button to bottom-left", "Press Enter or Space to place the selected notification button here.");
+        AssertNamedControlHasLabel(xaml, "ToastSlotBottomInnerLeft", "<Border", "bottom inner-left notification slot", "Move selected notification button to bottom inner-left", "Press Enter or Space to place the selected notification button here.");
+        AssertNamedControlHasLabel(xaml, "ToastSlotBottomInnerRight", "<Border", "bottom inner-right notification slot", "Move selected notification button to bottom inner-right", "Press Enter or Space to place the selected notification button here.");
+        AssertNamedControlHasLabel(xaml, "ToastSlotBottomRight", "<Border", "bottom-right notification slot", "Move selected notification button to bottom-right", "Press Enter or Space to place the selected notification button here.");
+        AssertNamedControlHasLabel(xaml, "ToastLayoutCloseBtn", "<Border", "Close notification button", "Move the close notification button");
+        AssertNamedControlHasLabel(xaml, "ToastLayoutPinBtn", "<Border", "Pin notification button", "Move the pin notification button");
+        AssertNamedControlHasLabel(xaml, "ToastLayoutSaveBtn", "<Border", "Save notification button", "Move the save notification button");
+        AssertNamedControlHasLabel(xaml, "ToastLayoutOfficeBtn", "<Border", "Office export notification button", "Move the office export notification button");
+        AssertNamedControlHasLabel(xaml, "ToastLayoutAiRedirectBtn", "<Border", "AI redirect notification button", "Move the AI redirect notification button");
+        AssertNamedControlHasLabel(xaml, "ToastLayoutDeleteBtn", "<Border", "Delete notification button", "Move the delete notification button");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Right", "Show previews near the right edge.", "Right notification position", "Place screenshot previews near the right edge of the screen.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Left", "Show previews near the left edge.", "Left notification position", "Place screenshot previews near the left edge of the screen.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Top Left", "Show previews in the top-left corner.", "Top-left notification position", "Place screenshot previews in the top-left corner of the screen.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Top Right", "Show previews in the top-right corner.", "Top-right notification position", "Place screenshot previews in the top-right corner of the screen.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "1.5 seconds", "Hide previews after 1.5 seconds.", "1.5 second notification duration", "Keep screenshot previews visible for 1.5 seconds.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "2 seconds", "Hide previews after 2 seconds.", "2 second notification duration", "Keep screenshot previews visible for 2 seconds.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "2.5 seconds", "Hide previews after 2.5 seconds.", "2.5 second notification duration", "Keep screenshot previews visible for 2.5 seconds.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "3 seconds", "Hide previews after 3 seconds.", "3 second notification duration", "Keep screenshot previews visible for 3 seconds.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "4 seconds", "Hide previews after 4 seconds.", "4 second notification duration", "Keep screenshot previews visible for 4 seconds.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastDurationCombo", "5 seconds", "Hide previews after 5 seconds.", "5 second notification duration", "Keep screenshot previews visible for 5 seconds.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastFadeDurationCombo", "1 second", "Fade previews out over 1 second.", "1 second fade-out duration", "Dismiss screenshot previews with a 1 second fade-out animation.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastFadeDurationCombo", "2 seconds", "Fade previews out over 2 seconds.", "2 second fade-out duration", "Dismiss screenshot previews with a 2 second fade-out animation.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastFadeDurationCombo", "3 seconds", "Fade previews out over 3 seconds.", "3 second fade-out duration", "Dismiss screenshot previews with a 3 second fade-out animation.");
@@ -1265,7 +1265,7 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("applyRuntime?.Invoke(previous);", helperBlock);
         Assert.Contains("SetToastPreferenceStatus($\"{label} change was not saved. Previous setting restored.\");", helperBlock);
         Assert.Contains("ToastWindow.ShowError(", helperBlock);
-        Assert.Contains("The previous toast setting was restored. Check Settings -> Toasts and try again.", helperBlock);
+        Assert.Contains("The previous notification setting was restored. Check Settings -> Notifications and try again.", helperBlock);
 
         var statusBlock = GetMethodBlock(preferencesCode, "private void SetToastPreferenceStatus(string message)");
         Assert.Contains("ToastPreferenceStatusText.Text = message;", statusBlock);

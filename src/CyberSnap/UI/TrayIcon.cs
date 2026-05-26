@@ -35,7 +35,7 @@ public sealed class TrayIcon : IDisposable
         _defaultIcon = CreateDefaultIcon();
         _notifyIcon = new NotifyIcon
         {
-            Text = T("CyberSnap - Click to view history, right-click for menu"),
+            Text = T("CyberSnap - Left-click to activate / Right-click for menu"),
             Icon = _defaultIcon,
             Visible = true
         };
@@ -47,7 +47,7 @@ public sealed class TrayIcon : IDisposable
                 if (Capture.RecordingForm.Current != null)
                     Capture.RecordingForm.Current.RequestStop();
                 else
-                    OnHistory?.Invoke();
+                    OnCapture?.Invoke();
             }
             else if (e.Button == MouseButtons.Right)
                 ShowMenu();
@@ -56,7 +56,7 @@ public sealed class TrayIcon : IDisposable
         _notifyIcon.MouseDoubleClick += (_, e) =>
         {
             if (e.Button == MouseButtons.Left)
-                OnHistory?.Invoke();
+                OnCapture?.Invoke();
         };
 
         _menu = CreateThemedMenu();
@@ -76,7 +76,7 @@ public sealed class TrayIcon : IDisposable
         else
         {
             _notifyIcon.Icon = _defaultIcon;
-            _notifyIcon.Text = T("CyberSnap - Click to view history, right-click for menu");
+            _notifyIcon.Text = T("CyberSnap - Left-click to activate / Right-click for menu");
         }
     }
 
@@ -84,7 +84,7 @@ public sealed class TrayIcon : IDisposable
     {
         _notifyIcon.Text = _isShowingRecording
             ? T("CyberSnap recording - click to stop, right-click for menu")
-            : T("CyberSnap - Click to view history, right-click for menu");
+            : T("CyberSnap - Left-click to activate / Right-click for menu");
 
         var oldMenu = _menu;
         _menu = CreateThemedMenu();
@@ -98,14 +98,14 @@ public sealed class TrayIcon : IDisposable
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: WindowsMenuRenderer.DefaultWidth);
         bool isRec = Capture.RecordingForm.Current != null;
 
-        var captureItem  = WindowsMenuRenderer.Item(T("Screenshot"), HotkeyHint("rect"), "rect");
-        var ocrItem      = WindowsMenuRenderer.Item(T("Text capture"), HotkeyHint("ocr"), "ocr");
+        var captureItem  = WindowsMenuRenderer.Item(T("Start capture"), HotkeyHint("rect"), "rect");
+        var scrollItem   = WindowsMenuRenderer.Item(T("Scroll capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
+        var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("ocr"), "ocr");
         var pickerItem   = WindowsMenuRenderer.Item(T("Color picker"), HotkeyHint("picker"), "picker");
         var recordItem   = isRec
             ? WindowsMenuRenderer.Item(T("Stop recording"), null, "record", active: true, danger: true)
-            : WindowsMenuRenderer.Item(T("Record"), HotkeyHint("_record"), "record");
+            : WindowsMenuRenderer.Item(T("Record screen"), HotkeyHint("_record"), "record");
         _recordItem = recordItem;
-        var scrollItem   = WindowsMenuRenderer.Item(T("Scroll capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
         var settingsItem = WindowsMenuRenderer.Item(T("Settings"), iconId: "gear");
         var historyItem  = WindowsMenuRenderer.Item(T("Capture History"), iconId: "folder");
         var quitItem     = WindowsMenuRenderer.Item(T("Quit"), iconId: "close", danger: true);
@@ -127,7 +127,7 @@ public sealed class TrayIcon : IDisposable
 
         menu.Items.AddRange(new ToolStripItem[]
         {
-            captureItem, ocrItem, pickerItem, recordItem, scrollItem,
+            captureItem, scrollItem, ocrItem, pickerItem, recordItem,
             new ToolStripSeparator(),
             settingsItem, historyItem,
             new ToolStripSeparator(),
@@ -178,7 +178,7 @@ public sealed class TrayIcon : IDisposable
             return;
 
         bool isRec = Capture.RecordingForm.Current != null;
-        _recordItem.Text = isRec ? T("Stop recording") : T("Record");
+        _recordItem.Text = isRec ? T("Stop recording") : T("Record screen");
         _recordItem.ShortcutKeyDisplayString = isRec ? string.Empty : HotkeyHint("_record") ?? string.Empty;
         _recordItem.Tag = isRec;
         _recordItem.ForeColor = isRec ? Color.FromArgb(239, 68, 68) : UiChrome.SurfaceTextPrimary;

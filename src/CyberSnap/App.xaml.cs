@@ -23,6 +23,7 @@ public partial class App : Application
     private readonly object _historyGate = new();
     private TrayIcon? _trayIcon;
     private SettingsWindow? _settingsWindow;
+    private CaptureWidgetWindow? _widgetWindow;
     private DispatcherTimer? _idleTrimTimer;
     private int _isCapturing;
     private bool _historyRecovered;
@@ -44,5 +45,50 @@ public partial class App : Application
             return;
         }
         _historyWindow?.RequestRefresh();
+    }
+
+    public void EnsureWidgetWindowCreated()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(EnsureWidgetWindowCreated);
+            return;
+        }
+
+        if (_settingsService?.Settings.ShowCaptureWidget == true && _widgetWindow == null)
+        {
+            _widgetWindow = new CaptureWidgetWindow(_settingsService);
+            _widgetWindow.Show();
+        }
+    }
+
+    public void CloseWidgetWindow()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(CloseWidgetWindow);
+            return;
+        }
+
+        if (_widgetWindow != null)
+        {
+            try
+            {
+                _widgetWindow.Close();
+            }
+            catch { }
+            _widgetWindow = null;
+        }
+    }
+
+    public void RefreshWidgetWindowLayout()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(RefreshWidgetWindowLayout);
+            return;
+        }
+
+        _widgetWindow?.RefreshLayout();
     }
 }

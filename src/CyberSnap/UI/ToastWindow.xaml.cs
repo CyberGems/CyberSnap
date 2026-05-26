@@ -162,8 +162,10 @@ public partial class ToastWindow : Window
     private void ConfigureShell()
     {
         OuterShell.Background = System.Windows.Media.Brushes.Transparent;
-        OuterShell.BorderBrush = Theme.Brush(Color.FromArgb(180, 255, 255, 255));
-        OuterShell.BorderThickness = new Thickness(2.0);
+        OuterShell.BorderBrush = Theme.Brush(Theme.IsDark
+            ? Color.FromArgb(160, 0, 200, 215)
+            : Color.FromArgb(160, 0, 110, 205));
+        OuterShell.BorderThickness = new Thickness(1.0);
         OuterShell.Effect = CreateToastShadow();
         Root.Background = Theme.Brush(Theme.ToastBg);
         Root.BorderBrush = System.Windows.Media.Brushes.Transparent;
@@ -283,7 +285,7 @@ public partial class ToastWindow : Window
                 ? Color.FromRgb(60, 28, 28)
                 : Color.FromRgb(255, 240, 240));
             OuterShell.BorderBrush = Theme.Brush(Color.FromArgb(160, red.R, red.G, red.B));
-            OuterShell.BorderThickness = new Thickness(2.0);
+            OuterShell.BorderThickness = new Thickness(1.0);
             ProgressBar.Background = Theme.Brush(Color.FromArgb(180, red.R, red.G, red.B));
             TitleText.Foreground = Theme.Brush(red);
         }
@@ -430,14 +432,29 @@ public partial class ToastWindow : Window
 
     private static void ApplyToastOverlayButtonVisual(System.Windows.Controls.Border btn, System.Windows.Controls.Image icon, string iconId, bool active)
     {
-        btn.Background = Theme.Brush(active
-            ? (Theme.IsDark ? Color.FromRgb(70, 70, 70) : Color.FromRgb(226, 226, 226))
-            : (Theme.IsDark ? Color.FromRgb(48, 48, 48) : Color.FromRgb(246, 246, 246)));
-        btn.BorderBrush = System.Windows.Media.Brushes.Transparent;
-        btn.BorderThickness = new Thickness(0);
+        if (Theme.IsDark)
+        {
+            btn.Background = Theme.Brush(active
+                ? Color.FromArgb(235, 12, 50, 62)
+                : Color.FromArgb(215, 6, 22, 28));
+            btn.BorderBrush = Theme.Brush(active
+                ? Color.FromArgb(255, 0, 255, 255)
+                : Color.FromArgb(130, 0, 220, 220));
+        }
+        else
+        {
+            btn.Background = Theme.Brush(active
+                ? Color.FromArgb(235, 180, 225, 255)
+                : Color.FromArgb(210, 235, 246, 253));
+            btn.BorderBrush = Theme.Brush(active
+                ? Color.FromArgb(255, 0, 120, 215)
+                : Color.FromArgb(130, 0, 120, 215));
+        }
+        btn.BorderThickness = new Thickness(1);
+
         var iconColor = Theme.IsDark
-            ? System.Drawing.Color.FromArgb(255, 255, 255, 255)
-            : System.Drawing.Color.FromArgb(255, 24, 24, 24);
+            ? (active ? System.Drawing.Color.FromArgb(255, 0, 255, 255) : System.Drawing.Color.FromArgb(235, 255, 255, 255))
+            : (active ? System.Drawing.Color.FromArgb(255, 0, 90, 180) : System.Drawing.Color.FromArgb(235, 24, 24, 24));
         icon.Source = FluentIcons.RenderWpf(iconId, iconColor, 22, active);
     }
 
@@ -1557,7 +1574,7 @@ public partial class ToastWindow : Window
         ProgressBar.Visibility = Visibility.Visible;
         if (_dragBorderBrush is not null)
             OuterShell.BorderBrush = _dragBorderBrush;
-        OuterShell.BorderThickness = _dragBorderThickness == default ? new Thickness(2.0) : _dragBorderThickness;
+        OuterShell.BorderThickness = _dragBorderThickness == default ? new Thickness(1.0) : _dragBorderThickness;
         _dragBorderBrush = null;
         _dragBorderThickness = default;
         Mouse.OverrideCursor = null;

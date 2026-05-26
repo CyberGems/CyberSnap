@@ -156,4 +156,13 @@ public partial class App
 
     private static bool TrySwitchActiveOverlay(CaptureMode mode) =>
         RegionOverlayForm.TrySwitchCurrentOverlayMode(mode);
+
+    public bool IsCapturingActive() => Volatile.Read(ref _isCapturing) != 0;
+
+    public void OnHotkeyPressedProxy() => OnHotkeyPressed();
+    public void OnOcrHotkeyPressedProxy() => OnOcrHotkeyPressed();
+    public void OnGifHotkeyPressedProxy() => OnGifHotkeyPressed();
+    public void OnScrollCaptureHotkeyPressedProxy() => OnScrollCaptureHotkeyPressed();
+    public void OnScanHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Scan);
+    public void OnPickerHotkeyPressedProxy() => OnPickerHotkeyPressed();
 }

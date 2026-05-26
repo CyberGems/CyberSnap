@@ -55,7 +55,7 @@ public static class Theme
     public static Color Separator => IsDark ? CA(255, 255, 255, 16) : CA(0, 0, 0, 10);
 
     // Toast background (needs to be opaque enough to read)
-    public static Color ToastBg => IsDark ? C(48, 48, 48) : C(252, 252, 252);
+    public static Color ToastBg => IsDark ? C(26, 27, 31) : C(252, 252, 252);
     public static Color ToastBorder => IsDark ? CA(255, 255, 255, 30) : CA(0, 0, 0, 18);
 
     public static SolidColorBrush Brush(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }

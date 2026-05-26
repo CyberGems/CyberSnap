@@ -1,6 +1,5 @@
 ﻿{
   "General": "Umum",
-  "Toast": "Roti bakar",
   "Tools": "Alatan",
   "Capture": "Tangkap",
   "Recording": "Rakaman",
@@ -116,15 +115,11 @@
   "Install": "Pasang",
   "Checking install state...": "Menyemak keadaan pemasangan...",
   "Placement": "Penempatan",
-  "Toast position": "Kedudukan roti bakar",
-  "Toast monitor": "Toast monitor",
   "Choose which monitor to show previews on.": "Choose which monitor to show previews on.",
   "Top Left": "Atas Kiri",
   "Top Right": "Atas Kanan",
   "Duration": "Tempoh",
-  "Capture toast duration": "Capture toast duration",
   "Set how long screenshot previews stay visible.": "Set how long screenshot previews stay visible.",
-  "System toast duration": "System toast duration",
   "Set how long system alert notifications stay visible.": "Set how long system alert notifications stay visible.",
   "Fade out": "Pudar keluar",
   "Button layout": "Susun atur butang",
@@ -264,5 +259,14 @@
   "Display the search bar in the Capture History window.": "Display the search bar in the Capture History window.",
   "Automatically open newly taken screenshots in the system default viewer (such as CyberViewer).": "Automatically open newly taken screenshots in the system default viewer (such as CyberViewer).",
   "Active drawing color": "Active drawing color",
-  "Close (Esc or right-click)": "Close (Esc or right-click)"
-}
+  "Close (Esc or right-click)": "Close (Esc or right-click)",
+  "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Click izquierdo para activar / Click derecho para menú",
+  "Start capture": "Start capture",
+  "Text extraction (OCR)": "Text extraction (OCR)",
+  "Record screen": "Record screen",
+  "Notifications": "Pemberitahuan",
+  "Notification position": "Kedudukan pemberitahuan",
+  "Notification monitor": "Monitor pemberitahuan",
+  "Capture notification duration": "Tempoh pemberitahuan tangkapan",
+  "System notification duration": "Tempoh pemberitahuan sistem"
+}

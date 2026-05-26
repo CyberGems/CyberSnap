@@ -15,17 +15,17 @@ public sealed partial class RegionOverlayForm
         int btn = GetToolbarButtonAt(e.Location);
         if (btn >= 0)
         {
-            int closeIdx = _mainBarTools.Length + 1;
-            if (btn == closeIdx) { Cancel(); return; }     // close
+            if (btn == CloseButtonIndex) { Cancel(); return; }     // close (Cancel)
             if (btn == ColorButtonIndex) { ToggleColorPicker(); return; } // color dot
+            if (btn == PositionButtonIndex) { ToggleToolbarPosition(); return; } // toggle position
             if (btn < _mainBarTools.Length)
             {
                 if (_mainBarTools[btn].Mode.HasValue)
                     SetTool(_mainBarTools[btn]);
             }
-            else if (btn >= closeIdx + 1 && btn < BtnCount)
+            else if (btn >= CloseButtonIndex + 1 && btn < BtnCount)
             {
-                int flyoutIdx = btn - (closeIdx + 1);
+                int flyoutIdx = btn - (CloseButtonIndex + 1);
                 if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length && _flyoutTools[flyoutIdx].Mode.HasValue)
                     SetTool(_flyoutTools[flyoutIdx]);
             }

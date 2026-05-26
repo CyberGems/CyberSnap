@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Drawing.Imaging;
@@ -195,10 +195,12 @@ public sealed partial class RegionOverlayForm
         // Line + tick marks (tickHalf=6 perpendicular) + safety pad
         var lineRect = Rectangle.FromLTRB(minX - 12, minY - 12, maxX + 12, maxY + 12);
 
-        // Distance label floats above the midpoint. Worst-case label is ~280Ã—40 with shadow.
+        // Distance label floats. Worst-case label is ~300x50 and can be offset
+        // perpendicular to the line by up to 160px.
+        // A box of 310x190 around the midpoint is conservative and covers all directions.
         int midX = (from.X + to.X) / 2;
         int midY = (from.Y + to.Y) / 2;
-        var labelRect = new Rectangle(midX - 170, midY - 64, 340, 80);
+        var labelRect = new Rectangle(midX - 310, midY - 190, 620, 380);
 
         return Rectangle.Union(lineRect, labelRect);
     }

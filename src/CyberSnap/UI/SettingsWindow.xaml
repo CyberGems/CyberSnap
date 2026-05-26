@@ -680,7 +680,7 @@
                     
                     <RadioButton x:Name="SettingsTab" Content="General" GroupName="Main"
                                  IsChecked="True" Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="ToastTab" Content="Toast" GroupName="Main"
+                    <RadioButton x:Name="ToastTab" Content="Notifications" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="HotkeysTab" Content="Tools" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
@@ -1857,36 +1857,36 @@
                                 <ComboBox x:Name="UiScaleCombo" Grid.Column="2" MinWidth="110"
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="UI scale"
-                                          ToolTip="Manually scale CyberSnap windows, toasts, and capture controls."
+                                          ToolTip="Manually scale CyberSnap windows, notifications, and capture controls."
                                           SelectionChanged="UiScaleCombo_SelectionChanged">
                                     <ComboBoxItem Content="80%" Tag="0.8"
                                                   ToolTip="Scale CyberSnap UI to 80%."
                                                   AutomationProperties.Name="80 percent UI scale"
-                                                  AutomationProperties.HelpText="Make CyberSnap windows, toasts, and capture controls smaller."/>
+                                                  AutomationProperties.HelpText="Make CyberSnap windows, notifications, and capture controls smaller."/>
                                     <ComboBoxItem Content="90%" Tag="0.9"
                                                   ToolTip="Scale CyberSnap UI to 90%."
                                                   AutomationProperties.Name="90 percent UI scale"
-                                                  AutomationProperties.HelpText="Make CyberSnap windows, toasts, and capture controls slightly smaller."/>
+                                                  AutomationProperties.HelpText="Make CyberSnap windows, notifications, and capture controls slightly smaller."/>
                                     <ComboBoxItem Content="100%" Tag="1.0"
                                                   ToolTip="Use normal CyberSnap UI scale."
                                                   AutomationProperties.Name="100 percent UI scale"
-                                                  AutomationProperties.HelpText="Use the default CyberSnap window, toast, and capture-control size."/>
+                                                  AutomationProperties.HelpText="Use the default CyberSnap window, notification, and capture-control size."/>
                                     <ComboBoxItem Content="110%" Tag="1.1"
                                                   ToolTip="Scale CyberSnap UI to 110%."
                                                   AutomationProperties.Name="110 percent UI scale"
-                                                  AutomationProperties.HelpText="Make CyberSnap windows, toasts, and capture controls slightly larger."/>
+                                                  AutomationProperties.HelpText="Make CyberSnap windows, notifications, and capture controls slightly larger."/>
                                     <ComboBoxItem Content="120%" Tag="1.2"
                                                   ToolTip="Scale CyberSnap UI to 120%."
                                                   AutomationProperties.Name="120 percent UI scale"
-                                                  AutomationProperties.HelpText="Make CyberSnap windows, toasts, and capture controls larger."/>
+                                                  AutomationProperties.HelpText="Make CyberSnap windows, notifications, and capture controls larger."/>
                                     <ComboBoxItem Content="130%" Tag="1.3"
                                                   ToolTip="Scale CyberSnap UI to 130%."
                                                   AutomationProperties.Name="130 percent UI scale"
-                                                  AutomationProperties.HelpText="Make CyberSnap windows, toasts, and capture controls much larger."/>
+                                                  AutomationProperties.HelpText="Make CyberSnap windows, notifications, and capture controls much larger."/>
                                     <ComboBoxItem Content="140%" Tag="1.4"
                                                   ToolTip="Scale CyberSnap UI to 140%."
                                                   AutomationProperties.Name="140 percent UI scale"
-                                                  AutomationProperties.HelpText="Make CyberSnap windows, toasts, and capture controls extra large."/>
+                                                  AutomationProperties.HelpText="Make CyberSnap windows, notifications, and capture controls extra large."/>
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -1924,6 +1924,87 @@
                             </Grid>
                         </StackPanel>
                     </Border>
+
+                    <TextBlock Text="Floating Capture Widget" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <!-- Show Widget CheckBox -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE700;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show floating capture panel" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Hover at the screen edge to expand the quick capture panel." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ShowCaptureWidgetCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Show floating capture panel"
+                                          ToolTip="Enable the hover-activated floating capture panel."
+                                          Checked="ShowCaptureWidgetCheck_Changed" Unchecked="ShowCaptureWidgetCheck_Changed"/>
+                            </Grid>
+                            <Border x:Name="WidgetOptionsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            
+                            <!-- Widget Dock Edge ComboBox -->
+                            <Grid x:Name="WidgetDockEdgeRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE139;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Dock edge" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Select which screen edge the widget docks to." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="WidgetDockEdgeCombo" Grid.Column="2" MinWidth="145"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Dock edge"
+                                          ToolTip="Select screen edge."
+                                          SelectionChanged="WidgetDockEdgeCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Top"/>
+                                    <ComboBoxItem Content="Bottom"/>
+                                    <ComboBoxItem Content="Left"/>
+                                    <ComboBoxItem Content="Right"/>
+                                </ComboBox>
+                            </Grid>
+                            <Border x:Name="WidgetHoverDelaySeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            
+                            <!-- Widget Hover Trigger Delay ComboBox -->
+                            <Grid x:Name="WidgetHoverDelayRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Hover trigger delay" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Delay (ms) before expanding the widget on hover." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="WidgetHoverDelayCombo" Grid.Column="2" MinWidth="145"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Hover trigger delay"
+                                          ToolTip="Delay in milliseconds."
+                                          SelectionChanged="WidgetHoverDelayCombo_SelectionChanged">
+                                    <ComboBoxItem Content="0 ms" Tag="0"/>
+                                    <ComboBoxItem Content="100 ms" Tag="100"/>
+                                    <ComboBoxItem Content="250 ms" Tag="250"/>
+                                    <ComboBoxItem Content="500 ms" Tag="500"/>
+                                    <ComboBoxItem Content="1000 ms" Tag="1000"/>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock x:Name="GeneralPreferenceStatusText"
                                Style="{StaticResource SettingsStatusText}"
                                Visibility="Collapsed"
@@ -2025,25 +2106,25 @@
                                     <TextBlock Text="&#xE81D;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Toast position" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Notification position" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Choose where screenshot previews appear." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                  <ComboBox x:Name="ToastPositionCombo" Grid.Column="2" MinWidth="150"
                                            VerticalAlignment="Center"
-                                           AutomationProperties.Name="Toast position"
+                                           AutomationProperties.Name="notification position"
                                            ToolTip="Choose where screenshot previews appear."
                                            SelectionChanged="ToastPositionCombo_SelectionChanged">
                                      <ComboBoxItem Content="Right" ToolTip="Show previews near the right edge."
-                                                   AutomationProperties.Name="Right toast position"
+                                                   AutomationProperties.Name="Right notification position"
                                                    AutomationProperties.HelpText="Place screenshot previews near the right edge of the screen."/>
                                      <ComboBoxItem Content="Left" ToolTip="Show previews near the left edge."
-                                                   AutomationProperties.Name="Left toast position"
+                                                   AutomationProperties.Name="Left notification position"
                                                    AutomationProperties.HelpText="Place screenshot previews near the left edge of the screen."/>
                                      <ComboBoxItem Content="Top Left" ToolTip="Show previews in the top-left corner."
-                                                   AutomationProperties.Name="Top-left toast position"
+                                                   AutomationProperties.Name="Top-left notification position"
                                                    AutomationProperties.HelpText="Place screenshot previews in the top-left corner of the screen."/>
                                      <ComboBoxItem Content="Top Right" ToolTip="Show previews in the top-right corner."
-                                                   AutomationProperties.Name="Top-right toast position"
+                                                   AutomationProperties.Name="Top-right notification position"
                                                    AutomationProperties.HelpText="Place screenshot previews in the top-right corner of the screen."/>
                                  </ComboBox>
                             </Grid>
@@ -2058,7 +2139,7 @@
                                     <TextBlock Text="&#xE7F4;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Toast monitor" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Notification monitor" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Choose which monitor to show previews on." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="ToastMonitorCombo" Grid.Column="2" MinWidth="150"
@@ -2078,7 +2159,7 @@
                                     <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Capture toast duration" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Capture notification duration" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Set how long screenshot previews stay visible." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="ToastDurationCombo" Grid.Column="2" MinWidth="150"
@@ -2086,43 +2167,43 @@
                                            SelectionChanged="ToastDurationCombo_SelectionChanged">
                                     <ComboBoxItem Content="1.5 seconds" Tag="1.5"
                                                   ToolTip="Hide previews after 1.5 seconds."
-                                                  AutomationProperties.Name="1.5 second toast duration"
+                                                  AutomationProperties.Name="1.5 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 1.5 seconds."/>
                                     <ComboBoxItem Content="2 seconds" Tag="2"
                                                   ToolTip="Hide previews after 2 seconds."
-                                                  AutomationProperties.Name="2 second toast duration"
+                                                  AutomationProperties.Name="2 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 2 seconds."/>
                                     <ComboBoxItem Content="2.5 seconds" Tag="2.5"
                                                   ToolTip="Hide previews after 2.5 seconds."
-                                                  AutomationProperties.Name="2.5 second toast duration"
+                                                  AutomationProperties.Name="2.5 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 2.5 seconds."/>
                                     <ComboBoxItem Content="3 seconds" Tag="3"
                                                   ToolTip="Hide previews after 3 seconds."
-                                                  AutomationProperties.Name="3 second toast duration"
+                                                  AutomationProperties.Name="3 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 3 seconds."/>
                                     <ComboBoxItem Content="4 seconds" Tag="4"
                                                   ToolTip="Hide previews after 4 seconds."
-                                                  AutomationProperties.Name="4 second toast duration"
+                                                  AutomationProperties.Name="4 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 4 seconds."/>
                                     <ComboBoxItem Content="5 seconds" Tag="5"
                                                   ToolTip="Hide previews after 5 seconds."
-                                                  AutomationProperties.Name="5 second toast duration"
+                                                  AutomationProperties.Name="5 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 5 seconds."/>
                                     <ComboBoxItem Content="10 seconds" Tag="10"
                                                   ToolTip="Hide previews after 10 seconds."
-                                                  AutomationProperties.Name="10 second toast duration"
+                                                  AutomationProperties.Name="10 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 10 seconds."/>
                                     <ComboBoxItem Content="20 seconds" Tag="20"
                                                   ToolTip="Hide previews after 20 seconds."
-                                                  AutomationProperties.Name="20 second toast duration"
+                                                  AutomationProperties.Name="20 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 20 seconds."/>
                                     <ComboBoxItem Content="40 seconds" Tag="40"
                                                   ToolTip="Hide previews after 40 seconds."
-                                                  AutomationProperties.Name="40 second toast duration"
+                                                  AutomationProperties.Name="40 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 40 seconds."/>
                                     <ComboBoxItem Content="60 seconds" Tag="60"
                                                   ToolTip="Hide previews after 60 seconds."
-                                                  AutomationProperties.Name="60 second toast duration"
+                                                  AutomationProperties.Name="60 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 60 seconds."/>
                                 </ComboBox>
                             </Grid>
@@ -2137,7 +2218,7 @@
                                     <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="System toast duration" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="System notification duration" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Set how long system alert notifications stay visible." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="SystemToastDurationCombo" Grid.Column="2" MinWidth="150"
@@ -2189,7 +2270,7 @@
                                        Style="{StaticResource SettingsStatusText}"
                                        Visibility="Collapsed"
                                        ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                       AutomationProperties.Name="Toast preference status"
+                                       AutomationProperties.Name="notification preference status"
                                        AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
                                        AutomationProperties.LiveSetting="Polite"
                                        Margin="34,5,0,0"/>
@@ -2288,14 +2369,14 @@
                                     <TextBlock Text="Drag buttons to move them. You can also select one, then click a slot or another button." FontSize="13" TextWrapping="Wrap"/>
                                     <TextBlock x:Name="ToastLayoutSelectionText" Text="Selected: Close" Style="{StaticResource InfoText}" Margin="0,4,0,0"
                                                ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                               AutomationProperties.Name="Toast layout selection"
+                                               AutomationProperties.Name="notification layout selection"
                                                AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
                                                AutomationProperties.LiveSetting="Polite"/>
                                 </StackPanel>
                                 <Button x:Name="ResetToastButtonsBtn" Grid.Column="1" Content="Reset Layout"
                                         Margin="8,0,0,0"
-                                        AutomationProperties.Name="Reset toast button layout"
-                                        ToolTip="Restore the default toast button layout"
+                                        AutomationProperties.Name="Reset notification button layout"
+                                        ToolTip="Restore the default notification button layout"
                                         Cursor="Hand" Click="ResetToastButtonsBtn_Click"/>
                             </Grid>
 
@@ -2326,9 +2407,9 @@
                                                             Margin="8,8,0,0"
                                                             Background="Transparent" BorderBrush="#2DFFFFFF" BorderThickness="1"
                                                             Cursor="Hand"
-                                                            ToolTip="Move selected toast button to top-left"
-                                                            AutomationProperties.Name="top-left toast slot"
-                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected toast button here."
+                                                            ToolTip="Move selected notification button to top-left"
+                                                            AutomationProperties.Name="top-left notification slot"
+                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected notification button here."
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutSlot_MouseLeftButtonDown"
                                                             DragEnter="ToastLayoutSlot_DragEnter"
@@ -2342,9 +2423,9 @@
                                                             Margin="48,8,0,0"
                                                             Background="Transparent" BorderBrush="#2DFFFFFF" BorderThickness="1"
                                                             Cursor="Hand"
-                                                            ToolTip="Move selected toast button to top inner-left"
-                                                            AutomationProperties.Name="top inner-left toast slot"
-                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected toast button here."
+                                                            ToolTip="Move selected notification button to top inner-left"
+                                                            AutomationProperties.Name="top inner-left notification slot"
+                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected notification button here."
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutSlot_MouseLeftButtonDown"
                                                             DragEnter="ToastLayoutSlot_DragEnter"
@@ -2358,9 +2439,9 @@
                                                             Margin="0,8,48,0"
                                                             Background="Transparent" BorderBrush="#2DFFFFFF" BorderThickness="1"
                                                             Cursor="Hand"
-                                                            ToolTip="Move selected toast button to top inner-right"
-                                                            AutomationProperties.Name="top inner-right toast slot"
-                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected toast button here."
+                                                            ToolTip="Move selected notification button to top inner-right"
+                                                            AutomationProperties.Name="top inner-right notification slot"
+                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected notification button here."
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutSlot_MouseLeftButtonDown"
                                                             DragEnter="ToastLayoutSlot_DragEnter"
@@ -2374,9 +2455,9 @@
                                                             Margin="0,8,8,0"
                                                             Background="Transparent" BorderBrush="#2DFFFFFF" BorderThickness="1"
                                                             Cursor="Hand"
-                                                            ToolTip="Move selected toast button to top-right"
-                                                            AutomationProperties.Name="top-right toast slot"
-                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected toast button here."
+                                                            ToolTip="Move selected notification button to top-right"
+                                                            AutomationProperties.Name="top-right notification slot"
+                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected notification button here."
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutSlot_MouseLeftButtonDown"
                                                             DragEnter="ToastLayoutSlot_DragEnter"
@@ -2390,9 +2471,9 @@
                                                             Margin="8,0,0,8"
                                                             Background="Transparent" BorderBrush="#2DFFFFFF" BorderThickness="1"
                                                             Cursor="Hand"
-                                                            ToolTip="Move selected toast button to bottom-left"
-                                                            AutomationProperties.Name="bottom-left toast slot"
-                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected toast button here."
+                                                            ToolTip="Move selected notification button to bottom-left"
+                                                            AutomationProperties.Name="bottom-left notification slot"
+                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected notification button here."
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutSlot_MouseLeftButtonDown"
                                                             DragEnter="ToastLayoutSlot_DragEnter"
@@ -2406,9 +2487,9 @@
                                                             Margin="48,0,0,8"
                                                             Background="Transparent" BorderBrush="#2DFFFFFF" BorderThickness="1"
                                                             Cursor="Hand"
-                                                            ToolTip="Move selected toast button to bottom inner-left"
-                                                            AutomationProperties.Name="bottom inner-left toast slot"
-                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected toast button here."
+                                                            ToolTip="Move selected notification button to bottom inner-left"
+                                                            AutomationProperties.Name="bottom inner-left notification slot"
+                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected notification button here."
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutSlot_MouseLeftButtonDown"
                                                             DragEnter="ToastLayoutSlot_DragEnter"
@@ -2422,9 +2503,9 @@
                                                             Margin="0,0,48,8"
                                                             Background="Transparent" BorderBrush="#2DFFFFFF" BorderThickness="1"
                                                             Cursor="Hand"
-                                                            ToolTip="Move selected toast button to bottom inner-right"
-                                                            AutomationProperties.Name="bottom inner-right toast slot"
-                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected toast button here."
+                                                            ToolTip="Move selected notification button to bottom inner-right"
+                                                            AutomationProperties.Name="bottom inner-right notification slot"
+                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected notification button here."
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutSlot_MouseLeftButtonDown"
                                                             DragEnter="ToastLayoutSlot_DragEnter"
@@ -2438,9 +2519,9 @@
                                                             Margin="0,0,8,8"
                                                             Background="Transparent" BorderBrush="#2DFFFFFF" BorderThickness="1"
                                                             Cursor="Hand"
-                                                            ToolTip="Move selected toast button to bottom-right"
-                                                            AutomationProperties.Name="bottom-right toast slot"
-                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected toast button here."
+                                                            ToolTip="Move selected notification button to bottom-right"
+                                                            AutomationProperties.Name="bottom-right notification slot"
+                                                            AutomationProperties.HelpText="Press Enter or Space to place the selected notification button here."
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutSlot_MouseLeftButtonDown"
                                                             DragEnter="ToastLayoutSlot_DragEnter"
@@ -2453,8 +2534,8 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
-                                                            ToolTip="Move the close toast button"
-                                                            AutomationProperties.Name="Close toast button"
+                                                            ToolTip="Move the close notification button"
+                                                            AutomationProperties.Name="Close notification button"
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
                                                             MouseMove="ToastLayoutButton_MouseMove"
@@ -2470,8 +2551,8 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
-                                                            ToolTip="Move the pin toast button"
-                                                            AutomationProperties.Name="Pin toast button"
+                                                            ToolTip="Move the pin notification button"
+                                                            AutomationProperties.Name="Pin notification button"
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
                                                             MouseMove="ToastLayoutButton_MouseMove"
@@ -2487,8 +2568,8 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
-                                                            ToolTip="Move the save toast button"
-                                                            AutomationProperties.Name="Save toast button"
+                                                            ToolTip="Move the save notification button"
+                                                            AutomationProperties.Name="Save notification button"
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
                                                             MouseMove="ToastLayoutButton_MouseMove"
@@ -2504,8 +2585,8 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
-                                                            ToolTip="Move the office export toast button"
-                                                            AutomationProperties.Name="Office export toast button"
+                                                            ToolTip="Move the office export notification button"
+                                                            AutomationProperties.Name="Office export notification button"
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
                                                             MouseMove="ToastLayoutButton_MouseMove"
@@ -2521,8 +2602,8 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
-                                                            ToolTip="Move the delete toast button"
-                                                            AutomationProperties.Name="Delete toast button"
+                                                            ToolTip="Move the delete notification button"
+                                                            AutomationProperties.Name="Delete notification button"
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
                                                             MouseMove="ToastLayoutButton_MouseMove"
@@ -2539,8 +2620,8 @@
                                                               Width="30" Height="30" CornerRadius="9"
                                                               Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                               Cursor="Hand"
-                                                              ToolTip="Move the AI redirect toast button"
-                                                              AutomationProperties.Name="AI redirect toast button"
+                                                              ToolTip="Move the AI redirect notification button"
+                                                              AutomationProperties.Name="AI redirect notification button"
                                                               AllowDrop="True"
                                                               MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
                                                               MouseMove="ToastLayoutButton_MouseMove"
@@ -2560,7 +2641,7 @@
                                                 <StackPanel>
                                                     <TextBlock Text="Screenshot saved" FontSize="12.5" FontWeight="SemiBold"
                                                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                                    <TextBlock Text="Preview toast with overlay buttons." FontSize="11.5" Opacity="0.62"
+                                                    <TextBlock Text="Preview notification with overlay buttons." FontSize="11.5" Opacity="0.62"
                                                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                                 </StackPanel>
                                             </StackPanel>

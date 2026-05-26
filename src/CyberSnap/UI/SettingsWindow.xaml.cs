@@ -122,11 +122,23 @@ public partial class SettingsWindow : Window
 
     private void SaveWindowBounds()
     {
+        if (WindowState == WindowState.Minimized)
+        {
+            return;
+        }
+
         var settings = _settingsService.Settings;
         if (WindowState == WindowState.Maximized)
         {
-            settings.SettingsWindowState = (int)WindowState.Maximized;
             var bounds = RestoreBounds;
+            if (double.IsNaN(bounds.Left) || double.IsInfinity(bounds.Left) ||
+                double.IsNaN(bounds.Top) || double.IsInfinity(bounds.Top) ||
+                double.IsNaN(bounds.Width) || double.IsInfinity(bounds.Width) ||
+                double.IsNaN(bounds.Height) || double.IsInfinity(bounds.Height))
+            {
+                return;
+            }
+            settings.SettingsWindowState = (int)WindowState.Maximized;
             settings.SettingsWindowLeft = bounds.Left;
             settings.SettingsWindowTop = bounds.Top;
             settings.SettingsWindowWidth = bounds.Width;
@@ -134,13 +146,28 @@ public partial class SettingsWindow : Window
         }
         else
         {
+            if (double.IsNaN(Left) || double.IsInfinity(Left) ||
+                double.IsNaN(Top) || double.IsInfinity(Top) ||
+                double.IsNaN(Width) || double.IsInfinity(Width) ||
+                double.IsNaN(Height) || double.IsInfinity(Height))
+            {
+                return;
+            }
             settings.SettingsWindowState = (int)WindowState.Normal;
             settings.SettingsWindowLeft = Left;
             settings.SettingsWindowTop = Top;
             settings.SettingsWindowWidth = Width;
             settings.SettingsWindowHeight = Height;
         }
-        _settingsService.Save();
+
+        try
+        {
+            _settingsService.Save();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.save-window-bounds", ex);
+        }
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

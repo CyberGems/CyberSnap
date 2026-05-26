@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using CyberSnap.Services;
 
 namespace CyberSnap;
@@ -16,6 +16,7 @@ public partial class App
         try { _imageSearchIndexService?.Dispose(); } catch (Exception ex) { AppDiagnostics.LogError("shutdown.dispose-image-search", ex); }
         _imageSearchIndexService = null;
         _trayIcon?.Dispose();
+        CloseWidgetWindow();
         _settingsWindow?.Close();
         try { CyberSnap.Capture.DxgiScreenCapture.ResetCache(); } catch (Exception ex) { AppDiagnostics.LogError("shutdown.reset-dxgi-cache", ex); }
         try { _mutex?.ReleaseMutex(); } catch (Exception ex) { AppDiagnostics.LogWarning("shutdown.release-mutex", ex.Message, ex); }

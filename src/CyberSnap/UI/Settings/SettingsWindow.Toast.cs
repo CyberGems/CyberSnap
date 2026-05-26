@@ -78,8 +78,8 @@ public partial class SettingsWindow
     {
         var label = FormatToastButtonLabel(button);
         border.Focusable = true;
-        border.ToolTip = $"Move the {label} toast button";
-        AutomationProperties.SetName(border, $"{label} toast button");
+        border.ToolTip = $"Move the {label} notification button";
+        AutomationProperties.SetName(border, $"{label} notification button");
         AutomationProperties.SetHelpText(border, "Press Enter or Space to move the selected button here.");
         border.KeyDown -= ToastLayoutButton_KeyDown;
         border.KeyDown += ToastLayoutButton_KeyDown;
@@ -133,9 +133,9 @@ public partial class SettingsWindow
     {
         var label = FormatToastSlotLabel(slot);
         slotBorder.Focusable = true;
-        slotBorder.ToolTip = $"Move selected toast button to {label}";
-        AutomationProperties.SetName(slotBorder, $"{label} toast slot");
-        AutomationProperties.SetHelpText(slotBorder, "Press Enter or Space to place the selected toast button here.");
+        slotBorder.ToolTip = $"Move selected notification button to {label}";
+        AutomationProperties.SetName(slotBorder, $"{label} notification slot");
+        AutomationProperties.SetHelpText(slotBorder, "Press Enter or Space to place the selected notification button here.");
         slotBorder.KeyDown -= ToastLayoutSlot_KeyDown;
         slotBorder.KeyDown += ToastLayoutSlot_KeyDown;
 
@@ -374,9 +374,9 @@ public partial class SettingsWindow
     private void RefreshToastHiddenShelf()
     {
         ToastHiddenShelf.Focusable = true;
-        ToastHiddenShelf.ToolTip = "Hide the selected toast button";
-        AutomationProperties.SetName(ToastHiddenShelf, "Hidden toast button shelf");
-        AutomationProperties.SetHelpText(ToastHiddenShelf, "Press Enter or Space to hide the selected toast button.");
+        ToastHiddenShelf.ToolTip = "Hide the selected notification button";
+        AutomationProperties.SetName(ToastHiddenShelf, "Hidden notification button shelf");
+        AutomationProperties.SetHelpText(ToastHiddenShelf, "Press Enter or Space to hide the selected notification button.");
         ToastHiddenShelf.KeyDown -= ToastHiddenShelf_KeyDown;
         ToastHiddenShelf.KeyDown += ToastHiddenShelf_KeyDown;
 
@@ -411,11 +411,11 @@ public partial class SettingsWindow
             BorderThickness = new Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand,
             Focusable = true,
-            ToolTip = $"Select hidden {label} toast button",
+            ToolTip = $"Select hidden {label} notification button",
             Tag = button.ToString()
         };
 
-        AutomationProperties.SetName(chip, $"Hidden {label} toast button");
+        AutomationProperties.SetName(chip, $"Hidden {label} notification button");
         AutomationProperties.SetHelpText(chip, "Press Enter or Space to select this hidden button, then choose a slot.");
 
         chip.Child = button switch
@@ -639,7 +639,7 @@ public partial class SettingsWindow
         ToastButtonKind.Office => "office export",
         ToastButtonKind.Delete => "delete",
         ToastButtonKind.History => "AI redirect",
-        _ => "toast"
+        _ => "notification"
     };
 
     private static string FormatToastSlotLabel(ToastButtonSlot slot) => slot switch

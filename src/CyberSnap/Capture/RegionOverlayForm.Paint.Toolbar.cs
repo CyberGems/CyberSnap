@@ -91,7 +91,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // Draw discrete elegant CyberSnap logo and brand name
-        int closeIdx = _mainBarTools.Length + 1;
+        int closeIdx = CloseButtonIndex;
 
         if (_brandBitmap == null)
         {
@@ -268,8 +268,8 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // 3. Tier 2 Dividers: after indices offset by _mainBarTools.Length + 2
-        int drawingStartIdx = _mainBarTools.Length + 2;
+        // 3. Tier 2 Dividers: after indices offset by _mainBarTools.Length + 3
+        int drawingStartIdx = _mainBarTools.Length + 3;
         int[] tier2Offsets = { 1, 8 };
         int[] tier2Seps = tier2Offsets.Select(offset => drawingStartIdx + offset).ToArray();
         foreach (int idx in tier2Seps)
@@ -297,7 +297,7 @@ public sealed partial class RegionOverlayForm
             var btn = _toolbarButtons[i];
             bool active = _toolbarModes[i] is { } && string.Equals(_toolbarToolIds[i], _activeToolId, StringComparison.OrdinalIgnoreCase);
             bool hover = _hoveredButton == i;
-            bool isTier2 = i >= 7;
+            bool isTier2 = i >= drawingStartIdx;
             var tierAccent = isTier2 ? UiChrome.AccentTier2 : UiChrome.AccentColor;
 
             // Color dot button (shows active drawing color)
@@ -336,7 +336,7 @@ public sealed partial class RegionOverlayForm
 
             WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
 
-            int ia = active ? 255 : hover ? 240 : i == closeIdx ? 130 : 200;
+            int ia = active ? 255 : hover ? 240 : (i == CloseButtonIndex || i == PositionButtonIndex) ? 130 : 200;
             var iconColor = active ? tierAccent : UiChrome.SurfaceTextPrimary;
             if (_toolbarIcons[i] == "picker")
             {
