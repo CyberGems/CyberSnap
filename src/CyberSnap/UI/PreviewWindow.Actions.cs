@@ -336,7 +336,8 @@ public partial class PreviewWindow
     private bool IsPreviewOverlayButtonSource(DependencyObject? source) =>
         IsChildOf(source, CloseBtn) ||
         IsChildOf(source, PinBtn) ||
-        IsChildOf(source, SaveBtn);
+        IsChildOf(source, SaveBtn) ||
+        IsChildOf(source, EditBtn);
 
     private void CancelPreviewRootInteractionFromOverlaySource(System.Windows.Input.MouseEventArgs e)
     {
@@ -407,6 +408,47 @@ public partial class PreviewWindow
 
         e.Handled = true;
         SavePreview();
+    }
+
+    private void EditClick(object sender, MouseButtonEventArgs e)
+    {
+        if (!CanActivateMouseControl(sender))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        e.Handled = true;
+        OpenEditor();
+    }
+
+    private void EditBtn_KeyDown(object sender, WpfKeyEventArgs e)
+    {
+        if (!CanActivateKeyboardControl(sender, e))
+            return;
+
+        e.Handled = true;
+        OpenEditor();
+    }
+
+    private void OpenEditor()
+    {
+        if (_isGif || _screenshot is null) return;
+
+        try
+        {
+            CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(_screenshot), _savedFilePath);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("preview.open-editor", ex.Message, ex);
+            ToastWindow.ShowError("Editor failed",
+                BuildPreviewFailureBody("CyberSnap could not open the post-capture editor.", ex.Message),
+                GetExistingPreviewFilePathOrNull());
+            return;
+        }
+
+        AnimateDismiss();
     }
 
     private static bool IsKeyboardActivateKey(WpfKeyEventArgs e) =>

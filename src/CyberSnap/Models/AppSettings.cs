@@ -125,6 +125,8 @@ public sealed class AppSettings
         public ToastButtonSlot DeleteSlot { get; set; } = ToastButtonSlot.BottomLeft;
         public bool ShowHistory { get; set; } = true;
         public ToastButtonSlot HistorySlot { get; set; } = ToastButtonSlot.TopInnerRight;
+        public bool ShowEdit { get; set; }
+        public ToastButtonSlot EditSlot { get; set; } = ToastButtonSlot.BottomInnerLeft;
     }
 
     public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT;
@@ -142,6 +144,7 @@ public sealed class AppSettings
     public bool TranslationRuntimeInstalled { get; set; }
     public int TranslationModel { get; set; } = 2; // 0 = Argos, 1 = Google, 2 = Open-source local
     public bool AnnotationStrokeShadow { get; set; } = true;
+    public float StrokeWidth { get; set; } = 6f;
     public int ToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(0, 136, 255).ToArgb(); // Default blue
 
     // Color picker hotkey: Alt+C
@@ -170,6 +173,7 @@ public sealed class AppSettings
     public int GifFps { get; set; } = 15;
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
+    public bool OpenEditorAfterCapture { get; set; }
     public bool SaveToFile { get; set; } = true;
     public bool AskForFileNameOnSave { get; set; }
     public string FileNameTemplate { get; set; } = Helpers.FileNameTemplate.DefaultTemplate;
@@ -233,7 +237,7 @@ public sealed class AppSettings
     public CaptureDockSide WidgetDockEdge { get; set; } = CaptureDockSide.Top;
     public int WidgetMonitorIndex { get; set; } = -1;
     public double WidgetDockPositionOffset { get; set; } = 0.5;
-    public bool WidgetDirectCopy { get; set; } = false;
+    public bool WidgetOpenEditor { get; set; }
     public int WidgetHoverDelayMs { get; set; } = 250;
 
     // Window bounds

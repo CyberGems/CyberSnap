@@ -384,22 +384,25 @@ public partial class ToastWindow : Window
         CloseIcon.Source = FluentIcons.RenderWpf("close", IconWhite, 20);
         PinIcon.Source = FluentIcons.RenderWpf("pin", IconWhite, 20);
         SaveIcon.Source = FluentIcons.RenderWpf("download", IconWhite, 20);
-        OfficeIcon.Source = FluentIcons.RenderWpf("copy", IconWhite, 20);
+        OfficeIcon.Source = FluentIcons.RenderWpf("arrow", IconWhite, 20);
         DeleteIcon.Source = FluentIcons.RenderWpf("trash", IconWhite, 20);
+        EditIcon.Source = FluentIcons.RenderWpf("draw", IconWhite, 20);
         ApplyToastOverlayButtonVisual(CloseBtn, CloseIcon, "close", active: false);
         ApplyToastOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
         ApplyToastOverlayButtonVisual(SaveBtn, SaveIcon, "download", active: false);
-        ApplyToastOverlayButtonVisual(OfficeBtn, OfficeIcon, "copy", active: false);
+        ApplyToastOverlayButtonVisual(OfficeBtn, OfficeIcon, "arrow", active: false);
         ApplyToastOverlayButtonVisual(DeleteBtn, DeleteIcon, "trash", active: false);
         ApplyToastOverlayButtonVisual(HistoryBtn, HistoryIcon, "history", active: false);
+        ApplyToastOverlayButtonVisual(EditBtn, EditIcon, "draw", active: false);
         ApplyTextCloseVisual(active: false);
 
         HookOverlayHover(CloseBtn, CloseIcon, "close");
         HookOverlayHover(PinBtn, PinIcon, "pin");
         HookOverlayHover(SaveBtn, SaveIcon, "download");
-        HookOverlayHover(OfficeBtn, OfficeIcon, "copy");
+        HookOverlayHover(OfficeBtn, OfficeIcon, "arrow");
         HookOverlayHover(DeleteBtn, DeleteIcon, "trash");
         HookOverlayHover(HistoryBtn, HistoryIcon, "history");
+        HookOverlayHover(EditBtn, EditIcon, "draw");
         TextCloseBtn.MouseEnter += (_, _) => ApplyTextCloseVisual(active: true);
         TextCloseBtn.MouseLeave += (_, _) => ApplyTextCloseVisual(active: false);
     }
@@ -466,6 +469,7 @@ public partial class ToastWindow : Window
         OfficeBtn.MouseLeftButtonDown -= OfficeBtn_MouseLeftButtonDown;
         DeleteBtn.MouseLeftButtonDown -= DeleteBtn_MouseLeftButtonDown;
         HistoryBtn.MouseLeftButtonDown -= HistoryBtn_MouseLeftButtonDown;
+        EditBtn.MouseLeftButtonDown -= EditBtn_MouseLeftButtonDown;
         TextCloseBtn.MouseLeftButtonDown -= CloseBtn_MouseLeftButtonDown;
 
         // Text-only toasts (no preview bitmap) always get an X â€” independent of ShowOverlayButtons.
@@ -480,6 +484,7 @@ public partial class ToastWindow : Window
         OfficeBtn.MouseLeftButtonDown += OfficeBtn_MouseLeftButtonDown;
         DeleteBtn.MouseLeftButtonDown += DeleteBtn_MouseLeftButtonDown;
         HistoryBtn.MouseLeftButtonDown += HistoryBtn_MouseLeftButtonDown;
+        EditBtn.MouseLeftButtonDown += EditBtn_MouseLeftButtonDown;
     }
 
     internal void RefreshOverlayButtonLayout()
@@ -490,6 +495,7 @@ public partial class ToastWindow : Window
         ApplyOverlayButton(OfficeBtn, Helpers.ToastButtonKind.Office);
         ApplyOverlayButton(DeleteBtn, Helpers.ToastButtonKind.Delete);
         ApplyOverlayButton(HistoryBtn, Helpers.ToastButtonKind.History);
+        ApplyOverlayButton(EditBtn, Helpers.ToastButtonKind.Edit);
 
         // Every text-only toast gets an X â€” Scan/Error/Color/Standard alike.
         bool textCloseVisible = _previewBitmap is null &&
@@ -558,8 +564,9 @@ public partial class ToastWindow : Window
                 ? ("Saving preview", "Save is already running.")
                 : ("Save preview", "Save this preview image."),
             Helpers.ToastButtonKind.Office => _isRunningOfficeAction
-                ? ("Office action running", "Open with or Office export is already running.")
-                : ("Open with or send to Office", "Open this preview with another app or send it to Office."),
+                ? ("Send to action running", "Open with or send action is already running.")
+                : ("Send to", "Open the screenshot with another app."),
+            Helpers.ToastButtonKind.Edit => ("Edit preview", "Open this preview in the post-capture editor."),
 
             Helpers.ToastButtonKind.Delete => _isDeletingSavedFile
                 ? ("Deleting file", "Delete is already running.")
@@ -650,6 +657,44 @@ public partial class ToastWindow : Window
 
         e.Handled = true;
         OpenHistory();
+    }
+
+    private void EditBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!CanActivateMouseControl(sender))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        e.Handled = true;
+        OpenEditor();
+    }
+
+    private void EditBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (!CanActivateKeyboardControl(sender, e))
+            return;
+
+        e.Handled = true;
+        OpenEditor();
+    }
+
+    private void OpenEditor()
+    {
+        if (_previewBitmap is null)
+            return;
+
+        try
+        {
+            CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(_previewBitmap), _savedFilePath);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("toast.open-editor", ex.Message, ex);
+        }
+
+        DismissAnimated();
     }
 
     private void OpenHistory()
@@ -832,13 +877,6 @@ public partial class ToastWindow : Window
         };
 
         AddOpenWithMenuItem(menu, () => menuActionSelected = true);
-        var installedOfficeTargets = Services.OfficeExportService.GetInstalledTargets().ToList();
-        if (installedOfficeTargets.Count > 0)
-        {
-            menu.Items.Add(new System.Windows.Controls.Separator());
-            foreach (var target in installedOfficeTargets)
-                AddOfficeMenuItem(menu, target, () => menuActionSelected = true);
-        }
 
         menu.IsOpen = true;
         _officeMenuMouseWasDown = true;
@@ -1189,6 +1227,7 @@ public partial class ToastWindow : Window
         OfficeBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
         DeleteBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
         HistoryBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
+        EditBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
         PinBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity == 0 ? pinnedOpacity : targetOpacity, 150, Motion.SmoothOut));
     }
 
@@ -1496,6 +1535,7 @@ public partial class ToastWindow : Window
         IsChildOf(source, OfficeBtn) ||
         IsChildOf(source, DeleteBtn) ||
         IsChildOf(source, HistoryBtn) ||
+        IsChildOf(source, EditBtn) ||
         IsChildOf(source, TextCloseBtn);
 
     private string? GetDragFilePath()

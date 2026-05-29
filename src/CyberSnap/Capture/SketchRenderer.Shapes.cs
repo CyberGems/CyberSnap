@@ -41,7 +41,7 @@ public static partial class SketchRenderer
         g.SmoothingMode = SmoothingMode.Default;
     }
 
-    public static void DrawRectShape(Graphics g, Rectangle rect, Color color, bool strokeShadow = false)
+    public static void DrawRectShape(Graphics g, Rectangle rect, Color color, bool strokeShadow = false, float strokeWidth = 4f)
     {
         if (rect.Width < 1 || rect.Height < 1) return;
         g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -72,11 +72,11 @@ public static partial class SketchRenderer
             }
         }
 
-        g.DrawPath(GetRoundJoinPen(color, 3f), path);
+        g.DrawPath(GetRoundJoinPen(color, strokeWidth), path);
         g.SmoothingMode = SmoothingMode.Default;
     }
 
-    public static void DrawCircleShape(Graphics g, Rectangle rect, Color color, bool strokeShadow = false)
+    public static void DrawCircleShape(Graphics g, Rectangle rect, Color color, bool strokeShadow = false, float strokeWidth = 4f)
     {
         if (rect.Width < 1 || rect.Height < 1) return;
         g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -89,7 +89,7 @@ public static partial class SketchRenderer
                 g.DrawEllipse(ShapeStrokePen, new Rectangle(rect.X + ox, rect.Y + oy, rect.Width, rect.Height));
         }
 
-        g.DrawEllipse(GetRoundJoinPen(color, 3f), rect);
+        g.DrawEllipse(GetRoundJoinPen(color, strokeWidth), rect);
         g.SmoothingMode = SmoothingMode.Default;
     }
 

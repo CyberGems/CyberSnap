@@ -565,6 +565,7 @@ public sealed partial class RegionOverlayForm
             _autoDetectTimer.Dispose();
             _magGfx.Dispose();
             _magBitmap.Dispose();
+            ClearEditHistory();
             _committedAnnotationsBitmap?.Dispose();
             _brandBitmap?.Dispose();
             _brandBitmap = null;

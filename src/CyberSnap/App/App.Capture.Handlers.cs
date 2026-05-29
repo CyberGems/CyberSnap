@@ -68,7 +68,24 @@ public partial class App
                         TryCopyCaptureOutputToClipboard(persisted.Output);
                     ResetCapturing();
 
-                    if (ShouldPreviewAfterCapture(action))
+                    if (settings.OpenEditorAfterCapture)
+                    {
+                        try
+                        {
+                            // Editor takes ownership of its own clone; dispose the original
+                            // so the persisted output doesn't leak when we skip the toast path.
+                            CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(persisted.Output), persisted.FilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            AppDiagnostics.LogError("capture.auto-open-editor", ex);
+                            // Fall back to the standard preview so the capture isn't lost.
+                            ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
+                            return;
+                        }
+                        persisted.Output.Dispose();
+                    }
+                    else if (ShouldPreviewAfterCapture(action))
                     {
                         ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
                     }

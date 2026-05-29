@@ -151,6 +151,17 @@ public partial class HistoryWindow
 
     private void UpdateHistoryItemViewModel(HistoryItemVM vm, HistoryEntry entry, bool isSelected, bool hydrateSearchMetadata)
     {
+        var previousEntry = vm.Entry;
+        var thumbnailSourceChanged =
+            previousEntry is not null &&
+            string.Equals(previousEntry.FilePath, entry.FilePath, StringComparison.OrdinalIgnoreCase) &&
+            (previousEntry.FileSizeBytes != entry.FileSizeBytes ||
+             previousEntry.Width != entry.Width ||
+             previousEntry.Height != entry.Height);
+
+        if (thumbnailSourceChanged)
+            ResetHistoryItemThumbnail(vm, entry.FilePath);
+
         vm.Entry = entry;
         vm.ThumbPath = entry.FilePath;
         vm.Dimensions = entry.Width > 0 ? $"{entry.Width} x {entry.Height}" : "";
@@ -183,6 +194,31 @@ public partial class HistoryWindow
             vm.ThumbnailSource = cachedThumb;
             vm.ThumbnailLoaded = true;
         }
+
+        if (vm.ThumbnailLoaded)
+            RememberHistoryItemThumbnailFingerprint(vm, entry);
+    }
+
+    private static void ResetHistoryItemThumbnail(HistoryItemVM vm, string filePath)
+    {
+        RemoveThumbFromCache(filePath);
+        vm.ThumbnailLoaded = false;
+        vm.ThumbnailSource = null;
+        vm.ThumbnailFileSizeBytes = 0;
+        vm.ThumbnailWidth = 0;
+        vm.ThumbnailHeight = 0;
+        if (vm.ThumbnailImage is Image image)
+        {
+            image.Source = GetHistoryPlaceholder(vm.Entry?.Kind ?? HistoryKind.Image);
+            image.Opacity = 1;
+        }
+    }
+
+    private static void RememberHistoryItemThumbnailFingerprint(HistoryItemVM vm, HistoryEntry entry)
+    {
+        vm.ThumbnailFileSizeBytes = entry.FileSizeBytes;
+        vm.ThumbnailWidth = entry.Width;
+        vm.ThumbnailHeight = entry.Height;
     }
 
     private void HydrateHistoryItemSearchMetadata(HistoryItemVM vm)
@@ -723,6 +759,14 @@ public partial class HistoryWindow
         if (vm.ThumbnailImage is not Image image)
             return;
 
+        var thumbnailFingerprintChanged =
+            vm.ThumbnailLoaded &&
+            (vm.ThumbnailFileSizeBytes != vm.Entry.FileSizeBytes ||
+             vm.ThumbnailWidth != vm.Entry.Width ||
+             vm.ThumbnailHeight != vm.Entry.Height);
+        if (thumbnailFingerprintChanged)
+            ResetHistoryItemThumbnail(vm, vm.Entry.FilePath);
+
         if (vm.ThumbnailLoaded && IsStaleHistoryPlaceholder(vm.ThumbnailSource, vm.Entry.Kind))
         {
             vm.ThumbnailLoaded = false;
@@ -734,6 +778,7 @@ public partial class HistoryWindow
         {
             vm.ThumbnailSource = cachedThumb;
             vm.ThumbnailLoaded = true;
+            RememberHistoryItemThumbnailFingerprint(vm, vm.Entry);
         }
 
         image.Source = vm.ThumbnailSource ?? GetHistoryPlaceholder(vm.Entry.Kind);

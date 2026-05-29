@@ -10,7 +10,8 @@ public enum ToastButtonKind
     Save,
     Office,
     Delete,
-    History
+    History,
+    Edit
 }
 
 public static class ToastButtonLayout
@@ -40,6 +41,7 @@ public static class ToastButtonLayout
             ToastButtonKind.Save => settings.SaveSlot,
             ToastButtonKind.Office => settings.OfficeSlot,
             ToastButtonKind.History => settings.HistorySlot,
+            ToastButtonKind.Edit => settings.EditSlot,
             _ => settings.DeleteSlot
         };
 
@@ -51,6 +53,7 @@ public static class ToastButtonLayout
             ToastButtonKind.Save => settings.ShowSave,
             ToastButtonKind.Office => settings.ShowOffice,
             ToastButtonKind.History => settings.ShowHistory,
+            ToastButtonKind.Edit => settings.ShowEdit,
             _ => settings.ShowDelete
         };
 
@@ -63,6 +66,7 @@ public static class ToastButtonLayout
             case ToastButtonKind.Save: settings.ShowSave = visible; break;
             case ToastButtonKind.Office: settings.ShowOffice = visible; break;
             case ToastButtonKind.History: settings.ShowHistory = visible; break;
+            case ToastButtonKind.Edit: settings.ShowEdit = visible; break;
             default: settings.ShowDelete = visible; break;
         }
     }
@@ -87,6 +91,7 @@ public static class ToastButtonLayout
         if (settings.OfficeSlot == slot) return ToastButtonKind.Office;
         if (settings.DeleteSlot == slot) return ToastButtonKind.Delete;
         if (settings.HistorySlot == slot) return ToastButtonKind.History;
+        if (settings.EditSlot == slot) return ToastButtonKind.Edit;
         return null;
     }
 
@@ -99,6 +104,7 @@ public static class ToastButtonLayout
             case ToastButtonKind.Save: settings.SaveSlot = slot; break;
             case ToastButtonKind.Office: settings.OfficeSlot = slot; break;
             case ToastButtonKind.History: settings.HistorySlot = slot; break;
+            case ToastButtonKind.Edit: settings.EditSlot = slot; break;
             default: settings.DeleteSlot = slot; break;
         }
     }

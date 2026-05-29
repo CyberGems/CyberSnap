@@ -55,6 +55,7 @@ public partial class HistoryWindow
         {
             vm.ThumbnailSource = cachedThumb;
             vm.ThumbnailLoaded = true;
+            RememberHistoryItemThumbnailFingerprint(vm, vm.Entry);
         }
         var img = new System.Windows.Controls.Image
         {
@@ -131,6 +132,22 @@ public partial class HistoryWindow
                 suppressOpenAction = true;
                 OpenFileWithDefaultApp(vm.Entry.FilePath);
             }, "Open this file with the system default viewer."));
+        }
+        if (vm.Entry.Kind == HistoryKind.Image && HasHistoryFilePath(vm.Entry.FilePath))
+        {
+            actionMenu.Items.Add(CreateCardActionMenuItem("Open in editor", () =>
+            {
+                suppressOpenAction = true;
+                try
+                {
+                    using var bmp = new System.Drawing.Bitmap(vm.Entry.FilePath);
+                    CyberSnap.UI.Editor.EditorForm.ShowEditor(new System.Drawing.Bitmap(bmp), vm.Entry.FilePath);
+                }
+                catch (Exception ex)
+                {
+                    ToastWindow.ShowError("Editor failed", $"Could not open editor: {ex.Message}");
+                }
+            }, "Open this image in the post-capture editor."));
         }
         actionMenu.Items.Add(CreateCardActionMenuItem(GetHistoryCopyMenuLabel(vm.Entry), () =>
         {

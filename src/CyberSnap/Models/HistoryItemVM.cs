@@ -24,6 +24,9 @@ internal sealed class HistoryItemVM : INotifyPropertyChanged
     public bool SearchMetadataHydrated { get; set; }
     public BitmapSource? ThumbnailSource { get; set; }
     public bool ThumbnailLoaded { get; set; }
+    public long ThumbnailFileSizeBytes { get; set; }
+    public int ThumbnailWidth { get; set; }
+    public int ThumbnailHeight { get; set; }
     internal Border? Card { get; set; }
     internal System.Windows.Controls.Image? ThumbnailImage { get; set; }
     internal FrameworkElement? SelectionBadge { get; set; }

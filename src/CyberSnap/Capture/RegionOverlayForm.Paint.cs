@@ -80,6 +80,7 @@ public sealed partial class RegionOverlayForm
         }
 
         g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
         // Live tool previews (active drawing in progress)
         PaintAnnotations(g);
@@ -102,6 +103,23 @@ public sealed partial class RegionOverlayForm
                 };
                 foreach (var c in corners)
                     WindowsHandleRenderer.Paint(g, WindowsHandleRenderer.CenteredAt(c));
+            }
+        }
+
+        // Eraser hover highlight
+        if (_mode == CaptureMode.Eraser && _eraserHoverIndex >= 0 && _eraserHoverIndex < _undoStack.Count)
+        {
+            var bounds = GetAnnotationBounds(_undoStack[_eraserHoverIndex]);
+            if (bounds.Width > 0 && bounds.Height > 0)
+            {
+                using var overlay = new SolidBrush(Color.FromArgb(50, 220, 50, 50));
+                g.FillRectangle(overlay, bounds);
+                using var pen = new Pen(Color.FromArgb(200, 220, 40, 40), 2f)
+                {
+                    DashStyle = DashStyle.Dash,
+                    DashPattern = new[] { 5f, 3f }
+                };
+                g.DrawRectangle(pen, Rectangle.Inflate(bounds, 3, 3));
             }
         }
 

@@ -10,8 +10,6 @@ namespace CyberSnap.Capture;
 /// </summary>
 public static partial class SketchRenderer
 {
-    private const float AnnotationStrokeWidth = 6f;
-
     // Match text annotation shadow/stroke values exactly
     private static readonly Color AnnotShadow1 = Color.FromArgb(50, 0, 0, 0);
     private static readonly Color AnnotShadow2 = Color.FromArgb(25, 0, 0, 0);
@@ -126,7 +124,7 @@ public static partial class SketchRenderer
     }
 
     /// <summary>Draw a straight line (no arrowhead).</summary>
-    public static void DrawLine(Graphics g, PointF from, PointF to, Color color, int seed, bool strokeShadow = false)
+    public static void DrawLine(Graphics g, PointF from, PointF to, Color color, int seed, bool strokeShadow = false, float strokeWidth = 4f)
     {
         float dx = to.X - from.X, dy = to.Y - from.Y;
         float len = MathF.Sqrt(dx * dx + dy * dy);
@@ -134,13 +132,13 @@ public static partial class SketchRenderer
 
         g.SmoothingMode = SmoothingMode.AntiAlias;
         if (strokeShadow)
-            DrawSoftLineShadow(g, from, to, 3f);
-        g.DrawLine(GetRoundCapPen(color, 3.2f), from, to);
+            DrawSoftLineShadow(g, from, to, strokeWidth * 0.5f);
+        g.DrawLine(GetRoundCapPen(color, strokeWidth), from, to);
         g.SmoothingMode = SmoothingMode.Default;
     }
 
     /// <summary>Draw a clean arrow with proportional arrowhead (Excalidraw style).</summary>
-    public static void DrawArrow(Graphics g, PointF from, PointF to, Color color, int seed, float roughness = 0.5f, bool strokeShadow = false)
+    public static void DrawArrow(Graphics g, PointF from, PointF to, Color color, int seed, float roughness = 0.5f, bool strokeShadow = false, float strokeWidth = 4f)
     {
         float dx = to.X - from.X, dy = to.Y - from.Y;
         float len = MathF.Sqrt(dx * dx + dy * dy);
@@ -154,18 +152,18 @@ public static partial class SketchRenderer
 
         if (strokeShadow)
         {
-            DrawSoftLineShadow(g, from, shaftEnd, AnnotationStrokeWidth);
-            DrawArrowhead(g, new PointF(to.X + 2, to.Y + 2), nx, ny, len, Color.FromArgb(42, 0, 0, 0), AnnotationStrokeWidth, seed + 3000);
+            DrawSoftLineShadow(g, from, shaftEnd, strokeWidth);
+            DrawArrowhead(g, new PointF(to.X + 2, to.Y + 2), nx, ny, len, Color.FromArgb(42, 0, 0, 0), strokeWidth, seed + 3000);
         }
 
-        g.DrawLine(GetRoundCapPen(color, AnnotationStrokeWidth), from, shaftEnd);
-        DrawArrowhead(g, to, nx, ny, len, color, AnnotationStrokeWidth, seed + 6000);
+        g.DrawLine(GetRoundCapPen(color, strokeWidth), from, shaftEnd);
+        DrawArrowhead(g, to, nx, ny, len, color, strokeWidth, seed + 6000);
 
         g.SmoothingMode = SmoothingMode.Default;
     }
 
     /// <summary>Draw a curved arrow (smooth line with arrowhead at tip).</summary>
-    public static void DrawCurvedArrow(Graphics g, List<Point> points, Color color, int seed, bool strokeShadow = false)
+    public static void DrawCurvedArrow(Graphics g, List<Point> points, Color color, int seed, bool strokeShadow = false, float strokeWidth = 4f)
     {
         if (points.Count < 2) return;
 
@@ -183,7 +181,7 @@ public static partial class SketchRenderer
         }
         if (len < 3) return;
 
-        const float thickness = AnnotationStrokeWidth;
+        float thickness = strokeWidth;
 
         // Calculate arrowhead size first â€” we need it to find the right direction distance
         float headSize = Math.Clamp(12f + len / 15f, 12f, 28f);

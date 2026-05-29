@@ -316,6 +316,19 @@ public sealed partial class RegionOverlayForm
                 target = h >= 0 ? Cursors.Hand : Cursors.Default;
             }
         }
+        else if (_mode == CaptureMode.Eraser)
+        {
+            int h = HitTestAnnotation(e.Location);
+            if (h != _eraserHoverIndex)
+            {
+                if (_eraserHoverIndex >= 0 && _eraserHoverIndex < _undoStack.Count)
+                    Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[_eraserHoverIndex]), 6, 6));
+                _eraserHoverIndex = h;
+                if (h >= 0 && h < _undoStack.Count)
+                    Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[h]), 6, 6));
+            }
+            target = CursorFactory.EraserCursor;
+        }
         else if (_mode == CaptureMode.Text && !_isTyping)
             target = Cursors.IBeam;
         else
@@ -420,9 +433,6 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Blur when _isBlurring:
                 InvalidateLivePreview(NormRect(_blurStart, oldCursor), NormRect(_blurStart, e.Location), 18);
-                break;
-            case CaptureMode.Eraser when _isEraserDragging:
-                InvalidateLivePreview(NormRect(_eraserStart, oldCursor), NormRect(_eraserStart, e.Location), 18);
                 break;
             case CaptureMode.Emoji when _isPlacingEmoji:
                 InvalidateLivePreview(GetEmojiPreviewRect(oldCursor), GetEmojiPreviewRect(e.Location), 10);
@@ -603,14 +613,14 @@ public sealed partial class RegionOverlayForm
                 _isRectShapeDragging = false;
                 var rectShape = GetShapeRect(e.Location);
                 if (rectShape.Width > 2 && rectShape.Height > 2)
-                    AddAnnotation(new RectShapeAnnotation(rectShape, _toolColor));
+                    AddAnnotation(new RectShapeAnnotation(rectShape, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(rectShape));
                 break;
             case CaptureMode.CircleShape when _isCircleShapeDragging:
                 _isCircleShapeDragging = false;
                 var circleShape = GetShapeRect(e.Location);
                 if (circleShape.Width > 2 && circleShape.Height > 2)
-                    AddAnnotation(new CircleShapeAnnotation(circleShape, _toolColor));
+                    AddAnnotation(new CircleShapeAnnotation(circleShape, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(circleShape));
                 break;
             case CaptureMode.Magnifier:
@@ -628,7 +638,7 @@ public sealed partial class RegionOverlayForm
                         _currentStroke.Add(start);
                         _currentStroke.Add(constrainedEnd);
                     }
-                    AddAnnotation(new DrawStroke(_currentStroke, _toolColor));
+                    AddAnnotation(new DrawStroke(_currentStroke, _toolColor, _strokeWidth));
                     Invalidate(InflateForRepaint(BoundsOfPoints(_currentStroke, 6)));
                 }
                 _currentStroke = null;
@@ -639,7 +649,7 @@ public sealed partial class RegionOverlayForm
                 float ldx = lineEnd.X - _lineStart.X;
                 float ldy = lineEnd.Y - _lineStart.Y;
                 if (MathF.Sqrt(ldx * ldx + ldy * ldy) > 5)
-                    AddAnnotation(new LineAnnotation(_lineStart, lineEnd, _toolColor));
+                    AddAnnotation(new LineAnnotation(_lineStart, lineEnd, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(RectFromPoints(_lineStart, lineEnd, 1)));
                 break;
             case CaptureMode.Ruler when _isRulerDragging:
@@ -658,14 +668,14 @@ public sealed partial class RegionOverlayForm
                 float dx = end.X - _arrowStart.X;
                 float dy = end.Y - _arrowStart.Y;
                 if (MathF.Sqrt(dx * dx + dy * dy) > 5)
-                    AddAnnotation(new ArrowAnnotation(_arrowStart, end, _toolColor));
+                    AddAnnotation(new ArrowAnnotation(_arrowStart, end, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(RectFromPoints(_arrowStart, end, 1)));
                 break;
             case CaptureMode.CurvedArrow when _isCurvedArrowDragging:
                 _isCurvedArrowDragging = false;
                 if (_currentCurvedArrow is { Count: >= 2 } && GetPathLength(_currentCurvedArrow) > 5f)
                 {
-                    AddAnnotation(new CurvedArrowAnnotation(_currentCurvedArrow, _toolColor));
+                    AddAnnotation(new CurvedArrowAnnotation(_currentCurvedArrow, _toolColor, _strokeWidth));
                     Invalidate(InflateForRepaint(BoundsOfPoints(_currentCurvedArrow, 10)));
                 }
                 _currentCurvedArrow = null;
@@ -676,13 +686,6 @@ public sealed partial class RegionOverlayForm
                 if (blurRect.Width > 3 && blurRect.Height > 3)
                     AddAnnotation(new BlurRect(blurRect));
                 Invalidate(InflateForRepaint(blurRect));
-                break;
-            case CaptureMode.Eraser when _isEraserDragging:
-                _isEraserDragging = false;
-                var eraserRect = NormRect(_eraserStart, e.Location);
-                if (eraserRect.Width > 1 && eraserRect.Height > 1)
-                    AddAnnotation(new EraserFill(eraserRect, _eraserColor));
-                Invalidate(InflateForRepaint(eraserRect));
                 break;
             case CaptureMode.Rectangle when _isSelecting:
             case CaptureMode.Center when _isSelecting:
@@ -772,6 +775,7 @@ public sealed partial class RegionOverlayForm
 
         if (actuallyLeft)
         {
+            _eraserHoverIndex = -1;
             _hoveredButton = -1;
             CloseCaptureMagnifier();
             _autoDetectTimer.Stop();

@@ -690,6 +690,8 @@ public sealed class SettingsWindowVisualPolishTests
         AssertComboBoxItemInNamedComboHasLabel(xaml, "AfterCaptureCombo", "Copy to clipboard", "Copy the capture without opening a preview.", "Copy after capture", "Copy the saved capture to the clipboard and skip the preview window.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "AfterCaptureCombo", "Preview + Copy", "Open a preview and copy the capture.", "Preview and copy after capture", "Open the preview window and also copy the saved capture to the clipboard.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "AfterCaptureCombo", "Preview only", "Open a preview without copying.", "Preview only after capture", "Open the preview window without copying the saved capture to the clipboard.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "AfterCaptureCombo", "Editor + Copy", "Open the editor and copy the capture.", "Open editor and copy after capture", "Open the post-capture editor directly and also copy the saved capture to the clipboard.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "AfterCaptureCombo", "Editor only", "Open the editor without copying.", "Open editor only after capture", "Open the post-capture editor directly without copying the saved capture to the clipboard.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "CaptureDelayCombo", "None", "Open capture immediately.", "No capture delay", "Start the capture overlay immediately after choosing capture.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "CaptureDelayCombo", "3 seconds", "Wait 3 seconds before capture.", "3 second capture delay", "Wait 3 seconds before opening the capture overlay.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "CaptureDelayCombo", "5 seconds", "Wait 5 seconds before capture.", "5 second capture delay", "Wait 5 seconds before opening the capture overlay.");
@@ -723,9 +725,12 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("notifyHotkeyChanged: true", defaultCaptureBlock);
 
         var afterCaptureBlock = GetMethodBlock(settingsCode, "private void AfterCaptureCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)");
-        Assert.Contains("var previous = _settingsService.Settings.AfterCapture;", afterCaptureBlock);
+        Assert.Contains("var previous = new AfterCapturePreference", afterCaptureBlock);
         Assert.Contains("\"settings.after-capture\"", afterCaptureBlock);
-        Assert.Contains("AfterCaptureCombo.SelectedIndex = value switch", afterCaptureBlock);
+        Assert.Contains("_settingsService.Settings.AfterCapture = value.Action;", afterCaptureBlock);
+        Assert.Contains("_settingsService.Settings.OpenEditorAfterCapture = value.OpenEditor;", afterCaptureBlock);
+        Assert.Contains("AfterCaptureCombo.SelectedIndex = GetAfterCaptureSelectedIndex(value);", afterCaptureBlock);
+        Assert.Contains("RefreshWidgetWindowLayout", afterCaptureBlock);
 
         var aspectBlock = GetMethodBlock(settingsCode, "private void CenterAspectRatioCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)");
         Assert.Contains("var previous = _settingsService.Settings.CenterSelectionAspectRatio;", aspectBlock);
@@ -1192,9 +1197,10 @@ public sealed class SettingsWindowVisualPolishTests
         AssertNamedControlHasLabel(xaml, "ToastLayoutCloseBtn", "<Border", "Close notification button", "Move the close notification button");
         AssertNamedControlHasLabel(xaml, "ToastLayoutPinBtn", "<Border", "Pin notification button", "Move the pin notification button");
         AssertNamedControlHasLabel(xaml, "ToastLayoutSaveBtn", "<Border", "Save notification button", "Move the save notification button");
-        AssertNamedControlHasLabel(xaml, "ToastLayoutOfficeBtn", "<Border", "Office export notification button", "Move the office export notification button");
-        AssertNamedControlHasLabel(xaml, "ToastLayoutAiRedirectBtn", "<Border", "AI redirect notification button", "Move the AI redirect notification button");
+        AssertNamedControlHasLabel(xaml, "ToastLayoutOfficeBtn", "<Border", "Send to notification button", "Move the send to notification button");
+        AssertNamedControlHasLabel(xaml, "ToastLayoutAiRedirectBtn", "<Border", "History notification button", "Move the history notification button");
         AssertNamedControlHasLabel(xaml, "ToastLayoutDeleteBtn", "<Border", "Delete notification button", "Move the delete notification button");
+        AssertNamedControlHasLabel(xaml, "ToastLayoutEditBtn", "<Border", "Edit notification button", "Move the edit notification button");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Right", "Show previews near the right edge.", "Right notification position", "Place screenshot previews near the right edge of the screen.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Left", "Show previews near the left edge.", "Left notification position", "Place screenshot previews near the left edge of the screen.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "ToastPositionCombo", "Top Left", "Show previews in the top-left corner.", "Top-left notification position", "Place screenshot previews in the top-left corner of the screen.");

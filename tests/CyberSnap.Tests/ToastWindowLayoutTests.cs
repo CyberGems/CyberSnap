@@ -61,4 +61,34 @@ public sealed class ToastWindowLayoutTests
         Assert.True(converted.Width > 0);
         Assert.True(converted.Height > 0);
     }
+
+    [Fact]
+    public void ScreenBoundsAppearToBeDips_HandlesLeftMonitorWithNegativeOrigin()
+    {
+        var screenBounds = new System.Drawing.Rectangle(-1536, 0, 1280, 720);
+        var nativeBounds = new System.Drawing.Rectangle(-1920, 0, 1920, 1080);
+
+        var appearsToBeDips = PopupWindowHelper.ScreenBoundsAppearToBeDips(
+            screenBounds,
+            nativeBounds,
+            scaleX: 1.5,
+            scaleY: 1.5);
+
+        Assert.True(appearsToBeDips);
+    }
+
+    [Fact]
+    public void ScreenBoundsAppearToBeDips_RejectsPhysicalPixelBounds()
+    {
+        var screenBounds = new System.Drawing.Rectangle(-1920, 0, 1600, 900);
+        var nativeBounds = new System.Drawing.Rectangle(-1920, 0, 1600, 900);
+
+        var appearsToBeDips = PopupWindowHelper.ScreenBoundsAppearToBeDips(
+            screenBounds,
+            nativeBounds,
+            scaleX: 1.25,
+            scaleY: 1.25);
+
+        Assert.False(appearsToBeDips);
+    }
 }

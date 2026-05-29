@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Forms;
 using System.Linq;
+using System.Runtime.InteropServices;
 using CyberSnap.Models;
 using CyberSnap.Native;
 
@@ -36,12 +37,12 @@ internal static class PopupWindowHelper
             if (monitorIndex >= 0 && monitorIndex < screens.Length)
             {
                 var screen = screens[monitorIndex];
-                return PhysicalPixelsToDips(screen.WorkingArea, screen.Bounds.Location);
+                return ScreenWorkingAreaToDips(screen);
             }
 
             var pt = _monitorHintPoint ?? Cursor.Position;
             _monitorHintPoint = null; // consume the hint
-            return PhysicalPixelsToDips(Screen.FromPoint(pt).WorkingArea, pt);
+            return ScreenWorkingAreaToDips(Screen.FromPoint(pt));
         }
         catch
         {
@@ -112,7 +113,7 @@ internal static class PopupWindowHelper
     internal static Rect PhysicalPixelsToDips(System.Drawing.Rectangle physicalRect, System.Drawing.Point monitorPoint)
     {
         var (scaleX, scaleY) = GetScaleForPoint(monitorPoint);
-        
+
         return new Rect(
             physicalRect.Left / scaleX,
             physicalRect.Top / scaleY,
@@ -120,7 +121,95 @@ internal static class PopupWindowHelper
             physicalRect.Height / scaleY);
     }
 
-    private static (double X, double Y) GetScaleForPoint(System.Drawing.Point point)
+    internal static Rect ScreenWorkingAreaToDips(Screen screen)
+    {
+        var screenBounds = screen.Bounds;
+        var screenWorkingArea = screen.WorkingArea;
+
+        if (TryGetNativeMonitorInfo(screen, out var nativeBounds, out var nativeWorkingArea))
+        {
+            var (scaleX, scaleY) = GetScaleForPoint(nativeBounds.Location);
+
+            if (ScreenBoundsAppearToBeDips(screenBounds, nativeBounds, scaleX, scaleY))
+            {
+                return new Rect(
+                    screenWorkingArea.Left,
+                    screenWorkingArea.Top,
+                    screenWorkingArea.Width,
+                    screenWorkingArea.Height);
+            }
+
+            return PhysicalPixelsToDips(nativeWorkingArea, nativeBounds.Location);
+        }
+
+        return PhysicalPixelsToDips(screenWorkingArea, screenBounds.Location);
+    }
+
+    internal static bool TryGetNativeMonitorInfo(
+        Screen screen,
+        out System.Drawing.Rectangle bounds,
+        out System.Drawing.Rectangle workingArea)
+    {
+        bounds = System.Drawing.Rectangle.Empty;
+        workingArea = System.Drawing.Rectangle.Empty;
+
+        try
+        {
+            var found = false;
+            var nativeBounds = System.Drawing.Rectangle.Empty;
+            var nativeWorkingArea = System.Drawing.Rectangle.Empty;
+            Native.User32.MonitorEnumProc callback = (
+                IntPtr monitor,
+                IntPtr hdcMonitor,
+                ref Native.User32.RECT monitorRect,
+                IntPtr data) =>
+            {
+                var info = new Native.User32.MONITORINFOEX
+                {
+                    cbSize = Marshal.SizeOf<Native.User32.MONITORINFOEX>()
+                };
+
+                if (Native.User32.GetMonitorInfoEx(monitor, ref info) &&
+                    string.Equals(info.szDevice, screen.DeviceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    nativeBounds = info.rcMonitor.ToRectangle();
+                    nativeWorkingArea = info.rcWork.ToRectangle();
+                    found = true;
+                    return false;
+                }
+
+                return true;
+            };
+
+            Native.User32.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, callback, IntPtr.Zero);
+            bounds = nativeBounds;
+            workingArea = nativeWorkingArea;
+
+            return found && !bounds.IsEmpty && !workingArea.IsEmpty;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    internal static bool ScreenBoundsAppearToBeDips(
+        System.Drawing.Rectangle screenBounds,
+        System.Drawing.Rectangle nativeBounds,
+        double scaleX,
+        double scaleY)
+    {
+        if (scaleX <= 0 || scaleY <= 0)
+        {
+            return false;
+        }
+
+        const int tolerance = 2;
+        return Math.Abs(screenBounds.Width - nativeBounds.Width / scaleX) <= tolerance &&
+               Math.Abs(screenBounds.Height - nativeBounds.Height / scaleY) <= tolerance;
+    }
+
+    internal static (double X, double Y) GetScaleForPoint(System.Drawing.Point point)
     {
         try
         {

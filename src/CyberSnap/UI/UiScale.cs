@@ -82,9 +82,7 @@ public static class UiScale
             var screen = hwnd != IntPtr.Zero
                 ? System.Windows.Forms.Screen.FromHandle(hwnd)
                 : System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position);
-            return PopupWindowHelper.PhysicalPixelsToDips(
-                screen.WorkingArea,
-                new System.Drawing.Point(screen.WorkingArea.Left, screen.WorkingArea.Top));
+            return PopupWindowHelper.ScreenWorkingAreaToDips(screen);
         }
         catch
         {

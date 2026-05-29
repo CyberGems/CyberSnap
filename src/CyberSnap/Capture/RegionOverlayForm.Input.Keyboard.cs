@@ -103,28 +103,15 @@ public sealed partial class RegionOverlayForm
         }
 
         // Undo must work in all states (emoji placing, typing, etc.)
-        if (e.KeyCode == Keys.Z && e.Control && _undoStack.Count > 0)
+        if (e.KeyCode == Keys.Z && e.Control && _editUndoStack.Count > 0)
         {
-            var last = RemoveLastAnnotation();
-            _redoStack.Add(last);
-            // Update step counter when undoing a step number
-            if (last is StepNumberAnnotation)
-            {
-                var remaining = _undoStack.OfType<StepNumberAnnotation>().LastOrDefault();
-                _nextStepNumber = remaining != null ? remaining.Number + 1 : 1;
-            }
-            Invalidate(InflateForRepaint(GetAnnotationBounds(last)));
+            UndoLastEdit();
             return;
         }
 
-        if ((e.KeyCode == Keys.Y && e.Control || e.KeyCode == Keys.Z && e.Control && e.Shift) && _redoStack.Count > 0)
+        if ((e.KeyCode == Keys.Y && e.Control || e.KeyCode == Keys.Z && e.Control && e.Shift) && _editRedoStack.Count > 0)
         {
-            var annotation = _redoStack[^1];
-            _redoStack.RemoveAt(_redoStack.Count - 1);
-            RestoreAnnotation(annotation);
-            if (annotation is StepNumberAnnotation step)
-                _nextStepNumber = Math.Max(_nextStepNumber, step.Number + 1);
-            Invalidate(InflateForRepaint(GetAnnotationBounds(annotation)));
+            RedoLastEdit();
             return;
         }
 
@@ -132,6 +119,20 @@ public sealed partial class RegionOverlayForm
         if (_mode == CaptureMode.Emoji && _isPlacingEmoji)
         {
             if (e.KeyCode == Keys.Tab) { _emojiPickerOpen = true; _isPlacingEmoji = false; QueueEmojiWarmup(); RefreshToolbar(); }
+            return;
+        }
+
+        // Stroke width shortcuts: [ decrease, ] increase
+        if (e.KeyCode == Keys.OemOpenBrackets)
+        {
+            int idx = Array.IndexOf(StrokeWidths, _strokeWidth);
+            if (idx > 0) { StrokeWidth = StrokeWidths[idx - 1]; }
+            return;
+        }
+        if (e.KeyCode == Keys.OemCloseBrackets)
+        {
+            int idx = Array.IndexOf(StrokeWidths, _strokeWidth);
+            if (idx < StrokeWidths.Length - 1) { StrokeWidth = StrokeWidths[idx + 1]; }
             return;
         }
 
@@ -149,16 +150,7 @@ public sealed partial class RegionOverlayForm
         // Delete selected annotation
         if (e.KeyCode == Keys.Delete && _mode == CaptureMode.Select && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
         {
-            var bounds = InflateForRepaint(GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]));
-            _undoStack.RemoveAt(_selectedAnnotationIndex);
-            _redoStack.Clear();
-            MarkCommittedAnnotationsDirty();
-            _selectedAnnotationIndex = -1;
-            _selectPreviewAnnotation = null;
-            _renderSkipIndex = -1;
-            _isSelectDragging = false;
-            _isSelectResizing = false;
-            Invalidate(bounds);
+            DeleteAnnotationAt(_selectedAnnotationIndex);
             return;
         }
     }

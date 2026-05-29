@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime;
 using System.Windows;
 using System.Windows.Threading;
@@ -309,6 +310,30 @@ public partial class App
     private void HistoryService_Changed()
     {
         QueueImageSearchIndexRefresh();
+    }
+
+    public void NotifyEditedCaptureSaved(string filePath, int width, int height)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(() => NotifyEditedCaptureSaved(filePath, width, height));
+            return;
+        }
+
+        try
+        {
+            HistoryWindow.InvalidateThumbCache(filePath);
+            var historyService = EnsureHistoryService();
+            historyService.RefreshExistingCapture(filePath, width, height, HistoryKind.Image);
+            RefreshHistoryWindowIfOpen();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning(
+                "lifecycle.editor-save-history",
+                $"Failed to refresh Capture History after saving {Path.GetFileName(filePath)}: {ex.Message}",
+                ex);
+        }
     }
 
     private void QueueImageSearchIndexRefresh()

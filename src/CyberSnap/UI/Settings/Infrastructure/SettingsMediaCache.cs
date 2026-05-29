@@ -53,6 +53,22 @@ internal static class SettingsMediaCache
         }
     }
 
+    public static void RemoveThumb(string path)
+    {
+        lock (ThumbCache)
+        {
+            ThumbCache.Remove(path);
+            if (ThumbCacheNodes.Remove(path, out var node))
+                ThumbCacheOrder.Remove(node);
+        }
+
+        lock (ThumbWaiters)
+            ThumbWaiters.Remove(path);
+
+        lock (ThumbInflight)
+            ThumbInflight.Remove(path);
+    }
+
     public static void Clear()
     {
         lock (ThumbWarmGate)

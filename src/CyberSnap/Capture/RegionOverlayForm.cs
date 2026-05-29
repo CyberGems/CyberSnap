@@ -55,10 +55,11 @@ public sealed partial class RegionOverlayForm : Form
     private ToolDef[] _visibleTools = ToolDef.AllTools;
     private ToolDef[] _mainBarTools = Array.Empty<ToolDef>();
     private ToolDef[] _flyoutTools = Array.Empty<ToolDef>();
-    private int BtnCount => _mainBarTools.Length + _flyoutTools.Length + 3; // +color +position +close
-    private int ColorButtonIndex => _mainBarTools.Length;
-    private int PositionButtonIndex => _mainBarTools.Length + 1;
-    private int CloseButtonIndex => _mainBarTools.Length + 2;
+    private int BtnCount => _mainBarTools.Length + _flyoutTools.Length + 4; // +strokeWidth +color +position +close
+    private int StrokeWidthButtonIndex => _mainBarTools.Length;
+    private int ColorButtonIndex => _mainBarTools.Length + 1;
+    private int PositionButtonIndex => _mainBarTools.Length + 2;
+    private int CloseButtonIndex => _mainBarTools.Length + 3;
     private Rectangle[] _toolbarButtons = Array.Empty<Rectangle>();
     private string[] _toolbarIcons = Array.Empty<string>();
     private string[] _toolbarLabels = Array.Empty<string>();
@@ -115,9 +116,11 @@ public sealed partial class RegionOverlayForm : Form
     private const int PW = Mag, PH = Mag;
     private const int MagOff = 8, MagMargin = 4;
 
-    // Typed undo stack: all annotations in creation order
+    // Committed annotations in creation order. Edit commands mutate this list.
     private readonly List<Annotation> _undoStack = new();
-    private readonly List<Annotation> _redoStack = new();
+    private readonly List<IEditCommand> _editUndoStack = new();
+    private readonly List<IEditCommand> _editRedoStack = new();
+    private OverlayEditorContext? _overlayEditorContext;
     private Bitmap? _committedAnnotationsBitmap;
     private bool _committedAnnotationsDirty = true;
 
@@ -190,10 +193,9 @@ public sealed partial class RegionOverlayForm : Form
     // the original position.
     private int _renderSkipIndex = -1;
 
-    // Smart eraser state
-    private Point _eraserStart;
-    private Color _eraserColor;
-    private bool _isEraserDragging;
+    // Eraser hover highlight
+    private int _eraserHoverIndex = -1;
+
     private bool _isTyping;
     private Point _textPos;
     private string _textBuffer = "";
@@ -362,6 +364,11 @@ public sealed partial class RegionOverlayForm : Form
         Color.FromArgb(0, 200, 0), Color.FromArgb(0, 136, 255), Color.White
     };
     private int _toolColorIndex = 4;
+
+    // Stroke width
+    private float _strokeWidth = 6f;
+    public static readonly float[] StrokeWidths = { 2f, 3f, 4f, 6f, 10f };
+    private const int StrokeWidthCount = 5;
     public event Action<Color>? ToolColorChanged;
     public event Action<CaptureDockSide>? DockSideChanged;
     private const int ColorPickerColumns = 6;
@@ -547,7 +554,7 @@ public sealed partial class RegionOverlayForm : Form
         BuildToolbarToolSplit(screenBounds, buttonSize, buttonSpacing, pad);
         _sepAfter = Array.Empty<int>(); // dividers drawn manually inside PaintToolbar
 
-        int tier1PrimarySpan = GetToolbarPrimarySpan(_mainBarTools.Length + 3, 2, buttonSize, buttonSpacing, pad);
+        int tier1PrimarySpan = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, pad);
         int tier2PrimarySpan = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, pad);
         int maxPrimarySpan = Math.Max(tier1PrimarySpan, tier2PrimarySpan);
 
@@ -559,7 +566,10 @@ public sealed partial class RegionOverlayForm : Form
         }
         else
         {
-            w = maxPrimarySpan;
+            int logoSize = UiChrome.ScaleInt(10);
+            int textWidth = UiChrome.ScaleInt(50); // "CyberSnap" text estimate at 5.8pt bold
+            int brandWidth = logoSize + textWidth + UiChrome.ScaleInt(24); // logo + text + padding+buffer
+            w = maxPrimarySpan + brandWidth;
             h = pad * 2 + buttonSize * 2 + buttonSpacing;
         }
 
@@ -578,29 +588,36 @@ public sealed partial class RegionOverlayForm : Form
             _toolbarModes[i] = _mainBarTools[i].Mode;
         }
 
-        // 2. Color picker button
-        int colorIdx = _mainBarTools.Length;
+        // 2. Stroke width button
+        int swIdx = StrokeWidthButtonIndex;
+        _toolbarIcons[swIdx] = "strokeWidth";
+        _toolbarLabels[swIdx] = LocalizationService.Translate("Stroke Width");
+        _toolbarToolIds[swIdx] = "strokeWidth";
+        _toolbarModes[swIdx] = null;
+
+        // 3. Color picker button
+        int colorIdx = ColorButtonIndex;
         _toolbarIcons[colorIdx] = "color";
         _toolbarLabels[colorIdx] = LocalizationService.Translate("Active drawing color");
         _toolbarToolIds[colorIdx] = "color";
         _toolbarModes[colorIdx] = null;
 
-        // 3. Position button
-        int positionIdx = _mainBarTools.Length + 1;
+        // 4. Position button
+        int positionIdx = PositionButtonIndex;
         _toolbarIcons[positionIdx] = "position";
         _toolbarLabels[positionIdx] = LocalizationService.Translate("Toolbar Position");
         _toolbarToolIds[positionIdx] = "position";
         _toolbarModes[positionIdx] = null;
 
-        // 4. Close (Cancel) button
-        int closeIdx = _mainBarTools.Length + 2;
+        // 5. Close (Cancel) button
+        int closeIdx = CloseButtonIndex;
         _toolbarIcons[closeIdx] = "close";
         _toolbarLabels[closeIdx] = LocalizationService.Translate("Cancel");
         _toolbarToolIds[closeIdx] = "close";
         _toolbarModes[closeIdx] = null;
 
-        // 5. Group 1 (Annotation & Drawing tools)
-        int drawingStartIdx = _mainBarTools.Length + 3;
+        // 6. Group 1 (Annotation & Drawing tools)
+        int drawingStartIdx = _mainBarTools.Length + 4;
         for (int i = 0; i < _flyoutTools.Length; i++)
         {
             int btnIdx = drawingStartIdx + i;
@@ -621,7 +638,7 @@ public sealed partial class RegionOverlayForm : Form
         if (IsVerticalDock)
         {
             // Column 1: Capture & System Tools
-            int col1Height = GetToolbarPrimarySpan(_mainBarTools.Length + 3, 2, buttonSize, buttonSpacing, 0);
+            int col1Height = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
             int col1StartY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - col1Height) / 2;
             int col1X = _toolbarRect.X + pad;
 
@@ -634,11 +651,13 @@ public sealed partial class RegionOverlayForm : Form
                     cy += GroupGap;
             }
             cy += GroupGap;
-            _toolbarButtons[_mainBarTools.Length] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Color
+            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Stroke width
             cy += buttonSize + buttonSpacing;
-            _toolbarButtons[_mainBarTools.Length + 1] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Position
+            _toolbarButtons[ColorButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Color
             cy += buttonSize + buttonSpacing;
-            _toolbarButtons[_mainBarTools.Length + 2] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Close
+            _toolbarButtons[PositionButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Position
+            cy += buttonSize + buttonSpacing;
+            _toolbarButtons[CloseButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Close
 
             // Column 2: Annotation Tools
             int col2X = _toolbarRect.X + pad + buttonSize + buttonSpacing;
@@ -648,7 +667,7 @@ public sealed partial class RegionOverlayForm : Form
             int[] tier2Seps = { 1, 8 };
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
-                int btnIdx = _mainBarTools.Length + 3 + i;
+                int btnIdx = _mainBarTools.Length + 4 + i;
                 _toolbarButtons[btnIdx] = new Rectangle(col2X, cy2, buttonSize, buttonSize);
                 cy2 += buttonSize + buttonSpacing;
                 if (Array.IndexOf(tier2Seps, i) >= 0)
@@ -658,7 +677,7 @@ public sealed partial class RegionOverlayForm : Form
         else
         {
             // Row 1: Capture & System Tools
-            int row1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 3, 2, buttonSize, buttonSpacing, 0);
+            int row1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
             int row1StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row1Width) / 2;
             int row1Y = _toolbarRect.Y + pad;
 
@@ -671,11 +690,13 @@ public sealed partial class RegionOverlayForm : Form
                     cx += GroupGap;
             }
             cx += GroupGap;
-            _toolbarButtons[_mainBarTools.Length] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Color
+            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Stroke width
             cx += buttonSize + buttonSpacing;
-            _toolbarButtons[_mainBarTools.Length + 1] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Position
+            _toolbarButtons[ColorButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Color
             cx += buttonSize + buttonSpacing;
-            _toolbarButtons[_mainBarTools.Length + 2] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Close
+            _toolbarButtons[PositionButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Position
+            cx += buttonSize + buttonSpacing;
+            _toolbarButtons[CloseButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Close
 
             // Row 2: Annotation Tools
             int row2Y = _toolbarRect.Y + pad + buttonSize + buttonSpacing;
@@ -685,7 +706,7 @@ public sealed partial class RegionOverlayForm : Form
             int[] tier2Seps = { 1, 8 };
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
-                int btnIdx = _mainBarTools.Length + 3 + i;
+                int btnIdx = _mainBarTools.Length + 4 + i;
                 _toolbarButtons[btnIdx] = new Rectangle(cx2, row2Y, buttonSize, buttonSize);
                 cx2 += buttonSize + buttonSpacing;
                 if (Array.IndexOf(tier2Seps, i) >= 0)
@@ -772,6 +793,13 @@ public sealed partial class RegionOverlayForm : Form
         CalcToolbar();
         PositionToolbarForm();
         RefreshToolbar();
+    }
+
+    private void CycleStrokeWidth()
+    {
+        int idx = Array.IndexOf(StrokeWidths, _strokeWidth);
+        idx = (idx + 1) % StrokeWidths.Length;
+        StrokeWidth = StrokeWidths[idx];
     }
 
     public void ResetEvasion()

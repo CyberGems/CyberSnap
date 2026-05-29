@@ -92,9 +92,9 @@
                     </Border>
                     <Border x:Name="OfficeBtn" Width="32" Height="32" CornerRadius="8"
                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                            ToolTip="Open with or send to Office"
-                            AutomationProperties.Name="Open with or send to Office"
-                            AutomationProperties.HelpText="Open this preview with another app or send it to Office."
+                            ToolTip="Send to"
+                            AutomationProperties.Name="Send to"
+                            AutomationProperties.HelpText="Open the screenshot with another app."
                             Cursor="Hand"
                             Focusable="True"
                             KeyDown="OfficeBtn_KeyDown"
@@ -129,6 +129,20 @@
                             HorizontalAlignment="Right" VerticalAlignment="Top"
                             Margin="0,8,48,0" Opacity="0" Visibility="Collapsed">
                         <Image x:Name="HistoryIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border x:Name="EditBtn" Width="32" Height="32" CornerRadius="8"
+                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            ToolTip="Edit preview"
+                            AutomationProperties.Name="Edit preview"
+                            AutomationProperties.HelpText="Open this preview in the post-capture editor."
+                            Cursor="Hand"
+                            Focusable="True"
+                            KeyDown="EditBtn_KeyDown"
+                            HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                            Margin="48,0,0,8" Opacity="0" Visibility="Collapsed">
+                        <Image x:Name="EditIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>

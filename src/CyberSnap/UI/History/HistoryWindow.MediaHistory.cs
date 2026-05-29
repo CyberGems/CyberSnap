@@ -504,6 +504,7 @@ public partial class HistoryWindow
 
         vm.ThumbnailSource = source;
         vm.ThumbnailLoaded = true;
+        RememberHistoryItemThumbnailFingerprint(vm, vm.Entry);
         StoreThumbInCache(vm.Entry.FilePath, source);
         ApplyThumbnailToBoundImage(vm, source, animate: true);
     }
@@ -829,6 +830,7 @@ public partial class HistoryWindow
         {
             vm.ThumbnailSource = cached;
             vm.ThumbnailLoaded = true;
+            RememberHistoryItemThumbnailFingerprint(vm, vm.Entry);
             img.Source = cached;
             img.Opacity = 1;
             ApplyThumbnailToWaiters(cacheKey, cached, animate: false);
@@ -839,6 +841,7 @@ public partial class HistoryWindow
         {
             vm.ThumbnailSource = cachedDisk;
             vm.ThumbnailLoaded = true;
+            RememberHistoryItemThumbnailFingerprint(vm, vm.Entry);
             img.Source = cachedDisk;
             img.Opacity = 1;
             ApplyThumbnailToWaiters(cacheKey, cachedDisk, animate: false);
@@ -865,6 +868,7 @@ public partial class HistoryWindow
                         var placeholder = GetHistoryPlaceholder(vm.Entry.Kind);
                         vm.ThumbnailSource = placeholder;
                         vm.ThumbnailLoaded = true;
+                        RememberHistoryItemThumbnailFingerprint(vm, vm.Entry);
                         StoreThumbInCache(cacheKey, placeholder);
                         ApplyThumbnailToWaiters(cacheKey, placeholder, animate: false);
                     }
@@ -885,6 +889,7 @@ public partial class HistoryWindow
 
                     vm.ThumbnailSource = bmp;
                     vm.ThumbnailLoaded = true;
+                    RememberHistoryItemThumbnailFingerprint(vm, vm.Entry);
                     StoreThumbInCache(cacheKey, bmp);
                     ApplyThumbnailToWaiters(cacheKey, bmp, animate: true);
                 }
@@ -989,6 +994,7 @@ public partial class HistoryWindow
             {
                 vm.ThumbnailSource = bmp;
                 vm.ThumbnailLoaded = true;
+                RememberHistoryItemThumbnailFingerprint(vm, vm.Entry);
                 ApplyThumbnailToBoundImage(vm, bmp, animate: false);
             },
             onLoaded);

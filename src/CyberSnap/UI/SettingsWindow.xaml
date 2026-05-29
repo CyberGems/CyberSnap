@@ -126,8 +126,8 @@
                             <Trigger Property="Content" Value="General">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE9E9;"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="Toast">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE7F4;"/>
+                            <Trigger Property="Content" Value="Notifications">
+                                <Setter TargetName="Icon" Property="Text" Value="&#xEA8F;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Tools">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE90F;"/>
@@ -1035,6 +1035,14 @@
                                                   ToolTip="Open a preview without copying."
                                                   AutomationProperties.Name="Preview only after capture"
                                                   AutomationProperties.HelpText="Open the preview window without copying the saved capture to the clipboard."/>
+                                    <ComboBoxItem Content="Editor + Copy"
+                                                  ToolTip="Open the editor and copy the capture."
+                                                  AutomationProperties.Name="Open editor and copy after capture"
+                                                  AutomationProperties.HelpText="Open the post-capture editor directly and also copy the saved capture to the clipboard."/>
+                                    <ComboBoxItem Content="Editor only"
+                                                  ToolTip="Open the editor without copying."
+                                                  AutomationProperties.Name="Open editor only after capture"
+                                                  AutomationProperties.HelpText="Open the post-capture editor directly without copying the saved capture to the clipboard."/>
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -1939,12 +1947,12 @@
                                     <TextBlock Text="&#xE700;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Show floating capture panel" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Hover at the screen edge to expand the quick capture panel." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Show edge capture widget" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Keep the capture widget peeking from the screen edge for hover or click activation." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="ShowCaptureWidgetCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Show floating capture panel"
-                                          ToolTip="Enable the hover-activated floating capture panel."
+                                          AutomationProperties.Name="Show edge capture widget"
+                                          ToolTip="Enable the edge-peeking capture widget."
                                           Checked="ShowCaptureWidgetCheck_Changed" Unchecked="ShowCaptureWidgetCheck_Changed"/>
                             </Grid>
                             <Border x:Name="WidgetOptionsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -1960,13 +1968,13 @@
                                     <TextBlock Text="&#xE139;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Dock edge" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Select which screen edge the widget docks to." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Widget edge" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Select which screen edge the widget peeks from." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="WidgetDockEdgeCombo" Grid.Column="2" MinWidth="145"
                                           VerticalAlignment="Center"
-                                          AutomationProperties.Name="Dock edge"
-                                          ToolTip="Select screen edge."
+                                          AutomationProperties.Name="Widget edge"
+                                          ToolTip="Select the screen edge for the widget."
                                           SelectionChanged="WidgetDockEdgeCombo_SelectionChanged">
                                     <ComboBoxItem Content="Top"/>
                                     <ComboBoxItem Content="Bottom"/>
@@ -1987,12 +1995,12 @@
                                     <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Hover trigger delay" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Delay (ms) before expanding the widget on hover." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Edge hover delay" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Delay (ms) before the peeking widget expands on hover." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="WidgetHoverDelayCombo" Grid.Column="2" MinWidth="145"
                                           VerticalAlignment="Center"
-                                          AutomationProperties.Name="Hover trigger delay"
+                                          AutomationProperties.Name="Edge hover delay"
                                           ToolTip="Delay in milliseconds."
                                           SelectionChanged="WidgetHoverDelayCombo_SelectionChanged">
                                     <ComboBoxItem Content="0 ms" Tag="0"/>
@@ -2585,8 +2593,8 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
-                                                            ToolTip="Move the office export notification button"
-                                                            AutomationProperties.Name="Office export notification button"
+                                                            ToolTip="Move the send to notification button"
+                                                            AutomationProperties.Name="Send to notification button"
                                                             AllowDrop="True"
                                                             MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
                                                             MouseMove="ToastLayoutButton_MouseMove"
@@ -2616,23 +2624,40 @@
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
 
-                                                    <Border x:Name="ToastLayoutAiRedirectBtn"
-                                                              Width="30" Height="30" CornerRadius="9"
-                                                              Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                                                              Cursor="Hand"
-                                                              ToolTip="Move the AI redirect notification button"
-                                                              AutomationProperties.Name="AI redirect notification button"
-                                                              AllowDrop="True"
-                                                              MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
-                                                              MouseMove="ToastLayoutButton_MouseMove"
-                                                              MouseLeftButtonUp="ToastLayoutButton_MouseLeftButtonUp"
-                                                              DragEnter="ToastLayoutButton_DragEnter"
-                                                              Drop="ToastLayoutButton_Drop"
-                                                              Tag="History">
-                                                          <Image x:Name="ToastLayoutAiRedirectIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
-                                                                 RenderOptions.BitmapScalingMode="HighQuality"
-                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                      </Border>
+                                                       <Border x:Name="ToastLayoutAiRedirectBtn"
+                                                               Width="30" Height="30" CornerRadius="9"
+                                                               Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                               Cursor="Hand"
+                                                               ToolTip="Move the history notification button"
+                                                               AutomationProperties.Name="History notification button"
+                                                               AllowDrop="True"
+                                                               MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
+                                                               MouseMove="ToastLayoutButton_MouseMove"
+                                                               MouseLeftButtonUp="ToastLayoutButton_MouseLeftButtonUp"
+                                                               DragEnter="ToastLayoutButton_DragEnter"
+                                                               Drop="ToastLayoutButton_Drop"
+                                                               Tag="History">
+                                                           <Image x:Name="ToastLayoutAiRedirectIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                                  RenderOptions.BitmapScalingMode="HighQuality"
+                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                       </Border>
+                                                       <Border x:Name="ToastLayoutEditBtn"
+                                                               Width="30" Height="30" CornerRadius="9"
+                                                               Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                               Cursor="Hand"
+                                                               ToolTip="Move the edit notification button"
+                                                               AutomationProperties.Name="Edit notification button"
+                                                               AllowDrop="True"
+                                                               MouseLeftButtonDown="ToastLayoutButton_MouseLeftButtonDown"
+                                                               MouseMove="ToastLayoutButton_MouseMove"
+                                                               MouseLeftButtonUp="ToastLayoutButton_MouseLeftButtonUp"
+                                                               DragEnter="ToastLayoutButton_DragEnter"
+                                                               Drop="ToastLayoutButton_Drop"
+                                                               Tag="Edit">
+                                                           <Image x:Name="ToastLayoutEditIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                                  RenderOptions.BitmapScalingMode="HighQuality"
+                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                       </Border>
                                                 </Grid>
                                             </Border>
 
