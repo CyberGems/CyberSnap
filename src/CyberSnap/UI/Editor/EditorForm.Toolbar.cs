@@ -1,0 +1,1956 @@
+using System.ComponentModel;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.IO;
+using System.Windows.Forms;
+using CyberSnap.Helpers;
+using CyberSnap.Services;
+using CyberSnap.UI.Controls;
+
+namespace CyberSnap.UI.Editor;
+
+public sealed partial class EditorForm
+{
+    private Panel _topBarPanel = null!;
+    private Panel _statusBarPanel = null!;
+    private Panel _toolbarPanel = null!;
+    private Bitmap? _brandBitmap;
+    private Label _captureMetaLabel = null!;
+    private Label _coordsLabel = null!;
+    private Label _zoomLabel = null!;
+    private Label _hintLabel = null!;
+    private EditorZoomSlider _zoomSlider = null!;
+    private bool _suppressZoomSliderChange;
+    private TableLayoutPanel _cropSection = null!;
+    private System.Windows.Forms.Timer _cropRevealTimer = null!;
+    private int _cropSectionTargetHeight;
+    private EditorCommandButton _confirmCropButton = null!;
+    private EditorCommandButton _cancelCropButton = null!;
+    private EditorCommandButton _undoButton = null!;
+    private EditorCommandButton _redoButton = null!;
+    private EditorCommandButton _saveButton = null!;
+    private EditorCommandButton _copyButton = null!;
+    private EditorChromeButton _windowStateButton = null!;
+    private EditorZoomBarButton _fitZoomBtn = null!;
+    private EditorZoomBarButton _resetZoomBtn = null!;
+    private EditorToggleSwitch _toggleFrameSwitch = null!;
+    private readonly ToolTip _chromeToolTip = new() { InitialDelay = 350, ReshowDelay = 80, ShowAlways = true };
+    private readonly Dictionary<AnnotationCanvas.CanvasTool, EditorToolButton> _toolButtons = new();
+    private readonly Dictionary<Color, EditorColorButton> _colorButtons = new();
+    private readonly List<EditorStrokeWidthButton> _strokeWidthButtons = new();
+    private const int CropSectionExpandedHeight = 86;
+
+    private static readonly Color[] PaletteColors =
+    {
+        Color.FromArgb(0, 255, 255),
+        Color.FromArgb(0, 136, 255),
+        Color.FromArgb(168, 85, 247),
+        Color.FromArgb(255, 45, 85),
+        Color.FromArgb(245, 158, 11),
+        Color.FromArgb(234, 179, 8),
+        Color.FromArgb(34, 197, 94),
+        Color.White,
+        Color.FromArgb(15, 23, 42),
+    };
+
+    private void BuildToolbar()
+    {
+        _topBarPanel = BuildTopBar();
+        _cropRevealTimer = new System.Windows.Forms.Timer { Interval = 15 };
+        _cropRevealTimer.Tick += CropRevealTimer_Tick;
+
+        _toolbarPanel = new Panel
+        {
+            Dock = DockStyle.Left,
+            Width = 332,
+            BackColor = EditorColors.BgSecondary,
+            Padding = new Padding(20, 18, 20, 18),
+        };
+        _toolbarPanel.Paint += (_, e) =>
+        {
+            using var pen = new Pen(EditorColors.BorderSubtle);
+            e.Graphics.DrawLine(pen, _toolbarPanel.Width - 1, 0, _toolbarPanel.Width - 1, _toolbarPanel.Height);
+        };
+
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            ColumnCount = 1,
+            RowCount = 3,
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        layout.Controls.Add(BuildToolSection(), 0, 0);
+        layout.Controls.Add(BuildCropSection(), 0, 1);
+        layout.Controls.Add(BuildColorSection(), 0, 2);
+
+        _toolbarPanel.Controls.Add(layout);
+    }
+
+    private void BuildStatusBar()
+    {
+        _statusBarPanel = new DoubleBufferedPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 58,
+            BackColor = EditorColors.TitleBar,
+            Padding = new Padding(18, 8, 18, 8),
+        };
+        _statusBarPanel.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var glow = new Pen(Color.FromArgb(36, EditorColors.Accent), 4f);
+            using var border = new Pen(EditorColors.Border);
+            e.Graphics.DrawLine(glow, 0, 1, _statusBarPanel.Width, 1);
+            e.Graphics.DrawLine(border, 0, 0, _statusBarPanel.Width, 0);
+        };
+
+        var statusInfo = new DoubleBufferedPanel
+        {
+            Dock = DockStyle.Left,
+            BackColor = EditorColors.TitleBar,
+            Width = 400,
+            Padding = new Padding(0),
+        };
+
+        _coordsLabel = new DoubleBufferedLabel
+        {
+            Dock = DockStyle.Left,
+            Width = 86,
+            BackColor = EditorColors.TitleBar,
+            Text = "0, 0",
+            ForeColor = EditorColors.TextSecondary,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular, GraphicsUnit.Point),
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+
+        var metaSeparator = new Panel
+        {
+            Dock = DockStyle.Left,
+            Width = 24,
+            BackColor = Color.Transparent,
+        };
+        metaSeparator.Paint += (s, e) =>
+        {
+            using var pen = new Pen(EditorColors.BorderSubtle);
+            int y1 = (metaSeparator.Height - 16) / 2;
+            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
+        };
+
+        _captureMetaLabel = new DoubleBufferedLabel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = EditorColors.TitleBar,
+            Text = "",
+            ForeColor = EditorColors.TextSecondary,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular, GraphicsUnit.Point),
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+        statusInfo.Controls.Add(_captureMetaLabel);
+        statusInfo.Controls.Add(metaSeparator);
+        statusInfo.Controls.Add(_coordsLabel);
+
+        var statusSeparator = new Panel
+        {
+            Dock = DockStyle.Left,
+            Width = 24,
+            BackColor = Color.Transparent,
+        };
+        statusSeparator.Paint += (s, e) =>
+        {
+            using var pen = new Pen(EditorColors.BorderSubtle);
+            int y1 = (statusSeparator.Height - 16) / 2;
+            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
+        };
+
+        _toggleFrameSwitch = new EditorToggleSwitch
+        {
+            LabelText = LocalizationService.Translate("Border"),
+            Checked = _canvas.ShowCaptureFrame,
+            Width = 120,
+            Height = 42,
+            Dock = DockStyle.Left,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
+        };
+        _toggleFrameSwitch.CheckedChanged += (_, _) =>
+        {
+            _canvas.ShowCaptureFrame = _toggleFrameSwitch.Checked;
+            _canvas.Invalidate();
+        };
+
+        _hintLabel = new DoubleBufferedLabel
+        {
+            Dock = DockStyle.Right,
+            Width = 170,
+            BackColor = EditorColors.TitleBar,
+            Text = "Ready",
+            ForeColor = EditorColors.TextMuted,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular, GraphicsUnit.Point),
+            TextAlign = ContentAlignment.MiddleRight,
+        };
+
+        var hintSpacer = new Label
+        {
+            Dock = DockStyle.Right,
+            Width = 10,
+            BackColor = Color.Transparent,
+        };
+
+        _resetZoomBtn = new EditorZoomBarButton
+        {
+            Dock = DockStyle.Right,
+            IconId = "fullscreen",
+            Text = "100%",
+            Width = 100,
+            Height = 42,
+            Margin = new Padding(0),
+        };
+        _resetZoomBtn.Click += (_, _) => _canvas.ZoomReset();
+
+        var zoomSpacer1 = new Label
+        {
+            Dock = DockStyle.Right,
+            Width = 10,
+            BackColor = Color.Transparent,
+        };
+
+        _fitZoomBtn = new EditorZoomBarButton
+        {
+            Dock = DockStyle.Right,
+            IconId = "zoomFit",
+            Text = LocalizationService.Translate("Fit"),
+            Width = 90,
+            Height = 42,
+            Margin = new Padding(0),
+        };
+        _fitZoomBtn.Click += (_, _) => _canvas.ZoomFit();
+
+        var zoomSpacer2 = new Label
+        {
+            Dock = DockStyle.Right,
+            Width = 10,
+            BackColor = Color.Transparent,
+        };
+
+        var zoomHost = new EditorZoomHostPanel
+        {
+            Dock = DockStyle.Right,
+            Width = 315,
+            Height = 42,
+            BackColor = EditorColors.TitleBar,
+            ColumnCount = 3,
+            RowCount = 1,
+            Padding = new Padding(8, 3, 8, 3),
+        };
+        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 55));
+        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 65));
+
+        _zoomLabel = new DoubleBufferedLabel
+        {
+            Dock = DockStyle.Right,
+            Width = 65,
+            BackColor = EditorColors.TitleBar,
+            Text = "100%",
+            ForeColor = EditorColors.Accent,
+            Font = new Font("Segoe UI Variable Text", 10f, FontStyle.Bold, GraphicsUnit.Point),
+            TextAlign = ContentAlignment.MiddleRight,
+        };
+
+        var zoomText = new DoubleBufferedLabel
+        {
+            Dock = DockStyle.Left,
+            Width = 55,
+            BackColor = EditorColors.TitleBar,
+            Text = "Zoom",
+            ForeColor = EditorColors.TextSecondary,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+
+        _zoomSlider = new EditorZoomSlider
+        {
+            Dock = DockStyle.Fill,
+            BackColor = EditorColors.TitleBar,
+            Minimum = AnnotationCanvas.MinZoomPercent,
+            Maximum = AnnotationCanvas.MaxZoomPercent,
+            Value = 100,
+            Margin = new Padding(8, 0, 8, 0),
+        };
+        _zoomSlider.ValueChanged += (_, _) =>
+        {
+            if (_suppressZoomSliderChange) return;
+            _canvas.ZoomToPercent(_zoomSlider.Value);
+        };
+
+        zoomHost.Controls.Add(zoomText, 0, 0);
+        zoomHost.Controls.Add(_zoomSlider, 1, 0);
+        zoomHost.Controls.Add(_zoomLabel, 2, 0);
+
+        _statusBarPanel.Controls.Add(zoomHost);
+        _statusBarPanel.Controls.Add(zoomSpacer2);
+        _statusBarPanel.Controls.Add(_fitZoomBtn);
+        _statusBarPanel.Controls.Add(zoomSpacer1);
+        _statusBarPanel.Controls.Add(_resetZoomBtn);
+        _statusBarPanel.Controls.Add(hintSpacer);
+        _statusBarPanel.Controls.Add(_hintLabel);
+        _statusBarPanel.Controls.Add(statusInfo);
+        _statusBarPanel.Controls.Add(statusSeparator);
+        _statusBarPanel.Controls.Add(_toggleFrameSwitch);
+    }
+
+    private Panel BuildTopBar()
+    {
+        var panel = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 76,
+            BackColor = EditorColors.TitleBar,
+            Padding = new Padding(22, 13, 18, 12),
+        };
+        panel.Paint += (_, e) =>
+        {
+            using var pen = new Pen(EditorColors.BorderSubtle);
+            e.Graphics.DrawLine(pen, 0, panel.Height - 1, panel.Width, panel.Height - 1);
+        };
+        panel.MouseDown += BeginWindowDrag;
+
+        // Brand area: logo + "CyberSnap" + "Annotations Editor"
+        var brandPanel = new Panel
+        {
+            Dock = DockStyle.Left,
+            Width = 320,
+            BackColor = Color.Transparent,
+        };
+        brandPanel.MouseDown += BeginWindowDrag;
+
+        // Load logo bitmap
+        if (_brandBitmap == null)
+        {
+            try
+            {
+                var logoUri = new Uri("pack://application:,,,/Assets/CyberSnap_square.png", UriKind.Absolute);
+                var streamInfo = System.Windows.Application.GetResourceStream(logoUri);
+                if (streamInfo != null)
+                {
+                    using (var s = streamInfo.Stream)
+                        _brandBitmap = new Bitmap(s);
+                }
+            }
+            catch { }
+        }
+
+        brandPanel.Paint += (_, e) =>
+        {
+            var g = e.Graphics;
+            int cy = brandPanel.Height / 2;
+
+            if (_brandBitmap != null)
+            {
+                g.DrawImage(_brandBitmap, new Rectangle(0, cy - 9, 18, 18));
+            }
+
+            using var font1 = new Font("Segoe UI Variable Display", 10f, FontStyle.Bold, GraphicsUnit.Point);
+            var size1 = TextRenderer.MeasureText("CyberSnap", font1);
+            TextRenderer.DrawText(g, "CyberSnap", font1,
+                new Rectangle(24, 0, size1.Width, brandPanel.Height),
+                EditorColors.Accent,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+
+            using var font2 = new Font("Segoe UI Variable Display", 9f, FontStyle.Regular, GraphicsUnit.Point);
+            TextRenderer.DrawText(g, LocalizationService.Translate("Annotations Editor"), font2,
+                new Rectangle(24 + size1.Width + 10, 0, 240, brandPanel.Height),
+                EditorColors.TextPrimary,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+        };
+
+        var topActions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = EditorColors.TitleBar,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0),
+        };
+
+        var closeButton = MakeChromeButton("close", LocalizationService.Translate("Close"));
+        closeButton.Click += (_, _) => Close();
+        topActions.Controls.Add(closeButton);
+
+        _windowStateButton = MakeChromeButton("maximize", LocalizationService.Translate("Maximize"));
+        _windowStateButton.Click += (_, _) => ToggleWindowState();
+        topActions.Controls.Add(_windowStateButton);
+
+        var minimizeButton = MakeChromeButton("minimize", LocalizationService.Translate("Minimize"));
+        minimizeButton.Click += (_, _) => WindowState = FormWindowState.Minimized;
+        topActions.Controls.Add(minimizeButton);
+
+        var settingsButton = MakeChromeButton("gear", LocalizationService.Translate("Settings"));
+        settingsButton.Click += (_, _) => OpenSettingsWindow();
+        topActions.Controls.Add(settingsButton);
+
+        // Spacer between settings and saveAs
+        topActions.Controls.Add(new Label
+        {
+            Width = 24,
+            Height = 1,
+            BackColor = Color.Transparent,
+        });
+
+        var saveAsButton = MakeCommandButton("folder", LocalizationService.Translate("Save As"), false);
+        saveAsButton.Width = 148;
+        saveAsButton.Click += (_, _) => DoSaveAs();
+        topActions.Controls.Add(saveAsButton);
+
+        _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
+        _saveButton.Width = 132;
+        _saveButton.Click += (_, _) => DoSave();
+        topActions.Controls.Add(_saveButton);
+
+        _copyButton = MakeCommandButton("copy", LocalizationService.Translate("Copy"), false);
+        _copyButton.Width = 112;
+        _copyButton.Click += (_, _) => DoCopy();
+        topActions.Controls.Add(_copyButton);
+
+        // Spacer between undo/redo and the rest
+        topActions.Controls.Add(new Label
+        {
+            Width = 16,
+            Height = 1,
+            BackColor = Color.Transparent,
+        });
+
+        _redoButton = MakeCommandButton("redo", LocalizationService.Translate("Redo"), false);
+        _redoButton.Width = 110;
+        _redoButton.Click += (_, _) => _canvas.Redo();
+        topActions.Controls.Add(_redoButton);
+
+        _undoButton = MakeCommandButton("undo", LocalizationService.Translate("Undo"), false);
+        _undoButton.Width = 110;
+        _undoButton.Click += (_, _) => _canvas.Undo();
+        topActions.Controls.Add(_undoButton);
+
+        UpdateWindowStateButton();
+
+        panel.Controls.Add(brandPanel);
+        panel.Controls.Add(topActions);
+
+        return panel;
+    }
+
+    private Control BuildToolSection()
+    {
+        var section = MakeSectionPanel("Tools", 560);
+        var grid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            ColumnCount = 2,
+            RowCount = 6,
+            Padding = new Padding(0, 2, 0, 0),
+        };
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        for (int i = 0; i < 6; i++)
+            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 16.66f));
+
+        AddToolButton(grid, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
+        AddToolButton(grid, 1, 0, AnnotationCanvas.CanvasTool.Select, "select", "Select");
+        AddToolButton(grid, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop");
+        AddToolButton(grid, 1, 1, AnnotationCanvas.CanvasTool.Text, "text", "Text");
+        AddToolButton(grid, 0, 2, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw");
+        AddToolButton(grid, 1, 2, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow");
+        AddToolButton(grid, 0, 3, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", "Curved arrow");
+        AddToolButton(grid, 1, 3, AnnotationCanvas.CanvasTool.Line, "line", "Line");
+        AddToolButton(grid, 0, 4, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle");
+        AddToolButton(grid, 1, 4, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle");
+        AddToolButton(grid, 0, 5, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser");
+        AddToolButton(grid, 1, 5, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight");
+
+        section.Controls.Add(grid, 0, 1);
+        return section;
+    }
+
+    private Control BuildCropSection()
+    {
+        var section = MakeSectionPanel("Crop", 86);
+        _cropSection = section;
+        _cropSection.Height = 0;
+        _cropSection.Visible = false;
+        var actions = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 1,
+            BackColor = Color.Transparent,
+        };
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+
+        _confirmCropButton = MakeCommandButton("select", LocalizationService.Translate("Confirm"), true);
+        _confirmCropButton.Dock = DockStyle.Fill;
+        _confirmCropButton.Margin = new Padding(0, 3, 5, 7);
+        _confirmCropButton.Click += (_, _) => _canvas.TryConfirmCrop();
+        actions.Controls.Add(_confirmCropButton, 0, 0);
+
+        _cancelCropButton = MakeCommandButton("close", LocalizationService.Translate("Cancel"), false);
+        _cancelCropButton.Dock = DockStyle.Fill;
+        _cancelCropButton.Margin = new Padding(5, 3, 0, 7);
+        _cancelCropButton.Click += (_, _) => _canvas.CancelCropPending();
+        actions.Controls.Add(_cancelCropButton, 1, 0);
+
+        section.Controls.Add(actions, 0, 1);
+        return section;
+    }
+
+    private Control BuildColorSection()
+    {
+        var section = MakeSectionPanel("Color && Width", 240);
+        var outer = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+        };
+
+        int swatchSize = (int)Math.Round(28 * 1.35);
+        int swatchMargin = 9;
+        int btnSize = (int)Math.Round(32 * 1.35);
+
+        var palette = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            MaximumSize = new Size(290, 0),
+            BackColor = Color.Transparent,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+        };
+
+        foreach (var color in PaletteColors)
+        {
+            var swatch = new EditorColorButton
+            {
+                SwatchColor = color,
+                Width = swatchSize,
+                Height = swatchSize,
+                Margin = new Padding(0, 0, swatchMargin, swatchMargin),
+            };
+            swatch.Click += (_, _) =>
+            {
+                _canvas.ToolColor = color;
+                UpdateColorSwatch();
+            };
+            _colorButtons[color] = swatch;
+            palette.Controls.Add(swatch);
+        }
+
+        outer.Controls.Add(palette);
+
+        var strokeWidths = new[] { 2f, 3f, 4f, 6f, 10f };
+        var widthRow = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            MaximumSize = new Size(290, 0),
+            BackColor = Color.Transparent,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+        };
+
+        foreach (var w in strokeWidths)
+        {
+            var btn = new EditorStrokeWidthButton
+            {
+                StrokeWidth = w,
+                Width = btnSize,
+                Height = btnSize,
+                Margin = new Padding(0, 0, swatchMargin, 0),
+            };
+            btn.Click += (_, _) =>
+            {
+                _canvas.StrokeWidth = w;
+                UpdateStrokeWidthButtons();
+            };
+            _strokeWidthButtons.Add(btn);
+            widthRow.Controls.Add(btn);
+        }
+
+        outer.Controls.Add(widthRow);
+        section.Controls.Add(outer, 0, 1);
+        return section;
+    }
+
+    private TableLayoutPanel MakeSectionPanel(string title, int height)
+    {
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = height,
+            BackColor = Color.Transparent,
+            Padding = new Padding(0, 0, 0, 12),
+            ColumnCount = 1,
+            RowCount = 2,
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        var label = new Label
+        {
+            Dock = DockStyle.Top,
+            Height = 24,
+            Text = title,
+            ForeColor = EditorColors.Accent,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
+        panel.Controls.Add(label, 0, 0);
+        return panel;
+    }
+
+    private void AddToolButton(
+        TableLayoutPanel parent,
+        int column,
+        int row,
+        AnnotationCanvas.CanvasTool tool,
+        string iconId,
+        string labelKey)
+    {
+        var label = LocalizationService.Translate(labelKey);
+        var button = new EditorToolButton
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(column == 0 ? 0 : 4, row == 0 ? 2 : 4, column == 0 ? 4 : 0, 4),
+            IconId = iconId,
+            Text = label,
+        };
+        button.Click += (_, _) => _canvas.ActiveTool = tool;
+        _toolButtons[tool] = button;
+        parent.Controls.Add(button, column, row);
+    }
+
+    private EditorCommandButton MakeCommandButton(string iconId, string text, bool primary)
+    {
+        return new EditorCommandButton
+        {
+            IconId = iconId,
+            Text = text,
+            Primary = primary,
+            Width = primary ? 132 : 100,
+            Height = 42,
+            Margin = new Padding(6, 3, 0, 3),
+        };
+    }
+
+    private EditorChromeButton MakeChromeButton(string iconId, string tooltip)
+    {
+        var button = new EditorChromeButton
+        {
+            IconId = iconId,
+            Width = 42,
+            Height = 42,
+            Margin = new Padding(6, 3, 0, 3),
+            AccessibleName = tooltip,
+        };
+        _chromeToolTip.SetToolTip(button, tooltip);
+        return button;
+    }
+
+    private void ToggleWindowState()
+    {
+        if (_isManualMaximized)
+            RestoreManualMaximize();
+        else
+            ApplyManualMaximize();
+
+        UpdateWindowStateButton();
+    }
+
+    private void UpdateWindowStateButton()
+    {
+        if (_windowStateButton is null)
+            return;
+
+        _windowStateButton.IconId = _isManualMaximized ? "restore" : "maximize";
+        _chromeToolTip.SetToolTip(
+            _windowStateButton,
+            LocalizationService.Translate(_isManualMaximized ? "Restore" : "Maximize"));
+    }
+
+    private static void OpenSettingsWindow()
+    {
+        if (System.Windows.Application.Current is not CyberSnap.App app)
+            return;
+
+        if (app.Dispatcher.CheckAccess())
+        {
+            app.ShowSettings();
+            return;
+        }
+
+        _ = app.Dispatcher.BeginInvoke(app.ShowSettings);
+    }
+
+    private void UpdateToolButtonState()
+    {
+        foreach (var kv in _toolButtons)
+            kv.Value.Checked = kv.Key == _canvas.ActiveTool;
+
+        _undoButton.Enabled = _canvas.CanUndo;
+        _undoButton.Primary = _canvas.CanUndo;
+        _redoButton.Enabled = _canvas.CanRedo;
+        _redoButton.Primary = _canvas.CanRedo;
+        _saveButton.Primary = _canvas.IsDirty;
+        _confirmCropButton.Enabled = _canvas.HasPendingCrop;
+        _cancelCropButton.Enabled = _canvas.HasPendingCrop;
+        SetCropSectionVisible(_canvas.HasPendingCrop);
+        UpdateColorSwatch();
+        UpdateStrokeWidthButtons();
+    }
+
+    private void SetCropSectionVisible(bool visible)
+    {
+        var target = visible ? CropSectionExpandedHeight : 0;
+        if (_cropSectionTargetHeight == target && _cropSection.Height == target)
+            return;
+
+        _cropSectionTargetHeight = target;
+        if (visible)
+        {
+            _cropSection.Visible = true;
+            _cropSection.Enabled = true;
+        }
+        else
+        {
+            _cropSection.Enabled = false;
+        }
+
+        _cropRevealTimer.Start();
+    }
+
+    private void CropRevealTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_cropSection is null) return;
+
+        var current = _cropSection.Height;
+        var delta = _cropSectionTargetHeight - current;
+        if (delta == 0)
+        {
+            _cropRevealTimer.Stop();
+            if (_cropSectionTargetHeight == 0)
+                _cropSection.Visible = false;
+            return;
+        }
+
+        var step = Math.Min(Math.Abs(delta), 12);
+        _cropSection.Height = current + Math.Sign(delta) * step;
+        _toolbarPanel.PerformLayout();
+    }
+
+    private void UpdateZoomStatus()
+    {
+        var percent = (int)Math.Round(_canvas.Zoom * 100);
+        var zoomText = $"{percent}%";
+        if (_zoomLabel.Text != zoomText)
+            _zoomLabel.Text = zoomText;
+
+        _resetZoomBtn.Enabled = percent != 100;
+        _fitZoomBtn.Enabled = !IsZoomFitted();
+
+        if (_zoomSlider is null) return;
+
+        var sliderValue = Math.Clamp(
+            percent,
+            AnnotationCanvas.MinZoomPercent,
+            AnnotationCanvas.MaxZoomPercent);
+
+        if (_zoomSlider.Value == sliderValue) return;
+        _suppressZoomSliderChange = true;
+        try
+        {
+            _zoomSlider.Value = sliderValue;
+        }
+        finally
+        {
+            _suppressZoomSliderChange = false;
+        }
+    }
+
+    private bool IsZoomFitted()
+    {
+        var canvas = _canvas;
+        var clientW = canvas.ClientSize.Width;
+        var clientH = canvas.ClientSize.Height;
+        if (clientW <= 0 || clientH <= 0) return false;
+        var bmp = canvas.BaseBitmap;
+        double sx = (double)clientW / bmp.Width;
+        double sy = (double)clientH / bmp.Height;
+        double fitZoom = Math.Clamp(Math.Min(sx, sy) * 0.95, 0.1, 8.0);
+        return Math.Abs(canvas.Zoom - fitZoom) < 0.01;
+    }
+
+    private void UpdateColorSwatch()
+    {
+        foreach (var kv in _colorButtons)
+            kv.Value.Checked = kv.Key.ToArgb() == _canvas.ToolColor.ToArgb();
+    }
+
+    private void UpdateStrokeWidthButtons()
+    {
+        foreach (var btn in _strokeWidthButtons)
+            btn.Checked = Math.Abs(btn.StrokeWidth - _canvas.StrokeWidth) < 0.01f;
+    }
+
+    private void UpdateCaptureCaption()
+    {
+        if (_captureMetaLabel is null) return;
+
+        var bitmap = _canvas.BaseBitmap;
+        var fileName = string.IsNullOrWhiteSpace(_savedFilePath)
+            ? "Unsaved capture"
+            : Path.GetFileName(_savedFilePath);
+        var text = $"{bitmap.Width} x {bitmap.Height} px  |  {fileName}";
+        if (_captureMetaLabel.Text != text)
+            _captureMetaLabel.Text = text;
+    }
+
+    private string GetCurrentHint()
+    {
+        return _canvas.ActiveTool switch
+        {
+            AnnotationCanvas.CanvasTool.Pan => "Pan",
+            AnnotationCanvas.CanvasTool.Select => "Select",
+            AnnotationCanvas.CanvasTool.Crop => "Crop",
+            AnnotationCanvas.CanvasTool.Text => "Text",
+            AnnotationCanvas.CanvasTool.Draw => "Draw",
+            AnnotationCanvas.CanvasTool.Arrow => "Arrow",
+            AnnotationCanvas.CanvasTool.CurvedArrow => "Curved arrow",
+            AnnotationCanvas.CanvasTool.Line => "Line",
+            AnnotationCanvas.CanvasTool.Rect => "Rectangle",
+            AnnotationCanvas.CanvasTool.Circle => "Circle",
+            AnnotationCanvas.CanvasTool.Eraser => "Eraser",
+            AnnotationCanvas.CanvasTool.Highlight => "Highlight",
+            _ => "Ready",
+        };
+    }
+
+    private static GraphicsPath RoundedRect(Rectangle rect, int radius)
+    {
+        return EditorPaint.RoundedRect(rect, radius);
+    }
+}
+
+internal static class EditorColors
+{
+    public static readonly Color BgPrimary = Color.FromArgb(13, 15, 23);
+    public static readonly Color BgSecondary = Color.FromArgb(18, 20, 31);
+    public static readonly Color BgCard = Color.FromArgb(23, 26, 40);
+    public static readonly Color BgHover = Color.FromArgb(33, 38, 58);
+    public static readonly Color CanvasBg = Color.FromArgb(8, 10, 16);
+    public static readonly Color TitleBar = Color.FromArgb(10, 12, 18);
+    public static readonly Color TextPrimary = Color.FromArgb(230, 240, 255);
+    public static readonly Color TextSecondary = Color.FromArgb(160, 180, 210);
+    public static readonly Color TextMuted = Color.FromArgb(110, 130, 160);
+    public static readonly Color Accent = Color.FromArgb(0, 255, 255);
+    public static readonly Color AccentPressed = Color.FromArgb(0, 210, 230);
+    public static readonly Color Border = Color.FromArgb(76, 0, 255, 255);
+    public static readonly Color BorderSubtle = Color.FromArgb(34, 0, 255, 255);
+    public static readonly Color WindowBorder = Color.FromArgb(46, 255, 255, 255);
+}
+
+internal sealed class EditorWindowFrame : DoubleBufferedPanel
+{
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var rect = new Rectangle(1, 1, Width - 3, Height - 3);
+        if (rect.Width <= 0 || rect.Height <= 0)
+            return;
+
+        using var border = new Pen(EditorColors.WindowBorder, 1.4f);
+        using var glow = new Pen(Color.FromArgb(34, EditorColors.Accent), 3f);
+        using var path = EditorPaint.RoundedRect(rect, 10);
+        e.Graphics.DrawPath(glow, path);
+        e.Graphics.DrawPath(border, path);
+    }
+}
+
+internal sealed class EditorCanvasFrame : Panel
+{
+    public EditorCanvasFrame()
+    {
+        DoubleBuffered = true;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var rect = new Rectangle(
+            Math.Max(6, Padding.Left - 8),
+            Math.Max(6, Padding.Top - 8),
+            Math.Max(1, Width - Padding.Horizontal + 16),
+            Math.Max(1, Height - Padding.Vertical + 16));
+
+        using var glow = new Pen(Color.FromArgb(34, EditorColors.Accent), 5f);
+        using var border = new Pen(EditorColors.Border);
+        using var path = EditorPaint.RoundedRect(rect, 8);
+        e.Graphics.DrawPath(glow, path);
+        e.Graphics.DrawPath(border, path);
+    }
+}
+
+internal class DoubleBufferedPanel : Panel
+{
+    public DoubleBufferedPanel()
+    {
+        DoubleBuffered = true;
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw, true);
+    }
+}
+
+internal sealed class DoubleBufferedLabel : Label
+{
+    public DoubleBufferedLabel()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw, true);
+    }
+}
+
+internal sealed class EditorZoomHostPanel : TableLayoutPanel
+{
+    public EditorZoomHostPanel()
+    {
+        DoubleBuffered = true;
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw, true);
+    }
+
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        using var fill = new SolidBrush(EditorColors.TitleBar);
+        e.Graphics.FillRectangle(fill, ClientRectangle);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        var rect = new Rectangle(1, 1, Width - 3, Height - 3);
+        if (rect.Width <= 0 || rect.Height <= 0)
+            return;
+
+        using var path = EditorPaint.RoundedRect(rect, 8);
+        using var glow = new Pen(Color.FromArgb(42, EditorColors.Accent), 3f);
+        using var border = new Pen(EditorColors.Border);
+        e.Graphics.DrawPath(glow, path);
+        e.Graphics.DrawPath(border, path);
+    }
+}
+
+internal sealed class EditorToolButton : EditorButtonBase
+{
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Checked
+    {
+        get => IsSelected;
+        set => IsSelected = value;
+    }
+
+    protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
+    {
+        var iconSize = Math.Min(52, Math.Max(42, rect.Height - 42));
+        var iconRect = new RectangleF(
+            rect.Left + (rect.Width - iconSize) / 2f,
+            rect.Top + 10,
+            iconSize,
+            iconSize);
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active);
+
+        var textRect = new Rectangle(rect.Left + 8, rect.Bottom - 28, rect.Width - 16, 24);
+        TextRenderer.DrawText(
+            g,
+            Text,
+            Font,
+            textRect,
+            contentColor,
+            TextFormatFlags.HorizontalCenter |
+            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.EndEllipsis |
+            TextFormatFlags.NoPrefix);
+    }
+}
+
+
+internal sealed class EditorCommandButton : Button
+{
+    private bool _hover;
+    private bool _pressed;
+    private bool _primary;
+    private string _iconId = "";
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Primary
+    {
+        get => _primary;
+        set
+        {
+            if (_primary == value) return;
+            _primary = value;
+            Invalidate();
+        }
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string IconId
+    {
+        get => _iconId;
+        set
+        {
+            if (_iconId == value) return;
+            _iconId = value;
+            Invalidate();
+        }
+    }
+
+    public EditorCommandButton()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw |
+                 ControlStyles.Selectable, true);
+        FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        BackColor = Color.Transparent;
+        Cursor = Cursors.Hand;
+        Font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold, GraphicsUnit.Point);
+        TabStop = true;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+        var parentBackColor = Parent?.BackColor ?? EditorColors.TitleBar;
+        g.Clear(parentBackColor == Color.Transparent ? EditorColors.TitleBar : parentBackColor);
+
+        var rect = new Rectangle(1, 1, Width - 3, Height - 3);
+        if (rect.Width <= 0 || rect.Height <= 0) return;
+
+        Color fill;
+        Color contentColor;
+        Color glowColor;
+        Color borderColor;
+
+        if (!Enabled)
+        {
+            fill = Color.FromArgb(16, 18, 28);
+            contentColor = Color.FromArgb(88, 105, 128);
+            glowColor = Color.Transparent;
+            borderColor = Color.FromArgb(26, 255, 255, 255);
+        }
+        else if (Primary)
+        {
+            fill = _pressed ? EditorColors.AccentPressed : EditorColors.Accent;
+            contentColor = Color.FromArgb(4, 20, 26);
+            glowColor = _pressed ? Color.FromArgb(70, EditorColors.Accent) : Color.FromArgb(42, EditorColors.Accent);
+            borderColor = fill;
+        }
+        else
+        {
+            fill = _pressed ? Color.FromArgb(24, 28, 42) : (_hover ? Color.FromArgb(18, 22, 33) : EditorColors.TitleBar);
+            contentColor = EditorColors.Accent;
+            glowColor = _pressed ? Color.FromArgb(70, EditorColors.Accent) : (_hover ? Color.FromArgb(60, EditorColors.Accent) : Color.FromArgb(42, EditorColors.Accent));
+            borderColor = _pressed ? Color.FromArgb(200, EditorColors.Accent) : (_hover ? Color.FromArgb(150, EditorColors.Accent) : EditorColors.Border);
+        }
+
+        using (var path = EditorPaint.RoundedRect(rect, 8))
+        using (var brush = new SolidBrush(fill))
+        using (var glowPen = new Pen(glowColor, 3f))
+        using (var borderPen = new Pen(borderColor, (Primary || _hover || _pressed) ? 1.4f : 1f))
+        {
+            g.FillPath(brush, path);
+            if (glowColor != Color.Transparent)
+            {
+                g.DrawPath(glowPen, path);
+            }
+            g.DrawPath(borderPen, path);
+        }
+
+        var iconSize = Math.Min(20, Math.Max(16, rect.Height - 22));
+        var iconRect = new RectangleF(rect.Left + 12, rect.Top + (rect.Height - iconSize) / 2f, iconSize, iconSize);
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (Primary || _hover || _pressed));
+
+        var textRect = new Rectangle(rect.Left + 36, rect.Top + 1, rect.Width - 42, rect.Height - 2);
+        TextRenderer.DrawText(
+            g,
+            Text,
+            Font,
+            textRect,
+            contentColor,
+            TextFormatFlags.Left |
+            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.EndEllipsis |
+            TextFormatFlags.NoPrefix);
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _hover = true;
+        Invalidate();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _hover = false;
+        _pressed = false;
+        Invalidate();
+        base.OnMouseLeave(e);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left)
+        {
+            _pressed = true;
+            Invalidate();
+        }
+        base.OnMouseDown(e);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        _pressed = false;
+        Invalidate();
+        base.OnMouseUp(e);
+    }
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        base.OnEnabledChanged(e);
+        Cursor = Enabled ? Cursors.Hand : Cursors.Default;
+        Invalidate();
+    }
+}
+
+
+internal sealed class EditorChromeButton : EditorButtonBase
+{
+    protected override Color DefaultTransparentBackColor => EditorColors.TitleBar;
+
+    protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
+    {
+        var iconSize = Math.Min(22, Math.Max(18, rect.Height - 20));
+        var iconRect = new RectangleF(
+            rect.Left + (rect.Width - iconSize) / 2f,
+            rect.Top + (rect.Height - iconSize) / 2f,
+            iconSize,
+            iconSize);
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active);
+    }
+}
+
+internal abstract class EditorButtonBase : Button
+{
+    private bool _hover;
+    private bool _pressed;
+    private bool _selected;
+    private string _iconId = "";
+
+    protected EditorButtonBase()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw, true);
+        FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        BackColor = Color.Transparent;
+        ForeColor = EditorColors.TextPrimary;
+        Cursor = Cursors.Hand;
+        Font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold, GraphicsUnit.Point);
+        TabStop = true;
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string IconId
+    {
+        get => _iconId;
+        set
+        {
+            if (_iconId == value) return;
+            _iconId = value;
+            Invalidate();
+        }
+    }
+
+    protected bool IsSelected
+    {
+        get => _selected;
+        set
+        {
+            if (_selected == value) return;
+            _selected = value;
+            Invalidate();
+        }
+    }
+
+    protected virtual bool UsePrimaryFill => false;
+
+    protected virtual Color DefaultTransparentBackColor => EditorColors.BgSecondary;
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        var parentBackColor = Parent?.BackColor ?? EditorColors.BgSecondary;
+        g.Clear(parentBackColor == Color.Transparent ? DefaultTransparentBackColor : parentBackColor);
+
+        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+        if (rect.Width <= 0 || rect.Height <= 0) return;
+
+        bool active = Enabled && (IsSelected || UsePrimaryFill);
+        var fill = ResolveFill(active);
+        var border = ResolveBorder(active);
+        var content = ResolveContent(active);
+
+        using (var path = EditorPaint.RoundedRect(rect, 8))
+        using (var brush = new SolidBrush(fill))
+        using (var pen = new Pen(border, active ? 1.4f : 1f))
+        {
+            g.FillPath(brush, path);
+            g.DrawPath(pen, path);
+        }
+
+        if (IsSelected && Enabled)
+        {
+            using var strip = new SolidBrush(EditorColors.Accent);
+            using var stripPath = EditorPaint.RoundedRect(new Rectangle(5, 8, 3, Height - 16), 2);
+            g.FillPath(strip, stripPath);
+        }
+
+        PaintContent(g, rect, content, active);
+    }
+
+    protected abstract void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active);
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _hover = true;
+        Invalidate();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _hover = false;
+        _pressed = false;
+        Invalidate();
+        base.OnMouseLeave(e);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left)
+        {
+            _pressed = true;
+            Invalidate();
+        }
+        base.OnMouseDown(e);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        _pressed = false;
+        Invalidate();
+        base.OnMouseUp(e);
+    }
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        base.OnEnabledChanged(e);
+        Cursor = Enabled ? Cursors.Hand : Cursors.Default;
+        Invalidate();
+    }
+
+    private Color ResolveFill(bool active)
+    {
+        if (!Enabled)
+            return Color.FromArgb(16, 18, 28);
+        if (UsePrimaryFill)
+            return _pressed ? EditorColors.AccentPressed : EditorColors.Accent;
+        if (IsSelected)
+            return _pressed
+                ? Color.FromArgb(42, 0, 255, 255)
+                : Color.FromArgb(30, 0, 255, 255);
+        if (_pressed)
+            return Color.FromArgb(44, 50, 74);
+        if (_hover)
+            return EditorColors.BgHover;
+        return ResolveEffectiveParentBackColor() == EditorColors.TitleBar
+            ? Color.FromArgb(18, 0, 255, 255)
+            : EditorColors.BgCard;
+    }
+
+    private Color ResolveEffectiveParentBackColor()
+    {
+        var parentBackColor = Parent?.BackColor ?? EditorColors.BgSecondary;
+        return parentBackColor == Color.Transparent ? DefaultTransparentBackColor : parentBackColor;
+    }
+
+    private Color ResolveBorder(bool active)
+    {
+        if (!Enabled)
+            return Color.FromArgb(26, 255, 255, 255);
+        if (active || _hover)
+            return Color.FromArgb(150, EditorColors.Accent);
+        return EditorColors.BorderSubtle;
+    }
+
+    private Color ResolveContent(bool active)
+    {
+        if (!Enabled)
+            return Color.FromArgb(88, 105, 128);
+        if (UsePrimaryFill)
+            return Color.FromArgb(4, 20, 26);
+        if (active || _hover)
+            return EditorColors.Accent;
+        return EditorColors.TextPrimary;
+    }
+}
+
+internal sealed class EditorColorButton : Button
+{
+    private bool _hover;
+    private bool _checked;
+
+    public EditorColorButton()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw, true);
+        FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        Cursor = Cursors.Hand;
+        TabStop = true;
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Color SwatchColor { get; set; } = EditorColors.Accent;
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Checked
+    {
+        get => _checked;
+        set
+        {
+            if (_checked == value) return;
+            _checked = value;
+            Invalidate();
+        }
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.Clear(Parent?.BackColor ?? EditorColors.BgSecondary);
+
+        var outer = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (var outerPath = EditorPaint.RoundedRect(outer, 7))
+        using (var outerFill = new SolidBrush(_hover || Checked ? EditorColors.BgHover : EditorColors.BgCard))
+        using (var outerPen = new Pen(Checked ? EditorColors.Accent : EditorColors.BorderSubtle, Checked ? 1.6f : 1f))
+        {
+            g.FillPath(outerFill, outerPath);
+            g.DrawPath(outerPen, outerPath);
+        }
+
+        var inner = Rectangle.Inflate(outer, -6, -6);
+        using var innerPath = EditorPaint.RoundedRect(inner, 5);
+        using var swatch = new SolidBrush(SwatchColor);
+        using var swatchPen = new Pen(Color.FromArgb(140, 255, 255, 255));
+        g.FillPath(swatch, innerPath);
+        g.DrawPath(swatchPen, innerPath);
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _hover = true;
+        Invalidate();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _hover = false;
+        Invalidate();
+        base.OnMouseLeave(e);
+    }
+}
+
+internal sealed class EditorStrokeWidthButton : Button
+{
+    private bool _hover;
+    private bool _checked;
+
+    public EditorStrokeWidthButton()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw, true);
+        FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        Cursor = Cursors.Hand;
+        TabStop = true;
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float StrokeWidth { get; set; } = 4f;
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Checked
+    {
+        get => _checked;
+        set
+        {
+            if (_checked == value) return;
+            _checked = value;
+            Invalidate();
+        }
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.Clear(Parent?.BackColor ?? EditorColors.BgSecondary);
+
+        var outer = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (var outerPath = EditorPaint.RoundedRect(outer, 7))
+        using (var outerFill = new SolidBrush(_hover || Checked ? EditorColors.BgHover : EditorColors.BgCard))
+        using (var outerPen = new Pen(Checked ? EditorColors.Accent : EditorColors.BorderSubtle, Checked ? 1.6f : 1f))
+        {
+            g.FillPath(outerFill, outerPath);
+            g.DrawPath(outerPen, outerPath);
+        }
+
+        float lineY = outer.Y + outer.Height / 2f;
+        float margin = 8f;
+        float lineX1 = outer.X + margin;
+        float lineX2 = outer.Right - margin;
+        using (var pen = new Pen(EditorColors.TextPrimary, StrokeWidth))
+        {
+            pen.StartCap = LineCap.Round;
+            pen.EndCap = LineCap.Round;
+            g.DrawLine(pen, lineX1, lineY, lineX2, lineY);
+        }
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _hover = true;
+        Invalidate();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _hover = false;
+        Invalidate();
+        base.OnMouseLeave(e);
+    }
+}
+
+internal sealed class EditorZoomSlider : Control
+{
+    private bool _hover;
+    private bool _dragging;
+    private int _minimum = 10;
+    private int _maximum = 800;
+    private int _value = 100;
+
+    public EditorZoomSlider()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw |
+                 ControlStyles.Selectable, true);
+        Cursor = Cursors.Hand;
+        TabStop = true;
+        Height = 34;
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int Minimum
+    {
+        get => _minimum;
+        set
+        {
+            _minimum = value;
+            if (_maximum < _minimum) _maximum = _minimum;
+            Value = Math.Clamp(_value, _minimum, _maximum);
+            Invalidate();
+        }
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int Maximum
+    {
+        get => _maximum;
+        set
+        {
+            _maximum = value;
+            if (_minimum > _maximum) _minimum = _maximum;
+            Value = Math.Clamp(_value, _minimum, _maximum);
+            Invalidate();
+        }
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int Value
+    {
+        get => _value;
+        set
+        {
+            var clamped = Math.Clamp(value, Minimum, Maximum);
+            if (_value == clamped) return;
+            _value = clamped;
+            Invalidate();
+            ValueChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public event EventHandler? ValueChanged;
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.Clear(EditorColors.TitleBar);
+
+        var track = GetTrackRect();
+        using (var trackPath = EditorPaint.RoundedRect(track, 4))
+        using (var trackFill = new SolidBrush(Color.FromArgb(18, 0, 255, 255)))
+        using (var trackGlow = new Pen(Color.FromArgb(42, EditorColors.Accent), 3f))
+        using (var trackPen = new Pen(EditorColors.Border))
+        {
+            g.FillPath(trackFill, trackPath);
+            g.DrawPath(trackGlow, trackPath);
+            g.DrawPath(trackPen, trackPath);
+        }
+
+        var thumbX = GetThumbX();
+        var fillRect = Rectangle.FromLTRB(track.Left, track.Top, thumbX, track.Bottom);
+        if (fillRect.Width > 0)
+        {
+            using var fillPath = EditorPaint.RoundedRect(fillRect, 4);
+            using var accent = new SolidBrush(Color.FromArgb(120, EditorColors.Accent));
+            g.FillPath(accent, fillPath);
+        }
+
+        using var glow = new SolidBrush(Color.FromArgb(_hover || _dragging ? 80 : 44, EditorColors.Accent));
+        using var thumbFill = new SolidBrush(EditorColors.Accent);
+        using var thumbStroke = new Pen(Color.FromArgb(230, 4, 20, 26), 1.4f);
+        var thumb = new Rectangle(thumbX - 8, track.Top - 5, 16, 16);
+        g.FillEllipse(glow, thumb.X - 5, thumb.Y - 5, thumb.Width + 10, thumb.Height + 10);
+        g.FillEllipse(thumbFill, thumb);
+        g.DrawEllipse(thumbStroke, thumb);
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _hover = true;
+        Invalidate();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _hover = false;
+        if (!_dragging)
+            Invalidate();
+        base.OnMouseLeave(e);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left)
+        {
+            Focus();
+            _dragging = true;
+            Capture = true;
+            SetValueFromX(e.X);
+        }
+        base.OnMouseDown(e);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        if (_dragging)
+            SetValueFromX(e.X);
+        base.OnMouseMove(e);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left)
+        {
+            _dragging = false;
+            Capture = false;
+            SetValueFromX(e.X);
+            Invalidate();
+        }
+        base.OnMouseUp(e);
+    }
+
+    protected override bool IsInputKey(Keys keyData)
+        => keyData is Keys.Left or Keys.Right or Keys.Home or Keys.End || base.IsInputKey(keyData);
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        switch (e.KeyCode)
+        {
+            case Keys.Left:
+                Value -= e.Shift ? 25 : 5;
+                e.Handled = true;
+                break;
+            case Keys.Right:
+                Value += e.Shift ? 25 : 5;
+                e.Handled = true;
+                break;
+            case Keys.Home:
+                Value = Minimum;
+                e.Handled = true;
+                break;
+            case Keys.End:
+                Value = Maximum;
+                e.Handled = true;
+                break;
+        }
+        base.OnKeyDown(e);
+    }
+
+    private Rectangle GetTrackRect()
+        => new(10, (Height - 6) / 2, Math.Max(1, Width - 20), 6);
+
+    private int GetThumbX()
+    {
+        var track = GetTrackRect();
+        var range = Math.Max(1, Maximum - Minimum);
+        var t = (Value - Minimum) / (double)range;
+        return track.Left + (int)Math.Round(track.Width * t);
+    }
+
+    private void SetValueFromX(int x)
+    {
+        var track = GetTrackRect();
+        var t = Math.Clamp((x - track.Left) / (double)Math.Max(1, track.Width), 0.0, 1.0);
+        Value = Minimum + (int)Math.Round((Maximum - Minimum) * t);
+    }
+}
+
+internal static class EditorPaint
+{
+    public static GraphicsPath RoundedRect(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        int diameter = Math.Max(1, radius * 2);
+        if (rect.Width <= diameter || rect.Height <= diameter)
+        {
+            path.AddRectangle(rect);
+            return path;
+        }
+
+        path.AddArc(rect.Left, rect.Top, diameter, diameter, 180, 90);
+        path.AddArc(rect.Right - diameter, rect.Top, diameter, diameter, 270, 90);
+        path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(rect.Left, rect.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+}
+
+internal sealed class EditorZoomBarButton : Button
+{
+    private bool _hover;
+    private bool _pressed;
+    private string _iconId = "";
+
+    public EditorZoomBarButton()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw |
+                 ControlStyles.Selectable, true);
+        FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        BackColor = Color.Transparent;
+        ForeColor = EditorColors.Accent;
+        Cursor = Cursors.Hand;
+        Font = new Font("Segoe UI Variable Text", 10f, FontStyle.Bold, GraphicsUnit.Point);
+        TabStop = true;
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string IconId
+    {
+        get => _iconId;
+        set
+        {
+            if (_iconId == value) return;
+            _iconId = value;
+            Invalidate();
+        }
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        var parentBackColor = Parent?.BackColor ?? EditorColors.TitleBar;
+        g.Clear(parentBackColor == Color.Transparent ? EditorColors.TitleBar : parentBackColor);
+
+        var rect = new Rectangle(1, 1, Width - 3, Height - 3);
+        if (rect.Width <= 0 || rect.Height <= 0) return;
+
+        Color fill = EditorColors.TitleBar;
+        Color contentColor = EditorColors.Accent;
+        Color glowColor = Color.FromArgb(42, EditorColors.Accent);
+        Color borderColor = EditorColors.Border;
+
+        if (!Enabled)
+        {
+            fill = Color.FromArgb(16, 18, 28);
+            contentColor = Color.FromArgb(88, 105, 128);
+            glowColor = Color.Transparent;
+            borderColor = Color.FromArgb(26, 255, 255, 255);
+        }
+        else if (_pressed)
+        {
+            fill = Color.FromArgb(24, 28, 42);
+            glowColor = Color.FromArgb(70, EditorColors.Accent);
+            borderColor = Color.FromArgb(200, EditorColors.Accent);
+        }
+        else if (_hover)
+        {
+            fill = Color.FromArgb(18, 22, 33);
+            glowColor = Color.FromArgb(60, EditorColors.Accent);
+            borderColor = Color.FromArgb(150, EditorColors.Accent);
+        }
+
+        using (var path = EditorPaint.RoundedRect(rect, 8))
+        using (var brush = new SolidBrush(fill))
+        using (var glowPen = new Pen(glowColor, 3f))
+        using (var borderPen = new Pen(borderColor, (_hover || _pressed) ? 1.4f : 1f))
+        {
+            g.FillPath(brush, path);
+            if (glowColor != Color.Transparent)
+            {
+                g.DrawPath(glowPen, path);
+            }
+            g.DrawPath(borderPen, path);
+        }
+
+        var iconSize = Math.Min(20, Math.Max(16, rect.Height - 22));
+        var iconRect = new RectangleF(rect.Left + 12, rect.Top + (rect.Height - iconSize) / 2f, iconSize, iconSize);
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed));
+
+        var textRect = new Rectangle(rect.Left + 36, rect.Top + 1, rect.Width - 42, rect.Height - 2);
+        TextRenderer.DrawText(
+            g,
+            Text,
+            Font,
+            textRect,
+            contentColor,
+            TextFormatFlags.Left |
+            TextFormatFlags.VerticalCenter |
+            TextFormatFlags.EndEllipsis |
+            TextFormatFlags.NoPrefix);
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _hover = true;
+        Invalidate();
+        base.OnMouseEnter(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _hover = false;
+        _pressed = false;
+        Invalidate();
+        base.OnMouseLeave(e);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left)
+        {
+            _pressed = true;
+            Invalidate();
+        }
+        base.OnMouseDown(e);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        _pressed = false;
+        Invalidate();
+        base.OnMouseUp(e);
+    }
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        base.OnEnabledChanged(e);
+        Cursor = Enabled ? Cursors.Hand : Cursors.Default;
+        Invalidate();
+    }
+}
+
+internal sealed class EditorToggleSwitch : Control
+{
+    private bool _checked;
+    private float _animPercent = 0f;
+    private System.Windows.Forms.Timer? _animTimer;
+
+    public event EventHandler? CheckedChanged;
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Checked
+    {
+        get => _checked;
+        set
+        {
+            if (_checked == value) return;
+            _checked = value;
+            StartAnimation();
+            CheckedChanged?.Invoke(this, EventArgs.Empty);
+            Invalidate();
+        }
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string LabelText { get; set; } = string.Empty;
+
+    public EditorToggleSwitch()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer |
+                 ControlStyles.ResizeRedraw |
+                 ControlStyles.SupportsTransparentBackColor, true);
+        BackColor = Color.Transparent;
+        Cursor = Cursors.Hand;
+    }
+
+    private void StartAnimation()
+    {
+        _animTimer?.Stop();
+        _animTimer = new System.Windows.Forms.Timer { Interval = 15 };
+        _animTimer.Tick += (s, e) =>
+        {
+            float target = _checked ? 1f : 0f;
+            if (Math.Abs(_animPercent - target) < 0.1f)
+            {
+                _animPercent = target;
+                _animTimer?.Stop();
+                _animTimer?.Dispose();
+                _animTimer = null;
+            }
+            else
+            {
+                _animPercent += (_checked ? 0.15f : -0.15f);
+                _animPercent = Math.Clamp(_animPercent, 0f, 1f);
+            }
+            Invalidate();
+        };
+        _animTimer.Start();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+        // Label text on the left, pill switch on the right.
+        int swWidth = 44;
+        int swHeight = 22;
+        int swX = Width - swWidth - 2;
+        int swY = (Height - swHeight) / 2;
+        var swRect = new Rectangle(swX, swY, swWidth, swHeight);
+
+        // Draw Label Text
+        var textRect = new Rectangle(0, 0, swX - 6, Height);
+        using (var brush = new SolidBrush(EditorColors.TextPrimary))
+        using (var sf = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center })
+        {
+            e.Graphics.DrawString(LabelText, Font ?? new Font("Segoe UI Variable Text", 9f, FontStyle.Bold), brush, textRect, sf);
+        }
+
+        // Draw Switch Background (Pill)
+        using var path = EditorPaint.RoundedRect(swRect, swHeight / 2);
+        
+        // Background color transition from BgSecondary to Accent
+        int r = (int)(EditorColors.BgSecondary.R + _animPercent * (EditorColors.Accent.R - EditorColors.BgSecondary.R));
+        int g = (int)(EditorColors.BgSecondary.G + _animPercent * (EditorColors.Accent.G - EditorColors.BgSecondary.G));
+        int b = (int)(EditorColors.BgSecondary.B + _animPercent * (EditorColors.Accent.B - EditorColors.BgSecondary.B));
+        Color bg = Color.FromArgb(r, g, b);
+
+        using (var bgBrush = new SolidBrush(bg))
+        {
+            e.Graphics.FillPath(bgBrush, path);
+        }
+
+        // Border color transition
+        Color borderColor = Color.FromArgb(
+            (int)(EditorColors.BorderSubtle.R + _animPercent * (EditorColors.Accent.R - EditorColors.BorderSubtle.R)),
+            (int)(EditorColors.BorderSubtle.G + _animPercent * (EditorColors.Accent.G - EditorColors.BorderSubtle.G)),
+            (int)(EditorColors.BorderSubtle.B + _animPercent * (EditorColors.Accent.B - EditorColors.BorderSubtle.B))
+        );
+        using (var borderPen = new Pen(borderColor, 1.5f))
+        {
+            e.Graphics.DrawPath(borderPen, path);
+        }
+
+        // Draw Knob
+        int knobSize = swHeight - 6;
+        float knobMinX = swX + 3;
+        float knobMaxX = swX + swWidth - knobSize - 3;
+        float knobX = knobMinX + _animPercent * (knobMaxX - knobMinX);
+        float knobY = swY + 3;
+
+        var knobRect = new RectangleF(knobX, knobY, knobSize, knobSize);
+        using (var knobBrush = new SolidBrush(Color.White))
+        {
+            e.Graphics.FillEllipse(knobBrush, knobRect);
+        }
+    }
+
+    protected override void OnClick(EventArgs e)
+    {
+        Checked = !Checked;
+        base.OnClick(e);
+    }
+}
+
