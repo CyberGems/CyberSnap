@@ -12,7 +12,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationIcon>CyberSnap.ico</ApplicationIcon>
-    <Version>1.3.2</Version>
+    <Version>1.5.0</Version>
     <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
     <Authors>CyberGems</Authors>
     <AssemblyName>CyberSnap</AssemblyName>
