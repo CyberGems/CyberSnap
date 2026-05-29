@@ -38,7 +38,7 @@ jobs:
       - name: Zip Published Output
         shell: powershell
         run: |
-          Compress-Archive -Path ./publish-win64/* -DestinationPath ./CyberSnap-win-x64.zip
+          Compress-Archive -Path ./publish-win64/* -DestinationPath ./CyberSnap-${{ github.ref_name }}-Portable-win-x64.zip
 
       - name: Compile Inno Setup Installer
         shell: powershell
@@ -50,7 +50,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           files: |
-            ./CyberSnap-win-x64.zip
+            ./CyberSnap-${{ github.ref_name }}-Portable-win-x64.zip
             ./CyberSnap-Setup-${{ github.ref_name }}.exe
           draft: false
           prerelease: false
