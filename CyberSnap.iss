@@ -23,7 +23,7 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "startup"; Description: "Run CyberSnap when Windows starts"; GroupDescription: "Options:"; Flags: checkedonce
+Name: "startup"; Description: "Run CyberSnap when Windows starts"; GroupDescription: "Options:"
 
 [Files]
 Source: ".\publish-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
