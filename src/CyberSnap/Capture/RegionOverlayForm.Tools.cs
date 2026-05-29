@@ -68,7 +68,7 @@ public sealed partial class RegionOverlayForm
                 PaintBlurRect(g, br.Rect);
                 break;
             case DrawStroke ds:
-                SketchRenderer.DrawFreehandStroke(g, ds.Points, ds.Color, 6f, AnnotationStrokeShadow);
+                SketchRenderer.DrawFreehandStroke(g, ds.Points, ds.Color, ds.StrokeWidth, AnnotationStrokeShadow);
                 break;
             case HighlightAnnotation h:
                 using (var path = SketchRenderer.RoundedRect(h.Rect, 5))
@@ -76,22 +76,22 @@ public sealed partial class RegionOverlayForm
                     PaintHighlightRegion(g, region, h.Color);
                 break;
             case RectShapeAnnotation rs:
-                SketchRenderer.DrawRectShape(g, rs.Rect, rs.Color, AnnotationStrokeShadow);
+                SketchRenderer.DrawRectShape(g, rs.Rect, rs.Color, AnnotationStrokeShadow, rs.StrokeWidth);
                 break;
             case CircleShapeAnnotation cs:
-                SketchRenderer.DrawCircleShape(g, cs.Rect, cs.Color, AnnotationStrokeShadow);
+                SketchRenderer.DrawCircleShape(g, cs.Rect, cs.Color, AnnotationStrokeShadow, cs.StrokeWidth);
                 break;
             case LineAnnotation ln:
-                SketchRenderer.DrawLine(g, ln.From, ln.To, ln.Color, ln.From.GetHashCode(), AnnotationStrokeShadow);
+                SketchRenderer.DrawLine(g, ln.From, ln.To, ln.Color, ln.From.GetHashCode(), AnnotationStrokeShadow, ln.StrokeWidth);
                 break;
             case RulerAnnotation ra:
                 PaintRuler(g, ra.From, ra.To);
                 break;
             case ArrowAnnotation a:
-                SketchRenderer.DrawArrow(g, a.From, a.To, a.Color, a.From.GetHashCode(), strokeShadow: AnnotationStrokeShadow);
+                SketchRenderer.DrawArrow(g, a.From, a.To, a.Color, a.From.GetHashCode(), strokeShadow: AnnotationStrokeShadow, strokeWidth: a.StrokeWidth);
                 break;
             case CurvedArrowAnnotation ca:
-                SketchRenderer.DrawCurvedArrow(g, ca.Points, ca.Color, ca.Points.Count * 7919, AnnotationStrokeShadow);
+                SketchRenderer.DrawCurvedArrow(g, ca.Points, ca.Color, ca.Points.Count * 7919, AnnotationStrokeShadow, ca.StrokeWidth);
                 break;
             case StepNumberAnnotation sn:
                 PaintStepNumber(g, sn.Pos, sn.Number, sn.Color);

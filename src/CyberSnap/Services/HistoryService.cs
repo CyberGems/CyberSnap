@@ -291,6 +291,43 @@ public sealed partial class HistoryService : IDisposable
         return entry;
     }
 
+    public HistoryEntry RefreshExistingCapture(string filePath, int width, int height, HistoryKind kind = HistoryKind.Image)
+    {
+        var info = new FileInfo(filePath);
+        if (!info.Exists)
+            throw new FileNotFoundException("Capture file was not found.", filePath);
+
+        HistoryEntry entry;
+        lock (_gate)
+        {
+            if (!_entriesByPath.TryGetValue(filePath, out entry!))
+            {
+                entry = new HistoryEntry
+                {
+                    CapturedAt = info.CreationTime
+                };
+                _entries.Insert(0, entry);
+            }
+
+            entry.FileName = info.Name;
+            entry.FilePath = filePath;
+            entry.Width = width;
+            entry.Height = height;
+            entry.FileSizeBytes = info.Length;
+            entry.Kind = kind;
+
+            _entriesByPath[entry.FilePath] = entry;
+            InvalidateFilteredCache();
+            TryDeleteManagedThumbnail_NoLock(filePath);
+            QueueEntryUpsert_NoLock(entry);
+            PruneByCount_NoLock(HistoryCountLimit, HistoryDeleteOriginalOnPrune);
+            ScheduleFlush_NoLock();
+        }
+
+        NotifyChanged();
+        return entry;
+    }
+
     public HistoryEntry SaveCapture(Bitmap screenshot)
     {
         var now = DateTime.Now;

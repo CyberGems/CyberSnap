@@ -44,8 +44,9 @@ public partial class SettingsWindow
         ToastLayoutCloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", iconColor, 20);
         ToastLayoutPinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", iconColor, 20);
         ToastLayoutSaveIcon.Source = Helpers.FluentIcons.RenderWpf("download", iconColor, 20);
-        ToastLayoutOfficeIcon.Source = Helpers.FluentIcons.RenderWpf("copy", iconColor, 20);
+        ToastLayoutOfficeIcon.Source = Helpers.FluentIcons.RenderWpf("arrow", iconColor, 20);
         ToastLayoutDeleteIcon.Source = Helpers.FluentIcons.RenderWpf("trash", iconColor, 20);
+        ToastLayoutEditIcon.Source = Helpers.FluentIcons.RenderWpf("draw", iconColor, 20);
         ToastLayoutAiRedirectIcon.Source = Helpers.FluentIcons.RenderWpf("history", iconColor, 20);
     }
 
@@ -63,6 +64,7 @@ public partial class SettingsWindow
         UpdateToastLayoutButton(ToastLayoutOfficeBtn, ToastButtonKind.Office);
         UpdateToastLayoutButton(ToastLayoutDeleteBtn, ToastButtonKind.Delete);
         UpdateToastLayoutButton(ToastLayoutAiRedirectBtn, ToastButtonKind.History);
+        UpdateToastLayoutButton(ToastLayoutEditBtn, ToastButtonKind.Edit);
         UpdateToastLayoutSlot(ToastSlotTopLeft, ToastButtonSlot.TopLeft);
         UpdateToastLayoutSlot(ToastSlotTopInnerLeft, ToastButtonSlot.TopInnerLeft);
         UpdateToastLayoutSlot(ToastSlotTopInnerRight, ToastButtonSlot.TopInnerRight);
@@ -118,13 +120,16 @@ public partial class SettingsWindow
                 ToastLayoutSaveIcon.Source = Helpers.FluentIcons.RenderWpf("download", color, 22, active);
                 break;
             case ToastButtonKind.Office:
-                ToastLayoutOfficeIcon.Source = Helpers.FluentIcons.RenderWpf("copy", color, 22, active);
+                ToastLayoutOfficeIcon.Source = Helpers.FluentIcons.RenderWpf("arrow", color, 22, active);
                 break;
             case ToastButtonKind.Delete:
                 ToastLayoutDeleteIcon.Source = Helpers.FluentIcons.RenderWpf("trash", color, 22, active);
                 break;
             case ToastButtonKind.History:
                 ToastLayoutAiRedirectIcon.Source = Helpers.FluentIcons.RenderWpf("history", color, 22, active);
+                break;
+            case ToastButtonKind.Edit:
+                ToastLayoutEditIcon.Source = Helpers.FluentIcons.RenderWpf("draw", color, 22, active);
                 break;
         }
     }
@@ -356,6 +361,7 @@ public partial class SettingsWindow
         "Office" => ToastButtonKind.Office,
         "Delete" => ToastButtonKind.Delete,
         "History" => ToastButtonKind.History,
+        "Edit" => ToastButtonKind.Edit,
         _ => ToastButtonKind.Close
     };
 
@@ -384,7 +390,7 @@ public partial class SettingsWindow
         ToastHiddenShelfDropCue.Visibility = Visibility.Collapsed;
         ToastHiddenButtonsPanel.Children.Clear();
 
-        foreach (var button in new[] { ToastButtonKind.Close, ToastButtonKind.Pin, ToastButtonKind.Save, ToastButtonKind.Office, ToastButtonKind.Delete, ToastButtonKind.History })
+        foreach (var button in new[] { ToastButtonKind.Close, ToastButtonKind.Pin, ToastButtonKind.Save, ToastButtonKind.Office, ToastButtonKind.Delete, ToastButtonKind.History, ToastButtonKind.Edit })
         {
             if (ToastButtonLayout.IsVisible(ToastButtons, button))
                 continue;
@@ -425,7 +431,8 @@ public partial class SettingsWindow
             ToastButtonKind.Save => BuildSaveGlyph(),
             ToastButtonKind.Office => BuildOfficeGlyph(),
             ToastButtonKind.Delete => BuildDeleteGlyph(),
-            _ => BuildHistoryGlyph()
+            ToastButtonKind.History => BuildHistoryGlyph(),
+            _ => BuildEditGlyph()
         };
 
         chip.MouseLeftButtonDown += ToastHiddenButton_MouseLeftButtonDown;
@@ -510,6 +517,7 @@ public partial class SettingsWindow
         if (IsPointOverElement(ToastLayoutOfficeBtn, pos) && ToastLayoutOfficeBtn.Visibility == Visibility.Visible) return ToastButtonKind.Office;
         if (IsPointOverElement(ToastLayoutDeleteBtn, pos) && ToastLayoutDeleteBtn.Visibility == Visibility.Visible) return ToastButtonKind.Delete;
         if (IsPointOverElement(ToastLayoutAiRedirectBtn, pos) && ToastLayoutAiRedirectBtn.Visibility == Visibility.Visible) return ToastButtonKind.History;
+        if (IsPointOverElement(ToastLayoutEditBtn, pos) && ToastLayoutEditBtn.Visibility == Visibility.Visible) return ToastButtonKind.Edit;
         return null;
     }
 
@@ -559,7 +567,8 @@ public partial class SettingsWindow
                 ToastButtonKind.Save => BuildSaveGlyph(),
                 ToastButtonKind.Office => BuildOfficeGlyph(),
                 ToastButtonKind.Delete => BuildDeleteGlyph(),
-                _ => BuildHistoryGlyph()
+                ToastButtonKind.History => BuildHistoryGlyph(),
+                _ => BuildEditGlyph()
             });
             ToastDragGhost.Tag = button;
         }
@@ -636,9 +645,10 @@ public partial class SettingsWindow
         ToastButtonKind.Close => "close",
         ToastButtonKind.Pin => "pin",
         ToastButtonKind.Save => "save",
-        ToastButtonKind.Office => "office export",
+        ToastButtonKind.Office => "send to",
         ToastButtonKind.Delete => "delete",
-        ToastButtonKind.History => "AI redirect",
+        ToastButtonKind.History => "history",
+        ToastButtonKind.Edit => "edit",
         _ => "notification"
     };
 
@@ -674,9 +684,10 @@ public partial class SettingsWindow
     private static System.Windows.Controls.Image BuildCloseGlyph() => BuildFluentIcon("close");
     private static System.Windows.Controls.Image BuildPinGlyph() => BuildFluentIcon("pin");
     private static System.Windows.Controls.Image BuildSaveGlyph() => BuildFluentIcon("download");
-    private static System.Windows.Controls.Image BuildOfficeGlyph() => BuildFluentIcon("copy");
+    private static System.Windows.Controls.Image BuildOfficeGlyph() => BuildFluentIcon("arrow");
     private static System.Windows.Controls.Image BuildDeleteGlyph() => BuildFluentIcon("trash");
     private static System.Windows.Controls.Image BuildHistoryGlyph() => BuildFluentIcon("history");
+    private static System.Windows.Controls.Image BuildEditGlyph() => BuildFluentIcon("draw");
 
     private static System.Drawing.Color GetToastLayoutIconColor(bool active)
         => Theme.IsDark

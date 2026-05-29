@@ -16,6 +16,7 @@ public sealed partial class RegionOverlayForm
         if (btn >= 0)
         {
             if (btn == CloseButtonIndex) { Cancel(); return; }     // close (Cancel)
+            if (btn == StrokeWidthButtonIndex) { CycleStrokeWidth(); return; } // stroke width
             if (btn == ColorButtonIndex) { ToggleColorPicker(); return; } // color dot
             if (btn == PositionButtonIndex) { ToggleToolbarPosition(); return; } // toggle position
             if (btn < _mainBarTools.Length)
@@ -379,12 +380,7 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Eraser:
                 HideToolbarForCaptureTool();
-                var pixelData = GetPixelData();
-                int cx = Math.Clamp(e.Location.X, 0, _bmpW - 1);
-                int cy = Math.Clamp(e.Location.Y, 0, _bmpH - 1);
-                _eraserColor = Color.FromArgb(pixelData[cy * _bmpW + cx]);
-                _eraserStart = e.Location;
-                _isEraserDragging = true;
+                TryEraseAnnotationAt(e.Location);
                 break;
         }
     }

@@ -129,6 +129,7 @@ public sealed partial class RegionOverlayForm
         _fontPickerOpen = false;
         HideFontSearchBox();
         _emojiHovered = -1;
+        _eraserHoverIndex = -1;
         _mode = m;
         _activeToolId = toolId ?? _visibleTools.FirstOrDefault(t => t.Mode == m)?.Id;
         _hasSelection = false;
@@ -145,7 +146,6 @@ public sealed partial class RegionOverlayForm
         _isLineDragging = false;
         _isRulerDragging = false;
         _isCurvedArrowDragging = false;
-        _isEraserDragging = false;
         _isPlacingMagnifier = false;
         if (_isSelectDragging || _isSelectResizing || _renderSkipIndex >= 0)
         {

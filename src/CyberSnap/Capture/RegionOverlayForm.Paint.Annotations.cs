@@ -20,15 +20,6 @@ public sealed partial class RegionOverlayForm
         var cursorPoint = GetLiveAnnotationCursorPoint();
 
         // Active tool previews
-        if (_mode == CaptureMode.Eraser && _isEraserDragging)
-        {
-            var pr = NormRect(_eraserStart, cursorPoint);
-            if (pr.Width > 0 && pr.Height > 0)
-            {
-                g.FillRectangle(SketchRenderer.GetToolColorBrush(Color.FromArgb(180, _eraserColor)), pr);
-                g.DrawRectangle(GetThemeDashPen(), pr);
-            }
-        }
         if (_mode == CaptureMode.Blur && _isBlurring)
         {
             var pr = NormRect(_blurStart, cursorPoint);
@@ -45,17 +36,17 @@ public sealed partial class RegionOverlayForm
         {
             var pr = GetShapeRect(cursorPoint);
             if (pr.Width > 1 && pr.Height > 1)
-                SketchRenderer.DrawRectShape(g, pr, _toolColor, AnnotationStrokeShadow);
+                SketchRenderer.DrawRectShape(g, pr, _toolColor, AnnotationStrokeShadow, _strokeWidth);
         }
         if (_mode == CaptureMode.CircleShape && _isCircleShapeDragging)
         {
             var pr = GetShapeRect(cursorPoint);
             if (pr.Width > 1 && pr.Height > 1)
-                SketchRenderer.DrawCircleShape(g, pr, _toolColor, AnnotationStrokeShadow);
+                SketchRenderer.DrawCircleShape(g, pr, _toolColor, AnnotationStrokeShadow, _strokeWidth);
         }
         if (_mode == CaptureMode.Line && _isLineDragging)
         {
-            SketchRenderer.DrawLine(g, _lineStart, cursorPoint, _toolColor, _lineStart.GetHashCode(), AnnotationStrokeShadow);
+            SketchRenderer.DrawLine(g, _lineStart, cursorPoint, _toolColor, _lineStart.GetHashCode(), AnnotationStrokeShadow, _strokeWidth);
         }
         if (_mode == CaptureMode.Ruler && _isRulerDragging)
         {
@@ -64,10 +55,10 @@ public sealed partial class RegionOverlayForm
         }
         if (_mode == CaptureMode.Arrow && _isArrowDragging)
         {
-            SketchRenderer.DrawArrow(g, _arrowStart, cursorPoint, _toolColor, _arrowStart.GetHashCode(), strokeShadow: AnnotationStrokeShadow);
+            SketchRenderer.DrawArrow(g, _arrowStart, cursorPoint, _toolColor, _arrowStart.GetHashCode(), strokeShadow: AnnotationStrokeShadow, strokeWidth: _strokeWidth);
         }
         if (_mode == CaptureMode.CurvedArrow && _isCurvedArrowDragging && _currentCurvedArrow is { Count: >= 2 })
-            SketchRenderer.DrawCurvedArrow(g, _currentCurvedArrow, _toolColor, 42, AnnotationStrokeShadow);
+            SketchRenderer.DrawCurvedArrow(g, _currentCurvedArrow, _toolColor, 42, AnnotationStrokeShadow, _strokeWidth);
         if (_mode == CaptureMode.Draw && _isSelecting && _currentStroke is { Count: >= 1 })
         {
             if ((ModifierKeys & Keys.Shift) != 0)
@@ -75,7 +66,7 @@ public sealed partial class RegionOverlayForm
                 var start = _currentStroke[0];
                 var end = GetConstrainedDrawPoint(cursorPoint);
                 if (start != end)
-                    SketchRenderer.DrawLine(g, start, end, _toolColor, start.GetHashCode(), AnnotationStrokeShadow);
+                    SketchRenderer.DrawLine(g, start, end, _toolColor, start.GetHashCode(), AnnotationStrokeShadow, _strokeWidth);
             }
             else if (_currentStroke.Count >= 2)
             {
@@ -219,8 +210,6 @@ public sealed partial class RegionOverlayForm
             return Rectangle.Union(a, b);
         }
 
-        if (_mode == CaptureMode.Eraser && _isEraserDragging)
-            r = U(r, NormRect(_eraserStart, cursorPoint));
         if (_mode == CaptureMode.Blur && _isBlurring)
             r = U(r, NormRect(_blurStart, cursorPoint));
         if (_mode == CaptureMode.Highlight && _isHighlighting)

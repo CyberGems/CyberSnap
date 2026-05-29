@@ -155,6 +155,7 @@ public partial class PreviewWindow : Window
         HookOverlayHover(CloseBtn, CloseIcon, "close");
         HookOverlayHover(PinBtn, PinIcon, "pin");
         HookOverlayHover(SaveBtn, SaveIcon, "download");
+        HookOverlayHover(EditBtn, EditIcon, "draw");
         RefreshPreviewAccessibility();
 
         SourceInitialized += (_, _) => PopupWindowHelper.ApplyNoActivateChrome(this);
@@ -193,6 +194,7 @@ public partial class PreviewWindow : Window
         ApplyOverlayButtonVisual(CloseBtn, CloseIcon, "close", active: false);
         ApplyOverlayButtonVisual(PinBtn, PinIcon, "pin", active: _isPinned);
         ApplyOverlayButtonVisual(SaveBtn, SaveIcon, "download", active: false);
+        ApplyOverlayButtonVisual(EditBtn, EditIcon, "draw", active: false);
         RefreshPreviewAccessibility();
     }
 
@@ -206,6 +208,7 @@ public partial class PreviewWindow : Window
             _isPinned ? "Unpin preview" : "Pin preview",
             _isPinned ? "Allow this preview to dismiss automatically." : "Keep this preview open.");
         RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", "Save this preview image.");
+        RefreshPreviewOverlayButtonAccessibility(EditBtn, "Edit preview", "Open the post-capture editor.");
     }
 
     private void RefreshPreviewWindowTooltip()
@@ -436,6 +439,7 @@ public partial class PreviewWindow : Window
         CloseBtn.BeginAnimation(OpacityProperty, Motion.To(to, 150, Motion.SmoothOut));
         PinBtn.BeginAnimation(OpacityProperty, Motion.To(_isPinned ? 1 : to, 150, Motion.SmoothOut));
         SaveBtn.BeginAnimation(OpacityProperty, Motion.To(to, 150, Motion.SmoothOut));
+        EditBtn.BeginAnimation(OpacityProperty, Motion.To(_isGif ? 0 : to, 150, Motion.SmoothOut));
     }
 
 }

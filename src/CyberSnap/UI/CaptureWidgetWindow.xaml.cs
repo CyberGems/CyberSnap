@@ -2,12 +2,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
+using System.Runtime.InteropServices;
 using System.Windows.Threading;
-using System.Windows.Interop;
 using System.Windows.Forms;
 using System.Linq;
-using System.Windows.Shapes;
 using CyberSnap.Models;
 using CyberSnap.Services;
 
@@ -21,6 +19,7 @@ public partial class CaptureWidgetWindow : Window
     private readonly DispatcherTimer _collapseTimer;
     private bool _isExpanded;
     private bool _isDragging;
+    private bool _isDragArmed;
     private System.Windows.Point _dragStartPoint;
     private double _dragStartOffset;
     private bool _mouseInWindow;
@@ -30,10 +29,9 @@ public partial class CaptureWidgetWindow : Window
     private RecordingFormat? _restorableRecordFormat;
 
     // Layout constants
-    private const double HandleHeight = 16;
-    private const double HandleWidth = 80;
     private const double PanelWidth = 196;
-    private const double PanelHeight = 260;
+    private const double PanelHeight = 250;
+    private const double PeekSize = 16;
 
     public CaptureWidgetWindow(SettingsService settingsService)
     {
@@ -49,15 +47,13 @@ public partial class CaptureWidgetWindow : Window
         _collapseTimer.Interval = TimeSpan.FromMilliseconds(400);
         _collapseTimer.Tick += CollapseTimer_Tick;
 
-        HandleBorder.MouseEnter += HandleBorder_MouseEnter;
-        HandleBorder.MouseLeave += HandleBorder_MouseLeave;
-
         Loaded += OnLoaded;
         SourceInitialized += OnSourceInitialized;
 
         LoadIcons();
         RefreshLayout();
-        UpdateDirectCopyState();
+        UpdateEnableEditorState();
+        LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
     }
 
     private void LoadIcons()
@@ -80,6 +76,8 @@ public partial class CaptureWidgetWindow : Window
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         PopupWindowHelper.ApplyNoActivateChrome(this);
+        var source = System.Windows.Interop.HwndSource.FromHwnd(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+        source?.AddHook(WndProc);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -95,201 +93,237 @@ public partial class CaptureWidgetWindow : Window
             return;
         }
 
+        UpdateEnableEditorState();
+
         // Apply scaling
         UiScale.ApplyToWindow(this, RootGrid, scaleWindowBounds: false);
 
-        // Adjust components layout based on dock edge
-        LayoutGrid.Children.Clear();
         LayoutGrid.RowDefinitions.Clear();
         LayoutGrid.ColumnDefinitions.Clear();
-
         var edge = _settings.WidgetDockEdge;
 
-        if (edge == CaptureDockSide.Top || edge == CaptureDockSide.Bottom)
+        if (!LayoutGrid.Children.Contains(MainPanelBorder))
         {
-            LayoutGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            LayoutGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-            // Setup GripPanel and HandleContainerPanel orientation and size using Grid definitions
-            HandleCol0.Width = new GridLength(1, GridUnitType.Star);
-            HandleCol1.Width = GridLength.Auto;
-            HandleCol2.Width = new GridLength(1, GridUnitType.Star);
-
-            HandleRow0.Height = new GridLength(1, GridUnitType.Star);
-            HandleRow1.Height = new GridLength(0);
-            HandleRow2.Height = new GridLength(0);
-
-            Grid.SetColumn(HandleBorder, 1);
-            Grid.SetRow(HandleBorder, 0);
-
-            Grid.SetColumn(DragHandleBorder, 2);
-            Grid.SetRow(DragHandleBorder, 0);
-
-            GripPanel.Orientation = System.Windows.Controls.Orientation.Horizontal;
-            GripRect1.Width = 2; GripRect1.Height = 6; GripRect1.Margin = new Thickness(1, 0, 1, 0);
-            GripRect2.Width = 2; GripRect2.Height = 6; GripRect2.Margin = new Thickness(1, 0, 1, 0);
-            GripRect3.Width = 2; GripRect3.Height = 6; GripRect3.Margin = new Thickness(1, 0, 1, 0);
-
-            // Set size of hover activator handle
-            HandleBorder.Height = HandleHeight;
-            HandleBorder.Width = HandleWidth;
-            HandleBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
-            HandleBorder.VerticalAlignment = System.Windows.VerticalAlignment.Center;
-
-            // Set size of drag handle (aligned to left of column 2)
-            DragHandleBorder.Height = HandleHeight;
-            DragHandleBorder.Width = 24;
-            DragHandleBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Left;
-            DragHandleBorder.VerticalAlignment = System.Windows.VerticalAlignment.Center;
-            DragHandleBorder.Margin = new Thickness(6, 0, 0, 0);
-
-            HandleContainerPanel.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
-            HandleContainerPanel.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
-
-            if (edge == CaptureDockSide.Top)
-            {
-                // Top: Handle at top (Row 0), Main panel at bottom (Row 1)
-                Grid.SetRow(HandleContainerPanel, 0);
-                Grid.SetRow(MainPanelBorder, 1);
-                IndicatorArrow.Text = _isExpanded ? "\uE0E4" : "\uE0E5"; // Up/Down chevrons
-            }
-            else
-            {
-                // Bottom: Main panel at top (Row 0), Handle at bottom (Row 1)
-                Grid.SetRow(MainPanelBorder, 0);
-                Grid.SetRow(HandleContainerPanel, 1);
-                IndicatorArrow.Text = _isExpanded ? "\uE0E5" : "\uE0E4"; // Down/Up chevrons
-            }
-        }
-        else // Left or Right
-        {
-            LayoutGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            LayoutGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            // Setup GripPanel and HandleContainerPanel orientation and size using Grid definitions
-            HandleCol0.Width = new GridLength(1, GridUnitType.Star);
-            HandleCol1.Width = new GridLength(0);
-            HandleCol2.Width = new GridLength(0);
-
-            HandleRow0.Height = new GridLength(1, GridUnitType.Star);
-            HandleRow1.Height = GridLength.Auto;
-            HandleRow2.Height = new GridLength(1, GridUnitType.Star);
-
-            Grid.SetColumn(HandleBorder, 0);
-            Grid.SetRow(HandleBorder, 1);
-
-            Grid.SetColumn(DragHandleBorder, 0);
-            Grid.SetRow(DragHandleBorder, 2);
-
-            GripPanel.Orientation = System.Windows.Controls.Orientation.Vertical;
-            GripRect1.Width = 6; GripRect1.Height = 2; GripRect1.Margin = new Thickness(0, 1, 0, 1);
-            GripRect2.Width = 6; GripRect2.Height = 2; GripRect2.Margin = new Thickness(0, 1, 0, 1);
-            GripRect3.Width = 6; GripRect3.Height = 2; GripRect3.Margin = new Thickness(0, 1, 0, 1);
-
-            HandleBorder.Width = HandleHeight;
-            HandleBorder.Height = HandleWidth;
-            HandleBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
-            HandleBorder.VerticalAlignment = System.Windows.VerticalAlignment.Center;
-
-            DragHandleBorder.Width = HandleHeight;
-            DragHandleBorder.Height = 24;
-            DragHandleBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
-            DragHandleBorder.VerticalAlignment = System.Windows.VerticalAlignment.Top;
-            DragHandleBorder.Margin = new Thickness(0, 6, 0, 0);
-
-            HandleContainerPanel.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
-            HandleContainerPanel.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
-
-            if (edge == CaptureDockSide.Left)
-            {
-                // Left: Handle at left (Col 0), Main panel at right (Col 1)
-                Grid.SetColumn(HandleContainerPanel, 0);
-                Grid.SetColumn(MainPanelBorder, 1);
-                IndicatorArrow.Text = _isExpanded ? "\uE0E2" : "\uE0E3"; // Left/Right chevrons
-            }
-            else
-            {
-                // Right: Main panel at left (Col 0), Handle at right (Col 1)
-                Grid.SetColumn(MainPanelBorder, 0);
-                Grid.SetColumn(HandleContainerPanel, 1);
-                IndicatorArrow.Text = _isExpanded ? "\uE0E3" : "\uE0E2"; // Right/Left chevrons
-            }
+            LayoutGrid.Children.Add(MainPanelBorder);
         }
 
-        LayoutGrid.Children.Add(HandleContainerPanel);
-        LayoutGrid.Children.Add(MainPanelBorder);
+        MainPanelBorder.Width = PanelWidth;
+        MainPanelBorder.Height = PanelHeight;
+        MainPanelBorder.Margin = new Thickness(0);
+        MainPanelBorder.Cursor = _isExpanded ? System.Windows.Input.Cursors.Arrow : System.Windows.Input.Cursors.Hand;
+        MainPanelBorder.Visibility = Visibility.Visible;
+        UpdatePeekGrip(edge);
+        UpdateGripVisibility();
 
         PositionWindow();
     }
 
-    private void UpdateDirectCopyState()
+    private void UpdatePeekGrip(CaptureDockSide edge)
     {
-        DirectCopyCheck.IsChecked = _settings.WidgetDirectCopy;
+        var horizontal = edge == CaptureDockSide.Top || edge == CaptureDockSide.Bottom;
+
+        PeekGrip.Width = horizontal ? PanelWidth : PeekSize;
+        PeekGrip.Height = horizontal ? PeekSize : PanelHeight;
+        PeekGrip.HorizontalAlignment = edge switch
+        {
+            CaptureDockSide.Left => System.Windows.HorizontalAlignment.Right,
+            CaptureDockSide.Right => System.Windows.HorizontalAlignment.Left,
+            _ => System.Windows.HorizontalAlignment.Stretch,
+        };
+        PeekGrip.VerticalAlignment = edge switch
+        {
+            CaptureDockSide.Top => System.Windows.VerticalAlignment.Bottom,
+            CaptureDockSide.Bottom => System.Windows.VerticalAlignment.Top,
+            _ => System.Windows.VerticalAlignment.Stretch,
+        };
+        PeekGrip.BorderThickness = edge switch
+        {
+            CaptureDockSide.Top => new Thickness(1, 1, 1, 0),
+            CaptureDockSide.Bottom => new Thickness(1, 0, 1, 1),
+            CaptureDockSide.Left => new Thickness(1, 1, 0, 1),
+            CaptureDockSide.Right => new Thickness(0, 1, 1, 1),
+            _ => new Thickness(1),
+        };
+
+        GripPanel.Orientation = horizontal
+            ? System.Windows.Controls.Orientation.Horizontal
+            : System.Windows.Controls.Orientation.Vertical;
+
+        SetGripRect(GripRect1, horizontal);
+        SetGripRect(GripRect2, horizontal);
+        SetGripRect(GripRect3, horizontal);
+        PeekGrip.Visibility = _isExpanded ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private static void SetGripRect(System.Windows.Shapes.Rectangle rect, bool horizontal)
+    {
+        rect.Width = horizontal ? 2 : 6;
+        rect.Height = horizontal ? 6 : 2;
+        rect.Margin = horizontal ? new Thickness(1, 0, 1, 0) : new Thickness(0, 1, 0, 1);
+    }
+
+    private void UpdateEnableEditorState()
+    {
+        EnableEditorToggle.IsChecked = _settings.OpenEditorAfterCapture;
     }
 
     public void PositionWindow()
     {
         if (!IsLoaded) return;
 
+        ControlsGrid.Visibility = _isExpanded ? Visibility.Visible : Visibility.Collapsed;
+
         var screens = PopupWindowHelper.GetSortedScreens();
-        int screenIdx = _settings.WidgetMonitorIndex;
-        if (screenIdx < 0 || screenIdx >= screens.Length)
-        {
-            // default to screen containing the mouse/active area
-            screenIdx = 0;
-        }
+        var targetScreen = ResolveTargetScreen(screens, _settings.WidgetMonitorIndex);
+        var workingArea = PopupWindowHelper.ScreenWorkingAreaToDips(targetScreen);
+        var bounds = CalculateWidgetBounds(
+            workingArea,
+            _settings.WidgetDockEdge,
+            _settings.WidgetDockPositionOffset,
+            _isExpanded,
+            UiScale.Current);
 
-        var targetScreen = screens[screenIdx];
-        var workingArea = PopupWindowHelper.PhysicalPixelsToDips(targetScreen.WorkingArea, targetScreen.Bounds.Location);
+        var (scaleX, scaleY) = PopupWindowHelper.GetScaleForPoint(targetScreen.Bounds.Location);
+        double physicalLeft = bounds.Left * scaleX;
+        double physicalTop = bounds.Top * scaleY;
+        double physicalWidth = bounds.Width * scaleX;
+        double physicalHeight = bounds.Height * scaleY;
 
-        double w, h;
-        if (_settings.WidgetDockEdge == CaptureDockSide.Top || _settings.WidgetDockEdge == CaptureDockSide.Bottom)
+        var primaryScreen = screens.FirstOrDefault(s => s.Primary) ?? screens.First();
+        var (primaryScaleX, primaryScaleY) = PopupWindowHelper.GetScaleForPoint(primaryScreen.Bounds.Location);
+
+        Width = physicalWidth / primaryScaleX;
+        Height = physicalHeight / primaryScaleY;
+        Left = physicalLeft / primaryScaleX;
+        Top = physicalTop / primaryScaleY;
+
+        UpdateMainPanelBorderAlignment();
+    }
+
+    private void UpdateMainPanelBorderAlignment()
+    {
+        var edge = _settings.WidgetDockEdge;
+        if (_isExpanded)
         {
-            w = PanelWidth;
-            h = _isExpanded ? (PanelHeight + HandleHeight) : HandleHeight;
+            MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+            MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
         }
         else
         {
-            w = _isExpanded ? (PanelWidth + HandleHeight) : HandleHeight;
-            h = PanelWidth;
+            switch (edge)
+            {
+                case CaptureDockSide.Left:
+                    MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+                    MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
+                    break;
+                case CaptureDockSide.Right:
+                    MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Left;
+                    MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Stretch;
+                    break;
+                case CaptureDockSide.Top:
+                    MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+                    MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
+                    break;
+                case CaptureDockSide.Bottom:
+                    MainPanelBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch;
+                    MainPanelBorder.VerticalAlignment = System.Windows.VerticalAlignment.Top;
+                    break;
+            }
         }
+    }
 
-        Width = w * UiScale.Current;
-        Height = h * UiScale.Current;
+    internal static Rect CalculateWidgetBounds(
+        Rect workingArea,
+        CaptureDockSide dockEdge,
+        double dockOffset,
+        bool isExpanded,
+        double uiScale)
+    {
+        var scale = UiScale.Normalize(uiScale);
+        var offset = Math.Clamp(double.IsFinite(dockOffset) ? dockOffset : 0.5, 0.0, 1.0);
+        var peekSize = PeekSize * scale;
+        var panelWidth = PanelWidth * scale;
+        var panelHeight = PanelHeight * scale;
 
-        double offset = _settings.WidgetDockPositionOffset;
-
-        switch (_settings.WidgetDockEdge)
+        double width, height;
+        if (isExpanded)
         {
-            case CaptureDockSide.Top:
-                Left = workingArea.Left + (workingArea.Width - Width) * offset;
-                Top = workingArea.Top - (_isExpanded ? HandleHeight * UiScale.Current : 0);
-                break;
-            case CaptureDockSide.Bottom:
-                Left = workingArea.Left + (workingArea.Width - Width) * offset;
-                Top = workingArea.Bottom - Height + (_isExpanded ? HandleHeight * UiScale.Current : 0);
-                break;
-            case CaptureDockSide.Left:
-                Left = workingArea.Left - (_isExpanded ? HandleHeight * UiScale.Current : 0);
-                Top = workingArea.Top + (workingArea.Height - Height) * offset;
-                break;
-            case CaptureDockSide.Right:
-                Left = workingArea.Right - Width + (_isExpanded ? HandleHeight * UiScale.Current : 0);
-                Top = workingArea.Top + (workingArea.Height - Height) * offset;
-                break;
+            width = panelWidth;
+            height = panelHeight;
         }
+        else
+        {
+            if (dockEdge == CaptureDockSide.Left || dockEdge == CaptureDockSide.Right)
+            {
+                width = peekSize;
+                height = panelHeight;
+            }
+            else
+            {
+                width = panelWidth;
+                height = peekSize;
+            }
+        }
+
+        var horizontalTravel = Math.Max(0, workingArea.Width - panelWidth);
+        var verticalTravel = Math.Max(0, workingArea.Height - panelHeight);
+
+        return dockEdge switch
+        {
+            CaptureDockSide.Top => new Rect(
+                workingArea.Left + horizontalTravel * offset,
+                isExpanded ? workingArea.Top - 6 * scale : workingArea.Top,
+                width,
+                height),
+            CaptureDockSide.Bottom => new Rect(
+                workingArea.Left + horizontalTravel * offset,
+                isExpanded ? workingArea.Bottom - height + 6 * scale : workingArea.Bottom - height,
+                width,
+                height),
+            CaptureDockSide.Left => new Rect(
+                isExpanded ? workingArea.Left - 6 * scale : workingArea.Left,
+                workingArea.Top + verticalTravel * offset,
+                width,
+                height),
+            CaptureDockSide.Right => new Rect(
+                isExpanded ? workingArea.Right - width + 6 * scale : workingArea.Right - width,
+                workingArea.Top + verticalTravel * offset,
+                width,
+                height),
+            _ => new Rect(
+                workingArea.Left + horizontalTravel * offset,
+                workingArea.Top,
+                width,
+                height),
+        };
+    }
+
+
+    private static Screen ResolveTargetScreen(Screen[] screens, int requestedIndex)
+    {
+        if (requestedIndex >= 0 && requestedIndex < screens.Length)
+        {
+            return screens[requestedIndex];
+        }
+
+        var cursorScreen = Screen.FromPoint(System.Windows.Forms.Control.MousePosition);
+        return screens.FirstOrDefault(screen =>
+                string.Equals(screen.DeviceName, cursorScreen.DeviceName, StringComparison.OrdinalIgnoreCase))
+            ?? screens.FirstOrDefault()
+            ?? cursorScreen;
     }
 
     private void Window_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
         _mouseInWindow = true;
         _collapseTimer.Stop(); // Cancel scheduled collapse
+        ActivatorSurface_MouseEnter(sender, e);
     }
 
     private void Window_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
         _mouseInWindow = false;
-        _hoverDelayTimer.Stop();
+        ActivatorSurface_MouseLeave(sender, e);
         
         if (_isExpanded && !_isDragging)
         {
@@ -297,15 +331,15 @@ public partial class CaptureWidgetWindow : Window
         }
     }
 
-    private void HandleBorder_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    private void ActivatorSurface_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (_isExpanded || _isDragging) return;
+        if (_isExpanded || _isDragging || _isDragArmed) return;
 
         _hoverDelayTimer.Interval = TimeSpan.FromMilliseconds(_settings.WidgetHoverDelayMs);
         _hoverDelayTimer.Start();
     }
 
-    private void HandleBorder_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    private void ActivatorSurface_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
         _hoverDelayTimer.Stop();
     }
@@ -313,7 +347,8 @@ public partial class CaptureWidgetWindow : Window
     private void HoverDelayTimer_Tick(object? sender, EventArgs e)
     {
         _hoverDelayTimer.Stop();
-        if (_mouseInWindow && HandleBorder.IsMouseOver)
+        if (_isDragArmed || _isDragging) return;
+        if (_mouseInWindow && !_isExpanded && IsMouseOverWidgetWithPadding())
         {
             ExpandWidget();
         }
@@ -323,11 +358,15 @@ public partial class CaptureWidgetWindow : Window
     {
         try
         {
-            var mousePos = System.Windows.Forms.Control.MousePosition;
-            var relativeMouse = PointFromScreen(new System.Windows.Point(mousePos.X, mousePos.Y));
-            const double padding = 8; // 8 dips safety padding
-            return relativeMouse.X >= -padding && relativeMouse.X <= ActualWidth + padding &&
-                   relativeMouse.Y >= -padding && relativeMouse.Y <= ActualHeight + padding;
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return false;
+
+            if (!Native.User32.GetWindowRect(hwnd, out var rect)) return false;
+            if (!Native.User32.GetCursorPos(out var pt)) return false;
+
+            const int padding = 12; // 12 physical pixels safety padding
+            return pt.X >= rect.Left - padding && pt.X <= rect.Right + padding &&
+                   pt.Y >= rect.Top - padding && pt.Y <= rect.Bottom + padding;
         }
         catch
         {
@@ -349,7 +388,6 @@ public partial class CaptureWidgetWindow : Window
 
     private void CheckMouseLeaveWidget()
     {
-        // Safety check to ensure collapse if cursor left during complex window transitions
         _ = Dispatcher.BeginInvoke(new Action(() =>
         {
             if (!_mouseInWindow && _isExpanded && !_isDragging)
@@ -367,243 +405,159 @@ public partial class CaptureWidgetWindow : Window
         if (_isExpanded) return;
         _isExpanded = true;
 
+        MainPanelBorder.Cursor = System.Windows.Input.Cursors.Arrow;
         MainPanelBorder.Visibility = Visibility.Visible;
-
-        // Calculate start/end values first
-        double startVal = 0;
-        double handleStartVal = 0;
-        double handleEndVal = 0;
-        string path = "";
-
-        switch (_settings.WidgetDockEdge)
-        {
-            case CaptureDockSide.Top:
-                startVal = -PanelHeight * UiScale.Current;
-                handleStartVal = HandleHeight * UiScale.Current;
-                handleEndVal = 0;
-                path = "Y";
-                break;
-            case CaptureDockSide.Bottom:
-                startVal = PanelHeight * UiScale.Current;
-                handleStartVal = -HandleHeight * UiScale.Current;
-                handleEndVal = 0;
-                path = "Y";
-                break;
-            case CaptureDockSide.Left:
-                startVal = -PanelWidth * UiScale.Current;
-                handleStartVal = HandleHeight * UiScale.Current;
-                handleEndVal = 0;
-                path = "X";
-                break;
-            case CaptureDockSide.Right:
-                startVal = PanelWidth * UiScale.Current;
-                handleStartVal = -HandleHeight * UiScale.Current;
-                handleEndVal = 0;
-                path = "X";
-                break;
-        }
-
-        // Pre-apply starting translation offsets to prevent single-frame layout jumps
-        if (path == "Y")
-        {
-            SlideTransform.Y = startVal;
-            HandleSlideTransform.Y = handleStartVal;
-        }
-        else
-        {
-            SlideTransform.X = startVal;
-            HandleSlideTransform.X = handleStartVal;
-        }
-
-        // Reposition window with pre-applied translation active
         PositionWindow();
-
-        var anim = new DoubleAnimation(startVal, 0, TimeSpan.FromMilliseconds(350))
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        SlideTransform.BeginAnimation(
-            path == "Y" ? TranslateTransform.YProperty : TranslateTransform.XProperty,
-            anim);
-
-        var handleAnim = new DoubleAnimation(handleStartVal, handleEndVal, TimeSpan.FromMilliseconds(350))
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        HandleSlideTransform.BeginAnimation(
-            path == "Y" ? TranslateTransform.YProperty : TranslateTransform.XProperty,
-            handleAnim);
-
-        var opacityAnim = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(250));
-        HandleContainerPanel.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
-
-        // Chevron update
-        RefreshChevronText();
+        UpdateGripVisibility();
     }
 
     private void CollapseWidget()
     {
         if (!_isExpanded) return;
 
-        double endVal = 0;
-        double handleEndVal = 0;
-        string path = "";
+        _isExpanded = false;
+        MainPanelBorder.Visibility = Visibility.Visible;
+        MainPanelBorder.Cursor = System.Windows.Input.Cursors.Hand;
 
-        switch (_settings.WidgetDockEdge)
-        {
-            case CaptureDockSide.Top:
-                endVal = -PanelHeight * UiScale.Current;
-                handleEndVal = HandleHeight * UiScale.Current;
-                path = "Y";
-                break;
-            case CaptureDockSide.Bottom:
-                endVal = PanelHeight * UiScale.Current;
-                handleEndVal = -HandleHeight * UiScale.Current;
-                path = "Y";
-                break;
-            case CaptureDockSide.Left:
-                endVal = -PanelWidth * UiScale.Current;
-                handleEndVal = HandleHeight * UiScale.Current;
-                path = "X";
-                break;
-            case CaptureDockSide.Right:
-                endVal = PanelWidth * UiScale.Current;
-                handleEndVal = -HandleHeight * UiScale.Current;
-                path = "X";
-                break;
-        }
-
-        var anim = new DoubleAnimation(0, endVal, TimeSpan.FromMilliseconds(300))
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-        };
-
-        var handleAnimIn = new DoubleAnimation(0, handleEndVal, TimeSpan.FromMilliseconds(300))
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-        };
-
-        anim.Completed += (s, e) =>
-        {
-            _isExpanded = false;
-            MainPanelBorder.Visibility = Visibility.Collapsed;
-
-            SlideTransform.BeginAnimation(TranslateTransform.XProperty, null);
-            SlideTransform.BeginAnimation(TranslateTransform.YProperty, null);
-            SlideTransform.X = 0;
-            SlideTransform.Y = 0;
-
-            HandleSlideTransform.BeginAnimation(TranslateTransform.XProperty, null);
-            HandleSlideTransform.BeginAnimation(TranslateTransform.YProperty, null);
-            HandleSlideTransform.X = 0;
-            HandleSlideTransform.Y = 0;
-            HandleContainerPanel.BeginAnimation(UIElement.OpacityProperty, null);
-            HandleContainerPanel.Opacity = 1;
-
-            PositionWindow();
-            RefreshChevronText();
-        };
-
-        SlideTransform.BeginAnimation(
-            path == "Y" ? TranslateTransform.YProperty : TranslateTransform.XProperty,
-            anim);
-
-        HandleSlideTransform.BeginAnimation(
-            path == "Y" ? TranslateTransform.YProperty : TranslateTransform.XProperty,
-            handleAnimIn);
-
-        var opacityAnimIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(250));
-        HandleContainerPanel.BeginAnimation(UIElement.OpacityProperty, opacityAnimIn);
+        StopWidgetAnimations();
+        PositionWindow();
+        UpdateGripVisibility();
     }
 
     public void CollapseImmediately()
     {
         _isExpanded = false;
-        MainPanelBorder.Visibility = Visibility.Collapsed;
-        
+        MainPanelBorder.Visibility = Visibility.Visible;
+        MainPanelBorder.Cursor = System.Windows.Input.Cursors.Hand;
+
+        StopWidgetAnimations();
+        PositionWindow();
+        UpdateGripVisibility();
+    }
+
+    private void StopWidgetAnimations()
+    {
         SlideTransform.BeginAnimation(TranslateTransform.XProperty, null);
         SlideTransform.BeginAnimation(TranslateTransform.YProperty, null);
         SlideTransform.X = 0;
         SlideTransform.Y = 0;
-
-        HandleSlideTransform.BeginAnimation(TranslateTransform.XProperty, null);
-        HandleSlideTransform.BeginAnimation(TranslateTransform.YProperty, null);
-        HandleSlideTransform.X = 0;
-        HandleSlideTransform.Y = 0;
-        HandleContainerPanel.BeginAnimation(UIElement.OpacityProperty, null);
-        HandleContainerPanel.Opacity = 1;
-
-        PositionWindow();
-        RefreshChevronText();
     }
 
-    private void RefreshChevronText()
+    private void UpdateGripVisibility()
     {
-        var edge = _settings.WidgetDockEdge;
-        if (edge == CaptureDockSide.Top)
-            IndicatorArrow.Text = _isExpanded ? "\uE0E4" : "\uE0E5";
-        else if (edge == CaptureDockSide.Bottom)
-            IndicatorArrow.Text = _isExpanded ? "\uE0E5" : "\uE0E4";
-        else if (edge == CaptureDockSide.Left)
-            IndicatorArrow.Text = _isExpanded ? "\uE0E2" : "\uE0E3";
-        else
-            IndicatorArrow.Text = _isExpanded ? "\uE0E3" : "\uE0E2";
-    }
-
-    private void DragHandleBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        _isDragging = true;
-        _dragStartPoint = e.GetPosition(this);
-        _dragStartOffset = _settings.WidgetDockPositionOffset;
-        DragHandleBorder.CaptureMouse();
-        e.Handled = true;
+        PeekGrip.Visibility = _isExpanded ? Visibility.Collapsed : Visibility.Visible;
     }
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {
         base.OnMouseMove(e);
+        if (_isDragArmed && !_isDragging)
+        {
+            var current = GetCursorPositionInDips();
+            if (Math.Abs(current.X - _dragStartPoint.X) >= SystemParameters.MinimumHorizontalDragDistance ||
+                Math.Abs(current.Y - _dragStartPoint.Y) >= SystemParameters.MinimumVerticalDragDistance)
+            {
+                _isDragging = true;
+            }
+        }
+
         if (_isDragging)
         {
             var screens = PopupWindowHelper.GetSortedScreens();
-            int screenIdx = _settings.WidgetMonitorIndex;
-            if (screenIdx < 0 || screenIdx >= screens.Length) screenIdx = 0;
-            var targetScreen = screens[screenIdx];
-            var workingArea = PopupWindowHelper.PhysicalPixelsToDips(targetScreen.WorkingArea, targetScreen.Bounds.Location);
+            var targetScreen = ResolveTargetScreen(screens, _settings.WidgetMonitorIndex);
+            var workingArea = PopupWindowHelper.ScreenWorkingAreaToDips(targetScreen);
 
-            var curPos = e.GetPosition(this);
-            double delta = 0;
+            var curPos = GetCursorPositionInDips();
 
             if (_settings.WidgetDockEdge == CaptureDockSide.Top || _settings.WidgetDockEdge == CaptureDockSide.Bottom)
             {
-                delta = curPos.X - _dragStartPoint.X;
-                double currentLeft = Left + delta;
-                double maxLeft = workingArea.Right - Width;
-                double newOffset = (currentLeft - workingArea.Left) / (workingArea.Width - Width);
-                _settings.WidgetDockPositionOffset = Math.Clamp(newOffset, 0.0, 1.0);
+                var travel = workingArea.Width - Width;
+                if (travel > 0)
+                {
+                    var delta = curPos.X - _dragStartPoint.X;
+                    _settings.WidgetDockPositionOffset = Math.Clamp(_dragStartOffset + delta / travel, 0.0, 1.0);
+                }
             }
             else
             {
-                delta = curPos.Y - _dragStartPoint.Y;
-                double currentTop = Top + delta;
-                double maxTop = workingArea.Bottom - Height;
-                double newOffset = (currentTop - workingArea.Top) / (workingArea.Height - Height);
-                _settings.WidgetDockPositionOffset = Math.Clamp(newOffset, 0.0, 1.0);
+                var travel = workingArea.Height - Height;
+                if (travel > 0)
+                {
+                    var delta = curPos.Y - _dragStartPoint.Y;
+                    _settings.WidgetDockPositionOffset = Math.Clamp(_dragStartOffset + delta / travel, 0.0, 1.0);
+                }
             }
 
             PositionWindow();
+        }
+    }
+
+    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(e);
+        if (!_isExpanded && !_isDragging)
+        {
+            ArmWidgetDrag(e);
         }
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
-        if (_isDragging)
+        if (_isDragging || _isDragArmed)
         {
+            var wasDragging = _isDragging;
             _isDragging = false;
-            DragHandleBorder.ReleaseMouseCapture();
-            _settingsService.Save();
+            _isDragArmed = false;
+            ReleaseMouseCapture();
+            Cursor = null;
+            Mouse.OverrideCursor = null;
+            ForceCursor = false;
+            if (wasDragging)
+            {
+                _settingsService.Save();
+            }
+            else if (!_isExpanded)
+            {
+                ExpandWidget();
+            }
+
             CheckMouseLeaveWidget();
         }
+    }
+
+    protected override void OnLostMouseCapture(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnLostMouseCapture(e);
+        if (_isDragging || _isDragArmed)
+        {
+            _isDragging = false;
+            _isDragArmed = false;
+            Cursor = null;
+            Mouse.OverrideCursor = null;
+            ForceCursor = false;
+            CheckMouseLeaveWidget();
+        }
+    }
+
+    private void ArmWidgetDrag(MouseButtonEventArgs e)
+    {
+        _hoverDelayTimer.Stop();
+        _isDragArmed = true;
+        _dragStartPoint = GetCursorPositionInDips();
+        _dragStartOffset = _settings.WidgetDockPositionOffset;
+        CaptureMouse();
+        Cursor = System.Windows.Input.Cursors.Hand;
+        Mouse.OverrideCursor = System.Windows.Input.Cursors.Hand;
+        ForceCursor = true;
+        e.Handled = true;
+    }
+
+    private System.Windows.Point GetCursorPositionInDips()
+    {
+        var point = System.Windows.Forms.Control.MousePosition;
+        var localPoint = PointFromScreen(new System.Windows.Point(point.X, point.Y));
+        return new System.Windows.Point(Left + localPoint.X, Top + localPoint.Y);
     }
 
     // Context Menu options (right click handle)
@@ -618,13 +572,13 @@ public partial class CaptureWidgetWindow : Window
         var menu = new System.Windows.Controls.ContextMenu();
 
         // Dock Edge Selection
-        var edgeMenu = new MenuItem { Header = "Posicionar borde" };
+        var edgeMenu = new MenuItem { Header = LocalizationService.Translate("Dock edge") };
         var edges = new[] { CaptureDockSide.Top, CaptureDockSide.Bottom, CaptureDockSide.Left, CaptureDockSide.Right };
-        var edgeLabels = new[] { "Arriba", "Abajo", "Izquierda", "Derecha" };
+        var edgeLabels = new[] { "Top", "Bottom", "Left", "Right" };
         for (int i = 0; i < edges.Length; i++)
         {
             var ed = edges[i];
-            var item = new MenuItem { Header = edgeLabels[i], IsChecked = _settings.WidgetDockEdge == ed };
+            var item = new MenuItem { Header = LocalizationService.Translate(edgeLabels[i]), IsChecked = _settings.WidgetDockEdge == ed };
             item.Click += (s, ev) =>
             {
                 _settings.WidgetDockEdge = ed;
@@ -639,12 +593,13 @@ public partial class CaptureWidgetWindow : Window
         var screens = PopupWindowHelper.GetSortedScreens();
         if (screens.Length > 1)
         {
-            var monitorMenu = new MenuItem { Header = "Pantalla" };
+            var monitorMenu = new MenuItem { Header = LocalizationService.Translate("Screen") };
             for (int i = 0; i < screens.Length; i++)
             {
                 var idx = i;
                 var s = screens[i];
-                var label = $"Monitor {i + 1} ({(s.Primary ? "Principal" : "Secundario")})";
+                var primarySecondary = s.Primary ? LocalizationService.Translate("Primary") : LocalizationService.Translate("Secondary");
+                var label = $"Monitor {i + 1} ({primarySecondary})";
                 var item = new MenuItem { Header = label, IsChecked = _settings.WidgetMonitorIndex == idx };
                 item.Click += (s, ev) =>
                 {
@@ -658,7 +613,7 @@ public partial class CaptureWidgetWindow : Window
         }
 
         // Hover Delay trigger submenu
-        var delayMenu = new MenuItem { Header = "Retardo de activación" };
+        var delayMenu = new MenuItem { Header = LocalizationService.Translate("Activation delay") };
         var delays = new[] { 0, 100, 250, 500, 1000 };
         foreach (var d in delays)
         {
@@ -676,12 +631,14 @@ public partial class CaptureWidgetWindow : Window
         menu.Items.Add(new Separator());
 
         // Disable Floating Panel completely
-        var disableItem = new MenuItem { Header = "Desactivar panel rápido" };
+        var disableItem = new MenuItem { Header = LocalizationService.Translate("Disable quick panel") };
         disableItem.Click += (s, ev) =>
         {
             _settings.ShowCaptureWidget = false;
             _settingsService.Save();
-            ToastWindow.Show("Panel rápido desactivado", "Puedes volver a activarlo en cualquier momento desde Configuración -> General.");
+            ToastWindow.Show(
+                LocalizationService.Translate("Quick panel disabled"),
+                LocalizationService.Translate("You can re-enable it anytime from Settings -> General."));
             Close();
         };
         menu.Items.Add(disableItem);
@@ -730,9 +687,10 @@ public partial class CaptureWidgetWindow : Window
         TriggerAppCapture(Models.CaptureMode.Record, forceGif: true);
     }
 
-    private void DirectCopyCheck_Changed(object sender, RoutedEventArgs e)
+    private void EnableEditorToggle_Changed(object sender, RoutedEventArgs e)
     {
-        _settings.WidgetDirectCopy = DirectCopyCheck.IsChecked == true;
+        var enabled = EnableEditorToggle.IsChecked == true;
+        _settings.OpenEditorAfterCapture = enabled;
         _settingsService.Save();
     }
 
@@ -746,14 +704,9 @@ public partial class CaptureWidgetWindow : Window
         // Hide panel so it doesn't get captured
         Hide();
 
-        // Perform temporary settings bypass
+        // Perform temporary settings bypass (recording format only)
         _restorableAfterCapture = _settings.AfterCapture;
         _restorableRecordFormat = _settings.RecordingFormat;
-
-        if (_settings.WidgetDirectCopy)
-        {
-            _settings.AfterCapture = AfterCaptureAction.CopyToClipboard;
-        }
 
         if (forceMp4)
         {
@@ -828,5 +781,26 @@ public partial class CaptureWidgetWindow : Window
             }
         };
         timer.Start();
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr LoadCursor(IntPtr hInstance, int lpCursorName);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetCursor(IntPtr hCursor);
+
+    private const int IDC_HAND = 32649;
+    private const int WM_SETCURSOR = 0x0020;
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_SETCURSOR && (_isDragging || _isDragArmed))
+        {
+            var hCursor = LoadCursor(IntPtr.Zero, IDC_HAND);
+            SetCursor(hCursor);
+            handled = true;
+            return (IntPtr)1;
+        }
+        return IntPtr.Zero;
     }
 }

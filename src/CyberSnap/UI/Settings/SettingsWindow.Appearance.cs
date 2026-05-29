@@ -108,12 +108,8 @@ public partial class SettingsWindow
             var afterCapture = Enum.IsDefined(typeof(AfterCaptureAction), s.AfterCapture)
                 ? s.AfterCapture
                 : AfterCaptureAction.PreviewAndCopy;
-            AfterCaptureCombo.SelectedIndex = afterCapture switch
-            {
-                AfterCaptureAction.CopyToClipboard => 0,
-                AfterCaptureAction.PreviewOnly => 2,
-                _ => 1
-            };
+            AfterCaptureCombo.SelectedIndex = GetAfterCaptureSelectedIndex(
+                new AfterCapturePreference(afterCapture, s.OpenEditorAfterCapture));
             SaveToFileCheck.IsChecked = s.SaveToFile;
             AutoOpenCapturedImagesCheck.IsChecked = s.AutoOpenCapturedImages;
             CaptureFormatCombo.SelectedIndex = (int)s.CaptureImageFormat;

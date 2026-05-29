@@ -268,8 +268,8 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // 3. Tier 2 Dividers: after indices offset by _mainBarTools.Length + 3
-        int drawingStartIdx = _mainBarTools.Length + 3;
+        // 3. Tier 2 Dividers: after indices offset by _mainBarTools.Length + 4
+        int drawingStartIdx = _mainBarTools.Length + 4;
         int[] tier2Offsets = { 1, 8 };
         int[] tier2Seps = tier2Offsets.Select(offset => drawingStartIdx + offset).ToArray();
         foreach (int idx in tier2Seps)
@@ -299,6 +299,26 @@ public sealed partial class RegionOverlayForm
             bool hover = _hoveredButton == i;
             bool isTier2 = i >= drawingStartIdx;
             var tierAccent = isTier2 ? UiChrome.AccentTier2 : UiChrome.AccentColor;
+
+            // Stroke width button (shows line thickness preview in current tool color)
+            if (_toolbarIcons[i] == "strokeWidth")
+            {
+                WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
+                float lineY = btn.Y + btn.Height / 2f;
+                float margin = 6f;
+                float lineX1 = btn.X + margin;
+                float lineX2 = btn.Right - margin;
+                int alpha = active ? 255 : hover ? 230 : 175;
+                float width = _strokeWidth;
+                var lineColor = Color.FromArgb(alpha, _toolColor.R, _toolColor.G, _toolColor.B);
+                using (var pen = new Pen(lineColor, width))
+                {
+                    pen.StartCap = LineCap.Round;
+                    pen.EndCap = LineCap.Round;
+                    g.DrawLine(pen, lineX1, lineY, lineX2, lineY);
+                }
+                continue;
+            }
 
             // Color dot button (shows active drawing color)
             if (_toolbarIcons[i] == "color")

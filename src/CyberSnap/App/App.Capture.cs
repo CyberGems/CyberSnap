@@ -339,6 +339,7 @@ public partial class App
                     DetectWindows = _settingsService.Settings.DetectWindows,
                     ShowCaptureMagnifier = _settingsService.Settings.ShowCaptureMagnifier,
                     AnnotationStrokeShadow = _settingsService.Settings.AnnotationStrokeShadow,
+                    StrokeWidth = _settingsService.Settings.StrokeWidth,
                     CaptureDockSide = _settingsService.Settings.CaptureDockSide,
                     UiScale = _settingsService.Settings.UiScale,
                     ConfirmRegionBeforeCapture = _settingsService.Settings.ConfirmRegionBeforeCapture
@@ -354,6 +355,11 @@ public partial class App
                 overlay.DockSideChanged += dockSide =>
                 {
                     _settingsService!.Settings.CaptureDockSide = dockSide;
+                    _settingsService.Save();
+                };
+                overlay.StrokeWidthChanged += width =>
+                {
+                    _settingsService!.Settings.StrokeWidth = width;
                     _settingsService.Save();
                 };
 

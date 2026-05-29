@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
+using CyberSnap.Models.Commands;
 
 namespace CyberSnap.Capture;
 
@@ -21,6 +22,20 @@ public sealed partial class RegionOverlayForm
     public bool ShowCrosshairGuides { get; set; }
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public bool AnnotationStrokeShadow { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public float StrokeWidth
+    {
+        get => _strokeWidth;
+        set
+        {
+            if (Math.Abs(_strokeWidth - value) < 0.01f) return;
+            _strokeWidth = value;
+            StrokeWidthChanged?.Invoke(value);
+            RefreshToolbar();
+        }
+    }
+
+    public event Action<float>? StrokeWidthChanged;
 
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public bool DetectWindows { get; set; } = true;
@@ -317,11 +332,44 @@ public sealed partial class RegionOverlayForm
         _committedAnnotationsDirty = true;
     }
 
+    private IEditorContext OverlayEditContext =>
+        _overlayEditorContext ??= new OverlayEditorContext(this);
+
+    private void PushEditCommand(IEditCommand command)
+    {
+        command.Apply(OverlayEditContext);
+        _editUndoStack.Add(command);
+        ClearRedoEditHistory();
+        RefreshNextStepNumber();
+        MarkCommittedAnnotationsDirty();
+    }
+
+    private void ClearRedoEditHistory()
+    {
+        foreach (var command in _editRedoStack)
+            command.Dispose();
+        _editRedoStack.Clear();
+    }
+
+    private void ClearEditHistory()
+    {
+        foreach (var command in _editUndoStack)
+            command.Dispose();
+        foreach (var command in _editRedoStack)
+            command.Dispose();
+        _editUndoStack.Clear();
+        _editRedoStack.Clear();
+    }
+
+    private void RefreshNextStepNumber()
+    {
+        var maxStep = _undoStack.OfType<StepNumberAnnotation>().Select(step => step.Number).DefaultIfEmpty(0).Max();
+        _nextStepNumber = maxStep + 1;
+    }
+
     private void AddAnnotation(Annotation annotation)
     {
-        _undoStack.Add(annotation);
-        _redoStack.Clear();
-        MarkCommittedAnnotationsDirty();
+        PushEditCommand(new AddAnnotationCommand(annotation));
     }
 
     /// <summary>Returns the bounding rectangle for any annotation type, for hit-testing.</summary>
@@ -461,13 +509,8 @@ public sealed partial class RegionOverlayForm
 
     private bool RemoveAnnotation(Annotation annotation)
     {
-        bool removed = _undoStack.Remove(annotation);
-        if (removed)
-        {
-            _redoStack.Clear();
-            MarkCommittedAnnotationsDirty();
-        }
-        return removed;
+        var index = _undoStack.LastIndexOf(annotation);
+        return DeleteAnnotationAt(index, invalidate: false);
     }
 
     private void CommitSelectTransform()
@@ -476,9 +519,9 @@ public sealed partial class RegionOverlayForm
             _selectedAnnotationIndex < _undoStack.Count &&
             _selectPreviewAnnotation is not null)
         {
-            _undoStack[_selectedAnnotationIndex] = _selectPreviewAnnotation;
-            _redoStack.Clear();
-            MarkCommittedAnnotationsDirty();
+            var original = _undoStack[_selectedAnnotationIndex];
+            if (!Equals(original, _selectPreviewAnnotation))
+                PushEditCommand(new ReplaceAnnotationCommand(_selectedAnnotationIndex, original, _selectPreviewAnnotation));
         }
 
         _selectPreviewAnnotation = null;
@@ -489,18 +532,88 @@ public sealed partial class RegionOverlayForm
         }
     }
 
-    private Annotation RemoveLastAnnotation()
+    private bool DeleteAnnotationAt(int index, bool invalidate = true)
     {
-        var last = _undoStack[^1];
-        _undoStack.RemoveAt(_undoStack.Count - 1);
-        MarkCommittedAnnotationsDirty();
-        return last;
+        if (index < 0 || index >= _undoStack.Count)
+            return false;
+
+        var annotation = _undoStack[index];
+        var bounds = InflateForRepaint(GetAnnotationBounds(annotation), 28);
+        PushEditCommand(new DeleteAnnotationCommand(index, annotation));
+        ResetSelectedAnnotationState();
+        if (invalidate)
+            Invalidate(bounds);
+        return true;
     }
 
-    private void RestoreAnnotation(Annotation annotation)
+    private bool TryEraseAnnotationAt(Point point)
     {
-        _undoStack.Add(annotation);
+        _eraserHoverIndex = -1;
+        var hit = HitTestAnnotation(point);
+        return DeleteAnnotationAt(hit);
+    }
+
+    private bool UndoLastEdit()
+    {
+        if (_editUndoStack.Count == 0)
+            return false;
+
+        var command = _editUndoStack[^1];
+        _editUndoStack.RemoveAt(_editUndoStack.Count - 1);
+        command.Revert(OverlayEditContext);
+        _editRedoStack.Add(command);
+        ResetSelectedAnnotationState();
+        RefreshNextStepNumber();
         MarkCommittedAnnotationsDirty();
+        Invalidate();
+        return true;
+    }
+
+    private bool RedoLastEdit()
+    {
+        if (_editRedoStack.Count == 0)
+            return false;
+
+        var command = _editRedoStack[^1];
+        _editRedoStack.RemoveAt(_editRedoStack.Count - 1);
+        command.Apply(OverlayEditContext);
+        _editUndoStack.Add(command);
+        ResetSelectedAnnotationState();
+        RefreshNextStepNumber();
+        MarkCommittedAnnotationsDirty();
+        Invalidate();
+        return true;
+    }
+
+    private void ResetSelectedAnnotationState()
+    {
+        _selectedAnnotationIndex = -1;
+        _selectPreviewAnnotation = null;
+        _selectResizeOriginalAnnotation = null;
+        _renderSkipIndex = -1;
+        _isSelectDragging = false;
+        _isSelectResizing = false;
+        _selectResizeHandle = -1;
+    }
+
+    private sealed class OverlayEditorContext : IEditorContext
+    {
+        private readonly RegionOverlayForm _owner;
+
+        public OverlayEditorContext(RegionOverlayForm owner)
+        {
+            _owner = owner;
+        }
+
+        public Bitmap BaseBitmap
+        {
+            get => _owner._screenshot;
+            set => throw new NotSupportedException("The capture overlay edit context only supports annotation commands.");
+        }
+
+        public List<Annotation> Annotations => _owner._undoStack;
+
+        public void Invalidate() => _owner.MarkCommittedAnnotationsDirty();
     }
 
     private Bitmap GetCommittedAnnotationsBitmap()

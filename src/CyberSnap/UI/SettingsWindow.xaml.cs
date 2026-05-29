@@ -288,27 +288,61 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
-        var previous = _settingsService.Settings.AfterCapture;
-        var selected = AfterCaptureCombo.SelectedIndex switch
-        {
-            0 => AfterCaptureAction.CopyToClipboard,
-            2 => AfterCaptureAction.PreviewOnly,
-            _ => AfterCaptureAction.PreviewAndCopy
-        };
+        var previous = new AfterCapturePreference(
+            NormalizeAfterCaptureAction(_settingsService.Settings.AfterCapture),
+            _settingsService.Settings.OpenEditorAfterCapture);
+        var selected = GetAfterCapturePreference(AfterCaptureCombo.SelectedIndex);
 
         UpdateCaptureSavePreference(
             "settings.after-capture",
             "After capture",
             previous,
             selected,
-            value => _settingsService.Settings.AfterCapture = value,
-            value => AfterCaptureCombo.SelectedIndex = value switch
+            value =>
             {
-                AfterCaptureAction.CopyToClipboard => 0,
-                AfterCaptureAction.PreviewOnly => 2,
-                _ => 1
-            });
+                _settingsService.Settings.AfterCapture = value.Action;
+                _settingsService.Settings.OpenEditorAfterCapture = value.OpenEditor;
+            },
+            value =>
+            {
+                AfterCaptureCombo.SelectedIndex = GetAfterCaptureSelectedIndex(value);
+                ((App)Application.Current).RefreshWidgetWindowLayout();
+            },
+            () => ((App)Application.Current).RefreshWidgetWindowLayout());
     }
+
+    private static AfterCapturePreference GetAfterCapturePreference(int selectedIndex) =>
+        selectedIndex switch
+        {
+            0 => new AfterCapturePreference(AfterCaptureAction.CopyToClipboard, false),
+            2 => new AfterCapturePreference(AfterCaptureAction.PreviewOnly, false),
+            3 => new AfterCapturePreference(AfterCaptureAction.PreviewAndCopy, true),
+            4 => new AfterCapturePreference(AfterCaptureAction.PreviewOnly, true),
+            _ => new AfterCapturePreference(AfterCaptureAction.PreviewAndCopy, false)
+        };
+
+    private static int GetAfterCaptureSelectedIndex(AfterCapturePreference preference)
+    {
+        var action = NormalizeAfterCaptureAction(preference.Action);
+        if (preference.OpenEditor)
+        {
+            return action == AfterCaptureAction.PreviewOnly ? 4 : 3;
+        }
+
+        return action switch
+        {
+            AfterCaptureAction.CopyToClipboard => 0,
+            AfterCaptureAction.PreviewOnly => 2,
+            _ => 1
+        };
+    }
+
+    private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
+        Enum.IsDefined(typeof(AfterCaptureAction), action)
+            ? action
+            : AfterCaptureAction.PreviewAndCopy;
+
+    private readonly record struct AfterCapturePreference(AfterCaptureAction Action, bool OpenEditor);
 
     private void DefaultCaptureModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

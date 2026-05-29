@@ -27,6 +27,10 @@ public partial class HistoryWindow
 
     private static void StoreThumbInCache(string path, BitmapSource image) => SettingsMediaCache.StoreThumb(path, image);
 
+    private static void RemoveThumbFromCache(string path) => SettingsMediaCache.RemoveThumb(path);
+
+    internal static void InvalidateThumbCache(string path) => RemoveThumbFromCache(path);
+
     internal static void ClearThumbCache() => SettingsMediaCache.Clear();
 
     internal static void TrimThumbCache(int keepCount) => SettingsMediaCache.Trim(keepCount);

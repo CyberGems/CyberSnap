@@ -36,7 +36,9 @@ public partial class ToastWindow
                 ShowDelete = layout.ShowDelete,
                 DeleteSlot = layout.DeleteSlot,
                 ShowHistory = layout.ShowHistory,
-                HistorySlot = layout.HistorySlot
+                HistorySlot = layout.HistorySlot,
+                ShowEdit = layout.ShowEdit,
+                EditSlot = layout.EditSlot
             };
 
         _current?.RefreshOverlayButtonLayout();

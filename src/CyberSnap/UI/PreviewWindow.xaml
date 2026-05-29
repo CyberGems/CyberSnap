@@ -88,6 +88,21 @@
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
+
+                    <Border x:Name="EditBtn" Width="30" Height="30" CornerRadius="9"
+                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Cursor="Hand"
+                            Focusable="True"
+                            MouseLeftButtonDown="EditClick"
+                            KeyDown="EditBtn_KeyDown"
+                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                            Margin="0,6,42,0" Opacity="0"
+                            ToolTip="Edit preview"
+                            AutomationProperties.Name="Edit preview"
+                            AutomationProperties.HelpText="Open the post-capture editor.">
+                        <Image x:Name="EditIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
                 </Grid>
             </Border>
 
