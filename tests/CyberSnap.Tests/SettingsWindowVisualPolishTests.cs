@@ -674,8 +674,7 @@ public sealed class SettingsWindowVisualPolishTests
         AssertNamedControlHasLabel(xaml, "MonthlyFoldersCheck", "<CheckBox", "Create monthly subfolders", "Organize captures into year-month folders");
         AssertNamedControlHasLabel(xaml, "SaveHistoryCheck", "<CheckBox", "Save capture history", "Keep captures available in the History page");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "DefaultCaptureModeCombo", "Rectangle", "Drag from corner to corner.", "Rectangle selection", "Start captures with the standard rectangular selection tool.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "DefaultCaptureModeCombo", "Center", "Drag outward from a center point.", "Center selection", "Start captures with a center-based selection tool.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "DefaultCaptureModeCombo", "Freeform", "Draw an irregular capture outline.", "Freeform selection", "Start captures with the freeform selection tool.");
+        AssertComboBoxItemInNamedComboHasLabel(xaml, "DefaultCaptureModeCombo", "From center", "Drag outward from a center point.", "Center selection", "Start captures with a center-based selection tool.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "CenterAspectRatioCombo", "Free", "Do not lock the center selection ratio.", "Free center ratio", "Let center selection resize freely without an aspect-ratio lock.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "CenterAspectRatioCombo", "Square", "Lock center selection to a square.", "Square center ratio", "Keep center selection width and height equal.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "CenterAspectRatioCombo", "16:9", "Lock center selection to widescreen landscape.", "16:9 center ratio", "Keep center selection in a 16 to 9 landscape ratio.");
@@ -1063,7 +1062,7 @@ public sealed class SettingsWindowVisualPolishTests
         AssertNamedControlHasLabel(xaml, "RecordShowCursorCheck", "<CheckBox", "Show cursor in recordings", "Include pointer movement in recorded output.");
         AssertNamedControlHasLabel(xaml, "RecordMicCheck", "<CheckBox", "Record microphone", "Capture audio from the selected input device.");
         AssertNamedControlHasLabel(xaml, "RecordDesktopAudioCheck", "<CheckBox", "Record desktop audio", "Capture system audio from the selected output device.");
-        AssertNamedControlHasLabel(xaml, "RecordingFormatCombo", "<ComboBox", "Recording format", "Choose the video container for recordings");
+
         AssertNamedControlHasLabel(xaml, "RecordingQualityCombo", "<ComboBox", "Recording quality", "Set maximum recording resolution");
         AssertNamedControlHasLabel(xaml, "RecordingFpsCombo", "<ComboBox", "Recording FPS", "Choose how many frames are captured each second");
         AssertNamedControlHasLabel(xaml, "MicDeviceCombo", "<ComboBox", "Microphone input device", "Choose the microphone input device");
@@ -1073,10 +1072,7 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("Use {mic.Name} for microphone recording.", recordingCode);
         Assert.Contains("Desktop audio device {dev.Name}", recordingCode);
         Assert.Contains("Use {dev.Name} for desktop audio recording.", recordingCode);
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "RecordingFormatCombo", "GIF", "Save recordings as GIF animations", "GIF recording format", "Save recordings as animated GIF files.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "RecordingFormatCombo", "MP4", "Save recordings as MP4 videos", "MP4 recording format", "Save recordings as MP4 video files.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "RecordingFormatCombo", "WebM", "Save recordings as WebM videos", "WebM recording format", "Save recordings as WebM video files.");
-        AssertComboBoxItemInNamedComboHasLabel(xaml, "RecordingFormatCombo", "MKV", "Save recordings as MKV videos", "MKV recording format", "Save recordings as MKV video files.");
+
         AssertComboBoxItemInNamedComboHasLabel(xaml, "RecordingQualityCombo", "Original", "Keep the original recording resolution", "Original recording resolution", "Record at the selected area's original resolution.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "RecordingQualityCombo", "1080p", "Limit recordings to 1080p", "1080p recording resolution", "Scale recordings down to 1080p when needed.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "RecordingQualityCombo", "720p", "Limit recordings to 720p", "720p recording resolution", "Scale recordings down to 720p when needed.");
@@ -1086,15 +1082,6 @@ public sealed class SettingsWindowVisualPolishTests
         AssertComboBoxItemInNamedComboHasLabel(xaml, "RecordingFpsCombo", "30", "Capture 30 frames per second", "30 FPS", "Capture smooth recordings at 30 frames per second.");
         AssertComboBoxItemInNamedComboHasLabel(xaml, "RecordingFpsCombo", "60", "Capture 60 frames per second", "60 FPS", "Capture very smooth recordings at 60 frames per second.");
 
-        var formatBlock = GetMethodBlock(recordingCode, "private void RecordingFormatCombo_Changed(object sender, SelectionChangedEventArgs e)");
-        Assert.Contains("if (!IsLoaded || _suppressRecordingPreferenceChange) return;", formatBlock);
-        Assert.Contains("var previous = _settingsService.Settings.RecordingFormat;", formatBlock);
-        Assert.Contains("var selected = (RecordingFormat)Math.Clamp(RecordingFormatCombo.SelectedIndex, 0, 3);", formatBlock);
-        Assert.Contains("\"settings.recording-format\"", formatBlock);
-        Assert.Contains("value => _settingsService.Settings.RecordingFormat = value", formatBlock);
-        Assert.Contains("RecordingFormatCombo.SelectedIndex = (int)value;", formatBlock);
-        Assert.Contains("SelectRecordingFps(value == RecordingFormat.GIF", formatBlock);
-        Assert.Contains("UpdateRecordingFormatVisibility();", formatBlock);
 
         var qualityBlock = GetMethodBlock(recordingCode, "private void RecordingQualityCombo_Changed(object sender, SelectionChangedEventArgs e)");
         Assert.Contains("if (!IsLoaded || _suppressRecordingPreferenceChange) return;", qualityBlock);

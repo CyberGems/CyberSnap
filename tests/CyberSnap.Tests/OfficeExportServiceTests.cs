@@ -28,7 +28,7 @@ public sealed class OfficeExportServiceTests
     public void SupportedOpenWithExtensions_CoversCyberSnapOutputTypes()
     {
         Assert.Equal(
-            new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".mp4", ".webm", ".mkv" },
+            new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".mp4" },
             OfficeExportService.SupportedOpenWithExtensions);
     }
 

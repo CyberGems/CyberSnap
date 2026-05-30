@@ -141,7 +141,7 @@ public partial class App
         _trayIcon.OnCapture += OnHotkeyPressed;
         _trayIcon.OnOcr += OnOcrHotkeyPressed;
         _trayIcon.OnColorPicker += OnPickerHotkeyPressed;
-        _trayIcon.OnGifRecord += OnGifHotkeyPressed;
+        _trayIcon.OnRecordRequested += LaunchRecordingWithFormat;
         _trayIcon.OnScrollCapture += OnScrollCaptureHotkeyPressed;
         _trayIcon.OnSettings += () => ShowSettings();
         _trayIcon.OnHistory += () => ShowHistory();

@@ -307,5 +307,10 @@
   "Record screen (Video MP4)": "Record screen (Video MP4)",
   "Record animated GIF": "Record animated GIF",
   "Drag here to position the panel.": "Drag here to position the panel.",
-  "Confirm": "Confirm"
+  "Confirm": "Confirm",
+  "Video": "فيديو",
+  "Screen Recording": "تسجيل الشاشة",
+  "Default capture method": "طريقة الالتقاط الافتراضية",
+  "Screen Recorder (MP4)": "مسجل الشاشة (MP4)",
+  "Screen Recorder (GIF)": "مسجل الشاشة (GIF)"
 }

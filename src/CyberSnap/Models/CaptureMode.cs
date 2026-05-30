@@ -27,5 +27,6 @@ public enum CaptureMode
     Line = 21,
     Center = 22,
     ScrollCapture = 23,
-    Record = 24
+    Record = 24,
+    RecordGif = 25
 }

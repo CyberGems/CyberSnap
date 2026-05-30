@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -230,18 +230,18 @@ public sealed class GifRecorder : IDisposable
         string inputArgs = $"-f rawvideo -pix_fmt bgra -s {_region.Width}x{_region.Height} -framerate {_fps} -i \"{rawInput}\"";
 
         RunFfmpegChecked(ffmpegPath,
-            $"-y {inputArgs} -vf \"palettegen=stats_mode=diff\" \"{paletteFile}\"",
+            $"-y {inputArgs} -vf \"format=bgr24,palettegen=stats_mode=diff:reserve_transparent=0\" \"{paletteFile}\"",
             timeoutMs: 120_000);
 
         if (!File.Exists(paletteFile) || new FileInfo(paletteFile).Length == 0)
-            throw new InvalidOperationException("FFmpeg palette generation failed â€” no palette file produced.");
+            throw new InvalidOperationException("FFmpeg palette generation failed — no palette file produced.");
 
         RunFfmpegChecked(ffmpegPath,
-            $"-y {inputArgs} -i \"{paletteFile}\" -lavfi \"paletteuse=dither=sierra2_4a:diff_mode=rectangle\" -frames:v {frameCount} \"{outputPath}\"",
+            $"-y {inputArgs} -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" -frames:v {frameCount} \"{outputPath}\"",
             timeoutMs: 120_000);
 
         if (!IsValidOutputFile(outputPath))
-            throw new InvalidOperationException("FFmpeg GIF encoding failed â€” no output file produced.");
+            throw new InvalidOperationException("FFmpeg GIF encoding failed — no output file produced.");
     }
 
     private void EncodeFfmpegGifFromBmpSequence(string ffmpegPath, string outputPath)
@@ -252,15 +252,15 @@ public sealed class GifRecorder : IDisposable
 
         // Pass 1: generate palette
         RunFfmpegChecked(ffmpegPath,
-            $"-y -framerate {_fps} -i \"{inputPattern}\" -vf \"palettegen=stats_mode=diff\" \"{paletteFile}\"",
+            $"-y -framerate {_fps} -i \"{inputPattern}\" -vf \"format=bgr24,palettegen=stats_mode=diff:reserve_transparent=0\" \"{paletteFile}\"",
             timeoutMs: 120_000);
 
         if (!File.Exists(paletteFile) || new FileInfo(paletteFile).Length == 0)
-            throw new InvalidOperationException("FFmpeg palette generation failed â€” no palette file produced.");
+            throw new InvalidOperationException("FFmpeg palette generation failed — no palette file produced.");
 
         // Pass 2: encode using palette
         RunFfmpegChecked(ffmpegPath,
-            $"-y -framerate {_fps} -i \"{inputPattern}\" -i \"{paletteFile}\" -lavfi \"paletteuse=dither=sierra2_4a:diff_mode=rectangle\" \"{outputPath}\"",
+            $"-y -framerate {_fps} -i \"{inputPattern}\" -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" \"{outputPath}\"",
             timeoutMs: 120_000);
 
         if (!IsValidOutputFile(outputPath))
@@ -400,11 +400,31 @@ public sealed class GifRecorder : IDisposable
         var data = bitmap.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
         try
         {
-            int bytes = data.Stride * data.Height;
-            if (buffer is null || buffer.Length != bytes)
-                buffer = new byte[bytes];
-            System.Runtime.InteropServices.Marshal.Copy(data.Scan0, buffer, 0, bytes);
-            stream.Write(buffer, 0, bytes);
+            int rowBytes = bitmap.Width * 4;
+            int totalBytes = rowBytes * bitmap.Height;
+            if (buffer is null || buffer.Length != totalBytes)
+                buffer = new byte[totalBytes];
+
+            if (data.Stride == rowBytes)
+            {
+                System.Runtime.InteropServices.Marshal.Copy(data.Scan0, buffer, 0, totalBytes);
+            }
+            else
+            {
+                for (int y = 0; y < bitmap.Height; y++)
+                {
+                    IntPtr rowPtr = IntPtr.Add(data.Scan0, y * data.Stride);
+                    System.Runtime.InteropServices.Marshal.Copy(rowPtr, buffer, y * rowBytes, rowBytes);
+                }
+            }
+
+            // Force alpha to 255 to prevent transparent green screen glitches
+            for (int i = 3; i < totalBytes; i += 4)
+            {
+                buffer[i] = 255;
+            }
+
+            stream.Write(buffer, 0, totalBytes);
             return buffer;
         }
         finally

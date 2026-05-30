@@ -391,7 +391,7 @@ public sealed partial class RegionOverlayForm : Form
     public event Action<Rectangle>? UpscaleRegionSelected;
     public event Action<Rectangle>? ScrollRegionSelected;
     public event Action? SelectionCancelled;
-    public event Action? RecordingRequested;
+    public event Action<Models.RecordingFormat>? RecordingRequested;
 
     public RegionOverlayForm(Bitmap screenshot, Rectangle virtualBounds,
         CaptureMode initialMode = CaptureMode.Rectangle,

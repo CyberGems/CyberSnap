@@ -126,17 +126,17 @@
                             <Trigger Property="Content" Value="General">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE9E9;"/>
                             </Trigger>
+                            <Trigger Property="Content" Value="Capture">
+                                <Setter TargetName="Icon" Property="Text" Value="&#xEE6F;"/>
+                            </Trigger>
                             <Trigger Property="Content" Value="Notifications">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xEA8F;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Tools">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE90F;"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="Capture">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE722;"/>
-                            </Trigger>
-                            <Trigger Property="Content" Value="Recording">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE714;"/>
+                            <Trigger Property="Content" Value="Video">
+                                <Setter TargetName="Icon" Property="Text" Value="&#xE768;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="OCR">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE8B7;"/>
@@ -686,7 +686,7 @@
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="CaptureTab" Content="Capture" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="RecordingTab" Content="Recording" GroupName="Main"
+                    <RadioButton x:Name="RecordingTab" Content="Video" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="OcrTab" Content="OCR" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
@@ -733,29 +733,25 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE722;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xEE6F;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Default capture tool" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose which selection mode opens first." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Default capture method" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Choose your default area selection mode." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="DefaultCaptureModeCombo" Grid.Column="2" MinWidth="150"
                                            VerticalAlignment="Center"
-                                           AutomationProperties.Name="Default capture tool"
-                                           ToolTip="Choose which selection mode opens first."
+                                           AutomationProperties.Name="Default capture method"
+                                           ToolTip="Choose your default area selection mode."
                                            SelectionChanged="DefaultCaptureModeCombo_SelectionChanged">
                                      <ComboBoxItem Content="Rectangle"
                                                    ToolTip="Drag from corner to corner."
                                                    AutomationProperties.Name="Rectangle selection"
                                                    AutomationProperties.HelpText="Start captures with the standard rectangular selection tool."/>
-                                     <ComboBoxItem Content="Center"
+                                     <ComboBoxItem Content="From center"
                                                    ToolTip="Drag outward from a center point."
                                                    AutomationProperties.Name="Center selection"
                                                    AutomationProperties.HelpText="Start captures with a center-based selection tool."/>
-                                     <ComboBoxItem Content="Freeform"
-                                                   ToolTip="Draw an irregular capture outline."
-                                                   AutomationProperties.Name="Freeform selection"
-                                                   AutomationProperties.HelpText="Start captures with the freeform selection tool."/>
                                  </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -769,12 +765,12 @@
                                     <TextBlock Text="&#xE1D9;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Center aspect ratio" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="From center aspect ratio" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Optional ratio lock for center selection." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="CenterAspectRatioCombo" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Center"
-                                          AutomationProperties.Name="Center aspect ratio"
+                                          AutomationProperties.Name="From center aspect ratio"
                                           ToolTip="Optional ratio lock for center selection."
                                           SelectionChanged="CenterAspectRatioCombo_SelectionChanged">
                                     <ComboBoxItem Content="Free"
@@ -1350,46 +1346,10 @@
             <!-- Recording -->
             <ScrollViewer x:Name="RecordingPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
                 <StackPanel>
-                    <TextBlock Text="Recording" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="Screen Recording" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE714;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Format" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose the video container for recordings." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="RecordingFormatCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
-                                          ToolTip="Choose the video container for recordings"
-                                          AutomationProperties.Name="Recording format"
-                                          SelectionChanged="RecordingFormatCombo_Changed">
-                                    <ComboBoxItem Content="GIF"
-                                                  ToolTip="Save recordings as GIF animations"
-                                                  AutomationProperties.Name="GIF recording format"
-                                                  AutomationProperties.HelpText="Save recordings as animated GIF files."/>
-                                    <ComboBoxItem Content="MP4"
-                                                  ToolTip="Save recordings as MP4 videos"
-                                                  AutomationProperties.Name="MP4 recording format"
-                                                  AutomationProperties.HelpText="Save recordings as MP4 video files."/>
-                                    <ComboBoxItem Content="WebM"
-                                                  ToolTip="Save recordings as WebM videos"
-                                                  AutomationProperties.Name="WebM recording format"
-                                                  AutomationProperties.HelpText="Save recordings as WebM video files."/>
-                                    <ComboBoxItem Content="MKV"
-                                                  ToolTip="Save recordings as MKV videos"
-                                                  AutomationProperties.Name="MKV recording format"
-                                                  AutomationProperties.HelpText="Save recordings as MKV video files."/>
-                                </ComboBox>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>

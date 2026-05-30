@@ -45,7 +45,20 @@ public partial class App
         public Services.HistoryEntry? HistoryEntry { get; init; }
     }
 
-    private void LaunchGifRecording()
+    private void LaunchRecordingWithFormat(RecordingFormat fmt)
+    {
+        if (RecordingForm.Current != null)
+        {
+            RecordingForm.Current.RequestStop();
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        HideSettingsForCapture();
+        LaunchGifRecording(fmt);
+    }
+
+    private void LaunchGifRecording(RecordingFormat? formatOverride = null)
     {
         var thread = new Thread(() =>
         {
@@ -57,10 +70,10 @@ public partial class App
                 bool showCursor = settings.ShowCursor;
                 var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
                 var s = settings;
-                var fmt = s.RecordingFormat;
+                var fmt = formatOverride ?? s.RecordingFormat;
 
                 string baseDir = s.SaveDirectory;
-                string ext = fmt switch { RecordingFormat.MP4 => ".mp4", RecordingFormat.WebM => ".webm", RecordingFormat.MKV => ".mkv", _ => ".gif" };
+                string ext = fmt switch { RecordingFormat.MP4 => ".mp4", _ => ".gif" };
                 string saveRoot = fmt == RecordingFormat.GIF ? baseDir : Path.Combine(baseDir, "Videos");
                 string saveDir = s.SaveInMonthlyFolders
                     ? Helpers.CaptureSavePath.GetMonthDirectory(saveRoot)
@@ -439,12 +452,12 @@ public partial class App
                     });
                 };
 
-                overlay.RecordingRequested += () =>
+                overlay.RecordingRequested += fmt =>
                 {
                     overlay.Hide();
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
-                    Dispatcher.BeginInvoke(() => LaunchGifRecording());
+                    Dispatcher.BeginInvoke(() => LaunchGifRecording(fmt));
                 };
 
                 overlay.ColorPicked += hex =>

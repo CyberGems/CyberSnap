@@ -245,7 +245,7 @@ public sealed partial class RegionOverlayForm
             }
 
             // Draw selection frame and handles ON TOP of buttons
-            SelectionFrameRenderer.DrawRectangle(g, _confirmRect);
+            SelectionFrameRenderer.DrawRectangle(g, _confirmRect, fill: false);
             var handles = GetConfirmHandleRects();
             foreach (var h in handles)
                 WindowsHandleRenderer.Paint(g, h);

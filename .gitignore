@@ -43,9 +43,7 @@ src/CyberSnap/CyberSnap_*.png
 *.zip
 .omx/
 .claude/
-site/node_modules/
-*.tsbuildinfo
-site/vite-dev.*.log
+
 
 
 

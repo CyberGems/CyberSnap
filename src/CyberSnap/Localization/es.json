@@ -1,8 +1,10 @@
-{
+﻿{
   "General": "Generales",
   "Tools": "Herramientas",
   "Capture": "Capturar",
   "Recording": "Grabación",
+  "Video": "Video",
+  "Screen Recording": "Grabación de pantalla",
   "OCR": "OCR",
   "History": "Historial",
   "Capture History": "Historial de capturas",
@@ -310,5 +312,8 @@
   "System Message": "Mensaje de sistema",
   "Copied to clipboard": "Copiado al portapapeles",
   "Border": "Marco",
-  "Confirm": "Confirmar"
+  "Confirm": "Confirmar",
+  "Screen Recorder (MP4)": "Grabador de pantalla (MP4)",
+  "Screen Recorder (GIF)": "Grabador de pantalla (GIF)",
+  "Default capture method": "Default capture method"
 }

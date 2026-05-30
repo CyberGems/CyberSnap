@@ -15,7 +15,7 @@ internal static class HistoryEntryUtilities
     public static bool IsSupportedHistoryFile(string path)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
-        return ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".webp" or ".mp4" or ".webm" or ".mkv";
+        return ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".webp" or ".mp4";
     }
 
     public static HistoryEntry CloneEntry(HistoryEntry entry)
@@ -49,8 +49,6 @@ internal static class HistoryEntryUtilities
     private static bool IsVideoPath(string path)
     {
         var ext = Path.GetExtension(path);
-        return ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase) ||
-               ext.Equals(".webm", StringComparison.OrdinalIgnoreCase) ||
-               ext.Equals(".mkv", StringComparison.OrdinalIgnoreCase);
+        return ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -39,9 +39,7 @@ public enum SoundPack
 public enum RecordingFormat
 {
     GIF,
-    MP4,
-    WebM,
-    MKV
+    MP4
 }
 
 public enum RecordingQuality
@@ -386,7 +384,8 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("ocr",         "OCR",          '\uE53C', CaptureMode.Ocr,         0), // scan-text
         new("picker",      "Color Picker", '\uE2B1', CaptureMode.ColorPicker, 0), // eyedropper
         new("scan",        "QR/Barcode",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
-        new("record",      "Record",       '\uE7C8', CaptureMode.Record,      0), // video
+        new("record",      "Screen Recorder (MP4)", '\uE7C8', CaptureMode.Record,      0), // video
+        new("recordGif",   "Screen Recorder (GIF)", '\uE790', CaptureMode.RecordGif,   0), // gif
         new("select",      "Select",       '\uE1E3', CaptureMode.Select,      1), // cursor-click   → 0x31
         new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser         → 0x33
         new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type           → 0x37

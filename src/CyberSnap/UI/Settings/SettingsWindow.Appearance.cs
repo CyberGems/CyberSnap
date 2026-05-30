@@ -43,11 +43,34 @@ public partial class SettingsWindow
 
     private void UpdateSectionIcons()
     {
-        var iconColor = Theme.IsDark
-            ? System.Drawing.Color.FromArgb(160, 255, 255, 255)
-            : System.Drawing.Color.FromArgb(170, 0, 0, 0);
+        // Determine foreground color for icons based on theme darkness
+        var foreground = Theme.IsDark ? Colors.White : Colors.Black;
 
-        _ = iconColor;
+        // Mapping of each tab RadioButton to its glyph icon (Unicode character)
+        var iconMap = new System.Collections.Generic.Dictionary<System.Windows.Controls.RadioButton, string>
+        {
+            [SettingsTab] = "\uE9E9", // General
+            [ToastTab] = "\uEA8F", // Notifications
+            [HotkeysTab] = "\uE90F", // Tools
+            [CaptureTab] = "\uEE6F", // Capture
+            [RecordingTab] = "\uE768", // Video
+            [OcrTab] = "\uE8B7", // OCR
+            [HistoryTab] = "\uE81C", // History
+            [AboutTab] = "\uE946" // About
+        };
+
+        foreach (var kvp in iconMap)
+        {
+            var radio = kvp.Key;
+            var glyph = kvp.Value;
+            // Ensure template is applied before searching for named parts
+            radio.ApplyTemplate();
+            if (radio.Template.FindName("Icon", radio) is TextBlock iconTextBlock)
+            {
+                iconTextBlock.Text = glyph;
+                iconTextBlock.Foreground = new SolidColorBrush(foreground);
+            }
+        }
     }
 
     private void ApplyThemeToVisualTree(DependencyObject root)
@@ -172,7 +195,6 @@ public partial class SettingsWindow
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
             UpdateWidgetOptionsVisibility(s.ShowCaptureWidget);
-            RecordingFormatCombo.SelectedIndex = (int)s.RecordingFormat;
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
             SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
             RecordShowCursorCheck.IsChecked = s.ShowCursor;
@@ -197,8 +219,6 @@ public partial class SettingsWindow
 
             TryLoadSettingsSection("settings.populate-tool-toggles", PopulateToolToggles);
             TryLoadSettingsSection("settings.update-capture-format-controls", UpdateCaptureFormatControls);
-            TryLoadSettingsSection("settings.update-recording-format-visibility", UpdateRecordingFormatVisibility);
-
             ApplyLocalization();
         }
         finally
@@ -418,7 +438,7 @@ public partial class SettingsWindow
         if (ToastTab.IsChecked == true) return "Notifications";
         if (HotkeysTab.IsChecked == true) return "Tools";
         if (CaptureTab.IsChecked == true) return "Capture";
-        if (RecordingTab.IsChecked == true) return "Recording";
+        if (RecordingTab.IsChecked == true) return "Video";
         if (OcrTab.IsChecked == true) return "OCR";
         if (HistoryTab.IsChecked == true) return "History";
         if (AboutTab.IsChecked == true) return "About";
