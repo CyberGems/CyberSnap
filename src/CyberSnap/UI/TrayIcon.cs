@@ -22,11 +22,11 @@ public sealed class TrayIcon : IDisposable
     public event Action? OnCapture;
     public event Action? OnOcr;
     public event Action? OnColorPicker;
-    public event Action? OnGifRecord;
     public event Action? OnScrollCapture;
     public event Action? OnSettings;
     public event Action? OnHistory;
     public event Action? OnQuit;
+    public event Action<RecordingFormat>? OnRecordRequested;
 
     public TrayIcon(AppSettings? settings = null)
     {
@@ -102,10 +102,30 @@ public sealed class TrayIcon : IDisposable
         var scrollItem   = WindowsMenuRenderer.Item(T("Scroll capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
         var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("ocr"), "ocr");
         var pickerItem   = WindowsMenuRenderer.Item(T("Color picker"), HotkeyHint("picker"), "picker");
-        var recordItem   = isRec
-            ? WindowsMenuRenderer.Item(T("Stop recording"), null, "record", active: true, danger: true)
-            : WindowsMenuRenderer.Item(T("Record screen"), HotkeyHint("_record"), "record");
-        _recordItem = recordItem;
+
+        ToolStripMenuItem? recordItem = null;
+        ToolStripMenuItem? recordGifItem = null;
+
+        if (isRec)
+        {
+            recordItem = WindowsMenuRenderer.Item(T("Stop recording"), null, "play", active: true, danger: true);
+            recordItem.Click += (_, _) =>
+            {
+                if (Capture.RecordingForm.Current != null)
+                    Capture.RecordingForm.Current.RequestStop();
+            };
+            _recordItem = recordItem;
+        }
+        else
+        {
+            recordItem = WindowsMenuRenderer.Item(T("Screen Recorder (MP4)"), HotkeyHint("_record"), "play");
+            recordItem.Click += (_, _) => OnRecordRequested?.Invoke(RecordingFormat.MP4);
+            _recordItem = recordItem;
+
+            recordGifItem = WindowsMenuRenderer.Item(T("Screen Recorder (GIF)"), null, "play");
+            recordGifItem.Click += (_, _) => OnRecordRequested?.Invoke(RecordingFormat.GIF);
+        }
+
         var settingsItem = WindowsMenuRenderer.Item(T("Settings"), iconId: "gear");
         var historyItem  = WindowsMenuRenderer.Item(T("Capture History"), iconId: "folder");
         var quitItem     = WindowsMenuRenderer.Item(T("Quit"), iconId: "close", danger: true);
@@ -113,26 +133,36 @@ public sealed class TrayIcon : IDisposable
         captureItem.Click += (_, _) => OnCapture?.Invoke();
         ocrItem.Click     += (_, _) => OnOcr?.Invoke();
         pickerItem.Click  += (_, _) => OnColorPicker?.Invoke();
-        recordItem.Click  += (_, _) =>
-        {
-            if (Capture.RecordingForm.Current != null)
-                Capture.RecordingForm.Current.RequestStop();
-            else
-                OnGifRecord?.Invoke();
-        };
         scrollItem.Click   += (_, _) => OnScrollCapture?.Invoke();
         settingsItem.Click += (_, _) => OnSettings?.Invoke();
         historyItem.Click  += (_, _) => OnHistory?.Invoke();
         quitItem.Click     += (_, _) => OnQuit?.Invoke();
 
-        menu.Items.AddRange(new ToolStripItem[]
+        // ── App header ──
+        var headerLabel = new ToolStripLabel($"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}")
         {
-            captureItem, scrollItem, ocrItem, pickerItem, recordItem,
-            new ToolStripSeparator(),
-            settingsItem, historyItem,
-            new ToolStripSeparator(),
-            quitItem,
-        });
+            ForeColor = UiChrome.SurfaceTextMuted,
+            Font = UiChrome.ChromeFont(8.5f),
+            Padding = new System.Windows.Forms.Padding(10, 4, 0, 2),
+            AutoSize = true,
+        };
+        menu.Items.Add(headerLabel);
+        menu.Items.Add(new ToolStripSeparator());
+
+        menu.Items.Add(captureItem);
+        menu.Items.Add(scrollItem);
+        menu.Items.Add(ocrItem);
+        menu.Items.Add(pickerItem);
+        menu.Items.Add(recordItem);
+        if (recordGifItem != null)
+        {
+            menu.Items.Add(recordGifItem);
+        }
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(settingsItem);
+        menu.Items.Add(historyItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(quitItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
@@ -165,23 +195,14 @@ public sealed class TrayIcon : IDisposable
 
     private void ShowMenu()
     {
-        UpdateRecordingMenuItem();
+        var oldMenu = _menu;
+        _menu = CreateThemedMenu();
+        _notifyIcon.ContextMenuStrip = _menu;
+        oldMenu?.Dispose();
 
         var showMethod = typeof(NotifyIcon).GetMethod("ShowContextMenu",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         showMethod?.Invoke(_notifyIcon, null);
-    }
-
-    private void UpdateRecordingMenuItem()
-    {
-        if (_recordItem is null)
-            return;
-
-        bool isRec = Capture.RecordingForm.Current != null;
-        _recordItem.Text = isRec ? T("Stop recording") : T("Record screen");
-        _recordItem.ShortcutKeyDisplayString = isRec ? string.Empty : HotkeyHint("_record") ?? string.Empty;
-        _recordItem.Tag = isRec;
-        _recordItem.ForeColor = isRec ? Color.FromArgb(239, 68, 68) : UiChrome.SurfaceTextPrimary;
     }
 
     private static string T(string text) => LocalizationService.Translate(text);

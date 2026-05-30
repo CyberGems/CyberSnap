@@ -12,14 +12,14 @@ public sealed class UpdateServiceTests
     {
         var version = UpdateService.GetCurrentVersion();
         Assert.NotNull(version);
-        Assert.Equal(new Version(1, 5, 0, 0), version);
+        Assert.Equal(new Version(1, 5, 1, 0), version);
     }
 
     [Fact]
     public void GetCurrentVersionLabel_ReturnsFormattedLabel()
     {
         var label = UpdateService.GetCurrentVersionLabel();
-        Assert.Equal("v1.5.0", label);
+        Assert.Equal("v1.5.1", label);
     }
 
     [Fact]
@@ -33,9 +33,9 @@ public sealed class UpdateServiceTests
         if (result.LatestVersion != null)
         {
             // GitHub currently has v1.4.1 as the latest release tag.
-            // Under local version 1.5.0, there should not be any update available.
-            Assert.Equal(new Version(1, 4, 1), result.LatestVersion);
-            Assert.Equal("v1.4.1", result.LatestVersionLabel);
+            // Under local version 1.5.1, there should not be any update available.
+            Assert.Equal(new Version(1, 5, 0), result.LatestVersion);
+            Assert.Equal("v1.5.0", result.LatestVersionLabel);
             Assert.False(result.IsUpdateAvailable);
             Assert.Contains("up to date", result.StatusMessage, StringComparison.OrdinalIgnoreCase);
         }

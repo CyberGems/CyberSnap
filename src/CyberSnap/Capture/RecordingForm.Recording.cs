@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.IO;
@@ -17,79 +17,7 @@ public sealed partial class RecordingForm
 
     // â”€â”€â”€ Recording lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    private void StartRecording()
-    {
-        _recordingStopRequested = 0;
-        _totalPausedDuration = TimeSpan.Zero;
-        _pauseStartTime = null;
-        _isPaused = false;
-        _magHelper?.Close();
-        _selectionAdorner?.Close();
-        _selectionAdorner?.Dispose();
-        _selectionAdorner = null;
-        _recordRegion = _selection;
 
-        // Convert selection from form coords to screen coords
-        var screenRegion = new Rectangle(
-            _selection.X + _virtualBounds.X,
-            _selection.Y + _virtualBounds.Y,
-            _selection.Width, _selection.Height);
-
-        if (_format == Models.RecordingFormat.GIF)
-        {
-            _recorder = new GifRecorder(screenRegion, _fps, _maxDuration, _showCursor);
-        }
-        else
-        {
-            var vfmt = _format switch
-            {
-                Models.RecordingFormat.WebM => VideoRecorder.Format.WebM,
-                Models.RecordingFormat.MKV => VideoRecorder.Format.MKV,
-                _ => VideoRecorder.Format.MP4
-            };
-            _videoRecorder = new VideoRecorder(screenRegion, vfmt, _fps, _maxDuration, _maxHeight,
-                _showCursor, _recordMic, _micDeviceId, _recordDesktop, _desktopDeviceId);
-        }
-        _state = State.Recording;
-        Cursor = Cursors.Default;
-
-        CalcToolbarLayout();
-        TransitionToRecordingSurface();
-
-        Current = this;
-        _desktopAudioSoundSuppression = _recordDesktop ? SoundService.SuppressPlayback() : null;
-        try
-        {
-            SoundService.PlayRecordStartSound();
-            _recorder?.Start(RecordingWarmupDelayMs);
-            _videoRecorder?.Start(_savePath, RecordingWarmupDelayMs);
-        }
-        catch (Exception ex)
-        {
-            _desktopAudioSoundSuppression?.Dispose();
-            _desktopAudioSoundSuppression = null;
-            _recorder?.Dispose();
-            _recorder = null;
-            _videoRecorder?.Dispose();
-            _videoRecorder = null;
-            RecordingFailed?.Invoke(ex);
-            Close();
-            return;
-        }
-
-        _tickTimer = new System.Windows.Forms.Timer { Interval = 200 };
-        _tickTimer.Tick += (_, _) =>
-        {
-            if ((_recorder != null && !_recorder.IsRecording) || (_videoRecorder != null && !_videoRecorder.IsRecording))
-            {
-                StopRecording();
-                return;
-            }
-            Invalidate(_toolbarRect);
-        };
-        _tickTimer.Start();
-        Invalidate(Rectangle.Union(_selection, _toolbarRect));
-    }
 
     private void TogglePause()
     {
@@ -174,11 +102,93 @@ public sealed partial class RecordingForm
         Close();
     }
 
+    private void PrepareRecording()
+    {
+        _state = State.PreRecording;
+        _magHelper?.Close();
+        _selectionAdorner?.Close();
+        _selectionAdorner?.Dispose();
+        _selectionAdorner = null;
+        _recordRegion = _selection;
+
+        CalcToolbarLayout();
+        TransitionToRecordingSurface();
+
+        Current = this;
+        Invalidate(Rectangle.Union(_selection, _toolbarRect));
+    }
+
+    private void ToggleFps()
+    {
+        _fps = _fps == 60 ? 30 : 60;
+        Invalidate(_toolbarRect);
+    }
+
+    private void StartActualRecording()
+    {
+        _state = State.Recording;
+        _recordingStopRequested = 0;
+        _totalPausedDuration = TimeSpan.Zero;
+        _pauseStartTime = null;
+        _isPaused = false;
+
+        CalcToolbarLayout();
+        TransitionToRecordingSurface();
+
+        var screenRegion = new Rectangle(
+            _recordRegion.X + _virtualBounds.X,
+            _recordRegion.Y + _virtualBounds.Y,
+            _recordRegion.Width, _recordRegion.Height);
+
+        if (_format == Models.RecordingFormat.GIF)
+        {
+            _recorder = new GifRecorder(screenRegion, _fps, _maxDuration, _showCursor);
+        }
+        else
+        {
+            var vfmt = VideoRecorder.Format.MP4;
+            _videoRecorder = new VideoRecorder(screenRegion, vfmt, _fps, _maxDuration, _maxHeight,
+                _showCursor, _recordMic, _micDeviceId, _recordDesktop, _desktopDeviceId);
+        }
+
+        _desktopAudioSoundSuppression = _recordDesktop ? SoundService.SuppressPlayback() : null;
+        try
+        {
+            SoundService.PlayRecordStartSound();
+            _recorder?.Start(RecordingWarmupDelayMs);
+            _videoRecorder?.Start(_savePath, RecordingWarmupDelayMs);
+        }
+        catch (Exception ex)
+        {
+            _desktopAudioSoundSuppression?.Dispose();
+            _desktopAudioSoundSuppression = null;
+            _recorder?.Dispose();
+            _recorder = null;
+            _videoRecorder?.Dispose();
+            _videoRecorder = null;
+            RecordingFailed?.Invoke(ex);
+            Close();
+            return;
+        }
+
+        _tickTimer = new System.Windows.Forms.Timer { Interval = 200 };
+        _tickTimer.Tick += (_, _) =>
+        {
+            if ((_recorder != null && !_recorder.IsRecording) || (_videoRecorder != null && !_videoRecorder.IsRecording))
+            {
+                StopRecording();
+                return;
+            }
+            Invalidate(_toolbarRect);
+        };
+        _tickTimer.Start();
+        Invalidate();
+    }
+
     private void CalcToolbarLayout()
     {
-        bool hasPause = _format != Models.RecordingFormat.GIF;
-        int extraWidth = hasPause ? WindowsDockRenderer.IconButtonSize + WindowsDockRenderer.ButtonSpacing : 0;
-        int tw = UiChrome.ScaleInt(320) + extraWidth;
+        bool isPreRec = _state == State.PreRecording;
+        int tw = UiChrome.ScaleInt(360);
         int th = WindowsDockRenderer.SurfaceHeight;
 
         // Try to place above the recording region
@@ -200,10 +210,21 @@ public sealed partial class RecordingForm
         int btnGap = WindowsDockRenderer.ButtonSpacing;
 
         _discardBtn = new Rectangle(_toolbarRect.Right - btnPad - btnSize, btnY, btnSize, btnSize);
-        _stopBtn = new Rectangle(_discardBtn.X - btnGap - btnSize, btnY, btnSize, btnSize);
-        _pauseBtn = hasPause
-            ? new Rectangle(_stopBtn.X - btnGap - btnSize, btnY, btnSize, btnSize)
-            : Rectangle.Empty;
+
+        if (isPreRec)
+        {
+            int fpsWidth = UiChrome.ScaleInt(54);
+            _fpsBtn = new Rectangle(_discardBtn.X - btnGap - fpsWidth, btnY, fpsWidth, btnSize);
+            _startBtn = new Rectangle(_fpsBtn.X - btnGap - btnSize, btnY, btnSize, btnSize);
+        }
+        else
+        {
+            _stopBtn = new Rectangle(_discardBtn.X - btnGap - btnSize, btnY, btnSize, btnSize);
+            bool hasPause = _format != Models.RecordingFormat.GIF;
+            _pauseBtn = hasPause
+                ? new Rectangle(_stopBtn.X - btnGap - btnSize, btnY, btnSize, btnSize)
+                : Rectangle.Empty;
+        }
     }
 
     private void TransitionToRecordingSurface()

@@ -3,6 +3,8 @@
   "Tools": "Tools",
   "Capture": "Capture",
   "Recording": "Recording",
+  "Video": "Video",
+  "Screen Recording": "Screen Recording",
   "OCR": "OCR",
   "History": "History",
   "Capture History": "Capture History",
@@ -30,7 +32,7 @@
   "Image index cache": "Image index cache",
   "Reset": "Reset",
   "Capture Tool": "Capture Tool",
-  "Default capture tool": "Default capture tool",
+  "Default capture method": "Default capture method",
   "Center aspect ratio": "Center aspect ratio",
   "Free": "Free",
   "Square": "Square",
@@ -307,5 +309,7 @@
   "Disable quick panel": "Disable quick panel",
   "Quick panel disabled": "Quick panel disabled",
   "You can re-enable it anytime from Settings -> General.": "You can re-enable it anytime from Settings -> General.",
-  "Confirm": "Confirm"
+  "Confirm": "Confirm",
+  "Screen Recorder (MP4)": "Screen Recorder (MP4)",
+  "Screen Recorder (GIF)": "Screen Recorder (GIF)"
 }

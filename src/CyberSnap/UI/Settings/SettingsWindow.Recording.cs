@@ -156,43 +156,6 @@ public partial class SettingsWindow
             });
     }
 
-    private void RecordingFormatCombo_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (!IsLoaded || _suppressRecordingPreferenceChange) return;
-
-        var previous = _settingsService.Settings.RecordingFormat;
-        var selected = (RecordingFormat)Math.Clamp(RecordingFormatCombo.SelectedIndex, 0, 3);
-        UpdateRecordingPreference(
-            "settings.recording-format",
-            "Recording format",
-            previous,
-            selected,
-            value => _settingsService.Settings.RecordingFormat = value,
-            value =>
-            {
-                RecordingFormatCombo.SelectedIndex = (int)value;
-                SelectRecordingFps(value == RecordingFormat.GIF
-                    ? _settingsService.Settings.GifFps
-                    : _settingsService.Settings.RecordingFps);
-                UpdateRecordingFormatVisibility();
-            },
-            value =>
-            {
-                SelectRecordingFps(value == RecordingFormat.GIF
-                    ? _settingsService.Settings.GifFps
-                    : _settingsService.Settings.RecordingFps);
-                UpdateRecordingFormatVisibility();
-            });
-    }
-
-    private void UpdateRecordingFormatVisibility()
-    {
-        bool isGif = RecordingFormatCombo.SelectedIndex == 0;
-        var videoOnlyVisibility = isGif ? Visibility.Collapsed : Visibility.Visible;
-        AudioSettingsLabel.Visibility = videoOnlyVisibility;
-        VideoOnlySettings.Visibility = videoOnlyVisibility;
-    }
-
     private void RecordingQualityCombo_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded || _suppressRecordingPreferenceChange) return;

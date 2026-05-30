@@ -52,8 +52,6 @@ public sealed class HistoryServiceTests
 
     [Theory]
     [InlineData("clip.mp4")]
-    [InlineData("clip.webm")]
-    [InlineData("clip.mkv")]
     public void GetKindForPath_RecognizesVideoFiles(string fileName)
     {
         Assert.Equal(HistoryKind.Video, HistoryEntryUtilities.GetKindForPath(fileName));

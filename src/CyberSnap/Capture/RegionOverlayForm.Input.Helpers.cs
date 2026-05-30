@@ -221,7 +221,13 @@ public sealed partial class RegionOverlayForm
 
         if (m == CaptureMode.Record)
         {
-            RecordingRequested?.Invoke();
+            RecordingRequested?.Invoke(Models.RecordingFormat.MP4);
+            return;
+        }
+
+        if (m == CaptureMode.RecordGif)
+        {
+            RecordingRequested?.Invoke(Models.RecordingFormat.GIF);
             return;
         }
 

@@ -15,8 +15,9 @@ public sealed partial class EditorForm
     private Panel _statusBarPanel = null!;
     private Panel _toolbarPanel = null!;
     private Bitmap? _brandBitmap;
-    private Label _captureMetaLabel = null!;
     private Label _coordsLabel = null!;
+    private Label _dimensionsLabel = null!;
+    private Label _fileNameLabel = null!;
     private Label _zoomLabel = null!;
     private Label _hintLabel = null!;
     private EditorZoomSlider _zoomSlider = null!;
@@ -108,79 +109,144 @@ public sealed partial class EditorForm
             e.Graphics.DrawLine(border, 0, 0, _statusBarPanel.Width, 0);
         };
 
-        var statusInfo = new DoubleBufferedPanel
+        // Create the flow layout for the left side status items (matching the mockup)
+        var leftStatusFlow = new FlowLayoutPanel
         {
             Dock = DockStyle.Left,
-            BackColor = EditorColors.TitleBar,
-            Width = 400,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0),
             Padding = new Padding(0),
         };
 
-        _coordsLabel = new DoubleBufferedLabel
-        {
-            Dock = DockStyle.Left,
-            Width = 86,
-            BackColor = EditorColors.TitleBar,
-            Text = "0, 0",
-            ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular, GraphicsUnit.Point),
-            TextAlign = ContentAlignment.MiddleLeft,
-        };
-
-        var metaSeparator = new Panel
-        {
-            Dock = DockStyle.Left,
-            Width = 24,
-            BackColor = Color.Transparent,
-        };
-        metaSeparator.Paint += (s, e) =>
-        {
-            using var pen = new Pen(EditorColors.BorderSubtle);
-            int y1 = (metaSeparator.Height - 16) / 2;
-            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
-        };
-
-        _captureMetaLabel = new DoubleBufferedLabel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = EditorColors.TitleBar,
-            Text = "",
-            ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular, GraphicsUnit.Point),
-            TextAlign = ContentAlignment.MiddleLeft,
-        };
-        statusInfo.Controls.Add(_captureMetaLabel);
-        statusInfo.Controls.Add(metaSeparator);
-        statusInfo.Controls.Add(_coordsLabel);
-
-        var statusSeparator = new Panel
-        {
-            Dock = DockStyle.Left,
-            Width = 24,
-            BackColor = Color.Transparent,
-        };
-        statusSeparator.Paint += (s, e) =>
-        {
-            using var pen = new Pen(EditorColors.BorderSubtle);
-            int y1 = (statusSeparator.Height - 16) / 2;
-            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
-        };
-
+        // BORDER switch
         _toggleFrameSwitch = new EditorToggleSwitch
         {
             LabelText = LocalizationService.Translate("Border"),
             Checked = _canvas.ShowCaptureFrame,
             Width = 120,
             Height = 42,
-            Dock = DockStyle.Left,
             Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
+            Margin = new Padding(0),
         };
         _toggleFrameSwitch.CheckedChanged += (_, _) =>
         {
             _canvas.ShowCaptureFrame = _toggleFrameSwitch.Checked;
             _canvas.Invalidate();
         };
+        leftStatusFlow.Controls.Add(_toggleFrameSwitch);
 
+        // Separator 1
+        var sep1 = new Panel { Width = 24, Height = 42, BackColor = Color.Transparent, Margin = new Padding(0) };
+        sep1.Paint += (s, e) =>
+        {
+            using var pen = new Pen(Color.FromArgb(40, 255, 255, 255));
+            int y1 = (sep1.Height - 16) / 2;
+            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
+        };
+        leftStatusFlow.Controls.Add(sep1);
+
+        // Coords: Icon + Label
+        var coordsPanel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0),
+        };
+        var coordsIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
+        coordsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "select", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
+        _coordsLabel = new Label
+        {
+            AutoSize = true,
+            Text = "0, 0",
+            ForeColor = EditorColors.TextPrimary,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular),
+            Margin = new Padding(0, 12, 0, 12),
+        };
+        coordsPanel.Controls.Add(coordsIcon);
+        coordsPanel.Controls.Add(_coordsLabel);
+        leftStatusFlow.Controls.Add(coordsPanel);
+
+        // Separator 2
+        var sep2 = new Panel { Width = 24, Height = 42, BackColor = Color.Transparent, Margin = new Padding(0) };
+        sep2.Paint += (s, e) =>
+        {
+            using var pen = new Pen(Color.FromArgb(40, 255, 255, 255));
+            int y1 = (sep2.Height - 16) / 2;
+            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
+        };
+        leftStatusFlow.Controls.Add(sep2);
+
+        // Dimensions: Icon + Label + px
+        var dimsPanel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0),
+        };
+        var dimsIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
+        dimsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "rect", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
+        _dimensionsLabel = new Label
+        {
+            AutoSize = true,
+            Text = "0 x 0",
+            ForeColor = EditorColors.TextPrimary,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular),
+            Margin = new Padding(0, 12, 2, 12),
+        };
+        var pxLabel = new Label
+        {
+            AutoSize = true,
+            Text = "px",
+            ForeColor = EditorColors.Accent,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular),
+            Margin = new Padding(0, 12, 0, 12),
+        };
+        dimsPanel.Controls.Add(dimsIcon);
+        dimsPanel.Controls.Add(_dimensionsLabel);
+        dimsPanel.Controls.Add(pxLabel);
+        leftStatusFlow.Controls.Add(dimsPanel);
+
+        // Separator 3
+        var sep3 = new Panel { Width = 24, Height = 42, BackColor = Color.Transparent, Margin = new Padding(0) };
+        sep3.Paint += (s, e) =>
+        {
+            using var pen = new Pen(Color.FromArgb(40, 255, 255, 255));
+            int y1 = (sep3.Height - 16) / 2;
+            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
+        };
+        leftStatusFlow.Controls.Add(sep3);
+
+        // Filename: Icon + Label
+        var filePanel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0),
+        };
+        var fileIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
+        fileIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "document", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
+        _fileNameLabel = new Label
+        {
+            AutoSize = true,
+            Text = "Unsaved capture",
+            ForeColor = EditorColors.TextSecondary,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular),
+            Margin = new Padding(0, 12, 0, 12),
+        };
+        filePanel.Controls.Add(fileIcon);
+        filePanel.Controls.Add(_fileNameLabel);
+        leftStatusFlow.Controls.Add(filePanel);
+
+        // Rest of the controls (zoom and helper labels) on the right side
         _hintLabel = new DoubleBufferedLabel
         {
             Dock = DockStyle.Right,
@@ -297,9 +363,9 @@ public sealed partial class EditorForm
         _statusBarPanel.Controls.Add(_resetZoomBtn);
         _statusBarPanel.Controls.Add(hintSpacer);
         _statusBarPanel.Controls.Add(_hintLabel);
-        _statusBarPanel.Controls.Add(statusInfo);
-        _statusBarPanel.Controls.Add(statusSeparator);
-        _statusBarPanel.Controls.Add(_toggleFrameSwitch);
+        
+        // Add our premium left-side status flow layout
+        _statusBarPanel.Controls.Add(leftStatusFlow);
     }
 
     private Panel BuildTopBar()
@@ -375,6 +441,7 @@ public sealed partial class EditorForm
             WrapContents = false,
             Padding = new Padding(0),
         };
+        topActions.MouseDown += BeginWindowDrag;
 
         var closeButton = MakeChromeButton("close", LocalizationService.Translate("Close"));
         closeButton.Click += (_, _) => Close();
@@ -806,15 +873,19 @@ public sealed partial class EditorForm
 
     private void UpdateCaptureCaption()
     {
-        if (_captureMetaLabel is null) return;
+        if (_dimensionsLabel is null || _fileNameLabel is null) return;
 
         var bitmap = _canvas.BaseBitmap;
         var fileName = string.IsNullOrWhiteSpace(_savedFilePath)
             ? "Unsaved capture"
             : Path.GetFileName(_savedFilePath);
-        var text = $"{bitmap.Width} x {bitmap.Height} px  |  {fileName}";
-        if (_captureMetaLabel.Text != text)
-            _captureMetaLabel.Text = text;
+        
+        var dimsText = $"{bitmap.Width} x {bitmap.Height}";
+        if (_dimensionsLabel.Text != dimsText)
+            _dimensionsLabel.Text = dimsText;
+            
+        if (_fileNameLabel.Text != fileName)
+            _fileNameLabel.Text = fileName;
     }
 
     private string GetCurrentHint()
@@ -850,7 +921,7 @@ internal static class EditorColors
     public static readonly Color BgCard = Color.FromArgb(23, 26, 40);
     public static readonly Color BgHover = Color.FromArgb(33, 38, 58);
     public static readonly Color CanvasBg = Color.FromArgb(8, 10, 16);
-    public static readonly Color TitleBar = Color.FromArgb(10, 12, 18);
+    public static readonly Color TitleBar = Color.FromArgb(6, 12, 20);
     public static readonly Color TextPrimary = Color.FromArgb(230, 240, 255);
     public static readonly Color TextSecondary = Color.FromArgb(160, 180, 210);
     public static readonly Color TextMuted = Color.FromArgb(110, 130, 160);

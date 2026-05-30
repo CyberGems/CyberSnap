@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -341,10 +341,26 @@ public static class ScreenCapture
             var data = _bitmap.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
             try
             {
-                int byteCount = data.Stride * data.Height;
-                if (buffer.Length != byteCount)
-                    buffer = new byte[byteCount];
-                Marshal.Copy(data.Scan0, buffer, 0, byteCount);
+                int rowBytes = _bitmap.Width * 4;
+                if (data.Stride == rowBytes)
+                {
+                    Marshal.Copy(data.Scan0, buffer, 0, BufferByteCount);
+                }
+                else
+                {
+                    for (int y = 0; y < _bitmap.Height; y++)
+                    {
+                        IntPtr rowPtr = IntPtr.Add(data.Scan0, y * data.Stride);
+                        Marshal.Copy(rowPtr, buffer, y * rowBytes, rowBytes);
+                    }
+                }
+
+                // Force alpha to 255 for all pixels to prevent green screen transparency glitches
+                for (int i = 3; i < BufferByteCount; i += 4)
+                {
+                    buffer[i] = 255;
+                }
+
                 return buffer;
             }
             finally

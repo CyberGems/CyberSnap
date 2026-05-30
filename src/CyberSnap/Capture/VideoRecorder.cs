@@ -10,14 +10,14 @@ using CyberSnap.Services;
 namespace CyberSnap.Capture;
 
 /// <summary>
-/// Captures screen frames and pipes them to FFmpeg for MP4/WebM encoding.
+/// Captures screen frames and pipes them to FFmpeg for MP4 encoding.
 /// Same lifecycle as GifRecorder: Create, Start, Pause/Resume, Stop/Discard.
 /// </summary>
 public sealed class VideoRecorder : IDisposable
 {
     private const int DefaultInitialCaptureDelayMs = 0;
     private const double DurationValidationToleranceSeconds = 0.35d;
-    public enum Format { MP4, WebM, MKV }
+    public enum Format { MP4 }
     private static readonly object FfmpegPathLock = new();
     private static string? _cachedFfmpegPath;
     private static bool _ffmpegPathResolved;
@@ -471,7 +471,7 @@ public sealed class VideoRecorder : IDisposable
         string dir = Path.GetDirectoryName(videoPath)!;
         string ext = Path.GetExtension(videoPath);
         string tempOut = Path.Combine(dir, Path.GetFileNameWithoutExtension(videoPath) + "_muxed" + ext);
-        string audioCodec = ext.Equals(".webm", StringComparison.OrdinalIgnoreCase) ? "libopus" : "aac";
+        string audioCodec = "aac";
         double targetDurationSeconds = GetCapturedVideoDurationSeconds();
 
         try
@@ -804,12 +804,8 @@ public sealed class VideoRecorder : IDisposable
         }
     }
 
-    private static string GetRepairVideoCodecArguments(Format format) => format switch
-    {
-        Format.WebM => "-c:v libvpx-vp9 -deadline good -cpu-used 2 -row-mt 1 -crf 24 -b:v 0 -pix_fmt yuv420p",
-        Format.MKV => "-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p",
-        _ => "-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart",
-    };
+    private static string GetRepairVideoCodecArguments(Format format) =>
+        "-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart";
 
     internal static string BuildVideoCodecArguments(Format format, int inputWidth, int inputHeight, int outputWidth, int outputHeight)
     {
@@ -817,16 +813,10 @@ public sealed class VideoRecorder : IDisposable
             ? string.Empty
             : $" -vf scale={outputWidth}:{outputHeight}:flags=lanczos";
 
-        return format switch
-        {
-            Format.WebM => $"-c:v libvpx-vp9 -deadline good -cpu-used 2 -row-mt 1 -crf 24 -b:v 0 -pix_fmt yuv420p{scaleFilter}",
-            Format.MKV => $"-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p{scaleFilter}",
-            _ => $"-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p{scaleFilter} -movflags +faststart",
-        };
+        return $"-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p{scaleFilter} -movflags +faststart";
     }
 
-    private static string GetRepairAudioCodec(Format format)
-        => format == Format.WebM ? "libopus" : "aac";
+    private static string GetRepairAudioCodec(Format format) => "aac";
 
     private void LogRecordingStats(string outputPath)
     {

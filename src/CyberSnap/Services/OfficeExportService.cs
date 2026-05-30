@@ -29,9 +29,7 @@ public static class OfficeExportService
         ".jpeg",
         ".bmp",
         ".gif",
-        ".mp4",
-        ".webm",
-        ".mkv"
+        ".mp4"
     ];
 
     public static IReadOnlyList<OfficeExportTarget> Targets { get; } =

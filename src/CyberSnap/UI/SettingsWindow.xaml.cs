@@ -358,7 +358,7 @@ public partial class SettingsWindow : Window
 
         UpdateCaptureSavePreference(
             "settings.default-capture-mode",
-            "Default capture tool",
+            "Default capture method",
             previous,
             selected,
             value => _settingsService.Settings.DefaultCaptureMode = value,

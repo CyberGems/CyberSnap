@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Generelt",
   "Tools": "Værktøjer",
   "Capture": "Capture",
@@ -307,5 +307,10 @@
   "Record screen (Video MP4)": "Record screen (Video MP4)",
   "Record animated GIF": "Record animated GIF",
   "Drag here to position the panel.": "Drag here to position the panel.",
-  "Confirm": "Confirm"
+  "Confirm": "Confirm",
+  "Video": "Video",
+  "Screen Recording": "Screen Recording",
+  "Default capture method": "Default capture method",
+  "Screen Recorder (MP4)": "Screen Recorder (MP4)",
+  "Screen Recorder (GIF)": "Screen Recorder (GIF)"
 }
