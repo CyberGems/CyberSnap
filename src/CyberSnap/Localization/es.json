@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Generales",
   "Tools": "Herramientas",
   "Capture": "Capturar",
@@ -290,7 +290,6 @@
   "Undo": "Undo",
   "Redo": "Redo",
   "Copy failed": "Error al copiar",
-  "Update Available": "Actualización disponible",
   "Check for Updates": "Buscar actualizaciones",
   "Download": "Descargar",
   "Later": "Más tarde",

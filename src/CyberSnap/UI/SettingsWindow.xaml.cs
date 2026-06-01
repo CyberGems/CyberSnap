@@ -857,7 +857,7 @@ public partial class SettingsWindow : Window
         if (result.IsUpdateAvailable)
         {
             var msg = $"{result.StatusMessage}\n\nCurrent: {result.CurrentVersion}\nLatest: {result.LatestVersionLabel}\n\nDownload now?";
-            var choice = ThemedConfirmDialog.Confirm(this, "Update Available", msg, "Download", "Later", danger: false);
+            var choice = ThemedConfirmDialog.Confirm(this, "Update available", msg, "Download", "Later", danger: false);
             if (choice)
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(result.ReleaseUrl) { UseShellExecute = true });
         }
