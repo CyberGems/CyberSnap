@@ -857,13 +857,13 @@ public partial class SettingsWindow : Window
         if (result.IsUpdateAvailable)
         {
             var msg = $"{result.StatusMessage}\n\nCurrent: {result.CurrentVersion}\nLatest: {result.LatestVersionLabel}\n\nDownload now?";
-            var choice = MessageBox.Show(msg, "Update Available", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (choice == MessageBoxResult.Yes)
+            var choice = ThemedConfirmDialog.Confirm(this, "Update Available", msg, "Download", "Later", danger: false);
+            if (choice)
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(result.ReleaseUrl) { UseShellExecute = true });
         }
         else
         {
-            MessageBox.Show(result.StatusMessage, "Check for Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+            ThemedConfirmDialog.Alert(this, "Check for Updates", result.StatusMessage, error: false);
         }
     }
 

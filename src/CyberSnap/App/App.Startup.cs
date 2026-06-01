@@ -75,8 +75,10 @@ public partial class App
         ToastWindow.SetMonitorIndex(_settingsService.Settings.ToastMonitorIndex);
         ToastWindow.SetDuration(_settingsService.Settings.ToastDurationSeconds);
         ToastWindow.SetSystemDuration(_settingsService.Settings.SystemToastDurationSeconds);
+        ToastWindow.SetNotificationsEnabled(_settingsService.Settings.NotificationsEnabled);
+        ToastWindow.SetSystemNotificationsEnabled(_settingsService.Settings.SystemNotificationsEnabled);
         ToastWindow.SetButtonLayout(_settingsService.Settings.ToastButtons);
-        ToastWindow.SetFadeOutBehavior(_settingsService.Settings.ToastFadeOutEnabled, _settingsService.Settings.ToastFadeOutSeconds);
+        ToastWindow.SetFadeOutSeconds(_settingsService.Settings.ToastFadeOutSeconds);
 
         _idleTrimTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
         _idleTrimTimer.Tick += (_, _) => TrimIdleMemory();

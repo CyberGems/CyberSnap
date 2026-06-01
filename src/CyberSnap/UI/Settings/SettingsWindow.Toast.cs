@@ -1,27 +1,26 @@
-using System.IO;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using Color = System.Windows.Media.Color;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using Image = System.Windows.Controls.Image;
+using Button = System.Windows.Controls.Button;
 
 namespace CyberSnap.UI;
 
 public partial class SettingsWindow
 {
-    private ToastButtonKind _selectedToastButton = ToastButtonKind.Close;
-    private bool _toastButtonDragActive;
-    private ToastButtonSlot? _dragHoverSlot;
-    private Border? _toastDragSource;
-    private ToastButtonKind _toastDragButton;
-    private System.Windows.Point _toastDragStart;
-    private ToastButtonKind _selectedBeforePress;
-    private bool _pressedButtonWasHidden;
+    // One Off + four corner segments per button row, captured so the designer can refresh the
+    // selected state without walking the visual tree.
+    private readonly List<(ToastButtonKind kind, ToastCorner? corner, Border segment)> _toastSegments = new();
+
+    // Transient message (e.g. "corner is full") shown in place of the preset name until the next action.
+    private string? _toastLayoutHint;
 
     private AppSettings.ToastButtonLayoutSettings ToastButtons
     {
@@ -34,600 +33,243 @@ public partial class SettingsWindow
 
     private void LoadToastButtonLayoutDesigner()
     {
-        LoadToastLayoutIcons();
+        BuildToastButtonRows();
         RefreshToastButtonLayoutDesigner();
     }
 
-    private void LoadToastLayoutIcons()
+    private void BuildToastButtonRows()
     {
-        var iconColor = GetToastLayoutIconColor(active: false);
-        ToastLayoutCloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", iconColor, 20);
-        ToastLayoutPinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", iconColor, 20);
-        ToastLayoutSaveIcon.Source = Helpers.FluentIcons.RenderWpf("download", iconColor, 20);
-        ToastLayoutOfficeIcon.Source = Helpers.FluentIcons.RenderWpf("arrow", iconColor, 20);
-        ToastLayoutDeleteIcon.Source = Helpers.FluentIcons.RenderWpf("trash", iconColor, 20);
-        ToastLayoutEditIcon.Source = Helpers.FluentIcons.RenderWpf("draw", iconColor, 20);
-        ToastLayoutAiRedirectIcon.Source = Helpers.FluentIcons.RenderWpf("history", iconColor, 20);
+        _toastSegments.Clear();
+        ToastButtonRows.Children.Clear();
+
+        foreach (var kind in ToastButtonLayout.AllButtons)
+            ToastButtonRows.Children.Add(BuildToastButtonRow(kind));
     }
 
-    private void RefreshToastButtonLayoutDesigner()
+    private Border BuildToastButtonRow(ToastButtonKind kind)
     {
-        var selectionText = _toastButtonDragActive
-            ? $"Dragging {_selectedToastButton}. Drop on a slot, another button, or the shelf."
-            : $"Selected: {_selectedToastButton}";
-        ToastLayoutSelectionText.Text = selectionText;
-        ToastLayoutSelectionText.ToolTip = selectionText;
-        AutomationProperties.SetHelpText(ToastLayoutSelectionText, selectionText);
-        UpdateToastLayoutButton(ToastLayoutCloseBtn, ToastButtonKind.Close);
-        UpdateToastLayoutButton(ToastLayoutPinBtn, ToastButtonKind.Pin);
-        UpdateToastLayoutButton(ToastLayoutSaveBtn, ToastButtonKind.Save);
-        UpdateToastLayoutButton(ToastLayoutOfficeBtn, ToastButtonKind.Office);
-        UpdateToastLayoutButton(ToastLayoutDeleteBtn, ToastButtonKind.Delete);
-        UpdateToastLayoutButton(ToastLayoutAiRedirectBtn, ToastButtonKind.History);
-        UpdateToastLayoutButton(ToastLayoutEditBtn, ToastButtonKind.Edit);
-        UpdateToastLayoutSlot(ToastSlotTopLeft, ToastButtonSlot.TopLeft);
-        UpdateToastLayoutSlot(ToastSlotTopInnerLeft, ToastButtonSlot.TopInnerLeft);
-        UpdateToastLayoutSlot(ToastSlotTopInnerRight, ToastButtonSlot.TopInnerRight);
-        UpdateToastLayoutSlot(ToastSlotTopRight, ToastButtonSlot.TopRight);
-        UpdateToastLayoutSlot(ToastSlotBottomLeft, ToastButtonSlot.BottomLeft);
-        UpdateToastLayoutSlot(ToastSlotBottomInnerLeft, ToastButtonSlot.BottomInnerLeft);
-        UpdateToastLayoutSlot(ToastSlotBottomInnerRight, ToastButtonSlot.BottomInnerRight);
-        UpdateToastLayoutSlot(ToastSlotBottomRight, ToastButtonSlot.BottomRight);
-        RefreshToastHiddenShelf();
-    }
+        var label = FormatToastButtonLabel(kind);
 
-    private void UpdateToastLayoutButton(Border border, ToastButtonKind button)
-    {
-        var label = FormatToastButtonLabel(button);
-        border.Focusable = true;
-        border.ToolTip = $"Move the {label} notification button";
-        AutomationProperties.SetName(border, $"{label} notification button");
-        AutomationProperties.SetHelpText(border, "Press Enter or Space to move the selected button here.");
-        border.KeyDown -= ToastLayoutButton_KeyDown;
-        border.KeyDown += ToastLayoutButton_KeyDown;
-
-        border.Visibility = ToastButtonLayout.IsVisible(ToastButtons, button) ? Visibility.Visible : Visibility.Collapsed;
-
-        var placement = ToastButtonLayout.ToPlacement(ToastButtonLayout.GetSlot(ToastButtons, button));
-        border.HorizontalAlignment = placement.horizontal;
-        border.VerticalAlignment = placement.vertical;
-        border.Margin = placement.margin;
-
-        bool selected = button == _selectedToastButton;
-        border.Background = selected
-            ? Theme.Brush(Theme.IsDark ? Color.FromRgb(70, 70, 70) : Color.FromRgb(226, 226, 226))
-            : Theme.Brush(Theme.IsDark ? Color.FromRgb(48, 48, 48) : Color.FromRgb(246, 246, 246));
-        border.BorderBrush = System.Windows.Media.Brushes.Transparent;
-        border.BorderThickness = new Thickness(0);
-        border.Opacity = ToastButtonLayout.IsVisible(ToastButtons, button)
-            ? (_toastButtonDragActive && button == _toastDragButton ? 0.18 : 1)
-            : 0.45;
-        UpdateToastLayoutIcon(button, selected);
-    }
-
-    private void UpdateToastLayoutIcon(ToastButtonKind button, bool active)
-    {
-        var color = GetToastLayoutIconColor(active);
-        switch (button)
+        // Left-packed with a fixed label column so the segments stay near the labels and aligned
+        // across rows, instead of being pushed to the far right edge on wide windows.
+        var grid = new Grid
         {
-            case ToastButtonKind.Close:
-                ToastLayoutCloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", color, 22, active);
-                break;
-            case ToastButtonKind.Pin:
-                ToastLayoutPinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", color, 22, active);
-                break;
-            case ToastButtonKind.Save:
-                ToastLayoutSaveIcon.Source = Helpers.FluentIcons.RenderWpf("download", color, 22, active);
-                break;
-            case ToastButtonKind.Office:
-                ToastLayoutOfficeIcon.Source = Helpers.FluentIcons.RenderWpf("arrow", color, 22, active);
-                break;
-            case ToastButtonKind.Delete:
-                ToastLayoutDeleteIcon.Source = Helpers.FluentIcons.RenderWpf("trash", color, 22, active);
-                break;
-            case ToastButtonKind.History:
-                ToastLayoutAiRedirectIcon.Source = Helpers.FluentIcons.RenderWpf("history", color, 22, active);
-                break;
-            case ToastButtonKind.Edit:
-                ToastLayoutEditIcon.Source = Helpers.FluentIcons.RenderWpf("draw", color, 22, active);
-                break;
-        }
-    }
+            Margin = new Thickness(0, 0, 0, 6),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Left
+        };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-    private void UpdateToastLayoutSlot(Border slotBorder, ToastButtonSlot slot)
-    {
-        var label = FormatToastSlotLabel(slot);
-        slotBorder.Focusable = true;
-        slotBorder.ToolTip = $"Move selected notification button to {label}";
-        AutomationProperties.SetName(slotBorder, $"{label} notification slot");
-        AutomationProperties.SetHelpText(slotBorder, "Press Enter or Space to place the selected notification button here.");
-        slotBorder.KeyDown -= ToastLayoutSlot_KeyDown;
-        slotBorder.KeyDown += ToastLayoutSlot_KeyDown;
-
-        bool selectedTarget = _dragHoverSlot == slot || ToastButtonLayout.GetSlot(ToastButtons, _selectedToastButton) == slot;
-
-        slotBorder.Visibility = Visibility.Visible;
-        slotBorder.Background = selectedTarget
-            ? Theme.Brush(Theme.IsDark ? Color.FromArgb(82, 255, 255, 255) : Color.FromArgb(38, 0, 0, 0))
-            : System.Windows.Media.Brushes.Transparent;
-        slotBorder.BorderBrush = selectedTarget
-            ? Theme.Brush(Theme.IsDark ? Color.FromArgb(230, 255, 255, 255) : Color.FromArgb(155, 0, 0, 0))
-            : Theme.Brush(Theme.IsDark ? Color.FromArgb(72, 255, 255, 255) : Color.FromArgb(46, 0, 0, 0));
-        slotBorder.BorderThickness = selectedTarget ? new Thickness(2) : new Thickness(1);
-        slotBorder.Opacity = _toastButtonDragActive ? 1 : (selectedTarget ? 0.95 : 0.55);
-    }
-
-    private void ToastLayoutButton_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        e.Handled = true;
-        if (sender is not Border border || border.Tag is not string raw)
-            return;
-
-        var clickedButton = ParseToastButton(raw);
-        _selectedBeforePress = _selectedToastButton;
-        _selectedToastButton = clickedButton;
-        _toastDragSource = border;
-        _toastDragButton = clickedButton;
-        _toastDragStart = e.GetPosition(this);
-        _pressedButtonWasHidden = false;
-        border.CaptureMouse();
-        RefreshToastButtonLayoutDesigner();
-    }
-
-    private void ToastLayoutButton_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        UpdateToastDrag(e.GetPosition(this), e.LeftButton);
-    }
-
-    private void ToastLayoutButton_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is Border border)
-            border.ReleaseMouseCapture();
-
-        if (_toastDragSource is null)
-            return;
-
-        var pos = e.GetPosition(this);
-        if (_toastButtonDragActive)
+        var icon = new Image
         {
-            if (TryApplyToastDropAt(pos))
+            Source = Helpers.FluentIcons.RenderWpf(ToastButtonIconId(kind), GetToastLayoutIconColor(active: false), 20),
+            Width = 18,
+            Height = 18,
+            Stretch = Stretch.Uniform,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Margin = new Thickness(2, 0, 10, 0)
+        };
+        System.Windows.Media.RenderOptions.SetBitmapScalingMode(icon, System.Windows.Media.BitmapScalingMode.HighQuality);
+        Grid.SetColumn(icon, 0);
+        grid.Children.Add(icon);
+
+        var name = new TextBlock
+        {
+            Text = ToTitleCase(label),
+            FontSize = 13,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Foreground = Theme.Brush(Theme.IsDark ? Color.FromRgb(232, 232, 232) : Color.FromRgb(24, 24, 24))
+        };
+        Grid.SetColumn(name, 1);
+        grid.Children.Add(name);
+
+        var segments = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
+        Grid.SetColumn(segments, 2);
+        segments.Children.Add(BuildToastSegment(kind, null, "Off", $"Hide the {label} button"));
+        segments.Children.Add(BuildToastSegment(kind, ToastCorner.TopLeft, "↖", $"Place the {label} button in the top-left corner"));
+        segments.Children.Add(BuildToastSegment(kind, ToastCorner.TopRight, "↗", $"Place the {label} button in the top-right corner"));
+        segments.Children.Add(BuildToastSegment(kind, ToastCorner.BottomLeft, "↙", $"Place the {label} button in the bottom-left corner"));
+        segments.Children.Add(BuildToastSegment(kind, ToastCorner.BottomRight, "↘", $"Place the {label} button in the bottom-right corner"));
+        grid.Children.Add(segments);
+
+        return new Border { Child = grid };
+    }
+
+    private Border BuildToastSegment(ToastButtonKind kind, ToastCorner? corner, string glyph, string helpText)
+    {
+        var segment = new Border
+        {
+            Width = corner is null ? 42 : 34,
+            Height = 30,
+            CornerRadius = new CornerRadius(8),
+            Margin = new Thickness(4, 0, 0, 0),
+            BorderThickness = new Thickness(1),
+            Cursor = System.Windows.Input.Cursors.Hand,
+            Focusable = true,
+            Tag = (kind, corner),
+            Child = new TextBlock
             {
-                ClearToastPointerState();
-                RefreshToastButtonLayoutDesigner();
-                return;
+                Text = glyph,
+                FontSize = corner is null ? 12 : 14,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center
             }
-        }
-        else if (!_pressedButtonWasHidden && _toastDragButton != _selectedBeforePress)
-        {
-            _selectedToastButton = _selectedBeforePress;
-            MoveSelectedButtonToButton(_toastDragButton);
-            _selectedToastButton = _toastDragButton;
-        }
+        };
 
-        ClearToastPointerState();
-        RefreshToastButtonLayoutDesigner();
+        AutomationProperties.SetName(segment, helpText);
+        AutomationProperties.SetHelpText(segment, "Press Enter or Space to apply.");
+        segment.MouseLeftButtonDown += ToastSegment_MouseLeftButtonDown;
+        segment.KeyDown += ToastSegment_KeyDown;
+
+        _toastSegments.Add((kind, corner, segment));
+        return segment;
     }
 
-    private void ToastLayoutSlot_DragEnter(object sender, System.Windows.DragEventArgs e)
-    {
-        if (!e.Data.GetDataPresent(System.Windows.DataFormats.Text) || sender is not Border border || border.Tag is not string raw)
-            return;
-
-        _dragHoverSlot = ParseToastSlot(raw);
-        e.Effects = System.Windows.DragDropEffects.Move;
-        RefreshToastButtonLayoutDesigner();
-    }
-
-    private void ToastLayoutSlot_DragOver(object sender, System.Windows.DragEventArgs e)
-    {
-        if (!e.Data.GetDataPresent(System.Windows.DataFormats.Text) || sender is not Border border || border.Tag is not string raw)
-            return;
-
-        _dragHoverSlot = ParseToastSlot(raw);
-        e.Effects = System.Windows.DragDropEffects.Move;
-        e.Handled = true;
-        RefreshToastButtonLayoutDesigner();
-    }
-
-    private void ToastLayoutSlot_Drop(object sender, System.Windows.DragEventArgs e)
-    {
-        if (!e.Data.GetDataPresent(System.Windows.DataFormats.Text) || sender is not Border border || border.Tag is not string raw)
-            return;
-
-        _selectedToastButton = ParseToastButton((string)e.Data.GetData(System.Windows.DataFormats.Text)!);
-        MoveSelectedButtonToSlot(ParseToastSlot(raw));
-        _dragHoverSlot = null;
-        _toastButtonDragActive = false;
-        RefreshToastButtonLayoutDesigner();
-    }
-
-    private void ToastLayoutSlot_DragLeave(object sender, System.Windows.DragEventArgs e)
-    {
-        _dragHoverSlot = null;
-        RefreshToastButtonLayoutDesigner();
-    }
-
-    private void ToastLayoutSlot_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void ToastSegment_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
-        if (sender is not Border border || border.Tag is not string raw)
-            return;
-
-        MoveSelectedButtonToSlot(ParseToastSlot(raw));
+        if (sender is Border { Tag: ValueTuple<ToastButtonKind, ToastCorner?> tag })
+            ChooseToastButtonPlacement(tag.Item1, tag.Item2);
     }
 
-    private void ToastLayoutButton_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (!IsToastLayoutActivationKey(e) || sender is not Border border || border.Tag is not string raw)
-            return;
-
-        e.Handled = true;
-        var targetButton = ParseToastButton(raw);
-        if (targetButton != _selectedToastButton)
-        {
-            MoveSelectedButtonToButton(targetButton);
-            _selectedToastButton = targetButton;
-        }
-
-        RefreshToastButtonLayoutDesigner();
-    }
-
-    private void ToastLayoutSlot_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (!IsToastLayoutActivationKey(e) || sender is not Border border || border.Tag is not string raw)
-            return;
-
-        e.Handled = true;
-        MoveSelectedButtonToSlot(ParseToastSlot(raw));
-    }
-
-    private void ToastLayoutButton_DragEnter(object sender, System.Windows.DragEventArgs e)
-    {
-        if (!e.Data.GetDataPresent(System.Windows.DataFormats.Text))
-            return;
-        e.Effects = System.Windows.DragDropEffects.Move;
-    }
-
-    private void ToastLayoutButton_Drop(object sender, System.Windows.DragEventArgs e)
-    {
-        if (!e.Data.GetDataPresent(System.Windows.DataFormats.Text) || sender is not Border border || border.Tag is not string raw)
-            return;
-
-        _selectedToastButton = ParseToastButton((string)e.Data.GetData(System.Windows.DataFormats.Text)!);
-        MoveSelectedButtonToButton(ParseToastButton(raw));
-    }
-
-    private void ToastShelf_DragEnter(object sender, System.Windows.DragEventArgs e)
-    {
-        if (!e.Data.GetDataPresent(System.Windows.DataFormats.Text))
-            return;
-
-        ToastHiddenShelf.BorderBrush = Theme.Brush(GetToastLayoutAccentBorder());
-        e.Effects = System.Windows.DragDropEffects.Move;
-    }
-
-    private void ToastShelf_DragOver(object sender, System.Windows.DragEventArgs e)
-    {
-        if (!e.Data.GetDataPresent(System.Windows.DataFormats.Text))
-            return;
-
-        ToastHiddenShelf.BorderBrush = Theme.Brush(GetToastLayoutAccentBorder());
-        e.Effects = System.Windows.DragDropEffects.Move;
-        e.Handled = true;
-    }
-
-    private void ToastShelf_DragLeave(object sender, System.Windows.DragEventArgs e)
-    {
-        ToastHiddenShelf.BorderBrush = Theme.Brush(Theme.BorderSubtle);
-    }
-
-    private void ToastShelf_Drop(object sender, System.Windows.DragEventArgs e)
-    {
-        if (!e.Data.GetDataPresent(System.Windows.DataFormats.Text))
-            return;
-
-        var button = ParseToastButton((string)e.Data.GetData(System.Windows.DataFormats.Text)!);
-        _selectedToastButton = button;
-        HideSelectedButton();
-        ToastHiddenShelf.BorderBrush = Theme.Brush(Theme.BorderSubtle);
-        _toastButtonDragActive = false;
-        _dragHoverSlot = null;
-        RefreshToastButtonLayoutDesigner();
-    }
-
-    private void ToastHiddenShelf_KeyDown(object sender, KeyEventArgs e)
+    private void ToastSegment_KeyDown(object sender, KeyEventArgs e)
     {
         if (!IsToastLayoutActivationKey(e))
             return;
 
         e.Handled = true;
-        HideSelectedButton();
+        if (sender is Border { Tag: ValueTuple<ToastButtonKind, ToastCorner?> tag })
+            ChooseToastButtonPlacement(tag.Item1, tag.Item2);
+    }
+
+    private void ChooseToastButtonPlacement(ToastButtonKind kind, ToastCorner? corner)
+    {
+        if (corner is null)
+        {
+            ToastButtonLayout.SetVisible(ToastButtons, kind, false);
+            _toastLayoutHint = null;
+            PersistToastButtonLayout();
+            return;
+        }
+
+        if (ToastButtonLayout.AssignCorner(ToastButtons, kind, corner.Value))
+        {
+            _toastLayoutHint = null;
+            PersistToastButtonLayout();
+            return;
+        }
+
+        // Corner already holds two buttons — leave the layout untouched and explain why.
+        _toastLayoutHint = $"The {FormatCornerLabel(corner.Value)} corner is full (2 buttons max). Move another button out first.";
+        RefreshToastButtonLayoutDesigner();
+    }
+
+    private void ToastPresetMinimalBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Minimal);
+    private void ToastPresetStandardBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Standard);
+    private void ToastPresetFullBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Full);
+
+    private void ApplyToastPreset(ToastButtonPreset preset)
+    {
+        ToastButtonLayout.ApplyPreset(ToastButtons, preset);
+        _toastLayoutHint = null;
+        PersistToastButtonLayout();
     }
 
     private void ResetToastButtonsBtn_Click(object sender, RoutedEventArgs e)
     {
         _settingsService.Settings.ToastButtons = new AppSettings.ToastButtonLayoutSettings();
-        _settingsService.Save();
-        ToastWindow.SetButtonLayout(ToastButtons);
-        _dragHoverSlot = null;
-        _toastButtonDragActive = false;
-        LoadToastButtonLayoutDesigner();
+        _toastLayoutHint = null;
+        PersistToastButtonLayout();
     }
 
-    private static ToastButtonKind ParseToastButton(string raw) => raw switch
+    private void RefreshToastButtonLayoutDesigner()
     {
-        "Pin" => ToastButtonKind.Pin,
-        "Save" => ToastButtonKind.Save,
-        "Office" => ToastButtonKind.Office,
-        "Delete" => ToastButtonKind.Delete,
-        "History" => ToastButtonKind.History,
-        "Edit" => ToastButtonKind.Edit,
-        _ => ToastButtonKind.Close
-    };
-
-    private static ToastButtonSlot ParseToastSlot(string raw) => raw switch
-    {
-        "TopInnerLeft" => ToastButtonSlot.TopInnerLeft,
-        "TopInnerRight" => ToastButtonSlot.TopInnerRight,
-        "TopRight" => ToastButtonSlot.TopRight,
-        "BottomLeft" => ToastButtonSlot.BottomLeft,
-        "BottomInnerLeft" => ToastButtonSlot.BottomInnerLeft,
-        "BottomInnerRight" => ToastButtonSlot.BottomInnerRight,
-        "BottomRight" => ToastButtonSlot.BottomRight,
-        _ => ToastButtonSlot.TopLeft
-    };
-
-    private void RefreshToastHiddenShelf()
-    {
-        ToastHiddenShelf.Focusable = true;
-        ToastHiddenShelf.ToolTip = "Hide the selected notification button";
-        AutomationProperties.SetName(ToastHiddenShelf, "Hidden notification button shelf");
-        AutomationProperties.SetHelpText(ToastHiddenShelf, "Press Enter or Space to hide the selected notification button.");
-        ToastHiddenShelf.KeyDown -= ToastHiddenShelf_KeyDown;
-        ToastHiddenShelf.KeyDown += ToastHiddenShelf_KeyDown;
-
-        ToastHiddenShelf.BorderBrush = Theme.Brush(Theme.BorderSubtle);
-        ToastHiddenShelfDropCue.Visibility = Visibility.Collapsed;
-        ToastHiddenButtonsPanel.Children.Clear();
-
-        foreach (var button in new[] { ToastButtonKind.Close, ToastButtonKind.Pin, ToastButtonKind.Save, ToastButtonKind.Office, ToastButtonKind.Delete, ToastButtonKind.History, ToastButtonKind.Edit })
-        {
-            if (ToastButtonLayout.IsVisible(ToastButtons, button))
-                continue;
-
-            ToastHiddenButtonsPanel.Children.Add(CreateHiddenToastButtonChip(button));
-        }
-
-        ToastHiddenShelfEmpty.Visibility = ToastHiddenButtonsPanel.Children.Count == 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        RefreshToastPreview();
+        RefreshToastSegments();
+        RefreshToastPresetButtons();
+        RefreshToastLayoutStatus();
     }
 
-    private Border CreateHiddenToastButtonChip(ToastButtonKind button)
+    private void RefreshToastPreview()
     {
-        var label = FormatToastButtonLabel(button);
-        var chip = new Border
-        {
-            Width = 44,
-            Height = 44,
-            CornerRadius = new CornerRadius(12),
-            Margin = new Thickness(0, 0, 8, 8),
-            Background = Theme.Brush(Theme.IsDark ? Color.FromArgb(122, 11, 13, 16) : Color.FromArgb(255, 246, 246, 246)),
-            BorderBrush = Theme.Brush(Theme.BorderSubtle),
-            BorderThickness = new Thickness(1),
-            Cursor = System.Windows.Input.Cursors.Hand,
-            Focusable = true,
-            ToolTip = $"Select hidden {label} notification button",
-            Tag = button.ToString()
-        };
-
-        AutomationProperties.SetName(chip, $"Hidden {label} notification button");
-        AutomationProperties.SetHelpText(chip, "Press Enter or Space to select this hidden button, then choose a slot.");
-
-        chip.Child = button switch
-        {
-            ToastButtonKind.Close => BuildCloseGlyph(),
-            ToastButtonKind.Pin => BuildPinGlyph(),
-            ToastButtonKind.Save => BuildSaveGlyph(),
-            ToastButtonKind.Office => BuildOfficeGlyph(),
-            ToastButtonKind.Delete => BuildDeleteGlyph(),
-            ToastButtonKind.History => BuildHistoryGlyph(),
-            _ => BuildEditGlyph()
-        };
-
-        chip.MouseLeftButtonDown += ToastHiddenButton_MouseLeftButtonDown;
-        chip.MouseMove += ToastHiddenButton_MouseMove;
-        chip.MouseLeftButtonUp += ToastHiddenButton_MouseLeftButtonUp;
-        chip.KeyDown += ToastHiddenButton_KeyDown;
-        return chip;
+        UpdateToastPreviewButton(ToastLayoutCloseBtn, ToastLayoutCloseIcon, "close", ToastButtonKind.Close);
+        UpdateToastPreviewButton(ToastLayoutPinBtn, ToastLayoutPinIcon, "pin", ToastButtonKind.Pin);
+        UpdateToastPreviewButton(ToastLayoutSaveBtn, ToastLayoutSaveIcon, "download", ToastButtonKind.Save);
+        UpdateToastPreviewButton(ToastLayoutOfficeBtn, ToastLayoutOfficeIcon, "arrow", ToastButtonKind.Office);
+        UpdateToastPreviewButton(ToastLayoutDeleteBtn, ToastLayoutDeleteIcon, "trash", ToastButtonKind.Delete);
+        UpdateToastPreviewButton(ToastLayoutAiRedirectBtn, ToastLayoutAiRedirectIcon, "history", ToastButtonKind.History);
+        UpdateToastPreviewButton(ToastLayoutEditBtn, ToastLayoutEditIcon, "draw", ToastButtonKind.Edit);
     }
 
-    private void ToastHiddenButton_KeyDown(object sender, KeyEventArgs e)
+    private void UpdateToastPreviewButton(Border border, Image icon, string iconId, ToastButtonKind kind)
     {
-        if (!IsToastLayoutActivationKey(e) || sender is not Border border || border.Tag is not string raw)
+        bool visible = ToastButtonLayout.IsVisible(ToastButtons, kind);
+        border.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        if (!visible)
             return;
 
-        e.Handled = true;
-        _selectedToastButton = ParseToastButton(raw);
-        RefreshToastButtonLayoutDesigner();
+        var placement = ToastButtonLayout.ToPlacement(ToastButtonLayout.GetSlot(ToastButtons, kind));
+        border.HorizontalAlignment = placement.horizontal;
+        border.VerticalAlignment = placement.vertical;
+        border.Margin = placement.margin;
+        border.Background = Theme.Brush(Theme.IsDark ? Color.FromArgb(64, 0, 0, 0) : Color.FromArgb(40, 0, 0, 0));
+        icon.Source = Helpers.FluentIcons.RenderWpf(iconId, GetToastLayoutIconColor(active: false), 22);
     }
 
-    private void ToastHiddenButton_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void RefreshToastSegments()
     {
-        e.Handled = true;
-        if (sender is not Border border || border.Tag is not string raw)
-            return;
-
-        _selectedBeforePress = _selectedToastButton;
-        _selectedToastButton = ParseToastButton(raw);
-        _toastDragSource = border;
-        _toastDragButton = _selectedToastButton;
-        _toastDragStart = e.GetPosition(this);
-        _pressedButtonWasHidden = true;
-        border.CaptureMouse();
-        RefreshToastButtonLayoutDesigner();
-    }
-
-    private void ToastHiddenButton_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-        => UpdateToastDrag(e.GetPosition(this), e.LeftButton);
-
-    private void ToastHiddenButton_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        => ToastLayoutButton_MouseLeftButtonUp(sender, e);
-
-    private void ClearToastPointerState()
-    {
-        _toastButtonDragActive = false;
-        _dragHoverSlot = null;
-        _toastDragSource = null;
-        _pressedButtonWasHidden = false;
-        UpdateShelfHover(false);
-        ToastDragGhost.Visibility = Visibility.Collapsed;
-    }
-
-    private bool TryApplyToastDropAt(System.Windows.Point pos)
-    {
-        if (IsPointOverElement(ToastHiddenShelf, pos))
+        foreach (var (kind, corner, segment) in _toastSegments)
         {
-            HideSelectedButton();
-            return true;
+            bool visible = ToastButtonLayout.IsVisible(ToastButtons, kind);
+            bool selected = corner is null
+                ? !visible
+                : visible && ToastButtonLayout.GetCorner(ToastButtons, kind) == corner.Value;
+
+            segment.Background = selected
+                ? Theme.Brush(Theme.IsDark ? Color.FromRgb(70, 70, 70) : Color.FromRgb(222, 222, 222))
+                : Theme.Brush(Theme.IsDark ? Color.FromRgb(40, 40, 40) : Color.FromRgb(246, 246, 246));
+            segment.BorderBrush = selected
+                ? Theme.Brush(Theme.IsDark ? Color.FromArgb(220, 255, 255, 255) : Color.FromArgb(150, 0, 0, 0))
+                : Theme.Brush(Theme.BorderSubtle);
+
+            if (segment.Child is TextBlock glyph)
+                glyph.Foreground = Theme.Brush(Theme.IsDark
+                    ? Color.FromArgb((byte)(selected ? 255 : 200), 255, 255, 255)
+                    : Color.FromArgb((byte)(selected ? 255 : 190), 24, 24, 24));
         }
-
-        var button = HitTestToastButton(pos);
-        if (button.HasValue)
-        {
-            MoveSelectedButtonToButton(button.Value);
-            return true;
-        }
-
-        var slot = HitTestToastSlot(pos);
-        if (slot.HasValue)
-        {
-            MoveSelectedButtonToSlot(slot.Value);
-            return true;
-        }
-
-        return false;
     }
 
-    private ToastButtonKind? HitTestToastButton(System.Windows.Point pos)
+    private void RefreshToastPresetButtons()
     {
-        if (IsPointOverElement(ToastLayoutCloseBtn, pos) && ToastLayoutCloseBtn.Visibility == Visibility.Visible) return ToastButtonKind.Close;
-        if (IsPointOverElement(ToastLayoutPinBtn, pos) && ToastLayoutPinBtn.Visibility == Visibility.Visible) return ToastButtonKind.Pin;
-        if (IsPointOverElement(ToastLayoutSaveBtn, pos) && ToastLayoutSaveBtn.Visibility == Visibility.Visible) return ToastButtonKind.Save;
-        if (IsPointOverElement(ToastLayoutOfficeBtn, pos) && ToastLayoutOfficeBtn.Visibility == Visibility.Visible) return ToastButtonKind.Office;
-        if (IsPointOverElement(ToastLayoutDeleteBtn, pos) && ToastLayoutDeleteBtn.Visibility == Visibility.Visible) return ToastButtonKind.Delete;
-        if (IsPointOverElement(ToastLayoutAiRedirectBtn, pos) && ToastLayoutAiRedirectBtn.Visibility == Visibility.Visible) return ToastButtonKind.History;
-        if (IsPointOverElement(ToastLayoutEditBtn, pos) && ToastLayoutEditBtn.Visibility == Visibility.Visible) return ToastButtonKind.Edit;
-        return null;
+        var active = ToastButtonLayout.DetectPreset(ToastButtons);
+        HighlightToastPreset(ToastPresetMinimalBtn, active == ToastButtonPreset.Minimal);
+        HighlightToastPreset(ToastPresetStandardBtn, active == ToastButtonPreset.Standard);
+        HighlightToastPreset(ToastPresetFullBtn, active == ToastButtonPreset.Full);
     }
 
-    private ToastButtonSlot? HitTestToastSlot(System.Windows.Point pos)
+    private static void HighlightToastPreset(Button button, bool active)
     {
-        if (IsPointOverElement(ToastSlotTopLeft, pos)) return ToastButtonSlot.TopLeft;
-        if (IsPointOverElement(ToastSlotTopInnerLeft, pos)) return ToastButtonSlot.TopInnerLeft;
-        if (IsPointOverElement(ToastSlotTopInnerRight, pos)) return ToastButtonSlot.TopInnerRight;
-        if (IsPointOverElement(ToastSlotTopRight, pos)) return ToastButtonSlot.TopRight;
-        if (IsPointOverElement(ToastSlotBottomLeft, pos)) return ToastButtonSlot.BottomLeft;
-        if (IsPointOverElement(ToastSlotBottomInnerLeft, pos)) return ToastButtonSlot.BottomInnerLeft;
-        if (IsPointOverElement(ToastSlotBottomInnerRight, pos)) return ToastButtonSlot.BottomInnerRight;
-        if (IsPointOverElement(ToastSlotBottomRight, pos)) return ToastButtonSlot.BottomRight;
-        return null;
-    }
-
-    private bool IsPointOverElement(FrameworkElement element, System.Windows.Point pos)
-    {
-        if (!element.IsVisible || element.ActualWidth <= 0 || element.ActualHeight <= 0)
-            return false;
-
-        var bounds = element.TransformToAncestor(this)
-            .TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
-        return bounds.Contains(pos);
-    }
-
-    private void UpdateShelfHover(bool hovered)
-    {
-        ToastHiddenShelf.BorderBrush = hovered
-            ? Theme.Brush(GetToastLayoutAccentBorder())
+        button.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
+        button.BorderBrush = active
+            ? Theme.Brush(Theme.IsDark ? Color.FromArgb(220, 255, 255, 255) : Color.FromArgb(150, 0, 0, 0))
             : Theme.Brush(Theme.BorderSubtle);
-        ToastHiddenShelfDropCue.Visibility = hovered ? Visibility.Visible : Visibility.Collapsed;
-        ToastHiddenShelfEmpty.Visibility = hovered || ToastHiddenButtonsPanel.Children.Count > 0
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        button.BorderThickness = new Thickness(active ? 2 : 1);
     }
 
-    private void ShowToastDragGhost(ToastButtonKind button, System.Windows.Point pos)
+    private void RefreshToastLayoutStatus()
     {
-        if (ToastDragGhostGlyphHost.Children.Count == 0 || !Equals(ToastDragGhost.Tag, button))
+        string status = _toastLayoutHint ?? ToastButtonLayout.DetectPreset(ToastButtons) switch
         {
-            ToastDragGhostGlyphHost.Children.Clear();
-            ToastDragGhostGlyphHost.Children.Add(button switch
-            {
-                ToastButtonKind.Close => BuildCloseGlyph(),
-                ToastButtonKind.Pin => BuildPinGlyph(),
-                ToastButtonKind.Save => BuildSaveGlyph(),
-                ToastButtonKind.Office => BuildOfficeGlyph(),
-                ToastButtonKind.Delete => BuildDeleteGlyph(),
-                ToastButtonKind.History => BuildHistoryGlyph(),
-                _ => BuildEditGlyph()
-            });
-            ToastDragGhost.Tag = button;
-        }
+            ToastButtonPreset.Minimal => "Minimal preset",
+            ToastButtonPreset.Standard => "Standard preset",
+            ToastButtonPreset.Full => "Full preset",
+            _ => "Custom layout"
+        };
 
-        var layerPos = TranslatePoint(pos, ToastLayoutSurfaceRoot);
-        Canvas.SetLeft(ToastDragGhost, layerPos.X - 15);
-        Canvas.SetTop(ToastDragGhost, layerPos.Y - 15);
-        ToastDragGhost.Visibility = Visibility.Visible;
-    }
-
-    private void ToastPanel_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (_toastDragSource is null)
-            return;
-
-        UpdateToastDrag(e.GetPosition(this), e.LeftButton);
-    }
-
-    private void ToastPanel_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (_toastDragSource is null)
-            return;
-
-        ToastLayoutButton_MouseLeftButtonUp(_toastDragSource, e);
-    }
-
-    private void UpdateToastDrag(System.Windows.Point pos, MouseButtonState leftButton)
-    {
-        if (_toastDragSource is null || leftButton != MouseButtonState.Pressed)
-            return;
-
-        if (Math.Abs(pos.X - _toastDragStart.X) < 2 && Math.Abs(pos.Y - _toastDragStart.Y) < 2)
-            return;
-
-        _toastButtonDragActive = true;
-        _dragHoverSlot = HitTestToastSlot(pos);
-        UpdateShelfHover(IsPointOverElement(ToastHiddenShelf, pos));
-        ShowToastDragGhost(_toastDragButton, pos);
-        RefreshToastButtonLayoutDesigner();
-    }
-
-    private void MoveSelectedButtonToSlot(ToastButtonSlot slot)
-    {
-        ToastButtonLayout.SetVisible(ToastButtons, _selectedToastButton, true);
-        ToastButtonLayout.AssignSlot(ToastButtons, _selectedToastButton, slot);
-        PersistToastButtonLayout();
-    }
-
-    private void MoveSelectedButtonToButton(ToastButtonKind targetButton)
-    {
-        ToastButtonLayout.SetVisible(ToastButtons, _selectedToastButton, true);
-        ToastButtonLayout.AssignSlot(ToastButtons, _selectedToastButton, ToastButtonLayout.GetSlot(ToastButtons, targetButton));
-        PersistToastButtonLayout();
-    }
-
-    private void HideSelectedButton()
-    {
-        ToastButtonLayout.SetVisible(ToastButtons, _selectedToastButton, false);
-        PersistToastButtonLayout();
+        ToastLayoutSelectionText.Text = status;
+        ToastLayoutSelectionText.ToolTip = status;
+        AutomationProperties.SetHelpText(ToastLayoutSelectionText, status);
     }
 
     private void PersistToastButtonLayout()
@@ -652,50 +294,30 @@ public partial class SettingsWindow
         _ => "notification"
     };
 
-    private static string FormatToastSlotLabel(ToastButtonSlot slot) => slot switch
+    private static string FormatCornerLabel(ToastCorner corner) => corner switch
     {
-        ToastButtonSlot.TopLeft => "top-left",
-        ToastButtonSlot.TopInnerLeft => "top inner-left",
-        ToastButtonSlot.TopInnerRight => "top inner-right",
-        ToastButtonSlot.TopRight => "top-right",
-        ToastButtonSlot.BottomLeft => "bottom-left",
-        ToastButtonSlot.BottomInnerLeft => "bottom inner-left",
-        ToastButtonSlot.BottomInnerRight => "bottom inner-right",
-        ToastButtonSlot.BottomRight => "bottom-right",
-        _ => "selected"
+        ToastCorner.TopLeft => "top-left",
+        ToastCorner.TopRight => "top-right",
+        ToastCorner.BottomLeft => "bottom-left",
+        _ => "bottom-right"
     };
 
-    private static System.Windows.Controls.Image BuildFluentIcon(string id)
+    private static string ToastButtonIconId(ToastButtonKind button) => button switch
     {
-        var iconColor = GetToastLayoutIconColor(active: false);
-        var img = new System.Windows.Controls.Image
-        {
-            Source = Helpers.FluentIcons.RenderWpf(id, iconColor, 20),
-            Width = 14,
-            Height = 14,
-            Stretch = Stretch.Uniform,
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-            VerticalAlignment = System.Windows.VerticalAlignment.Center
-        };
-        System.Windows.Media.RenderOptions.SetBitmapScalingMode(img, System.Windows.Media.BitmapScalingMode.HighQuality);
-        return img;
-    }
+        ToastButtonKind.Close => "close",
+        ToastButtonKind.Pin => "pin",
+        ToastButtonKind.Save => "download",
+        ToastButtonKind.Office => "arrow",
+        ToastButtonKind.Delete => "trash",
+        ToastButtonKind.History => "history",
+        _ => "draw"
+    };
 
-    private static System.Windows.Controls.Image BuildCloseGlyph() => BuildFluentIcon("close");
-    private static System.Windows.Controls.Image BuildPinGlyph() => BuildFluentIcon("pin");
-    private static System.Windows.Controls.Image BuildSaveGlyph() => BuildFluentIcon("download");
-    private static System.Windows.Controls.Image BuildOfficeGlyph() => BuildFluentIcon("arrow");
-    private static System.Windows.Controls.Image BuildDeleteGlyph() => BuildFluentIcon("trash");
-    private static System.Windows.Controls.Image BuildHistoryGlyph() => BuildFluentIcon("history");
-    private static System.Windows.Controls.Image BuildEditGlyph() => BuildFluentIcon("draw");
+    private static string ToTitleCase(string label)
+        => string.IsNullOrEmpty(label) ? label : char.ToUpperInvariant(label[0]) + label[1..];
 
     private static System.Drawing.Color GetToastLayoutIconColor(bool active)
         => Theme.IsDark
             ? System.Drawing.Color.FromArgb(active ? 255 : 220, 255, 255, 255)
             : System.Drawing.Color.FromArgb(active ? 255 : 210, 24, 24, 24);
-
-    private static Color GetToastLayoutAccentBorder()
-        => Theme.IsDark
-            ? Color.FromArgb(130, 255, 255, 255)
-            : Color.FromArgb(115, 0, 0, 0);
 }

@@ -47,6 +47,16 @@ public partial class App : Application
         _historyWindow?.RequestRefresh();
     }
 
+    /// <summary>Persists the annotation editor's "auto-fit vs real size on open" preference.</summary>
+    public void PersistEditorFitPreference(bool fitToWindow)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorFitToWindowOnOpen == fitToWindow) return;
+        _settingsService.Settings.EditorFitToWindowOnOpen = fitToWindow;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-fit-pref", ex); }
+    }
+
     public void EnsureWidgetWindowCreated()
     {
         if (!Dispatcher.CheckAccess())

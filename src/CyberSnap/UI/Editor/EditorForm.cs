@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -49,12 +50,34 @@ public sealed partial class EditorForm : Form
         if (_instance is not null && !_instance.IsDisposed)
         {
             _instance.LoadCapture(captured, savedFilePath);
-            _instance.Activate();
-            _instance.BringToFront();
+            _instance.RestoreAndActivate();
             return;
         }
         _instance = new EditorForm(captured, savedFilePath);
         _instance.Show();
+    }
+
+    /// <summary>
+    /// Brings an already-open editor back to the foreground for a new capture. Windows blocks a
+    /// background process from stealing focus, so a brief TopMost toggle is used to reliably pop
+    /// the window to the front (without keeping it pinned on top afterwards).
+    /// </summary>
+    private void RestoreAndActivate()
+    {
+        if (WindowState == FormWindowState.Minimized)
+            WindowState = FormWindowState.Normal;
+        if (!Visible)
+            Show();
+
+        Activate();
+        BringToFront();
+
+        bool wasTopMost = TopMost;
+        TopMost = true;
+        TopMost = wasTopMost;
+
+        Activate();
+        _canvas?.Focus();
     }
 
     public EditorForm(Bitmap captured, string? savedFilePath = null)
@@ -93,9 +116,11 @@ public sealed partial class EditorForm : Form
             BackColor = EditorColors.CanvasBg,
             ToolColor = EditorColors.Accent,
             StrokeWidth = settings?.StrokeWidth ?? 4f,
+            FitToWindowOnLoad = settings?.EditorFitToWindowOnOpen ?? true,
         };
         _canvas.StateChanged += OnCanvasStateChanged;
         _canvas.MouseMove += OnCanvasMouseMove;
+        _canvas.MouseUp += OnCanvasMouseUp;
         _saveStatusTimer.Tick += (_, _) =>
         {
             _saveStatusTimer.Stop();
@@ -146,6 +171,8 @@ public sealed partial class EditorForm : Form
         windowFrame.Controls.Add(root);
         Controls.Add(windowFrame);
 
+        BuildContextMenus();
+
         ResumeLayout(false);
         PerformLayout();
 
@@ -155,6 +182,9 @@ public sealed partial class EditorForm : Form
             _saveStatusTimer.Stop();
             _saveStatusTimer.Dispose();
             _brandBitmap?.Dispose();
+            _hoverToolTip?.Dispose();
+            _canvasMenu?.Dispose();
+            _imageMenu?.Dispose();
             if (ReferenceEquals(_instance, this)) _instance = null;
         };
         Resize += (_, _) =>
@@ -211,16 +241,14 @@ public sealed partial class EditorForm : Form
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
     {
         if (_suppressCloseConfirm || !_canvas.IsDirty) return;
-        var msg = LocalizationService.Translate("Discard changes?");
-        var yes = LocalizationService.Translate("Discard");
-        var no = LocalizationService.Translate("Keep editing");
-        var result = System.Windows.Forms.MessageBox.Show(
-            this,
-            msg,
-            Text,
-            System.Windows.Forms.MessageBoxButtons.OKCancel,
-            System.Windows.Forms.MessageBoxIcon.Question);
-        if (result != DialogResult.OK)
+        var discard = ThemedConfirmDialog.Confirm(
+            Handle,
+            "Unsaved changes",
+            "Discard changes?",
+            "Discard",
+            "Keep editing",
+            danger: false);
+        if (!discard)
             e.Cancel = true;
     }
 
@@ -245,8 +273,7 @@ public sealed partial class EditorForm : Form
         }
         catch (Exception ex)
         {
-            System.Windows.Forms.MessageBox.Show(this, ex.Message, LocalizationService.Translate("Save failed"),
-                System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
         }
     }
 
@@ -276,8 +303,7 @@ public sealed partial class EditorForm : Form
         }
         catch (Exception ex)
         {
-            System.Windows.Forms.MessageBox.Show(this, ex.Message, LocalizationService.Translate("Save failed"),
-                System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
         }
     }
 
@@ -340,8 +366,7 @@ public sealed partial class EditorForm : Form
         }
         catch (Exception ex)
         {
-            System.Windows.Forms.MessageBox.Show(this, ex.Message, LocalizationService.Translate("Copy failed"),
-                System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            ThemedConfirmDialog.Alert(Handle, "Copy failed", ex.Message, error: true);
         }
     }
 
@@ -477,4 +502,181 @@ public sealed partial class EditorForm : Form
 
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    // The "properties" verb is only honored by ShellExecuteEx when SEE_MASK_INVOKEIDLIST
+    // is set; the simpler ShellExecute API cannot pass that flag and fails (SE_ERR_NOASSOC).
+    private const int SEE_MASK_INVOKEIDLIST = 0x0000000C;
+    private const int SW_SHOW = 5;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct SHELLEXECUTEINFO
+    {
+        public int cbSize;
+        public int fMask;
+        public IntPtr hwnd;
+        public string? lpVerb;
+        public string? lpFile;
+        public string? lpParameters;
+        public string? lpDirectory;
+        public int nShow;
+        public IntPtr hInstApp;
+        public IntPtr lpIDList;
+        public string? lpClass;
+        public IntPtr hkeyClass;
+        public uint dwHotKey;
+        public IntPtr hIcon;
+        public IntPtr hProcess;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShellExecuteEx(ref SHELLEXECUTEINFO lpExecInfo);
+
+    // ── Context menus ──────────────────────────────────────────────────────
+
+    private ContextMenuStrip? _canvasMenu;
+    private ContextMenuStrip? _imageMenu;
+
+    private void BuildContextMenus()
+    {
+        _canvasMenu = BuildCanvasContextMenu();
+    }
+
+    private ContextMenuStrip BuildCanvasContextMenu()
+    {
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
+
+        var headerLabel = new ToolStripLabel($"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}")
+        {
+            ForeColor = UiChrome.SurfaceTextMuted,
+            Font = UiChrome.ChromeFont(8.5f),
+            Padding = new Padding(10, 4, 0, 2),
+            AutoSize = true,
+        };
+        menu.Items.Add(headerLabel);
+        menu.Items.Add(new ToolStripSeparator());
+
+        var fitItem = WindowsMenuRenderer.Item("Fit to window", iconId: null);
+        var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
+        var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
+        var redoItem = WindowsMenuRenderer.Item("Redo", iconId: null);
+        var exitItem = WindowsMenuRenderer.Item("Quit", iconId: "close", danger: true);
+
+        fitItem.Click += (_, _) => _canvas.ZoomFit();
+        resetItem.Click += (_, _) => _canvas.ZoomReset();
+        undoItem.Click += (_, _) => _canvas.Undo();
+        redoItem.Click += (_, _) => _canvas.Redo();
+        exitItem.Click += (_, _) => Close();
+
+        menu.Items.Add(fitItem);
+        menu.Items.Add(resetItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(undoItem);
+        menu.Items.Add(redoItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(exitItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu);
+        return menu;
+    }
+
+    private ContextMenuStrip BuildImageContextMenu()
+    {
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
+        var copyItem = WindowsMenuRenderer.Item("Copy", iconId: null);
+        var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
+        var saveAsItem = WindowsMenuRenderer.Item("Save as...", iconId: null);
+        var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");
+        var propsItem = WindowsMenuRenderer.Item("Properties", iconId: null);
+        var exitItem = WindowsMenuRenderer.Item("Quit", iconId: "close", danger: true);
+
+        copyItem.Click += (_, _) => DoCopy();
+        saveItem.Click += (_, _) => DoSave();
+        saveAsItem.Click += (_, _) => DoSaveAs();
+        openLocItem.Click += (_, _) => DoOpenLocation();
+        propsItem.Click += (_, _) => DoShowProperties();
+        exitItem.Click += (_, _) => Close();
+
+        menu.Items.Add(copyItem);
+        menu.Items.Add(saveItem);
+        menu.Items.Add(saveAsItem);
+        menu.Items.Add(new ToolStripSeparator());
+
+        bool hasPath = !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);
+        openLocItem.Visible = hasPath;
+        propsItem.Visible = hasPath;
+        menu.Items.Add(openLocItem);
+        menu.Items.Add(propsItem);
+
+        if (hasPath)
+            menu.Items.Add(new ToolStripSeparator());
+
+        menu.Items.Add(exitItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu);
+        return menu;
+    }
+
+    private void OnCanvasMouseUp(object? sender, MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Right) return;
+        var imgPt = _canvas.PointFromScreenToImage(e.Location);
+        bool onImage = imgPt.X >= 0 && imgPt.Y >= 0
+            && imgPt.X < _canvas.BaseBitmap.Width
+            && imgPt.Y < _canvas.BaseBitmap.Height;
+
+        if (onImage)
+        {
+            _imageMenu?.Dispose();
+            _imageMenu = BuildImageContextMenu();
+            _imageMenu.Show(_canvas, e.Location);
+        }
+        else
+        {
+            _canvasMenu ??= BuildCanvasContextMenu();
+            _canvasMenu.Show(_canvas, e.Location);
+        }
+    }
+
+    private void DoOpenLocation()
+    {
+        if (string.IsNullOrWhiteSpace(_savedFilePath) || !File.Exists(_savedFilePath)) return;
+        try
+        {
+            var psi = new ProcessStartInfo("explorer.exe", $"/select,\"{_savedFilePath}\"")
+            {
+                UseShellExecute = true
+            };
+            Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "Error", ex.Message, error: true);
+        }
+    }
+
+    private void DoShowProperties()
+    {
+        if (string.IsNullOrWhiteSpace(_savedFilePath) || !File.Exists(_savedFilePath)) return;
+        try
+        {
+            var info = new SHELLEXECUTEINFO
+            {
+                cbSize = Marshal.SizeOf<SHELLEXECUTEINFO>(),
+                fMask = SEE_MASK_INVOKEIDLIST,
+                hwnd = Handle,
+                lpVerb = "properties",
+                lpFile = _savedFilePath,
+                nShow = SW_SHOW
+            };
+            if (!ShellExecuteEx(ref info))
+            {
+                ThemedConfirmDialog.Alert(Handle, "Error", "Could not open the file properties dialog.", error: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "Error", ex.Message, error: true);
+        }
+    }
 }

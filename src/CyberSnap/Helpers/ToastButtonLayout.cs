@@ -14,6 +14,21 @@ public enum ToastButtonKind
     Edit
 }
 
+public enum ToastCorner
+{
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight
+}
+
+public enum ToastButtonPreset
+{
+    Minimal,
+    Standard,
+    Full
+}
+
 public static class ToastButtonLayout
 {
     public static (System.Windows.HorizontalAlignment horizontal, System.Windows.VerticalAlignment vertical, Thickness margin) ToPlacement(
@@ -107,5 +122,140 @@ public static class ToastButtonLayout
             case ToastButtonKind.Edit: settings.EditSlot = slot; break;
             default: settings.DeleteSlot = slot; break;
         }
+    }
+
+    // Every notification button, in the order shown in the layout designer.
+    public static readonly ToastButtonKind[] AllButtons =
+    {
+        ToastButtonKind.Pin,
+        ToastButtonKind.Close,
+        ToastButtonKind.Save,
+        ToastButtonKind.History,
+        ToastButtonKind.Office,
+        ToastButtonKind.Delete,
+        ToastButtonKind.Edit
+    };
+
+    public static ToastCorner SlotToCorner(ToastButtonSlot slot) => slot switch
+    {
+        ToastButtonSlot.TopLeft or ToastButtonSlot.TopInnerLeft => ToastCorner.TopLeft,
+        ToastButtonSlot.TopRight or ToastButtonSlot.TopInnerRight => ToastCorner.TopRight,
+        ToastButtonSlot.BottomLeft or ToastButtonSlot.BottomInnerLeft => ToastCorner.BottomLeft,
+        _ => ToastCorner.BottomRight
+    };
+
+    // Each corner holds at most two buttons: the outer slot (at the very corner) and the
+    // inner slot (offset inward by ~40px).
+    public static (ToastButtonSlot outer, ToastButtonSlot inner) CornerSlots(ToastCorner corner) => corner switch
+    {
+        ToastCorner.TopLeft => (ToastButtonSlot.TopLeft, ToastButtonSlot.TopInnerLeft),
+        ToastCorner.TopRight => (ToastButtonSlot.TopRight, ToastButtonSlot.TopInnerRight),
+        ToastCorner.BottomLeft => (ToastButtonSlot.BottomLeft, ToastButtonSlot.BottomInnerLeft),
+        _ => (ToastButtonSlot.BottomRight, ToastButtonSlot.BottomInnerRight)
+    };
+
+    public static ToastCorner GetCorner(AppSettings.ToastButtonLayoutSettings settings, ToastButtonKind button)
+        => SlotToCorner(GetSlot(settings, button));
+
+    // Place a button into a corner, filling the outer slot first then the inner slot. Hidden
+    // buttons keep their slot but do not occupy space, so only visible buttons count toward the
+    // 2-per-corner cap. Returns false (without mutating) when both slots are taken by other
+    // visible buttons.
+    public static bool AssignCorner(AppSettings.ToastButtonLayoutSettings settings, ToastButtonKind button, ToastCorner corner)
+    {
+        if (IsVisible(settings, button) && GetCorner(settings, button) == corner)
+            return true;
+
+        var (outer, inner) = CornerSlots(corner);
+        ToastButtonSlot? target =
+            !IsSlotOccupiedByOther(settings, outer, button) ? outer :
+            !IsSlotOccupiedByOther(settings, inner, button) ? inner :
+            null;
+
+        if (target is null)
+            return false;
+
+        SetSlot(settings, button, target.Value);
+        SetVisible(settings, button, true);
+        return true;
+    }
+
+    private static bool IsSlotOccupiedByOther(AppSettings.ToastButtonLayoutSettings settings, ToastButtonSlot slot, ToastButtonKind exclude)
+    {
+        foreach (var other in AllButtons)
+        {
+            if (other == exclude)
+                continue;
+            if (IsVisible(settings, other) && GetSlot(settings, other) == slot)
+                return true;
+        }
+
+        return false;
+    }
+
+    public static void ApplyPreset(AppSettings.ToastButtonLayoutSettings settings, ToastButtonPreset preset)
+    {
+        foreach (var button in AllButtons)
+            SetVisible(settings, button, false);
+
+        switch (preset)
+        {
+            case ToastButtonPreset.Minimal:
+                Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
+                break;
+
+            case ToastButtonPreset.Full:
+                Place(ToastButtonKind.Pin, ToastButtonSlot.TopLeft);
+                Place(ToastButtonKind.Office, ToastButtonSlot.TopInnerLeft);
+                Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
+                Place(ToastButtonKind.History, ToastButtonSlot.TopInnerRight);
+                Place(ToastButtonKind.Delete, ToastButtonSlot.BottomLeft);
+                Place(ToastButtonKind.Edit, ToastButtonSlot.BottomInnerLeft);
+                Place(ToastButtonKind.Save, ToastButtonSlot.BottomRight);
+                break;
+
+            default: // Standard — matches the default ToastButtonLayoutSettings layout; one button per corner.
+                Place(ToastButtonKind.Pin, ToastButtonSlot.TopLeft);
+                Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
+                Place(ToastButtonKind.History, ToastButtonSlot.BottomLeft);
+                Place(ToastButtonKind.Save, ToastButtonSlot.BottomRight);
+                break;
+        }
+
+        void Place(ToastButtonKind button, ToastButtonSlot slot)
+        {
+            SetSlot(settings, button, slot);
+            SetVisible(settings, button, true);
+        }
+    }
+
+    // Returns the preset whose visible buttons and corners exactly match the current layout,
+    // or null when the layout has been customized.
+    public static ToastButtonPreset? DetectPreset(AppSettings.ToastButtonLayoutSettings settings)
+    {
+        foreach (ToastButtonPreset preset in Enum.GetValues(typeof(ToastButtonPreset)))
+        {
+            if (MatchesPreset(settings, preset))
+                return preset;
+        }
+
+        return null;
+    }
+
+    private static bool MatchesPreset(AppSettings.ToastButtonLayoutSettings settings, ToastButtonPreset preset)
+    {
+        var expected = new AppSettings.ToastButtonLayoutSettings();
+        ApplyPreset(expected, preset);
+
+        foreach (var button in AllButtons)
+        {
+            bool visible = IsVisible(settings, button);
+            if (visible != IsVisible(expected, button))
+                return false;
+            if (visible && GetCorner(settings, button) != GetCorner(expected, button))
+                return false;
+        }
+
+        return true;
     }
 }

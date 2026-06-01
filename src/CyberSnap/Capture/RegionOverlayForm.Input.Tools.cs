@@ -131,13 +131,18 @@ public sealed partial class RegionOverlayForm
             else if (_textShadowBtnRect.Contains(e.Location)) _hoveredTextBtn = 3;
             else if (_textBackgroundBtnRect.Contains(e.Location)) _hoveredTextBtn = 4;
             else if (_textFontBtnRect.Contains(e.Location)) _hoveredTextBtn = 5;
+            else if (_textSizeMinusBtnRect.Contains(e.Location)) _hoveredTextBtn = 6;
+            else if (_textSizePlusBtnRect.Contains(e.Location)) _hoveredTextBtn = 7;
+            else if (_textGripRect.Contains(e.Location)) _hoveredTextBtn = 8;
         }
         if (_hoveredTextBtn != prevTextBtn)
         {
             _textBtnTooltip = _hoveredTextBtn switch
             {
-                0 => "Bold", 1 => "Italic", 2 => "Stroke", 3 => "Shadow", 4 => "Background", 5 => _textFontFamily, _ => ""
+                0 => "Bold", 1 => "Italic", 2 => "Stroke", 3 => "Shadow", 4 => "Background",
+                5 => _textFontFamily, 6 => "Decrease size", 7 => "Increase size", 8 => "Move", _ => ""
             };
+            UpdateTextToolbarTooltip();
             needsRepaint = true;
         }
 
@@ -267,6 +272,8 @@ public sealed partial class RegionOverlayForm
             target = IsPointInColorPickerSwatch(e.Location) ? Cursors.Hand : Cursors.Default;
         else if (_toolbarRect.Contains(e.Location))
             target = btn >= 0 ? Cursors.Hand : Cursors.Default;
+        else if (_isTyping && _hoveredTextBtn == 8)
+            target = Cursors.SizeAll;
         else if (_isTyping && _hoveredTextBtn >= 0)
             target = Cursors.Hand;
         else if (_isTyping && _textToolbarRect.Contains(e.Location))
@@ -777,6 +784,11 @@ public sealed partial class RegionOverlayForm
         {
             _eraserHoverIndex = -1;
             _hoveredButton = -1;
+            if (_hoveredTextBtn >= 0)
+            {
+                _hoveredTextBtn = -1;
+                HideToolbarTooltip();
+            }
             CloseCaptureMagnifier();
             _autoDetectTimer.Stop();
             ClearCrosshairGuides();
@@ -818,6 +830,63 @@ public sealed partial class RegionOverlayForm
             _emojiPlaceSize = Math.Clamp(_emojiPlaceSize + (e.Delta > 0 ? 4f : -4f), 16f, 128f);
             Invalidate(Rectangle.Union(InflateForRepaint(oldPreview), InflateForRepaint(GetEmojiPreviewRect(_lastCursorPos))));
         }
+        else if (_isTyping)
+        {
+            // Scroll wheel changes the text font size while editing
+            AdjustTextFontSize(e.Delta > 0 ? TextSizeStep : -TextSizeStep);
+        }
         base.OnMouseWheel(e);
+    }
+
+    private const float TextSizeStep = 2f;
+
+    // Adjusts the active text font size, mirroring the corner-handle resize path
+    // (clamp + InvalidateActiveTextLayout). Used by the +/- buttons and the wheel.
+    private void AdjustTextFontSize(float delta)
+    {
+        if (!_isTyping) return;
+        float next = Math.Clamp(_textFontSize + delta, 10f, 120f);
+        if (Math.Abs(next - _textFontSize) < 0.01f) return;
+        _textFontSize = next;
+        InvalidateActiveTextLayout();
+        Invalidate();
+    }
+
+    // Shows the hovered text-toolbar button's tooltip, reusing the shared WindowsToolTip.
+    // Button rects are in overlay client space; offset by _virtualBounds to reach screen.
+    private void UpdateTextToolbarTooltip()
+    {
+        if (!_isTyping || _hoveredTextBtn < 0 || string.IsNullOrEmpty(_textBtnTooltip))
+        {
+            HideToolbarTooltip();
+            return;
+        }
+
+        RectangleF rect = _hoveredTextBtn switch
+        {
+            0 => _textBoldBtnRect,
+            1 => _textItalicBtnRect,
+            2 => _textStrokeBtnRect,
+            3 => _textShadowBtnRect,
+            4 => _textBackgroundBtnRect,
+            5 => _textFontBtnRect,
+            6 => _textSizeMinusBtnRect,
+            7 => _textSizePlusBtnRect,
+            8 => _textGripRect,
+            _ => RectangleF.Empty,
+        };
+        if (rect.IsEmpty)
+        {
+            HideToolbarTooltip();
+            return;
+        }
+
+        _toolbarToolTip ??= new WindowsToolTip();
+        var anchor = new Rectangle(
+            _virtualBounds.X + (int)rect.X,
+            _virtualBounds.Y + (int)rect.Y,
+            (int)rect.Width,
+            (int)rect.Height);
+        _toolbarToolTip.ShowNear(this, _textBtnTooltip, anchor, above: true);
     }
 }

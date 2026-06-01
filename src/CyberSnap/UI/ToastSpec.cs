@@ -19,6 +19,9 @@ internal sealed record ToastSpec
     public bool PlayErrorSound { get; init; }
     public bool SuppressSound { get; init; }
     public bool IsError { get; init; }
+    // Brief text-only status message (e.g. "Sent to the editor"). Suppressed by the
+    // "System messages" sub-toggle while previews and errors remain visible.
+    public bool IsSystemMessage { get; init; }
     public bool AutoPin { get; init; }
     public bool TransparentShell { get; init; }
     public bool ShowOverlayButtons { get; init; }
@@ -33,7 +36,8 @@ internal sealed record ToastSpec
     {
         Title = title,
         Body = body,
-        FilePath = filePath
+        FilePath = filePath,
+        IsSystemMessage = true
     };
 
     public static ToastSpec Error(string title, string body = "", string? filePath = null) => new()

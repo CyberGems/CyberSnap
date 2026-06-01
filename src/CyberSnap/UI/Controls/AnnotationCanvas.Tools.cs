@@ -101,12 +101,23 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
+
+        // While editing text, the floating toolbar gets first dibs on left clicks so
+        // toggling format doesn't steal focus from the text box or commit the text.
+        if (e.Button == MouseButtons.Left && HandleTextToolbarMouseDown(e.Location))
+        {
+            _inlineTextBox?.Focus();
+            return;
+        }
+
         Focus();
 
         if (e.Button == MouseButtons.Middle ||
             (e.Button == MouseButtons.Left && _activeTool == CanvasTool.Pan))
         {
             _isPanning = true;
+            _userPanned = true;
+            _viewFitsWindow = false;
             _panStart = e.Location;
             _panStartOffset = _pan;
             return;
@@ -179,6 +190,20 @@ public sealed partial class AnnotationCanvas
     {
         base.OnMouseMove(e);
 
+        // Dragging the inline text box by its toolbar grip
+        if (_textGripDragging && _inlineTextBox is not null)
+        {
+            int nx = e.X - _textGripDragOffset.X;
+            int ny = e.Y - _textGripDragOffset.Y;
+            _inlineTextOrigin = ScreenToImage(new Point(nx, ny));
+            Invalidate();
+            return;
+        }
+
+        // Hovering the floating text toolbar (skip normal tool hover when over it)
+        if (_inlineTextBox is not null && UpdateTextToolbarHover(e.Location))
+            return;
+
         if (_isPanning)
         {
             _pan = new PointF(
@@ -237,6 +262,12 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
+
+        if (_textGripDragging)
+        {
+            _textGripDragging = false;
+            return;
+        }
 
         if (_isPanning && (e.Button == MouseButtons.Middle ||
             (e.Button == MouseButtons.Left && _activeTool == CanvasTool.Pan)))
@@ -346,6 +377,14 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         base.OnMouseWheel(e);
+
+        // While editing text, the wheel adjusts the font size instead of zooming.
+        if (_inlineTextBox is not null)
+        {
+            AdjustTextFontSize(e.Delta > 0 ? 2f : -2f);
+            return;
+        }
+
         const double step = 1.15;
         ZoomBy(e.Delta > 0 ? step : 1.0 / step, e.Location);
     }
@@ -520,22 +559,23 @@ public sealed partial class AnnotationCanvas
         CommitOrCancelInlineText(commit: true);
 
         _inlineTextOrigin = imgOrigin;
-        var screen = new PointF(_pan.X + (float)(imgOrigin.X * _zoom), _pan.Y + (float)(imgOrigin.Y * _zoom));
-        var fontPx = (float)(24f * _zoom);
 
         _inlineTextBox = new TextBox
         {
             Multiline = true,
-            BorderStyle = BorderStyle.FixedSingle,
-            BackColor = Color.FromArgb(18, 20, 31),
+            BorderStyle = BorderStyle.None,
+            BackColor = BackColor,
             ForeColor = ToolColor,
-            Font = new Font("Segoe UI", Math.Max(8f, fontPx * 0.6f), FontStyle.Bold),
-            Location = new Point((int)screen.X, (int)screen.Y),
-            Size = new Size(220, 60),
+            Location = new Point(-100, -100),
+            Size = new Size(1, 1),
+            TabStop = false,
         };
         _inlineTextBox.KeyDown += InlineTextBox_KeyDown;
+        _inlineTextBox.TextChanged += (_, _) => Invalidate();
         Controls.Add(_inlineTextBox);
+        UpdateInlineTextBoxStyle(); // apply current bold/italic/font/size to the editor box
         _inlineTextBox.Focus();
+        Invalidate();               // show the floating toolbar
     }
 
     private void InlineTextBox_KeyDown(object? sender, KeyEventArgs e)
@@ -569,15 +609,18 @@ public sealed partial class AnnotationCanvas
             Push(new AddAnnotationCommand(new TextAnnotation(
                 Pos: origin,
                 Text: text,
-                FontSize: 24f,
+                FontSize: _textFontSize,
                 Color: ToolColor,
-                Bold: true,
-                Italic: false,
-                Stroke: true,
-                Shadow: true,
-                Background: false,
-                FontFamily: "Segoe UI")));
+                Bold: _textBold,
+                Italic: _textItalic,
+                Stroke: _textStroke,
+                Shadow: _textShadow,
+                Background: _textBackground,
+                FontFamily: _textFontFamily)));
         }
+        _fontDropdownOpen = false;
+        _hoveredTextBtn = -1;
+        _textGripDragging = false;
         Focus();
         Invalidate();
     }
@@ -639,7 +682,7 @@ public sealed partial class AnnotationCanvas
             RulerAnnotation ru => DistanceToSegment(pt, ru.From, ru.To) <= tol * 2,
             CurvedArrowAnnotation ca => ca.Points.Any(p => Distance(p, pt) <= tol * 2),
             DrawStroke ds => ds.Points.Any(p => Distance(p, pt) <= tol),
-            TextAnnotation ta => new RectangleF(ta.Pos.X - tol, ta.Pos.Y - tol, 200, 40).Contains(pt),
+            TextAnnotation ta => MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background).Contains(pt),
             StepNumberAnnotation sn => Distance(sn.Pos, pt) <= tol * 3,
             EmojiAnnotation em => Distance(em.Pos, pt) <= tol * 3,
             MagnifierAnnotation mg => Distance(mg.Pos, pt) <= tol * 4,

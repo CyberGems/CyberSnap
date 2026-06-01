@@ -190,6 +190,9 @@ public partial class SettingsWindow
             AnnotationStrokeShadowCheck.IsChecked = s.AnnotationStrokeShadow;
             CaptureDelayCombo.SelectedIndex = s.CaptureDelaySeconds switch { 3 => 1, 5 => 2, 10 => 3, _ => 0 };
             AutoPinPreviewsCheck.IsChecked = s.AutoPinPreviews;
+            NotificationsEnabledCheck.IsChecked = s.NotificationsEnabled;
+            SystemNotificationsCheck.IsChecked = s.SystemNotificationsEnabled;
+            UpdateSystemNotificationsRowState(s.NotificationsEnabled);
             SoundPackCombo.SelectedIndex = (int)s.SoundPack;
             ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
@@ -206,13 +209,9 @@ public partial class SettingsWindow
             SelectToastDuration(dur);
             double sysDur = s.SystemToastDurationSeconds;
             SelectSystemToastDuration(sysDur);
-            ToastFadeOutCheck.IsChecked = s.ToastFadeOutEnabled;
             double fadeDur = s.ToastFadeOutSeconds;
             int fadeDurIdx = fadeDur switch { 1.0 => 0, 2.0 => 1, 3.0 => 2, 5.0 => 3, _ => 2 };
             ToastFadeDurationCombo.SelectedIndex = fadeDurIdx;
-            var fadeDurationVisibility = s.ToastFadeOutEnabled ? Visibility.Visible : Visibility.Collapsed;
-            ToastFadeDurationSeparator.Visibility = fadeDurationVisibility;
-            ToastFadeDurationRow.Visibility = fadeDurationVisibility;
             LoadToastButtonLayoutDesigner();
 
             AboutVersionText.Text = $"Version {UpdateService.GetCurrentVersionLabel()}";

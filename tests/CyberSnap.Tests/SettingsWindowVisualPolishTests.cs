@@ -146,44 +146,27 @@ public sealed class SettingsWindowVisualPolishTests
         var selectionTag = GetOpeningTag(xaml, xaml.IndexOf("x:Name=\"ToastLayoutSelectionText\"", StringComparison.Ordinal), "<TextBlock");
         Assert.Contains("AutomationProperties.HelpText=\"{Binding Text, RelativeSource={RelativeSource Self}}\"", selectionTag);
 
-        var designerBlock = GetMethodBlock(toastCode, "private void RefreshToastButtonLayoutDesigner()");
-        Assert.Contains("ToastLayoutSelectionText.Text = selectionText;", designerBlock);
-        Assert.Contains("ToastLayoutSelectionText.ToolTip = selectionText;", designerBlock);
-        Assert.Contains("AutomationProperties.SetHelpText(ToastLayoutSelectionText, selectionText);", designerBlock);
+        var statusBlock = GetMethodBlock(toastCode, "private void RefreshToastLayoutStatus()");
+        Assert.Contains("ToastLayoutSelectionText.Text = status;", statusBlock);
+        Assert.Contains("ToastLayoutSelectionText.ToolTip = status;", statusBlock);
+        Assert.Contains("AutomationProperties.SetHelpText(ToastLayoutSelectionText, status);", statusBlock);
 
-        var buttonBlock = GetMethodBlock(toastCode, "private void UpdateToastLayoutButton(Border border, ToastButtonKind button)");
-        Assert.Contains("border.Focusable = true;", buttonBlock);
-        Assert.Contains("AutomationProperties.SetName(border, $\"{label} notification button\");", buttonBlock);
-        Assert.Contains("AutomationProperties.SetHelpText(border, \"Press Enter or Space to move the selected button here.\");", buttonBlock);
-        Assert.Contains("border.KeyDown -= ToastLayoutButton_KeyDown;", buttonBlock);
-        Assert.Contains("border.KeyDown += ToastLayoutButton_KeyDown;", buttonBlock);
+        // Each corner picker segment is a focusable, keyboard-activatable control with an accessible name.
+        var segmentBlock = GetMethodBlock(toastCode, "private Border BuildToastSegment(ToastButtonKind kind, ToastCorner? corner, string glyph, string helpText)");
+        Assert.Contains("Focusable = true,", segmentBlock);
+        Assert.Contains("AutomationProperties.SetName(segment, helpText);", segmentBlock);
+        Assert.Contains("AutomationProperties.SetHelpText(segment, \"Press Enter or Space to apply.\");", segmentBlock);
+        Assert.Contains("segment.MouseLeftButtonDown += ToastSegment_MouseLeftButtonDown;", segmentBlock);
+        Assert.Contains("segment.KeyDown += ToastSegment_KeyDown;", segmentBlock);
 
-        var slotBlock = GetMethodBlock(toastCode, "private void UpdateToastLayoutSlot(Border slotBorder, ToastButtonSlot slot)");
-        Assert.Contains("slotBorder.Focusable = true;", slotBlock);
-        Assert.Contains("AutomationProperties.SetName(slotBorder, $\"{label} notification slot\");", slotBlock);
-        Assert.Contains("AutomationProperties.SetHelpText(slotBorder, \"Press Enter or Space to place the selected notification button here.\");", slotBlock);
-        Assert.Contains("slotBorder.KeyDown -= ToastLayoutSlot_KeyDown;", slotBlock);
-        Assert.Contains("slotBorder.KeyDown += ToastLayoutSlot_KeyDown;", slotBlock);
-
-        var shelfBlock = GetMethodBlock(toastCode, "private void RefreshToastHiddenShelf()");
-        Assert.Contains("ToastHiddenShelf.Focusable = true;", shelfBlock);
-        Assert.Contains("AutomationProperties.SetName(ToastHiddenShelf, \"Hidden notification button shelf\");", shelfBlock);
-        Assert.Contains("AutomationProperties.SetHelpText(ToastHiddenShelf, \"Press Enter or Space to hide the selected notification button.\");", shelfBlock);
-        Assert.Contains("ToastHiddenShelf.KeyDown -= ToastHiddenShelf_KeyDown;", shelfBlock);
-        Assert.Contains("ToastHiddenShelf.KeyDown += ToastHiddenShelf_KeyDown;", shelfBlock);
-
-        var hiddenChipBlock = GetMethodBlock(toastCode, "private Border CreateHiddenToastButtonChip(ToastButtonKind button)");
-        Assert.Contains("Focusable = true,", hiddenChipBlock);
-        Assert.Contains("ToolTip = $\"Select hidden {label} notification button\",", hiddenChipBlock);
-        Assert.Contains("AutomationProperties.SetName(chip, $\"Hidden {label} notification button\");", hiddenChipBlock);
-        Assert.Contains("AutomationProperties.SetHelpText(chip, \"Press Enter or Space to select this hidden button, then choose a slot.\");", hiddenChipBlock);
-        Assert.Contains("chip.KeyDown += ToastHiddenButton_KeyDown;", hiddenChipBlock);
-
-        Assert.Contains("private void ToastLayoutButton_KeyDown(object sender, KeyEventArgs e)", toastCode);
-        Assert.Contains("private void ToastLayoutSlot_KeyDown(object sender, KeyEventArgs e)", toastCode);
-        Assert.Contains("private void ToastHiddenShelf_KeyDown(object sender, KeyEventArgs e)", toastCode);
-        Assert.Contains("private void ToastHiddenButton_KeyDown(object sender, KeyEventArgs e)", toastCode);
+        Assert.Contains("private void ToastSegment_KeyDown(object sender, KeyEventArgs e)", toastCode);
+        Assert.Contains("private void ToastSegment_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)", toastCode);
         Assert.Contains("=> e.Key is Key.Enter or Key.Space;", toastCode);
+
+        // Presets are keyboard-reachable buttons with accessible names.
+        AssertNamedControlHasLabel(xaml, "ToastPresetMinimalBtn", "<Button", "Minimal preset", "Show only the close button");
+        AssertNamedControlHasLabel(xaml, "ToastPresetStandardBtn", "<Button", "Standard preset", "Show pin, close, history and save");
+        AssertNamedControlHasLabel(xaml, "ToastPresetFullBtn", "<Button", "Full preset", "Show every button");
     }
 
     [Fact]
@@ -1173,14 +1156,6 @@ public sealed class SettingsWindowVisualPolishTests
         AssertDynamicStatusTextBlock(xaml, "ToastPreferenceStatusText", "notification preference status", isLive: true);
         var toastStatusTag = GetOpeningTag(xaml, xaml.IndexOf("x:Name=\"ToastPreferenceStatusText\"", StringComparison.Ordinal), "<TextBlock");
         Assert.Contains("AutomationProperties.HelpText=\"{Binding Text, RelativeSource={RelativeSource Self}}\"", toastStatusTag);
-        AssertNamedControlHasLabel(xaml, "ToastSlotTopLeft", "<Border", "top-left notification slot", "Move selected notification button to top-left", "Press Enter or Space to place the selected notification button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotTopInnerLeft", "<Border", "top inner-left notification slot", "Move selected notification button to top inner-left", "Press Enter or Space to place the selected notification button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotTopInnerRight", "<Border", "top inner-right notification slot", "Move selected notification button to top inner-right", "Press Enter or Space to place the selected notification button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotTopRight", "<Border", "top-right notification slot", "Move selected notification button to top-right", "Press Enter or Space to place the selected notification button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotBottomLeft", "<Border", "bottom-left notification slot", "Move selected notification button to bottom-left", "Press Enter or Space to place the selected notification button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotBottomInnerLeft", "<Border", "bottom inner-left notification slot", "Move selected notification button to bottom inner-left", "Press Enter or Space to place the selected notification button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotBottomInnerRight", "<Border", "bottom inner-right notification slot", "Move selected notification button to bottom inner-right", "Press Enter or Space to place the selected notification button here.");
-        AssertNamedControlHasLabel(xaml, "ToastSlotBottomRight", "<Border", "bottom-right notification slot", "Move selected notification button to bottom-right", "Press Enter or Space to place the selected notification button here.");
         AssertNamedControlHasLabel(xaml, "ToastLayoutCloseBtn", "<Border", "Close notification button", "Move the close notification button");
         AssertNamedControlHasLabel(xaml, "ToastLayoutPinBtn", "<Border", "Pin notification button", "Move the pin notification button");
         AssertNamedControlHasLabel(xaml, "ToastLayoutSaveBtn", "<Border", "Save notification button", "Move the save notification button");
@@ -1220,21 +1195,13 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("SelectToastDuration", durationBlock);
         Assert.Contains("ToastWindow.SetDuration", durationBlock);
 
-        var fadeBlock = GetMethodBlock(preferencesCode, "private void ToastFadeOutCheck_Changed(object sender, RoutedEventArgs e)");
-        Assert.Contains("if (!IsLoaded || _suppressToastPreferenceChange) return;", fadeBlock);
-        Assert.Contains("var previous = _settingsService.Settings.ToastFadeOutEnabled;", fadeBlock);
-        Assert.Contains("\"settings.toast-fade-out\"", fadeBlock);
-        Assert.Contains("ToastFadeOutCheck.IsChecked = value;", fadeBlock);
-        Assert.Contains("SetToastFadeDurationVisibility(value);", fadeBlock);
-        Assert.Contains("ToastWindow.SetFadeOutBehavior(value, _settingsService.Settings.ToastFadeOutSeconds)", fadeBlock);
-
         var fadeDurationBlock = GetMethodBlock(preferencesCode, "private void ToastFadeDurationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)");
         Assert.Contains("if (!IsLoaded || _suppressToastPreferenceChange) return;", fadeDurationBlock);
         Assert.Contains("var previous = _settingsService.Settings.ToastFadeOutSeconds;", fadeDurationBlock);
         Assert.Contains("\"settings.toast-fade-duration\"", fadeDurationBlock);
         Assert.Contains("value => _settingsService.Settings.ToastFadeOutSeconds = value", fadeDurationBlock);
         Assert.Contains("SelectToastFadeDuration", fadeDurationBlock);
-        Assert.Contains("ToastWindow.SetFadeOutBehavior(_settingsService.Settings.ToastFadeOutEnabled, value)", fadeDurationBlock);
+        Assert.Contains("ToastWindow.SetFadeOutSeconds(value)", fadeDurationBlock);
 
         var autoPinBlock = GetMethodBlock(preferencesCode, "private void AutoPinPreviewsCheck_Changed(object sender, RoutedEventArgs e)");
         Assert.Contains("if (!IsLoaded || _suppressToastPreferenceChange) return;", autoPinBlock);
@@ -1264,10 +1231,6 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("ToastPreferenceStatusText.Text = message;", statusBlock);
         Assert.Contains("Visibility.Collapsed", statusBlock);
         Assert.Contains("Visibility.Visible", statusBlock);
-
-        var visibilityBlock = GetMethodBlock(preferencesCode, "private void SetToastFadeDurationVisibility(bool enabled)");
-        Assert.Contains("ToastFadeDurationSeparator.Visibility = visibility;", visibilityBlock);
-        Assert.Contains("ToastFadeDurationRow.Visibility = visibility;", visibilityBlock);
     }
 
     [Fact]

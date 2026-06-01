@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
@@ -18,6 +19,8 @@ public sealed partial class RegionOverlayForm
         if (_isTyping && _textBuffer.Length > 0)
             AddAnnotation(new TextAnnotation(_textPos, _textBuffer, _textFontSize, _toolColor, _textBold, _textItalic, _textStroke, _textShadow, _textBackground, _textFontFamily));
         _isTyping = false;
+        _hoveredTextBtn = -1;
+        HideToolbarTooltip();
         SetSnapGuides(false, false);
         _textBuffer = "";
         InvalidateActiveTextLayout();
@@ -34,33 +37,25 @@ public sealed partial class RegionOverlayForm
         if (italic) style |= FontStyle.Italic;
         var font = GetAnnotationFont(fontFamily, fontSize, style);
         string display = text.Length > 0 ? text : "Type here...";
-        using var path = new GraphicsPath();
-        using var format = new StringFormat(StringFormat.GenericTypographic)
+
+        // Measure with the SAME metrics DrawString uses to render the glyphs (full line
+        // box, anchored at pos), so the frame and background wrap the text exactly.
+        // GraphicsPath ink bounds were ~30% smaller than the rendered text.
+        SizeF size;
+        using (var bmp = new Bitmap(1, 1))
+        using (var mg = Graphics.FromImage(bmp))
         {
-            FormatFlags = StringFormatFlags.NoClip | StringFormatFlags.MeasureTrailingSpaces
-        };
-        path.AddString(
-            display,
-            font.FontFamily,
-            (int)font.Style,
-            font.SizeInPoints * 96f / 72f,
-            new PointF(pos.X, pos.Y),
-            format);
-        var bounds = path.GetBounds();
-        if (bounds.Width <= 0 || bounds.Height <= 0)
-        {
-            var size = TextRenderer.MeasureText(display, font, Size.Empty,
-                TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
-            bounds = new RectangleF(pos.X, pos.Y, Math.Max(1, size.Width), Math.Max(1, size.Height));
+            mg.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            size = mg.MeasureString(display, font);
         }
 
         int padX = background ? 16 : 8;
         int padY = background ? 12 : 8;
         return new RectangleF(
-            bounds.X - (padX / 2f),
-            bounds.Y - (padY / 2f),
-            bounds.Width + padX,
-            bounds.Height + padY);
+            pos.X - (padX / 2f),
+            pos.Y - (padY / 2f),
+            size.Width + padX,
+            size.Height + padY);
     }
 
     private RectangleF GetActiveTextRect()

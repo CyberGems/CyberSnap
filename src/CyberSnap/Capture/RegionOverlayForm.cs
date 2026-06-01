@@ -216,7 +216,10 @@ public sealed partial class RegionOverlayForm : Form
     private RectangleF _textShadowBtnRect;
     private RectangleF _textBackgroundBtnRect;
     private RectangleF _textFontBtnRect;
-    private int _hoveredTextBtn = -1; // 0=B, 1=I, 2=S, 3=Sh, 4=Font, -1=none
+    private RectangleF _textSizeMinusBtnRect;
+    private RectangleF _textSizePlusBtnRect;
+    private RectangleF _textGripRect; // drag handle that moves toolbar + text together
+    private int _hoveredTextBtn = -1; // 0=B 1=I 2=Stroke 3=Shadow 4=Background 5=Font 6=Size- 7=Size+ 8=Grip, -1=none
     private string _textBtnTooltip = "";
     private int _textResizeHandle = -1;
     private bool _textResizing;
@@ -591,14 +594,14 @@ public sealed partial class RegionOverlayForm : Form
         // 2. Stroke width button
         int swIdx = StrokeWidthButtonIndex;
         _toolbarIcons[swIdx] = "strokeWidth";
-        _toolbarLabels[swIdx] = LocalizationService.Translate("Stroke Width");
+        _toolbarLabels[swIdx] = LocalizationService.Translate("Shape stroke width");
         _toolbarToolIds[swIdx] = "strokeWidth";
         _toolbarModes[swIdx] = null;
 
         // 3. Color picker button
         int colorIdx = ColorButtonIndex;
         _toolbarIcons[colorIdx] = "color";
-        _toolbarLabels[colorIdx] = LocalizationService.Translate("Active drawing color");
+        _toolbarLabels[colorIdx] = LocalizationService.Translate("Active drawing and text color");
         _toolbarToolIds[colorIdx] = "color";
         _toolbarModes[colorIdx] = null;
 
