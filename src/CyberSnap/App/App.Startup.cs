@@ -177,7 +177,7 @@ public partial class App
                 {
                     var spec = new ToastSpec
                     {
-                        Title = "Update Available",
+                        Title = "Update available",
                         Body = $"CyberSnap {result.LatestVersionLabel} is out!\nYou're on {UpdateService.GetCurrentVersionLabel()}",
                         ClickActionUrl = result.ReleaseUrl,
                         ClickActionLabel = "Download",
