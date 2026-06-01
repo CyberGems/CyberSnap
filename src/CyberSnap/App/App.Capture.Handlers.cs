@@ -84,6 +84,14 @@ public partial class App
                             return;
                         }
                         persisted.Output.Dispose();
+
+                        // No preview toast is shown when the editor opens directly, so surface a
+                        // lightweight system message confirming where the capture went. A text-only
+                        // toast (no preview bitmap) is treated as a system message by ToastWindow.
+                        ToastWindow.Show(
+                            LocalizationService.Translate("Sent to the editor"),
+                            LocalizationService.Translate("Your capture is open in the editor."),
+                            persisted.FilePath);
                     }
                     else if (ShouldPreviewAfterCapture(action))
                     {

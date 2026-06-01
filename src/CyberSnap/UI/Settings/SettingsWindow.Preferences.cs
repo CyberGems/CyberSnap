@@ -336,7 +336,7 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressToastPreferenceChange) return;
 
         var previous = _settingsService.Settings.ToastPosition;
-        var selected = (ToastPosition)Math.Clamp(ToastPositionCombo.SelectedIndex, 0, 3);
+        var selected = (ToastPosition)Math.Clamp(ToastPositionCombo.SelectedIndex, 0, 5);
         UpdateToastPreference(
             "settings.toast-position",
             "Toast position",
@@ -450,27 +450,6 @@ public partial class SettingsWindow
             value => ScrollingCaptureModeCombo.SelectedIndex = value == ScrollingCaptureMode.AssistAutoscroll ? 1 : 0);
     }
 
-    private void ToastFadeOutCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressToastPreferenceChange) return;
-
-        var previous = _settingsService.Settings.ToastFadeOutEnabled;
-        var enabled = ToastFadeOutCheck.IsChecked == true;
-        UpdateToastPreference(
-            "settings.toast-fade-out",
-            "Toast fade out",
-            previous,
-            enabled,
-            value => _settingsService.Settings.ToastFadeOutEnabled = value,
-            value =>
-            {
-                ToastFadeOutCheck.IsChecked = value;
-                SetToastFadeDurationVisibility(value);
-            },
-            value => ToastWindow.SetFadeOutBehavior(value, _settingsService.Settings.ToastFadeOutSeconds),
-            SetToastFadeDurationVisibility);
-    }
-
     private void ToastFadeDurationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded || _suppressToastPreferenceChange) return;
@@ -488,7 +467,7 @@ public partial class SettingsWindow
             seconds,
             value => _settingsService.Settings.ToastFadeOutSeconds = value,
             SelectToastFadeDuration,
-            value => ToastWindow.SetFadeOutBehavior(_settingsService.Settings.ToastFadeOutEnabled, value));
+            value => ToastWindow.SetFadeOutSeconds(value));
     }
 
     private void AutoPinPreviewsCheck_Changed(object sender, RoutedEventArgs e)
@@ -504,6 +483,47 @@ public partial class SettingsWindow
             enabled,
             value => _settingsService.Settings.AutoPinPreviews = value,
             value => AutoPinPreviewsCheck.IsChecked = value);
+    }
+
+    private void NotificationsEnabledCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToastPreferenceChange) return;
+
+        var previous = _settingsService.Settings.NotificationsEnabled;
+        var enabled = NotificationsEnabledCheck.IsChecked == true;
+        UpdateToastPreference(
+            "settings.notifications-enabled",
+            "Show notifications",
+            previous,
+            enabled,
+            value => _settingsService.Settings.NotificationsEnabled = value,
+            value => NotificationsEnabledCheck.IsChecked = value,
+            ToastWindow.SetNotificationsEnabled,
+            value => UpdateSystemNotificationsRowState(value));
+    }
+
+    private void SystemNotificationsCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToastPreferenceChange) return;
+
+        var previous = _settingsService.Settings.SystemNotificationsEnabled;
+        var enabled = SystemNotificationsCheck.IsChecked == true;
+        UpdateToastPreference(
+            "settings.system-notifications-enabled",
+            "System messages",
+            previous,
+            enabled,
+            value => _settingsService.Settings.SystemNotificationsEnabled = value,
+            value => SystemNotificationsCheck.IsChecked = value,
+            ToastWindow.SetSystemNotificationsEnabled);
+    }
+
+    // The "System messages" sub-toggle only applies while the master switch is on, so it is
+    // greyed out and disabled when notifications are turned off entirely.
+    private void UpdateSystemNotificationsRowState(bool notificationsEnabled)
+    {
+        SystemNotificationsRow.IsEnabled = notificationsEnabled;
+        SystemNotificationsRow.Opacity = notificationsEnabled ? 1.0 : 0.45;
     }
 
     private void UpdateToastPreference<T>(
@@ -561,13 +581,6 @@ public partial class SettingsWindow
         ToastPreferenceStatusText.Visibility = string.IsNullOrWhiteSpace(message)
             ? Visibility.Collapsed
             : Visibility.Visible;
-    }
-
-    private void SetToastFadeDurationVisibility(bool enabled)
-    {
-        var visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
-        ToastFadeDurationSeparator.Visibility = visibility;
-        ToastFadeDurationRow.Visibility = visibility;
     }
 
     private void SelectToastDuration(double seconds)

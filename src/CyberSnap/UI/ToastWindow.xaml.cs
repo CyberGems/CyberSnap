@@ -36,7 +36,8 @@ public partial class ToastWindow : Window
     private static CyberSnap.Models.ToastPosition _position = CyberSnap.Models.ToastPosition.Right;
     private static double _durationSeconds = 2.5;
     private static double _systemDurationSeconds = 4.0;
-    private static bool _fadeOutEnabled;
+    private static bool _notificationsEnabled = true;
+    private static bool _systemNotificationsEnabled = true;
     private static double _fadeOutSeconds = 1.0;
     private static int _monitorIndex = -1;
     private static Models.AppSettings.ToastButtonLayoutSettings _buttonLayout = new();
@@ -1726,10 +1727,9 @@ public partial class ToastWindow : Window
             return;
         }
 
-        if (_fadeOutEnabled)
-            FadeAway();
-        else
-            SlideAway();
+        // Toasts always dismiss with a fade-out. SlideAway() is retained for a possible
+        // future "slide" option but is intentionally not wired up right now.
+        FadeAway();
     }
 
     private void RestartVisibleTimer(double seconds)
@@ -1931,6 +1931,7 @@ public partial class ToastWindow : Window
         CyberSnap.Models.ToastPosition.Left => (-56, 0),
         CyberSnap.Models.ToastPosition.TopLeft => (0, -32),
         CyberSnap.Models.ToastPosition.TopRight => (0, -32),
+        CyberSnap.Models.ToastPosition.BottomLeft => (-56, 0),
         _ => (56, 0)
     };
 

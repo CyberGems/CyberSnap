@@ -46,6 +46,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     private double _zoom = 1.0;
     private PointF _pan; // pixel offset of image-space origin relative to control client
+    private bool _viewFitsWindow = true; // image auto-fits the canvas until the user zooms
+    private bool _userPanned;            // user has manually dragged the image
     private bool _isPanning;
     private Point _panStart;
     private PointF _panStartOffset;
@@ -223,6 +225,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         ClearEditHistory();
         _zoom = 1.0;
         _pan = PointF.Empty;
+        _viewFitsWindow = true;
+        _userPanned = false;
         _isPanning = false;
         _selectedAnnotationIndex = -1;
         _selectOriginalAnnotation = null;
@@ -232,6 +236,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         ActiveTool = CanvasTool.Pan;
         oldBaseBitmap?.Dispose();
         ClearCropPending();
+        ApplyInitialView();
         Invalidate();
         OnStateChanged();
     }
@@ -321,6 +326,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public void ZoomReset()
     {
         _zoom = 1.0;
+        _viewFitsWindow = false;
+        _userPanned = false;
         CenterImage();
         Invalidate();
         OnStateChanged();
@@ -332,6 +339,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         double sx = (double)ClientSize.Width / _baseBitmap.Width;
         double sy = (double)ClientSize.Height / _baseBitmap.Height;
         _zoom = Math.Clamp(Math.Min(sx, sy) * 0.95, MinZoom, MaxZoom);
+        _viewFitsWindow = true;
+        _userPanned = false;
         CenterImage();
         Invalidate();
         OnStateChanged();
@@ -348,6 +357,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
         var imageAnchor = ScreenToImage(screenAnchor);
         _zoom = newZoom;
+        _viewFitsWindow = false;
+        _userPanned = true;
         _pan = new PointF(
             screenAnchor.X - (float)(imageAnchor.X * _zoom),
             screenAnchor.Y - (float)(imageAnchor.Y * _zoom));
@@ -371,15 +382,47 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
-        ZoomFit();
+        ApplyInitialView();
+    }
+
+    /// <summary>How a freshly loaded capture is framed: auto-fit to the canvas, or shown at real 100% size.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool FitToWindowOnLoad { get; set; } = true;
+
+    /// <summary>Applies the configured initial view (fit-to-window or 100%) for the current image.</summary>
+    public void ApplyInitialView()
+    {
+        if (FitToWindowOnLoad)
+            ZoomFit();
+        else
+            ZoomReset();
     }
 
     protected override void OnSizeChanged(EventArgs e)
     {
         base.OnSizeChanged(e);
-        if (_pan == PointF.Empty)
+        if (ClientSize.Width <= 0 || ClientSize.Height <= 0)
+        {
+            Invalidate();
+            return;
+        }
+
+        // Keep the image where the user expects it as the canvas grows/shrinks
+        // (e.g. when the window is maximized): re-fit while the view still
+        // auto-fits, re-center while it's centered, but preserve a manual pan.
+        if (_viewFitsWindow)
+        {
+            ZoomFit();
+        }
+        else if (!_userPanned || _pan == PointF.Empty)
+        {
             CenterImage();
-        Invalidate();
+            Invalidate();
+        }
+        else
+        {
+            Invalidate();
+        }
     }
 
     /// <summary>Returns a fresh bitmap with all current annotations baked in.</summary>

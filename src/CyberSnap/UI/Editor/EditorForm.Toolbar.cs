@@ -25,6 +25,8 @@ public sealed partial class EditorForm
     private TableLayoutPanel _cropSection = null!;
     private System.Windows.Forms.Timer _cropRevealTimer = null!;
     private int _cropSectionTargetHeight;
+    private int _cropAnimFromHeight;
+    private readonly System.Diagnostics.Stopwatch _cropAnimClock = new();
     private EditorCommandButton _confirmCropButton = null!;
     private EditorCommandButton _cancelCropButton = null!;
     private EditorCommandButton _undoButton = null!;
@@ -35,11 +37,12 @@ public sealed partial class EditorForm
     private EditorZoomBarButton _fitZoomBtn = null!;
     private EditorZoomBarButton _resetZoomBtn = null!;
     private EditorToggleSwitch _toggleFrameSwitch = null!;
-    private readonly ToolTip _chromeToolTip = new() { InitialDelay = 350, ReshowDelay = 80, ShowAlways = true };
+    private EditorToggleSwitch _toggleFitSwitch = null!;
     private readonly Dictionary<AnnotationCanvas.CanvasTool, EditorToolButton> _toolButtons = new();
     private readonly Dictionary<Color, EditorColorButton> _colorButtons = new();
     private readonly List<EditorStrokeWidthButton> _strokeWidthButtons = new();
     private const int CropSectionExpandedHeight = 86;
+    private const int CropAnimDurationMs = 200;
 
     private static readonly Color[] PaletteColors =
     {
@@ -52,6 +55,7 @@ public sealed partial class EditorForm
         Color.FromArgb(34, 197, 94),
         Color.White,
         Color.FromArgb(15, 23, 42),
+        Color.FromArgb(236, 72, 153),
     };
 
     private void BuildToolbar()
@@ -60,7 +64,7 @@ public sealed partial class EditorForm
         _cropRevealTimer = new System.Windows.Forms.Timer { Interval = 15 };
         _cropRevealTimer.Tick += CropRevealTimer_Tick;
 
-        _toolbarPanel = new Panel
+        _toolbarPanel = new DoubleBufferedPanel
         {
             Dock = DockStyle.Left,
             Width = 332,
@@ -80,6 +84,7 @@ public sealed partial class EditorForm
             ColumnCount = 1,
             RowCount = 3,
         };
+        EnableDoubleBuffering(layout);
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -126,7 +131,6 @@ public sealed partial class EditorForm
         {
             LabelText = LocalizationService.Translate("Border"),
             Checked = _canvas.ShowCaptureFrame,
-            Width = 120,
             Height = 42,
             Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
             Margin = new Padding(0),
@@ -137,6 +141,24 @@ public sealed partial class EditorForm
             _canvas.Invalidate();
         };
         leftStatusFlow.Controls.Add(_toggleFrameSwitch);
+
+        // AUTO-FIT switch: fit the image to the canvas on load, or show it at real 100% size.
+        _toggleFitSwitch = new EditorToggleSwitch
+        {
+            LabelText = LocalizationService.Translate("Auto-fit"),
+            Checked = _canvas.FitToWindowOnLoad,
+            Height = 42,
+            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
+            Margin = new Padding(18, 0, 0, 0),
+        };
+        _toggleFitSwitch.CheckedChanged += (_, _) =>
+        {
+            _canvas.FitToWindowOnLoad = _toggleFitSwitch.Checked;
+            _canvas.ApplyInitialView(); // re-frame the current image immediately for instant feedback
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.PersistEditorFitPreference(_toggleFitSwitch.Checked);
+        };
+        leftStatusFlow.Controls.Add(_toggleFitSwitch);
 
         // Separator 1
         var sep1 = new Panel { Width = 24, Height = 42, BackColor = Color.Transparent, Margin = new Padding(0) };
@@ -233,7 +255,7 @@ public sealed partial class EditorForm
             Margin = new Padding(0),
         };
         var fileIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
-        fileIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "document", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
+        fileIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "camera", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
         _fileNameLabel = new Label
         {
             AutoSize = true,
@@ -363,9 +385,20 @@ public sealed partial class EditorForm
         _statusBarPanel.Controls.Add(_resetZoomBtn);
         _statusBarPanel.Controls.Add(hintSpacer);
         _statusBarPanel.Controls.Add(_hintLabel);
-        
+
         // Add our premium left-side status flow layout
         _statusBarPanel.Controls.Add(leftStatusFlow);
+
+        // CyberSnap-styled hover hints for the bottom bar, matching the capture toolbar.
+        // The bar sits at the bottom of the window, so the bubbles open upward (above: true).
+        RegisterHoverTooltip(_toggleFrameSwitch, "Show a frame around the capture");
+        RegisterHoverTooltip(_toggleFitSwitch, "Fit the image to the window when the editor opens");
+        RegisterHoverTooltip(coordsPanel, "Cursor position over the image (X, Y)");
+        RegisterHoverTooltip(dimsPanel, "Image size in pixels");
+        RegisterHoverTooltip(filePanel, "Current file name");
+        RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", LocalizationService.Translate("key 0")));
+        RegisterHoverTooltip(_fitZoomBtn, () => WithShortcut("Zoom to fit the image in the window", "F2"));
+        RegisterHoverTooltip(_zoomSlider, () => WithShortcut("Drag to zoom in or out", "+ / -"));
     }
 
     private Panel BuildTopBar()
@@ -470,16 +503,19 @@ public sealed partial class EditorForm
         var saveAsButton = MakeCommandButton("folder", LocalizationService.Translate("Save As"), false);
         saveAsButton.Width = 148;
         saveAsButton.Click += (_, _) => DoSaveAs();
+        RegisterHoverTooltip(saveAsButton, () => WithShortcut("Save the image as a new file", "Ctrl+Shift+S"), above: false);
         topActions.Controls.Add(saveAsButton);
 
         _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
         _saveButton.Width = 132;
         _saveButton.Click += (_, _) => DoSave();
+        RegisterHoverTooltip(_saveButton, () => WithShortcut("Save the image", "Ctrl+S"), above: false);
         topActions.Controls.Add(_saveButton);
 
         _copyButton = MakeCommandButton("copy", LocalizationService.Translate("Copy"), false);
         _copyButton.Width = 112;
         _copyButton.Click += (_, _) => DoCopy();
+        RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
         topActions.Controls.Add(_copyButton);
 
         // Spacer between undo/redo and the rest
@@ -493,11 +529,13 @@ public sealed partial class EditorForm
         _redoButton = MakeCommandButton("redo", LocalizationService.Translate("Redo"), false);
         _redoButton.Width = 110;
         _redoButton.Click += (_, _) => _canvas.Redo();
+        RegisterHoverTooltip(_redoButton, () => WithShortcut("Redo the last undone change", "Ctrl+Y"), above: false);
         topActions.Controls.Add(_redoButton);
 
         _undoButton = MakeCommandButton("undo", LocalizationService.Translate("Undo"), false);
         _undoButton.Width = 110;
         _undoButton.Click += (_, _) => _canvas.Undo();
+        RegisterHoverTooltip(_undoButton, () => WithShortcut("Undo the last change", "Ctrl+Z"), above: false);
         topActions.Controls.Add(_undoButton);
 
         UpdateWindowStateButton();
@@ -527,24 +565,67 @@ public sealed partial class EditorForm
         AddToolButton(grid, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
         AddToolButton(grid, 1, 0, AnnotationCanvas.CanvasTool.Select, "select", "Select");
         AddToolButton(grid, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop");
-        AddToolButton(grid, 1, 1, AnnotationCanvas.CanvasTool.Text, "text", "Text");
+        AddToolButton(grid, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser");
         AddToolButton(grid, 0, 2, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw");
         AddToolButton(grid, 1, 2, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow");
         AddToolButton(grid, 0, 3, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", "Curved arrow");
         AddToolButton(grid, 1, 3, AnnotationCanvas.CanvasTool.Line, "line", "Line");
         AddToolButton(grid, 0, 4, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle");
         AddToolButton(grid, 1, 4, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle");
-        AddToolButton(grid, 0, 5, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser");
+        AddToolButton(grid, 0, 5, AnnotationCanvas.CanvasTool.Text, "text", "Text");
         AddToolButton(grid, 1, 5, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight");
+
+        // Subtle divider between the selection/navigation tools (rows 0-1) and the
+        // drawing tools (rows 2-5). It is painted in the whitespace gap that already
+        // exists between the button margins, so it costs no vertical layout space.
+        grid.Paint += (_, e) =>
+        {
+            var heights = grid.GetRowHeights();
+            if (heights.Length < 3) return;
+            int y = grid.Padding.Top + heights[0] + heights[1];
+            DrawToolGroupDivider(e.Graphics, grid.ClientRectangle.Width, y);
+        };
 
         section.Controls.Add(grid, 0, 1);
         return section;
+    }
+
+    // Cyan hairline with a soft glow, fading out toward both ends so it reads as an
+    // elegant group separator rather than a hard rule. Matches the accent glow used
+    // on the status bar and toolbar borders.
+    private static void DrawToolGroupDivider(Graphics g, int width, int y)
+    {
+        if (width <= 0) return;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        var area = new Rectangle(0, y - 2, width, 4);
+        DrawFadedAccentLine(g, area, y, width, 26, 3f);   // soft glow underneath
+        DrawFadedAccentLine(g, area, y, width, 80, 1f);   // crisp hairline on top
+    }
+
+    private static void DrawFadedAccentLine(Graphics g, Rectangle area, int y, int width, int peakAlpha, float thickness)
+    {
+        using var brush = new LinearGradientBrush(area, Color.Empty, Color.Empty, LinearGradientMode.Horizontal)
+        {
+            InterpolationColors = new ColorBlend(3)
+            {
+                Colors = new[]
+                {
+                    Color.FromArgb(0, EditorColors.Accent),
+                    Color.FromArgb(peakAlpha, EditorColors.Accent),
+                    Color.FromArgb(0, EditorColors.Accent),
+                },
+                Positions = new[] { 0f, 0.5f, 1f },
+            },
+        };
+        using var pen = new Pen(brush, thickness);
+        g.DrawLine(pen, 0, y, width, y);
     }
 
     private Control BuildCropSection()
     {
         var section = MakeSectionPanel("Crop", 86);
         _cropSection = section;
+        EnableDoubleBuffering(_cropSection);
         _cropSection.Height = 0;
         _cropSection.Visible = false;
         var actions = new TableLayoutPanel
@@ -687,10 +768,14 @@ public sealed partial class EditorForm
         string labelKey)
     {
         var label = LocalizationService.Translate(labelKey);
+        // Rows 1 and 2 straddle the group divider, so they get +2px of breathing room
+        // on the divider side (bottom of row 1, top of row 2).
+        int topMargin = row == 0 ? 2 : (row == 2 ? 6 : 4);
+        int bottomMargin = row == 1 ? 6 : 4;
         var button = new EditorToolButton
         {
             Dock = DockStyle.Fill,
-            Margin = new Padding(column == 0 ? 0 : 4, row == 0 ? 2 : 4, column == 0 ? 4 : 0, 4),
+            Margin = new Padding(column == 0 ? 0 : 4, topMargin, column == 0 ? 4 : 0, bottomMargin),
             IconId = iconId,
             Text = label,
         };
@@ -722,7 +807,10 @@ public sealed partial class EditorForm
             Margin = new Padding(6, 3, 0, 3),
             AccessibleName = tooltip,
         };
-        _chromeToolTip.SetToolTip(button, tooltip);
+        // Top-bar chrome: open the CyberSnap-styled hint downward (below: above = false).
+        // Reading AccessibleName keeps the text in sync for buttons whose label changes
+        // at runtime (e.g. Maximize <-> Restore).
+        RegisterHoverTooltip(button, () => button.AccessibleName ?? tooltip, above: false);
         return button;
     }
 
@@ -742,9 +830,8 @@ public sealed partial class EditorForm
             return;
 
         _windowStateButton.IconId = _isManualMaximized ? "restore" : "maximize";
-        _chromeToolTip.SetToolTip(
-            _windowStateButton,
-            LocalizationService.Translate(_isManualMaximized ? "Restore" : "Maximize"));
+        _windowStateButton.AccessibleName =
+            LocalizationService.Translate(_isManualMaximized ? "Restore" : "Maximize");
     }
 
     private static void OpenSettingsWindow()
@@ -781,8 +868,12 @@ public sealed partial class EditorForm
     private void SetCropSectionVisible(bool visible)
     {
         var target = visible ? CropSectionExpandedHeight : 0;
-        if (_cropSectionTargetHeight == target && _cropSection.Height == target)
-            return;
+        if (_cropSectionTargetHeight == target)
+        {
+            // Already at (or already animating toward) the requested state; don't restart the clock.
+            if (_cropSection.Height == target || _cropRevealTimer.Enabled)
+                return;
+        }
 
         _cropSectionTargetHeight = target;
         if (visible)
@@ -795,6 +886,8 @@ public sealed partial class EditorForm
             _cropSection.Enabled = false;
         }
 
+        _cropAnimFromHeight = _cropSection.Height;
+        _cropAnimClock.Restart();
         _cropRevealTimer.Start();
     }
 
@@ -802,19 +895,38 @@ public sealed partial class EditorForm
     {
         if (_cropSection is null) return;
 
-        var current = _cropSection.Height;
-        var delta = _cropSectionTargetHeight - current;
-        if (delta == 0)
+        double t = _cropAnimClock.ElapsedMilliseconds / (double)CropAnimDurationMs;
+        if (t >= 1.0)
         {
             _cropRevealTimer.Stop();
+            _cropAnimClock.Stop();
+            if (_cropSection.Height != _cropSectionTargetHeight)
+            {
+                _cropSection.Height = _cropSectionTargetHeight;
+                _toolbarPanel.PerformLayout();
+            }
             if (_cropSectionTargetHeight == 0)
                 _cropSection.Visible = false;
             return;
         }
 
-        var step = Math.Min(Math.Abs(delta), 12);
-        _cropSection.Height = current + Math.Sign(delta) * step;
-        _toolbarPanel.PerformLayout();
+        // easeOutCubic: fast start, smooth deceleration into place.
+        double eased = 1 - Math.Pow(1 - t, 3);
+        int height = _cropAnimFromHeight + (int)Math.Round((_cropSectionTargetHeight - _cropAnimFromHeight) * eased);
+        if (height != _cropSection.Height)
+        {
+            _cropSection.Height = height;
+            _toolbarPanel.PerformLayout();
+        }
+    }
+
+    // Turns on double buffering for panels that get repainted every animation frame
+    // (TableLayoutPanel ignores the public API, so it must be set via the protected member).
+    private static void EnableDoubleBuffering(Control control)
+    {
+        typeof(Control)
+            .GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?.SetValue(control, true);
     }
 
     private void UpdateZoomStatus()
@@ -1924,6 +2036,13 @@ internal sealed class EditorToggleSwitch : Control
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public string LabelText { get; set; } = string.Empty;
 
+    // Pill geometry, shared by layout (GetPreferredSize) and painting.
+    private const int PillWidth = 42;
+    private const int PillHeight = 22;
+    private const int LabelPillGap = 12;
+    private const TextFormatFlags LabelFlags =
+        TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding;
+
     public EditorToggleSwitch()
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint |
@@ -1933,6 +2052,15 @@ internal sealed class EditorToggleSwitch : Control
                  ControlStyles.SupportsTransparentBackColor, true);
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
+        AutoSize = true;
+    }
+
+    private Font LabelFont => Font ?? new Font("Segoe UI Variable Text", 9f, FontStyle.Bold);
+
+    public override Size GetPreferredSize(Size proposedSize)
+    {
+        int labelWidth = TextRenderer.MeasureText(LabelText, LabelFont, new Size(int.MaxValue, PillHeight), LabelFlags).Width;
+        return new Size(labelWidth + LabelPillGap + PillWidth + 2, 42);
     }
 
     private void StartAnimation()
@@ -1964,55 +2092,42 @@ internal sealed class EditorToggleSwitch : Control
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
         e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-        // Label text on the left, pill switch on the right.
-        int swWidth = 44;
-        int swHeight = 22;
-        int swX = Width - swWidth - 2;
+        // Label on the left, pill switch immediately after it (the control auto-sizes to fit both).
+        var font = LabelFont;
+        int labelWidth = TextRenderer.MeasureText(e.Graphics, LabelText, font, new Size(int.MaxValue, Height), LabelFlags).Width;
+        TextRenderer.DrawText(e.Graphics, LabelText, font, new Rectangle(0, 0, labelWidth + 2, Height), EditorColors.TextPrimary, LabelFlags);
+
+        const int swWidth = PillWidth;
+        const int swHeight = PillHeight;
+        int swX = labelWidth + LabelPillGap;
         int swY = (Height - swHeight) / 2;
         var swRect = new Rectangle(swX, swY, swWidth, swHeight);
-
-        // Draw Label Text
-        var textRect = new Rectangle(0, 0, swX - 6, Height);
-        using (var brush = new SolidBrush(EditorColors.TextPrimary))
-        using (var sf = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center })
-        {
-            e.Graphics.DrawString(LabelText, Font ?? new Font("Segoe UI Variable Text", 9f, FontStyle.Bold), brush, textRect, sf);
-        }
-
-        // Draw Switch Background (Pill)
+        // Pill track: transparent (off) -> accent (on), with a muted -> accent outline.
+        // Mirrors the rounded toggle switches used in the Settings window.
         using var path = EditorPaint.RoundedRect(swRect, swHeight / 2);
-        
-        // Background color transition from BgSecondary to Accent
-        int r = (int)(EditorColors.BgSecondary.R + _animPercent * (EditorColors.Accent.R - EditorColors.BgSecondary.R));
-        int g = (int)(EditorColors.BgSecondary.G + _animPercent * (EditorColors.Accent.G - EditorColors.BgSecondary.G));
-        int b = (int)(EditorColors.BgSecondary.B + _animPercent * (EditorColors.Accent.B - EditorColors.BgSecondary.B));
-        Color bg = Color.FromArgb(r, g, b);
 
-        using (var bgBrush = new SolidBrush(bg))
+        var accent = EditorColors.Accent;
+        using (var bgBrush = new SolidBrush(Color.FromArgb((int)(_animPercent * 255), accent)))
         {
             e.Graphics.FillPath(bgBrush, path);
         }
 
-        // Border color transition
-        Color borderColor = Color.FromArgb(
-            (int)(EditorColors.BorderSubtle.R + _animPercent * (EditorColors.Accent.R - EditorColors.BorderSubtle.R)),
-            (int)(EditorColors.BorderSubtle.G + _animPercent * (EditorColors.Accent.G - EditorColors.BorderSubtle.G)),
-            (int)(EditorColors.BorderSubtle.B + _animPercent * (EditorColors.Accent.B - EditorColors.BorderSubtle.B))
-        );
-        using (var borderPen = new Pen(borderColor, 1.5f))
+        Color borderColor = Lerp(Color.FromArgb(150, 132, 150, 178), accent, _animPercent);
+        using (var borderPen = new Pen(borderColor, 1.4f))
         {
             e.Graphics.DrawPath(borderPen, path);
         }
 
-        // Draw Knob
-        int knobSize = swHeight - 6;
-        float knobMinX = swX + 3;
-        float knobMaxX = swX + swWidth - knobSize - 3;
+        // Thumb: muted grey (off) -> dark (on), sliding with margins like the config toggle.
+        const int knobSize = swHeight - 8; // 14px leaves breathing room around the thumb
+        const float knobMargin = 4f;
+        float knobMinX = swX + knobMargin;
+        float knobMaxX = swX + swWidth - knobSize - knobMargin;
         float knobX = knobMinX + _animPercent * (knobMaxX - knobMinX);
-        float knobY = swY + 3;
+        float knobY = swY + (swHeight - knobSize) / 2f;
 
         var knobRect = new RectangleF(knobX, knobY, knobSize, knobSize);
-        using (var knobBrush = new SolidBrush(Color.White))
+        using (var knobBrush = new SolidBrush(Lerp(EditorColors.TextSecondary, EditorColors.BgPrimary, _animPercent)))
         {
             e.Graphics.FillEllipse(knobBrush, knobRect);
         }
@@ -2022,6 +2137,16 @@ internal sealed class EditorToggleSwitch : Control
     {
         Checked = !Checked;
         base.OnClick(e);
+    }
+
+    private static Color Lerp(Color a, Color b, float t)
+    {
+        t = Math.Clamp(t, 0f, 1f);
+        return Color.FromArgb(
+            (int)(a.A + t * (b.A - a.A)),
+            (int)(a.R + t * (b.R - a.R)),
+            (int)(a.G + t * (b.G - a.G)),
+            (int)(a.B + t * (b.B - a.B)));
     }
 }
 

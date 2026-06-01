@@ -121,6 +121,27 @@ public sealed partial class RegionOverlayForm
                 RefreshToolbar();
                 return;
             }
+            if (_textSizeMinusBtnRect.Contains(e.Location))
+            {
+                AdjustTextFontSize(-TextSizeStep);
+                return;
+            }
+            if (_textSizePlusBtnRect.Contains(e.Location))
+            {
+                AdjustTextFontSize(+TextSizeStep);
+                return;
+            }
+            if (_textGripRect.Contains(e.Location))
+            {
+                // Drag the grip to move the toolbar and text together
+                _textDragging = true;
+                _lastTextDragLocation = Point.Empty;
+                _lastTextDragFrameUtc = default;
+                _textDragOffset = new Point(e.Location.X - _textPos.X, e.Location.Y - _textPos.Y);
+                ClearCrosshairGuides();
+                Invalidate();
+                return;
+            }
             // Absorb click on the toolbar background
             if (_textToolbarRect.Contains(e.Location))
                 return;

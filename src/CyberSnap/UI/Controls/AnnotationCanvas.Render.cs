@@ -30,6 +30,7 @@ public sealed partial class AnnotationCanvas
 
             RenderAnnotations(g);
             RenderToolPreview(g);
+            RenderInlineTextPreview(g);
         }
         finally
         {
@@ -39,6 +40,9 @@ public sealed partial class AnnotationCanvas
         RenderCropOverlay(g);
         RenderCheckerboardFrame(g);
         RenderToolBanner(g);
+
+        if (_inlineTextBox is not null)
+            RenderInlineTextToolbar(g);
     }
 
     /// <summary>Renders committed annotations. Called inside the zoom/pan transform.</summary>
@@ -122,32 +126,176 @@ public sealed partial class AnnotationCanvas
     {
         var style = (ta.Bold ? FontStyle.Bold : 0) | (ta.Italic ? FontStyle.Italic : 0);
         using var font = new Font(ta.FontFamily, ta.FontSize, style, GraphicsUnit.Pixel);
-        var size = g.MeasureString(ta.Text, font);
-        var rect = new RectangleF(ta.Pos.X, ta.Pos.Y, size.Width + 12, size.Height + 8);
+        var pos = new Point(ta.Pos.X, ta.Pos.Y);
+        var color = ta.Color;
 
         if (ta.Background)
         {
-            using var bg = new SolidBrush(Color.FromArgb(220, 0, 0, 0));
-            g.FillRectangle(bg, rect);
+            var size = g.MeasureString(ta.Text, font);
+            var bgRect = new RectangleF(
+                pos.X - 8f,
+                pos.Y - 6f,
+                size.Width + 16,
+                size.Height + 12);
+            using var bgPath = SketchRenderer.RoundedRect(bgRect, 8f);
+            if (ta.Shadow)
+            {
+                using var shadowPath = SketchRenderer.RoundedRect(new RectangleF(bgRect.X + 2, bgRect.Y + 2, bgRect.Width, bgRect.Height), 8f);
+                using var shadowBrush = new SolidBrush(Color.FromArgb(55, 0, 0, 0));
+                g.FillPath(shadowBrush, shadowPath);
+            }
+            using var fillBrush = new SolidBrush(color);
+            g.FillPath(fillBrush, bgPath);
+            if (ta.Stroke)
+            {
+                using var strokePen = new Pen(Color.FromArgb(60, 0, 0, 0), 1.25f);
+                g.DrawPath(strokePen, bgPath);
+            }
+            color = Color.White;
         }
 
         if (ta.Shadow)
         {
-            using var shadowBrush = new SolidBrush(Color.FromArgb(80, 0, 0, 0));
-            g.DrawString(ta.Text, font, shadowBrush, ta.Pos.X + 8, ta.Pos.Y + 6);
+            using var sb1 = new SolidBrush(Color.FromArgb(50, 0, 0, 0));
+            using var sb2 = new SolidBrush(Color.FromArgb(25, 0, 0, 0));
+            g.DrawString(ta.Text, font, sb1, pos.X + 2, pos.Y + 2);
+            g.DrawString(ta.Text, font, sb2, pos.X + 3, pos.Y + 3);
         }
 
         if (ta.Stroke)
         {
-            using var strokeBrush = new SolidBrush(Color.FromArgb(160, 0, 0, 0));
+            using var strokeBrush = new SolidBrush(Color.FromArgb(60, 0, 0, 0));
             for (int ox = -1; ox <= 1; ox++)
                 for (int oy = -1; oy <= 1; oy++)
                     if (ox != 0 || oy != 0)
-                        g.DrawString(ta.Text, font, strokeBrush, ta.Pos.X + 6 + ox, ta.Pos.Y + 4 + oy);
+                        g.DrawString(ta.Text, font, strokeBrush, pos.X + ox, pos.Y + oy);
         }
 
-        using var brush = new SolidBrush(ta.Color);
-        g.DrawString(ta.Text, font, brush, ta.Pos.X + 6, ta.Pos.Y + 4);
+        using var brush = new SolidBrush(color);
+        g.DrawString(ta.Text, font, brush, pos.X, pos.Y);
+    }
+
+    /// <summary>Measures the visual bounding rect of a text annotation (including padding).
+    /// Matches the logic used in the capture overlay.</summary>
+    private static RectangleF MeasureInlineTextRect(Point pos, string text, float fontSize, string fontFamily, bool bold, bool italic, bool background = false)
+    {
+        var style = FontStyle.Regular;
+        if (bold) style |= FontStyle.Bold;
+        if (italic) style |= FontStyle.Italic;
+        using var font = new Font(fontFamily, fontSize, style);
+        string display = text.Length > 0 ? text : "Type here...";
+        SizeF size;
+        using (var bmp = new Bitmap(1, 1))
+        using (var g = Graphics.FromImage(bmp))
+        {
+            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            size = g.MeasureString(display, font);
+        }
+        int padX = background ? 16 : 8;
+        int padY = background ? 12 : 8;
+        return new RectangleF(
+            pos.X - (padX / 2f),
+            pos.Y - (padY / 2f),
+            size.Width + padX,
+            size.Height + padY);
+    }
+
+    private static float MeasureInlineTextPrefixWidth(string text, int length, Font font)
+    {
+        if (length <= 0 || string.IsNullOrEmpty(text)) return 0f;
+        length = Math.Min(length, text.Length);
+        var size = TextRenderer.MeasureText(text[..length], font, Size.Empty,
+            TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+        return size.Width;
+    }
+
+    /// <summary>Renders the live inline text preview inside the zoom/pan transform.</summary>
+    private void RenderInlineTextPreview(Graphics g)
+    {
+        if (_inlineTextBox is null) return;
+
+        var style = (_textBold ? FontStyle.Bold : 0) | (_textItalic ? FontStyle.Italic : 0);
+        using var font = new Font(_textFontFamily, _textFontSize, style);
+        var text = _inlineTextBox.Text.Length > 0 ? _inlineTextBox.Text : "Type here...";
+        var color = ToolColor;
+        var pos = new Point(_inlineTextOrigin.X, _inlineTextOrigin.Y);
+
+        // Background (matches committed annotation style)
+        if (_textBackground)
+        {
+            var bgRect = MeasureInlineTextRect(_inlineTextOrigin, _inlineTextBox.Text, _textFontSize, _textFontFamily, _textBold, _textItalic, true);
+            using var bgPath = SketchRenderer.RoundedRect(bgRect, 8f);
+            if (_textShadow)
+            {
+                using var shadowPath = SketchRenderer.RoundedRect(new RectangleF(bgRect.X + 2, bgRect.Y + 2, bgRect.Width, bgRect.Height), 8f);
+                using var shadowBrush = new SolidBrush(Color.FromArgb(55, 0, 0, 0));
+                g.FillPath(shadowBrush, shadowPath);
+            }
+            using var fillBrush = new SolidBrush(color);
+            g.FillPath(fillBrush, bgPath);
+            if (_textStroke)
+            {
+                using var strokePen = new Pen(Color.FromArgb(60, 0, 0, 0), 1.25f);
+                g.DrawPath(strokePen, bgPath);
+            }
+            color = Color.White;
+        }
+
+        // Shadow
+        if (_textShadow)
+        {
+            using var sb1 = new SolidBrush(Color.FromArgb(50, 0, 0, 0));
+            using var sb2 = new SolidBrush(Color.FromArgb(25, 0, 0, 0));
+            g.DrawString(text, font, sb1, pos.X + 2, pos.Y + 2);
+            g.DrawString(text, font, sb2, pos.X + 3, pos.Y + 3);
+        }
+
+        // Stroke
+        if (_textStroke)
+        {
+            using var strokeBrush = new SolidBrush(Color.FromArgb(60, 0, 0, 0));
+            for (int ox = -1; ox <= 1; ox++)
+                for (int oy = -1; oy <= 1; oy++)
+                    if (ox != 0 || oy != 0)
+                        g.DrawString(text, font, strokeBrush, pos.X + ox, pos.Y + oy);
+        }
+
+        // Main text / placeholder
+        if (_inlineTextBox.Text.Length > 0)
+        {
+            using var brush = new SolidBrush(color);
+            g.DrawString(text, font, brush, pos.X, pos.Y);
+        }
+        else
+        {
+            using var placeholderBrush = new SolidBrush(Color.FromArgb(120, 180, 180, 180));
+            g.DrawString(text, font, placeholderBrush, pos.X, pos.Y);
+        }
+
+        // Dashed selection border
+        var textRect = MeasureInlineTextRect(_inlineTextOrigin, _inlineTextBox.Text, _textFontSize, _textFontFamily, _textBold, _textItalic, _textBackground);
+        using (var dashPen = new Pen(Color.FromArgb(180, 255, 255, 255), 1f) { DashStyle = DashStyle.Dash })
+        {
+            g.DrawRectangle(dashPen, textRect.X, textRect.Y, textRect.Width, textRect.Height);
+        }
+
+        // Blinking caret
+        float blinkAlpha = (float)(Math.Sin(Environment.TickCount64 / 400.0 * Math.PI) * 0.5 + 0.5);
+        int alpha = (int)(blinkAlpha * 220);
+        using (var caretPen = new Pen(Color.FromArgb(alpha, 255, 255, 255), 1.6f))
+        {
+            float cursorX;
+            if (_inlineTextBox.Text.Length > 0)
+            {
+                int caretIndex = _inlineTextBox.SelectionStart;
+                cursorX = pos.X + MeasureInlineTextPrefixWidth(_inlineTextBox.Text, caretIndex, font) - 1;
+            }
+            else
+            {
+                cursorX = pos.X;
+            }
+            g.DrawLine(caretPen, cursorX, textRect.Y + 3, cursorX, textRect.Bottom - 3);
+        }
     }
 
     /// <summary>Subtle border around the image so very pale captures still have edges.</summary>
@@ -200,7 +348,7 @@ public sealed partial class AnnotationCanvas
             RulerAnnotation ru => RectangleFromPoints(ru.From, ru.To),
             CurvedArrowAnnotation ca => ca.Points.Count > 0 ? BoundingBox(ca.Points) : Rectangle.Empty,
             DrawStroke ds => ds.Points.Count > 0 ? BoundingBox(ds.Points) : Rectangle.Empty,
-            TextAnnotation ta => new Rectangle(ta.Pos.X, ta.Pos.Y, 200, 40),
+            TextAnnotation ta => Rectangle.Round(MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background)),
             StepNumberAnnotation sn => new Rectangle(sn.Pos.X - 20, sn.Pos.Y - 20, 40, 40),
             EmojiAnnotation em => new Rectangle(em.Pos.X - 20, em.Pos.Y - 20, 40, 40),
             MagnifierAnnotation mg => new Rectangle(mg.Pos.X - 30, mg.Pos.Y - 30, 60, 60),

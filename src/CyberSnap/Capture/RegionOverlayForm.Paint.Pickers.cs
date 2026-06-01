@@ -292,75 +292,188 @@ public sealed partial class RegionOverlayForm
         return (_textToolbarFont, _textToolbarFontBold, _textToolbarFontItalic, _textToolbarFontSmall);
     }
 
+    // Shared layout constants for the inline text formatting toolbar. Used by both the
+    // paint path and the bounds/measure path so they can never drift out of sync.
+    private const float TextTbBtnW = 28f;
+    private const float TextTbBtnH = 28f;
+    private const float TextTbBtnPad = 3f;
+    private const float TextTbPad = 6f;
+    private const float TextTbSepW = 8f;
+    private const float TextTbSizeW = 34f; // width of the numeric size readout
+    private const float TextTbGripW = 16f; // drag-handle column
+    private const float TextTbGap = 14f;   // vertical gap between toolbar and text
+
+    private string TextFontLabel()
+        => _textFontFamily.Length > 14 ? _textFontFamily[..13] + ".." : _textFontFamily;
+
+    // Single source of truth for the toolbar's total size. Layout: B I [Stroke] [Shadow]
+    // [Bg] | Font | [-] size [+] | grip
+    private void MeasureTextToolbar(out float totalW, out float totalH)
+    {
+        var (uiFont, _, _, _) = GetTextToolbarFonts();
+        using var tmpBmp = new Bitmap(1, 1);
+        using var tmpG = Graphics.FromImage(tmpBmp);
+        float fontW = tmpG.MeasureString(TextFontLabel(), uiFont).Width + 20;
+
+        totalW = TextTbBtnW * 5 + TextTbBtnPad * 4                       // B I Stroke Shadow Bg
+               + TextTbSepW + fontW                                      // | font selector
+               + TextTbSepW + TextTbBtnW + TextTbSizeW + TextTbBtnW      // | [-] size [+]
+               + TextTbSepW + TextTbGripW                                // | grip
+               + TextTbPad * 2;
+        totalH = TextTbBtnH + TextTbPad * 2;
+    }
+
     private void PaintTextToolbar(Graphics g, RectangleF textRect)
     {
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
         EnsurePickerChrome();
 
-        float btnH = 28, btnPad = 3, pad = 6, sepW = 8;
+        var (uiFont, uiFontBold, uiFontItalic, _) = GetTextToolbarFonts();
+        string fontLabel = TextFontLabel();
+        float fontW = g.MeasureString(fontLabel, uiFont).Width + 20;
 
-        var (uiFont, uiFontBold, uiFontItalic, uiFontSmall) = GetTextToolbarFonts();
-
-        string fontLabel = _textFontFamily.Length > 14 ? _textFontFamily[..13] + ".." : _textFontFamily;
-        var fontLabelSize = g.MeasureString(fontLabel, uiFont);
-
-        float btnW = 28;
-        float fontW = fontLabelSize.Width + 20;
-        float totalW = btnW * 5 + btnPad * 4 + sepW + fontW + pad * 2;
-        float totalH = btnH + pad * 2;
+        MeasureTextToolbar(out float totalW, out float totalH);
         _textToolbarRect = GetTextToolbarBounds(textRect, totalW, totalH);
         float tx = _textToolbarRect.X;
         float ty = _textToolbarRect.Y;
 
         WindowsDockRenderer.PaintSurface(g, _textToolbarRect);
+        // Outline so the bar stays legible over dark backgrounds (matches tooltip chrome).
+        using (var borderPath = WindowsDockRenderer.RoundedRect(_textToolbarRect, WindowsDockRenderer.SurfaceRadius))
+        using (var borderPen = new Pen(UiChrome.SurfaceBorderStrong, 1f))
+            g.DrawPath(borderPen, borderPath);
 
-        float cx = tx + pad;
-        float cy = ty + pad;
+        float cx = tx + TextTbPad;
+        float cy = ty + TextTbPad;
+
+        SolidBrush LabelBrush(int alpha) => SketchRenderer.GetToolColorBrush(
+            Color.FromArgb(alpha, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B));
 
         int btnIdx = 0;
         void DrawToggleBtn(ref RectangleF rect, float x, string label, Font f, bool active)
         {
-            rect = new RectangleF(x, cy, btnW, btnH);
+            rect = new RectangleF(x, cy, TextTbBtnW, TextTbBtnH);
             bool hovered = _hoveredTextBtn == btnIdx;
             WindowsDockRenderer.PaintButton(g, rect, active, hovered);
-            int textAlpha = active ? 255 : hovered ? 210 : 130;
-            var brush = SketchRenderer.GetToolColorBrush(Color.FromArgb(textAlpha, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B));
-            g.DrawString(label, f, brush, rect, _iconFmt);
+            g.DrawString(label, f, LabelBrush(active ? 255 : hovered ? 210 : 130), rect, _iconFmt);
             btnIdx++;
         }
+        void DrawEffectBtn(ref RectangleF rect, float x, EffectGlyph kind, bool active)
+        {
+            rect = new RectangleF(x, cy, TextTbBtnW, TextTbBtnH);
+            bool hovered = _hoveredTextBtn == btnIdx;
+            WindowsDockRenderer.PaintButton(g, rect, active, hovered);
+            DrawEffectGlyph(g, rect, kind, uiFontBold, active, hovered);
+            btnIdx++;
+        }
+        void DrawSeparator()
+        {
+            float sepX = cx + TextTbSepW / 2f;
+            g.DrawLine(_pickerSeparatorPen!, sepX, cy + 5, sepX, cy + TextTbBtnH - 5);
+            cx += TextTbSepW;
+        }
 
-        // B, I, S(troke), Sh(adow), Bg
+        // B, I, then the three effect previews (self-documenting sample "A")
         DrawToggleBtn(ref _textBoldBtnRect, cx, "B", uiFontBold, _textBold);
-        cx += btnW + btnPad;
+        cx += TextTbBtnW + TextTbBtnPad;
         DrawToggleBtn(ref _textItalicBtnRect, cx, "I", uiFontItalic, _textItalic);
-        cx += btnW + btnPad;
-        DrawToggleBtn(ref _textStrokeBtnRect, cx, "S", uiFontSmall, _textStroke);
-        cx += btnW + btnPad;
-        DrawToggleBtn(ref _textShadowBtnRect, cx, "Sh", uiFontSmall, _textShadow);
-        cx += btnW + btnPad;
-        DrawToggleBtn(ref _textBackgroundBtnRect, cx, "Bg", uiFontSmall, _textBackground);
-        cx += btnW;
+        cx += TextTbBtnW + TextTbBtnPad;
+        DrawEffectBtn(ref _textStrokeBtnRect, cx, EffectGlyph.Stroke, _textStroke);
+        cx += TextTbBtnW + TextTbBtnPad;
+        DrawEffectBtn(ref _textShadowBtnRect, cx, EffectGlyph.Shadow, _textShadow);
+        cx += TextTbBtnW + TextTbBtnPad;
+        DrawEffectBtn(ref _textBackgroundBtnRect, cx, EffectGlyph.Background, _textBackground);
+        cx += TextTbBtnW;
 
-        // Separator between toggle buttons and font selector
-        {
-            float sepX = cx + sepW / 2f;
-            g.DrawLine(_pickerSeparatorPen!, sepX, cy + 5, sepX, cy + btnH - 5);
-        }
-        cx += sepW;
+        DrawSeparator();
 
-        // Font selector
-        _textFontBtnRect = new RectangleF(cx, cy, fontW, btnH);
-        {
-            bool fontHovered = _hoveredTextBtn == 5;
-            WindowsDockRenderer.PaintButton(g, _textFontBtnRect, _fontPickerOpen, fontHovered);
-        }
-        int fontTextAlpha = _hoveredTextBtn == 5 || _fontPickerOpen ? 255 : 190;
-        var fontBrush = SketchRenderer.GetToolColorBrush(Color.FromArgb(fontTextAlpha, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B));
-        g.DrawString(fontLabel, uiFont, fontBrush, _textFontBtnRect, _iconFmt);
+        // Font selector (index 5)
+        _textFontBtnRect = new RectangleF(cx, cy, fontW, TextTbBtnH);
+        bool fontHovered = _hoveredTextBtn == 5;
+        WindowsDockRenderer.PaintButton(g, _textFontBtnRect, _fontPickerOpen, fontHovered);
+        g.DrawString(fontLabel, uiFont, LabelBrush(fontHovered || _fontPickerOpen ? 255 : 190), _textFontBtnRect, _iconFmt);
+        cx += fontW;
+
+        DrawSeparator();
+
+        // Size group: [-] <size px> [+]
+        btnIdx = 6; // minus
+        DrawToggleBtn(ref _textSizeMinusBtnRect, cx, "−", uiFontBold, false);
+        cx += TextTbBtnW;
+        var sizeRect = new RectangleF(cx, cy, TextTbSizeW, TextTbBtnH);
+        g.DrawString(((int)Math.Round(_textFontSize)).ToString(), uiFont, LabelBrush(230), sizeRect, _iconFmt);
+        cx += TextTbSizeW;
+        DrawToggleBtn(ref _textSizePlusBtnRect, cx, "+", uiFontBold, false);
+        cx += TextTbBtnW;
+
+        DrawSeparator();
+
+        // Drag grip (index 8): drags the toolbar and the text together
+        _textGripRect = new RectangleF(cx, cy, TextTbGripW, TextTbBtnH);
+        DrawGrip(g, _textGripRect, _hoveredTextBtn == 8);
 
         g.TextRenderingHint = TextRenderingHint.SystemDefault;
         g.SmoothingMode = SmoothingMode.Default;
+    }
+
+    // Six-dot drag handle, brighter on hover.
+    private void DrawGrip(Graphics g, RectangleF rect, bool hovered)
+    {
+        int alpha = hovered ? 235 : 150;
+        var brush = SketchRenderer.GetToolColorBrush(
+            Color.FromArgb(alpha, UiChrome.SurfaceTextMuted.R, UiChrome.SurfaceTextMuted.G, UiChrome.SurfaceTextMuted.B));
+        const float dot = 2.4f, gapX = 5f, gapY = 5f;
+        float midX = rect.X + rect.Width / 2f;
+        float midY = rect.Y + rect.Height / 2f;
+        for (int col = 0; col < 2; col++)
+            for (int row = 0; row < 3; row++)
+            {
+                float dx = midX + (col == 0 ? -gapX / 2f : gapX / 2f) - dot / 2f;
+                float dy = midY + (row - 1) * gapY - dot / 2f;
+                g.FillEllipse(brush, dx, dy, dot, dot);
+            }
+    }
+
+    private enum EffectGlyph { Stroke, Shadow, Background }
+
+    // Draws a sample "A" that demonstrates the text effect, mirroring how B/I already
+    // preview themselves with bold/italic fonts.
+    private void DrawEffectGlyph(Graphics g, RectangleF btnRect, EffectGlyph kind, Font font, bool active, bool hovered)
+    {
+        int alpha = active ? 255 : hovered ? 210 : 130;
+        var fg = Color.FromArgb(alpha, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
+
+        switch (kind)
+        {
+            case EffectGlyph.Background:
+            {
+                var chip = RectangleF.Inflate(btnRect, -6f, -6f);
+                using var path = WindowsDockRenderer.RoundedRect(chip, 4f);
+                g.FillPath(SketchRenderer.GetToolColorBrush(fg), path);
+                // "A" punched in the surface color for contrast against the chip
+                g.DrawString("A", font, SketchRenderer.GetToolColorBrush(UiChrome.SurfaceBackground), btnRect, _iconFmt);
+                break;
+            }
+            case EffectGlyph.Shadow:
+            {
+                var shadowRect = btnRect;
+                shadowRect.Offset(1.5f, 1.5f);
+                g.DrawString("A", font, SketchRenderer.GetToolColorBrush(Color.FromArgb(alpha, 0, 0, 0)), shadowRect, _iconFmt);
+                g.DrawString("A", font, SketchRenderer.GetToolColorBrush(fg), btnRect, _iconFmt);
+                break;
+            }
+            case EffectGlyph.Stroke:
+            {
+                using var gp = new GraphicsPath();
+                using var fmt = (StringFormat)_iconFmt.Clone();
+                float emPx = font.SizeInPoints * g.DpiY / 72f;
+                gp.AddString("A", font.FontFamily, (int)FontStyle.Bold, emPx, btnRect, fmt);
+                using var pen = new Pen(fg, 1.2f) { LineJoin = LineJoin.Round };
+                g.DrawPath(pen, gp);
+                break;
+            }
+        }
     }
 
     private RectangleF GetTextToolbarBounds()
@@ -371,25 +484,15 @@ public sealed partial class RegionOverlayForm
         if (textRect.IsEmpty)
             return RectangleF.Empty;
 
-        float btnH = 28, btnPad = 3, pad = 6, sepW = 8;
-        var (uiFont, _, _, _) = GetTextToolbarFonts();
-        string fontLabel = _textFontFamily.Length > 14 ? _textFontFamily[..13] + ".." : _textFontFamily;
-        using var tmpBmp = new Bitmap(1, 1);
-        using var tmpG = Graphics.FromImage(tmpBmp);
-        var fontLabelSize = tmpG.MeasureString(fontLabel, uiFont);
-
-        float btnW = 28;
-        float fontW = fontLabelSize.Width + 20;
-        float totalW = btnW * 5 + btnPad * 4 + sepW + fontW + pad * 2;
-        float totalH = btnH + pad * 2;
+        MeasureTextToolbar(out float totalW, out float totalH);
         return GetTextToolbarBounds(textRect, totalW, totalH);
     }
 
     private RectangleF GetTextToolbarBounds(RectangleF textRect, float totalW, float totalH)
     {
         float tx = textRect.X;
-        float ty = textRect.Y - totalH - 8;
-        if (ty < 4) ty = textRect.Bottom + 8;
+        float ty = textRect.Y - totalH - TextTbGap;
+        if (ty < 4) ty = textRect.Bottom + TextTbGap;
         tx = Math.Clamp(tx, 4f, Math.Max(4f, ClientSize.Width - totalW - 4f));
         ty = Math.Clamp(ty, 4f, Math.Max(4f, ClientSize.Height - totalH - 4f));
         return new RectangleF(tx, ty, totalW, totalH);

@@ -19,6 +19,12 @@ public partial class ToastWindow
     public static void SetDuration(double seconds) => _durationSeconds = Math.Clamp(seconds, 1, 60);
     public static void SetSystemDuration(double seconds) => _systemDurationSeconds = Math.Clamp(seconds, 1, 60);
     public static double GetSystemDuration() => _systemDurationSeconds;
+
+    // Master switch: when disabled, no toasts are shown at all (previews, system messages, errors).
+    public static void SetNotificationsEnabled(bool enabled) => _notificationsEnabled = enabled;
+    // Sub-toggle: when disabled, brief text-only system messages are suppressed while capture
+    // previews and error alerts still appear. Ignored entirely when the master switch is off.
+    public static void SetSystemNotificationsEnabled(bool enabled) => _systemNotificationsEnabled = enabled;
     public static void SetButtonLayout(Models.AppSettings.ToastButtonLayoutSettings? layout)
     {
         _buttonLayout = layout is null
@@ -44,11 +50,9 @@ public partial class ToastWindow
         _current?.RefreshOverlayButtonLayout();
     }
 
-    public static void SetFadeOutBehavior(bool enabled, double seconds)
-    {
-        _fadeOutEnabled = enabled;
-        _fadeOutSeconds = Math.Clamp(seconds, 1, 10);
-    }
+    // Toasts always fade out now; this only sets how long the fade animation lasts.
+    public static void SetFadeOutSeconds(double seconds)
+        => _fadeOutSeconds = Math.Clamp(seconds, 1, 10);
     public static double GetDuration() => _durationSeconds;
 
     public static void Show(string title, string body = "", string? filePath = null)
@@ -56,6 +60,14 @@ public partial class ToastWindow
 
     internal static void Show(ToastSpec spec)
     {
+        // Master switch: nothing is shown when notifications are off.
+        if (!_notificationsEnabled)
+            return;
+
+        // Sub-toggle: suppress brief text-only system messages while leaving previews/errors.
+        if (spec.IsSystemMessage && !_systemNotificationsEnabled)
+            return;
+
         // Guard: skip completely empty toasts (no text, no image, no color)
         if (string.IsNullOrWhiteSpace(spec.Title)
             && string.IsNullOrWhiteSpace(spec.Body)

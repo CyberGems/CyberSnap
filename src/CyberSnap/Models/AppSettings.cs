@@ -14,7 +14,9 @@ public enum ToastPosition
     Right,
     Left,
     TopLeft,
-    TopRight
+    TopRight,
+    BottomLeft,
+    BottomRight
 }
 
 public enum ToastButtonSlot
@@ -122,7 +124,7 @@ public sealed class AppSettings
         public bool ShowDelete { get; set; }
         public ToastButtonSlot DeleteSlot { get; set; } = ToastButtonSlot.BottomLeft;
         public bool ShowHistory { get; set; } = true;
-        public ToastButtonSlot HistorySlot { get; set; } = ToastButtonSlot.TopInnerRight;
+        public ToastButtonSlot HistorySlot { get; set; } = ToastButtonSlot.BottomLeft;
         public bool ShowEdit { get; set; }
         public ToastButtonSlot EditSlot { get; set; } = ToastButtonSlot.BottomInnerLeft;
     }
@@ -172,6 +174,8 @@ public sealed class AppSettings
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
     public bool OpenEditorAfterCapture { get; set; }
+    // Editor: when a capture loads, auto-fit it to the canvas (true) or show it at real 100% size (false).
+    public bool EditorFitToWindowOnOpen { get; set; } = true;
     public bool SaveToFile { get; set; } = true;
     public bool AskForFileNameOnSave { get; set; }
     public string FileNameTemplate { get; set; } = Helpers.FileNameTemplate.DefaultTemplate;
@@ -223,7 +227,12 @@ public sealed class AppSettings
 
     public double ToastDurationSeconds { get; set; } = 2.5;
     public double SystemToastDurationSeconds { get; set; } = 4.0;
-    public bool ToastFadeOutEnabled { get; set; }
+    // Master switch for all pop-up notifications. When false, no toasts are shown at all.
+    public bool NotificationsEnabled { get; set; } = true;
+    // Sub-toggle (only meaningful when NotificationsEnabled): controls brief text-only system
+    // messages such as "Sent to the editor". Capture previews and error alerts are unaffected.
+    public bool SystemNotificationsEnabled { get; set; } = true;
+    // Toasts always dismiss with a fade-out; this only controls how long that fade takes.
     public double ToastFadeOutSeconds { get; set; } = 1.0;
     public bool AutoPinPreviews { get; set; }
     public ToastButtonLayoutSettings ToastButtons { get; set; } = new();
