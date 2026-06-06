@@ -85,16 +85,33 @@ public sealed partial class EditorForm : Form
             return;
         }
 
-        using (var dlg = new OpenFileDialog
+        var blank = new Bitmap(1024, 768);
+        using (var g = Graphics.FromImage(blank))
         {
-            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tiff|All Files|*.*",
-            Title = LocalizationService.Translate("Open Image for Annotations")
-        })
-        {
-            if (dlg.ShowDialog() == DialogResult.OK)
+            var color1 = Color.FromArgb(20, 22, 33);
+            var color2 = Color.FromArgb(28, 30, 43);
+            g.Clear(color1);
+            using (var brush = new SolidBrush(color2))
             {
-                ShowEditorFromFile(dlg.FileName);
+                int size = 16;
+                for (int y = 0; y < blank.Height; y += size)
+                {
+                    for (int x = 0; x < blank.Width; x += size)
+                    {
+                        if (((x / size) + (y / size)) % 2 == 1)
+                        {
+                            g.FillRectangle(brush, x, y, size, size);
+                        }
+                    }
+                }
             }
+        }
+        ShowEditor(blank);
+        if (_instance is not null)
+        {
+            _instance._canvas.IsDefaultBlank = true;
+            _instance.RefreshUi();
+            _instance._canvas.Invalidate();
         }
     }
 
@@ -163,6 +180,7 @@ public sealed partial class EditorForm : Form
         _canvas.StateChanged += OnCanvasStateChanged;
         _canvas.MouseMove += OnCanvasMouseMove;
         _canvas.MouseUp += OnCanvasMouseUp;
+        _canvas.DoubleClick += OnCanvasDoubleClick;
         _saveStatusTimer.Tick += (_, _) =>
         {
             _saveStatusTimer.Stop();
@@ -223,6 +241,8 @@ public sealed partial class EditorForm : Form
         {
             _saveStatusTimer.Stop();
             _saveStatusTimer.Dispose();
+            _tooltipTimer?.Stop();
+            _tooltipTimer?.Dispose();
             _brandBitmap?.Dispose();
             _hoverToolTip?.Dispose();
             _canvasMenu?.Dispose();
@@ -452,12 +472,47 @@ public sealed partial class EditorForm : Form
         }
     }
 
+    private void DoPaste()
+    {
+        try
+        {
+            if (Clipboard.ContainsImage())
+            {
+                using (var img = Clipboard.GetImage())
+                {
+                    if (img != null)
+                    {
+                        var bmp = new Bitmap(img);
+                        var command = new CyberSnap.Models.Commands.PasteImageCommand(bmp);
+                        _canvas.Push(command);
+                        _canvas.ZoomFit();
+                        _canvas.IsDefaultBlank = false;
+                        RefreshUi();
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "Paste failed", ex.Message, error: true);
+        }
+    }
+
+    private void OnCanvasDoubleClick(object? sender, EventArgs e)
+    {
+        if (_canvas.IsDefaultBlank)
+        {
+            DoOpen();
+        }
+    }
+
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
         if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
+        if (keyData == (Keys.Control | Keys.V)) { DoPaste(); return true; }
         return base.ProcessCmdKey(ref msg, keyData);
     }
 
@@ -641,6 +696,7 @@ public sealed partial class EditorForm : Form
         menu.Items.Add(new ToolStripSeparator());
 
         var openItem = WindowsMenuRenderer.Item("Open image...", iconId: null);
+        var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "arrow");
         var fitItem = WindowsMenuRenderer.Item("Fit to window", iconId: null);
         var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
         var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
@@ -648,6 +704,8 @@ public sealed partial class EditorForm : Form
         var exitItem = WindowsMenuRenderer.Item("Quit", iconId: "close", danger: true);
 
         openItem.Click += (_, _) => DoOpen();
+        pasteItem.Click += (_, _) => DoPaste();
+        pasteItem.Enabled = Clipboard.ContainsImage();
         fitItem.Click += (_, _) => _canvas.ZoomFit();
         resetItem.Click += (_, _) => _canvas.ZoomReset();
         undoItem.Click += (_, _) => _canvas.Undo();
@@ -655,6 +713,7 @@ public sealed partial class EditorForm : Form
         exitItem.Click += (_, _) => Close();
 
         menu.Items.Add(openItem);
+        menu.Items.Add(pasteItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(fitItem);
         menu.Items.Add(resetItem);
@@ -673,6 +732,7 @@ public sealed partial class EditorForm : Form
     {
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
         var copyItem = WindowsMenuRenderer.Item("Copy", iconId: null);
+        var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "arrow");
         var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
         var saveAsItem = WindowsMenuRenderer.Item("Save as...", iconId: null);
         var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");
@@ -680,6 +740,8 @@ public sealed partial class EditorForm : Form
         var exitItem = WindowsMenuRenderer.Item("Quit", iconId: "close", danger: true);
 
         copyItem.Click += (_, _) => DoCopy();
+        pasteItem.Click += (_, _) => DoPaste();
+        pasteItem.Enabled = Clipboard.ContainsImage();
         saveItem.Click += (_, _) => DoSave();
         saveAsItem.Click += (_, _) => DoSaveAs();
         openLocItem.Click += (_, _) => DoOpenLocation();
@@ -687,6 +749,7 @@ public sealed partial class EditorForm : Form
         exitItem.Click += (_, _) => Close();
 
         menu.Items.Add(copyItem);
+        menu.Items.Add(pasteItem);
         menu.Items.Add(saveItem);
         menu.Items.Add(saveAsItem);
         menu.Items.Add(new ToolStripSeparator());

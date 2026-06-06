@@ -145,7 +145,7 @@ public sealed class AppSettings
     public int TranslationModel { get; set; } = 2; // 0 = Argos, 1 = Google, 2 = Open-source local
     public bool AnnotationStrokeShadow { get; set; } = true;
     public float StrokeWidth { get; set; } = 6f;
-    public int ToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(0, 136, 255).ToArgb(); // Default blue
+    public int ToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(255, 220, 0).ToArgb(); // Default yellow
 
     // Color picker hotkey: Alt+C
     public uint PickerHotkeyModifiers { get; set; } = Native.User32.MOD_ALT;

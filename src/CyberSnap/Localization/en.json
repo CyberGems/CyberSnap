@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "General",
   "Tools": "Tools",
   "Capture": "Capture",
@@ -275,8 +275,10 @@
   "Edit": "Edit",
   "Edit preview": "Edit preview",
   "Open editor": "Open editor",
+  "Annotations Editor": "Annotations Editor",
   "Post-Capture Editor": "Post-Capture Editor",
   "Open editor after capture": "Open editor after capture",
+  "Paste": "Paste",
   "Crop": "Crop",
   "Confirm crop": "Confirm crop",
   "Cancel crop": "Cancel crop",
@@ -340,5 +342,6 @@
   "Show notifications": "Show notifications",
   "System messages": "System messages",
   "Bottom Left": "Bottom Left",
-  "Bottom Right": "Bottom Right"
+  "Bottom Right": "Bottom Right",
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
 }

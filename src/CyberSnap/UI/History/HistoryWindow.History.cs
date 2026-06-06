@@ -1238,20 +1238,30 @@ public partial class HistoryWindow
                     {
                         Height = 1,
                         Background = Theme.Brush(Theme.BorderSubtle),
-                        Margin = new Thickness(6, 14, 6, 0)
+                        Margin = new Thickness(6, 20, 6, 0)
                     });
                 }
 
-                target.Children.Add(new TextBlock
+                var dateLabelText = new TextBlock
                 {
-                    Text = FormatHistoryGroupLabel(itemDate),
-                    FontSize = 12,
-                    FontWeight = FontWeights.SemiBold,
+                    Text = FormatHistoryGroupLabel(itemDate).ToUpperInvariant(),
+                    FontSize = 10.5,
+                    FontWeight = FontWeights.Bold,
                     FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
-                    Foreground = Theme.Brush(Theme.TextPrimary),
-                    Opacity = 0.45,
-                    Margin = new Thickness(6, 12, 0, 6)
-                });
+                    Foreground = Theme.Brush(Theme.Accent),
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                    Opacity = 0.9,
+                };
+                var dateLabelPill = new Border
+                {
+                    Background = Theme.Brush(Theme.AccentSubtle),
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(12, 5, 12, 5),
+                    Margin = new Thickness(6, 14, 0, 10),
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                    Child = dateLabelText
+                };
+                target.Children.Add(dateLabelPill);
 
                 currentWrap = CreateHistoryWrapPanel(itemDate);
                 target.Children.Add(currentWrap);

@@ -94,7 +94,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public List<Annotation> Annotations => _annotations;
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Color ToolColor { get; set; } = Color.FromArgb(0, 136, 255);
+    public Color ToolColor { get; set; } = Color.FromArgb(255, 220, 0);
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool ShowCaptureFrame { get; set; } = false;
@@ -211,6 +211,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     public event EventHandler? StateChanged;
 
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool IsDefaultBlank { get; set; } = false;
+
     /// <summary>Raised after any modification (push/undo/redo, tool change, base bitmap change).</summary>
     private void OnStateChanged() => StateChanged?.Invoke(this, EventArgs.Empty);
 
@@ -232,6 +235,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _selectOriginalAnnotation = null;
         _selectDragStartImg = Point.Empty;
         _eraserHoverIndex = -1;
+        IsDefaultBlank = false;
         CancelInProgressTool();
         ActiveTool = CanvasTool.Pan;
         oldBaseBitmap?.Dispose();
@@ -272,6 +276,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     public void Push(IEditCommand command)
     {
+        if (IsDefaultBlank)
+        {
+            IsDefaultBlank = false;
+        }
         command.Apply(this);
         _undoStack.Add(command);
         if (_undoStack.Count > UndoStackLimit)
