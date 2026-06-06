@@ -438,4 +438,33 @@ public partial class App
             }
         });
     }
+
+    public void HandleCommandLineArgs(string[] args)
+    {
+        if (args == null || args.Length == 0) return;
+
+        bool openEditor = args.Any(a => a.Equals("--editor", StringComparison.OrdinalIgnoreCase) || a.Equals("/editor", StringComparison.OrdinalIgnoreCase));
+        string? editorFilePath = null;
+        foreach (var arg in args)
+        {
+            if (arg.StartsWith("-") || arg.StartsWith("/")) continue;
+            if (File.Exists(arg))
+            {
+                editorFilePath = arg;
+                break;
+            }
+        }
+
+        if (openEditor || editorFilePath != null)
+        {
+            if (editorFilePath != null)
+            {
+                CyberSnap.UI.Editor.EditorForm.ShowEditorFromFile(editorFilePath);
+            }
+            else
+            {
+                CyberSnap.UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();
+            }
+        }
+    }
 }

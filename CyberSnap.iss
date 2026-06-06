@@ -30,7 +30,9 @@ Source: ".\publish-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdi
 
 [Icons]
 Name: "{group}\CyberSnap"; Filename: "{app}\CyberSnap.exe"
+Name: "{group}\CyberSnap Annotations Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"
 Name: "{autodesktop}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: desktopicon
+Name: "{autodesktop}\CyberSnap Annotations Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; Tasks: desktopicon
 Name: "{userstartup}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: startup
 
 [Run]

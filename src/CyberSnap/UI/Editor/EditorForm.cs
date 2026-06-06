@@ -57,6 +57,48 @@ public sealed partial class EditorForm : Form
         _instance.Show();
     }
 
+    public static void ShowEditorFromFile(string filePath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                return;
+
+            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            using (var tempBmp = new Bitmap(stream))
+            {
+                var captured = new Bitmap(tempBmp);
+                ShowEditor(captured, filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.Forms.MessageBox.Show($"Failed to load image: {ex.Message}", "Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+        }
+    }
+
+    public static void ShowEditorEmptyOrPrompt()
+    {
+        if (_instance is not null && !_instance.IsDisposed)
+        {
+            _instance.RestoreAndActivate();
+            return;
+        }
+
+        using (var dlg = new OpenFileDialog
+        {
+            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tiff|All Files|*.*",
+            Title = LocalizationService.Translate("Open Image for Annotations")
+        })
+        {
+            if (dlg.ShowDialog() == DialogResult.OK)
+            {
+                ShowEditorFromFile(dlg.FileName);
+            }
+        }
+    }
+
+
     /// <summary>
     /// Brings an already-open editor back to the foreground for a new capture. Windows blocks a
     /// background process from stealing focus, so a brief TopMost toggle is used to reliably pop
@@ -351,6 +393,46 @@ public sealed partial class EditorForm : Form
         _saveStatusTimer.Start();
     }
 
+    private void DoOpen()
+    {
+        if (_canvas.IsDirty)
+        {
+            var discard = ThemedConfirmDialog.Confirm(
+                Handle,
+                "Unsaved changes",
+                "Discard changes?",
+                "Discard",
+                "Keep editing",
+                danger: false);
+            if (!discard)
+                return;
+        }
+
+        using (var dlg = new OpenFileDialog
+        {
+            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tiff|All Files|*.*",
+            Title = LocalizationService.Translate("Open Image")
+        })
+        {
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                try
+                {
+                    using (var stream = new FileStream(dlg.FileName, FileMode.Open, FileAccess.Read))
+                    using (var tempBmp = new Bitmap(stream))
+                    {
+                        var captured = new Bitmap(tempBmp);
+                        LoadCapture(captured, dlg.FileName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ThemedConfirmDialog.Alert(Handle, "Error loading image", ex.Message, error: true);
+                }
+            }
+        }
+    }
+
     private void DoCopy()
     {
         try
@@ -372,11 +454,13 @@ public sealed partial class EditorForm : Form
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
+        if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
         return base.ProcessCmdKey(ref msg, keyData);
     }
+
 
     protected override CreateParams CreateParams
     {
@@ -556,18 +640,22 @@ public sealed partial class EditorForm : Form
         menu.Items.Add(headerLabel);
         menu.Items.Add(new ToolStripSeparator());
 
+        var openItem = WindowsMenuRenderer.Item("Open image...", iconId: null);
         var fitItem = WindowsMenuRenderer.Item("Fit to window", iconId: null);
         var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
         var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
         var redoItem = WindowsMenuRenderer.Item("Redo", iconId: null);
         var exitItem = WindowsMenuRenderer.Item("Quit", iconId: "close", danger: true);
 
+        openItem.Click += (_, _) => DoOpen();
         fitItem.Click += (_, _) => _canvas.ZoomFit();
         resetItem.Click += (_, _) => _canvas.ZoomReset();
         undoItem.Click += (_, _) => _canvas.Undo();
         redoItem.Click += (_, _) => _canvas.Redo();
         exitItem.Click += (_, _) => Close();
 
+        menu.Items.Add(openItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(fitItem);
         menu.Items.Add(resetItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -578,6 +666,7 @@ public sealed partial class EditorForm : Form
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
+
     }
 
     private ContextMenuStrip BuildImageContextMenu()

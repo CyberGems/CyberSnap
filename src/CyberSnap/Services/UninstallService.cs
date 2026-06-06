@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -17,7 +17,6 @@ public static class UninstallService
 
         var programsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Start Menu", "Programs");
         Directory.CreateDirectory(programsDir);
-        var shortcutPath = Path.Combine(programsDir, "CyberSnap.lnk");
 
         var shellType = Type.GetTypeFromProgID("WScript.Shell");
         if (shellType is null)
@@ -26,12 +25,24 @@ public static class UninstallService
         dynamic shell = Activator.CreateInstance(shellType)!;
         try
         {
+            // Main app shortcut
+            var shortcutPath = Path.Combine(programsDir, "CyberSnap.lnk");
             dynamic shortcut = shell.CreateShortcut(shortcutPath);
             shortcut.TargetPath = exe;
             shortcut.WorkingDirectory = Path.GetDirectoryName(exe) ?? string.Empty;
             shortcut.IconLocation = exe + ",0";
             shortcut.Description = "CyberSnap screenshot tool";
             shortcut.Save();
+
+            // Editor shortcut (using same icon)
+            var editorShortcutPath = Path.Combine(programsDir, "CyberSnap Annotations Editor.lnk");
+            dynamic editorShortcut = shell.CreateShortcut(editorShortcutPath);
+            editorShortcut.TargetPath = exe;
+            editorShortcut.Arguments = "--editor";
+            editorShortcut.WorkingDirectory = Path.GetDirectoryName(exe) ?? string.Empty;
+            editorShortcut.IconLocation = exe + ",0";
+            editorShortcut.Description = "CyberSnap annotations editor";
+            editorShortcut.Save();
         }
         finally
         {
@@ -41,17 +52,21 @@ public static class UninstallService
 
     public static void RemoveStartMenuShortcut()
     {
-        var shortcutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Start Menu", "Programs", "CyberSnap.lnk");
+        var programsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Start Menu", "Programs");
+        var shortcutPath = Path.Combine(programsDir, "CyberSnap.lnk");
+        var editorShortcutPath = Path.Combine(programsDir, "CyberSnap Annotations Editor.lnk");
         try
         {
             if (File.Exists(shortcutPath))
                 File.Delete(shortcutPath);
+            if (File.Exists(editorShortcutPath))
+                File.Delete(editorShortcutPath);
         }
         catch (Exception ex)
         {
             AppDiagnostics.LogWarning(
                 "uninstall.shortcut-cleanup",
-                $"Failed to delete Start Menu shortcut {Path.GetFileName(shortcutPath)}: {ex.Message}",
+                $"Failed to delete Start Menu shortcut: {ex.Message}",
                 ex);
         }
     }

@@ -68,9 +68,9 @@ public sealed class TranslationServiceTests
     }
 
     [Theory]
-    [InlineData("auto", "he", "he")]
-    [InlineData("he-IL", "en", "he")]
-    [InlineData("zz", "he", "en")]
+    [InlineData("auto", "fr", "fr")]
+    [InlineData("fr-FR", "en", "fr")]
+    [InlineData("zz", "fr", "en")]
     public void ResolveTargetLanguage_UsesInterfaceLanguageForAutoAndNormalizesSpecificTags(
         string target,
         string interfaceLanguage,
@@ -82,7 +82,7 @@ public sealed class TranslationServiceTests
     [Theory]
     [InlineData(null, "auto")]
     [InlineData("auto", "auto")]
-    [InlineData("he-IL", "he")]
+    [InlineData("fr-FR", "fr")]
     [InlineData("zz", "auto")]
     public void ResolveSourceLanguage_NormalizesButPreservesAuto(string? source, string expected)
     {

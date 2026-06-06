@@ -321,7 +321,6 @@ tokenizer_dir = sys.argv[5]
 
 aliases = {
     "nb": "no",
-    "he": "he",
     "zh": "zh",
 }
 
