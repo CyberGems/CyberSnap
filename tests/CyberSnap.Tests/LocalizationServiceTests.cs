@@ -19,7 +19,7 @@ public sealed class LocalizationServiceTests
     [InlineData("fr-FR", "fr")]
     [InlineData("pt-BR", "pt-BR")]
     [InlineData("zh-CN", "zh-Hans")]
-    [InlineData("he-IL", "he")]
+    [InlineData("de-DE", "de")]
     [InlineData("zz", "auto")]
     public void NormalizeLanguageSetting_ReturnsSupportedSetting(string? input, string expected)
     {
@@ -29,9 +29,9 @@ public sealed class LocalizationServiceTests
     [Fact]
     public void ResolveLanguageCode_UsesSystemCultureForAuto()
     {
-        var culture = CultureInfo.GetCultureInfo("he-IL");
+        var culture = CultureInfo.GetCultureInfo("fr-FR");
 
-        Assert.Equal("he", LocalizationService.ResolveLanguageCode("auto", culture));
+        Assert.Equal("fr", LocalizationService.ResolveLanguageCode("auto", culture));
     }
 
     [Fact]
@@ -43,12 +43,12 @@ public sealed class LocalizationServiceTests
     }
 
     [Fact]
-    public void Translate_LoadsHebrewJsonDictionary()
+    public void Translate_LoadsFrenchJsonDictionary()
     {
-        Assert.Equal("×›×œ×œ×™", LocalizationService.Translate("he", "General"));
-        Assert.Equal("×‘×—×™×¨×ª ×ž×¨×›×–", LocalizationService.Translate("he", "Center Select"));
-        Assert.Equal("×™×—×¡ ×ž×¨×›×–", LocalizationService.Translate("he", "Center aspect ratio"));
-        Assert.Equal("Untranslated", LocalizationService.Translate("he", "Untranslated"));
+        Assert.Equal("Général", LocalizationService.Translate("fr", "General"));
+        Assert.Equal("Center Select", LocalizationService.Translate("fr", "Center Select"));
+        Assert.Equal("Center aspect ratio", LocalizationService.Translate("fr", "Center aspect ratio"));
+        Assert.Equal("Untranslated", LocalizationService.Translate("fr", "Untranslated"));
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public sealed class LocalizationServiceTests
     {
         var culture = CultureInfo.GetCultureInfo("fr-FR");
 
-        Assert.Equal("he", LocalizationService.ResolveContentLanguageCode("he", culture));
+        Assert.Equal("fr", LocalizationService.ResolveContentLanguageCode("fr", culture));
     }
 
     [Fact]
@@ -104,9 +104,9 @@ public sealed class LocalizationServiceTests
                 textBlock.Inlines.Add(new Run(" â€” "));
                 textBlock.Inlines.Add(new Run("Language"));
 
-                LocalizationService.ApplyTo(textBlock, "he");
+                LocalizationService.ApplyTo(textBlock, "fr");
                 LocalizationService.ApplyTo(textBlock, "en");
-                LocalizationService.ApplyTo(textBlock, "he");
+                LocalizationService.ApplyTo(textBlock, "fr");
             }
             catch (Exception ex)
             {
@@ -138,7 +138,7 @@ public sealed class LocalizationServiceTests
                     FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets")
                 };
 
-                LocalizationService.ApplyTo(icon, "he");
+                LocalizationService.ApplyTo(icon, "fr");
                 text = icon.Text;
                 flowDirection = icon.FlowDirection;
             }
@@ -169,7 +169,7 @@ public sealed class LocalizationServiceTests
             {
                 var icon = new TextBlock { Text = "\uE930" };
 
-                LocalizationService.ApplyTo(icon, "he");
+                LocalizationService.ApplyTo(icon, "fr");
                 text = icon.Text;
             }
             catch (Exception ex)

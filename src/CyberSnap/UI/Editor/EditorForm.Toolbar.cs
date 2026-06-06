@@ -518,6 +518,13 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
         topActions.Controls.Add(_copyButton);
 
+        var openButton = MakeCommandButton("document", LocalizationService.Translate("Open"), false);
+        openButton.Width = 112;
+        openButton.Click += (_, _) => DoOpen();
+        RegisterHoverTooltip(openButton, () => WithShortcut("Open an image file", "Ctrl+O"), above: false);
+        topActions.Controls.Add(openButton);
+
+
         // Spacer between undo/redo and the rest
         topActions.Controls.Add(new Label
         {

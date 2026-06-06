@@ -37,16 +37,25 @@ public partial class App
 
         if (!acquired)
         {
+            SingleInstanceIpcClient.SendArgs(e.Args);
             base.OnStartup(e);
             Shutdown();
             return;
         }
+
+        SingleInstanceIpcServer.Start();
 
         base.OnStartup(e);
         WireUnhandledExceptionLogging();
 
         try { UninstallService.RegisterInstalledAppEntry(); } catch (Exception ex) { AppDiagnostics.LogError("startup.register-installed-entry", ex); }
         try { UninstallService.EnsureStartMenuShortcut(); } catch (Exception ex) { AppDiagnostics.LogError("startup.ensure-start-menu-shortcut", ex); }
+
+        // Process startup arguments if there are any
+        if (e.Args.Length > 0)
+        {
+            try { HandleCommandLineArgs(e.Args); } catch (Exception ex) { AppDiagnostics.LogError("startup.handle-args", ex); }
+        }
 
         _settingsService = new SettingsService();
         _settingsService.Load();
