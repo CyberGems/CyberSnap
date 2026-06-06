@@ -33,6 +33,7 @@ public sealed partial class EditorForm
     private EditorCommandButton _redoButton = null!;
     private EditorCommandButton _saveButton = null!;
     private EditorCommandButton _copyButton = null!;
+    private EditorCommandButton _pasteButton = null!;
     private EditorChromeButton _windowStateButton = null!;
     private EditorZoomBarButton _fitZoomBtn = null!;
     private EditorZoomBarButton _resetZoomBtn = null!;
@@ -501,25 +502,31 @@ public sealed partial class EditorForm
         });
 
         var saveAsButton = MakeCommandButton("folder", LocalizationService.Translate("Save As"), false);
-        saveAsButton.Width = 148;
+        saveAsButton.Width = 120;
         saveAsButton.Click += (_, _) => DoSaveAs();
         RegisterHoverTooltip(saveAsButton, () => WithShortcut("Save the image as a new file", "Ctrl+Shift+S"), above: false);
         topActions.Controls.Add(saveAsButton);
 
         _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
-        _saveButton.Width = 132;
+        _saveButton.Width = 95;
         _saveButton.Click += (_, _) => DoSave();
         RegisterHoverTooltip(_saveButton, () => WithShortcut("Save the image", "Ctrl+S"), above: false);
         topActions.Controls.Add(_saveButton);
 
         _copyButton = MakeCommandButton("copy", LocalizationService.Translate("Copy"), false);
-        _copyButton.Width = 112;
+        _copyButton.Width = 95;
         _copyButton.Click += (_, _) => DoCopy();
         RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
         topActions.Controls.Add(_copyButton);
 
+        _pasteButton = MakeCommandButton("arrow", LocalizationService.Translate("Paste"), false);
+        _pasteButton.Width = 95;
+        _pasteButton.Click += (_, _) => DoPaste();
+        RegisterHoverTooltip(_pasteButton, () => WithShortcut("Paste image from clipboard", "Ctrl+V"), above: false);
+        topActions.Controls.Add(_pasteButton);
+
         var openButton = MakeCommandButton("document", LocalizationService.Translate("Open"), false);
-        openButton.Width = 112;
+        openButton.Width = 95;
         openButton.Click += (_, _) => DoOpen();
         RegisterHoverTooltip(openButton, () => WithShortcut("Open an image file", "Ctrl+O"), above: false);
         topActions.Controls.Add(openButton);
@@ -534,13 +541,13 @@ public sealed partial class EditorForm
         });
 
         _redoButton = MakeCommandButton("redo", LocalizationService.Translate("Redo"), false);
-        _redoButton.Width = 110;
+        _redoButton.Width = 95;
         _redoButton.Click += (_, _) => _canvas.Redo();
         RegisterHoverTooltip(_redoButton, () => WithShortcut("Redo the last undone change", "Ctrl+Y"), above: false);
         topActions.Controls.Add(_redoButton);
 
         _undoButton = MakeCommandButton("undo", LocalizationService.Translate("Undo"), false);
-        _undoButton.Width = 110;
+        _undoButton.Width = 95;
         _undoButton.Click += (_, _) => _canvas.Undo();
         RegisterHoverTooltip(_undoButton, () => WithShortcut("Undo the last change", "Ctrl+Z"), above: false);
         topActions.Controls.Add(_undoButton);
@@ -865,6 +872,7 @@ public sealed partial class EditorForm
         _redoButton.Enabled = _canvas.CanRedo;
         _redoButton.Primary = _canvas.CanRedo;
         _saveButton.Primary = _canvas.IsDirty;
+        _pasteButton.Enabled = Clipboard.ContainsImage();
         _confirmCropButton.Enabled = _canvas.HasPendingCrop;
         _cancelCropButton.Enabled = _canvas.HasPendingCrop;
         SetCropSectionVisible(_canvas.HasPendingCrop);

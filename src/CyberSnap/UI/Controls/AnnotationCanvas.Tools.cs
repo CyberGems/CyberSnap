@@ -125,6 +125,12 @@ public sealed partial class AnnotationCanvas
 
         if (e.Button != MouseButtons.Left) return;
 
+        if (IsDefaultBlank)
+        {
+            IsDefaultBlank = false;
+            Invalidate();
+        }
+
         var img = ScreenToImage(e.Location);
 
         // Commit any pending text first

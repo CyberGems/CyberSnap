@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Ø¹Ø§Ù…",
   "Tools": "Ø£Ø¯ÙˆØ§Øª",
   "Capture": "Ø§Ù„ØªÙ‚Ø§Ø·",
@@ -342,5 +342,8 @@
   "Show notifications": "Show notifications",
   "System messages": "System messages",
   "Bottom Left": "Bottom Left",
-  "Bottom Right": "Bottom Right"
+  "Bottom Right": "Bottom Right",
+  "Annotations Editor": "Annotations Editor",
+  "Paste": "Paste",
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
 }

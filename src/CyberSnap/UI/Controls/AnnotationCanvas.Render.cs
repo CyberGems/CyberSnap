@@ -4,6 +4,7 @@ using System.Drawing.Text;
 using System.Windows.Forms;
 using CyberSnap.Capture;
 using CyberSnap.Models;
+using CyberSnap.Services;
 using CyberSnap.UI.Editor;
 
 namespace CyberSnap.UI.Controls;
@@ -40,6 +41,9 @@ public sealed partial class AnnotationCanvas
         RenderCropOverlay(g);
         RenderCheckerboardFrame(g);
         RenderToolBanner(g);
+
+        if (IsDefaultBlank)
+            RenderWelcomeText(g);
 
         if (_inlineTextBox is not null)
             RenderInlineTextToolbar(g);
@@ -426,5 +430,50 @@ public sealed partial class AnnotationCanvas
         {
             g.Restore(state);
         }
+    }
+
+    private void RenderWelcomeText(Graphics g)
+    {
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using var titleFont = new Font("Segoe UI Variable Display", 15f, FontStyle.Bold, GraphicsUnit.Point);
+        using var descFont = new Font("Segoe UI Variable Text", 10.5f, FontStyle.Regular, GraphicsUnit.Point);
+
+        var titleText = LocalizationService.Translate("Annotations Editor");
+        var descText = LocalizationService.Translate("Paste an image (Ctrl+V) or double-click to open a file");
+
+        var titleSize = g.MeasureString(titleText, titleFont);
+        var descSize = g.MeasureString(descText, descFont);
+
+        float paddingH = 32;
+        float paddingV = 24;
+        float spacing = 8;
+
+        float width = Math.Max(titleSize.Width, descSize.Width) + paddingH * 2;
+        float height = titleSize.Height + descSize.Height + paddingV * 2 + spacing;
+
+        float x = (ClientSize.Width - width) / 2;
+        float y = (ClientSize.Height - height) / 2;
+
+        var rect = new Rectangle((int)x, (int)y, (int)width, (int)height);
+        using var path = EditorPaint.RoundedRect(rect, 12);
+        using var bgBrush = new SolidBrush(Color.FromArgb(200, EditorColors.BgCard));
+        using var borderPen = new Pen(EditorColors.BorderSubtle, 1.5f);
+        using var titleBrush = new SolidBrush(EditorColors.TextSecondary);
+        using var descBrush = new SolidBrush(EditorColors.TextMuted);
+
+        g.FillPath(bgBrush, path);
+        g.DrawPath(borderPen, path);
+
+        using var sf = new StringFormat
+        {
+            Alignment = StringAlignment.Center,
+            LineAlignment = StringAlignment.Center
+        };
+
+        var titleRect = new RectangleF(x, y + paddingV, width, titleSize.Height);
+        var descRect = new RectangleF(x, y + paddingV + titleSize.Height + spacing, width, descSize.Height);
+
+        g.DrawString(titleText, titleFont, titleBrush, titleRect, sf);
+        g.DrawString(descText, descFont, descBrush, descRect, sf);
     }
 }

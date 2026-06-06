@@ -12,6 +12,23 @@ public sealed partial class RegionOverlayForm
         if (e.Button == MouseButtons.Right) { Cancel(); return; }
         if (e.Button != MouseButtons.Left) return;
 
+        // Prioritize open pickers if click is inside them, to avoid overlapping toolbar buttons
+        if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
+        {
+            if (HandleColorPickerClick(e.Location))
+                return;
+        }
+        if (_fontPickerOpen && _fontPickerRect.Contains(e.Location))
+        {
+            if (HandleFontPickerClick(e.Location))
+                return;
+        }
+        if (_emojiPickerOpen && _emojiPickerRect.Contains(e.Location))
+        {
+            if (HandleEmojiPickerClick(e.Location))
+                return;
+        }
+
         int btn = GetToolbarButtonAt(e.Location);
         if (btn >= 0)
         {

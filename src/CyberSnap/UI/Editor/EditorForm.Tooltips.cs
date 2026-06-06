@@ -22,27 +22,61 @@ public sealed partial class EditorForm
     private void RegisterHoverTooltip(Control anchor, string textKey, bool above = true)
         => RegisterHoverTooltip(anchor, () => LocalizationService.Translate(textKey), above);
 
+    private System.Windows.Forms.Timer? _tooltipTimer;
+    private readonly System.Collections.Generic.List<(Control Control, Func<string?> TextProvider, bool Above)> _tooltipControls = new();
+
     private void RegisterHoverTooltip(Control anchor, Func<string?> textProvider, bool above = true)
     {
-        void Enter(object? sender, EventArgs e) => ShowHoverTooltip(anchor, textProvider(), above);
-        void Leave(object? sender, EventArgs e)
-        {
-            // Composite controls (a panel hosting an icon + a label) raise MouseLeave on the
-            // parent the instant the cursor steps onto a child. Only dismiss once the cursor
-            // has truly left the anchor's bounds so the tooltip does not flicker.
-            if (!anchor.RectangleToScreen(anchor.ClientRectangle).Contains(Cursor.Position))
-                HideHoverTooltip(anchor);
-        }
-
-        HookHoverRecursive(anchor, Enter, Leave);
+        _tooltipControls.Add((anchor, textProvider, above));
+        EnsureTooltipTimerStarted();
     }
 
-    private static void HookHoverRecursive(Control root, EventHandler enter, EventHandler leave)
+    private void EnsureTooltipTimerStarted()
     {
-        root.MouseEnter += enter;
-        root.MouseLeave += leave;
-        foreach (Control child in root.Controls)
-            HookHoverRecursive(child, enter, leave);
+        if (_tooltipTimer is not null) return;
+        _tooltipTimer = new System.Windows.Forms.Timer { Interval = 100 };
+        _tooltipTimer.Tick += TooltipTimer_Tick;
+        _tooltipTimer.Start();
+    }
+
+    private void TooltipTimer_Tick(object? sender, EventArgs e)
+    {
+        if (IsDisposed || !Visible) return;
+
+        var screenPos = Cursor.Position;
+        Control? hovered = null;
+        Func<string?>? provider = null;
+        bool above = true;
+
+        foreach (var item in _tooltipControls)
+        {
+            if (item.Control.IsHandleCreated && item.Control.Visible)
+            {
+                var rect = item.Control.RectangleToScreen(item.Control.ClientRectangle);
+                if (rect.Contains(screenPos))
+                {
+                    hovered = item.Control;
+                    provider = item.TextProvider;
+                    above = item.Above;
+                    break;
+                }
+            }
+        }
+
+        if (hovered is not null)
+        {
+            if (!ReferenceEquals(_hoverAnchor, hovered))
+            {
+                ShowHoverTooltip(hovered, provider!(), above);
+            }
+        }
+        else
+        {
+            if (_hoverAnchor is not null)
+            {
+                HideHoverTooltip(_hoverAnchor);
+            }
+        }
     }
 
     private void ShowHoverTooltip(Control anchor, string? text, bool above)

@@ -44,6 +44,7 @@ public partial class CyberSnapTitleBar : UserControl
         MaximizeBtn.ToolTip = OwnerWindow?.WindowState == WindowState.Maximized ? "Restore" : "Maximize";
 
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", titleIcon, 18);
+        AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("draw", titleIcon, 18);
 
         InitializeActionBtn(titleIcon);
     }
@@ -52,18 +53,24 @@ public partial class CyberSnapTitleBar : UserControl
     {
         if (OwnerWindow is SettingsWindow)
         {
+            AnnotationBtn.Visibility = Visibility.Visible;
+            AnnotationBtn.ToolTip = LocalizationService.Translate("Annotations Editor");
+
             ActionBtn.Visibility = Visibility.Visible;
             ActionBtn.ToolTip = LocalizationService.Translate("Capture History");
             ActionIcon.Source = Helpers.FluentIcons.RenderWpf("folder", titleIcon, 18);
         }
         else if (OwnerWindow is HistoryWindow)
         {
+            AnnotationBtn.Visibility = Visibility.Collapsed;
+
             ActionBtn.Visibility = Visibility.Visible;
             ActionBtn.ToolTip = LocalizationService.Translate("Settings");
             ActionIcon.Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 18);
         }
         else
         {
+            AnnotationBtn.Visibility = Visibility.Collapsed;
             ActionBtn.Visibility = Visibility.Collapsed;
         }
     }
@@ -127,6 +134,15 @@ public partial class CyberSnapTitleBar : UserControl
     {
         if (sender is Border border)
             border.Background = System.Windows.Media.Brushes.Transparent;
+    }
+
+    private void AnnotationBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (OwnerWindow is SettingsWindow)
+        {
+            CyberSnap.UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();
+        }
     }
 
     private void ActionBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

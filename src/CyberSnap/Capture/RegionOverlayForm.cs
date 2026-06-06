@@ -361,12 +361,12 @@ public sealed partial class RegionOverlayForm : Form
     };
 
     // Tool color (shared across draw, arrow, text)
-    private Color _toolColor = Color.FromArgb(0, 136, 255);
+    private Color _toolColor = Color.FromArgb(255, 220, 0);
     private static readonly Color[] ToolColors = {
         Color.Red, Color.FromArgb(255, 136, 0), Color.FromArgb(255, 220, 0),
         Color.FromArgb(0, 200, 0), Color.FromArgb(0, 136, 255), Color.White
     };
-    private int _toolColorIndex = 4;
+    private int _toolColorIndex = 2;
 
     // Stroke width
     private float _strokeWidth = 6f;

@@ -23,6 +23,8 @@ public sealed class TrayIcon : IDisposable
     public event Action? OnOcr;
     public event Action? OnColorPicker;
     public event Action? OnScrollCapture;
+    public event Action? OnRuler;
+    public event Action? OnAnnotationEditor;
     public event Action? OnSettings;
     public event Action? OnHistory;
     public event Action? OnQuit;
@@ -102,6 +104,7 @@ public sealed class TrayIcon : IDisposable
         var scrollItem   = WindowsMenuRenderer.Item(T("Scroll capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
         var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("ocr"), "ocr");
         var pickerItem   = WindowsMenuRenderer.Item(T("Color picker"), HotkeyHint("picker"), "picker");
+        var rulerItem    = WindowsMenuRenderer.Item(T("Ruler"), HotkeyHint("ruler"), "ruler");
 
         ToolStripMenuItem? recordItem = null;
         ToolStripMenuItem? recordGifItem = null;
@@ -118,32 +121,35 @@ public sealed class TrayIcon : IDisposable
         }
         else
         {
-            recordItem = WindowsMenuRenderer.Item(T("Screen Recorder (MP4)"), HotkeyHint("_record"), "play");
+            recordItem = WindowsMenuRenderer.Item(T("Screen Recorder (MP4)"), HotkeyHint("_record"), "record");
             recordItem.Click += (_, _) => OnRecordRequested?.Invoke(RecordingFormat.MP4);
             _recordItem = recordItem;
 
-            recordGifItem = WindowsMenuRenderer.Item(T("Screen Recorder (GIF)"), null, "play");
+            recordGifItem = WindowsMenuRenderer.Item(T("Screen Recorder (GIF)"), null, "recordGif");
             recordGifItem.Click += (_, _) => OnRecordRequested?.Invoke(RecordingFormat.GIF);
         }
 
-        var settingsItem = WindowsMenuRenderer.Item(T("Settings"), iconId: "gear");
-        var historyItem  = WindowsMenuRenderer.Item(T("Capture History"), iconId: "folder");
-        var quitItem     = WindowsMenuRenderer.Item(T("Quit"), iconId: "close", danger: true);
+        var settingsItem       = WindowsMenuRenderer.Item(T("Settings"), iconId: "gear");
+        var historyItem        = WindowsMenuRenderer.Item(T("Capture History"), iconId: "folder");
+        var annotationEditorItem = WindowsMenuRenderer.Item(T("Annotations Editor"), iconId: "draw");
+        var quitItem           = WindowsMenuRenderer.Item(T("Shutdown"), iconId: "close", danger: true);
 
         captureItem.Click += (_, _) => OnCapture?.Invoke();
         ocrItem.Click     += (_, _) => OnOcr?.Invoke();
         pickerItem.Click  += (_, _) => OnColorPicker?.Invoke();
+        rulerItem.Click   += (_, _) => OnRuler?.Invoke();
         scrollItem.Click   += (_, _) => OnScrollCapture?.Invoke();
-        settingsItem.Click += (_, _) => OnSettings?.Invoke();
-        historyItem.Click  += (_, _) => OnHistory?.Invoke();
-        quitItem.Click     += (_, _) => OnQuit?.Invoke();
+        settingsItem.Click         += (_, _) => OnSettings?.Invoke();
+        historyItem.Click          += (_, _) => OnHistory?.Invoke();
+        annotationEditorItem.Click += (_, _) => OnAnnotationEditor?.Invoke();
+        quitItem.Click             += (_, _) => OnQuit?.Invoke();
 
         // ── App header ──
         var headerLabel = new ToolStripLabel($"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}")
         {
             ForeColor = UiChrome.SurfaceTextMuted,
             Font = UiChrome.ChromeFont(8.5f),
-            Padding = new System.Windows.Forms.Padding(10, 4, 0, 2),
+            Padding = new System.Windows.Forms.Padding(10, 12, 0, 2),
             AutoSize = true,
         };
         menu.Items.Add(headerLabel);
@@ -151,16 +157,19 @@ public sealed class TrayIcon : IDisposable
 
         menu.Items.Add(captureItem);
         menu.Items.Add(scrollItem);
-        menu.Items.Add(ocrItem);
-        menu.Items.Add(pickerItem);
         menu.Items.Add(recordItem);
         if (recordGifItem != null)
         {
             menu.Items.Add(recordGifItem);
         }
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(ocrItem);
+        menu.Items.Add(pickerItem);
+        menu.Items.Add(rulerItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
         menu.Items.Add(historyItem);
+        menu.Items.Add(annotationEditorItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(quitItem);
 
