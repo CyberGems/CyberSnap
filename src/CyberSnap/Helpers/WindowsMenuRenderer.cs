@@ -12,6 +12,37 @@ public static class WindowsMenuRenderer
 
     public static ContextMenuStrip Create(bool showImages = true, int minWidth = DefaultWidth)
     {
+        var menu = new ContextMenuStrip
+        {
+            ShowImageMargin = showImages,
+            ShowCheckMargin = false,
+            Padding = new Padding(5, 6, 5, 6),
+            Font = UiChrome.ChromeFont(9.0f),
+            DropShadowEnabled = false, // legacy CS_DROPSHADOW is faint and suppresses DWM's softer shadow
+            MinimumSize = new Size(minWidth, 0),
+        };
+        ApplyTheme(menu, showImages);
+        return menu;
+    }
+
+    /// <summary>Build a submenu parent item whose drop-down uses the same themed style
+    /// (dark rounded surface, accent hover bar) as the top-level menu.</summary>
+    public static ToolStripMenuItem Submenu(string text, bool showImages = false, bool active = false)
+    {
+        var item = Item(text, null, null, active: active);
+        if (item.DropDown is ToolStripDropDownMenu dd)
+        {
+            dd.ShowImageMargin = showImages;
+            dd.ShowCheckMargin = false;
+            dd.Padding = new Padding(5, 6, 5, 6);
+            dd.DropShadowEnabled = false;
+            ApplyTheme(dd, showImages);
+        }
+        return item;
+    }
+
+    private static void ApplyTheme(ToolStripDropDown dd, bool showImages)
+    {
         CyberSnap.UI.Theme.Refresh();
         var bg = UiChrome.IsDark ? Color.FromArgb(20, 20, 20) : Color.FromArgb(250, 250, 250);
         var fg = UiChrome.SurfaceTextPrimary;
@@ -21,36 +52,32 @@ public static class WindowsMenuRenderer
         var muted = UiChrome.SurfaceTextMuted;
         var sep = UiChrome.IsDark ? Color.FromArgb(26, 255, 255, 255) : Color.FromArgb(16, 0, 0, 0);
 
-        var menu = new ContextMenuStrip
-        {
-            BackColor = bg,
-            ForeColor = fg,
-            ShowImageMargin = showImages,
-            ShowCheckMargin = false,
-            Padding = new Padding(5, 6, 5, 6),
-            Font = UiChrome.ChromeFont(9.0f),
-            DropShadowEnabled = true,
-            MinimumSize = new Size(minWidth, 0),
-            Renderer = new Renderer(bg, fg, hover, active, muted, sep, showImages)
-        };
+        dd.BackColor = bg;
+        dd.ForeColor = fg;
+        dd.Renderer = new Renderer(bg, fg, hover, active, muted, sep, showImages);
 
-        menu.HandleCreated += (s, _) =>
+        dd.HandleCreated += (s, _) =>
         {
             try
             {
-                var strip = (ContextMenuStrip)s!;
+                var strip = (ToolStripDropDown)s!;
                 var handle = strip.Handle;
                 CyberSnap.Native.Dwm.TrySetWindowCornerPreference(handle, CyberSnap.Native.Dwm.DWMWCP_ROUND);
                 CyberSnap.Native.Dwm.TrySetImmersiveDarkMode(handle, UiChrome.IsDark);
-                ApplyRoundedRegion(strip);
+                // On Win11, DWM rounds the window and draws its native drop shadow. The manual
+                // GDI region clip would round the corners but kill that shadow, so only fall back
+                // to it on older Windows where DWM rounding isn't available.
+                if (!IsWin11)
+                    ApplyRoundedRegion(strip);
             }
             catch { }
         };
-        menu.SizeChanged += (_, _) => ApplyRoundedRegion(menu);
-        menu.Disposed += (_, _) => menu.Region?.Dispose();
-
-        return menu;
+        if (!IsWin11)
+            dd.SizeChanged += (_, _) => ApplyRoundedRegion(dd);
+        dd.Disposed += (_, _) => dd.Region?.Dispose();
     }
+
+    private static bool IsWin11 => Environment.OSVersion.Version.Build >= 22000;
 
     public static ToolStripMenuItem Item(
         string text,
@@ -103,6 +130,31 @@ public static class WindowsMenuRenderer
         return width;
     }
 
+    /// <summary>Size a submenu's drop-down items uniformly, like NormalizeItemWidths does for a top-level menu.</summary>
+    public static void NormalizeDropDownWidths(ToolStripMenuItem parent, int minWidth = DefaultWidth)
+    {
+        int width = minWidth;
+        using var g = Graphics.FromHwnd(IntPtr.Zero);
+        foreach (ToolStripItem item in parent.DropDownItems)
+        {
+            if (item is not ToolStripMenuItem menuItem)
+                continue;
+            int text = TextRenderer.MeasureText(g, menuItem.Text, menuItem.Font).Width;
+            width = Math.Max(width, text + 76);
+        }
+
+        width = Math.Max(120, width);
+        foreach (ToolStripItem item in parent.DropDownItems)
+        {
+            if (item is ToolStripMenuItem menuItem)
+            {
+                menuItem.AutoSize = false;
+                menuItem.Width = width - 8;
+                menuItem.Height = RowHeight;
+            }
+        }
+    }
+
     public static void SetMenuWidth(ContextMenuStrip menu, int width)
     {
         width = Math.Max(120, width);
@@ -119,7 +171,7 @@ public static class WindowsMenuRenderer
         }
     }
 
-    private static void ApplyRoundedRegion(ContextMenuStrip menu)
+    private static void ApplyRoundedRegion(ToolStripDropDown menu)
     {
         if (menu.Width <= 0 || menu.Height <= 0)
             return;
@@ -251,6 +303,29 @@ public static class WindowsMenuRenderer
             int y = e.Item.Height / 2;
             using var pen = new Pen(_sep);
             e.Graphics.DrawLine(pen, left, y, e.Item.Width - 10, y);
+        }
+
+        protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
+        {
+            // Default arrow renders dark-on-dark and is nearly invisible; draw a crisp chevron
+            // in the menu foreground color instead.
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            var r = e.Item.ContentRectangle;
+            int cx = e.Item.Width - 16;
+            int cy = r.Y + r.Height / 2;
+            const int w = 4, h = 7;
+            using var pen = new Pen(_fg, 1.6f)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round,
+            };
+            e.Graphics.DrawLines(pen, new[]
+            {
+                new Point(cx - w / 2, cy - h / 2),
+                new Point(cx + w / 2, cy),
+                new Point(cx - w / 2, cy + h / 2),
+            });
         }
 
         public static GraphicsPath RoundedRect(Rectangle rect, int radius)
