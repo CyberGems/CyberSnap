@@ -17,9 +17,11 @@ public partial class CaptureWidgetWindow : Window
     private readonly SettingsService _settingsService;
     private readonly DispatcherTimer _hoverDelayTimer;
     private readonly DispatcherTimer _collapseTimer;
+    private readonly DispatcherTimer _postDragGraceTimer;
     private bool _isExpanded;
     private bool _isDragging;
     private bool _isDragArmed;
+    private bool _suppressHoverExpand; // brief grace after a drag so it doesn't auto-expand under the resting cursor
     private System.Windows.Point _dragStartPoint;
     private double _dragStartOffset;
     private bool _mouseInWindow;
@@ -46,6 +48,13 @@ public partial class CaptureWidgetWindow : Window
         _collapseTimer = new DispatcherTimer();
         _collapseTimer.Interval = TimeSpan.FromMilliseconds(400);
         _collapseTimer.Tick += CollapseTimer_Tick;
+
+        _postDragGraceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        _postDragGraceTimer.Tick += (_, _) =>
+        {
+            _postDragGraceTimer.Stop();
+            _suppressHoverExpand = false;
+        };
 
         Loaded += OnLoaded;
         SourceInitialized += OnSourceInitialized;
@@ -352,7 +361,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void ActivatorSurface_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (_isExpanded || _isDragging || _isDragArmed) return;
+        if (_isExpanded || _isDragging || _isDragArmed || _suppressHoverExpand) return;
 
         _hoverDelayTimer.Interval = TimeSpan.FromMilliseconds(_settings.WidgetHoverDelayMs);
         _hoverDelayTimer.Start();
@@ -366,7 +375,7 @@ public partial class CaptureWidgetWindow : Window
     private void HoverDelayTimer_Tick(object? sender, EventArgs e)
     {
         _hoverDelayTimer.Stop();
-        if (_isDragArmed || _isDragging) return;
+        if (_isDragArmed || _isDragging || _suppressHoverExpand) return;
         if (_mouseInWindow && !_isExpanded && IsMouseOverWidgetWithPadding())
         {
             ExpandWidget();
@@ -514,7 +523,11 @@ public partial class CaptureWidgetWindow : Window
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);
-        if (!_isExpanded && !_isDragging)
+        // Arm a drag whether collapsed or expanded. When expanded, the toolbar buttons mark
+        // their own clicks Handled, so this window-level handler only fires for presses on the
+        // panel background — letting the user drag an (even accidentally) expanded widget without
+        // swallowing button clicks. Drag vs click is still decided by the movement threshold.
+        if (!_isDragging)
         {
             ArmWidgetDrag(e);
         }
@@ -535,6 +548,7 @@ public partial class CaptureWidgetWindow : Window
             if (wasDragging)
             {
                 _settingsService.Save();
+                BeginPostDragGrace();
             }
             else if (!_isExpanded)
             {
@@ -550,11 +564,16 @@ public partial class CaptureWidgetWindow : Window
         base.OnLostMouseCapture(e);
         if (_isDragging || _isDragArmed)
         {
+            var wasDragging = _isDragging;
             _isDragging = false;
             _isDragArmed = false;
             Cursor = null;
             Mouse.OverrideCursor = null;
             ForceCursor = false;
+            if (wasDragging)
+            {
+                BeginPostDragGrace();
+            }
             CheckMouseLeaveWidget();
         }
     }
@@ -570,6 +589,16 @@ public partial class CaptureWidgetWindow : Window
         Mouse.OverrideCursor = System.Windows.Input.Cursors.Hand;
         ForceCursor = true;
         e.Handled = true;
+    }
+
+    /// <summary>Suppress hover auto-expand briefly after a drag so the widget doesn't pop open
+    /// under the cursor while the user repositions their hand.</summary>
+    private void BeginPostDragGrace()
+    {
+        _suppressHoverExpand = true;
+        _hoverDelayTimer.Stop();
+        _postDragGraceTimer.Stop();
+        _postDragGraceTimer.Start();
     }
 
     private System.Windows.Point GetCursorPositionInDips()
