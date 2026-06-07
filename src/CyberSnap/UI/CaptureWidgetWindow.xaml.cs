@@ -145,13 +145,21 @@ public partial class CaptureWidgetWindow : Window
             CaptureDockSide.Bottom => System.Windows.VerticalAlignment.Top,
             _ => System.Windows.VerticalAlignment.Stretch,
         };
-        PeekGrip.BorderThickness = edge switch
+        // No border of its own: the peek's outline is defined by the panel's clean 1px
+        // CornerRadius=8 border (same as the expanded widget). A second, partial accent
+        // border here only doubled the line and left the rounded corner unclosed.
+        PeekGrip.BorderThickness = new Thickness(0);
+        // Round the interior-facing edge to match the panel's inner radius (8 minus the
+        // 1px border = 7), so the teal fill seats cleanly inside the corner.
+        // CornerRadius order is TopLeft, TopRight, BottomRight, BottomLeft.
+        const double r = 7;
+        PeekGrip.CornerRadius = edge switch
         {
-            CaptureDockSide.Top => new Thickness(1, 1, 1, 0),
-            CaptureDockSide.Bottom => new Thickness(1, 0, 1, 1),
-            CaptureDockSide.Left => new Thickness(1, 1, 0, 1),
-            CaptureDockSide.Right => new Thickness(0, 1, 1, 1),
-            _ => new Thickness(1),
+            CaptureDockSide.Top => new CornerRadius(0, 0, r, r),    // free edge faces down
+            CaptureDockSide.Bottom => new CornerRadius(r, r, 0, 0), // free edge faces up
+            CaptureDockSide.Left => new CornerRadius(0, r, r, 0),   // free edge faces right
+            CaptureDockSide.Right => new CornerRadius(r, 0, 0, r),  // free edge faces left
+            _ => new CornerRadius(r),
         };
 
         GripPanel.Orientation = horizontal
