@@ -175,7 +175,35 @@ public partial class CaptureWidgetWindow : Window
 
         var screens = PopupWindowHelper.GetSortedScreens();
         var targetScreen = ResolveTargetScreen(screens, _settings.WidgetMonitorIndex);
-        var workingArea = PopupWindowHelper.ScreenWorkingAreaToDips(targetScreen);
+
+        // Move the window onto the target monitor first so WPF adopts that monitor's
+        // per-monitor DPI context. Once it has, PointFromScreen maps physical pixels to
+        // this window's DIPs self-consistently — no dividing by a foreign monitor's scale.
+        // Only jump when the window is actually on a different monitor: PositionWindow runs
+        // every frame while dragging, and an unconditional corner-jump leaves ghost trails
+        // on this transparent topmost window.
+        var phys = targetScreen.WorkingArea;
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (hwnd != IntPtr.Zero)
+        {
+            var windowMonitor = Native.User32.MonitorFromWindow(hwnd, Native.User32.MONITOR_DEFAULTTONEAREST);
+            var targetMonitor = Native.User32.MonitorFromPoint(
+                new Native.User32.POINT(phys.X, phys.Y), Native.User32.MONITOR_DEFAULTTONEAREST);
+            if (windowMonitor != targetMonitor)
+            {
+                Native.User32.SetWindowPos(hwnd, IntPtr.Zero, phys.X, phys.Y, 0, 0,
+                    Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE | Native.User32.SWP_NOZORDER);
+            }
+        }
+
+        var topLeft = PointFromScreen(new System.Windows.Point(phys.Left, phys.Top));
+        var bottomRight = PointFromScreen(new System.Windows.Point(phys.Right, phys.Bottom));
+        var workingArea = new Rect(
+            Left + topLeft.X,
+            Top + topLeft.Y,
+            bottomRight.X - topLeft.X,
+            bottomRight.Y - topLeft.Y);
+
         var bounds = CalculateWidgetBounds(
             workingArea,
             _settings.WidgetDockEdge,
@@ -183,19 +211,10 @@ public partial class CaptureWidgetWindow : Window
             _isExpanded,
             UiScale.Current);
 
-        var (scaleX, scaleY) = PopupWindowHelper.GetScaleForPoint(targetScreen.Bounds.Location);
-        double physicalLeft = bounds.Left * scaleX;
-        double physicalTop = bounds.Top * scaleY;
-        double physicalWidth = bounds.Width * scaleX;
-        double physicalHeight = bounds.Height * scaleY;
-
-        var primaryScreen = screens.FirstOrDefault(s => s.Primary) ?? screens.First();
-        var (primaryScaleX, primaryScaleY) = PopupWindowHelper.GetScaleForPoint(primaryScreen.Bounds.Location);
-
-        Width = physicalWidth / primaryScaleX;
-        Height = physicalHeight / primaryScaleY;
-        Left = physicalLeft / primaryScaleX;
-        Top = physicalTop / primaryScaleY;
+        Width = bounds.Width;
+        Height = bounds.Height;
+        Left = bounds.Left;
+        Top = bounds.Top;
 
         UpdateMainPanelBorderAlignment();
     }
@@ -272,21 +291,21 @@ public partial class CaptureWidgetWindow : Window
         {
             CaptureDockSide.Top => new Rect(
                 workingArea.Left + horizontalTravel * offset,
-                isExpanded ? workingArea.Top - 6 * scale : workingArea.Top,
+                workingArea.Top,
                 width,
                 height),
             CaptureDockSide.Bottom => new Rect(
                 workingArea.Left + horizontalTravel * offset,
-                isExpanded ? workingArea.Bottom - height + 6 * scale : workingArea.Bottom - height,
+                workingArea.Bottom - height,
                 width,
                 height),
             CaptureDockSide.Left => new Rect(
-                isExpanded ? workingArea.Left - 6 * scale : workingArea.Left,
+                workingArea.Left,
                 workingArea.Top + verticalTravel * offset,
                 width,
                 height),
             CaptureDockSide.Right => new Rect(
-                isExpanded ? workingArea.Right - width + 6 * scale : workingArea.Right - width,
+                workingArea.Right - width,
                 workingArea.Top + verticalTravel * offset,
                 width,
                 height),
