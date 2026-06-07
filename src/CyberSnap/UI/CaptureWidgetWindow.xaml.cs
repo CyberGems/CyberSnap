@@ -23,6 +23,7 @@ public partial class CaptureWidgetWindow : Window
     private bool _isDragArmed;
     private bool _suppressHoverExpand; // brief grace after a drag so it doesn't auto-expand under the resting cursor
     private bool _contextMenuOpen;     // keep the widget from collapsing while its context menu is open
+    private System.Windows.Media.Effects.Effect? _panelShadow; // soft shadow, applied only when expanded
     private System.Windows.Point _dragStartPoint;
     private double _dragStartOffset;
     private bool _mouseInWindow;
@@ -36,12 +37,26 @@ public partial class CaptureWidgetWindow : Window
     private const double PanelHeight = 250;
     private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
+    // Transparent halo (DIPs) added around the content on every side so the panel's drop shadow
+    // has room to render instead of being clipped by a content-sized window. The window grows by
+    // 2x this; the content is inset by the same amount via RootGrid.Margin, so the visible widget
+    // stays put. Drag-travel and hover hit-testing compensate for this margin.
+    private const double ShadowMargin = 22;
+
     public CaptureWidgetWindow(SettingsService settingsService)
     {
         _settingsService = settingsService;
         _settings = settingsService.Settings;
         InitializeComponent();
         SizeToContent = SizeToContent.Manual;
+
+        // Inset the content so the transparent halo around it (window grown by ShadowMargin)
+        // is free for the drop shadow to render into.
+        RootGrid.Margin = new Thickness(ShadowMargin);
+
+        // The soft shadow looks great on the expanded panel but creates corner artifacts on the
+        // thin peek, so we only apply it while expanded (toggled in PositionWindow).
+        _panelShadow = MainPanelBorder.Effect;
 
         _hoverDelayTimer = new DispatcherTimer();
         _hoverDelayTimer.Tick += HoverDelayTimer_Tick;
@@ -253,10 +268,16 @@ public partial class CaptureWidgetWindow : Window
             _isExpanded,
             UiScale.Current);
 
-        Width = bounds.Width;
-        Height = bounds.Height;
-        Left = bounds.Left;
-        Top = bounds.Top;
+        // Grow the window by the shadow halo on every side; the content is inset by the same
+        // amount (RootGrid.Margin), so the visible widget lands exactly on 'bounds'. The halo on
+        // the docked-edge side simply falls off-screen, which is fine on a transparent window.
+        Width = bounds.Width + ShadowMargin * 2;
+        Height = bounds.Height + ShadowMargin * 2;
+        Left = bounds.Left - ShadowMargin;
+        Top = bounds.Top - ShadowMargin;
+
+        // Shadow only when expanded; the thin peek looks cleaner without it.
+        MainPanelBorder.Effect = _isExpanded ? _panelShadow : null;
 
         UpdateMainPanelBorderAlignment();
     }
@@ -425,9 +446,13 @@ public partial class CaptureWidgetWindow : Window
             if (!Native.User32.GetWindowRect(hwnd, out var rect)) return false;
             if (!Native.User32.GetCursorPos(out var pt)) return false;
 
+            // The window includes a transparent shadow halo; test against the visible content by
+            // deflating the rect by the halo (converted to physical pixels for this monitor).
+            int halo = (int)Math.Round(ShadowMargin * VisualTreeHelper.GetDpi(this).DpiScaleX);
+
             const int padding = 12; // 12 physical pixels safety padding
-            return pt.X >= rect.Left - padding && pt.X <= rect.Right + padding &&
-                   pt.Y >= rect.Top - padding && pt.Y <= rect.Bottom + padding;
+            return pt.X >= rect.Left + halo - padding && pt.X <= rect.Right - halo + padding &&
+                   pt.Y >= rect.Top + halo - padding && pt.Y <= rect.Bottom - halo + padding;
         }
         catch
         {
@@ -530,9 +555,12 @@ public partial class CaptureWidgetWindow : Window
 
             var curPos = GetCursorPositionInDips();
 
+            // Window is inflated by the shadow halo; travel is over the visible content size.
+            var contentWidth = Width - ShadowMargin * 2;
+            var contentHeight = Height - ShadowMargin * 2;
             if (_settings.WidgetDockEdge == CaptureDockSide.Top || _settings.WidgetDockEdge == CaptureDockSide.Bottom)
             {
-                var travel = workingArea.Width - Width;
+                var travel = workingArea.Width - contentWidth;
                 if (travel > 0)
                 {
                     var delta = curPos.X - _dragStartPoint.X;
@@ -541,7 +569,7 @@ public partial class CaptureWidgetWindow : Window
             }
             else
             {
-                var travel = workingArea.Height - Height;
+                var travel = workingArea.Height - contentHeight;
                 if (travel > 0)
                 {
                     var delta = curPos.Y - _dragStartPoint.Y;
@@ -743,7 +771,28 @@ public partial class CaptureWidgetWindow : Window
             CheckMouseLeaveWidget(); // collapse now if the cursor ended up outside
         };
 
-        menu.Show(System.Windows.Forms.Cursor.Position);
+        // Clamp the menu to the working area of the monitor under the cursor, so opening it near
+        // a screen edge flips it inward instead of spilling onto the adjacent monitor.
+        var cursor = System.Windows.Forms.Cursor.Position;
+        var wa = System.Windows.Forms.Screen.FromPoint(cursor).WorkingArea;
+        var sz = menu.PreferredSize;
+        int x = Math.Max(wa.Left, Math.Min(cursor.X, wa.Right - sz.Width));
+        int y = Math.Max(wa.Top, Math.Min(cursor.Y, wa.Bottom - sz.Height));
+
+        // If the menu sits near the right edge of this monitor, open submenus to the LEFT so they
+        // don't spill onto the adjacent monitor (WinForms would otherwise flow right into it).
+        const int submenuWidth = 180;
+        var subDirection = (x + sz.Width + submenuWidth > wa.Right)
+            ? System.Windows.Forms.ToolStripDropDownDirection.Left
+            : System.Windows.Forms.ToolStripDropDownDirection.Right;
+        foreach (System.Windows.Forms.ToolStripItem it in menu.Items)
+        {
+            if (it is System.Windows.Forms.ToolStripMenuItem mi && mi.HasDropDownItems)
+                mi.DropDownDirection = subDirection;
+        }
+
+        menu.Show(new System.Drawing.Point(x, y));
+
         // The widget is a NOACTIVATE window, so the menu opens without focus and wouldn't close
         // on an outside click. Force it foreground so click-away dismissal works.
         var menuHandle = menu.Handle;
