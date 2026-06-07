@@ -34,7 +34,7 @@ public partial class CaptureWidgetWindow : Window
     // Layout constants
     private const double PanelWidth = 196;
     private const double PanelHeight = 250;
-    private const double PeekSize = 16;
+    private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
     public CaptureWidgetWindow(SettingsService settingsService)
     {
@@ -166,6 +166,30 @@ public partial class CaptureWidgetWindow : Window
         GripPanel.Orientation = horizontal
             ? System.Windows.Controls.Orientation.Horizontal
             : System.Windows.Controls.Orientation.Vertical;
+
+        // Nudge the grip bars toward the docked (screen) edge with a tiny overflow, so they
+        // appear to emerge from the edge instead of hugging the free rounded edge.
+        const double overflow = 2;
+        GripPanel.HorizontalAlignment = edge switch
+        {
+            CaptureDockSide.Left => System.Windows.HorizontalAlignment.Left,
+            CaptureDockSide.Right => System.Windows.HorizontalAlignment.Right,
+            _ => System.Windows.HorizontalAlignment.Center,
+        };
+        GripPanel.VerticalAlignment = edge switch
+        {
+            CaptureDockSide.Top => System.Windows.VerticalAlignment.Top,
+            CaptureDockSide.Bottom => System.Windows.VerticalAlignment.Bottom,
+            _ => System.Windows.VerticalAlignment.Center,
+        };
+        GripPanel.Margin = edge switch
+        {
+            CaptureDockSide.Top => new Thickness(0, -overflow, 0, 0),
+            CaptureDockSide.Bottom => new Thickness(0, 0, 0, -overflow),
+            CaptureDockSide.Left => new Thickness(-overflow, 0, 0, 0),
+            CaptureDockSide.Right => new Thickness(0, 0, -overflow, 0),
+            _ => new Thickness(0),
+        };
 
         SetGripRect(GripRect1, horizontal);
         SetGripRect(GripRect2, horizontal);
