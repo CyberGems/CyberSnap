@@ -223,6 +223,9 @@ internal static partial class User32
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetIconInfo(IntPtr hIcon, out ICONINFO piconinfo);
 
+    [DllImport("user32.dll")]
+    public static extern IntPtr CreateIconIndirect(ref ICONINFO piconinfo);
+
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool DrawIconEx(IntPtr hDC, int xLeft, int yTop, IntPtr hIcon,

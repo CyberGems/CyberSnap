@@ -86,16 +86,27 @@ public static class ToastButtonLayout
         }
     }
 
+    // Move a button to an exact slot, making it visible. If another *visible* button already
+    // occupies the target slot, swap them (the occupant takes the dragged button's old slot).
+    // Hidden buttons keep stale slot assignments and are ignored so they never displace a
+    // visible one nor block a drop.
     public static void AssignSlot(AppSettings.ToastButtonLayoutSettings settings, ToastButtonKind button, ToastButtonSlot targetSlot)
     {
         var currentSlot = GetSlot(settings, button);
-        if (currentSlot == targetSlot)
-            return;
 
-        var occupant = FindButtonAt(settings, targetSlot);
+        foreach (var other in AllButtons)
+        {
+            if (other == button)
+                continue;
+            if (IsVisible(settings, other) && GetSlot(settings, other) == targetSlot)
+            {
+                SetSlot(settings, other, currentSlot);
+                break;
+            }
+        }
+
         SetSlot(settings, button, targetSlot);
-        if (occupant.HasValue && occupant.Value != button)
-            SetSlot(settings, occupant.Value, currentSlot);
+        SetVisible(settings, button, true);
     }
 
     public static ToastButtonKind? FindButtonAt(AppSettings.ToastButtonLayoutSettings settings, ToastButtonSlot slot)

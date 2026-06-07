@@ -2352,29 +2352,20 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Choose which buttons appear on screenshot previews, and which corner each one sits in. Pick a preset to start, then fine-tune below." FontSize="13" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Choose which buttons appear on screenshot previews and where. Pick a preset, use the dropdowns below, or drag buttons directly on the preview to rearrange them." FontSize="13" TextWrapping="Wrap"/>
                                     <TextBlock x:Name="ToastLayoutSelectionText" Text="Standard preset" Style="{StaticResource InfoText}" Margin="0,4,0,0"
                                                ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                                AutomationProperties.Name="notification layout selection"
                                                AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
                                                AutomationProperties.LiveSetting="Polite"/>
                                 </StackPanel>
-                                <Button x:Name="ResetToastButtonsBtn" Grid.Column="1" Content="Reset Layout"
-                                        Margin="8,0,0,0"
-                                        AutomationProperties.Name="Reset notification button layout"
-                                        ToolTip="Restore the default notification button layout"
-                                        Cursor="Hand" Click="ResetToastButtonsBtn_Click"/>
                             </Grid>
 
                             <TextBlock Text="Presets" FontSize="12.5" FontWeight="SemiBold" Margin="0,16,0,8"
-                                       HorizontalAlignment="Center"
+                                       HorizontalAlignment="Left"
                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                            <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left">
                                 <Button x:Name="ToastPresetMinimalBtn" Content="Minimal" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Minimal preset"
                                         AutomationProperties.HelpText="Show only the close button."
@@ -2383,10 +2374,18 @@
                                         AutomationProperties.Name="Standard preset"
                                         AutomationProperties.HelpText="Show pin, close, history and save."
                                         ToolTip="Show pin, close, history and save" Click="ToastPresetStandardBtn_Click"/>
-                                <Button x:Name="ToastPresetFullBtn" Content="Full" Cursor="Hand"
+                                <Button x:Name="ToastPresetFullBtn" Content="Full" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Full preset"
                                         AutomationProperties.HelpText="Show every button."
                                         ToolTip="Show every button" Click="ToastPresetFullBtn_Click"/>
+                                <Button x:Name="ToastManualBtn" Content="Manual" Margin="0,0,8,0" Cursor="Hand"
+                                        AutomationProperties.Name="Manual layout"
+                                        AutomationProperties.HelpText="Unlock the per-button controls to place each button yourself."
+                                        ToolTip="Customize each button yourself" Click="ToastManualBtn_Click"/>
+                                <Button x:Name="ResetToastButtonsBtn" Content="Reset" Margin="8,0,0,0" Cursor="Hand"
+                                        AutomationProperties.Name="Reset notification button layout"
+                                        ToolTip="Restore the default notification button layout"
+                                        Click="ResetToastButtonsBtn_Click"/>
                             </StackPanel>
 
                             <Border Margin="0,14,0,0"
@@ -2395,13 +2394,15 @@
                                     BorderThickness="1"
                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
                                     Padding="16">
-                                <Grid x:Name="ToastLayoutSurfaceRoot" IsHitTestVisible="False">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                    <StackPanel x:Name="ToastButtonRows" Margin="0,0,20,0" VerticalAlignment="Center"/>
+                                    <Grid x:Name="ToastLayoutSurfaceRoot">
                                     <StackPanel x:Name="ToastLayoutStack" Width="300" HorizontalAlignment="Center">
                                     <Border Width="300" Height="236" CornerRadius="18"
                                             Background="#12000000"
                                             BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
                                             BorderThickness="1">
-                                        <Grid x:Name="ToastLayoutPreviewSurface">
+                                        <Grid x:Name="ToastLayoutPreviewSurface" AllowDrop="True" DragOver="ToastPreviewSurface_DragOver" PreviewMouseMove="ToastPreviewSurface_PreviewMouseMove">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
                                                 <RowDefinition Height="Auto"/>
@@ -2410,10 +2411,85 @@
 
                                             <Border Grid.Row="0" Margin="12,12,12,0" CornerRadius="14,14,10,10" Background="#D35A93E6">
                                                 <Grid>
+                                                    <!-- Slot placeholders — always visible, dashed when empty, hidden when occupied -->
+                                                    <Border x:Name="ToastLayoutSlotTopLeft"
+                                                            Width="28" Height="28" CornerRadius="7"
+                                                            HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                            Margin="8,8,0,0"
+                                                            AllowDrop="True" Tag="TopLeft"
+                                                            DragEnter="ToastSlot_DragEnter" DragLeave="ToastSlot_DragLeave" Drop="ToastSlot_Drop"
+                                                            BorderBrush="{DynamicResource ThemeTextPrimaryBrush}" BorderThickness="1"
+                                                            Opacity="0.22"
+                                                            Background="Transparent"/>
+                                                    <Border x:Name="ToastLayoutSlotTopInnerLeft"
+                                                            Width="28" Height="28" CornerRadius="7"
+                                                            HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                            Margin="48,8,0,0"
+                                                            AllowDrop="True" Tag="TopInnerLeft"
+                                                            DragEnter="ToastSlot_DragEnter" DragLeave="ToastSlot_DragLeave" Drop="ToastSlot_Drop"
+                                                            BorderBrush="{DynamicResource ThemeTextPrimaryBrush}" BorderThickness="1"
+                                                            Opacity="0.22"
+                                                            Background="Transparent"/>
+                                                    <Border x:Name="ToastLayoutSlotTopRight"
+                                                            Width="28" Height="28" CornerRadius="7"
+                                                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                            Margin="0,8,8,0"
+                                                            AllowDrop="True" Tag="TopRight"
+                                                            DragEnter="ToastSlot_DragEnter" DragLeave="ToastSlot_DragLeave" Drop="ToastSlot_Drop"
+                                                            BorderBrush="{DynamicResource ThemeTextPrimaryBrush}" BorderThickness="1"
+                                                            Opacity="0.22"
+                                                            Background="Transparent"/>
+                                                    <Border x:Name="ToastLayoutSlotTopInnerRight"
+                                                            Width="28" Height="28" CornerRadius="7"
+                                                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                            Margin="0,8,48,0"
+                                                            AllowDrop="True" Tag="TopInnerRight"
+                                                            DragEnter="ToastSlot_DragEnter" DragLeave="ToastSlot_DragLeave" Drop="ToastSlot_Drop"
+                                                            BorderBrush="{DynamicResource ThemeTextPrimaryBrush}" BorderThickness="1"
+                                                            Opacity="0.22"
+                                                            Background="Transparent"/>
+                                                    <Border x:Name="ToastLayoutSlotBottomLeft"
+                                                            Width="28" Height="28" CornerRadius="7"
+                                                            HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                                            Margin="8,0,0,8"
+                                                            AllowDrop="True" Tag="BottomLeft"
+                                                            DragEnter="ToastSlot_DragEnter" DragLeave="ToastSlot_DragLeave" Drop="ToastSlot_Drop"
+                                                            BorderBrush="{DynamicResource ThemeTextPrimaryBrush}" BorderThickness="1"
+                                                            Opacity="0.22"
+                                                            Background="Transparent"/>
+                                                    <Border x:Name="ToastLayoutSlotBottomInnerLeft"
+                                                            Width="28" Height="28" CornerRadius="7"
+                                                            HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                                            Margin="48,0,0,8"
+                                                            AllowDrop="True" Tag="BottomInnerLeft"
+                                                            DragEnter="ToastSlot_DragEnter" DragLeave="ToastSlot_DragLeave" Drop="ToastSlot_Drop"
+                                                            BorderBrush="{DynamicResource ThemeTextPrimaryBrush}" BorderThickness="1"
+                                                            Opacity="0.22"
+                                                            Background="Transparent"/>
+                                                    <Border x:Name="ToastLayoutSlotBottomRight"
+                                                            Width="28" Height="28" CornerRadius="7"
+                                                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                            Margin="0,0,8,8"
+                                                            AllowDrop="True" Tag="BottomRight"
+                                                            DragEnter="ToastSlot_DragEnter" DragLeave="ToastSlot_DragLeave" Drop="ToastSlot_Drop"
+                                                            BorderBrush="{DynamicResource ThemeTextPrimaryBrush}" BorderThickness="1"
+                                                            Opacity="0.22"
+                                                            Background="Transparent"/>
+                                                    <Border x:Name="ToastLayoutSlotBottomInnerRight"
+                                                            Width="28" Height="28" CornerRadius="7"
+                                                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                            Margin="0,0,48,8"
+                                                            AllowDrop="True" Tag="BottomInnerRight"
+                                                            DragEnter="ToastSlot_DragEnter" DragLeave="ToastSlot_DragLeave" Drop="ToastSlot_Drop"
+                                                            BorderBrush="{DynamicResource ThemeTextPrimaryBrush}" BorderThickness="1"
+                                                            Opacity="0.22"
+                                                            Background="Transparent"/>
+
                                                     <Border x:Name="ToastLayoutCloseBtn"
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the close notification button"
                                                             AutomationProperties.Name="Close notification button"                                                            Tag="Close">
                                                         <Image x:Name="ToastLayoutCloseIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
@@ -2424,6 +2500,7 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the pin notification button"
                                                             AutomationProperties.Name="Pin notification button"                                                            Tag="Pin">
                                                         <Image x:Name="ToastLayoutPinIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
@@ -2434,6 +2511,7 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the save notification button"
                                                             AutomationProperties.Name="Save notification button"                                                            Tag="Save">
                                                         <Image x:Name="ToastLayoutSaveIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
@@ -2444,8 +2522,9 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the send to notification button"
-                                                            AutomationProperties.Name="Send to notification button"                                                            Tag="Send to">
+                                                            AutomationProperties.Name="Send to notification button"                                                            Tag="Office">
                                                         <Image x:Name="ToastLayoutOfficeIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                                RenderOptions.BitmapScalingMode="HighQuality"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -2454,6 +2533,7 @@
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                             Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the delete notification button"
                                                             AutomationProperties.Name="Delete notification button"                                                            Tag="Delete">
                                                         <Image x:Name="ToastLayoutDeleteIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
@@ -2465,6 +2545,7 @@
                                                                Width="30" Height="30" CornerRadius="9"
                                                                Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                                Cursor="Hand"
+                                                               PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                                ToolTip="Move the history notification button"
                                                                AutomationProperties.Name="History notification button"                                                               Tag="History">
                                                            <Image x:Name="ToastLayoutAiRedirectIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
@@ -2475,6 +2556,7 @@
                                                                Width="30" Height="30" CornerRadius="9"
                                                                Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                                Cursor="Hand"
+                                                               PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                                ToolTip="Move the edit notification button"
                                                                AutomationProperties.Name="Edit notification button"                                                               Tag="Edit">
                                                            <Image x:Name="ToastLayoutEditIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
@@ -2499,10 +2581,19 @@
                                     </Border>
 
                                     </StackPanel>
-                                </Grid>
-                            </Border>
 
-                            <StackPanel x:Name="ToastButtonRows" Margin="0,16,0,0" HorizontalAlignment="Center"/>
+                                    <!-- Floating drag preview ("ghost") that follows the cursor while dragging a toast button. -->
+                                    <Image x:Name="ToastDragGhost" Width="30" Height="30"
+                                           HorizontalAlignment="Left" VerticalAlignment="Top"
+                                           IsHitTestVisible="False" Visibility="Collapsed" Opacity="0.9"
+                                           RenderOptions.BitmapScalingMode="HighQuality">
+                                        <Image.Effect>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="0" Opacity="0.6" Color="#000000"/>
+                                        </Image.Effect>
+                                    </Image>
+                                </Grid>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
                 </StackPanel>
