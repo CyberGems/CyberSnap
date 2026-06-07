@@ -22,6 +22,7 @@ public partial class CaptureWidgetWindow : Window
     private bool _isDragging;
     private bool _isDragArmed;
     private bool _suppressHoverExpand; // brief grace after a drag so it doesn't auto-expand under the resting cursor
+    private bool _contextMenuOpen;     // keep the widget from collapsing while its context menu is open
     private System.Windows.Point _dragStartPoint;
     private double _dragStartOffset;
     private bool _mouseInWindow;
@@ -361,7 +362,7 @@ public partial class CaptureWidgetWindow : Window
         _mouseInWindow = false;
         ActivatorSurface_MouseLeave(sender, e);
         
-        if (_isExpanded && !_isDragging)
+        if (_isExpanded && !_isDragging && !_contextMenuOpen)
         {
             _collapseTimer.Start();
         }
@@ -413,7 +414,7 @@ public partial class CaptureWidgetWindow : Window
     private void CollapseTimer_Tick(object? sender, EventArgs e)
     {
         _collapseTimer.Stop();
-        if (!_mouseInWindow && _isExpanded && !_isDragging)
+        if (!_mouseInWindow && _isExpanded && !_isDragging && !_contextMenuOpen)
         {
             if (!IsMouseOverWidgetWithPadding())
             {
@@ -426,7 +427,7 @@ public partial class CaptureWidgetWindow : Window
     {
         _ = Dispatcher.BeginInvoke(new Action(() =>
         {
-            if (!_mouseInWindow && _isExpanded && !_isDragging)
+            if (!_mouseInWindow && _isExpanded && !_isDragging && !_contextMenuOpen)
             {
                 if (!IsMouseOverWidgetWithPadding())
                 {
@@ -625,23 +626,25 @@ public partial class CaptureWidgetWindow : Window
 
     private void ShowWidgetContextMenu()
     {
-        var menu = new System.Windows.Controls.ContextMenu();
+        // Built with WindowsMenuRenderer so it is pixel-identical to the tray icon menu
+        // (dark rounded surface, accent hover bar) instead of the default WPF look.
+        var menu = Helpers.WindowsMenuRenderer.Create(showImages: false, minWidth: 220);
 
-        // Dock Edge Selection
-        var edgeMenu = new MenuItem { Header = LocalizationService.Translate("Dock edge") };
+        // Dock edge submenu
+        var edgeMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Dock edge"));
         var edges = new[] { CaptureDockSide.Top, CaptureDockSide.Bottom, CaptureDockSide.Left, CaptureDockSide.Right };
         var edgeLabels = new[] { "Top", "Bottom", "Left", "Right" };
         for (int i = 0; i < edges.Length; i++)
         {
             var ed = edges[i];
-            var item = new MenuItem { Header = LocalizationService.Translate(edgeLabels[i]), IsChecked = _settings.WidgetDockEdge == ed };
+            var item = Helpers.WindowsMenuRenderer.Item(edgeLabels[i], active: _settings.WidgetDockEdge == ed);
             item.Click += (s, ev) =>
             {
                 _settings.WidgetDockEdge = ed;
                 _settingsService.Save();
                 RefreshLayout();
             };
-            edgeMenu.Items.Add(item);
+            edgeMenu.DropDownItems.Add(item);
         }
         menu.Items.Add(edgeMenu);
 
@@ -649,45 +652,47 @@ public partial class CaptureWidgetWindow : Window
         var screens = PopupWindowHelper.GetSortedScreens();
         if (screens.Length > 1)
         {
-            var monitorMenu = new MenuItem { Header = LocalizationService.Translate("Screen") };
+            var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"));
             for (int i = 0; i < screens.Length; i++)
             {
                 var idx = i;
                 var s = screens[i];
                 var primarySecondary = s.Primary ? LocalizationService.Translate("Primary") : LocalizationService.Translate("Secondary");
                 var label = $"Monitor {i + 1} ({primarySecondary})";
-                var item = new MenuItem { Header = label, IsChecked = _settings.WidgetMonitorIndex == idx };
+                var item = Helpers.WindowsMenuRenderer.Item(label, active: _settings.WidgetMonitorIndex == idx);
                 item.Click += (s, ev) =>
                 {
                     _settings.WidgetMonitorIndex = idx;
                     _settingsService.Save();
                     PositionWindow();
                 };
-                monitorMenu.Items.Add(item);
+                monitorMenu.DropDownItems.Add(item);
             }
             menu.Items.Add(monitorMenu);
+            Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(monitorMenu, minWidth: 200);
         }
 
-        // Hover Delay trigger submenu
-        var delayMenu = new MenuItem { Header = LocalizationService.Translate("Activation delay") };
+        // Activation delay submenu
+        var delayMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Activation delay"));
         var delays = new[] { 0, 100, 250, 500, 1000 };
         foreach (var d in delays)
         {
             var delayMs = d;
-            var item = new MenuItem { Header = $"{d} ms", IsChecked = _settings.WidgetHoverDelayMs == delayMs };
+            var item = Helpers.WindowsMenuRenderer.Item($"{d} ms", active: _settings.WidgetHoverDelayMs == delayMs);
             item.Click += (s, ev) =>
             {
                 _settings.WidgetHoverDelayMs = delayMs;
                 _settingsService.Save();
             };
-            delayMenu.Items.Add(item);
+            delayMenu.DropDownItems.Add(item);
         }
         menu.Items.Add(delayMenu);
 
-        menu.Items.Add(new Separator());
+        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
-        // Disable Floating Panel completely
-        var disableItem = new MenuItem { Header = LocalizationService.Translate("Disable quick panel") };
+        // Disable floating panel completely
+        var disableItem = Helpers.WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Disable quick panel"), iconId: "close", danger: true);
         disableItem.Click += (s, ev) =>
         {
             _settings.ShowCaptureWidget = false;
@@ -699,7 +704,27 @@ public partial class CaptureWidgetWindow : Window
         };
         menu.Items.Add(disableItem);
 
-        menu.IsOpen = true;
+        Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 220);
+        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(edgeMenu, minWidth: 150);
+        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(delayMenu, minWidth: 150);
+
+        // Keep the widget expanded/visible while the menu is open: showing the menu moves the
+        // cursor off the widget, which would otherwise start the collapse timer and leave the
+        // menu floating over an empty spot.
+        _contextMenuOpen = true;
+        _collapseTimer.Stop();
+        menu.Closed += (_, _) =>
+        {
+            _contextMenuOpen = false;
+            CheckMouseLeaveWidget(); // collapse now if the cursor ended up outside
+        };
+
+        menu.Show(System.Windows.Forms.Cursor.Position);
+        // The widget is a NOACTIVATE window, so the menu opens without focus and wouldn't close
+        // on an outside click. Force it foreground so click-away dismissal works.
+        var menuHandle = menu.Handle;
+        if (menuHandle != IntPtr.Zero)
+            Native.User32.SetForegroundWindow(menuHandle);
     }
 
     // Capture Actions
