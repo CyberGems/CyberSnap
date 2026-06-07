@@ -105,15 +105,16 @@
                     BorderBrush="{StaticResource WidgetBorderActive}" BorderThickness="1" CornerRadius="8"
                     Visibility="Visible">
                 <Border.Effect>
-                    <DropShadowEffect Color="#00FFFF" BlurRadius="6" ShadowDepth="0" Opacity="0.35"/>
+                    <!-- Soft neutral drop shadow (SnagIt-like). Needs the transparent halo from
+                         ShadowMargin to render; tune BlurRadius/Opacity/ShadowDepth to taste. -->
+                    <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="3" Direction="270" Opacity="0.5"/>
                 </Border.Effect>
-                
+
                 <Grid>
                     <Border x:Name="PeekGrip" Background="#2600FFFF" BorderBrush="{StaticResource WidgetAccent}"
                             BorderThickness="0" Panel.ZIndex="2" IsHitTestVisible="False">
-                        <Border.Effect>
-                            <DropShadowEffect Color="#00FFFF" BlurRadius="8" ShadowDepth="0" Opacity="0.45"/>
-                        </Border.Effect>
+                        <!-- No own glow: the panel's drop shadow covers the peek. Its own effect
+                             (clipped before the shadow margin existed) now rendered as a corner ghost. -->
                         <StackPanel x:Name="GripPanel" Orientation="Horizontal"
                                     HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Rectangle x:Name="GripRect1" Width="2" Height="6" Fill="{StaticResource WidgetTextMuted}" Margin="1,0"/>
