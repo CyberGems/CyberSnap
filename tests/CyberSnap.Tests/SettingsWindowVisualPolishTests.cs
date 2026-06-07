@@ -151,17 +151,18 @@ public sealed class SettingsWindowVisualPolishTests
         Assert.Contains("ToastLayoutSelectionText.ToolTip = status;", statusBlock);
         Assert.Contains("AutomationProperties.SetHelpText(ToastLayoutSelectionText, status);", statusBlock);
 
-        // Each corner picker segment is a focusable, keyboard-activatable control with an accessible name.
-        var segmentBlock = GetMethodBlock(toastCode, "private Border BuildToastSegment(ToastButtonKind kind, ToastCorner? corner, string glyph, string helpText)");
-        Assert.Contains("Focusable = true,", segmentBlock);
-        Assert.Contains("AutomationProperties.SetName(segment, helpText);", segmentBlock);
-        Assert.Contains("AutomationProperties.SetHelpText(segment, \"Press Enter or Space to apply.\");", segmentBlock);
-        Assert.Contains("segment.MouseLeftButtonDown += ToastSegment_MouseLeftButtonDown;", segmentBlock);
-        Assert.Contains("segment.KeyDown += ToastSegment_KeyDown;", segmentBlock);
+        // Each button row uses a ComboBox with accessible items and a SelectionChanged handler.
+        var comboBuilder = GetMethodBlock(toastCode, "private Border BuildToastButtonRow(ToastButtonKind kind)");
+        Assert.Contains("AutomationProperties.SetName(combo,", comboBuilder);
+        Assert.Contains("AutomationProperties.SetHelpText(combo,", comboBuilder);
+        Assert.Contains("combo.SelectionChanged += ToastButtonCombo_SelectionChanged;", comboBuilder);
 
-        Assert.Contains("private void ToastSegment_KeyDown(object sender, KeyEventArgs e)", toastCode);
-        Assert.Contains("private void ToastSegment_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)", toastCode);
-        Assert.Contains("=> e.Key is Key.Enter or Key.Space;", toastCode);
+        var itemBuilder = GetMethodBlock(toastCode, "private static ComboBoxItem CreateCornerComboItem(string text, ToastCorner? corner, string tooltip)");
+        Assert.Contains("AutomationProperties.SetName(item, text);", itemBuilder);
+        Assert.Contains("AutomationProperties.SetHelpText(item, tooltip);", itemBuilder);
+
+        Assert.Contains("private void ToastButtonCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)", toastCode);
+        Assert.Contains("_refreshingToastCombos", toastCode);
 
         // Presets are keyboard-reachable buttons with accessible names.
         AssertNamedControlHasLabel(xaml, "ToastPresetMinimalBtn", "<Button", "Minimal preset", "Show only the close button");

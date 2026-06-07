@@ -113,6 +113,11 @@ public sealed class AppSettings
 {
     public sealed class ToastButtonLayoutSettings
     {
+        // When true the user has opted into manual editing of each button's placement; the
+        // per-button controls in the layout designer are enabled. New users start with this off
+        // (a preset is in charge) until they click "Manual" or drag a button in the preview.
+        public bool Manual { get; set; }
+
         public bool ShowClose { get; set; } = true;
         public ToastButtonSlot CloseSlot { get; set; } = ToastButtonSlot.TopRight;
         public bool ShowPin { get; set; } = true;
