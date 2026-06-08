@@ -109,6 +109,41 @@ public static class ToastButtonLayout
         SetVisible(settings, button, true);
     }
 
+    // Place a button that is currently hidden (dragged in from the list) into an exact slot.
+    // Unlike AssignSlot, this never swaps an occupant into the hidden button's stale slot — a
+    // hidden button has no meaningful current slot, so a naive swap could collide. Instead:
+    //   - target free            -> place there;
+    //   - target taken, partner free in the same corner -> push the occupant to the partner
+    //                               (corners hold 2) and place the new button at the target;
+    //   - corner already full     -> return false without mutating.
+    public static bool PlaceFromHidden(AppSettings.ToastButtonLayoutSettings settings, ToastButtonKind button, ToastButtonSlot targetSlot)
+    {
+        ToastButtonKind? occupant = null;
+        foreach (var other in AllButtons)
+        {
+            if (other == button)
+                continue;
+            if (IsVisible(settings, other) && GetSlot(settings, other) == targetSlot)
+            {
+                occupant = other;
+                break;
+            }
+        }
+
+        if (occupant is not null)
+        {
+            var (outer, inner) = CornerSlots(SlotToCorner(targetSlot));
+            var partner = targetSlot == outer ? inner : outer;
+            if (IsSlotOccupiedByOther(settings, partner, button))
+                return false; // corner full (both slots taken)
+            SetSlot(settings, occupant.Value, partner);
+        }
+
+        SetSlot(settings, button, targetSlot);
+        SetVisible(settings, button, true);
+        return true;
+    }
+
     public static ToastButtonKind? FindButtonAt(AppSettings.ToastButtonLayoutSettings settings, ToastButtonSlot slot)
     {
         if (settings.CloseSlot == slot) return ToastButtonKind.Close;
