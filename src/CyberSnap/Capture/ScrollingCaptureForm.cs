@@ -41,6 +41,13 @@ public sealed partial class ScrollingCaptureForm : Form
     private Point _selectionCursor;
     private Rectangle _selection;
 
+    // Handle resize/move during ready phase (after drag-release, before START)
+    private int _handleDragIndex = -1; // -1=none, 0=TL, 1=TR, 2=BL, 3=BR, 4=move
+    private bool _isHandleDragging;
+    private Point _handleDragOrigin;
+    private Rectangle _handleDragStartRect;
+    private static readonly int HandleSize = 10;
+
     // Capture
     private Rectangle _screenRegion;
     private const int CaptureIntervalMs = 100;
@@ -57,6 +64,8 @@ public sealed partial class ScrollingCaptureForm : Form
     private int _bestMatchIndex;
     private int _bestIgnoreBottomOffset;
     private int _consecutiveDuplicates;
+    private int _consecutiveNonAccepted;
+    private const int MaxConsecutiveNonAccepted = 8;
     private enum FrameCaptureResult { Accepted, Pending, Duplicate, Rejected, Failed }
 
     // Control bar
@@ -180,6 +189,30 @@ public sealed partial class ScrollingCaptureForm : Form
             return;
         }
 
+        // Handle resize/move during ready phase (bar visible, before START)
+        if (_controlBar is not null && _state == State.Selecting && e.Button == MouseButtons.Left)
+        {
+            int hit = HitTestHandle(e.Location);
+            if (hit >= 0)
+            {
+                _handleDragIndex = hit;
+                _isHandleDragging = true;
+                _handleDragOrigin = e.Location;
+                _handleDragStartRect = _selection;
+                return;
+            }
+            if (_selection.Contains(e.Location))
+            {
+                _handleDragIndex = 4; // move
+                _isHandleDragging = true;
+                _handleDragOrigin = e.Location;
+                _handleDragStartRect = _selection;
+                return;
+            }
+            return;
+        }
+
+        // Initial selection drag
         if (_state == State.Selecting && e.Button == MouseButtons.Left)
         {
             _isDragging = true;
@@ -193,6 +226,26 @@ public sealed partial class ScrollingCaptureForm : Form
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
+        // Handle resize/move during ready phase
+        if (_isHandleDragging && _controlBar is not null)
+        {
+            ApplyHandleDrag(e.Location);
+            return;
+        }
+
+        // Cursor feedback during ready phase
+        if (_controlBar is not null && _state == State.Selecting)
+        {
+            int hit = HitTestHandle(e.Location);
+            if (hit >= 0)
+                Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
+            else if (_selection.Contains(e.Location))
+                Cursor = Cursors.SizeAll;
+            else
+                Cursor = Cursors.Default;
+            return;
+        }
+
         if (_state == State.Selecting)
         {
             if (_isDragging)
@@ -210,6 +263,16 @@ public sealed partial class ScrollingCaptureForm : Form
 
     protected override void OnMouseUp(MouseEventArgs e)
     {
+        // Finish handle drag
+        if (_isHandleDragging)
+        {
+            _isHandleDragging = false;
+            _handleDragIndex = -1;
+            Invalidate();
+            UpdateControlBarPosition();
+            return;
+        }
+
         if (_state == State.Selecting && _isDragging && e.Button == MouseButtons.Left)
         {
             _isDragging = false;
@@ -229,58 +292,57 @@ public sealed partial class ScrollingCaptureForm : Form
 
     private void ShowControlBar()
     {
-        Visible = false;
         _magHelper?.Close();
         _selectionAdorner?.Close();
         _selectionAdorner?.Dispose();
         _selectionAdorner = null;
-        ReleaseSelectionPreview();
         _screenRegion = new Rectangle(
             _selection.X + _virtualBounds.X,
             _selection.Y + _virtualBounds.Y,
             _selection.Width, _selection.Height);
 
-        // Keep the fullscreen selector hidden while capturing so it cannot flash over the page.
+        // Switch to transparent overlay so the selection chrome remains visible
+        // during the ready phase (user can still see and readjust the area).
         Opacity = 1;
         BackColor = TransKey;
         TransparencyKey = TransKey;
+        Invalidate(); // repaint to show selection border
 
         _controlBar = new CaptureControlBar(_screenRegion, _captureMode);
+        _controlBar.StartClicked += () =>
+        {
+            // User clicked START — begin capturing now
+            _state = State.Capturing;
+            ReleaseSelectionPreview(); // free screenshot memory now that capture has started
+            Services.SoundService.PlayRecordStartSound();
+            _controlBar?.TransitionToCapturing();
+
+            if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
+            {
+                int centerX = _screenRegion.Left + _screenRegion.Width / 2;
+                int centerY = _screenRegion.Top + _screenRegion.Height / 2;
+                User32.SetCursorPos(centerX, centerY);
+                IntPtr targetHwnd = User32.WindowFromPoint(new User32.POINT(centerX, centerY));
+                if (targetHwnd != IntPtr.Zero)
+                    User32.SetForegroundWindow(targetHwnd);
+                _consecutiveDuplicates = 0;
+            }
+
+            CaptureFrame(forceAccept: true);
+
+            if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
+                User32.mouse_event(User32.MOUSEEVENTF_WHEEL, 0, 0, unchecked((uint)-120), 0);
+
+            if (_captureMode == ScrollingCaptureMode.Automatic || _captureMode == ScrollingCaptureMode.AssistAutoscroll)
+                StartAutomaticTimer();
+        };
         _controlBar.StopClicked += () => StopCapturing();
         _controlBar.CancelClicked += () => Cancel();
         _controlBar.ManualFrameClicked += () => CaptureFrame(forceAccept: true);
         _controlBar.Show();
-
-        _state = State.Capturing;
-        Services.SoundService.PlayRecordStartSound();
-
-        if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
-        {
-            // Position cursor at the center of the region.
-            int centerX = _screenRegion.Left + _screenRegion.Width / 2;
-            int centerY = _screenRegion.Top + _screenRegion.Height / 2;
-            User32.SetCursorPos(centerX, centerY);
-
-            // Get target window handle and set focus
-            IntPtr targetHwnd = User32.WindowFromPoint(new User32.POINT(centerX, centerY));
-            if (targetHwnd != IntPtr.Zero)
-            {
-                User32.SetForegroundWindow(targetHwnd);
-            }
-
-            _consecutiveDuplicates = 0;
-        }
-
-        CaptureFrame(forceAccept: true);
-
-        if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
-        {
-            // Send the first scroll event so it starts scrolling immediately
-            User32.mouse_event(User32.MOUSEEVENTF_WHEEL, 0, 0, unchecked((uint)-120), 0);
-        }
-
-        if (_captureMode == ScrollingCaptureMode.Automatic || _captureMode == ScrollingCaptureMode.AssistAutoscroll)
-            StartAutomaticTimer();
+        // Ensure the bar is on top of the dimmed-screenshot background
+        Native.User32.SetWindowPos(_controlBar.Handle, Native.User32.HWND_TOPMOST,
+            0, 0, 0, 0, Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_SHOWWINDOW);
     }
 
     private void StartAutomaticTimer()
@@ -302,11 +364,22 @@ public sealed partial class ScrollingCaptureForm : Form
             if (result == FrameCaptureResult.Accepted)
             {
                 _consecutiveDuplicates = 0;
+                _consecutiveNonAccepted = 0;
             }
             else if (result == FrameCaptureResult.Duplicate)
             {
                 _consecutiveDuplicates++;
-                if (_consecutiveDuplicates >= 3)
+                _consecutiveNonAccepted++;
+                if (_consecutiveDuplicates >= 3 || _consecutiveNonAccepted >= MaxConsecutiveNonAccepted)
+                {
+                    StopCapturing();
+                    return;
+                }
+            }
+            else
+            {
+                _consecutiveNonAccepted++;
+                if (_consecutiveNonAccepted >= MaxConsecutiveNonAccepted)
                 {
                     StopCapturing();
                     return;
@@ -318,7 +391,20 @@ public sealed partial class ScrollingCaptureForm : Form
         }
         else
         {
-            CaptureFrame(forceAccept: false);
+            var result = CaptureFrame(forceAccept: false);
+            if (result == FrameCaptureResult.Accepted)
+            {
+                _consecutiveNonAccepted = 0;
+            }
+            else
+            {
+                _consecutiveNonAccepted++;
+                if (_consecutiveNonAccepted >= MaxConsecutiveNonAccepted)
+                {
+                    StopCapturing();
+                    return;
+                }
+            }
         }
     }
 
@@ -564,21 +650,132 @@ public sealed partial class ScrollingCaptureForm : Form
 
     protected override void OnPaint(PaintEventArgs e)
     {
-        if (_state == State.Selecting)
+        if (_state == State.Selecting && _controlBar is null)
             PaintSelectionPhase(e.Graphics);
-        else if (_state == State.Capturing)
-            PaintCapturingPhase(e.Graphics);
+        else if (_state == State.Selecting || _state == State.Capturing)
+            PaintReadyOrCapturingPhase(e.Graphics);
     }
 
-    private void PaintCapturingPhase(Graphics g)
+    /// <summary>
+    /// Paints the dimmed screenshot background with selection border and handles.
+    /// During ready phase, uses the screenshot so every pixel captures mouse
+    /// input (no click-through). During capturing, uses TransKey transparency.
+    /// </summary>
+    private void PaintReadyOrCapturingPhase(Graphics g)
     {
-        g.Clear(TransKey);
+        if (_state == State.Selecting && _screenshot is not null)
+        {
+            // Ready phase: draw screenshot at full brightness
+            g.DrawImage(_screenshot, ClientRectangle,
+                new Rectangle(0, 0, _screenshot.Width, _screenshot.Height),
+                GraphicsUnit.Pixel);
+
+            // Dim everything EXCEPT the selection area (same technique as RegionOverlayForm)
+            if (_selection.Width > 2 && _selection.Height > 2)
+            {
+                var state = g.Save();
+                g.ExcludeClip(_selection);
+                using var dimBrush = new SolidBrush(Color.FromArgb(80, 0, 0, 0));
+                g.FillRectangle(dimBrush, ClientRectangle);
+                g.Restore(state);
+            }
+        }
+        else
+        {
+            // Capturing phase: transparent overlay, just the border
+            g.Clear(TransKey);
+        }
+
         if (_selection.Width > 2 && _selection.Height > 2)
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var borderRect = Rectangle.Inflate(_selection, 2, 2);
             SelectionFrameRenderer.DrawRectangle(g, borderRect, fill: false);
+
+            // Draw resize handles when in ready phase (not yet capturing)
+            if (_state == State.Selecting && _controlBar is not null)
+            {
+                var handles = GetHandleRects();
+                foreach (var h in handles)
+                    WindowsHandleRenderer.Paint(g, h);
+            }
         }
+    }
+
+    // ── Handle resize/move helpers ──
+
+    private static int HandleSizeScaled => UiChrome.ScaleInt(HandleSize);
+
+    private Rectangle[] GetHandleRects()
+    {
+        int hs = HandleSizeScaled;
+        int h2 = hs / 2;
+        var r = _selection;
+        return new[]
+        {
+            new Rectangle(r.Left - h2, r.Top - h2, hs, hs),       // 0 TL
+            new Rectangle(r.Right - h2, r.Top - h2, hs, hs),      // 1 TR
+            new Rectangle(r.Left - h2, r.Bottom - h2, hs, hs),    // 2 BL
+            new Rectangle(r.Right - h2, r.Bottom - h2, hs, hs),   // 3 BR
+        };
+    }
+
+    private int HitTestHandle(Point p)
+    {
+        var handles = GetHandleRects();
+        for (int i = 0; i < handles.Length; i++)
+        {
+            var hr = handles[i];
+            hr.Inflate((WindowsHandleRenderer.HitSize - hr.Width) / 2,
+                        (WindowsHandleRenderer.HitSize - hr.Height) / 2);
+            if (hr.Contains(p)) return i;
+        }
+        return -1;
+    }
+
+    private void ApplyHandleDrag(Point current)
+    {
+        int dx = current.X - _handleDragOrigin.X;
+        int dy = current.Y - _handleDragOrigin.Y;
+        var r = _handleDragStartRect;
+
+        Rectangle next = _handleDragIndex switch
+        {
+            0 => Rectangle.FromLTRB(r.Left + dx, r.Top + dy, r.Right, r.Bottom),
+            1 => Rectangle.FromLTRB(r.Left, r.Top + dy, r.Right + dx, r.Bottom),
+            2 => Rectangle.FromLTRB(r.Left + dx, r.Top, r.Right, r.Bottom + dy),
+            3 => Rectangle.FromLTRB(r.Left, r.Top, r.Right + dx, r.Bottom + dy),
+            4 => new Rectangle(r.Left + dx, r.Top + dy, r.Width, r.Height), // move
+            _ => r
+        };
+
+        // Enforce minimum size
+        if (next.Width < 20) next.Width = 20;
+        if (next.Height < 20) next.Height = 20;
+
+        // Clamp within client bounds
+        next.X = Math.Max(0, Math.Min(next.X, ClientSize.Width - next.Width));
+        next.Y = Math.Max(0, Math.Min(next.Y, ClientSize.Height - next.Height));
+
+        if (next == _selection) return;
+
+        var old = _selection;
+        _selection = next;
+        Invalidate(Rectangle.Union(InflateForRepaint(old, 16), InflateForRepaint(next, 16)));
+    }
+
+    private void UpdateControlBarPosition()
+    {
+        if (_controlBar is null || _controlBar.IsDisposed) return;
+        _screenRegion = new Rectangle(
+            _selection.X + _virtualBounds.X,
+            _selection.Y + _virtualBounds.Y,
+            _selection.Width, _selection.Height);
+        _controlBar.Reposition(_screenRegion);
+        // Bring the control bar back to front — clicking the main form to drag
+        // a handle activates it and puts it above the bar in TopMost z-order.
+        Native.User32.SetWindowPos(_controlBar.Handle, Native.User32.HWND_TOPMOST,
+            0, 0, 0, 0, Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_SHOWWINDOW);
     }
 
     private void PaintSelectionPhase(Graphics g)
@@ -804,26 +1001,38 @@ public sealed partial class ScrollingCaptureForm : Form
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     /// <summary>
-    /// Floating control bar that uses the shared dock chrome.
+    /// Floating control bar styled identically to the MP4/GIF recording bars
+    /// with a teal accent tint. Two-phase: Ready (START) and Capturing (STOP).
+    /// Positions centered above the capture region like the recording bars.
     /// </summary>
     private sealed class CaptureControlBar : Form
     {
+        public event Action? StartClicked;
         public event Action? StopClicked;
         public event Action? CancelClicked;
         public event Action? ManualFrameClicked;
 
-        private static int AutoBarWidth => UiChrome.ScaleInt(320);
-        private static int ManualBarWidth => UiChrome.ScaleInt(370);
+        private static readonly Color ScrollAccent = Color.FromArgb(255, 0x07, 0x87, 0x88);
+
+        private static int BarWidth => UiChrome.ScaleInt(400);
         private static int BarHeight => WindowsDockRenderer.SurfaceHeight;
-        private static int CornerR => WindowsDockRenderer.SurfaceRadius;
+        private static float CornerR => UiChrome.ScaleFloat(5f);
 
         private readonly ScrollingCaptureMode _mode;
         private int _frameCount;
         private string _status;
+        private bool _isCapturing;
 
-        // Cached GDI objects
+        private Rectangle _startBtnRect;
+        private Rectangle _stopBtnRect;
+        private Rectangle _cancelBtnRect;
+        private Rectangle _manualFrameBtnRect;
+        private Rectangle? _hoveredBtn;
+        private Rectangle _statusRect;
+        private Rectangle _recDotRect;
+
         private readonly Font _statusFont = UiChrome.ChromeFont(10f, FontStyle.Bold);
-        private readonly Font _btnFont = UiChrome.ChromeFont(9.5f, FontStyle.Bold);
+        private readonly Font _dotFont = UiChrome.ChromeFont(8f, FontStyle.Bold);
         private static readonly StringFormat _statusFmt = new()
         {
             LineAlignment = StringAlignment.Center,
@@ -831,49 +1040,91 @@ public sealed partial class ScrollingCaptureForm : Form
             FormatFlags = StringFormatFlags.NoWrap,
         };
 
-        // Button hit-test rects
-        private Rectangle _manualFrameBtnRect;
-        private Rectangle _actionBtnRect;
-        private Rectangle _cancelBtnRect;
-        private Rectangle? _hoveredBtn;
-        private Rectangle _statusRect;
-
         public CaptureControlBar(Rectangle captureRegion, ScrollingCaptureMode mode)
         {
             _mode = mode;
-            if (mode == ScrollingCaptureMode.AssistAutoscroll)
-                _status = "Autoscroll: starting...";
-            else
-                _status = mode == ScrollingCaptureMode.Automatic ? "Auto: scroll now" : "Manual: click capture";
+            _isCapturing = false;
+            _status = mode == ScrollingCaptureMode.AssistAutoscroll ? "Autoscroll  —  ready"
+                : mode == ScrollingCaptureMode.Automatic ? "Auto  —  ready" : "Manual  —  ready";
 
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            int barWidth = mode == ScrollingCaptureMode.Manual ? ManualBarWidth : AutoBarWidth;
-            Size = new Size(barWidth, BarHeight);
-            BackColor = UiChrome.SurfaceWindowBackground;
+            Size = new Size(BarWidth, BarHeight);
+            BackColor = Color.FromArgb(1, 2, 3);
+            TransparencyKey = BackColor;
             KeyPreview = true;
             DoubleBuffered = true;
             Cursor = Cursors.Default;
 
-            int x = captureRegion.X + (captureRegion.Width - barWidth) / 2;
-            var offset = UiChrome.ScaleInt(12);
-            int y = captureRegion.Y - BarHeight - offset;
-            if (y < 0) y = captureRegion.Bottom + offset;
-            var margin = UiChrome.ScaleInt(4);
-            Location = new Point(Math.Max(margin, x), Math.Max(margin, y));
+            // Position centered above the capture region, same logic as RecordingForm
+            var screen = Screen.FromRectangle(captureRegion);
+            int tx = captureRegion.X + captureRegion.Width / 2 - BarWidth / 2;
+            int ty = captureRegion.Y - BarHeight - UiChrome.ScaleInt(14);
+            var edge = UiChrome.ScaleInt(4);
+            // If bar doesn't fit above, place it just below the region instead
+            if (ty < screen.Bounds.Top + edge)
+                ty = captureRegion.Bottom + UiChrome.ScaleInt(14);
+            if (tx < screen.Bounds.Left + edge) tx = screen.Bounds.Left + edge;
+            if (tx + BarWidth > screen.Bounds.Right - edge) tx = screen.Bounds.Right - edge - BarWidth;
+            Location = new Point(tx, ty);
 
-            Region = CreateRoundedRegion(barWidth, BarHeight, CornerR);
+            CalcLayout();
+        }
 
-            int btnY = (BarHeight - WindowsDockRenderer.IconButtonSize) / 2;
-            _cancelBtnRect = new Rectangle(barWidth - WindowsDockRenderer.SurfacePadding - WindowsDockRenderer.IconButtonSize, btnY, WindowsDockRenderer.IconButtonSize, WindowsDockRenderer.IconButtonSize);
-            _actionBtnRect = new Rectangle(_cancelBtnRect.X - WindowsDockRenderer.ButtonSpacing - WindowsDockRenderer.IconButtonSize, btnY, WindowsDockRenderer.IconButtonSize, WindowsDockRenderer.IconButtonSize);
-            _manualFrameBtnRect = mode == ScrollingCaptureMode.Manual
-                ? new Rectangle(_actionBtnRect.X - WindowsDockRenderer.ButtonSpacing - WindowsDockRenderer.IconButtonSize, btnY, WindowsDockRenderer.IconButtonSize, WindowsDockRenderer.IconButtonSize)
-                : Rectangle.Empty;
-            int firstButtonX = _manualFrameBtnRect.IsEmpty ? _actionBtnRect.X : _manualFrameBtnRect.X;
-            _statusRect = new Rectangle(UiChrome.ScaleInt(16), 0, firstButtonX - UiChrome.ScaleInt(24), BarHeight);
+        private void CalcLayout()
+        {
+            int btnPad = WindowsDockRenderer.SurfacePadding;
+            int btnSize = WindowsDockRenderer.IconButtonSize;
+            int btnGap = WindowsDockRenderer.ButtonSpacing;
+            int btnY = (BarHeight - btnSize) / 2;
+
+            _recDotRect = new Rectangle(UiChrome.ScaleInt(16), btnY + 4, 10, 10);
+            _cancelBtnRect = new Rectangle(BarWidth - btnPad - btnSize, btnY, btnSize, btnSize);
+
+            if (!_isCapturing)
+            {
+                _startBtnRect = new Rectangle(_cancelBtnRect.X - btnGap - btnSize, btnY, btnSize, btnSize);
+                _stopBtnRect = Rectangle.Empty;
+                _manualFrameBtnRect = Rectangle.Empty;
+            }
+            else
+            {
+                _startBtnRect = Rectangle.Empty;
+                _stopBtnRect = new Rectangle(_cancelBtnRect.X - btnGap - btnSize, btnY, btnSize, btnSize);
+                _manualFrameBtnRect = _mode == ScrollingCaptureMode.Manual
+                    ? new Rectangle(_stopBtnRect.X - btnGap - btnSize, btnY, btnSize, btnSize)
+                    : Rectangle.Empty;
+            }
+
+            int firstBtnX = !_manualFrameBtnRect.IsEmpty ? _manualFrameBtnRect.X
+                : !_startBtnRect.IsEmpty ? _startBtnRect.X : _stopBtnRect.X;
+            _statusRect = new Rectangle(UiChrome.ScaleInt(16), 0, firstBtnX - UiChrome.ScaleInt(24), BarHeight);
+        }
+
+        public void TransitionToCapturing()
+        {
+            _isCapturing = true;
+            CalcLayout();
+            Invalidate();
+        }
+
+        public void Reposition(Rectangle captureRegion)
+        {
+            if (InvokeRequired) { BeginInvoke(() => Reposition(captureRegion)); return; }
+            var screen = Screen.FromRectangle(captureRegion);
+            int tx = captureRegion.X + captureRegion.Width / 2 - BarWidth / 2;
+            int ty = captureRegion.Y - BarHeight - UiChrome.ScaleInt(14);
+            var edge = UiChrome.ScaleInt(4);
+            // If bar doesn't fit above, place it just below the region instead
+            if (ty < screen.Bounds.Top + edge)
+                ty = captureRegion.Bottom + UiChrome.ScaleInt(14);
+            if (tx < screen.Bounds.Left + edge) tx = screen.Bounds.Left + edge;
+            if (tx + BarWidth > screen.Bounds.Right - edge) tx = screen.Bounds.Right - edge - BarWidth;
+            Location = new Point(tx, ty);
+            CalcLayout();
+            Invalidate();
         }
 
         public void SetFrameCount(int count)
@@ -898,41 +1149,89 @@ public sealed partial class ScrollingCaptureForm : Form
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
 
             var barRect = new RectangleF(0, 0, Width, Height);
-            WindowsDockRenderer.PaintSurface(g, barRect, CornerR);
+            var bgPath = WindowsDockRenderer.RoundedRect(barRect, CornerR);
 
-            var statusBrush = SketchRenderer.GetToolColorBrush(UiChrome.SurfaceTextPrimary);
-            var statusRect = new RectangleF(UiChrome.ScaleInt(16), 0, _statusRect.Width, Height);
-            g.DrawString(_status, _statusFont, statusBrush, statusRect, _statusFmt);
+            // Teal ambient glow (matching RecordingForm style)
+            var glowRect = barRect;
+            glowRect.Inflate(3f, 3f);
+            using (var glowPath = WindowsDockRenderer.RoundedRect(glowRect, CornerR))
+            using (var glowBrush = new SolidBrush(Color.FromArgb(25, ScrollAccent)))
+                g.FillPath(glowBrush, glowPath);
 
-            if (!_manualFrameBtnRect.IsEmpty)
+            // Mica-black fill
+            using (var micaBrush = new SolidBrush(Color.FromArgb(225, 12, 12, 16)))
+                g.FillPath(micaBrush, bgPath);
+
+            // Teal accent border
+            using (var bp = new Pen(Color.FromArgb(150, ScrollAccent), 1f))
+                g.DrawPath(bp, bgPath);
+
+            // Shadow
+            WindowsDockRenderer.PaintShadow(g, barRect, CornerR);
+
+            // ── REC dot ──
+            if (!_isCapturing)
             {
-                DrawIconBtn(g, _manualFrameBtnRect, "record", UiChrome.SurfaceTextPrimary,
-                    _hoveredBtn == _manualFrameBtnRect, active: true);
+                using (var glowDot = new SolidBrush(Color.FromArgb(30, ScrollAccent)))
+                    g.FillEllipse(glowDot, _recDotRect.X - 4, _recDotRect.Y - 4, 18, 18);
+                using (var dotBrush = new SolidBrush(Color.FromArgb(180, ScrollAccent)))
+                    g.FillEllipse(dotBrush, _recDotRect);
             }
-            DrawIconBtn(g, _actionBtnRect, "stopSquare", UiChrome.SurfaceTextPrimary, _hoveredBtn == _actionBtnRect, active: false);
-            DrawIconBtn(g, _cancelBtnRect, "close", UiChrome.SurfaceTextPrimary, _hoveredBtn == _cancelBtnRect, active: false);
+            else
+            {
+                double pulse = Math.Sin(Environment.TickCount / 250.0);
+                float pa = (float)((pulse + 1.0) / 2.0);
+                using (var glowDot = new SolidBrush(Color.FromArgb((int)(30 + 40 * pa), ScrollAccent)))
+                    g.FillEllipse(glowDot, _recDotRect.X - 4, _recDotRect.Y - 4, 18, 18);
+                using (var dotBrush = new SolidBrush(Color.FromArgb((int)(200 + 55 * pa), ScrollAccent)))
+                    g.FillEllipse(dotBrush, _recDotRect);
+            }
+
+            // READY / CAPTURING label
+            var label = _isCapturing ? "CAPTURING" : "READY";
+            using (var labelBrush = new SolidBrush(Color.FromArgb(220, ScrollAccent)))
+            {
+                var labelRect = new RectangleF(_recDotRect.Right + 8, 0, 105, BarHeight);
+                g.DrawString(label, _dotFont, labelBrush, labelRect,
+                    new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Near });
+            }
+
+            // Status text
+            var statusX = _recDotRect.Right + UiChrome.ScaleInt(90);
+            var statusRect = new RectangleF(statusX, 0, _statusRect.Width - (statusX - _statusRect.X), BarHeight);
+            using (var statusBrush = new SolidBrush(UiChrome.SurfaceTextPrimary))
+                g.DrawString(_status, _statusFont, statusBrush, statusRect, _statusFmt);
+
+            // ── Buttons ──
+            if (!_startBtnRect.IsEmpty)
+                DrawIconBtn(g, _startBtnRect, "play", _hoveredBtn == _startBtnRect, ScrollAccent);
+            if (!_stopBtnRect.IsEmpty)
+            {
+                var sc = _hoveredBtn == _stopBtnRect
+                    ? Color.FromArgb(255, 255, 80, 80) : Color.FromArgb(220, 255, 80, 80);
+                DrawIconBtn(g, _stopBtnRect, "stop", _hoveredBtn == _stopBtnRect, sc);
+            }
+            if (!_manualFrameBtnRect.IsEmpty)
+                DrawIconBtn(g, _manualFrameBtnRect, "record", _hoveredBtn == _manualFrameBtnRect, UiChrome.SurfaceTextPrimary);
+            DrawIconBtn(g, _cancelBtnRect, "close", _hoveredBtn == _cancelBtnRect, UiChrome.SurfaceTextPrimary);
         }
 
-        private void DrawIconBtn(Graphics g, Rectangle r, string iconId, Color color, bool hovered, bool active)
+        private void DrawIconBtn(Graphics g, Rectangle r, string iconId, bool hovered, Color iconColor)
         {
-            WindowsDockRenderer.PaintButton(g, r, active, hovered);
-            int alpha = active ? 255 : hovered ? 240 : 200;
-            WindowsDockRenderer.PaintIcon(g, iconId, r, Color.FromArgb(alpha, color.R, color.G, color.B), active);
+            bool filled = iconId == "stop";
+            WindowsDockRenderer.PaintButton(g, r, filled, hovered);
+            int alpha = filled ? 255 : hovered ? 240 : 200;
+            WindowsDockRenderer.PaintIcon(g, iconId, r, Color.FromArgb(alpha, iconColor.R, iconColor.G, iconColor.B), filled);
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
             Rectangle? prev = _hoveredBtn;
-            if (!_manualFrameBtnRect.IsEmpty && _manualFrameBtnRect.Contains(e.Location))
-                _hoveredBtn = _manualFrameBtnRect;
-            else if (_actionBtnRect.Contains(e.Location))
-                _hoveredBtn = _actionBtnRect;
-            else if (_cancelBtnRect.Contains(e.Location))
-                _hoveredBtn = _cancelBtnRect;
-            else
-                _hoveredBtn = null;
-
+            _hoveredBtn = !_startBtnRect.IsEmpty && _startBtnRect.Contains(e.Location) ? _startBtnRect
+                : !_stopBtnRect.IsEmpty && _stopBtnRect.Contains(e.Location) ? _stopBtnRect
+                : !_manualFrameBtnRect.IsEmpty && _manualFrameBtnRect.Contains(e.Location) ? _manualFrameBtnRect
+                : _cancelBtnRect.Contains(e.Location) ? _cancelBtnRect : null;
             Cursor = _hoveredBtn != null ? Cursors.Hand : Cursors.Default;
             if (_hoveredBtn != prev)
             {
@@ -944,29 +1243,20 @@ public sealed partial class ScrollingCaptureForm : Form
         protected override void OnMouseLeave(EventArgs e)
         {
             base.OnMouseLeave(e);
-            if (_hoveredBtn != null)
-            {
-                var prev = _hoveredBtn.Value;
-                _hoveredBtn = null;
-                Invalidate(prev);
-            }
+            if (_hoveredBtn != null) { var p = _hoveredBtn.Value; _hoveredBtn = null; Invalidate(p); }
         }
 
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
-            if (!_manualFrameBtnRect.IsEmpty && _manualFrameBtnRect.Contains(e.Location))
-            {
-                ManualFrameClicked?.Invoke();
-            }
-            else if (_actionBtnRect.Contains(e.Location))
-            {
+            if (!_startBtnRect.IsEmpty && _startBtnRect.Contains(e.Location))
+                StartClicked?.Invoke();
+            else if (!_stopBtnRect.IsEmpty && _stopBtnRect.Contains(e.Location))
                 StopClicked?.Invoke();
-            }
+            else if (!_manualFrameBtnRect.IsEmpty && _manualFrameBtnRect.Contains(e.Location))
+                ManualFrameClicked?.Invoke();
             else if (_cancelBtnRect.Contains(e.Location))
-            {
                 CancelClicked?.Invoke();
-            }
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -974,30 +1264,21 @@ public sealed partial class ScrollingCaptureForm : Form
             var key = keyData & Keys.KeyCode;
             if (key == Keys.Escape)
             {
-                if (_frameCount > 1)
-                    StopClicked?.Invoke();
-                else
-                    CancelClicked?.Invoke();
+                if (!_isCapturing || _frameCount <= 1) CancelClicked?.Invoke();
+                else StopClicked?.Invoke();
                 return true;
             }
-
-            if (_mode == ScrollingCaptureMode.Manual && (key == Keys.Space || key == Keys.Enter))
+            if (_isCapturing && _mode == ScrollingCaptureMode.Manual && (key == Keys.Space || key == Keys.Enter))
             {
                 ManualFrameClicked?.Invoke();
                 return true;
             }
-
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
         protected override CreateParams CreateParams
         {
-            get
-            {
-                var cp = base.CreateParams;
-                cp.ExStyle |= 0x80; // WS_EX_TOOLWINDOW
-                return cp;
-            }
+            get { var cp = base.CreateParams; cp.ExStyle |= 0x80; return cp; }
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -1008,42 +1289,16 @@ public sealed partial class ScrollingCaptureForm : Form
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { _statusFont.Dispose(); _btnFont.Dispose(); }
+            if (disposing) { _statusFont.Dispose(); _dotFont.Dispose(); }
             base.Dispose(disposing);
         }
 
         private string FormatFrameStatus(int count)
         {
             string label = count == 1 ? "frame" : "frames";
-            if (_mode == ScrollingCaptureMode.AssistAutoscroll)
-                return $"Autoscroll: {count} {label}";
-            return _mode == ScrollingCaptureMode.Automatic
-                ? $"Auto: {count} {label}"
+            return _mode == ScrollingCaptureMode.AssistAutoscroll ? $"Autoscroll: {count} {label}"
+                : _mode == ScrollingCaptureMode.Automatic ? $"Auto: {count} {label}"
                 : $"Manual: {count} {label}";
-        }
-
-        private static Region CreateRoundedRegion(int w, int h, int r)
-        {
-            using var path = new GraphicsPath();
-            int d = r * 2;
-            path.AddArc(0, 0, d, d, 180, 90);
-            path.AddArc(w - d, 0, d, d, 270, 90);
-            path.AddArc(w - d, h - d, d, d, 0, 90);
-            path.AddArc(0, h - d, d, d, 90, 90);
-            path.CloseFigure();
-            return new Region(path);
-        }
-
-        private static GraphicsPath CreateRoundedPath(RectangleF r, float radius)
-        {
-            var path = new GraphicsPath();
-            float d = radius * 2;
-            path.AddArc(r.X, r.Y, d, d, 180, 90);
-            path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
-            path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
-            path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
-            path.CloseFigure();
-            return path;
         }
     }
 }
