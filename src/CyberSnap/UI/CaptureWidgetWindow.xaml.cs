@@ -81,6 +81,16 @@ public partial class CaptureWidgetWindow : Window
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
     }
 
+    public void RefreshLocalization()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(RefreshLocalization);
+            return;
+        }
+        LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
+    }
+
     private void LoadIcons()
     {
         var accentColor = System.Drawing.Color.FromArgb(0, 255, 255); // Neon Cyan for CyberGems aesthetics
