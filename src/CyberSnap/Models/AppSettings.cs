@@ -392,7 +392,7 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
     /// <summary>All available tools in display order. Group 0=capture, 1=annotation.</summary>
     public static readonly ToolDef[] AllTools =
     {
-        new("rect",        "Rectangle Select", '\uE257', CaptureMode.Rectangle, 0), // scan-line
+        new("rect",        "Area Capture", '\uE257', CaptureMode.Rectangle, 0), // scan-line
         new("center",      "Center Select",    '\uE257', CaptureMode.Center,    0),
         new("scroll",      "Scroll Capture",   '\uE7F0', CaptureMode.ScrollCapture, 0),
         new("ocr",         "OCR",          '\uE53C', CaptureMode.Ocr,         0), // scan-text

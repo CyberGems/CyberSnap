@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Genel",
   "Tools": "Araçlar",
   "Capture": "Yakala",
@@ -192,7 +192,7 @@
   "Annotation tools": "Ek açıklama araçları",
   "Fullscreen capture": "Tam ekran yakalama",
   "Active window": "Etkin pencere",
-  "Rectangle Select": "Dikdörtgen Seçimi",
+  "Area Capture": "Alan seçimi",
   "Center Select": "Center Select",
   "Sticker": "Etiket",
   "Upscale": "Lüks",
@@ -261,7 +261,6 @@
   "Active drawing color": "Active drawing color",
   "Close (Esc or right-click)": "Close (Esc or right-click)",
   "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Click izquierdo para activar / Click derecho para menú",
-  "Start capture": "Start capture",
   "Text extraction (OCR)": "Text extraction (OCR)",
   "Record screen": "Record screen",
   "Notifications": "Bildirimler",
@@ -299,8 +298,7 @@
   "Save": "Save",
   "Enable Editor": "Enable Editor",
   "Open the post-capture editor for annotations after capturing.": "Open the post-capture editor for annotations after capturing.",
-  "Quick screenshot capture (Rectangular selection)": "Quick screenshot capture (Rectangular selection)",
-  "Rectangular selection": "Rectangular selection",
+  "Quick screenshot (Area Capture)": "Hızlı ekran görüntüsü (Alan seçimi)",
   "Scrolling capture": "Scrolling capture",
   "Extract text (OCR)": "Extract text (OCR)",
   "Scan QR / Barcode": "Scan QR / Barcode",

@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Generales",
   "Tools": "Herramientas",
   "Capture": "Capturar",
@@ -196,7 +196,7 @@
   "Annotation tools": "Herramientas de anotación",
   "Fullscreen capture": "Captura de pantalla completa",
   "Active window": "Ventana activa",
-  "Rectangle Select": "Selección rectangular",
+  "Area Capture": "Selección de área",
   "Center Select": "Selección central",
   "Sticker": "Pegatina",
   "Upscale": "Aumentar resolución",
@@ -264,7 +264,6 @@
   "Shape stroke width": "Grosor de trazo de figuras",
   "Close (Esc or right-click)": "Close (Esc or right-click)",
   "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Click izquierdo para activar / Click derecho para menú",
-  "Start capture": "Iniciar captura",
   "Text extraction (OCR)": "Extracción de texto (OCR)",
   "Record screen": "Grabar pantalla",
   "Notifications": "Notificaciones",
@@ -304,8 +303,7 @@
   "Open location": "Abrir ubicación",
   "Enable Editor": "Activar Editor",
   "Open the post-capture editor for annotations after capturing.": "Abre el editor de anotaciones después de la captura.",
-  "Quick screenshot capture (Rectangular selection)": "Captura rápida (Selección rectangular)",
-  "Rectangular selection": "Selección rectangular",
+  "Quick screenshot (Area Capture)": "Captura rápida (Selección de área)",
   "Scrolling capture": "Captura con desplazamiento",
   "Extract text (OCR)": "Extraer texto (OCR)",
   "Scan QR / Barcode": "Escanear QR / Código de barras",

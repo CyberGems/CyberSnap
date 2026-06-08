@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Ð—Ð°Ð³Ð°Ð»ÑŒÐ½Ð¸Ð¹",
   "Tools": "Ð†Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ð¸",
   "Capture": "Ð·Ð°Ñ…Ð¾Ð¿Ð»ÐµÐ½Ð½Ñ",
@@ -192,7 +192,7 @@
   "Annotation tools": "Ð†Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚Ð¸ Ð°Ð½Ð¾Ñ‚ÑƒÐ²Ð°Ð½Ð½Ñ",
   "Fullscreen capture": "ÐŸÐ¾Ð²Ð½Ð¾ÐµÐºÑ€Ð°Ð½Ð½Ð¸Ð¹ Ð·Ð½Ñ–Ð¼Ð¾Ðº",
   "Active window": "ÐÐºÑ‚Ð¸Ð²Ð½Ðµ Ð²Ñ–ÐºÐ½Ð¾",
-  "Rectangle Select": "Ð’Ð¸Ð±Ñ–Ñ€ Ð¿Ñ€ÑÐ¼Ð¾ÐºÑƒÑ‚Ð½Ð¸ÐºÐ°",
+  "Area Capture": "Вибір області",
   "Center Select": "Center Select",
   "Sticker": "наклейка",
   "Upscale": "Ð’Ð¸ÑÐ¾ÐºÐ¾ÐºÐ»Ð°ÑÐ½Ð¸Ð¹",
@@ -261,7 +261,6 @@
   "Active drawing color": "Active drawing color",
   "Close (Esc or right-click)": "Close (Esc or right-click)",
   "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Click izquierdo para activar / Click derecho para menú",
-  "Start capture": "Start capture",
   "Text extraction (OCR)": "Text extraction (OCR)",
   "Record screen": "Record screen",
   "Notifications": "Сповіщення",
@@ -299,8 +298,7 @@
   "Save": "Save",
   "Enable Editor": "Enable Editor",
   "Open the post-capture editor for annotations after capturing.": "Open the post-capture editor for annotations after capturing.",
-  "Quick screenshot capture (Rectangular selection)": "Quick screenshot capture (Rectangular selection)",
-  "Rectangular selection": "Rectangular selection",
+  "Quick screenshot (Area Capture)": "Швидкий знімок (Вибір області)",
   "Scrolling capture": "Scrolling capture",
   "Extract text (OCR)": "Extract text (OCR)",
   "Scan QR / Barcode": "Scan QR / Barcode",

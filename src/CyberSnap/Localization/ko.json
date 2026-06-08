@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "ì¼ë°˜",
   "Tools": "ë„êµ¬",
   "Capture": "ìº¡ì²˜",
@@ -192,7 +192,7 @@
   "Annotation tools": "ì£¼ì„ ë„êµ¬",
   "Fullscreen capture": "ì „ì²´ í™”ë©´ ìº¡ì²˜",
   "Active window": "í™œì„± ì°½",
-  "Rectangle Select": "ì§ì‚¬ê°í˜• ì„ íƒ",
+  "Area Capture": "영역 선택",
   "Center Select": "Center Select",
   "Sticker": "ìŠ¤í‹°ì»¤",
   "Upscale": "ê³ ê¸‰",
@@ -261,7 +261,6 @@
   "Active drawing color": "Active drawing color",
   "Close (Esc or right-click)": "Close (Esc or right-click)",
   "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Click izquierdo para activar / Click derecho para menú",
-  "Start capture": "Start capture",
   "Text extraction (OCR)": "Text extraction (OCR)",
   "Record screen": "Record screen",
   "Notifications": "알림",
@@ -299,8 +298,7 @@
   "Save": "Save",
   "Enable Editor": "Enable Editor",
   "Open the post-capture editor for annotations after capturing.": "Open the post-capture editor for annotations after capturing.",
-  "Quick screenshot capture (Rectangular selection)": "Quick screenshot capture (Rectangular selection)",
-  "Rectangular selection": "Rectangular selection",
+  "Quick screenshot (Area Capture)": "빠른 캡처 (영역 선택)",
   "Scrolling capture": "Scrolling capture",
   "Extract text (OCR)": "Extract text (OCR)",
   "Scan QR / Barcode": "Scan QR / Barcode",
