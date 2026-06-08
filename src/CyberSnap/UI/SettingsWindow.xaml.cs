@@ -75,15 +75,6 @@ public partial class SettingsWindow : Window
         {
             ApplyThemeColors();
         };
-        Closing += (s, e) =>
-        {
-            if (_settingsService.Settings.MinimizeToTrayOnClose)
-            {
-                e.Cancel = true;
-                this.Hide();
-                SaveWindowBounds();
-            }
-        };
         Closed += (_, _) =>
         {
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;
@@ -690,13 +681,6 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void MinimizeToTrayOnCloseCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded) return;
-        _settingsService.Settings.MinimizeToTrayOnClose = MinimizeToTrayOnCloseCheck.IsChecked == true;
-        _settingsService.Save();
-    }
-
     private void StartWithWindowsCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressStartWithWindowsChange) return;
@@ -736,7 +720,6 @@ public partial class SettingsWindow : Window
             try
             {
                 StartWithWindowsCheck.IsChecked = previous;
-                MinimizeToTrayOnCloseCheck.IsChecked = _settingsService.Settings.MinimizeToTrayOnClose;
                 SaveHistoryCheck.IsChecked = _settingsService.Settings.SaveHistory;
             }
             finally
