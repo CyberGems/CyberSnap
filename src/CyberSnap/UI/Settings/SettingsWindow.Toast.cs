@@ -70,7 +70,24 @@ public partial class SettingsWindow
         };
 
         BuildToastButtonRows();
+        WireToastPreviewButtonGestures();
         RefreshToastButtonLayoutDesigner();
+    }
+
+    // Each preview button can be dragged to move it, or sent back to the list with a double-click
+    // or right-click. Wired once; the tooltip/help text advertise both gestures.
+    private void WireToastPreviewButtonGestures()
+    {
+        foreach (var (kind, border) in _previewButtonBorders)
+        {
+            var captured = kind;
+            border.MouseRightButtonUp += (_, e) => { RemoveToastButton(captured); e.Handled = true; };
+
+            string help = $"Drag to move the {FormatToastButtonLabel(kind)} button. Double-click or right-click to send it back to the list.";
+            border.ToolTip = help;
+            ToolTipService.SetInitialShowDelay(border, 300);
+            AutomationProperties.SetHelpText(border, help);
+        }
     }
 
     private void BuildToastButtonRows()
@@ -136,6 +153,7 @@ public partial class SettingsWindow
         {
             Width = 130,
             VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Cursor = System.Windows.Input.Cursors.Arrow,
             Tag = kind
         };
         AutomationProperties.SetName(combo, $"Placement for {label} button");
@@ -158,7 +176,22 @@ public partial class SettingsWindow
         grid.Children.Add(combo);
 
         _toastComboBoxes[kind] = combo;
-        return new Border { Child = grid };
+
+        // The whole row is a drag handle for adding this button to the preview (the icon stays in
+        // the list; a ghost follows the cursor). The ComboBox keeps its own behaviour — drags are
+        // suppressed when the gesture starts inside it (see ToastRow_PreviewMouseLeftButtonDown).
+        var row = new Border
+        {
+            Child = grid,
+            Tag = kind,
+            Cursor = System.Windows.Input.Cursors.Hand,
+            Background = System.Windows.Media.Brushes.Transparent,
+            ToolTip = "Drag onto the preview to add this button"
+        };
+        ToolTipService.SetInitialShowDelay(row, 300);
+        row.PreviewMouseLeftButtonDown += ToastRow_PreviewMouseLeftButtonDown;
+        row.PreviewMouseMove += ToastRow_PreviewMouseMove;
+        return row;
     }
 
     private static ComboBoxItem CreateCornerComboItem(string text, ToastCorner? corner, string tooltip)
@@ -220,13 +253,21 @@ public partial class SettingsWindow
         if (!Enum.TryParse<ToastButtonKind>(tag, out var kind))
             return;
 
+        // Double-click sends the button back to the list (the same as right-click).
+        if (e.ClickCount == 2)
+        {
+            RemoveToastButton(kind);
+            e.Handled = true;
+            return;
+        }
+
         // Arm the drag but don't start it here. Calling DragDrop.DoDragDrop directly from the
         // mouse-down handler is flaky: the first click on a not-yet-focused control is consumed
         // by focus activation and the drag silently fails to begin (the "some buttons won't drag
         // until you've clicked around a bit" symptom). We wait for real movement instead.
         _toastDragSource = border;
         _toastDragKind = kind;
-        _toastDragStart = e.GetPosition(ToastLayoutPreviewSurface);
+        _toastDragStart = e.GetPosition(ToastDesignerRoot);
         _toastDragArmed = true;
     }
 
@@ -238,7 +279,43 @@ public partial class SettingsWindow
             return;
         }
 
-        var pos = e.GetPosition(ToastLayoutPreviewSurface);
+        var pos = e.GetPosition(ToastDesignerRoot);
+        if (Math.Abs(pos.X - _toastDragStart.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(pos.Y - _toastDragStart.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        _toastDragArmed = false;
+        StartToastDrag();
+    }
+
+    // Drag a button in from the list. The row's icon/label act as the grab handle; the gesture is
+    // suppressed when it starts inside the ComboBox so the dropdown keeps working.
+    private void ToastRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Border { Tag: ToastButtonKind kind })
+            return;
+        if (FindAncestor<ComboBox>(e.OriginalSource as DependencyObject) is not null)
+            return;
+
+        _toastDragSource = null;          // null source marks a drag originating from the list
+        _toastDragKind = kind;
+        _toastDragStart = e.GetPosition(ToastDesignerRoot);
+        _toastDragArmed = true;
+    }
+
+    private void ToastRow_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        // Only handle list-originated drags here (source == null); preview-button drags are armed
+        // and started by the preview surface handler.
+        if (!_toastDragArmed || _toastDragSource is not null)
+            return;
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            _toastDragArmed = false;
+            return;
+        }
+
+        var pos = e.GetPosition(ToastDesignerRoot);
         if (Math.Abs(pos.X - _toastDragStart.X) < SystemParameters.MinimumHorizontalDragDistance
             && Math.Abs(pos.Y - _toastDragStart.Y) < SystemParameters.MinimumVerticalDragDistance)
             return;
@@ -249,18 +326,29 @@ public partial class SettingsWindow
 
     private void StartToastDrag()
     {
-        if (_toastDragSource is not { } border)
-            return;
         var kind = _toastDragKind;
 
         RestoreDimmedButton();
 
-        // Snapshot the button at full opacity for the floating ghost, then hide the original so
-        // only the ghost follows the cursor.
-        ShowToastDragGhost(border);
+        // The element that owns DoDragDrop/GiveFeedback: the preview button border when moving an
+        // existing button, or the whole designer surface when dragging a button in from the list.
+        UIElement dragSource = (UIElement?)_toastDragSource ?? ToastDesignerRoot;
 
-        var savedOpacity = border.Opacity;
-        border.Opacity = 0;
+        double savedOpacity = 1;
+        if (_toastDragSource is { } border)
+        {
+            // Snapshot the button at full opacity for the floating ghost, then hide the original so
+            // only the ghost follows the cursor.
+            ShowToastDragGhost(border);
+            savedOpacity = border.Opacity;
+            border.Opacity = 0;
+        }
+        else
+        {
+            // Dragging in from the list: build a ghost that matches the preview buttons. The list
+            // row itself stays put.
+            ShowToastDragGhostForKind(kind);
+        }
 
         // Preview buttons are drawn directly on top of the slot drop targets that share their
         // corner (same margins from ToastButtonLayout.ToPlacement). Drag-drop routed events
@@ -274,20 +362,22 @@ public partial class SettingsWindow
             b.IsHitTestVisible = false;
 
         // Suppress default drag cursors (arrow, "no" circle).
-        border.GiveFeedback += OnGiveFeedback;
+        dragSource.GiveFeedback += OnGiveFeedback;
         try
         {
-            DragDrop.DoDragDrop(border, kind, DragDropEffects.Move);
+            DragDrop.DoDragDrop(dragSource, kind, DragDropEffects.Move);
         }
         finally
         {
-            border.GiveFeedback -= OnGiveFeedback;
-            border.Opacity = savedOpacity;
+            dragSource.GiveFeedback -= OnGiveFeedback;
+            if (_toastDragSource is { } b2)
+                b2.Opacity = savedOpacity;
             foreach (var b in _previewButtonBorders.Values)
                 b.IsHitTestVisible = true;
             HideToastDragGhost();
             RestoreDimmedButton();
             RefreshToastSlotIndicators();
+            _toastDragSource = null;
         }
     }
 
@@ -315,10 +405,37 @@ public partial class SettingsWindow
         ToastDragGhost.Source = rtb;
         ToastDragGhost.Visibility = Visibility.Visible;
 
-        // _toastDragStart is in ToastLayoutPreviewSurface space; the ghost lives in
-        // ToastLayoutSurfaceRoot space, so translate before positioning.
-        var p = ToastLayoutPreviewSurface.TransformToVisual(ToastLayoutSurfaceRoot).Transform(_toastDragStart);
-        PositionToastDragGhost(p);
+        // _toastDragStart and the ghost both live in ToastDesignerRoot space.
+        PositionToastDragGhost(_toastDragStart);
+    }
+
+    // Build the floating ghost for a button dragged in from the list, matching the look of the
+    // preview buttons (30px rounded chrome + 22px icon) so the drag feels consistent regardless
+    // of whether it started on the small list icon or a preview button.
+    private void ShowToastDragGhostForKind(ToastButtonKind kind)
+    {
+        const int size = 30;
+        var iconBmp = Helpers.FluentIcons.RenderWpf(ToastButtonIconId(kind), GetToastLayoutIconColor(active: false), 22);
+
+        var dv = new DrawingVisual();
+        using (var dc = dv.RenderOpen())
+        {
+            var bg = Theme.Brush(Theme.IsDark ? Color.FromArgb(64, 0, 0, 0) : Color.FromArgb(40, 0, 0, 0));
+            dc.DrawRoundedRectangle(bg, null, new Rect(0, 0, size, size), 9, 9);
+            if (iconBmp is not null)
+            {
+                double iw = iconBmp.Width, ih = iconBmp.Height;
+                dc.DrawImage(iconBmp, new Rect((size - iw) / 2, (size - ih) / 2, iw, ih));
+            }
+        }
+
+        var rtb = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(dv);
+        rtb.Freeze();
+
+        ToastDragGhost.Source = rtb;
+        ToastDragGhost.Visibility = Visibility.Visible;
+        PositionToastDragGhost(_toastDragStart);
     }
 
     private void PositionToastDragGhost(Point posInRoot)
@@ -338,15 +455,16 @@ public partial class SettingsWindow
         e.Handled = true;
     }
 
-    /// <summary>Accept Move effects anywhere on the preview surface so the cursor
-    /// never shows the "no" symbol between slot targets.</summary>
-    private void ToastPreviewSurface_DragOver(object sender, DragEventArgs e)
+    /// <summary>Accept Move effects anywhere on the designer surface so the cursor never shows the
+    /// "no" symbol, and keep the floating ghost glued to the cursor across both the preview and the
+    /// list.</summary>
+    private void ToastDesigner_DragOver(object sender, DragEventArgs e)
     {
         if (e.Data.GetDataPresent(typeof(ToastButtonKind)))
         {
             e.Effects = DragDropEffects.Move;
             if (ToastDragGhost.Visibility == Visibility.Visible)
-                PositionToastDragGhost(e.GetPosition(ToastLayoutSurfaceRoot));
+                PositionToastDragGhost(e.GetPosition(ToastDesignerRoot));
         }
         else
         {
@@ -362,6 +480,32 @@ public partial class SettingsWindow
             _dragDimmedButton.Opacity = 1;
             _dragDimmedButton = null;
         }
+    }
+
+    // Send a preview button back to the list (double-click or right-click on it).
+    private void RemoveToastButton(ToastButtonKind kind)
+    {
+        if (!ToastButtonLayout.IsVisible(ToastButtons, kind))
+            return;
+
+        ToastButtonLayout.SetVisible(ToastButtons, kind, false);
+        ToastButtons.Manual = true;
+        _toastLayoutHint = null;
+        PersistToastButtonLayout();
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? start) where T : DependencyObject
+    {
+        var node = start;
+        while (node is not null)
+        {
+            if (node is T match)
+                return match;
+            if (node is not Visual && node is not System.Windows.Media.Media3D.Visual3D)
+                return null; // can't walk the visual tree above a ContentElement
+            node = VisualTreeHelper.GetParent(node);
+        }
+        return null;
     }
 
     private void ToastSlot_DragEnter(object sender, DragEventArgs e)
@@ -424,10 +568,25 @@ public partial class SettingsWindow
         slot.BorderThickness = new Thickness(1);
         RestoreDimmedButton();
 
-        // Drop onto the *exact* slot, not just the corner. AssignSlot swaps with the visible
-        // occupant (if any), which is what lets a button move to the free or occupied slot
-        // right next to it within the same corner.
-        ToastButtonLayout.AssignSlot(ToastButtons, kind, targetSlot);
+        // Drop onto the *exact* slot, not just the corner.
+        if (!ToastButtonLayout.IsVisible(ToastButtons, kind))
+        {
+            // A hidden kind can only have come from the list (drag-in). Place it without the
+            // stale-slot swap AssignSlot does for an already-visible button: fill the corner,
+            // pushing any occupant to the free partner slot, or reject when the corner is full.
+            if (!ToastButtonLayout.PlaceFromHidden(ToastButtons, kind, targetSlot))
+            {
+                _toastLayoutHint = $"The {FormatCornerLabel(ToastButtonLayout.SlotToCorner(targetSlot))} corner is full (2 buttons max). Remove a button first.";
+                PersistToastButtonLayout();
+                return;
+            }
+        }
+        else
+        {
+            // AssignSlot swaps with the visible occupant (if any), which is what lets a button move
+            // to the free or occupied slot right next to it within the same corner.
+            ToastButtonLayout.AssignSlot(ToastButtons, kind, targetSlot);
+        }
 
         // A drag-and-drop always implies the user is customising manually — activate Manual mode
         // so the combo boxes stay unlocked after the drop.
@@ -653,36 +812,20 @@ public partial class SettingsWindow
 
     private void RefreshToastLayoutStatus()
     {
-        string status;
+        // The preset buttons already make the active selection obvious, so this line stays hidden
+        // and only surfaces a transient warning (e.g. a corner being full).
         if (_toastLayoutHint is not null)
         {
-            status = _toastLayoutHint;
-        }
-        else if (IsManualMode)
-        {
-            // Manual mode: show the matching preset name as a base, plus "(manual)".
-            status = ToastButtonLayout.DetectPreset(ToastButtons) switch
-            {
-                ToastButtonPreset.Minimal => "Minimal preset (manual)",
-                ToastButtonPreset.Standard => "Standard preset (manual)",
-                ToastButtonPreset.Full => "Full preset (manual)",
-                _ => "Custom layout"
-            };
+            ToastLayoutSelectionText.Text = _toastLayoutHint;
+            ToastLayoutSelectionText.ToolTip = _toastLayoutHint;
+            AutomationProperties.SetHelpText(ToastLayoutSelectionText, _toastLayoutHint);
+            ToastLayoutSelectionText.Visibility = Visibility.Visible;
         }
         else
         {
-            status = ToastButtonLayout.DetectPreset(ToastButtons) switch
-            {
-                ToastButtonPreset.Minimal => "Minimal preset",
-                ToastButtonPreset.Standard => "Standard preset",
-                ToastButtonPreset.Full => "Full preset",
-                _ => "Custom layout"
-            };
+            ToastLayoutSelectionText.Text = string.Empty;
+            ToastLayoutSelectionText.Visibility = Visibility.Collapsed;
         }
-
-        ToastLayoutSelectionText.Text = status;
-        ToastLayoutSelectionText.ToolTip = status;
-        AutomationProperties.SetHelpText(ToastLayoutSelectionText, status);
     }
 
     private void PersistToastButtonLayout()
