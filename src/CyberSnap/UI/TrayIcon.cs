@@ -129,19 +129,19 @@ public sealed class TrayIcon : IDisposable
             recordGifItem.Click += (_, _) => OnRecordRequested?.Invoke(RecordingFormat.GIF);
         }
 
-        var settingsItem       = WindowsMenuRenderer.Item(T("Configuration"), iconId: "gear");
-        var historyItem        = WindowsMenuRenderer.Item(T("Capture History"), iconId: "folder");
-        var annotationEditorItem = WindowsMenuRenderer.Item(T("Annotations Editor"), iconId: "draw");
-        var quitItem           = WindowsMenuRenderer.Item(T("Shutdown"), iconId: "close", danger: true);
+        var annotationEditorItem = WindowsMenuRenderer.Item(T("Annotations Editor..."), iconId: "draw");
+        var historyItem        = WindowsMenuRenderer.Item(T("Capture History..."), iconId: "folder");
+        var settingsItem       = WindowsMenuRenderer.Item(T("Configuration..."), iconId: "gear");
+        var quitItem           = WindowsMenuRenderer.Item(T("Exit"), iconId: "close", danger: true);
 
         captureItem.Click += (_, _) => OnCapture?.Invoke();
         ocrItem.Click     += (_, _) => OnOcr?.Invoke();
         pickerItem.Click  += (_, _) => OnColorPicker?.Invoke();
         rulerItem.Click   += (_, _) => OnRuler?.Invoke();
         scrollItem.Click   += (_, _) => OnScrollCapture?.Invoke();
-        settingsItem.Click         += (_, _) => OnSettings?.Invoke();
-        historyItem.Click          += (_, _) => OnHistory?.Invoke();
         annotationEditorItem.Click += (_, _) => OnAnnotationEditor?.Invoke();
+        historyItem.Click          += (_, _) => OnHistory?.Invoke();
+        settingsItem.Click         += (_, _) => OnSettings?.Invoke();
         quitItem.Click             += (_, _) => OnQuit?.Invoke();
 
         // ── App header ──
@@ -167,9 +167,9 @@ public sealed class TrayIcon : IDisposable
         menu.Items.Add(pickerItem);
         menu.Items.Add(rulerItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(settingsItem);
-        menu.Items.Add(historyItem);
         menu.Items.Add(annotationEditorItem);
+        menu.Items.Add(historyItem);
+        menu.Items.Add(settingsItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(quitItem);
 
