@@ -392,6 +392,14 @@ public partial class SettingsWindow
     {
         LocalizationService.ApplyCurrentCulture(_settingsService.Settings.InterfaceLanguage);
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
+        UpdateWindowTitle();
+    }
+
+    private void UpdateWindowTitle()
+    {
+        var title = $"CyberSnap {UpdateService.GetCurrentVersionLabel()} - Configuration";
+        Title = title;
+        SettingsTitleBar.Title = title;
     }
 
     private void SelectUiScale(double scale)

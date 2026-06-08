@@ -675,9 +675,6 @@
             <Border Grid.Column="0" BorderBrush="{DynamicResource ThemeSeparatorBrush}" BorderThickness="0,0,1,0"
                     Padding="10,14,8,18">
                 <StackPanel>
-                    <TextBlock Text="Settings" FontSize="18" FontWeight="Bold" FontFamily="Segoe UI Variable Display"
-                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" Margin="10,0,10,16"/>
-                    
                     <RadioButton x:Name="SettingsTab" Content="General" GroupName="Main"
                                  IsChecked="True" Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="ToastTab" Content="Notifications" GroupName="Main"
