@@ -345,6 +345,13 @@ public sealed partial class RecordingForm : Form
 
         if (_selection.Width > 2 && _selection.Height > 2)
         {
+            // Dim everything outside the selection area (same as RegionOverlayForm)
+            var state = g.Save();
+            g.ExcludeClip(_selection);
+            using var dimBrush = new SolidBrush(Color.FromArgb(80, 0, 0, 0));
+            g.FillRectangle(dimBrush, ClientRectangle);
+            g.Restore(state);
+
             SelectionFrameRenderer.DrawRectangle(g, _selection);
             SelectionSizeReadout.Draw(
                 g,
