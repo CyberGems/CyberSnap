@@ -305,28 +305,28 @@ public static class TranslationService
     {
         if (model == TranslationModel.Google)
             return string.IsNullOrWhiteSpace(_googleApiKey)
-                ? "Google Translate API key not set. Add it in Settings -> OCR."
+                ? "Google Translate API key not set. Add it in Config -> OCR."
                 : null;
 
         if (model == TranslationModel.OpenSourceLocal)
         {
             if (OpenSourceTranslationRuntimeService.TryGetCachedStatus(out var localReady, out _))
-                return localReady ? null : "Open-source local translation is not installed. Install it in Settings -> OCR.";
+                return localReady ? null : "Open-source local translation is not installed. Install it in Config -> OCR.";
 
             return await OpenSourceTranslationRuntimeService.IsRuntimeReadyAsync(cancellationToken).ConfigureAwait(false)
                 ? null
-                : "Open-source local translation is not installed. Install it in Settings -> OCR.";
+                : "Open-source local translation is not installed. Install it in Config -> OCR.";
         }
 
         if (string.Equals(fromCode, "auto", StringComparison.OrdinalIgnoreCase))
             return "Argos Translate does not support auto-detect. Pick a source language or use Google Translate.";
 
         if (TryGetArgosCachedStatus(out var argosReady, out _))
-            return argosReady ? null : "Argos Translate is not installed. Install it in Settings -> OCR.";
+            return argosReady ? null : "Argos Translate is not installed. Install it in Config -> OCR.";
 
         return await IsArgosReadyAsync(cancellationToken).ConfigureAwait(false)
             ? null
-            : "Argos Translate is not installed. Install it in Settings -> OCR.";
+            : "Argos Translate is not installed. Install it in Config -> OCR.";
     }
 
     private static void UpdateArgosProbeCache(bool ready, string status)

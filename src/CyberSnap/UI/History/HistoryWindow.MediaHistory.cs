@@ -249,7 +249,7 @@ public partial class HistoryWindow
             {
                 var recovery = !string.IsNullOrWhiteSpace(vm.Entry.UploadUrl)
                     ? "Open History and copy the visible upload link manually."
-                    : "Try again from Settings -> History, or open the saved GIF manually.";
+                    : "Try again from Config -> History, or open the saved GIF manually.";
                 ToastWindow.ShowError(
                     "Copy failed",
                     $"CyberSnap could not copy this GIF history item. {recovery}\n{ex.Message}",
@@ -317,7 +317,7 @@ public partial class HistoryWindow
             {
                 var recovery = !string.IsNullOrWhiteSpace(vm.Entry.UploadUrl)
                     ? "Open History and copy the visible upload link manually."
-                    : "Try again from Settings -> History, or open the saved video manually.";
+                    : "Try again from Config -> History, or open the saved video manually.";
                 ToastWindow.ShowError(
                     "Copy failed",
                     $"CyberSnap could not copy this video history item. {recovery}\n{ex.Message}",

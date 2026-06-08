@@ -571,7 +571,7 @@ public partial class SettingsWindow
             SetToastPreferenceStatus($"{label} change was not saved. Previous setting restored.");
             ToastWindow.ShowError(
                 $"{label} failed",
-                $"The previous notification setting was restored. Check Settings -> Notifications and try again.\n{ex.Message}");
+                $"The previous notification setting was restored. Check Config -> Notifications and try again.\n{ex.Message}");
         }
     }
 
@@ -667,7 +667,7 @@ public partial class SettingsWindow
             SetGeneralPreferenceStatus($"{label} change was not saved. Previous setting restored.");
             ToastWindow.ShowError(
                 $"{label} failed",
-                $"The previous general setting was restored. Check Settings -> General and try again.\n{ex.Message}");
+                $"The previous general setting was restored. Check Config -> General and try again.\n{ex.Message}");
         }
     }
 

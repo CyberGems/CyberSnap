@@ -299,7 +299,7 @@ public partial class HistoryWindow
             {
                 ToastWindow.ShowError(
                     "Copy failed",
-                    $"CyberSnap could not copy this QR/barcode history item. Try again from Settings -> History, or copy the visible decoded value manually.\n{ex.Message}");
+                    $"CyberSnap could not copy this QR/barcode history item. Try again from Config -> History, or copy the visible decoded value manually.\n{ex.Message}");
             }
         }
 
@@ -513,7 +513,7 @@ public partial class HistoryWindow
             });
             if (process is null)
             {
-                ToastWindow.ShowError("Open failed", "Windows did not open the code URL. Copy it from Settings -> History and open it manually.");
+                ToastWindow.ShowError("Open failed", "Windows did not open the code URL. Copy it from Config -> History and open it manually.");
                 return false;
             }
 
@@ -523,7 +523,7 @@ public partial class HistoryWindow
         {
             ToastWindow.ShowError(
                 "Open failed",
-                $"CyberSnap could not open the code URL. Copy it from Settings -> History and open it manually.\n{ex.Message}");
+                $"CyberSnap could not open the code URL. Copy it from Config -> History and open it manually.\n{ex.Message}");
             return false;
         }
     }

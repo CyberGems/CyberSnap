@@ -512,7 +512,7 @@ public partial class HistoryWindow
         {
             ToastWindow.ShowError(
                 "Open failed",
-                $"CyberSnap could not open the file location. Try again from Settings -> History, or open the folder manually.\n{ex.Message}",
+                $"CyberSnap could not open the file location. Try again from Config -> History, or open the folder manually.\n{ex.Message}",
                 filePath);
             return false;
         }
@@ -536,7 +536,7 @@ public partial class HistoryWindow
             });
             if (process is null)
             {
-                ToastWindow.ShowError("Open failed", "Windows did not open the saved file. Try again from Settings -> History, or open it from disk manually.", filePath);
+                ToastWindow.ShowError("Open failed", "Windows did not open the saved file. Try again from Config -> History, or open it from disk manually.", filePath);
                 return false;
             }
 
@@ -546,7 +546,7 @@ public partial class HistoryWindow
         {
             ToastWindow.ShowError(
                 "Open failed",
-                $"CyberSnap could not open the saved file. Try again from Settings -> History, or open it from disk manually.\n{ex.Message}",
+                $"CyberSnap could not open the saved file. Try again from Config -> History, or open it from disk manually.\n{ex.Message}",
                 filePath);
             return false;
         }

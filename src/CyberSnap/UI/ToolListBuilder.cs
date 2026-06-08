@@ -285,7 +285,7 @@ public static class ToolListBuilder
     {
         ToastWindow.ShowError(
             "Tool setting failed",
-            $"The previous enabled tools were restored. Check Settings -> Tools and try again.\n{ex.Message}");
+            $"The previous enabled tools were restored. Check Config -> Tools and try again.\n{ex.Message}");
     }
 
     private static void RestoreEnabledToolChecks(StackPanel panel, IReadOnlyCollection<string> enabledIds)
@@ -335,7 +335,7 @@ public static class ToolListBuilder
             : string.Empty;
         ToastWindow.ShowError(
             "Hotkey failed",
-            $"The previous hotkey was restored after the failed {action}.{conflictCopy} Check Settings -> Tools and try again.\n{ex.Message}");
+            $"The previous hotkey was restored after the failed {action}.{conflictCopy} Check Config -> Tools and try again.\n{ex.Message}");
     }
 
     private static Key NormalizeHotkeyKey(System.Windows.Input.KeyEventArgs e)

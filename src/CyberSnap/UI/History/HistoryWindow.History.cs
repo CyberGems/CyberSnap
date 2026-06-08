@@ -636,7 +636,7 @@ public partial class HistoryWindow
             }
             catch (Exception ex)
             {
-                const string recovery = "Try again from Settings -> History, or open the saved screenshot manually.";
+                const string recovery = "Try again from Config -> History, or open the saved screenshot manually.";
                 ToastWindow.ShowError(
                     "Copy failed",
                     $"CyberSnap could not copy this history item. {recovery}\n{ex.Message}",
