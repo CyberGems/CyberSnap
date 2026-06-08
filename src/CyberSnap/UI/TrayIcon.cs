@@ -100,8 +100,8 @@ public sealed class TrayIcon : IDisposable
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: WindowsMenuRenderer.DefaultWidth);
         bool isRec = Capture.RecordingForm.Current != null;
 
-        var captureItem  = WindowsMenuRenderer.Item(T("Area Capture"), HotkeyHint("rect"), "captureRect");
-        var scrollItem   = WindowsMenuRenderer.Item(T("Scroll capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
+        var captureItem  = WindowsMenuRenderer.Item(T("Area capture"), HotkeyHint("rect"), "captureRect");
+        var scrollItem   = WindowsMenuRenderer.Item(T("Scrolling capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
         var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("ocr"), "ocr");
         var pickerItem   = WindowsMenuRenderer.Item(T("Color picker"), HotkeyHint("picker"), "picker");
         var rulerItem    = WindowsMenuRenderer.Item(T("Ruler"), HotkeyHint("ruler"), "ruler");
@@ -121,15 +121,15 @@ public sealed class TrayIcon : IDisposable
         }
         else
         {
-            recordItem = WindowsMenuRenderer.Item(T("Screen Recorder (MP4)"), HotkeyHint("_record"), "record");
+            recordItem = WindowsMenuRenderer.Item(T("Screen recorder (MP4)"), HotkeyHint("_record"), "record");
             recordItem.Click += (_, _) => OnRecordRequested?.Invoke(RecordingFormat.MP4);
             _recordItem = recordItem;
 
-            recordGifItem = WindowsMenuRenderer.Item(T("Screen Recorder (GIF)"), null, "recordGif");
+            recordGifItem = WindowsMenuRenderer.Item(T("Screen recorder (GIF)"), null, "recordGif");
             recordGifItem.Click += (_, _) => OnRecordRequested?.Invoke(RecordingFormat.GIF);
         }
 
-        var settingsItem       = WindowsMenuRenderer.Item(T("Settings"), iconId: "gear");
+        var settingsItem       = WindowsMenuRenderer.Item(T("Configuration"), iconId: "gear");
         var historyItem        = WindowsMenuRenderer.Item(T("Capture History"), iconId: "folder");
         var annotationEditorItem = WindowsMenuRenderer.Item(T("Annotations Editor"), iconId: "draw");
         var quitItem           = WindowsMenuRenderer.Item(T("Shutdown"), iconId: "close", danger: true);
