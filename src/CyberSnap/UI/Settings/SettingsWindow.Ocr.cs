@@ -543,8 +543,8 @@ public partial class SettingsWindow
 
     private static string FormatTranslationRuntimeRefreshFailureStatus(string message)
         => string.IsNullOrWhiteSpace(message)
-            ? "Status refresh failed. Check Settings -> OCR and try again."
-            : "Status refresh failed. Check Settings -> OCR and try again; details were logged.";
+            ? "Status refresh failed. Check Config -> OCR and try again."
+            : "Status refresh failed. Check Config -> OCR and try again; details were logged.";
 
     private static string FormatRuntimeReadinessStatus(bool isInstalled, string installedStatus, BackgroundRuntimeJobSnapshot? lastJob, string runtimeName)
     {
@@ -559,7 +559,7 @@ public partial class SettingsWindow
 
     private static string FormatRuntimeActionFailedStatus(string? message, string runtimeName)
     {
-        var recovery = $"{runtimeName} action failed. Check Settings -> OCR and try again.";
+        var recovery = $"{runtimeName} action failed. Check Config -> OCR and try again.";
         return string.IsNullOrWhiteSpace(message) ? recovery : $"{recovery} Details were logged.";
     }
 
@@ -672,7 +672,7 @@ public partial class SettingsWindow
             setStatus($"{label} change was not saved. Previous setting restored.");
             ToastWindow.ShowError(
                 $"{label} failed",
-                $"The previous OCR setting was restored. Check Settings -> OCR and try again.\n{ex.Message}");
+                $"The previous OCR setting was restored. Check Config -> OCR and try again.\n{ex.Message}");
         }
     }
 

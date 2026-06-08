@@ -261,7 +261,7 @@ public partial class App
             {
                 ShowCaptureProcessingFailed(
                     "OCR error",
-                    "CyberSnap could not read text from this capture. Try a clearer region, or check Settings -> OCR.",
+                    "CyberSnap could not read text from this capture. Try a clearer region, or check Config -> OCR.",
                     ex.Message);
             }
             finally { result.Dispose(); }

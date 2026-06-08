@@ -233,7 +233,7 @@ public partial class HistoryWindow
             HistorySearchStatusText.Text = $"{label} change was not saved. Previous setting restored.";
             ToastWindow.ShowError(
                 $"{label} failed",
-                $"The previous search setting was restored. Check Settings -> History and try again.\n{ex.Message}");
+                $"The previous search setting was restored. Check Config -> History and try again.\n{ex.Message}");
         }
     }
 

@@ -540,7 +540,7 @@ public partial class SettingsWindow : Window
         SetCaptureSavePreferenceStatus($"{label} change was not saved. Previous setting restored.");
         ToastWindow.ShowError(
             $"{label} failed",
-            $"The previous capture setting was restored. Check Settings -> Capture and try again.\n{ex.Message}");
+            $"The previous capture setting was restored. Check Config -> Capture and try again.\n{ex.Message}");
     }
 
     private void SetCaptureSavePreferenceStatus(string message)
@@ -753,7 +753,7 @@ public partial class SettingsWindow : Window
         SetStartupPreferenceStatus("Startup setting change was not saved. Previous setting restored.");
         ToastWindow.ShowError(
             "Startup setting failed",
-            $"The previous startup setting was restored. Check Settings -> About and try again.\n{ex.Message}");
+            $"The previous startup setting was restored. Check Config -> About and try again.\n{ex.Message}");
     }
 
     private void SetStartupPreferenceStatus(string message)

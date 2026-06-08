@@ -351,7 +351,7 @@ public partial class HistoryWindow
             {
                 ToastWindow.ShowError(
                     "Copy failed",
-                    $"CyberSnap could not copy this text history item. Try again from Settings -> History, or copy the visible text manually.\n{ex.Message}");
+                    $"CyberSnap could not copy this text history item. Try again from Config -> History, or copy the visible text manually.\n{ex.Message}");
             }
         }
         btnPanel.Children.Add(copyBtn);
@@ -576,7 +576,7 @@ public partial class HistoryWindow
             {
                 ToastWindow.ShowError(
                     "Copy failed",
-                    $"CyberSnap could not copy this color history item. Try again from Settings -> History, or copy the visible color value manually.\n{ex.Message}");
+                    $"CyberSnap could not copy this color history item. Try again from Config -> History, or copy the visible color value manually.\n{ex.Message}");
             }
         }
         Grid.SetColumn(copyBtn, 2);

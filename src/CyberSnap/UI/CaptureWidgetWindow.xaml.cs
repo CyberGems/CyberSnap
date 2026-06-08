@@ -788,7 +788,7 @@ public partial class CaptureWidgetWindow : Window
             _settingsService.Save();
             ToastWindow.Show(
                 LocalizationService.Translate("Quick panel disabled"),
-                LocalizationService.Translate("You can re-enable it anytime from Settings -> General."));
+                LocalizationService.Translate("You can re-enable it anytime from Config -> General."));
             Close();
         };
         menu.Items.Add(disableItem);

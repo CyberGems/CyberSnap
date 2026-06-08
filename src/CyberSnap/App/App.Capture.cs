@@ -147,7 +147,7 @@ public partial class App
                         ResetCapturing();
                         ShowCaptureProcessingFailed(
                             "Recording error",
-                            "CyberSnap could not finish the recording. Try again, or check Settings -> Recording.",
+                            "CyberSnap could not finish the recording. Try again, or check Config -> Recording.",
                             ex.Message);
                         ScheduleIdleMemoryTrim();
                     });
@@ -180,7 +180,7 @@ public partial class App
                     ResetCapturing();
                     ShowCaptureProcessingFailed(
                         "Recording error",
-                        "CyberSnap could not start recording. Try again, or check Settings -> Recording.",
+                        "CyberSnap could not start recording. Try again, or check Config -> Recording.",
                         ex.Message);
                 });
             }

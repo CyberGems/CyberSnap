@@ -177,7 +177,7 @@ public partial class SetupWizard : Window
     {
         ToastWindow.ShowError(
             "Hotkey failed",
-            $"The previous hotkey was restored. Try this setup step again, or change it later in Settings -> Tools.\n{ex.Message}");
+            $"The previous hotkey was restored. Try this setup step again, or change it later in Config -> Tools.\n{ex.Message}");
     }
 
     private void LoadDefaults()

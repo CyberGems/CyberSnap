@@ -92,7 +92,7 @@ public partial class SettingsWindow
             SetHistoryPreferenceStatus($"{label} change was not saved. Previous setting restored.");
             ToastWindow.ShowError(
                 $"{label} failed",
-                $"The previous history setting was restored. Check Settings -> Recording and try again.\n{ex.Message}");
+                $"The previous history setting was restored. Check Config -> Recording and try again.\n{ex.Message}");
         }
     }
 
@@ -397,7 +397,7 @@ public partial class SettingsWindow
             SetRecordingPreferenceStatus($"{label} change was not saved. Previous setting restored.");
             ToastWindow.ShowError(
                 $"{label} failed",
-                $"The previous recording setting was restored. Check Settings -> Recording and try again.\n{ex.Message}");
+                $"The previous recording setting was restored. Check Config -> Recording and try again.\n{ex.Message}");
         }
     }
 
@@ -495,7 +495,7 @@ public partial class SettingsWindow
             });
             if (process is null)
             {
-                ToastWindow.ShowError("Open failed", "Windows did not open the support link. Copy the link from Settings -> About and open it manually.");
+                ToastWindow.ShowError("Open failed", "Windows did not open the support link. Copy the link from Config -> About and open it manually.");
                 return false;
             }
 
@@ -505,7 +505,7 @@ public partial class SettingsWindow
         {
             ToastWindow.ShowError(
                 "Open failed",
-                $"CyberSnap could not open the support link. Copy the link from Settings -> About and open it manually.\n{ex.Message}");
+                $"CyberSnap could not open the support link. Copy the link from Config -> About and open it manually.\n{ex.Message}");
             return false;
         }
     }
