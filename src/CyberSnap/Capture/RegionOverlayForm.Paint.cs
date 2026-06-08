@@ -457,7 +457,7 @@ public sealed partial class RegionOverlayForm
         if (rect.Width < 3 || rect.Height < 3) return;
         var clamped = Rectangle.Intersect(rect, new Rectangle(0, 0, _bmpW, _bmpH));
         if (clamped.Width < 1 || clamped.Height < 1) return;
-        int blockSize = Math.Clamp(Math.Min(clamped.Width, clamped.Height) / 24, 3, 10);
+        int blockSize = Math.Clamp(Math.Min(clamped.Width, clamped.Height) / 16, 3, 14);
         int sw = Math.Max(1, clamped.Width / blockSize);
         int sh = Math.Max(1, clamped.Height / blockSize);
         var small = GetBlurPreviewGraphics(new Size(sw, sh));
