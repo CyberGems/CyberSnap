@@ -88,7 +88,7 @@ public partial class CaptureWidgetWindow : Window
 
         BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("center", accentColor, 20); // target crosshair
 
-        RegionCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("rect", normalIconColor, 22);
+        RegionCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("captureRect", normalIconColor, 22);
         ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, 22);
         GrabTextIcon.Source = Helpers.FluentIcons.RenderWpf("ocr", normalIconColor, 22);
         QrScanIcon.Source = Helpers.FluentIcons.RenderWpf("scan", normalIconColor, 22);

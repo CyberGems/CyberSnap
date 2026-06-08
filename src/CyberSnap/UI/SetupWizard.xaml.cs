@@ -19,7 +19,7 @@ public partial class SetupWizard : Window
 
     private static readonly (string id, string label, char icon)[] CaptureHotkeys =
     {
-        ("rect",           "Screenshot",        '\uE257'),
+        ("captureRect",    "Screenshot",        '\uE257'),
         ("center",         "Center capture",    '\uE257'),
         ("ocr",            "Text capture",      '\uE53C'),
         ("picker",         "Color picker",      '\uE13E'),
