@@ -761,7 +761,9 @@ public sealed partial class ScrollingCaptureForm : Form
 
         var old = _selection;
         _selection = next;
-        Invalidate(Rectangle.Union(InflateForRepaint(old, 16), InflateForRepaint(next, 16)));
+        Invalidate(Rectangle.Union(
+            InflateForRepaint(old, 16).IsEmpty ? old : Rectangle.Union(InflateForRepaint(old, 16), old),
+            InflateForRepaint(next, 16).IsEmpty ? next : Rectangle.Union(InflateForRepaint(next, 16), next)));
     }
 
     private void UpdateControlBarPosition()
@@ -903,6 +905,9 @@ public sealed partial class ScrollingCaptureForm : Form
     {
         var oldDirty = GetSelectionChromeBounds(oldSelection, oldCursor);
         var newDirty = GetSelectionChromeBounds(newSelection, newCursor);
+
+        if (oldSelection.Width > 2) oldDirty = oldDirty.IsEmpty ? oldSelection : Rectangle.Union(oldDirty, oldSelection);
+        if (newSelection.Width > 2) newDirty = newDirty.IsEmpty ? newSelection : Rectangle.Union(newDirty, newSelection);
 
         if (!oldDirty.IsEmpty && !newDirty.IsEmpty)
             Invalidate(Rectangle.Union(oldDirty, newDirty));

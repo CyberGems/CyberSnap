@@ -623,6 +623,11 @@ public sealed partial class RecordingForm : Form
         var oldDirty = GetSelectionChromeBounds(oldSelection, oldCursor);
         var newDirty = GetSelectionChromeBounds(newSelection, newCursor);
 
+        // Include the full selection rects so the dim overlay (which covers
+        // everything outside the selection) redraws correctly on shrink.
+        if (oldSelection.Width > 2) oldDirty = oldDirty.IsEmpty ? oldSelection : Rectangle.Union(oldDirty, oldSelection);
+        if (newSelection.Width > 2) newDirty = newDirty.IsEmpty ? newSelection : Rectangle.Union(newDirty, newSelection);
+
         if (!oldDirty.IsEmpty && !newDirty.IsEmpty)
             Invalidate(Rectangle.Union(oldDirty, newDirty));
         else if (!oldDirty.IsEmpty)
