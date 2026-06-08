@@ -132,6 +132,9 @@ public sealed partial class RecordingForm
         _pauseStartTime = null;
         _isPaused = false;
 
+        _screenshot?.Dispose();
+        _screenshot = null;
+
         CalcToolbarLayout();
         TransitionToRecordingSurface();
 
@@ -234,10 +237,6 @@ public sealed partial class RecordingForm
         Visible = false;
         _selectionAdorner?.Hide();
         Opacity = 1;
-
-        // The selection screenshot is only needed before recording starts.
-        _screenshot?.Dispose();
-        _screenshot = null;
 
         BackColor = TransKey;
         TransparencyKey = TransKey;
