@@ -71,8 +71,6 @@ public sealed partial class ScrollingCaptureForm : Form
 
     // Cached GDI objects for selection overlay
     private readonly Font _readoutFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
-    private readonly Font _hintFont = UiChrome.ChromeFont(UiChrome.ChromeHintSize);
-    private readonly SolidBrush _hintBrush = new(UiChrome.SurfaceTextMuted);
 
     public ScrollingCaptureForm(Bitmap? screenshot, Rectangle virtualBounds, bool showCursor = false,
                                 bool showMagnifier = false,
@@ -176,12 +174,19 @@ public sealed partial class ScrollingCaptureForm : Form
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
+        if (e.Button == MouseButtons.Right)
+        {
+            HandleEscape();
+            return;
+        }
+
         if (_state == State.Selecting && e.Button == MouseButtons.Left)
         {
             _isDragging = true;
             _dragStart = e.Location;
             _selectionCursor = e.Location;
             _selection = Rectangle.Empty;
+            Invalidate(); // immediately hide the hint banner
             UpdateLiveSelectionAdorner();
         }
     }
@@ -596,14 +601,82 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             SelectionFrameRenderer.DrawRectangle(g, _selection);
         }
-        else
+        else if (!_isDragging)
         {
             string hint = "Drag to select scrolling area";
-            var hintSz = g.MeasureString(hint, _hintFont);
-            g.DrawString(hint, _hintFont, _hintBrush,
-                Width / 2f - hintSz.Width / 2f, Height / 2f - hintSz.Height / 2f);
+            // Center the hint on each individual monitor instead of the
+            // combined virtual desktop so the text doesn't get split across
+            // monitor boundaries on multi-monitor setups.
+            DrawHintPerMonitor(g, hint);
+        }
+    }
+
+    /// <summary>
+    /// Draws an elegant hint banner at the bottom of each screen. The banner
+    /// matches the toolbar widget style: SurfacePill background, SurfaceBorderSubtle
+    /// outline, and SurfaceTextPrimary text. Disappears as soon as the user
+    /// starts dragging.
+    /// </summary>
+    private void DrawHintPerMonitor(Graphics g, string hint)
+    {
+        const int padX = 18;
+        const int padY = 10;
+        const int bottomMargin = 100;
+        const float cornerR = 8f;
+
+        using var hintFont = UiChrome.ChromeFont(14f, FontStyle.Bold);
+        var hintSz = g.MeasureString(hint, hintFont);
+        float bgW = hintSz.Width + padX * 2;
+        float bgH = hintSz.Height + padY * 2;
+
+        var oldMode = g.SmoothingMode;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+        // Match the toolbar widget: SurfaceTier1 + accent border
+        var tier1 = UiChrome.SurfaceTier1;
+        var bgColor = Color.FromArgb(245, tier1.R, tier1.G, tier1.B);
+        using var bgBrush = new SolidBrush(bgColor);
+
+        // Border from widget color picker: #078788 teal/cyan
+        using var borderPen = new Pen(Color.FromArgb(255, 0x07, 0x87, 0x88), 1.5f);
+
+        // Text from widget color picker: #A0B4D2
+        using var textBrush = new SolidBrush(Color.FromArgb(255, 0xA0, 0xB4, 0xD2));
+
+        foreach (var screen in Screen.AllScreens)
+        {
+            var screenRect = screen.Bounds;
+            int screenCenterX = screenRect.Left + screenRect.Width / 2 - _virtualBounds.X;
+            int screenBottomY = screenRect.Bottom - _virtualBounds.Y - bottomMargin;
+
+            float bgX = screenCenterX - bgW / 2f;
+            float bgY = screenBottomY - bgH;
+
+            // Rounded background — same fill as the toolbar widget
+            using var bgPath = GetRoundedRectPath(bgX, bgY, bgW, bgH, cornerR);
+            g.FillPath(bgBrush, bgPath);
+
+            // Subtle border — same as toolbar dividers
+            g.DrawPath(borderPen, bgPath);
+
+            // Text centered in the pill
+            g.DrawString(hint, hintFont, textBrush,
+                bgX + padX, bgY + padY);
         }
 
+        g.SmoothingMode = oldMode;
+    }
+
+    private static GraphicsPath GetRoundedRectPath(float x, float y, float w, float h, float r)
+    {
+        var path = new GraphicsPath();
+        float d = r * 2;
+        path.AddArc(x, y, d, d, 180, 90);
+        path.AddArc(x + w - d, y, d, d, 270, 90);
+        path.AddArc(x + w - d, y + h - d, d, d, 0, 90);
+        path.AddArc(x, y + h - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     private void UpdateLiveSelectionAdorner()
@@ -722,8 +795,6 @@ public sealed partial class ScrollingCaptureForm : Form
             ReleaseCaptureBitmaps();
             ReleaseSelectionPreview();
             _readoutFont.Dispose();
-            _hintFont.Dispose();
-            _hintBrush.Dispose();
         }
         base.Dispose(disposing);
     }
