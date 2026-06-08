@@ -39,6 +39,14 @@ public sealed partial class RecordingForm : Form
     private Point _selectionCursor;
     private Rectangle _selection;
 
+    // Handle resize/move during PreRecording (after drag-release, before START)
+    private int _handleDragIdx = -1; // -1=none, 0=TL, 1=TR, 2=BL, 3=BR, 4=move
+    private bool _isHandleDragging;
+    private Point _handleDragOrigin;
+    private Rectangle _handleDragStartRect;
+    private static readonly int HandleSize = 10;
+    private static int HandleSizeScaled => UiChrome.ScaleInt(HandleSize);
+
     // Recording
     private GifRecorder? _recorder;
     private VideoRecorder? _videoRecorder;
@@ -218,6 +226,24 @@ public sealed partial class RecordingForm : Form
         }
         else if (_state == State.PreRecording && e.Button == MouseButtons.Left)
         {
+            // Handle resize/move takes priority over buttons
+            int hit = HitTestHandle(e.Location);
+            if (hit >= 0)
+            {
+                _handleDragIdx = hit;
+                _isHandleDragging = true;
+                _handleDragOrigin = e.Location;
+                _handleDragStartRect = _recordRegion;
+                return;
+            }
+            if (_recordRegion.Contains(e.Location))
+            {
+                _handleDragIdx = 4; // move
+                _isHandleDragging = true;
+                _handleDragOrigin = e.Location;
+                _handleDragStartRect = _recordRegion;
+                return;
+            }
             if (_startBtn.Contains(e.Location))
                 StartActualRecording();
             else if (_fpsBtn.Contains(e.Location))
@@ -238,6 +264,13 @@ public sealed partial class RecordingForm : Form
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
+        // Handle resize/move during PreRecording
+        if (_isHandleDragging && _state == State.PreRecording)
+        {
+            ApplyHandleDrag(e.Location);
+            return;
+        }
+
         if (_state == State.Selecting)
         {
             if (_isDragging)
@@ -247,20 +280,29 @@ public sealed partial class RecordingForm : Form
                 _selection = NormRect(_dragStart, e.Location);
                 _selectionCursor = e.Location;
                 UpdateLiveSelectionAdorner();
-                InvalidateSelectionChrome(oldSelection, oldCursor, _selection, e.Location);
+                Invalidate(); // full repaint for correct dim overlay
             }
             _magHelper?.Update(e.Location, this, _virtualBounds, _isDragging ? GetMagnifierAvoidBounds() : Rectangle.Empty);
             return;
         }
         if (_state == State.PreRecording)
         {
-            int prev = _hoveredBtn;
-            _hoveredBtn = _startBtn.Contains(e.Location) ? 0
-                        : _fpsBtn.Contains(e.Location) ? 1
-                        : _discardBtn.Contains(e.Location) ? 2
-                        : -1;
-            Cursor = _hoveredBtn >= 0 ? Cursors.Hand : Cursors.Default;
-            if (_hoveredBtn != prev) Invalidate(_toolbarRect);
+            // Handle hover feedback takes priority over button hover
+            int hit = HitTestHandle(e.Location);
+            if (hit >= 0)
+                Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
+            else if (_recordRegion.Contains(e.Location))
+                Cursor = Cursors.SizeAll;
+            else
+            {
+                int prev = _hoveredBtn;
+                _hoveredBtn = _startBtn.Contains(e.Location) ? 0
+                            : _fpsBtn.Contains(e.Location) ? 1
+                            : _discardBtn.Contains(e.Location) ? 2
+                            : -1;
+                Cursor = _hoveredBtn >= 0 ? Cursors.Hand : Cursors.Default;
+                if (_hoveredBtn != prev) Invalidate(_toolbarRect);
+            }
 
             string tip = _hoveredBtn switch
             {
@@ -297,6 +339,16 @@ public sealed partial class RecordingForm : Form
 
     protected override void OnMouseUp(MouseEventArgs e)
     {
+        // Finish handle drag in PreRecording
+        if (_isHandleDragging)
+        {
+            _isHandleDragging = false;
+            _handleDragIdx = -1;
+            RebuildRecordingSurface();
+            Invalidate();
+            return;
+        }
+
         if (_state == State.Selecting && _isDragging && e.Button == MouseButtons.Left)
         {
             _isDragging = false;
@@ -424,6 +476,14 @@ public sealed partial class RecordingForm : Form
 
             g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset, borderRect.Right + cornerOffset - cornerLen, borderRect.Bottom + cornerOffset);
             g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset - cornerLen);
+        }
+
+        // Draw resize handles during PreRecording (before START is clicked)
+        if (_state == State.PreRecording)
+        {
+            var handles = GetHandleRects();
+            foreach (var h in handles)
+                WindowsHandleRenderer.Paint(g, h);
         }
 
         var tbRectF = new RectangleF(_toolbarRect.X, _toolbarRect.Y, _toolbarRect.Width, _toolbarRect.Height);
@@ -652,6 +712,112 @@ public sealed partial class RecordingForm : Form
             dirty = Rectangle.Union(dirty, InflateForRepaint(readoutBounds, 10));
 
         return dirty;
+    }
+
+    // ── Handle resize/move helpers (PreRecording phase) ──
+
+    private Rectangle[] GetHandleRects()
+    {
+        int hs = HandleSizeScaled;
+        int h2 = hs / 2;
+        var r = _recordRegion;
+        return new[]
+        {
+            new Rectangle(r.Left - h2, r.Top - h2, hs, hs),       // 0 TL
+            new Rectangle(r.Right - h2, r.Top - h2, hs, hs),      // 1 TR
+            new Rectangle(r.Left - h2, r.Bottom - h2, hs, hs),    // 2 BL
+            new Rectangle(r.Right - h2, r.Bottom - h2, hs, hs),   // 3 BR
+        };
+    }
+
+    private int HitTestHandle(Point p)
+    {
+        var handles = GetHandleRects();
+        for (int i = 0; i < handles.Length; i++)
+        {
+            var hr = handles[i];
+            hr.Inflate((WindowsHandleRenderer.HitSize - hr.Width) / 2,
+                        (WindowsHandleRenderer.HitSize - hr.Height) / 2);
+            if (hr.Contains(p)) return i;
+        }
+        return -1;
+    }
+
+    private void ApplyHandleDrag(Point current)
+    {
+        int dx = current.X - _handleDragOrigin.X;
+        int dy = current.Y - _handleDragOrigin.Y;
+        var r = _handleDragStartRect;
+
+        var next = _handleDragIdx switch
+        {
+            0 => Rectangle.FromLTRB(r.Left + dx, r.Top + dy, r.Right, r.Bottom),
+            1 => Rectangle.FromLTRB(r.Left, r.Top + dy, r.Right + dx, r.Bottom),
+            2 => Rectangle.FromLTRB(r.Left + dx, r.Top, r.Right, r.Bottom + dy),
+            3 => Rectangle.FromLTRB(r.Left, r.Top, r.Right + dx, r.Bottom + dy),
+            4 => new Rectangle(r.Left + dx, r.Top + dy, r.Width, r.Height),
+            _ => r
+        };
+
+        if (next.Width < 20) next.Width = 20;
+        if (next.Height < 20) next.Height = 20;
+        next.X = Math.Max(0, Math.Min(next.X, ClientSize.Width - next.Width));
+        next.Y = Math.Max(0, Math.Min(next.Y, ClientSize.Height - next.Height));
+
+        if (next == _recordRegion) return;
+        _recordRegion = next;
+        Invalidate();
+    }
+
+    private void RebuildRecordingSurface()
+    {
+        // Rebuild the hollow frame region and toolbar for the new _recordRegion
+        CalcToolbarLayout();
+        BuildHollowRegion();
+        CaptureWindowExclusion.SetLogicalBounds(Handle, GetRecordingChromeScreenBounds);
+        Invalidate();
+    }
+
+    private void BuildHollowRegion()
+    {
+        const int RGN_OR = 2;
+        const int frameThickness = 10;
+        var rgn = Native.Gdi32.CreateRectRgn(0, 0, 0, 0);
+
+        if (_recordRegion.Width > 0 && _recordRegion.Height > 0)
+        {
+            var topRgn = Native.Gdi32.CreateRectRgn(
+                _recordRegion.Left - frameThickness, _recordRegion.Top - frameThickness,
+                _recordRegion.Right + frameThickness, _recordRegion.Top);
+            var bottomRgn = Native.Gdi32.CreateRectRgn(
+                _recordRegion.Left - frameThickness, _recordRegion.Bottom,
+                _recordRegion.Right + frameThickness, _recordRegion.Bottom + frameThickness);
+            var leftRgn = Native.Gdi32.CreateRectRgn(
+                _recordRegion.Left - frameThickness, _recordRegion.Top,
+                _recordRegion.Left, _recordRegion.Bottom);
+            var rightRgn = Native.Gdi32.CreateRectRgn(
+                _recordRegion.Right, _recordRegion.Top,
+                _recordRegion.Right + frameThickness, _recordRegion.Bottom);
+
+            Native.Gdi32.CombineRgn(rgn, rgn, topRgn, RGN_OR);
+            Native.Gdi32.CombineRgn(rgn, rgn, bottomRgn, RGN_OR);
+            Native.Gdi32.CombineRgn(rgn, rgn, leftRgn, RGN_OR);
+            Native.Gdi32.CombineRgn(rgn, rgn, rightRgn, RGN_OR);
+
+            Native.Gdi32.DeleteObject(topRgn);
+            Native.Gdi32.DeleteObject(bottomRgn);
+            Native.Gdi32.DeleteObject(leftRgn);
+            Native.Gdi32.DeleteObject(rightRgn);
+        }
+
+        if (_toolbarRect.Width > 0 && _toolbarRect.Height > 0)
+        {
+            var tbRgn = Native.Gdi32.CreateRectRgn(_toolbarRect.Left, _toolbarRect.Top, _toolbarRect.Right, _toolbarRect.Bottom);
+            Native.Gdi32.CombineRgn(rgn, rgn, tbRgn, RGN_OR);
+            Native.Gdi32.DeleteObject(tbRgn);
+        }
+
+        Native.User32.SetWindowRgn(Handle, rgn, true);
     }
 
     protected override void Dispose(bool disposing)

@@ -255,7 +255,7 @@ public sealed partial class ScrollingCaptureForm : Form
                 _selection = NormRect(_dragStart, e.Location);
                 _selectionCursor = e.Location;
                 UpdateLiveSelectionAdorner();
-                InvalidateSelectionChrome(oldSelection, oldCursor, _selection, e.Location);
+                Invalidate(); // full repaint for correct dim overlay
             }
             _magHelper?.Update(e.Location, this, _virtualBounds, _isDragging ? GetMagnifierAvoidBounds() : Rectangle.Empty);
         }
