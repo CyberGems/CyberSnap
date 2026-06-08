@@ -242,49 +242,7 @@ public sealed partial class RecordingForm
         BackColor = TransKey;
         TransparencyKey = TransKey;
 
-        // Shrink the actual window to a hollow frame around the recording area
-        // plus the toolbar, so the interior recording area remains fully capturable.
-        const int RGN_OR = 2;
-        const int frameThickness = 10; // enough for glow(3) + border(2) + corners(2) + safety
-
-        var rgn = Native.Gdi32.CreateRectRgn(0, 0, 0, 0);
-
-        if (_recordRegion.Width > 0 && _recordRegion.Height > 0)
-        {
-            // Build a hollow frame from 4 bars so the interior is NOT part of the window
-            var topRgn = Native.Gdi32.CreateRectRgn(
-                _recordRegion.Left - frameThickness, _recordRegion.Top - frameThickness,
-                _recordRegion.Right + frameThickness, _recordRegion.Top);
-            var bottomRgn = Native.Gdi32.CreateRectRgn(
-                _recordRegion.Left - frameThickness, _recordRegion.Bottom,
-                _recordRegion.Right + frameThickness, _recordRegion.Bottom + frameThickness);
-            var leftRgn = Native.Gdi32.CreateRectRgn(
-                _recordRegion.Left - frameThickness, _recordRegion.Top,
-                _recordRegion.Left, _recordRegion.Bottom);
-            var rightRgn = Native.Gdi32.CreateRectRgn(
-                _recordRegion.Right, _recordRegion.Top,
-                _recordRegion.Right + frameThickness, _recordRegion.Bottom);
-
-            Native.Gdi32.CombineRgn(rgn, rgn, topRgn, RGN_OR);
-            Native.Gdi32.CombineRgn(rgn, rgn, bottomRgn, RGN_OR);
-            Native.Gdi32.CombineRgn(rgn, rgn, leftRgn, RGN_OR);
-            Native.Gdi32.CombineRgn(rgn, rgn, rightRgn, RGN_OR);
-
-            Native.Gdi32.DeleteObject(topRgn);
-            Native.Gdi32.DeleteObject(bottomRgn);
-            Native.Gdi32.DeleteObject(leftRgn);
-            Native.Gdi32.DeleteObject(rightRgn);
-        }
-
-        if (_toolbarRect.Width > 0 && _toolbarRect.Height > 0)
-        {
-            var tbRgn = Native.Gdi32.CreateRectRgn(_toolbarRect.Left, _toolbarRect.Top, _toolbarRect.Right, _toolbarRect.Bottom);
-            Native.Gdi32.CombineRgn(rgn, rgn, tbRgn, RGN_OR);
-            Native.Gdi32.DeleteObject(tbRgn);
-        }
-
-        Native.User32.SetWindowRgn(Handle, rgn, true);
-
+        BuildHollowRegion();
         CaptureWindowExclusion.SetLogicalBounds(Handle, GetRecordingChromeScreenBounds);
         Invalidate();
         Visible = true;
