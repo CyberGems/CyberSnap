@@ -51,8 +51,8 @@ public partial class CaptureWidgetWindow : Window
         SizeToContent = SizeToContent.Manual;
 
         // Inset the content so the transparent halo around it (window grown by ShadowMargin)
-        // is free for the drop shadow to render into.
-        RootGrid.Margin = new Thickness(ShadowMargin);
+        // is free for the drop shadow to render into. The docked side gets no halo (see ShadowHalo).
+        RootGrid.Margin = ShadowHalo(_settings.WidgetDockEdge);
 
         // The soft shadow looks great on the expanded panel but creates corner artifacts on the
         // thin peek, so we only apply it while expanded (toggled in PositionWindow).
@@ -224,6 +224,23 @@ public partial class CaptureWidgetWindow : Window
         EnableEditorToggle.IsChecked = _settings.OpenEditorAfterCapture;
     }
 
+    /// <summary>
+    /// Transparent shadow halo per side. The docked side gets ZERO halo so the window sits flush
+    /// against the screen edge: the peek's interactive edge then lands exactly on the screen-edge
+    /// pixel (where Windows clamps a flung cursor) instead of on the content/halo boundary, which
+    /// hit-tests unreliably and was eating the hover/click/hand-cursor right at the edge. The
+    /// shadow on the docked side isn't visible anyway — it falls against the screen bezel.
+    /// </summary>
+    private static Thickness ShadowHalo(CaptureDockSide edge) => edge switch
+    {
+        // Thickness order: left, top, right, bottom.
+        CaptureDockSide.Left => new Thickness(0, ShadowMargin, ShadowMargin, ShadowMargin),
+        CaptureDockSide.Right => new Thickness(ShadowMargin, ShadowMargin, 0, ShadowMargin),
+        CaptureDockSide.Top => new Thickness(ShadowMargin, 0, ShadowMargin, ShadowMargin),
+        CaptureDockSide.Bottom => new Thickness(ShadowMargin, ShadowMargin, ShadowMargin, 0),
+        _ => new Thickness(ShadowMargin),
+    };
+
     public void PositionWindow()
     {
         if (!IsLoaded) return;
@@ -268,13 +285,16 @@ public partial class CaptureWidgetWindow : Window
             _isExpanded,
             UiScale.Current);
 
-        // Grow the window by the shadow halo on every side; the content is inset by the same
-        // amount (RootGrid.Margin), so the visible widget lands exactly on 'bounds'. The halo on
-        // the docked-edge side simply falls off-screen, which is fine on a transparent window.
-        Width = bounds.Width + ShadowMargin * 2;
-        Height = bounds.Height + ShadowMargin * 2;
-        Left = bounds.Left - ShadowMargin;
-        Top = bounds.Top - ShadowMargin;
+        // Grow the window by the shadow halo; the content is inset by the same amounts
+        // (RootGrid.Margin), so the visible widget lands exactly on 'bounds'. The docked side has
+        // no halo (ShadowHalo), so that edge sits flush against the screen and the peek stays
+        // interactive right at the screen-edge pixel.
+        var halo = ShadowHalo(_settings.WidgetDockEdge);
+        RootGrid.Margin = halo;
+        Width = bounds.Width + halo.Left + halo.Right;
+        Height = bounds.Height + halo.Top + halo.Bottom;
+        Left = bounds.Left - halo.Left;
+        Top = bounds.Top - halo.Top;
 
         // Shadow only when expanded; the thin peek looks cleaner without it.
         MainPanelBorder.Effect = _isExpanded ? _panelShadow : null;
@@ -447,12 +467,18 @@ public partial class CaptureWidgetWindow : Window
             if (!Native.User32.GetCursorPos(out var pt)) return false;
 
             // The window includes a transparent shadow halo; test against the visible content by
-            // deflating the rect by the halo (converted to physical pixels for this monitor).
-            int halo = (int)Math.Round(ShadowMargin * VisualTreeHelper.GetDpi(this).DpiScaleX);
+            // deflating the rect by the per-side halo (converted to physical pixels for this
+            // monitor). The docked side has no halo, so it deflates by 0 there.
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var h = ShadowHalo(_settings.WidgetDockEdge);
+            int haloL = (int)Math.Round(h.Left * dpi.DpiScaleX);
+            int haloR = (int)Math.Round(h.Right * dpi.DpiScaleX);
+            int haloT = (int)Math.Round(h.Top * dpi.DpiScaleY);
+            int haloB = (int)Math.Round(h.Bottom * dpi.DpiScaleY);
 
             const int padding = 12; // 12 physical pixels safety padding
-            return pt.X >= rect.Left + halo - padding && pt.X <= rect.Right - halo + padding &&
-                   pt.Y >= rect.Top + halo - padding && pt.Y <= rect.Bottom - halo + padding;
+            return pt.X >= rect.Left + haloL - padding && pt.X <= rect.Right - haloR + padding &&
+                   pt.Y >= rect.Top + haloT - padding && pt.Y <= rect.Bottom - haloB + padding;
         }
         catch
         {
@@ -556,8 +582,9 @@ public partial class CaptureWidgetWindow : Window
             var curPos = GetCursorPositionInDips();
 
             // Window is inflated by the shadow halo; travel is over the visible content size.
-            var contentWidth = Width - ShadowMargin * 2;
-            var contentHeight = Height - ShadowMargin * 2;
+            var halo = ShadowHalo(_settings.WidgetDockEdge);
+            var contentWidth = Width - halo.Left - halo.Right;
+            var contentHeight = Height - halo.Top - halo.Bottom;
             if (_settings.WidgetDockEdge == CaptureDockSide.Top || _settings.WidgetDockEdge == CaptureDockSide.Bottom)
             {
                 var travel = workingArea.Width - contentWidth;
