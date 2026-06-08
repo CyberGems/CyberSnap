@@ -435,6 +435,23 @@ public sealed partial class RecordingForm : Form
     private void PaintRecordingPhase(Graphics g)
     {
         g.Clear(TransKey);
+
+        // During PreRecording, show dimmed screenshot outside the recording region
+        if (_state == State.PreRecording && _screenshot is not null)
+        {
+            g.DrawImage(_screenshot, ClientRectangle,
+                new Rectangle(0, 0, _screenshot.Width, _screenshot.Height),
+                GraphicsUnit.Pixel);
+            if (_recordRegion.Width > 2 && _recordRegion.Height > 2)
+            {
+                var state = g.Save();
+                g.ExcludeClip(_recordRegion);
+                using var dimBrush = new SolidBrush(Color.FromArgb(80, 0, 0, 0));
+                g.FillRectangle(dimBrush, ClientRectangle);
+                g.Restore(state);
+            }
+        }
+
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.CompositingMode = CompositingMode.SourceOver;
         g.CompositingQuality = CompositingQuality.HighQuality;
@@ -766,6 +783,7 @@ public sealed partial class RecordingForm : Form
 
         if (next == _recordRegion) return;
         _recordRegion = next;
+        BuildHollowRegion(); // keep region in sync during drag
         Invalidate();
     }
 
@@ -781,7 +799,7 @@ public sealed partial class RecordingForm : Form
     private void BuildHollowRegion()
     {
         const int RGN_OR = 2;
-        const int frameThickness = 10;
+        const int frameThickness = 15; // covers border + glow + handles
         var rgn = Native.Gdi32.CreateRectRgn(0, 0, 0, 0);
 
         if (_recordRegion.Width > 0 && _recordRegion.Height > 0)
