@@ -100,7 +100,7 @@ public sealed class TrayIcon : IDisposable
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: WindowsMenuRenderer.DefaultWidth);
         bool isRec = Capture.RecordingForm.Current != null;
 
-        var captureItem  = WindowsMenuRenderer.Item(T("Start capture"), HotkeyHint("rect"), "rect");
+        var captureItem  = WindowsMenuRenderer.Item(T("Start capture"), HotkeyHint("rect"), "captureRect");
         var scrollItem   = WindowsMenuRenderer.Item(T("Scroll capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
         var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("ocr"), "ocr");
         var pickerItem   = WindowsMenuRenderer.Item(T("Color picker"), HotkeyHint("picker"), "picker");

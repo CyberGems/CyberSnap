@@ -585,7 +585,7 @@ public sealed partial class RegionOverlayForm : Form
         // 1. Group 0 (Capture tools)
         for (int i = 0; i < _mainBarTools.Length; i++)
         {
-            _toolbarIcons[i] = _mainBarTools[i].Id == "crop" ? "rect" : _mainBarTools[i].Id;
+            _toolbarIcons[i] = _mainBarTools[i].Id switch { "crop" => "rect", "rect" => "captureRect", var id => id };
             _toolbarLabels[i] = LocalizationService.Translate(_mainBarTools[i].Label);
             _toolbarToolIds[i] = _mainBarTools[i].Id;
             _toolbarModes[i] = _mainBarTools[i].Mode;
