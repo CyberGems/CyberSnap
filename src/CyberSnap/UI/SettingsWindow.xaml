@@ -1742,29 +1742,6 @@
             <!-- We need to close and reopen for the General section -->
             <ScrollViewer x:Name="SettingsPanel" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
                 <StackPanel>
-                    <TextBlock Text="Startup" Style="{StaticResource SectionLabel}"/>
-                    <Border Style="{StaticResource Card}">
-                        <Grid Style="{StaticResource SettingRow}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}">
-                                <TextBlock Text="&#xE7E8;" Style="{StaticResource SettingIconGlyph}"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Launch on startup" Style="{StaticResource SettingTitle}"/>
-                                <TextBlock Text="Start CyberSnap automatically when Windows starts." Style="{StaticResource SettingDescription}"/>
-                            </StackPanel>
-                            <CheckBox x:Name="StartWithWindowsCheck" Grid.Column="2" Content="" FontSize="13"
-                                      AutomationProperties.Name="Launch on startup"
-                                      ToolTip="Start CyberSnap automatically when Windows starts."
-                                      VerticalAlignment="Center"
-                                      Checked="StartWithWindowsCheck_Changed" Unchecked="StartWithWindowsCheck_Changed"/>
-                        </Grid>
-                    </Border>
-
                     <TextBlock Text="Language" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <Grid Style="{StaticResource SettingRow}">
@@ -1785,6 +1762,29 @@
                                       AutomationProperties.Name="Interface language"
                                       ToolTip="Choose your preferred language for CyberSnap."
                                       SelectionChanged="InterfaceLanguageCombo_SelectionChanged"/>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Text="Startup" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE7E8;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Launch on startup" Style="{StaticResource SettingTitle}"/>
+                                <TextBlock Text="Start CyberSnap automatically when Windows starts." Style="{StaticResource SettingDescription}"/>
+                            </StackPanel>
+                            <CheckBox x:Name="StartWithWindowsCheck" Grid.Column="2" Content="" FontSize="13"
+                                      AutomationProperties.Name="Launch on startup"
+                                      ToolTip="Start CyberSnap automatically when Windows starts."
+                                      VerticalAlignment="Center"
+                                      Checked="StartWithWindowsCheck_Changed" Unchecked="StartWithWindowsCheck_Changed"/>
                         </Grid>
                     </Border>
 
