@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "à¸—à¸±à¹ˆà¸§à¹„à¸›",
   "Tools": "à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡à¸¡à¸·à¸­",
   "Capture": "à¸ˆà¸±à¸šà¸ à¸²à¸ž",
@@ -192,7 +192,7 @@
   "Annotation tools": "à¹€à¸„à¸£à¸·à¹ˆà¸­à¸‡à¸¡à¸·à¸­à¸„à¸³à¸­à¸˜à¸´à¸šà¸²à¸¢à¸›à¸£à¸°à¸à¸­à¸š",
   "Fullscreen capture": "à¸ˆà¸±à¸šà¸ à¸²à¸žà¹€à¸•à¹‡à¸¡à¸«à¸™à¹‰à¸²à¸ˆà¸­",
   "Active window": "à¸«à¸™à¹‰à¸²à¸•à¹ˆà¸²à¸‡à¸—à¸µà¹ˆà¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¸­à¸¢à¸¹à¹ˆ",
-  "Rectangle Select": "à¹€à¸¥à¸·à¸­à¸à¸ªà¸µà¹ˆà¹€à¸«à¸¥à¸µà¹ˆà¸¢à¸¡à¸œà¸·à¸™à¸œà¹‰à¸²",
+  "Area Capture": "การเลือกพื้นที่",
   "Center Select": "Center Select",
   "Sticker": "à¸ªà¸•à¸´à¹Šà¸à¹€à¸à¸­à¸£à¹Œ",
   "Upscale": "หรู",
@@ -261,7 +261,6 @@
   "Active drawing color": "Active drawing color",
   "Close (Esc or right-click)": "Close (Esc or right-click)",
   "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Click izquierdo para activar / Click derecho para menú",
-  "Start capture": "Start capture",
   "Text extraction (OCR)": "Text extraction (OCR)",
   "Record screen": "Record screen",
   "Notifications": "การแจ้งเตือน",
@@ -299,8 +298,7 @@
   "Save": "Save",
   "Enable Editor": "Enable Editor",
   "Open the post-capture editor for annotations after capturing.": "Open the post-capture editor for annotations after capturing.",
-  "Quick screenshot capture (Rectangular selection)": "Quick screenshot capture (Rectangular selection)",
-  "Rectangular selection": "Rectangular selection",
+  "Quick screenshot (Area Capture)": "จับภาพด่วน (การเลือกพื้นที่)",
   "Scrolling capture": "Scrolling capture",
   "Extract text (OCR)": "Extract text (OCR)",
   "Scan QR / Barcode": "Scan QR / Barcode",

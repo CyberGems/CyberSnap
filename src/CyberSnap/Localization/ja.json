@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "ä¸€èˆ¬",
   "Tools": "ãƒ„ãƒ¼ãƒ«",
   "Capture": "ã‚­ãƒ£ãƒ—ãƒãƒ£",
@@ -192,7 +192,7 @@
   "Annotation tools": "æ³¨é‡ˆãƒ„ãƒ¼ãƒ«",
   "Fullscreen capture": "å…¨ç”»é¢ã‚­ãƒ£ãƒ—ãƒãƒ£",
   "Active window": "ã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦",
-  "Rectangle Select": "é•·æ–¹å½¢ã®é¸æŠž",
+  "Area Capture": "領域選択",
   "Center Select": "Center Select",
   "Sticker": "ã‚¹ãƒ†ãƒƒã‚«ãƒ¼",
   "Upscale": "é«˜ç´šæ„Ÿã®ã‚ã‚‹",
@@ -261,7 +261,6 @@
   "Active drawing color": "Active drawing color",
   "Close (Esc or right-click)": "Close (Esc or right-click)",
   "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Click izquierdo para activar / Click derecho para menú",
-  "Start capture": "Start capture",
   "Text extraction (OCR)": "Text extraction (OCR)",
   "Record screen": "Record screen",
   "Notifications": "通知",
@@ -299,8 +298,7 @@
   "Save": "Save",
   "Enable Editor": "Enable Editor",
   "Open the post-capture editor for annotations after capturing.": "Open the post-capture editor for annotations after capturing.",
-  "Quick screenshot capture (Rectangular selection)": "Quick screenshot capture (Rectangular selection)",
-  "Rectangular selection": "Rectangular selection",
+  "Quick screenshot (Area Capture)": "クイックキャプチャ (領域選択)",
   "Scrolling capture": "Scrolling capture",
   "Extract text (OCR)": "Extract text (OCR)",
   "Scan QR / Barcode": "Scan QR / Barcode",

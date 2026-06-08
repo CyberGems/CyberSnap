@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Generelt",
   "Tools": "Værktøjer",
   "Capture": "Capture",
@@ -192,7 +192,7 @@
   "Annotation tools": "Annoteringsværktøjer",
   "Fullscreen capture": "Fuldskærms-optagelse",
   "Active window": "Aktivt vindue",
-  "Rectangle Select": "Rektangel Vælg",
+  "Area Capture": "Områdevalg",
   "Center Select": "Center Select",
   "Sticker": "Klistermærke",
   "Upscale": "Fornemme",
@@ -261,7 +261,6 @@
   "Active drawing color": "Active drawing color",
   "Close (Esc or right-click)": "Close (Esc or right-click)",
   "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Click izquierdo para activar / Click derecho para menú",
-  "Start capture": "Start capture",
   "Text extraction (OCR)": "Text extraction (OCR)",
   "Record screen": "Record screen",
   "Notifications": "Meddelelser",
@@ -299,8 +298,7 @@
   "Save": "Save",
   "Enable Editor": "Enable Editor",
   "Open the post-capture editor for annotations after capturing.": "Open the post-capture editor for annotations after capturing.",
-  "Quick screenshot capture (Rectangular selection)": "Quick screenshot capture (Rectangular selection)",
-  "Rectangular selection": "Rectangular selection",
+  "Quick screenshot (Area Capture)": "Hurtig skærmbillede (Områdevalg)",
   "Scrolling capture": "Scrolling capture",
   "Extract text (OCR)": "Extract text (OCR)",
   "Scan QR / Barcode": "Scan QR / Barcode",

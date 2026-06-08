@@ -133,7 +133,7 @@
                     <!-- Big Circular Capture Button -->
                     <Grid Grid.Row="0" Margin="0,0,0,12" HorizontalAlignment="Center">
                         <Button x:Name="CaptureButton" Click="CaptureButton_Click" Cursor="Hand" Width="54" Height="54" FocusVisualStyle="{x:Null}"
-                                ToolTip="Quick screenshot capture (Rectangular selection)">
+                                ToolTip="Quick screenshot (Area Capture)">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Grid>
@@ -169,7 +169,7 @@
                     <!-- Quick Action Shortcuts (Larger icons 22x22) -->
                     <StackPanel Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,0,10">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                            <Button Style="{StaticResource WidgetActionButton}" Click="RegionCapture_Click" ToolTip="Rectangular selection">
+                            <Button Style="{StaticResource WidgetActionButton}" Click="RegionCapture_Click" ToolTip="Area Capture">
                                 <Image x:Name="RegionCaptureIcon" Width="22" Height="22"/>
                             </Button>
                             <Button Style="{StaticResource WidgetActionButton}" Click="ScrollCapture_Click" ToolTip="Scrolling capture">

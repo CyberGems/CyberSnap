@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "General",
   "Tools": "Tools",
   "Capture": "Capture",
@@ -199,7 +199,7 @@
   "Annotation tools": "Annotation tools",
   "Fullscreen capture": "Fullscreen capture",
   "Active window": "Active window",
-  "Rectangle Select": "Rectangle Select",
+  "Area Capture": "Area Capture",
   "Center Select": "Center Select",
   "Sticker": "Sticker",
   "Upscale": "Upscale",
@@ -264,7 +264,6 @@
   "Extract text": "Extract text",
   "Extract text from this image using OCR.": "Extract text from this image using OCR.",
   "CyberSnap - Left-click to activate / Right-click for menu": "CyberSnap - Left-click to activate / Right-click for menu",
-  "Start capture": "Start capture",
   "Text extraction (OCR)": "Text extraction (OCR)",
   "Record screen": "Record screen",
   "Notifications": "Notifications",
@@ -304,8 +303,7 @@
   "Open location": "Open location",
   "Enable Editor": "Enable Editor",
   "Open the post-capture editor for annotations after capturing.": "Open the post-capture editor for annotations after capturing.",
-  "Quick screenshot capture (Rectangular selection)": "Quick screenshot capture (Rectangular selection)",
-  "Rectangular selection": "Rectangular selection",
+  "Quick screenshot (Area Capture)": "Quick screenshot (Area Capture)",
   "Scrolling capture": "Scrolling capture",
   "Extract text (OCR)": "Extract text (OCR)",
   "Scan QR / Barcode": "Scan QR / Barcode",
