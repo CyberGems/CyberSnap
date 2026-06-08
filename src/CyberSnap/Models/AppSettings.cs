@@ -194,7 +194,7 @@ public sealed class AppSettings
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "CyberSnap");
     public bool SaveInMonthlyFolders { get; set; } = true;
     public bool StartWithWindows { get; set; } = true;
-    public bool MinimizeToTrayOnClose { get; set; } = true;
+
     public bool AutoCheckForUpdates { get; set; } = true;
     public CaptureMode LastCaptureMode { get; set; } = CaptureMode.Rectangle;
     public WindowDetectionMode WindowDetection { get; set; } = WindowDetectionMode.WindowOnly;

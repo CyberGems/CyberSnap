@@ -1742,6 +1742,29 @@
             <!-- We need to close and reopen for the General section -->
             <ScrollViewer x:Name="SettingsPanel" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
                 <StackPanel>
+                    <TextBlock Text="Startup" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE7E8;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Launch on startup" Style="{StaticResource SettingTitle}"/>
+                                <TextBlock Text="Start CyberSnap automatically when Windows starts." Style="{StaticResource SettingDescription}"/>
+                            </StackPanel>
+                            <CheckBox x:Name="StartWithWindowsCheck" Grid.Column="2" Content="" FontSize="13"
+                                      AutomationProperties.Name="Launch on startup"
+                                      ToolTip="Start CyberSnap automatically when Windows starts."
+                                      VerticalAlignment="Center"
+                                      Checked="StartWithWindowsCheck_Changed" Unchecked="StartWithWindowsCheck_Changed"/>
+                        </Grid>
+                    </Border>
+
                     <TextBlock Text="Language" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <Grid Style="{StaticResource SettingRow}">
@@ -1765,7 +1788,87 @@
                         </Grid>
                     </Border>
 
-                    <TextBlock Text="Sound &amp; Motion" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="Floating Widget" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <!-- Show Widget CheckBox -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE700;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show edge capture widget" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Keep the capture widget peeking from the screen edge for hover or click activation." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ShowCaptureWidgetCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Show edge capture widget"
+                                          ToolTip="Enable the edge-peeking capture widget."
+                                          Checked="ShowCaptureWidgetCheck_Changed" Unchecked="ShowCaptureWidgetCheck_Changed"/>
+                            </Grid>
+                            <Border x:Name="WidgetOptionsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            
+                            <!-- Widget Dock Edge ComboBox -->
+                            <Grid x:Name="WidgetDockEdgeRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE139;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Widget edge" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Select which screen edge the widget peeks from." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="WidgetDockEdgeCombo" Grid.Column="2" MinWidth="145"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Widget edge"
+                                          ToolTip="Select the screen edge for the widget."
+                                          SelectionChanged="WidgetDockEdgeCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Top"/>
+                                    <ComboBoxItem Content="Bottom"/>
+                                    <ComboBoxItem Content="Left"/>
+                                    <ComboBoxItem Content="Right"/>
+                                </ComboBox>
+                            </Grid>
+                            <Border x:Name="WidgetHoverDelaySeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            
+                            <!-- Widget Hover Trigger Delay ComboBox -->
+                            <Grid x:Name="WidgetHoverDelayRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Edge hover delay" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Delay (ms) before the peeking widget expands on hover." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="WidgetHoverDelayCombo" Grid.Column="2" MinWidth="145"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Edge hover delay"
+                                          ToolTip="Delay in milliseconds."
+                                          SelectionChanged="WidgetHoverDelayCombo_SelectionChanged">
+                                    <ComboBoxItem Content="0 ms" Tag="0"/>
+                                    <ComboBoxItem Content="100 ms" Tag="100"/>
+                                    <ComboBoxItem Content="250 ms" Tag="250"/>
+                                    <ComboBoxItem Content="500 ms" Tag="500"/>
+                                    <ComboBoxItem Content="1000 ms" Tag="1000"/>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Audio &amp; Effects" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
@@ -1890,130 +1993,12 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Floating Capture Widget" Style="{StaticResource SectionLabel}"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <!-- Show Widget CheckBox -->
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE700;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Show edge capture widget" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Keep the capture widget peeking from the screen edge for hover or click activation." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="ShowCaptureWidgetCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Show edge capture widget"
-                                          ToolTip="Enable the edge-peeking capture widget."
-                                          Checked="ShowCaptureWidgetCheck_Changed" Unchecked="ShowCaptureWidgetCheck_Changed"/>
-                            </Grid>
-                            <Border x:Name="WidgetOptionsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            
-                            <!-- Widget Dock Edge ComboBox -->
-                            <Grid x:Name="WidgetDockEdgeRow" Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE139;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Widget edge" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Select which screen edge the widget peeks from." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="WidgetDockEdgeCombo" Grid.Column="2" MinWidth="145"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Widget edge"
-                                          ToolTip="Select the screen edge for the widget."
-                                          SelectionChanged="WidgetDockEdgeCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Top"/>
-                                    <ComboBoxItem Content="Bottom"/>
-                                    <ComboBoxItem Content="Left"/>
-                                    <ComboBoxItem Content="Right"/>
-                                </ComboBox>
-                            </Grid>
-                            <Border x:Name="WidgetHoverDelaySeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            
-                            <!-- Widget Hover Trigger Delay ComboBox -->
-                            <Grid x:Name="WidgetHoverDelayRow" Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Edge hover delay" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Delay (ms) before the peeking widget expands on hover." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="WidgetHoverDelayCombo" Grid.Column="2" MinWidth="145"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Edge hover delay"
-                                          ToolTip="Delay in milliseconds."
-                                          SelectionChanged="WidgetHoverDelayCombo_SelectionChanged">
-                                    <ComboBoxItem Content="0 ms" Tag="0"/>
-                                    <ComboBoxItem Content="100 ms" Tag="100"/>
-                                    <ComboBoxItem Content="250 ms" Tag="250"/>
-                                    <ComboBoxItem Content="500 ms" Tag="500"/>
-                                    <ComboBoxItem Content="1000 ms" Tag="1000"/>
-                                </ComboBox>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
                     <TextBlock x:Name="GeneralPreferenceStatusText"
                                Style="{StaticResource SettingsStatusText}"
                                Visibility="Collapsed"
                                Margin="4,8,0,0"/>
 
-                    <Grid Style="{StaticResource SettingRow}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Border Grid.Row="0" Style="{StaticResource SettingIconFrame}">
-                            <TextBlock Text="&#xE7E8;" Style="{StaticResource SettingIconGlyph}"/>
-                        </Border>
-                        <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="Launch on startup" Style="{StaticResource SettingTitle}"/>
-                            <TextBlock Text="Start CyberSnap automatically when Windows starts." Style="{StaticResource SettingDescription}"/>
-                        </StackPanel>
-                        <CheckBox x:Name="StartWithWindowsCheck" Grid.Row="0" Grid.Column="2" Content="" FontSize="13"
-                                  AutomationProperties.Name="Launch on startup"
-                                  ToolTip="Start CyberSnap automatically when Windows starts."
-                                  VerticalAlignment="Center"
-                                  Checked="StartWithWindowsCheck_Changed" Unchecked="StartWithWindowsCheck_Changed"/>
-
-                        <Border Grid.Row="1" Style="{StaticResource SettingIconFrame}" Margin="0,14,0,0">
-                            <TextBlock Text="&#xE8BB;" Style="{StaticResource SettingIconGlyph}"/>
-                        </Border>
-                        <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Margin="0,14,0,0">
-                            <TextBlock Text="Minimize to tray on close" Style="{StaticResource SettingTitle}"/>
-                            <TextBlock Text="When clicking [X], hide CyberSnap in the system tray instead of exiting." Style="{StaticResource SettingDescription}"/>
-                        </StackPanel>
-                        <CheckBox x:Name="MinimizeToTrayOnCloseCheck" Grid.Row="1" Grid.Column="2" Content="" FontSize="13"
-                                  AutomationProperties.Name="Minimize to tray on close"
-                                  ToolTip="Hide the app in the system tray instead of closing it when clicking the close button."
-                                  VerticalAlignment="Center" Margin="0,14,0,0"
-                                  Checked="MinimizeToTrayOnCloseCheck_Changed" Unchecked="MinimizeToTrayOnCloseCheck_Changed"/>
-
-                        <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,14,0,0">
+                    <StackPanel Margin="0,14,0,0">
                             <TextBlock x:Name="StartupPreferenceStatusText" Style="{StaticResource SettingsStatusText}"
                                        Visibility="Collapsed"
                                        ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
@@ -2048,8 +2033,6 @@
                                         Cursor="Hand" Click="UninstallButton_Click" Margin="0,0,10,8"/>
                             </WrapPanel>
                         </StackPanel>
-                    </Grid>
-
 
                 </StackPanel>
             </ScrollViewer>
