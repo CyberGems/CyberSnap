@@ -90,7 +90,11 @@ public partial class App
         var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService);
         Action hotkeyHandler = RegisterHotkeys;
         Action uninstallHandler = BeginUninstall;
-        Action localizationHandler = () => _trayIcon?.RefreshLocalization();
+        Action localizationHandler = () =>
+        {
+            _trayIcon?.RefreshLocalization();
+            _widgetWindow?.RefreshLocalization();
+        };
         win.HotkeyChanged += hotkeyHandler;
         win.UninstallRequested += uninstallHandler;
         win.LocalizationChanged += localizationHandler;
