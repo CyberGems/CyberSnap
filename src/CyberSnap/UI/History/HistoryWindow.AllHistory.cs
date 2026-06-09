@@ -268,7 +268,7 @@ public partial class HistoryWindow
         // Top: the actual text content (replaces the image thumbnail area)
         var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(textArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
-        AddHoverMenu(card, textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
+        AttachCardMenu(card, textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
         var displayText = text.Length > 80 ? text[..80] + "…" : text;
         textArea.Children.Add(new TextBlock
         {
@@ -316,7 +316,7 @@ public partial class HistoryWindow
 
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(swatchArea, "CLR", System.Windows.Media.Color.FromRgb(255, 160, 80));
-        AddHoverMenu(card, swatchArea, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
+        AttachCardMenu(card, swatchArea, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -357,7 +357,7 @@ public partial class HistoryWindow
 
         var previewArea = new Grid { Background = Brushes.White, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(previewArea, "QR", System.Windows.Media.Color.FromRgb(120, 200, 120));
-        AddHoverMenu(card, previewArea, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
+        AttachCardMenu(card, previewArea, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
         var previewKey = $"{text}|{format}";
         if (!_allCodePreviewCache.TryGetValue(previewKey, out var previewSrc))
         {
@@ -463,21 +463,24 @@ public partial class HistoryWindow
         catch (Exception ex) { ToastWindow.ShowError("Copy failed", ex.Message); }
     }
 
-    // ── Hover action menu ──
+    // ── Hover action menu (matches existing card menu style) ──
 
-    private static void AddHoverMenu(Border card, Grid imageArea, Action onCopy, Action? onDelete = null)
+    private void AttachCardMenu(Border card, Grid imageArea, Action onCopy, Action? onDelete = null)
     {
-        var menu = new System.Windows.Controls.ContextMenu();
-        var copyMenuItem = new System.Windows.Controls.MenuItem { Header = "Copy" };
-        copyMenuItem.Click += (_, _) => onCopy();
-        menu.Items.Add(copyMenuItem);
+        // Use the same styled menu as image/media cards
+        var menu = CreateCardActionMenu();
+        menu.Items.Add(CreateCardActionMenuItem("Copy", onCopy));
         if (onDelete is not null)
-        {
-            var deleteMenuItem = new System.Windows.Controls.MenuItem { Header = "Delete" };
-            deleteMenuItem.Click += (_, _) => onDelete();
-            menu.Items.Add(deleteMenuItem);
-        }
+            menu.Items.Add(CreateCardActionMenuItem("Delete", onDelete));
 
+        // Right-click opens the menu
+        card.MouseRightButtonUp += (_, e) =>
+        {
+            e.Handled = true;
+            menu.IsOpen = true;
+        };
+
+        // Hover button also opens the same menu
         var btn = new System.Windows.Controls.Button
         {
             ToolTip = "Actions",
@@ -491,16 +494,13 @@ public partial class HistoryWindow
             Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 0, 0, 0)),
             Foreground = Brushes.White,
             Content = "···",
-            Visibility = Visibility.Collapsed,
-            IsHitTestVisible = true
+            Visibility = Visibility.Collapsed
         };
         menu.PlacementTarget = btn;
-        btn.Click += (_, _) => { menu.IsOpen = true; };
+        btn.Click += (_, _) => menu.IsOpen = true;
 
-        // Add button on top of all other image area children
         imageArea.Children.Add(btn);
 
-        // Use the card's hover to control visibility (more reliable than Grid MouseEnter/Leave)
         card.MouseEnter += (_, _) => { if (btn != null) btn.Visibility = Visibility.Visible; };
         card.MouseLeave += (_, _) => { if (btn != null && !menu.IsOpen) btn.Visibility = Visibility.Collapsed; };
         menu.Closed += (_, _) => { if (btn != null && !card.IsMouseOver) btn.Visibility = Visibility.Collapsed; };
