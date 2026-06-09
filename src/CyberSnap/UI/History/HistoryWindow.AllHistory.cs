@@ -266,7 +266,7 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         // Top: the actual text content (replaces the image thumbnail area)
-        var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true };
+        var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(textArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
         var displayText = text.Length > 80 ? text[..80] + "…" : text;
         textArea.Children.Add(new TextBlock
