@@ -229,6 +229,7 @@ public sealed class AppSettings
     public bool ShowImageSearchDiagnostics { get; set; }
     public bool AutoIndexImages { get; set; } = false;
     public string? HistoryUploadProviderFilter { get; set; }
+    public int HistoryCategoryFilter { get; set; } = 0; // 0=All (default)
 
     public double ToastDurationSeconds { get; set; } = 2.5;
     public double SystemToastDurationSeconds { get; set; } = 4.0;

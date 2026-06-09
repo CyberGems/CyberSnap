@@ -80,7 +80,18 @@ public partial class HistoryWindow : Window
         LoadStaticFluentIcons();
         LoadPruneSettings();
 
-        Loaded += (_, _) => ApplyMicaBackdrop();
+        Loaded += (_, _) =>
+        {
+            // Restore persisted category filter
+            var savedFilter = _settingsService.Settings.HistoryCategoryFilter;
+            if (savedFilter >= 0 && savedFilter < HistoryCategoryCombo.Items.Count)
+            {
+                HistoryCategoryCombo.SelectionChanged -= HistoryCategoryCombo_Changed;
+                HistoryCategoryCombo.SelectedIndex = savedFilter;
+                HistoryCategoryCombo.SelectionChanged += HistoryCategoryCombo_Changed;
+            }
+            ApplyMicaBackdrop();
+        };
         StateChanged += (_, _) => SettingsTitleBar.RefreshIcons();
 
         _historyService.Changed += HistoryService_Changed;
@@ -100,7 +111,7 @@ public partial class HistoryWindow : Window
 
         SizeChanged += (_, _) =>
         {
-            if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 0)
+            if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex <= 1)
                 UpdateVirtualizedHistoryViewport();
         };
 
@@ -160,8 +171,8 @@ public partial class HistoryWindow : Window
 
         _pendingNavigateToPath = filePath;
 
-        if (HistoryCategoryCombo.SelectedIndex != 0)
-            HistoryCategoryCombo.SelectedIndex = 0;
+        if (HistoryCategoryCombo.SelectedIndex > 1) // not All or Images
+            HistoryCategoryCombo.SelectedIndex = 0; // switch to All
 
         _imageSearchQuery = "";
         if (ImageSearchBox != null) ImageSearchBox.Text = "";
@@ -433,7 +444,7 @@ public partial class HistoryWindow : Window
         {
             try
             {
-                if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
+                if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex > 1)
                     return;
 
                 UpdateImageSearchStatus();
@@ -453,7 +464,7 @@ public partial class HistoryWindow : Window
     {
         _pendingImageSearchTextRefresh = true;
 
-        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
+        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex > 1)
             return;
 
         _imageIndexRefreshTimer.Stop();
@@ -462,7 +473,7 @@ public partial class HistoryWindow : Window
 
     private void QueueImageSearchRefresh()
     {
-        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
+        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex > 1)
             return;
 
         if (!_settingsService.Settings.ShowImageSearchBar)
@@ -476,7 +487,7 @@ public partial class HistoryWindow : Window
     {
         _imageIndexRefreshTimer.Stop();
 
-        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
+        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex > 1)
             return;
 
         if (_pendingImageSearchTextRefresh)
@@ -497,7 +508,7 @@ public partial class HistoryWindow : Window
     {
         _imageSearchDebounceTimer.Stop();
 
-        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex != 0)
+        if (!IsLoaded || HistoryTab.IsChecked != true || HistoryCategoryCombo.SelectedIndex > 1)
             return;
 
         if (!_settingsService.Settings.ShowImageSearchBar)
@@ -634,7 +645,7 @@ public partial class HistoryWindow : Window
             }
 
             if (!reloadFromDisk && refreshLoadedData &&
-                HistoryCategoryCombo.SelectedIndex == 0 &&
+                HistoryCategoryCombo.SelectedIndex <= 1 &&
                 TryRefreshLoadedImageHistoryIncrementally())
             {
                 PrimeHistoryFingerprint();
@@ -657,6 +668,9 @@ public partial class HistoryWindow : Window
     private void HistoryCategoryCombo_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded) return;
+        // Persist the selected filter
+        _settingsService.Settings.HistoryCategoryFilter = HistoryCategoryCombo.SelectedIndex;
+        _settingsService.Save();
         UpdateImageSearchUi();
         ScheduleHistoryTabLoad(preserveTransientState: true);
     }
@@ -695,22 +709,23 @@ public partial class HistoryWindow : Window
         CodesPanel.Visibility = Visibility.Collapsed;
         UpdateImageSearchUi();
 
-        if (HistoryCategoryCombo.SelectedIndex != 0)
+        if (HistoryCategoryCombo.SelectedIndex != 1) // 0=All, 1=Images
             CancelImageSearchWork();
 
         switch (HistoryCategoryCombo.SelectedIndex)
         {
-            case 0:
+            case 0: // All
+            case 1: // Images
                 ImagesPanel.Visibility = Visibility.Visible;
                 if (CanReuseLoadedImageHistory())
                     ApplyImageSearchFilter();
                 else
                     _ = LoadHistoryAsync();
                 break;
-            case 1: TextPanel.Visibility = Visibility.Visible; LoadOcrHistory(); break;
-            case 2: GifsPanel.Visibility = Visibility.Visible; LoadMediaHistory(); break;
-            case 3: ColorsPanel.Visibility = Visibility.Visible; LoadColorHistory(); break;
-            case 4: CodesPanel.Visibility = Visibility.Visible; LoadCodeHistory(); break;
+            case 2: TextPanel.Visibility = Visibility.Visible; LoadOcrHistory(); break;
+            case 3: GifsPanel.Visibility = Visibility.Visible; LoadMediaHistory(); break;
+            case 4: ColorsPanel.Visibility = Visibility.Visible; LoadColorHistory(); break;
+            case 5: CodesPanel.Visibility = Visibility.Visible; LoadCodeHistory(); break;
         }
 
         UpdateHistoryMonitorState();
@@ -724,10 +739,11 @@ public partial class HistoryWindow : Window
 
     private void UpdateCategoryCounts()
     {
-        if (HistoryCategoryCombo == null || HistoryCategoryCombo.Items.Count < 5)
+        if (HistoryCategoryCombo == null || HistoryCategoryCombo.Items.Count < 6)
             return;
 
         var lang = _settingsService.Settings.InterfaceLanguage;
+        var allBase = LocalizationService.Translate(lang, "All");
         var imagesBase = LocalizationService.Translate(lang, "Images");
         var textBase = LocalizationService.Translate(lang, "Text");
         var mediaBase = LocalizationService.Translate(lang, "Videos/GIFs");
@@ -739,19 +755,20 @@ public partial class HistoryWindow : Window
         var mediaCount = _historyService.MediaEntries.Count;
         var colorsCount = _historyService.ColorEntries.Count;
         var codesCount = _historyService.CodeEntries.Count;
-
-        AppDiagnostics.LogInfo("history.update-counts", $"images={imagesCount} text={textCount} media={mediaCount} colors={colorsCount} codes={codesCount}");
+        var totalCount = imagesCount + textCount + mediaCount + colorsCount + codesCount;
 
         if (HistoryCategoryCombo.Items[0] is ComboBoxItem item0)
-            item0.Content = $"{imagesBase} ({imagesCount})";
+            item0.Content = $"{allBase} ({totalCount})";
         if (HistoryCategoryCombo.Items[1] is ComboBoxItem item1)
-            item1.Content = $"{textBase} ({textCount})";
+            item1.Content = $"{imagesBase} ({imagesCount})";
         if (HistoryCategoryCombo.Items[2] is ComboBoxItem item2)
-            item2.Content = $"{mediaBase} ({mediaCount})";
+            item2.Content = $"{textBase} ({textCount})";
         if (HistoryCategoryCombo.Items[3] is ComboBoxItem item3)
-            item3.Content = $"{colorsBase} ({colorsCount})";
+            item3.Content = $"{mediaBase} ({mediaCount})";
         if (HistoryCategoryCombo.Items[4] is ComboBoxItem item4)
-            item4.Content = $"{codesBase} ({codesCount})";
+            item4.Content = $"{colorsBase} ({colorsCount})";
+        if (HistoryCategoryCombo.Items[5] is ComboBoxItem item5)
+            item5.Content = $"{codesBase} ({codesCount})";
 
         var selectedIndex = HistoryCategoryCombo.SelectedIndex;
         if (selectedIndex >= 0)
