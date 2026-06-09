@@ -288,15 +288,15 @@
             </Setter>
         </Style>
 
-        <!-- Themed scrollbar — subtle, fades in on hover -->
+        <!-- Themed scrollbar — thin, subtle, glows on hover -->
         <Style x:Key="HistoryScrollThumbStyle" TargetType="{x:Type Thumb}">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Opacity" Value="0.4"/>
+            <Setter Property="Opacity" Value="0.35"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Border x:Name="ThumbBorder" CornerRadius="3" Background="{DynamicResource ThemeTextSecondaryBrush}" Margin="0,2,6,2"/>
+                        <Border CornerRadius="3" Background="{DynamicResource ThemeTextSecondaryBrush}" Margin="0,2,9,2"/>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -313,12 +313,12 @@
         <Style x:Key="HistoryScrollBarStyle" TargetType="{x:Type ScrollBar}">
             <Setter Property="Width" Value="12"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Opacity" Value="0.6"/>
+            <Setter Property="Opacity" Value="0.5"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ScrollBar}">
                         <Grid Background="Transparent" Width="{TemplateBinding Width}">
-                            <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="0,4,0,4">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="0,6,0,6">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="ScrollBar.PageUpCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
                                 </Track.DecreaseRepeatButton>
@@ -555,7 +555,7 @@
                     </Border>
 
                     <!-- Images history -->
-                    <ScrollViewer x:Name="ImagesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,10,4"
+                    <ScrollViewer x:Name="ImagesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,0,4"
                                   ScrollChanged="HistoryPanel_ScrollChanged">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
@@ -564,7 +564,7 @@
                     </ScrollViewer>
 
                     <!-- Videos / GIF history -->
-                    <ScrollViewer x:Name="GifsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,10,4"
+                    <ScrollViewer x:Name="GifsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,0,4"
                                   ScrollChanged="GifPanel_ScrollChanged"
                                   Visibility="Collapsed">
                         <ScrollViewer.Resources>
@@ -575,7 +575,7 @@
 
                     <!-- Text history -->
                     <ScrollViewer x:Name="TextPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  Padding="10,2,10,14" Visibility="Collapsed"
+                                  Padding="10,2,0,14" Visibility="Collapsed"
                                   ScrollChanged="OcrPanel_ScrollChanged">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
@@ -585,7 +585,7 @@
 
                     <!-- Color history -->
                     <ScrollViewer x:Name="ColorsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  Padding="10,2,10,14" Visibility="Collapsed"
+                                  Padding="10,2,0,14" Visibility="Collapsed"
                                   ScrollChanged="ColorsPanel_ScrollChanged">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
@@ -595,7 +595,7 @@
 
                     <!-- Code/QR history -->
                     <ScrollViewer x:Name="CodesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  Padding="10,2,10,14" Visibility="Collapsed"
+                                  Padding="10,2,0,14" Visibility="Collapsed"
                                   ScrollChanged="CodesPanel_ScrollChanged">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
