@@ -425,7 +425,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <Border x:Name="ImageSearchBorder" Background="#121212"
+                                    <Border x:Name="ImageSearchBorder" Background="Transparent"
                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                             BorderThickness="1" CornerRadius="7" Padding="10,6">
                                         <StackPanel>
@@ -435,7 +435,11 @@
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
+
+
                                                 <Image x:Name="ImageSearchIcon" Width="18" Height="18" Stretch="Uniform"
+
+
                                                        VerticalAlignment="Center"/>
                                                 <Grid Grid.Column="1" Margin="8,0,0,0">
                                                     <TextBox x:Name="ImageSearchBox" BorderThickness="0" Background="Transparent"
