@@ -480,6 +480,13 @@
                                                     </ContextMenu>
                                                 </TextBox.ContextMenu>
                                             </TextBox>
+                                            <!-- Clear button (X), only visible when there's text -->
+                                            <TextBlock x:Name="ImageSearchClearBtn" Grid.Column="1" Text="✕" FontSize="14"
+                                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.45"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Right"
+                                                       Margin="0,0,22,0" Cursor="Hand"
+                                                       Visibility="Collapsed" ToolTip="Clear search"
+                                                       MouseLeftButtonDown="ImageSearchClear_Click"/>
                                             <TextBlock x:Name="ImageSearchPlaceholder" Grid.Column="1" Text="Search..."
                                                        FontSize="12" Opacity="0.28" VerticalAlignment="Center"
                                                        IsHitTestVisible="False" Margin="8,0,0,0"/>
@@ -551,9 +558,13 @@
                                         </ComboBox>
 
                                         <!-- Delete original files switch -->
-                                        <TextBlock x:Name="DeleteOriginalLabel" Text="Delete files on prune" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="18,0,8,0" Cursor="Hand"
+                                        <TextBlock x:Name="DeleteOriginalLabel" Text="Delete files on prune" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="18,0,6,0" Cursor="Hand"
                                                    ToolTip="Delete the original screenshot/recording files on disk, not just the thumbnails."
                                                    MouseLeftButtonDown="DeleteOriginalLabel_MouseLeftButtonDown"/>
+                                        <TextBlock Text="?" FontSize="11" FontWeight="Bold"
+                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.4"
+                                                   VerticalAlignment="Center" Margin="2,0,8,0" Cursor="Help"
+                                                   ToolTip="When OFF: pruning hides entries from history but keeps original files on disk. If the limit is raised, files are re-discovered and reappear.&#x0a;When ON: original files are permanently deleted from disk during pruning."/>
                                         <CheckBox x:Name="HistoryDeleteOriginalOnPruneCheck" VerticalAlignment="Center"
                                                   ToolTip="Delete the original screenshot/recording files on disk, not just the thumbnails."
                                                   AutomationProperties.Name="Delete original files on prune"

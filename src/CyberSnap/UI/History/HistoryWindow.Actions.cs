@@ -258,6 +258,7 @@ public partial class HistoryWindow
 
             SetAutoPruneRowAutoHidden(false);
             var text = ImageSearchBox.Text ?? "";
+            ImageSearchClearBtn.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
             ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(text) && !ImageSearchBox.IsKeyboardFocused
                 ? Visibility.Visible
                 : Visibility.Collapsed;
@@ -415,6 +416,13 @@ public partial class HistoryWindow
         e.Handled = true;
         ImageSearchBox.Focus();
         ImageSearchBox.SelectAll();
+    }
+
+    private void ImageSearchClear_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        ImageSearchBox.Clear();
+        ImageSearchBox.Focus();
     }
 
     private void ImageSearchSelectAll_Click(object sender, RoutedEventArgs e)
