@@ -424,6 +424,7 @@ public partial class HistoryWindow
     {
         var card = new Border
         {
+            Width = HistoryCardPreferredWidth,  // initial width; UpdateHistoryWrapPanelCardWidths overrides
             MinWidth = HistoryCardMinWidth,
             MaxWidth = HistoryCardMaxWidth,
             Margin = new Thickness(HistoryCardMargin),
