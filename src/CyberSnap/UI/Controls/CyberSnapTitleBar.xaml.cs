@@ -67,7 +67,8 @@ public partial class CyberSnapTitleBar : UserControl
 
             ActionBtn.Visibility = Visibility.Visible;
             ActionBtn.ToolTip = LocalizationService.Translate("Menu");
-            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("filter", titleIcon, 18);  // three-line burger icon
+            // Render hamburger icon ☰ as bitmap (streamline set has no "menu"/"navigation" icon)
+            ActionIcon.Source = RenderHamburgerIcon(titleIcon, 18);
 
             // Build burger menu with toggles + Configuration
             var menu = new ContextMenu();
@@ -108,7 +109,14 @@ public partial class CyberSnapTitleBar : UserControl
                 Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 16), Width = 16, Height = 16 },
                 ToolTip = "Open the full Settings window"
             };
-            configItem.Click += (_, _) => ((App)Application.Current).ShowSettings();
+            configItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                // Defer to avoid layout jump when context menu closes
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowSettings());
+            };
             menu.Items.Add(configItem);
 
             ActionBtn.ContextMenu = menu;
@@ -210,5 +218,26 @@ public partial class CyberSnapTitleBar : UserControl
     private static void ToggleSetting(string propertyName, bool value)
     {
         ((App)Application.Current).ToggleHistorySetting(propertyName, value);
+    }
+
+    /// <summary>Renders a hamburger menu icon (☰) as a WPF bitmap.</summary>
+    private static System.Windows.Media.Imaging.BitmapSource RenderHamburgerIcon(System.Drawing.Color color, int size)
+    {
+        var text = "\u2630"; // ☰ trigram for heaven = hamburger icon
+        var visual = new System.Windows.Media.DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            var typeface = new System.Windows.Media.Typeface(new System.Windows.Media.FontFamily("Segoe UI Symbol"),
+                System.Windows.FontStyles.Normal, System.Windows.FontWeights.Normal, System.Windows.FontStretches.Normal);
+            var brush = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(color.R, color.G, color.B));
+            var formatted = new System.Windows.Media.FormattedText(text,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Windows.FlowDirection.LeftToRight, typeface, size * 0.9, brush, 1.0);
+            dc.DrawText(formatted, new System.Windows.Point(0, -2));
+        }
+        var renderTarget = new System.Windows.Media.Imaging.RenderTargetBitmap(size, size, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        renderTarget.Render(visual);
+        return renderTarget;
     }
 }
