@@ -894,7 +894,7 @@ public partial class HistoryWindow
     {
         return HistoryCategoryCombo.SelectedIndex switch
         {
-            0 => _filteredHistoryItems.Count,
+            0 => CountAllCardsInVisualTree(HistoryStack),
             1 => _filteredOcrEntries.Count,
             2 => _filteredGifItems.Count,
             3 => _filteredColorEntries.Count,
@@ -920,13 +920,37 @@ public partial class HistoryWindow
     {
         return HistoryCategoryCombo.SelectedIndex switch
         {
-            0 => CountSelectedCardsInVisualTree(HistoryStack),
+            0 => CountAllSelectedCardsInVisualTree(HistoryStack),
             1 => OcrStack.Children.OfType<Border>().Count(card => card.Tag is true),
             2 => CountSelectedCardsInVisualTree(GifsPanel),
             3 => ColorStack.Children.OfType<Border>().Count(card => card.Tag is ColorHistoryEntry),
             4 => CodeStack.Children.OfType<Border>().Count(card => card.Tag is CodeHistoryEntry),
             _ => 0
         };
+    }
+
+    private static int CountAllCardsInVisualTree(System.Windows.DependencyObject root)
+    {
+        var count = 0;
+        WalkVisualBorders(root, border =>
+        {
+            if (border.Tag is HistoryItemVM || border.Tag is bool)
+                count++;
+        });
+        return count;
+    }
+
+    private static int CountAllSelectedCardsInVisualTree(System.Windows.DependencyObject root)
+    {
+        var count = 0;
+        WalkVisualBorders(root, border =>
+        {
+            if (border.Tag is HistoryItemVM vm && vm.IsSelected)
+                count++;
+            else if (border.Tag is true)
+                count++;
+        });
+        return count;
     }
 
     private static int CountSelectedCardsInVisualTree(System.Windows.DependencyObject root)
@@ -979,6 +1003,11 @@ public partial class HistoryWindow
             {
                 if (border.Tag is HistoryItemVM vm)
                     vm.IsSelected = false;
+                else if (border.Tag is bool)
+                {
+                    border.Tag = false;
+                    UpdateUnifiedCardSelectionVisual(border, false);
+                }
             });
         }
 
@@ -1000,6 +1029,8 @@ public partial class HistoryWindow
             {
                 if (border.Tag is HistoryItemVM vm)
                     UpdateCardSelection(vm);
+                else if (border.Tag is bool selected)
+                    UpdateUnifiedCardSelectionVisual(border, selected);
             });
         }
 
@@ -1133,6 +1164,24 @@ public partial class HistoryWindow
             {
                 var toDelete = GetSelectedEntriesFromVisualTree(HistoryStack);
                 _historyService.RemoveEntries(toDelete);
+
+                // Also delete selected unified entries (text, color, code)
+                var unifiedToDelete = new List<Border>();
+                WalkVisualBorders(HistoryStack, border =>
+                {
+                    if (border.Tag is true && _unifiedCardEntries.TryGetValue(border, out var rawEntry))
+                        unifiedToDelete.Add(border);
+                });
+                foreach (var card in unifiedToDelete)
+                {
+                    if (_unifiedCardEntries.TryGetValue(card, out var rawEntry))
+                    {
+                        if (rawEntry is OcrHistoryEntry ocr) _historyService.DeleteOcrEntry(ocr);
+                        else if (rawEntry is ColorHistoryEntry color) _historyService.DeleteColorEntry(color);
+                        else if (rawEntry is CodeHistoryEntry code) _historyService.DeleteCodeEntry(code);
+                    }
+                    _unifiedCardEntries.Remove(card);
+                }
             }
             else if (HistoryCategoryCombo.SelectedIndex == 2)
             {
@@ -1309,8 +1358,8 @@ public partial class HistoryWindow
         {
             if (wrap.Children[i] is not Border card)
                 continue;
-            // Accept image-history cards (HistoryItemVM tag) and all-history unified cards (string tag)
-            if (card.Tag is not HistoryItemVM && card.Tag is not string)
+            // Accept image-history cards (HistoryItemVM tag) and unified cards (bool tag)
+            if (card.Tag is not HistoryItemVM && card.Tag is not bool)
                 continue;
 
             if (Math.Abs(card.Width - targetWidth) > 0.5)
