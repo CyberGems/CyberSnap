@@ -445,53 +445,57 @@
                             </Grid>
 
                             <!-- Auto-Pruning Row -->
-                            <Grid x:Name="AutoPruneRow" Margin="2,10,0,2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
-                                    <TextBlock Text="&#xE916;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Auto-Pruning" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource ThemeTextPrimaryBrush}" VerticalAlignment="Center"
-                                               ToolTip="Automatically prune old history items"
-                                               AutomationProperties.Name="Auto pruning title"/>
-                                </StackPanel>
-                                
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="Keep:" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                    <ComboBox x:Name="HistoryRetentionCombo" MinWidth="110" MinHeight="26" Height="26" Padding="8,2" FontSize="11" VerticalAlignment="Center"
-                                              ToolTip="Automatically prune old capture entries."
-                                              AutomationProperties.Name="Auto-clear history"
-                                              SelectionChanged="HistoryRetentionCombo_SelectionChanged">
-                                        <ComboBoxItem Content="Never" ToolTip="Keep history until manually cleared"/>
-                                        <ComboBoxItem Content="1 day" ToolTip="Keep history for 1 day"/>
-                                        <ComboBoxItem Content="7 days" ToolTip="Keep history for 7 days"/>
-                                        <ComboBoxItem Content="30 days" ToolTip="Keep history for 30 days"/>
-                                        <ComboBoxItem Content="3 months" ToolTip="Keep history for 3 months"/>
-                                    </ComboBox>
+                            <Border Margin="0,10,0,0" Padding="0,10,0,2" BorderBrush="{DynamicResource ThemeBorderSubtleBrush}" BorderThickness="0,1,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
-                                    <TextBlock Text="Limit:" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="14,0,6,0"/>
-                                    <ComboBox x:Name="HistoryCountLimitCombo" MinWidth="110" MinHeight="26" Height="26" Padding="8,2" FontSize="11" VerticalAlignment="Center"
-                                              ToolTip="Automatically prune oldest capture entries when count exceeds limit."
-                                              AutomationProperties.Name="Limit history size"
-                                              SelectionChanged="HistoryCountLimitCombo_SelectionChanged">
-                                        <ComboBoxItem Content="Never limit" ToolTip="Do not prune history entries by count."/>
-                                        <ComboBoxItem Content="50 captures" ToolTip="Keep only the 50 newest history entries."/>
-                                        <ComboBoxItem Content="100 captures" ToolTip="Keep only the 100 newest history entries."/>
-                                        <ComboBoxItem Content="250 captures" ToolTip="Keep only the 250 newest history entries."/>
-                                        <ComboBoxItem Content="500 captures" ToolTip="Keep only the 500 newest history entries."/>
-                                        <ComboBoxItem Content="1000 captures" ToolTip="Keep only the 1000 newest history entries."/>
-                                    </ComboBox>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
+                                        <TextBlock Text="&#xE916;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Auto-Pruning" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource ThemeTextPrimaryBrush}" VerticalAlignment="Center"
+                                                   ToolTip="Automatically prune old history items"
+                                                   AutomationProperties.Name="Auto pruning title"/>
+                                    </StackPanel>
 
-                                    <!-- Delete original files switch -->
-                                    <TextBlock x:Name="DeleteOriginalLabel" Text="Delete original files on prune" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="16,0,8,0" Cursor="Hand" MouseLeftButtonDown="DeleteOriginalLabel_MouseLeftButtonDown"/>
-                                    <CheckBox x:Name="HistoryDeleteOriginalOnPruneCheck" VerticalAlignment="Center" Margin="0,0,0,0"
-                                              ToolTip="Delete the original screenshot/recording files on disk, not just the thumbnails."
-                                              AutomationProperties.Name="Delete original files on prune"
-                                              Checked="HistoryDeleteOriginalOnPruneCheck_Changed" Unchecked="HistoryDeleteOriginalOnPruneCheck_Changed"/>
-                                </StackPanel>
-                            </Grid>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="Keep:" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <ComboBox x:Name="HistoryRetentionCombo" MinWidth="110" FontSize="11" VerticalAlignment="Center"
+                                                  ToolTip="Automatically prune old capture entries."
+                                                  AutomationProperties.Name="Auto-clear history"
+                                                  SelectionChanged="HistoryRetentionCombo_SelectionChanged">
+                                            <ComboBoxItem Content="Never" ToolTip="Keep history until manually cleared"/>
+                                            <ComboBoxItem Content="1 day" ToolTip="Keep history for 1 day"/>
+                                            <ComboBoxItem Content="7 days" ToolTip="Keep history for 7 days"/>
+                                            <ComboBoxItem Content="30 days" ToolTip="Keep history for 30 days"/>
+                                            <ComboBoxItem Content="3 months" ToolTip="Keep history for 3 months"/>
+                                        </ComboBox>
+
+                                        <TextBlock Text="Limit:" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="18,0,6,0"/>
+                                        <ComboBox x:Name="HistoryCountLimitCombo" MinWidth="110" FontSize="11" VerticalAlignment="Center"
+                                                  ToolTip="Automatically prune oldest capture entries when count exceeds limit."
+                                                  AutomationProperties.Name="Limit history size"
+                                                  SelectionChanged="HistoryCountLimitCombo_SelectionChanged">
+                                            <ComboBoxItem Content="Never limit" ToolTip="Do not prune history entries by count."/>
+                                            <ComboBoxItem Content="50 captures" ToolTip="Keep only the 50 newest history entries."/>
+                                            <ComboBoxItem Content="100 captures" ToolTip="Keep only the 100 newest history entries."/>
+                                            <ComboBoxItem Content="250 captures" ToolTip="Keep only the 250 newest history entries."/>
+                                            <ComboBoxItem Content="500 captures" ToolTip="Keep only the 500 newest history entries."/>
+                                            <ComboBoxItem Content="1000 captures" ToolTip="Keep only the 1000 newest history entries."/>
+                                        </ComboBox>
+
+                                        <!-- Delete original files switch -->
+                                        <TextBlock x:Name="DeleteOriginalLabel" Text="Delete files on prune" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="18,0,8,0" Cursor="Hand"
+                                                   ToolTip="Delete the original screenshot/recording files on disk, not just the thumbnails."
+                                                   MouseLeftButtonDown="DeleteOriginalLabel_MouseLeftButtonDown"/>
+                                        <CheckBox x:Name="HistoryDeleteOriginalOnPruneCheck" VerticalAlignment="Center"
+                                                  ToolTip="Delete the original screenshot/recording files on disk, not just the thumbnails."
+                                                  AutomationProperties.Name="Delete original files on prune"
+                                                  Checked="HistoryDeleteOriginalOnPruneCheck_Changed" Unchecked="HistoryDeleteOriginalOnPruneCheck_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
 
