@@ -400,12 +400,20 @@ public partial class HistoryWindow
 
     private void HistoryPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        if (HistoryCategoryCombo.SelectedIndex == 0 && _settingsService.Settings.ShowImageSearchBar)
+        if (HistoryCategoryCombo.SelectedIndex <= 1 && _settingsService.Settings.ShowImageSearchBar)
         {
             var shouldHideSearch = e.VerticalOffset > 18 &&
                                    !ImageSearchBox.IsKeyboardFocused &&
                                    string.IsNullOrWhiteSpace(_imageSearchQuery);
             SetImageSearchRowAutoHidden(shouldHideSearch);
+        }
+
+        // All view: infinite scroll
+        if (HistoryCategoryCombo.SelectedIndex == 0)
+        {
+            if (e.VerticalOffset + e.ViewportHeight < e.ExtentHeight - 360) return;
+            AppendNextAllPage();
+            return;
         }
 
         if (_useVirtualizedImageHistory)
@@ -417,7 +425,7 @@ public partial class HistoryWindow
         if (e.VerticalOffset + e.ViewportHeight < e.ExtentHeight - 360)
             return;
 
-        if (HistoryCategoryCombo.SelectedIndex == 0 && string.IsNullOrWhiteSpace(_imageSearchQuery))
+        if (HistoryCategoryCombo.SelectedIndex == 1 && string.IsNullOrWhiteSpace(_imageSearchQuery))
         {
             AppendNextImageHistoryPage();
             return;

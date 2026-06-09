@@ -709,12 +709,15 @@ public partial class HistoryWindow : Window
         CodesPanel.Visibility = Visibility.Collapsed;
         UpdateImageSearchUi();
 
-        if (HistoryCategoryCombo.SelectedIndex != 1) // 0=All, 1=Images
+        if (HistoryCategoryCombo.SelectedIndex > 1) // not All or Images
             CancelImageSearchWork();
 
         switch (HistoryCategoryCombo.SelectedIndex)
         {
             case 0: // All
+                ImagesPanel.Visibility = Visibility.Visible;
+                LoadAllHistory();
+                break;
             case 1: // Images
                 ImagesPanel.Visibility = Visibility.Visible;
                 if (CanReuseLoadedImageHistory())
