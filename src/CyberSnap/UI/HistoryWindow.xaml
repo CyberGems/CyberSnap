@@ -421,7 +421,8 @@
                                 <!-- Inline search bar -->
                                 <Grid x:Name="ImageSearchRow" VerticalAlignment="Center" Margin="8,0,8,0">
                                     <Border x:Name="ImageSearchBorder" Background="Transparent"
-                                            BorderThickness="0" CornerRadius="7" Padding="8,5"
+                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                            BorderThickness="1" CornerRadius="7" Padding="8,5"
                                             Cursor="IBeam">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -453,19 +454,28 @@
                                                                  AutomationProperties.Name="Search options">
                                                         <MenuItem Header="Select all" InputGestureText="Ctrl+A"
                                                                   Click="ImageSearchSelectAll_Click"/>
+                                                        <Separator/>
+                                                        <MenuItem Header="Cut" InputGestureText="Ctrl+X"
+                                                                  Click="ImageSearchCut_Click"/>
+                                                        <MenuItem Header="Copy" InputGestureText="Ctrl+C"
+                                                                  Click="ImageSearchCopy_Click"/>
+                                                        <MenuItem Header="Paste" InputGestureText="Ctrl+V"
+                                                                  Click="ImageSearchPaste_Click"/>
                                                         <MenuItem Header="Delete" InputGestureText="Del"
                                                                   Click="ImageSearchDeleteText_Click"/>
                                                         <Separator/>
-                                                        <MenuItem x:Name="ImageSearchFileNameCheck" Header="Search file names" IsCheckable="True"
-                                                                  ToolTip="Include screenshot file names in search"
-                                                                  Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                                        <MenuItem x:Name="ImageSearchOcrCheck" Header="Search OCR text" IsCheckable="True"
-                                                                  ToolTip="Include recognized screenshot text in search"
-                                                                  Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                                        <Separator/>
-                                                        <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
-                                                                  ToolTip="Require exact phrase/token matches"
-                                                                  Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
+                                                        <MenuItem Header="Filters">
+                                                            <MenuItem x:Name="ImageSearchFileNameCheck" Header="Search file names" IsCheckable="True"
+                                                                      ToolTip="Include screenshot file names in search"
+                                                                      Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                            <MenuItem x:Name="ImageSearchOcrCheck" Header="Search OCR text" IsCheckable="True"
+                                                                      ToolTip="Include recognized screenshot text in search"
+                                                                      Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                            <Separator/>
+                                                            <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
+                                                                      ToolTip="Require exact phrase/token matches"
+                                                                      Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
+                                                        </MenuItem>
                                                     </ContextMenu>
                                                 </TextBox.ContextMenu>
                                             </TextBox>
