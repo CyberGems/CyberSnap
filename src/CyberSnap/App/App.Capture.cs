@@ -117,12 +117,14 @@ public partial class App
 
                         if (firstFrame != null)
                         {
-                            ToastWindow.ShowImagePreview(
+                            ToastWindow.Show(ToastSpec.ImagePreview(
                                 firstFrame,
                                 isGif ? "GIF recorded" : "Video recorded",
                                 copiedToClipboard ? "File copied to clipboard" : "Saved; clipboard copy failed",
                                 path,
-                                false);
+                                false,
+                                transparentShell: false,
+                                showOverlayButtons: false));
                         }
                         else
                         {

@@ -216,6 +216,17 @@ public sealed partial class RecordingForm : Form
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
+        if (e.Button == MouseButtons.Right)
+        {
+            if (_state == State.Recording)
+                StopRecording();
+            else if (_state == State.PreRecording)
+                DiscardRecording();
+            else
+                CancelFromEscape();
+            return;
+        }
+
         if (_state == State.Selecting && e.Button == MouseButtons.Left)
         {
             _isDragging = true;
@@ -415,13 +426,47 @@ public sealed partial class RecordingForm : Form
         }
         else
         {
-            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             string hint = "Drag to select recording area";
-            var hintSz = g.MeasureString(hint, _hintFont);
-            g.DrawString(hint, _hintFont, _hintBrush,
-                Width / 2f - hintSz.Width / 2f, Height / 2f - hintSz.Height / 2f);
+            DrawHintPerMonitor(g, hint);
         }
 
+    }
+
+    private void DrawHintPerMonitor(Graphics g, string hint)
+    {
+        const int padX = 18, padY = 10, bottomMargin = 100;
+        using var hintFont = UiChrome.ChromeFont(14f, FontStyle.Bold);
+        var hintSz = g.MeasureString(hint, hintFont);
+        float bgW = hintSz.Width + padX * 2, bgH = hintSz.Height + padY * 2;
+
+        using var bgBrush = new SolidBrush(UiChrome.SurfaceTier1);
+        using var borderPen = new Pen(Color.FromArgb(255, 0x07, 0x87, 0x88), 1.5f);
+        using var textBrush = new SolidBrush(Color.FromArgb(255, 0xA0, 0xB4, 0xD2));
+
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        foreach (var screen in Screen.AllScreens)
+        {
+            var sr = screen.Bounds;
+            int cx = sr.Left + sr.Width / 2 - _virtualBounds.X;
+            int by = sr.Bottom - _virtualBounds.Y - bottomMargin;
+            float x = cx - bgW / 2f, y = by - bgH;
+            using var bgPath = GetRoundedRectPath(x, y, bgW, bgH, 8f);
+            g.FillPath(bgBrush, bgPath);
+            g.DrawPath(borderPen, bgPath);
+            g.DrawString(hint, hintFont, textBrush, x + padX, y + padY);
+        }
+    }
+
+    private static GraphicsPath GetRoundedRectPath(float x, float y, float w, float h, float r)
+    {
+        var path = new GraphicsPath();
+        float d = r * 2;
+        path.AddArc(x, y, d, d, 180, 90);
+        path.AddArc(x + w - d, y, d, d, 270, 90);
+        path.AddArc(x + w - d, y + h - d, d, d, 0, 90);
+        path.AddArc(x, y + h - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     private void UpdateLiveSelectionAdorner()
