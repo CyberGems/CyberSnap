@@ -408,6 +408,18 @@ public partial class HistoryWindow
         ImageSearchFiltersMenu.IsOpen = true;
     }
 
+    private void ImageSearchSelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        ImageSearchBox.SelectAll();
+        ImageSearchBox.Focus();
+    }
+
+    private void ImageSearchDeleteText_Click(object sender, RoutedEventArgs e)
+    {
+        ImageSearchBox.Clear();
+        ImageSearchBox.Focus();
+    }
+
     private void HistoryPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         if (HistoryCategoryCombo.SelectedIndex <= 1 && _settingsService.Settings.ShowImageSearchBar)
