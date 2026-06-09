@@ -122,6 +122,18 @@ public sealed partial class AnnotationCanvas
             case TextAnnotation ta:
                 RenderTextAnnotation(g, ta);
                 break;
+            case BlurRect br:
+                PaintBlurRect(g, br.Rect);
+                break;
+            case StepNumberAnnotation sn:
+                PaintStepNumber(g, sn.Pos, sn.Number, sn.Color);
+                break;
+            case MagnifierAnnotation mg:
+                PaintMagnifier(g, mg.Pos, mg.SrcRect);
+                break;
+            case EmojiAnnotation em:
+                PaintEmoji(g, em.Pos, em.Emoji, em.Size);
+                break;
 
         }
     }
@@ -354,7 +366,7 @@ public sealed partial class AnnotationCanvas
             DrawStroke ds => ds.Points.Count > 0 ? BoundingBox(ds.Points) : Rectangle.Empty,
             TextAnnotation ta => Rectangle.Round(MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background)),
             StepNumberAnnotation sn => new Rectangle(sn.Pos.X - 20, sn.Pos.Y - 20, 40, 40),
-            EmojiAnnotation em => new Rectangle(em.Pos.X - 20, em.Pos.Y - 20, 40, 40),
+            EmojiAnnotation em => new Rectangle(em.Pos.X, em.Pos.Y, (int)em.Size, (int)em.Size),
             MagnifierAnnotation mg => new Rectangle(mg.Pos.X - 30, mg.Pos.Y - 30, 60, 60),
             _ => Rectangle.Empty,
         };

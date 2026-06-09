@@ -181,6 +181,7 @@ public sealed partial class EditorForm : Form
         _canvas.MouseMove += OnCanvasMouseMove;
         _canvas.MouseUp += OnCanvasMouseUp;
         _canvas.DoubleClick += OnCanvasDoubleClick;
+        _canvas.EmojiPlacementRequested += (_, _) => OpenEmojiPicker(GetEmojiToolButton());
         _saveStatusTimer.Tick += (_, _) =>
         {
             _saveStatusTimer.Stop();
@@ -302,6 +303,8 @@ public sealed partial class EditorForm : Form
 
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
     {
+        if (_emojiPicker is { IsDisposed: false })
+            _emojiPicker.Close();
         if (_suppressCloseConfirm || !_canvas.IsDirty) return;
         var discard = ThemedConfirmDialog.Confirm(
             Handle,
