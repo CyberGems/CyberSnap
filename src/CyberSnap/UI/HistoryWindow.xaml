@@ -442,7 +442,7 @@
 
                                                        VerticalAlignment="Center"/>
                                                 <Grid Grid.Column="1" Margin="8,0,0,0">
-                                                    <TextBox x:Name="ImageSearchBox" BorderThickness="0" Background="Transparent"
+                                                    <TextBox x:Name="ImageSearchBox" BorderThickness="0" Background="#121212"
                                                              Padding="0" MinHeight="0" Height="20" VerticalContentAlignment="Center"
                                                              ToolTip="Search the current history category"
                                                              AutomationProperties.Name="History search"
