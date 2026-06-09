@@ -268,6 +268,7 @@ public partial class HistoryWindow
         // Top: the actual text content (replaces the image thumbnail area)
         var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(textArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
+        AddHoverMenu(textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
         var displayText = text.Length > 80 ? text[..80] + "…" : text;
         textArea.Children.Add(new TextBlock
         {
@@ -313,8 +314,9 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var swatchArea = new Grid();
+        var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(swatchArea, "CLR", System.Windows.Media.Color.FromRgb(255, 160, 80));
+        AddHoverMenu(swatchArea, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -353,8 +355,9 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var previewArea = new Grid { Background = Brushes.White };
+        var previewArea = new Grid { Background = Brushes.White, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(previewArea, "QR", System.Windows.Media.Color.FromRgb(120, 200, 120));
+        AddHoverMenu(previewArea, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
         var previewKey = $"{text}|{format}";
         if (!_allCodePreviewCache.TryGetValue(previewKey, out var previewSrc))
         {
@@ -458,5 +461,63 @@ public partial class HistoryWindow
     {
         try { ClipboardService.CopyTextToClipboard(hex); ToastWindow.Show("Copied", $"{hex} copied"); }
         catch (Exception ex) { ToastWindow.ShowError("Copy failed", ex.Message); }
+    }
+
+    // ── Hover action menu ──
+
+    private static void AddHoverMenu(Grid parent, Action onCopy, Action? onDelete = null)
+    {
+        var menu = new System.Windows.Controls.ContextMenu();
+        var copyMenuItem = new System.Windows.Controls.MenuItem { Header = "Copy" };
+        copyMenuItem.Click += (_, _) => onCopy();
+        menu.Items.Add(copyMenuItem);
+        if (onDelete is not null)
+        {
+            var deleteMenuItem = new System.Windows.Controls.MenuItem { Header = "Delete" };
+            deleteMenuItem.Click += (_, _) => onDelete();
+            menu.Items.Add(deleteMenuItem);
+        }
+
+        var btn = new System.Windows.Controls.Button
+        {
+            ToolTip = "Actions",
+            Focusable = true,
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(210, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            Width = 24, Height = 24,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(6),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 0, 0, 0)),
+            Foreground = Brushes.White,
+            Content = "···",
+            Visibility = Visibility.Collapsed,
+            Tag = menu
+        };
+        menu.PlacementTarget = btn;
+        btn.Click += (_, _) => { menu.IsOpen = true; };
+
+        parent.Children.Add(btn);
+        parent.MouseEnter += (_, _) => btn.Visibility = Visibility.Visible;
+        parent.MouseLeave += (_, _) => { if (!menu.IsOpen) btn.Visibility = Visibility.Collapsed; };
+        menu.Closed += (_, _) => { if (!parent.IsMouseOver) btn.Visibility = Visibility.Collapsed; };
+    }
+
+    private void DeleteOcrEntry(OcrHistoryEntry entry)
+    {
+        _historyService.DeleteOcrEntry(entry);
+        LoadAllHistory();
+    }
+
+    private void DeleteColorEntry(ColorHistoryEntry entry)
+    {
+        _historyService.DeleteColorEntry(entry);
+        LoadAllHistory();
+    }
+
+    private void DeleteCodeEntry(CodeHistoryEntry entry)
+    {
+        _historyService.DeleteCodeEntry(entry);
+        LoadAllHistory();
     }
 }
