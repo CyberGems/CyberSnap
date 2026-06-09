@@ -417,96 +417,88 @@
                                                   AutomationProperties.Name="QR &amp; Barcode history"
                                                   AutomationProperties.HelpText="Show saved QR and barcode scans."/>
                                 </ComboBox>
+
+                                <!-- Inline search bar -->
+                                <Grid x:Name="ImageSearchRow" VerticalAlignment="Center" Margin="8,0,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border x:Name="ImageSearchBorder" Background="Transparent"
+                                            BorderThickness="0" CornerRadius="7" Padding="8,5">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Image x:Name="ImageSearchIcon" Width="18" Height="18" Stretch="Uniform"
+                                                   VerticalAlignment="Center"/>
+                                            <TextBox x:Name="ImageSearchBox" Grid.Column="1" BorderThickness="0" Background="#121212"
+                                                     Padding="0" MinHeight="0" Height="20" VerticalContentAlignment="Center"
+                                                     Margin="8,0,0,0"
+                                                     ToolTip="Search the current history category"
+                                                     AutomationProperties.Name="History search"
+                                                     TextChanged="ImageSearchBox_TextChanged"
+                                                     PreviewKeyDown="ImageSearchBox_PreviewKeyDown"
+                                                     GotKeyboardFocus="ImageSearchBox_FocusChanged"
+                                                     LostKeyboardFocus="ImageSearchBox_FocusChanged"
+                                                     Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                     CaretBrush="{DynamicResource ThemeTextPrimaryBrush}">
+                                                <TextBox.Template>
+                                                    <ControlTemplate TargetType="TextBox">
+                                                        <ScrollViewer x:Name="PART_ContentHost" Background="Transparent"/>
+                                                    </ControlTemplate>
+                                                </TextBox.Template>
+                                            </TextBox>
+                                            <TextBlock x:Name="ImageSearchPlaceholder" Grid.Column="1" Text="Search screenshots, OCR text, or filenames..."
+                                                       FontSize="12" Opacity="0.28" VerticalAlignment="Center"
+                                                       IsHitTestVisible="False" Margin="8,0,0,0"/>
+                                        </Grid>
+                                    </Border>
+                                    <Button x:Name="ImageSearchFiltersBtn" Grid.Column="1" Content="Filters" Style="{StaticResource HistoryActionButton}"
+                                            Margin="6,0,0,0" VerticalAlignment="Center"
+                                            ToolTip="Choose image search sources and exact matching"
+                                            AutomationProperties.Name="Image search filters"
+                                            AutomationProperties.HelpText="Open search source and exact-match options for History."
+                                            Cursor="Hand" Click="ImageSearchFiltersBtn_Click">
+                                        <Button.ContextMenu>
+                                            <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
+                                                         Style="{StaticResource HistoryActionsMenuStyle}"
+                                                         AutomationProperties.Name="Image search filter options">
+                                                <MenuItem x:Name="ImageSearchFileNameCheck" Header="File name" IsCheckable="True"
+                                                          ToolTip="Search screenshot file names"
+                                                          AutomationProperties.Name="Search file names"
+                                                          AutomationProperties.HelpText="Include screenshot file names in History search results."
+                                                          Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                <MenuItem x:Name="ImageSearchOcrCheck" Header="OCR text" IsCheckable="True"
+                                                          ToolTip="Search recognized screenshot text"
+                                                          AutomationProperties.Name="Search OCR text"
+                                                          AutomationProperties.HelpText="Include recognized text from indexed screenshots in History search results."
+                                                          Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                <Separator/>
+                                                <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
+                                                          ToolTip="Require exact phrase/token matches"
+                                                          AutomationProperties.Name="Exact match search"
+                                                          AutomationProperties.HelpText="Only show History search results that match the exact phrase or token."
+                                                          Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                    </Button>
+                                </Grid>
                             </DockPanel>
 
-                            <Grid x:Name="ImageSearchRow" Margin="0,8,0,0" Visibility="Visible">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <Border x:Name="ImageSearchBorder" Background="Transparent"
-                                            BorderThickness="0" CornerRadius="7" Padding="10,6">
-                                        <StackPanel>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-
-
-                                                <Image x:Name="ImageSearchIcon" Width="18" Height="18" Stretch="Uniform"
-
-
-                                                       VerticalAlignment="Center"/>
-                                                <Grid Grid.Column="1" Margin="8,0,0,0">
-                                                    <TextBox x:Name="ImageSearchBox" BorderThickness="0" Background="#121212"
-                                                             Padding="0" MinHeight="0" Height="20" VerticalContentAlignment="Center"
-                                                             ToolTip="Search the current history category"
-                                                             AutomationProperties.Name="History search"
-                                                             TextChanged="ImageSearchBox_TextChanged"
-                                                             PreviewKeyDown="ImageSearchBox_PreviewKeyDown"
-                                                             GotKeyboardFocus="ImageSearchBox_FocusChanged"
-                                                             LostKeyboardFocus="ImageSearchBox_FocusChanged"
-                                                             Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                             CaretBrush="{DynamicResource ThemeTextPrimaryBrush}">
-                                                        <TextBox.Template>
-                                                            <ControlTemplate TargetType="TextBox">
-                                                                <ScrollViewer x:Name="PART_ContentHost" Background="Transparent"/>
-                                                            </ControlTemplate>
-                                                        </TextBox.Template>
-                                                    </TextBox>
-                                                    <TextBlock x:Name="ImageSearchPlaceholder" Text="Search screenshots, OCR text, or filenames..."
-                                                               FontSize="12" Opacity="0.28" VerticalAlignment="Center"
-                                                               IsHitTestVisible="False" Margin="0,0,0,0"/>
-                                                </Grid>
-                                            </Grid>
-
-                                            <TextBlock x:Name="ImageSearchFiltersSummaryText" Visibility="Collapsed"/>
-                                            <StackPanel x:Name="ReindexAllProgressPanel" Orientation="Horizontal" Visibility="Collapsed">
-                                                <ProgressBar x:Name="ReindexAllProgressBar" Width="60" Height="3" IsIndeterminate="True" Visibility="Collapsed"/>
-                                                <Button x:Name="ReindexAllBtn" Content="Index" Style="{StaticResource HistoryActionButton}"
-                                                        ToolTip="Refresh the image search index"
-                                                        AutomationProperties.Name="Refresh image search index"
-                                                        Cursor="Hand" Click="ReindexAllBtn_Click"/>
-                                            </StackPanel>
-                                            <ProgressBar x:Name="ImageSearchLoadingBar" Width="110" Height="3"
-                                                         IsIndeterminate="True" Visibility="Collapsed"
-                                                         Margin="22,6,0,0" HorizontalAlignment="Left"/>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                                <Button x:Name="ImageSearchFiltersBtn" Grid.Column="1" Content="Filters" Style="{StaticResource HistoryActionButton}"
-                                        Margin="8,0,0,0" VerticalAlignment="Stretch"
-                                        ToolTip="Choose image search sources and exact matching"
-                                        AutomationProperties.Name="Image search filters"
-                                        AutomationProperties.HelpText="Open search source and exact-match options for History."
-                                        Cursor="Hand" Click="ImageSearchFiltersBtn_Click">
-                                    <Button.ContextMenu>
-                                        <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
-                                                     Style="{StaticResource HistoryActionsMenuStyle}"
-                                                     AutomationProperties.Name="Image search filter options">
-                                            <MenuItem x:Name="ImageSearchFileNameCheck" Header="File name" IsCheckable="True"
-                                                      ToolTip="Search screenshot file names"
-                                                      AutomationProperties.Name="Search file names"
-                                                      AutomationProperties.HelpText="Include screenshot file names in History search results."
-                                                      Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                            <MenuItem x:Name="ImageSearchOcrCheck" Header="OCR text" IsCheckable="True"
-                                                      ToolTip="Search recognized screenshot text"
-                                                      AutomationProperties.Name="Search OCR text"
-                                                      AutomationProperties.HelpText="Include recognized text from indexed screenshots in History search results."
-                                                      Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                            <Separator/>
-                                            <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
-                                                      ToolTip="Require exact phrase/token matches"
-                                                      AutomationProperties.Name="Exact match search"
-                                                      AutomationProperties.HelpText="Only show History search results that match the exact phrase or token."
-                                                      Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
-                                        </ContextMenu>
-                                    </Button.ContextMenu>
-                                </Button>
-                            </Grid>
+                            <!-- Search status line -->
+                            <TextBlock x:Name="ImageSearchFiltersSummaryText" Visibility="Collapsed" Margin="0,4,0,0"/>
+                            <StackPanel x:Name="ReindexAllProgressPanel" Orientation="Horizontal" Visibility="Collapsed" Margin="0,4,0,0">
+                                <ProgressBar x:Name="ReindexAllProgressBar" Width="60" Height="3" IsIndeterminate="True" Visibility="Collapsed"/>
+                                <Button x:Name="ReindexAllBtn" Content="Index" Style="{StaticResource HistoryActionButton}"
+                                        ToolTip="Refresh the image search index"
+                                        AutomationProperties.Name="Refresh image search index"
+                                        Cursor="Hand" Click="ReindexAllBtn_Click"/>
+                            </StackPanel>
+                            <ProgressBar x:Name="ImageSearchLoadingBar" Width="110" Height="3"
+                                         IsIndeterminate="True" Visibility="Collapsed"
+                                         Margin="22,4,0,0" HorizontalAlignment="Left"/>
 
                             <!-- Auto-Pruning Card -->
                             <Border x:Name="AutoPruneCard" Margin="0,10,0,0" Padding="0" CornerRadius="8"
