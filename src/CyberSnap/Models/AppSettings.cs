@@ -225,6 +225,7 @@ public sealed class AppSettings
     public bool HistoryDeleteOriginalOnPrune { get; set; }
     public ImageSearchSourceOptions ImageSearchSources { get; set; } = ImageSearchSourceOptions.All;
     public bool ShowImageSearchBar { get; set; } = true;
+    public bool ShowAutoPrune { get; set; } = true;
     public bool ImageSearchExactMatch { get; set; }
     public bool ShowImageSearchDiagnostics { get; set; }
     public bool AutoIndexImages { get; set; } = false;
