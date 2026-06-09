@@ -426,7 +426,7 @@ public sealed partial class RecordingForm : Form
         }
         else
         {
-            string hint = "Drag to select recording area";
+            string hint = "Drag to Select Recording Area";
             DrawHintPerMonitor(g, hint);
         }
 
