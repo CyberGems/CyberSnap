@@ -259,6 +259,7 @@ public partial class HistoryWindow
             SetAutoPruneRowAutoHidden(false);
             var text = ImageSearchBox.Text ?? "";
             ImageSearchClearBtn.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
+            ImageSearchChevron.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
             ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(text) && !ImageSearchBox.IsKeyboardFocused
                 ? Visibility.Visible
                 : Visibility.Collapsed;
@@ -330,12 +331,10 @@ public partial class HistoryWindow
             SetAutoPruneRowAutoHidden(false);
             ImageSearchBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(60, 0, 255, 255));  // very soft cyan
-            ImageSearchChevron.Visibility = Visibility.Visible;
         }
         else
         {
             ImageSearchBorder.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush");
-            ImageSearchChevron.Visibility = Visibility.Collapsed;
         }
 
         ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(ImageSearchBox.Text) && !ImageSearchBox.IsKeyboardFocused

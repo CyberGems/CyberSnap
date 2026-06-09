@@ -68,7 +68,9 @@ public partial class App
                         TryCopyCaptureOutputToClipboard(persisted.Output);
                     ResetCapturing();
 
-                    if (settings.OpenEditorAfterCapture)
+                    if (settings.OpenEditorAfterCapture &&
+                        persisted.HistoryEntry?.Kind != Services.HistoryKind.Video &&
+                        persisted.HistoryEntry?.Kind != Services.HistoryKind.Gif)
                     {
                         try
                         {
