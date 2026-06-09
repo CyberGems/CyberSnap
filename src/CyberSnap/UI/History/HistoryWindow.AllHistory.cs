@@ -606,7 +606,7 @@ public partial class HistoryWindow
         {
             imageRow.Height = new GridLength(GetHistoryCardImageHeight(card.ActualWidth));
             card.Clip = new System.Windows.Media.RectangleGeometry(
-                new System.Windows.Rect(0, 0, card.ActualWidth, card.ActualHeight), 8, 8);
+                new System.Windows.Rect(0, 0, card.ActualWidth, card.ActualHeight), 8.5, 8.5);
         };
 
         card.MouseEnter += (_, _) =>
