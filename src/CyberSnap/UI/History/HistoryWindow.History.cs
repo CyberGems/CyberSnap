@@ -1307,7 +1307,10 @@ public partial class HistoryWindow
 
         for (int i = 0; i < wrap.Children.Count; i++)
         {
-            if (wrap.Children[i] is not Border card || card.Tag is not HistoryItemVM)
+            if (wrap.Children[i] is not Border card)
+                continue;
+            // Accept image-history cards (HistoryItemVM tag) and all-history unified cards (string tag)
+            if (card.Tag is not HistoryItemVM && card.Tag is not string)
                 continue;
 
             if (Math.Abs(card.Width - targetWidth) > 0.5)
