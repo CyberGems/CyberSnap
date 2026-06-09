@@ -237,7 +237,7 @@ public partial class HistoryWindow
             BorderThickness = new Thickness(1),
             Width = 24,
             Height = 24,
-            HorizontalAlignment = HorizontalAlignment.Right,
+            HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top,
             Margin = new Thickness(6),
             Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 0, 0, 0)),
