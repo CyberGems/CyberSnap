@@ -232,9 +232,6 @@ public sealed partial class RecordingForm
 
     private void TransitionToRecordingSurface()
     {
-        // Hide the style flip into transparent mode so the user does not see
-        // the fullscreen surface blink before the recording chrome repaints.
-        Visible = false;
         _selectionAdorner?.Hide();
         Opacity = 1;
 
@@ -244,7 +241,6 @@ public sealed partial class RecordingForm
         BuildHollowRegion();
         CaptureWindowExclusion.SetLogicalBounds(Handle, GetRecordingChromeScreenBounds);
         Invalidate();
-        Visible = true;
     }
 
     private Rectangle GetRecordingChromeScreenBounds()
