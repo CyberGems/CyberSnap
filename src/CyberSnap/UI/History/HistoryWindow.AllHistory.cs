@@ -26,20 +26,14 @@ public partial class HistoryWindow
     private sealed class UnifiedHistoryItem
     {
         public DateTime CapturedAt { get; init; }
-        public HistoryKind? MediaKind { get; init; }   // for Image/Media entries
-        public string? FilePath { get; init; }          // for Image/Media entries
-        public string? Text { get; init; }              // for OCR/Code entries
-        public string? Format { get; init; }            // for Code entries
-        public string? Hex { get; init; }               // for Color entries
-        public bool IsImageOrMedia => MediaKind.HasValue;
-        public bool IsOcr => Text is not null && Format is null && Hex is null;
-        public bool IsCode => Format is not null;
-        public bool IsColor => Hex is not null;
+        public object RawEntry { get; init; } = null!;    // HistoryEntry, OcrHistoryEntry, ColorHistoryEntry, or CodeHistoryEntry
+        public bool IsImageOrMedia => RawEntry is HistoryEntry;
+        public bool IsOcr => RawEntry is OcrHistoryEntry;
+        public bool IsCode => RawEntry is CodeHistoryEntry;
+        public bool IsColor => RawEntry is ColorHistoryEntry;
     }
 
     private List<UnifiedHistoryItem> _allUnifiedEntries = new();
-    private int _allRenderCount;
-    private DateTime? _allLastRenderedDate;
 
     private void LoadAllHistory()
     {
@@ -47,25 +41,24 @@ public partial class HistoryWindow
         HistoryStack.Children.Clear();
         HideHistoryEmptyState();
 
-        // Merge all entry types into a single sorted list
         var unified = new List<UnifiedHistoryItem>();
 
         foreach (var img in _historyService.ImageEntries)
-            unified.Add(new UnifiedHistoryItem { CapturedAt = img.CapturedAt, MediaKind = img.Kind, FilePath = img.FilePath });
+            unified.Add(new UnifiedHistoryItem { CapturedAt = img.CapturedAt, RawEntry = img });
 
         foreach (var media in _historyService.MediaEntries)
-            unified.Add(new UnifiedHistoryItem { CapturedAt = media.CapturedAt, MediaKind = media.Kind, FilePath = media.FilePath });
+            unified.Add(new UnifiedHistoryItem { CapturedAt = media.CapturedAt, RawEntry = media });
 
         foreach (var ocr in _historyService.OcrEntries)
-            unified.Add(new UnifiedHistoryItem { CapturedAt = ocr.CapturedAt, Text = ocr.Text });
+            unified.Add(new UnifiedHistoryItem { CapturedAt = ocr.CapturedAt, RawEntry = ocr });
 
         foreach (var color in _historyService.ColorEntries)
-            unified.Add(new UnifiedHistoryItem { CapturedAt = color.CapturedAt, Hex = color.Hex });
+            unified.Add(new UnifiedHistoryItem { CapturedAt = color.CapturedAt, RawEntry = color });
 
         foreach (var code in _historyService.CodeEntries)
-            unified.Add(new UnifiedHistoryItem { CapturedAt = code.CapturedAt, Text = code.Text, Format = code.Format });
+            unified.Add(new UnifiedHistoryItem { CapturedAt = code.CapturedAt, RawEntry = code });
 
-        unified.Sort((a, b) => b.CapturedAt.CompareTo(a.CapturedAt)); // newest first
+        unified.Sort((a, b) => b.CapturedAt.CompareTo(a.CapturedAt));
         _allUnifiedEntries = unified;
 
         if (unified.Count == 0)
@@ -77,27 +70,27 @@ public partial class HistoryWindow
         }
 
         HistoryCountText.Text = $"{unified.Count} item{(unified.Count == 1 ? "" : "s")}";
-        _allRenderCount = Math.Min(HistoryInitialPageSize, unified.Count);
-        _allLastRenderedDate = null;
-        AppendAllPage(unified, 0, _allRenderCount);
+        var pageSize = Math.Min(HistoryInitialPageSize, unified.Count);
+        var page = unified.GetRange(0, pageSize);
+        AppendGroupedUnifiedItems(HistoryStack, page, CreateUnifiedCard);
+        _allLastAppendIndex = pageSize;
         UpdateHistoryActionButtons();
         sw.Stop();
-        AppDiagnostics.LogInfo("history.load-all", $"items={unified.Count} rendered={_allRenderCount} elapsedMs={sw.ElapsedMilliseconds}");
+        AppDiagnostics.LogInfo("history.load-all", $"items={unified.Count} rendered={pageSize} elapsedMs={sw.ElapsedMilliseconds}");
     }
 
-    private void AllPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
-    {
-        if (e.VerticalOffset + e.ViewportHeight < e.ExtentHeight - 360) return;
-        AppendNextAllPage();
-    }
+    // ── Infinite scroll ──
+
+    private int _allLastAppendIndex;
 
     private void AppendNextAllPage()
     {
-        if (_allRenderCount >= _allUnifiedEntries.Count) return;
+        if (_allLastAppendIndex >= _allUnifiedEntries.Count) return;
         var prevOffset = ImagesPanel.VerticalOffset;
-        var prevCount = _allRenderCount;
-        _allRenderCount = Math.Min(_allRenderCount + HistoryAppendPageSize, _allUnifiedEntries.Count);
-        AppendAllPage(_allUnifiedEntries, prevCount, _allRenderCount - prevCount);
+        var prevCount = _allLastAppendIndex;
+        _allLastAppendIndex = Math.Min(_allLastAppendIndex + HistoryAppendPageSize, _allUnifiedEntries.Count);
+        var added = _allUnifiedEntries.GetRange(prevCount, _allLastAppendIndex - prevCount);
+        AppendGroupedUnifiedItems(HistoryStack, added, CreateUnifiedCard);
         _ = Dispatcher.BeginInvoke(() =>
         {
             if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 0)
@@ -105,41 +98,84 @@ public partial class HistoryWindow
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
-    private void AppendAllPage(IReadOnlyList<UnifiedHistoryItem> entries, int start, int count)
+    // ── Grouped grid rendering (WrapPanels + date pills, same as image history) ──
+
+    private void AppendGroupedUnifiedItems(System.Windows.Controls.Panel target, IReadOnlyList<UnifiedHistoryItem> items, Func<UnifiedHistoryItem, Border> cardFactory)
     {
-        var end = start + count;
-        for (int i = start; i < end; i++)
+        WrapPanel? currentWrap = target.Children.Count > 0 ? target.Children[target.Children.Count - 1] as WrapPanel : null;
+        DateTime? currentDate = currentWrap?.Tag is DateTime tagDate ? tagDate : null;
+        var updatedWraps = new HashSet<WrapPanel>();
+
+        foreach (var item in items)
         {
-            var entry = entries[i];
-            AppendSectionHeaderIfNeeded(HistoryStack, entry.CapturedAt.Date, ref _allLastRenderedDate);
-            HistoryStack.Children.Add(CreateUnifiedCard(entry));
+            var itemDate = item.CapturedAt.Date;
+            if (currentWrap is null || currentDate != itemDate)
+            {
+                // Date separator line
+                if (target.Children.Count > 0)
+                {
+                    target.Children.Add(new Border
+                    {
+                        Height = 1,
+                        Background = Theme.Brush(Theme.BorderSubtle),
+                        Margin = new Thickness(6, 20, 6, 0)
+                    });
+                }
+
+                // Date label pill
+                var dateLabel = new TextBlock
+                {
+                    Text = FormatHistoryGroupLabel(itemDate).ToUpperInvariant(),
+                    FontSize = 10.5,
+                    FontWeight = FontWeights.Bold,
+                    FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+                    Foreground = Theme.Brush(Theme.Accent),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Opacity = 0.9
+                };
+                target.Children.Add(new Border
+                {
+                    Background = Theme.Brush(Theme.AccentSubtle),
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(12, 5, 12, 5),
+                    Margin = new Thickness(6, 14, 0, 10),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Child = dateLabel
+                });
+
+                currentWrap = CreateHistoryWrapPanel(itemDate);
+                target.Children.Add(currentWrap);
+                currentDate = itemDate;
+            }
+
+            var card = cardFactory(item);
+            currentWrap!.Children.Add(card);
+            updatedWraps.Add(currentWrap);
         }
+
+        foreach (var wrap in updatedWraps)
+            UpdateHistoryWrapPanelCardWidths(wrap);
     }
+
+    // ── Card factory ──
 
     private Border CreateUnifiedCard(UnifiedHistoryItem item)
     {
         if (item.IsImageOrMedia)
-            return CreateUnifiedImageCard(item);
+            return CreateUnifiedImageCard((HistoryEntry)item.RawEntry);
         if (item.IsOcr)
-            return CreateUnifiedOcrCard(item);
+            return CreateUnifiedOcrCard((OcrHistoryEntry)item.RawEntry);
         if (item.IsCode)
-            return CreateUnifiedCodeCard(item);
+            return CreateUnifiedCodeCard((CodeHistoryEntry)item.RawEntry);
         if (item.IsColor)
-            return CreateUnifiedColorCard(item);
+            return CreateUnifiedColorCard((ColorHistoryEntry)item.RawEntry);
         return CreateUnifiedFallbackCard(item);
     }
 
-    // ── Image / Media card ──
+    // ── Image / Media card (reuses existing BuildMediaCardShell) ──
 
-    private Border CreateUnifiedImageCard(UnifiedHistoryItem item)
+    private Border CreateUnifiedImageCard(HistoryEntry entry)
     {
-        var entry = _historyService.ImageEntries
-            .FirstOrDefault(e => e.FilePath == item.FilePath && e.CapturedAt == item.CapturedAt)
-            ?? (HistoryEntry?)_historyService.MediaEntries
-            .FirstOrDefault(e => e.FilePath == item.FilePath && e.CapturedAt == item.CapturedAt);
-
-        if (entry is null) return CreateUnifiedFallbackCard(item);
-
         var vm = new HistoryItemVM();
         UpdateHistoryItemViewModel(vm, entry, isSelected: false, hydrateSearchMetadata: false);
 
@@ -155,7 +191,6 @@ public partial class HistoryWindow
             catch (Exception ex) { ToastWindow.ShowError("Copy failed", ex.Message); }
         });
 
-        // File name + time
         var nameBlock = new TextBlock
         {
             Text = entry.FileName,
@@ -188,36 +223,33 @@ public partial class HistoryWindow
 
     // ── OCR Text card ──
 
-    private Border CreateUnifiedOcrCard(UnifiedHistoryItem item)
+    private Border CreateUnifiedOcrCard(OcrHistoryEntry entry)
     {
-        var text = item.Text ?? "";
+        var text = entry.Text ?? "";
         var card = CreateBaseUnifiedCard("Text history item", "Copy this text");
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        // Top: large text icon on dark surface
         var iconArea = new Grid { Background = Theme.Brush(Theme.BgSecondary) };
-        var iconText = new TextBlock
+        iconArea.Children.Add(new TextBlock
         {
-            Text = "\uE8F1", // Segoe Fluent "Text" icon
+            Text = "\uE8F1",
             FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons"),
             FontSize = 36,
             Foreground = Theme.Brush(Theme.TextSecondary),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Opacity = 0.5
-        };
-        iconArea.Children.Add(iconText);
+        });
         Grid.SetRow(iconArea, 0);
         root.Children.Add(iconArea);
 
-        // Bottom: text preview + time
         var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
         var preview = text.Length > 60 ? text[..60] + "..." : text;
         info.Children.Add(new TextBlock { Text = preview, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName) });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(item.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
+        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
@@ -231,9 +263,9 @@ public partial class HistoryWindow
 
     // ── Color card ──
 
-    private Border CreateUnifiedColorCard(UnifiedHistoryItem item)
+    private Border CreateUnifiedColorCard(ColorHistoryEntry entry)
     {
-        var hex = item.Hex ?? "000000";
+        var hex = entry.Hex ?? "000000";
         TryParseHexColor(hex, out var r, out var g, out var b);
         var swatchColor = System.Windows.Media.Color.FromRgb(r, g, b);
         var displayHex = FormatColorHexForDisplay(hex);
@@ -244,23 +276,20 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        // Top: large color swatch
         var swatchArea = new Grid();
-        var swatch = new Border
+        swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
             Background = new SolidColorBrush(swatchColor),
             BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(1),
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
-        };
-        swatchArea.Children.Add(swatch);
+        });
         Grid.SetRow(swatchArea, 0);
         root.Children.Add(swatchArea);
 
-        // Bottom: hex + time
         var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
         info.Children.Add(new TextBlock { Text = displayHex, FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName) });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(item.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
+        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
@@ -275,17 +304,16 @@ public partial class HistoryWindow
 
     private readonly Dictionary<string, BitmapSource> _allCodePreviewCache = new();
 
-    private Border CreateUnifiedCodeCard(UnifiedHistoryItem item)
+    private Border CreateUnifiedCodeCard(CodeHistoryEntry entry)
     {
-        var text = item.Text ?? "";
-        var format = item.Format ?? "";
+        var text = entry.Text ?? "";
+        var format = entry.Format ?? "";
         var card = CreateBaseUnifiedCard($"{HumanizeBarcodeFormat(format)} history item", "Copy this code text");
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        // Top: barcode preview
         var previewArea = new Grid { Background = Brushes.White };
         var previewKey = $"{text}|{format}";
         if (!_allCodePreviewCache.TryGetValue(previewKey, out var previewSrc))
@@ -305,10 +333,9 @@ public partial class HistoryWindow
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 
-        // Bottom: format + time
         var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
         info.Children.Add(new TextBlock { Text = HumanizeBarcodeFormat(format), FontSize = 11, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName) });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(item.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
+        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
