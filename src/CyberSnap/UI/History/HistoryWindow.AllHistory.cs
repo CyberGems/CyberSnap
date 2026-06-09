@@ -268,7 +268,7 @@ public partial class HistoryWindow
         // Top: the actual text content (replaces the image thumbnail area)
         var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(textArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
-        AddHoverMenu(textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
+        AddHoverMenu(card, textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
         var displayText = text.Length > 80 ? text[..80] + "…" : text;
         textArea.Children.Add(new TextBlock
         {
@@ -316,7 +316,7 @@ public partial class HistoryWindow
 
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(swatchArea, "CLR", System.Windows.Media.Color.FromRgb(255, 160, 80));
-        AddHoverMenu(swatchArea, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
+        AddHoverMenu(card, swatchArea, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -357,7 +357,7 @@ public partial class HistoryWindow
 
         var previewArea = new Grid { Background = Brushes.White, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(previewArea, "QR", System.Windows.Media.Color.FromRgb(120, 200, 120));
-        AddHoverMenu(previewArea, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
+        AddHoverMenu(card, previewArea, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
         var previewKey = $"{text}|{format}";
         if (!_allCodePreviewCache.TryGetValue(previewKey, out var previewSrc))
         {
@@ -465,7 +465,7 @@ public partial class HistoryWindow
 
     // ── Hover action menu ──
 
-    private static void AddHoverMenu(Grid parent, Action onCopy, Action? onDelete = null)
+    private static void AddHoverMenu(Border card, Grid imageArea, Action onCopy, Action? onDelete = null)
     {
         var menu = new System.Windows.Controls.ContextMenu();
         var copyMenuItem = new System.Windows.Controls.MenuItem { Header = "Copy" };
@@ -481,7 +481,7 @@ public partial class HistoryWindow
         var btn = new System.Windows.Controls.Button
         {
             ToolTip = "Actions",
-            Focusable = true,
+            Focusable = false,
             BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(210, 255, 255, 255)),
             BorderThickness = new Thickness(1),
             Width = 24, Height = 24,
@@ -492,15 +492,18 @@ public partial class HistoryWindow
             Foreground = Brushes.White,
             Content = "···",
             Visibility = Visibility.Collapsed,
-            Tag = menu
+            IsHitTestVisible = true
         };
         menu.PlacementTarget = btn;
         btn.Click += (_, _) => { menu.IsOpen = true; };
 
-        parent.Children.Add(btn);
-        parent.MouseEnter += (_, _) => btn.Visibility = Visibility.Visible;
-        parent.MouseLeave += (_, _) => { if (!menu.IsOpen) btn.Visibility = Visibility.Collapsed; };
-        menu.Closed += (_, _) => { if (!parent.IsMouseOver) btn.Visibility = Visibility.Collapsed; };
+        // Add button on top of all other image area children
+        imageArea.Children.Add(btn);
+
+        // Use the card's hover to control visibility (more reliable than Grid MouseEnter/Leave)
+        card.MouseEnter += (_, _) => { if (btn != null) btn.Visibility = Visibility.Visible; };
+        card.MouseLeave += (_, _) => { if (btn != null && !menu.IsOpen) btn.Visibility = Visibility.Collapsed; };
+        menu.Closed += (_, _) => { if (btn != null && !card.IsMouseOver) btn.Visibility = Visibility.Collapsed; };
     }
 
     private void DeleteOcrEntry(OcrHistoryEntry entry)
