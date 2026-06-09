@@ -442,7 +442,7 @@ public partial class HistoryWindow
             Margin = new Thickness(HistoryCardMargin),
             CornerRadius = new CornerRadius(8),
             Background = Theme.Brush(Theme.BgCard),
-            BorderBrush = Brushes.Transparent,
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new Thickness(1),
             Cursor = Cursors.Hand,
             Focusable = true,
@@ -452,9 +452,9 @@ public partial class HistoryWindow
         AutomationProperties.SetHelpText(card, tooltip);
 
         card.MouseEnter += (_, _) => { card.Background = HistoryCardHoverBrush; card.BorderBrush = HistoryCardFocusBrush; };
-        card.MouseLeave += (_, _) => { if (!card.IsKeyboardFocusWithin) { card.Background = Theme.Brush(Theme.BgCard); card.BorderBrush = Brushes.Transparent; } };
+        card.MouseLeave += (_, _) => { if (!card.IsKeyboardFocusWithin) { card.Background = Theme.Brush(Theme.BgCard); card.BorderBrush = Theme.Brush(Theme.BorderSubtle); } };
         card.GotKeyboardFocus += (_, _) => { card.Background = HistoryCardHoverBrush; card.BorderBrush = HistoryCardFocusBrush; };
-        card.LostKeyboardFocus += (_, _) => { if (!card.IsMouseOver) { card.Background = Theme.Brush(Theme.BgCard); card.BorderBrush = Brushes.Transparent; } };
+        card.LostKeyboardFocus += (_, _) => { if (!card.IsMouseOver) { card.Background = Theme.Brush(Theme.BgCard); card.BorderBrush = Theme.Brush(Theme.BorderSubtle); } };
 
         card.Tag = "unified";  // so UpdateHistoryWrapPanelCardWidths resizes this card
 

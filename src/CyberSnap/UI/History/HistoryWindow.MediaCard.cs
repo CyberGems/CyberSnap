@@ -112,7 +112,7 @@ public partial class HistoryWindow
             Margin = new Thickness(HistoryCardMargin),
             CornerRadius = new CornerRadius(8),
             Background = Theme.Brush(Theme.BgCard),
-            BorderBrush = Brushes.Transparent,
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new Thickness(1),
             Cursor = Cursors.Hand,
             Focusable = true,
