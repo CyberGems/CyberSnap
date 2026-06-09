@@ -280,12 +280,25 @@ public partial class HistoryWindow
         Grid.SetRow(iconArea, 0);
         root.Children.Add(iconArea);
 
+        // Info area: type label → preview → time, with clean spacing
         var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
-        var typeLabel = new TextBlock { Text = "Text", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) };
-        info.Children.Add(typeLabel);
-        var preview = text.Length > 50 ? text[..50] + "..." : text;
-        info.Children.Add(new TextBlock { Text = preview, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), MaxHeight = 32, TextWrapping = TextWrapping.Wrap, ClipToBounds = true });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
+        info.Children.Add(new TextBlock { Text = "Text", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold });
+        var preview = text.Length > 40 ? text[..40] + "…" : text;
+        info.Children.Add(new TextBlock
+        {
+            Text = preview,
+            FontSize = 11,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            Margin = new Thickness(0, 2, 0, 0)
+        });
+        info.Children.Add(new TextBlock
+        {
+            Text = FormatTimeAgo(entry.CapturedAt),
+            FontSize = 10,
+            Opacity = 0.35,
+            Margin = new Thickness(0, 6, 0, 0)
+        });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
