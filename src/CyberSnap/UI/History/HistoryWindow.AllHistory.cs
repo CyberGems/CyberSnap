@@ -265,40 +265,28 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var iconArea = new Grid { Background = Theme.Brush(Theme.BgSecondary) };
-        AddTypeBadge(iconArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
-        iconArea.Children.Add(new TextBlock
+        // Top: the actual text content (replaces the image thumbnail area)
+        var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true };
+        AddTypeBadge(textArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
+        var displayText = text.Length > 80 ? text[..80] + "…" : text;
+        textArea.Children.Add(new TextBlock
         {
-            Text = "\uE8F1",
-            FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons"),
-            FontSize = 36,
-            Foreground = Theme.Brush(Theme.TextSecondary),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            Opacity = 0.5
-        });
-        Grid.SetRow(iconArea, 0);
-        root.Children.Add(iconArea);
-
-        // Info area: type label → preview → time, single-line to match image card height
-        var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
-        var preview = text.Length > 40 ? text[..40] + "…" : text;
-        info.Children.Add(new TextBlock { Text = "Text", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold });
-        info.Children.Add(new TextBlock
-        {
-            Text = preview,
+            Text = displayText,
             FontSize = 11,
+            TextWrapping = TextWrapping.Wrap,
             TextTrimming = TextTrimming.CharacterEllipsis,
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
-            Margin = new Thickness(0, 2, 0, 0)
+            Foreground = Theme.Brush(Theme.TextPrimary),
+            Margin = new Thickness(10),
+            VerticalAlignment = VerticalAlignment.Center
         });
-        info.Children.Add(new TextBlock
-        {
-            Text = FormatTimeAgo(entry.CapturedAt),
-            FontSize = 10,
-            Opacity = 0.3,
-            Margin = new Thickness(0, 4, 0, 0)
-        });
+        Grid.SetRow(textArea, 0);
+        root.Children.Add(textArea);
+
+        // Bottom: just the capture time
+        var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
+        info.Children.Add(new TextBlock { Text = "Text", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold });
+        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.3, Margin = new Thickness(0, 2, 0, 0) });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
