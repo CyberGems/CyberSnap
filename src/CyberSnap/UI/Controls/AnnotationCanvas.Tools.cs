@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
 using System.Windows.Forms;
 using CyberSnap.Capture;
 using CyberSnap.Helpers;
@@ -17,6 +18,14 @@ public sealed partial class AnnotationCanvas
     private Point _dragStartImg;
     private Point _dragLastImg;
     private List<Point>? _currentStroke;
+
+    // Last cursor position in image space (for the Emoji placement ghost).
+    private Point _hoverImg;
+    private bool _hoverImgValid;
+
+    /// <summary>Raised when the Emoji tool is clicked with no emoji chosen yet, so the
+    /// host can open its picker.</summary>
+    public event EventHandler? EmojiPlacementRequested;
 
     // Crop rectangle pending confirmation (image-space)
     private Rectangle _cropRect = Rectangle.Empty;
@@ -149,6 +158,7 @@ public sealed partial class AnnotationCanvas
             case CanvasTool.Rect:
             case CanvasTool.Circle:
             case CanvasTool.Highlight:
+            case CanvasTool.Blur:
                 _dragStartImg = img;
                 _dragLastImg = img;
                 _isDragging = true;
@@ -189,6 +199,28 @@ public sealed partial class AnnotationCanvas
             case CanvasTool.Text:
                 BeginInlineText(img);
                 break;
+            case CanvasTool.StepNumber:
+                int next = _annotations.OfType<StepNumberAnnotation>()
+                    .Select(s => s.Number).DefaultIfEmpty(0).Max() + 1;
+                Push(new AddAnnotationCommand(new StepNumberAnnotation(img, next, ToolColor)));
+                break;
+            case CanvasTool.Magnifier:
+                int srcSz = 50;
+                int sx = Math.Clamp(img.X - srcSz / 2, 0, Math.Max(0, _baseBitmap.Width - srcSz));
+                int sy = Math.Clamp(img.Y - srcSz / 2, 0, Math.Max(0, _baseBitmap.Height - srcSz));
+                Push(new AddAnnotationCommand(new MagnifierAnnotation(img, new Rectangle(sx, sy, srcSz, srcSz))));
+                break;
+            case CanvasTool.Emoji:
+                if (!string.IsNullOrEmpty(_selectedEmoji))
+                {
+                    var emojiPos = new Point(img.X - (int)(_emojiPlaceSize / 2), img.Y - (int)(_emojiPlaceSize / 2));
+                    Push(new AddAnnotationCommand(new EmojiAnnotation(emojiPos, _selectedEmoji, _emojiPlaceSize)));
+                }
+                else
+                {
+                    EmojiPlacementRequested?.Invoke(this, EventArgs.Empty);
+                }
+                break;
         }
     }
 
@@ -226,6 +258,15 @@ public sealed partial class AnnotationCanvas
             return;
         }
 
+        // Emoji placement ghost: track the cursor and repaint so the preview follows it.
+        if (_activeTool == CanvasTool.Emoji && !string.IsNullOrEmpty(_selectedEmoji) && !_isDragging)
+        {
+            _hoverImg = ScreenToImage(e.Location);
+            _hoverImgValid = true;
+            Invalidate();
+            return;
+        }
+
         if (!_isDragging && !_cropDragging) return;
 
         var img = ScreenToImage(e.Location);
@@ -259,6 +300,7 @@ public sealed partial class AnnotationCanvas
             case CanvasTool.Rect:
             case CanvasTool.Circle:
             case CanvasTool.Highlight:
+            case CanvasTool.Blur:
                 _dragLastImg = img;
                 Invalidate();
                 break;
@@ -344,6 +386,12 @@ public sealed partial class AnnotationCanvas
                     Push(new AddAnnotationCommand(new HighlightAnnotation(hlRect, ToolColor)));
                 Invalidate();
                 break;
+            case CanvasTool.Blur:
+                var blurRect = NormRect(_dragStartImg, _dragLastImg);
+                if (blurRect.Width >= 4 && blurRect.Height >= 4)
+                    Push(new AddAnnotationCommand(new BlurRect(blurRect)));
+                Invalidate();
+                break;
             case CanvasTool.CurvedArrow when _currentStroke is { Count: >= 2 }:
                 Push(new AddAnnotationCommand(new CurvedArrowAnnotation(_currentStroke, ToolColor, StrokeWidth)));
                 _currentStroke = null;
@@ -364,6 +412,11 @@ public sealed partial class AnnotationCanvas
         if (_eraserHoverIndex >= 0)
         {
             _eraserHoverIndex = -1;
+            Invalidate();
+        }
+        if (_hoverImgValid)
+        {
+            _hoverImgValid = false;
             Invalidate();
         }
     }
@@ -388,6 +441,16 @@ public sealed partial class AnnotationCanvas
         if (_inlineTextBox is not null)
         {
             AdjustTextFontSize(e.Delta > 0 ? 2f : -2f);
+            return;
+        }
+
+        // With the Emoji tool active, the wheel sizes the emoji to be placed (matches
+        // the capture overlay); zoom is unaffected for every other tool.
+        if (_activeTool == CanvasTool.Emoji)
+        {
+            EmojiPlaceSize = _emojiPlaceSize + (e.Delta > 0 ? 4f : -4f);
+            ShowToolBanner($"Emoji size: {(int)_emojiPlaceSize}px");
+            Invalidate();
             return;
         }
 
@@ -462,6 +525,13 @@ public sealed partial class AnnotationCanvas
 
     private void RenderToolPreview(Graphics g)
     {
+        // Emoji ghost follows the cursor (click-to-place, so there is no drag).
+        if (_activeTool == CanvasTool.Emoji && !string.IsNullOrEmpty(_selectedEmoji) && _hoverImgValid)
+        {
+            var ghostPos = new Point(_hoverImg.X - (int)(_emojiPlaceSize / 2), _hoverImg.Y - (int)(_emojiPlaceSize / 2));
+            PaintEmoji(g, ghostPos, _selectedEmoji, _emojiPlaceSize, 0.6f);
+        }
+
         if (!_isDragging) return;
 
         switch (_activeTool)
@@ -498,6 +568,11 @@ public sealed partial class AnnotationCanvas
                     using (var brush = new SolidBrush(Color.FromArgb(92, ToolColor.R, ToolColor.G, ToolColor.B)))
                         g.FillPath(brush, path);
                 }
+                break;
+            case CanvasTool.Blur:
+                var blurPrev = NormRect(_dragStartImg, _dragLastImg);
+                if (blurPrev.Width > 2 && blurPrev.Height > 2)
+                    PaintBlurRect(g, blurPrev);
                 break;
         }
     }

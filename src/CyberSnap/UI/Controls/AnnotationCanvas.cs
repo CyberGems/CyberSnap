@@ -31,6 +31,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         Crop,
         Eraser,
         Highlight,
+        Blur,
+        StepNumber,
+        Magnifier,
+        Emoji,
     }
 
     private const int UndoStackLimit = 200;
@@ -59,6 +63,28 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     // Eraser hover highlight
     private int _eraserHoverIndex = -1;
+
+    // Blur / Step / Magnifier / Emoji tool state
+    private readonly CyberSnap.Capture.EmojiRenderer _emojiRenderer = new();
+    private Bitmap? _blurScratch;
+    private string? _selectedEmoji;
+    private float _emojiPlaceSize = 32f;
+
+    /// <summary>Emoji glyph placed by the Emoji tool on the next click. Set by the editor's picker.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string? SelectedEmoji
+    {
+        get => _selectedEmoji;
+        set => _selectedEmoji = value;
+    }
+
+    /// <summary>Pixel size for emoji placed by the Emoji tool (clamped 16–128).</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float EmojiPlaceSize
+    {
+        get => _emojiPlaceSize;
+        set => _emojiPlaceSize = Math.Clamp(value, 16f, 128f);
+    }
 
     public AnnotationCanvas(Bitmap baseBitmap)
     {
@@ -453,6 +479,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             _bannerTimer?.Stop();
             _bannerTimer?.Dispose();
             ClearEditHistory();
+            _emojiRenderer.Dispose();
+            _blurScratch?.Dispose();
             _baseBitmap?.Dispose();
         }
         base.Dispose(disposing);

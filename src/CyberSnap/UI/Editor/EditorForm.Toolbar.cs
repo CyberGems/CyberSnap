@@ -40,6 +40,7 @@ public sealed partial class EditorForm
     private EditorToggleSwitch _toggleFrameSwitch = null!;
     private EditorToggleSwitch _toggleFitSwitch = null!;
     private readonly Dictionary<AnnotationCanvas.CanvasTool, EditorToolButton> _toolButtons = new();
+    private EmojiPickerPopup? _emojiPicker;
     private readonly Dictionary<Color, EditorColorButton> _colorButtons = new();
     private readonly List<EditorStrokeWidthButton> _strokeWidthButtons = new();
     private const int CropSectionExpandedHeight = 86;
@@ -563,44 +564,92 @@ public sealed partial class EditorForm
     private Control BuildToolSection()
     {
         var section = MakeSectionPanel("Tools", 560);
-        var grid = new TableLayoutPanel
+
+        // The Tools section keeps two visually distinct groups at the SAME total height
+        // (so the editor window layout stays pixel-identical after a capture):
+        //   • Navigation/utility tools — 2 columns, wider buttons (2 of 6 rows worth)
+        //   • Drawing/annotation tools — 3 columns, denser palette (4 of 6 rows worth)
+        // The density change reinforces the group boundary the divider already draws.
+        var host = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            ColumnCount = 1,
+            RowCount = 2,
+            Padding = new Padding(0, 2, 0, 0),
+        };
+        EnableDoubleBuffering(host);
+        host.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        host.RowStyles.Add(new RowStyle(SizeType.Percent, 33.34f)); // 2/6
+        host.RowStyles.Add(new RowStyle(SizeType.Percent, 66.66f)); // 4/6
+
+        var nav = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
             ColumnCount = 2,
-            RowCount = 6,
-            Padding = new Padding(0, 2, 0, 0),
+            RowCount = 2,
         };
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        for (int i = 0; i < 6; i++)
-            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 16.66f));
+        nav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        nav.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        nav.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        nav.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
-        AddToolButton(grid, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
-        AddToolButton(grid, 1, 0, AnnotationCanvas.CanvasTool.Select, "select", "Select");
-        AddToolButton(grid, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop");
-        AddToolButton(grid, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser");
-        AddToolButton(grid, 0, 2, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw");
-        AddToolButton(grid, 1, 2, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow");
-        AddToolButton(grid, 0, 3, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", "Curved arrow");
-        AddToolButton(grid, 1, 3, AnnotationCanvas.CanvasTool.Line, "line", "Line");
-        AddToolButton(grid, 0, 4, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle");
-        AddToolButton(grid, 1, 4, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle");
-        AddToolButton(grid, 0, 5, AnnotationCanvas.CanvasTool.Text, "text", "Text");
-        AddToolButton(grid, 1, 5, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight");
+        AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
+        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Select, "select", "Select");
+        AddToolButton(nav, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop");
+        AddToolButton(nav, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser");
 
-        // Subtle divider between the selection/navigation tools (rows 0-1) and the
-        // drawing tools (rows 2-5). It is painted in the whitespace gap that already
-        // exists between the button margins, so it costs no vertical layout space.
-        grid.Paint += (_, e) =>
+        var draw = new TableLayoutPanel
         {
-            var heights = grid.GetRowHeights();
-            if (heights.Length < 3) return;
-            int y = grid.Padding.Top + heights[0] + heights[1];
-            DrawToolGroupDivider(e.Graphics, grid.ClientRectangle.Width, y);
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            ColumnCount = 3,
+            RowCount = 4,
+        };
+        for (int c = 0; c < 3; c++)
+            draw.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+        for (int r = 0; r < 4; r++)
+            draw.RowStyles.Add(new RowStyle(SizeType.Percent, 25f));
+
+        AddToolButton(draw, 0, 0, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw");
+        AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow");
+        AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", "Curved");
+        AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line");
+        AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle");
+        AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle");
+        AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text");
+        AddToolButton(draw, 1, 2, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight");
+        AddToolButton(draw, 2, 2, AnnotationCanvas.CanvasTool.Blur, "blur", "Blur");
+        AddToolButton(draw, 0, 3, AnnotationCanvas.CanvasTool.StepNumber, "step", "Step");
+        AddToolButton(draw, 1, 3, AnnotationCanvas.CanvasTool.Magnifier, "magnifier", "Magnifier");
+        AddToolButton(draw, 2, 3, AnnotationCanvas.CanvasTool.Emoji, "emoji", "Emoji");
+
+        // Second divider inside the drawing group: between the line/shape row (1) and the
+        // text/highlight/blur row (2). Painted in the existing button-margin gap, so it
+        // costs no vertical layout space — same technique as the group divider.
+        draw.Paint += (_, e) =>
+        {
+            var heights = draw.GetRowHeights();
+            if (heights.Length < 2) return;
+            int y = draw.Padding.Top + heights[0] + heights[1];
+            DrawToolGroupDivider(e.Graphics, draw.ClientRectangle.Width, y);
         };
 
-        section.Controls.Add(grid, 0, 1);
+        // Divider painted in the gap between the two groups (between host rows 0 and 1),
+        // so it costs no vertical layout space — same technique as before.
+        host.Paint += (_, e) =>
+        {
+            var heights = host.GetRowHeights();
+            if (heights.Length < 1) return;
+            int y = host.Padding.Top + heights[0];
+            DrawToolGroupDivider(e.Graphics, host.ClientRectangle.Width, y);
+        };
+
+        host.Controls.Add(nav, 0, 0);
+        host.Controls.Add(draw, 0, 1);
+
+        section.Controls.Add(host, 0, 1);
         return section;
     }
 
@@ -782,18 +831,23 @@ public sealed partial class EditorForm
         string labelKey)
     {
         var label = LocalizationService.Translate(labelKey);
-        // Rows 1 and 2 straddle the group divider, so they get +2px of breathing room
-        // on the divider side (bottom of row 1, top of row 2).
-        int topMargin = row == 0 ? 2 : (row == 2 ? 6 : 4);
-        int bottomMargin = row == 1 ? 6 : 4;
+        // Even gutters between buttons; outer edges flush so the grid fills the column.
+        int cols = parent.ColumnCount;
+        int left = column == 0 ? 0 : 4;
+        int right = column == cols - 1 ? 0 : 4;
         var button = new EditorToolButton
         {
             Dock = DockStyle.Fill,
-            Margin = new Padding(column == 0 ? 0 : 4, topMargin, column == 0 ? 4 : 0, bottomMargin),
+            Margin = new Padding(left, 4, right, 4),
             IconId = iconId,
             Text = label,
         };
-        button.Click += (_, _) => _canvas.ActiveTool = tool;
+        button.Click += (_, _) =>
+        {
+            _canvas.ActiveTool = tool;
+            if (tool == AnnotationCanvas.CanvasTool.Emoji)
+                OpenEmojiPicker(button);
+        };
         _toolButtons[tool] = button;
         parent.Controls.Add(button, column, row);
     }
@@ -846,6 +900,32 @@ public sealed partial class EditorForm
         _windowStateButton.IconId = _isManualMaximized ? "restore" : "maximize";
         _windowStateButton.AccessibleName =
             LocalizationService.Translate(_isManualMaximized ? "Restore" : "Maximize");
+    }
+
+    private EditorToolButton? GetEmojiToolButton() =>
+        _toolButtons.TryGetValue(AnnotationCanvas.CanvasTool.Emoji, out var b) ? b : null;
+
+    private void OpenEmojiPicker(EditorToolButton? anchor)
+    {
+        if (_emojiPicker is { IsDisposed: false })
+        {
+            _emojiPicker.Activate();
+            return;
+        }
+
+        _emojiPicker = new EmojiPickerPopup();
+        _emojiPicker.EmojiChosen += emoji =>
+        {
+            _canvas.SelectedEmoji = emoji;
+            _canvas.ActiveTool = AnnotationCanvas.CanvasTool.Emoji;
+            _canvas.Focus();
+        };
+        _emojiPicker.FormClosed += (_, _) => _emojiPicker = null;
+
+        var anchorRect = anchor is not null
+            ? anchor.RectangleToScreen(anchor.ClientRectangle)
+            : new Rectangle(Cursor.Position, Size.Empty);
+        _emojiPicker.ShowNear(anchorRect);
     }
 
     private static void OpenSettingsWindow()
@@ -1031,6 +1111,10 @@ public sealed partial class EditorForm
             AnnotationCanvas.CanvasTool.Circle => "Circle",
             AnnotationCanvas.CanvasTool.Eraser => "Eraser",
             AnnotationCanvas.CanvasTool.Highlight => "Highlight",
+            AnnotationCanvas.CanvasTool.Blur => "Blur",
+            AnnotationCanvas.CanvasTool.StepNumber => "Step Number",
+            AnnotationCanvas.CanvasTool.Magnifier => "Magnifier",
+            AnnotationCanvas.CanvasTool.Emoji => "Emoji",
             _ => "Ready",
         };
     }
