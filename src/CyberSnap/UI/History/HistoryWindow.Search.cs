@@ -485,7 +485,8 @@ public partial class HistoryWindow
         UpdateHistoryActionButtons();
 
         // Auto-pruning card visibility
-        AutoPruneCard.Visibility = _settingsService.Settings.ShowAutoPrune ? Visibility.Visible : Visibility.Collapsed;
+        var showPrune = _settingsService.Settings.ShowAutoPrune && !_autoPruneRowAutoHidden;
+        AutoPruneCard.Visibility = showPrune ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SetImageSearchRowAutoHidden(bool hidden)
@@ -494,6 +495,15 @@ public partial class HistoryWindow
             return;
 
         _imageSearchRowAutoHidden = hidden;
+        UpdateImageSearchUi();
+    }
+
+    private void SetAutoPruneRowAutoHidden(bool hidden)
+    {
+        if (_autoPruneRowAutoHidden == hidden)
+            return;
+
+        _autoPruneRowAutoHidden = hidden;
         UpdateImageSearchUi();
     }
 }

@@ -38,6 +38,7 @@ public partial class HistoryWindow
     private int _historyRenderCount;
     private int _gifRenderCount;
     private bool _imageSearchRowAutoHidden;
+    private bool _autoPruneRowAutoHidden;
     private bool _suppressHistorySearchBoxTextEvents;
     private const int HistoryPageSize = 60;
     private const int HistoryInitialPageSize = 18;
@@ -324,6 +325,7 @@ public partial class HistoryWindow
         HideHistoryEmptyState();
         HistoryCountText.Text = "Loading captures...";
         _imageSearchRowAutoHidden = false;
+        _autoPruneRowAutoHidden = false;
         _lastImmediateSearchQuery = "";
         _lastImmediateSearchSources = ImageSearchSourceOptions.None;
         _lastImmediateSearchExactMatch = false;
