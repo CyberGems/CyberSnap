@@ -171,8 +171,15 @@ public partial class HistoryWindow : Window
 
         _pendingNavigateToPath = filePath;
 
-        if (HistoryCategoryCombo.SelectedIndex > 1) // not All or Images
-            HistoryCategoryCombo.SelectedIndex = 0; // switch to All
+        // Don't force-switch the filter — respect whatever the user has selected.
+        // If the current filter can't show this item, just refresh the current view.
+        if (HistoryCategoryCombo.SelectedIndex == 0)
+        {
+            // All view: refresh to pick up the new item
+            if (IsLoaded && HistoryTab.IsChecked == true)
+                LoadAllHistory();
+            return;
+        }
 
         _imageSearchQuery = "";
         if (ImageSearchBox != null) ImageSearchBox.Text = "";
