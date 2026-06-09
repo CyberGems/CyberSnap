@@ -323,6 +323,11 @@ public partial class HistoryWindow
         {
             SetImageSearchRowAutoHidden(false);
             SetAutoPruneRowAutoHidden(false);
+            ImageSearchBorder.BorderBrush = Theme.Brush(Theme.Accent);
+        }
+        else
+        {
+            ImageSearchBorder.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush");
         }
 
         ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(ImageSearchBox.Text) && !ImageSearchBox.IsKeyboardFocused
