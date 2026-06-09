@@ -287,35 +287,39 @@ public sealed partial class HistoryService
 
     private void PruneByCount_NoLock(int maxCount, bool deleteOriginalFiles)
     {
-        if (maxCount <= 0 || _entries.Count <= maxCount)
+        if (maxCount <= 0)
             return;
 
         // Prune image entries by count (newest first)
-        var entriesToRemove = _entries.Skip(maxCount).ToList();
-        foreach (var entry in entriesToRemove)
+        if (_entries.Count > maxCount)
         {
-            _entriesByPath.Remove(entry.FilePath);
-            TryDeleteManagedThumbnail_NoLock(entry.FilePath);
-            if (deleteOriginalFiles)
-                TryDeleteHistoryFile_NoLock(entry.FilePath, "count prune");
+            var entriesToRemove = _entries.Skip(maxCount).ToList();
+            foreach (var entry in entriesToRemove)
+            {
+                _entriesByPath.Remove(entry.FilePath);
+                TryDeleteManagedThumbnail_NoLock(entry.FilePath);
+                if (deleteOriginalFiles)
+                    TryDeleteHistoryFile_NoLock(entry.FilePath, "count prune");
+            }
+            _entries.RemoveRange(maxCount, _entries.Count - maxCount);
+            QueueEntryDeletes_NoLock(entriesToRemove.Select(e => e.FilePath));
         }
-        _entries.RemoveRange(maxCount, _entries.Count - maxCount);
 
         // Also prune OCR, color, and code entries by same count limit (newest first)
-        if (_ocrEntries.Count > maxCount)
-            _ocrEntries.RemoveRange(maxCount, _ocrEntries.Count - maxCount);
-        if (_colorEntries.Count > maxCount)
-            _colorEntries.RemoveRange(maxCount, _colorEntries.Count - maxCount);
-        if (_codeEntries.Count > maxCount)
-            _codeEntries.RemoveRange(maxCount, _codeEntries.Count - maxCount);
+        bool prunedOther = false;
+        if (_ocrEntries.Count > maxCount) { _ocrEntries.RemoveRange(maxCount, _ocrEntries.Count - maxCount); prunedOther = true; }
+        if (_colorEntries.Count > maxCount) { _colorEntries.RemoveRange(maxCount, _colorEntries.Count - maxCount); prunedOther = true; }
+        if (_codeEntries.Count > maxCount) { _codeEntries.RemoveRange(maxCount, _codeEntries.Count - maxCount); prunedOther = true; }
 
-        InvalidateFilteredCache();
-        QueueEntryDeletes_NoLock(entriesToRemove.Select(e => e.FilePath));
-        MarkEntriesRewrite_NoLock();
-        _ocrDirty = true;
-        _colorDirty = true;
-        _codeDirty = true;
-        ScheduleFlush_NoLock();
+        if (prunedOther)
+        {
+            InvalidateFilteredCache();
+            MarkEntriesRewrite_NoLock();
+            _ocrDirty = true;
+            _colorDirty = true;
+            _codeDirty = true;
+            ScheduleFlush_NoLock();
+        }
     }
 
     public void SaveIndex()
