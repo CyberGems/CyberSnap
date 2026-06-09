@@ -292,9 +292,9 @@ public partial class HistoryWindow
         root.Children.Add(textArea);
 
         // Bottom: just the capture time
-        var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
-        info.Children.Add(new TextBlock { Text = "Text", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.3, Margin = new Thickness(0, 2, 0, 0) });
+        var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
+        info.Children.Add(new TextBlock { Text = "Text", FontSize = 11, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), TextTrimming = TextTrimming.CharacterEllipsis });
+        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), Opacity = 0.3, TextTrimming = TextTrimming.CharacterEllipsis });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
@@ -350,7 +350,7 @@ public partial class HistoryWindow
         Grid.SetRow(swatchArea, 0);
         root.Children.Add(swatchArea);
 
-        var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
+        var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
         // Single line: "Color  #FF8844"
         info.Children.Add(new TextBlock
         {
@@ -360,7 +360,7 @@ public partial class HistoryWindow
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
             TextTrimming = TextTrimming.CharacterEllipsis
         });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 2, 0, 0) });
+        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), Opacity = 0.3, TextTrimming = TextTrimming.CharacterEllipsis });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
@@ -422,10 +422,17 @@ public partial class HistoryWindow
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 
-        var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
-        info.Children.Add(new TextBlock { Text = "Code", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) });
-        info.Children.Add(new TextBlock { Text = HumanizeBarcodeFormat(format), FontSize = 11, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName) });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
+        var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
+        // Single line: "Code  QR Code" (type + format)
+        info.Children.Add(new TextBlock
+        {
+            Text = $"Code  {HumanizeBarcodeFormat(format)}",
+            FontSize = 11,
+            FontWeight = FontWeights.Bold,
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), Opacity = 0.3, TextTrimming = TextTrimming.CharacterEllipsis });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
