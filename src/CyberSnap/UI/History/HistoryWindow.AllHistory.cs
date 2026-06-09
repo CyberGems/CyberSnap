@@ -268,8 +268,8 @@ public partial class HistoryWindow
         // Top: the actual text content (replaces the image thumbnail area)
         var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(textArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
-        AttachCardMenu(card, textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
         var displayText = text.Length > 80 ? text[..80] + "…" : text;
+        // Add TextBlock BEFORE AttachCardMenu so the action button sits on top (Z-order)
         textArea.Children.Add(new TextBlock
         {
             Text = displayText,
@@ -278,10 +278,11 @@ public partial class HistoryWindow
             TextTrimming = TextTrimming.CharacterEllipsis,
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
             Foreground = Theme.Brush(Theme.TextPrimary),
-            Margin = new Thickness(10),
+            Margin = new Thickness(10, 10, 48, 10),  // extra right margin so text doesn't invade badge
             VerticalAlignment = VerticalAlignment.Center,
-            MaxWidth = HistoryCardPreferredWidth - 20  // constrain to card width minus padding
+            MaxWidth = HistoryCardPreferredWidth - 20
         });
+        AttachCardMenu(card, textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 
@@ -358,7 +359,6 @@ public partial class HistoryWindow
 
         var previewArea = new Grid { Background = Brushes.White, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(previewArea, "QR", System.Windows.Media.Color.FromRgb(120, 200, 120));
-        AttachCardMenu(card, previewArea, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
         var previewKey = $"{text}|{format}";
         if (!_allCodePreviewCache.TryGetValue(previewKey, out var previewSrc))
         {
@@ -373,7 +373,8 @@ public partial class HistoryWindow
 
         var img = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(16), Source = previewSrc };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
-        previewArea.Children.Add(img);
+        previewArea.Children.Add(img);  // add image BEFORE AttachCardMenu so button is on top
+        AttachCardMenu(card, previewArea, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 
@@ -497,6 +498,7 @@ public partial class HistoryWindow
             Content = "···",
             Visibility = Visibility.Collapsed
         };
+        System.Windows.Controls.Panel.SetZIndex(btn, 999);  // ensure button always sits above other children
         menu.PlacementTarget = btn;
         btn.Click += (_, _) => menu.IsOpen = true;
 
