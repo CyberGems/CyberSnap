@@ -99,6 +99,16 @@ public sealed partial class AnnotationCanvas
     // ── Magnifier ────────────────────────────────────────────────────────────
 
     private const int MagnifierZoom = 3;
+    private const int MagnifierSrcSize = 50;
+
+    /// <summary>Source region (image-space) the magnifier samples for a point at <paramref name="img"/>,
+    /// clamped to the base bitmap. Shared by placement and the hover preview.</summary>
+    private Rectangle GetMagnifierSrcRect(Point img)
+    {
+        int sx = Math.Clamp(img.X - MagnifierSrcSize / 2, 0, Math.Max(0, _baseBitmap.Width - MagnifierSrcSize));
+        int sy = Math.Clamp(img.Y - MagnifierSrcSize / 2, 0, Math.Max(0, _baseBitmap.Height - MagnifierSrcSize));
+        return new Rectangle(sx, sy, MagnifierSrcSize, MagnifierSrcSize);
+    }
 
     /// <summary>Visual bounds (image-space) of a placed magnifier lens, used for repaint
     /// invalidation. Mirrors the placement math in <see cref="PaintMagnifier"/>.</summary>
@@ -112,7 +122,7 @@ public sealed partial class AnnotationCanvas
         return new Rectangle(px - 6, py - 6, dstSize + 12, dstSize + 12);
     }
 
-    private void PaintMagnifier(Graphics g, Point pos, Rectangle srcRect)
+    private void PaintMagnifier(Graphics g, Point pos, Rectangle srcRect, float opacity = 1f)
     {
         int dstSize = srcRect.Width * MagnifierZoom;
 
@@ -130,7 +140,7 @@ public sealed partial class AnnotationCanvas
             using (var bgPath = new GraphicsPath())
             {
                 bgPath.AddEllipse(new RectangleF(px - 2, py - 2, dstSize + 4, dstSize + 4));
-                var bg = SketchRenderer.GetToolColorBrush(Color.FromArgb(200, UiChrome.SurfaceElevated.R, UiChrome.SurfaceElevated.G, UiChrome.SurfaceElevated.B));
+                var bg = SketchRenderer.GetToolColorBrush(Color.FromArgb((int)(200 * opacity), UiChrome.SurfaceElevated.R, UiChrome.SurfaceElevated.G, UiChrome.SurfaceElevated.B));
                 g.FillPath(bg, bgPath);
             }
 
@@ -142,13 +152,13 @@ public sealed partial class AnnotationCanvas
             g.DrawImage(_baseBitmap, dstRect, srcRect, GraphicsUnit.Pixel);
 
             int ccx = px + dstSize / 2, ccy = py + dstSize / 2;
-            var crossPen = SketchRenderer.GetRoundCapPen(Color.FromArgb(180, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B), 1f);
+            var crossPen = SketchRenderer.GetRoundCapPen(Color.FromArgb((int)(180 * opacity), UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B), 1f);
             g.DrawLine(crossPen, ccx - 8, ccy, ccx + 8, ccy);
             g.DrawLine(crossPen, ccx, ccy - 8, ccx, ccy + 8);
 
             g.ResetClip();
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            var borderPen = SketchRenderer.GetRoundCapPen(Color.FromArgb(70, UiChrome.SurfaceBorderStrong.R, UiChrome.SurfaceBorderStrong.G, UiChrome.SurfaceBorderStrong.B), 1f);
+            var borderPen = SketchRenderer.GetRoundCapPen(Color.FromArgb((int)(70 * opacity), UiChrome.SurfaceBorderStrong.R, UiChrome.SurfaceBorderStrong.G, UiChrome.SurfaceBorderStrong.B), 1f);
             g.DrawPath(borderPen, clipPath);
         }
         finally

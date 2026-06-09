@@ -205,10 +205,7 @@ public sealed partial class AnnotationCanvas
                 Push(new AddAnnotationCommand(new StepNumberAnnotation(img, next, ToolColor)));
                 break;
             case CanvasTool.Magnifier:
-                int srcSz = 50;
-                int sx = Math.Clamp(img.X - srcSz / 2, 0, Math.Max(0, _baseBitmap.Width - srcSz));
-                int sy = Math.Clamp(img.Y - srcSz / 2, 0, Math.Max(0, _baseBitmap.Height - srcSz));
-                Push(new AddAnnotationCommand(new MagnifierAnnotation(img, new Rectangle(sx, sy, srcSz, srcSz))));
+                Push(new AddAnnotationCommand(new MagnifierAnnotation(img, GetMagnifierSrcRect(img))));
                 break;
             case CanvasTool.Emoji:
                 if (!string.IsNullOrEmpty(_selectedEmoji))
@@ -258,8 +255,11 @@ public sealed partial class AnnotationCanvas
             return;
         }
 
-        // Emoji placement ghost: track the cursor and repaint so the preview follows it.
-        if (_activeTool == CanvasTool.Emoji && !string.IsNullOrEmpty(_selectedEmoji) && !_isDragging)
+        // Placement ghost for the click-to-place tools (Emoji needs a chosen glyph):
+        // track the cursor and repaint so the translucent preview follows it.
+        if (!_isDragging &&
+            (_activeTool == CanvasTool.Magnifier ||
+             (_activeTool == CanvasTool.Emoji && !string.IsNullOrEmpty(_selectedEmoji))))
         {
             _hoverImg = ScreenToImage(e.Location);
             _hoverImgValid = true;
@@ -531,6 +531,10 @@ public sealed partial class AnnotationCanvas
             var ghostPos = new Point(_hoverImg.X - (int)(_emojiPlaceSize / 2), _hoverImg.Y - (int)(_emojiPlaceSize / 2));
             PaintEmoji(g, ghostPos, _selectedEmoji, _emojiPlaceSize, 0.6f);
         }
+
+        // Magnifier lens preview follows the cursor before the click places it.
+        if (_activeTool == CanvasTool.Magnifier && _hoverImgValid)
+            PaintMagnifier(g, _hoverImg, GetMagnifierSrcRect(_hoverImg), 0.65f);
 
         if (!_isDragging) return;
 
