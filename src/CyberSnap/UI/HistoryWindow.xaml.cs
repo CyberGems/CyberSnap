@@ -652,7 +652,7 @@ public partial class HistoryWindow : Window
             }
 
             if (!reloadFromDisk && refreshLoadedData &&
-                HistoryCategoryCombo.SelectedIndex <= 1 &&
+                HistoryCategoryCombo.SelectedIndex == 1 && // Only incremental for Images view
                 TryRefreshLoadedImageHistoryIncrementally())
             {
                 PrimeHistoryFingerprint();
