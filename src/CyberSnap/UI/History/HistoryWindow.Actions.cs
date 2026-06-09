@@ -250,7 +250,6 @@ public partial class HistoryWindow
             if (!IsLoaded || _suppressHistorySearchBoxTextEvents)
                 return;
 
-            SetImageSearchRowAutoHidden(false);
             SetAutoPruneRowAutoHidden(false);
             var text = ImageSearchBox.Text ?? "";
             ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(text) && !ImageSearchBox.IsKeyboardFocused
@@ -321,7 +320,6 @@ public partial class HistoryWindow
     {
         if (ImageSearchBox.IsKeyboardFocused)
         {
-            SetImageSearchRowAutoHidden(false);
             SetAutoPruneRowAutoHidden(false);
             ImageSearchBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(60, 0, 255, 255));  // very soft cyan
@@ -451,15 +449,7 @@ public partial class HistoryWindow
 
     private void HistoryPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        if (HistoryCategoryCombo.SelectedIndex <= 1 && _settingsService.Settings.ShowImageSearchBar)
-        {
-            var shouldHideSearch = e.VerticalOffset > 18 &&
-                                   !ImageSearchBox.IsKeyboardFocused &&
-                                   string.IsNullOrWhiteSpace(_imageSearchQuery);
-            SetImageSearchRowAutoHidden(shouldHideSearch);
-        }
-
-        // Auto-hide pruning card on scroll (same threshold as search)
+        // Auto-hide pruning card on scroll
         var shouldHidePrune = e.VerticalOffset > 18;
         SetAutoPruneRowAutoHidden(shouldHidePrune);
 
