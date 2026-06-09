@@ -401,6 +401,13 @@ public partial class HistoryWindow
         }
     }
 
+    private void ImageSearchChevron_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        ImageSearchFiltersMenu.PlacementTarget = ImageSearchChevron;
+        ImageSearchFiltersMenu.IsOpen = true;
+    }
+
     private void HistoryPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         if (HistoryCategoryCombo.SelectedIndex <= 1 && _settingsService.Settings.ShowImageSearchBar)
