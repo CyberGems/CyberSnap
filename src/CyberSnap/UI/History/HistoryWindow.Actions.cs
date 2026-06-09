@@ -101,12 +101,12 @@ public partial class HistoryWindow
         {
             var isIndexing = _imageSearchIndexService.StatusText.StartsWith("Indexing screenshots", StringComparison.OrdinalIgnoreCase);
             placeholder = isIndexing
-                ? "Search screenshots (indexing...)"
-                : "Search screenshots";
-            automationName = "Screenshot history search";
+                ? "Search... (indexing)"
+                : "Search...";
+            automationName = "History search";
             helpText = isIndexing
-                ? "Search screenshots while the image search index continues updating."
-                : "Search screenshots by file name or indexed OCR text.";
+                ? "Search your capture history while the index continues updating."
+                : "Search your capture history by file name, OCR text, color hex, or code content.";
         }
 
         ImageSearchPlaceholder.Text = placeholder;
@@ -518,6 +518,10 @@ public partial class HistoryWindow
         {
             _suppressPrunePreferenceChange = false;
         }
+
+        // Apply pruning on startup so limits take effect immediately
+        _historyService.PruneByRetention(_settingsService.Settings.HistoryRetention);
+        _historyService.PruneByCount(_settingsService.Settings.HistoryCountLimit, _settingsService.Settings.HistoryDeleteOriginalOnPrune);
     }
 
     private void HistoryRetentionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
