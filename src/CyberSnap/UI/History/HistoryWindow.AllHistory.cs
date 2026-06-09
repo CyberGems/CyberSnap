@@ -266,7 +266,8 @@ public partial class HistoryWindow
         _unifiedCardEntries[card] = entry;
 
         var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
+        var imageRow = new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) };
+        root.RowDefinitions.Add(imageRow);
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         // Top: the actual text content (replaces the image thumbnail area)
@@ -302,6 +303,7 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
+        card.SizeChanged += (_, _) => imageRow.Height = new GridLength(GetHistoryCardImageHeight(card.ActualWidth));
         card.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
@@ -332,7 +334,8 @@ public partial class HistoryWindow
         _unifiedCardEntries[card] = entry;
 
         var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
+        var imageRow = new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) };
+        root.RowDefinitions.Add(imageRow);
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
@@ -367,6 +370,7 @@ public partial class HistoryWindow
         root.Children.Add(infoBorder);
 
         card.Child = root;
+        card.SizeChanged += (_, _) => imageRow.Height = new GridLength(GetHistoryCardImageHeight(card.ActualWidth));
         card.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
@@ -396,7 +400,8 @@ public partial class HistoryWindow
         _unifiedCardEntries[card] = entry;
 
         var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
+        var imageRow = new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) };
+        root.RowDefinitions.Add(imageRow);
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var previewArea = new Grid { Background = Brushes.White, MaxWidth = HistoryCardPreferredWidth };
@@ -440,6 +445,7 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
+        card.SizeChanged += (_, _) => imageRow.Height = new GridLength(GetHistoryCardImageHeight(card.ActualWidth));
         card.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
