@@ -360,9 +360,9 @@
                                                   ToolTip="Show color history"
                                                   AutomationProperties.Name="Color history"
                                                   AutomationProperties.HelpText="Show saved color picks."/>
-                                    <ComboBoxItem Content="Codes"
+                                    <ComboBoxItem Content="QR &amp; Barcodes"
                                                   ToolTip="Show QR and barcode history"
-                                                  AutomationProperties.Name="Code history"
+                                                  AutomationProperties.Name="QR &amp; Barcode history"
                                                   AutomationProperties.HelpText="Show saved QR and barcode scans."/>
                                 </ComboBox>
                             </DockPanel>
