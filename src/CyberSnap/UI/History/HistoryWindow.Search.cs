@@ -29,9 +29,6 @@ public partial class HistoryWindow
 
     private void ApplyImageSearchFilter()
     {
-        if (HistoryCategoryCombo.SelectedIndex != 0)
-            return;
-
         var sources = _settingsService.Settings.ImageSearchSources;
         var exactMatch = _settingsService.Settings.ImageSearchExactMatch;
 
