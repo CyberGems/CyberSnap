@@ -289,6 +289,18 @@
         </Style>
 
         <!-- Themed scrollbar -->
+        <Style x:Key="HistoryScrollThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border CornerRadius="3" Background="{DynamicResource ThemeInputBorderBrush}" Margin="0,2"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="HistoryScrollBarStyle" TargetType="{x:Type ScrollBar}">
             <Setter Property="Width" Value="10"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -308,18 +320,6 @@
                                 </Track.IncreaseRepeatButton>
                             </Track>
                         </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="HistoryScrollThumbStyle" TargetType="{x:Type Thumb}">
-            <Setter Property="OverridesDefaultStyle" Value="True"/>
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Border CornerRadius="3" Background="{DynamicResource ThemeInputBorderBrush}" Margin="0,2"/>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
