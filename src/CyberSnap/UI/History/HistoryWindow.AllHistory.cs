@@ -43,6 +43,12 @@ public partial class HistoryWindow
         _unifiedCardEntries.Clear();
         HideHistoryEmptyState();
 
+        // Invalidate image-only cache so switching to Images tab forces a fresh load
+        _historyImageCacheReady = false;
+        _allHistoryItems.Clear();
+        _allHistoryItemsByPath.Clear();
+        _filteredHistoryItems.Clear();
+
         var unified = new List<UnifiedHistoryItem>();
 
         foreach (var img in _historyService.ImageEntries)

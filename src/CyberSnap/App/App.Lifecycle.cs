@@ -89,8 +89,6 @@ public partial class App
     private void ShowSettingsWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService)
     {
         var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService);
-        if (_historyWindow is { IsVisible: true })
-            win.Owner = _historyWindow;
         Action hotkeyHandler = RegisterHotkeys;
         Action uninstallHandler = BeginUninstall;
         Action localizationHandler = () =>
@@ -107,7 +105,8 @@ public partial class App
             win.UninstallRequested -= uninstallHandler;
             win.LocalizationChanged -= localizationHandler;
             _settingsWindow = null;
-            ScheduleIdleMemoryTrim();
+            // Defer GC compact to avoid layout jump when History window regains focus
+            Dispatcher.BeginInvoke(() => ScheduleIdleMemoryTrim(), System.Windows.Threading.DispatcherPriority.Background);
         };
         _settingsWindow = win;
         win.Show();
