@@ -323,15 +323,13 @@ public partial class HistoryWindow
         {
             SetImageSearchRowAutoHidden(false);
             SetAutoPruneRowAutoHidden(false);
-            ImageSearchBorder.BorderThickness = new Thickness(1);
             ImageSearchBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(60, 0, 255, 255));  // very soft cyan
             ImageSearchChevron.Visibility = Visibility.Visible;
         }
         else
         {
-            ImageSearchBorder.BorderThickness = new Thickness(0);
-            ImageSearchBorder.BorderBrush = null;
+            ImageSearchBorder.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush");
             ImageSearchChevron.Visibility = Visibility.Collapsed;
         }
 
@@ -404,7 +402,7 @@ public partial class HistoryWindow
     private void ImageSearchChevron_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         e.Handled = true;
-        ImageSearchFiltersMenu.PlacementTarget = ImageSearchChevron;
+        ImageSearchFiltersMenu.PlacementTarget = ImageSearchBox;
         ImageSearchFiltersMenu.IsOpen = true;
     }
 
@@ -418,6 +416,37 @@ public partial class HistoryWindow
     {
         ImageSearchBox.Clear();
         ImageSearchBox.Focus();
+    }
+
+    private void ImageSearchCut_Click(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(ImageSearchBox.SelectedText))
+        {
+            System.Windows.Clipboard.SetText(ImageSearchBox.SelectedText);
+            ImageSearchBox.SelectedText = "";
+        }
+    }
+
+    private void ImageSearchCopy_Click(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(ImageSearchBox.SelectedText))
+            System.Windows.Clipboard.SetText(ImageSearchBox.SelectedText);
+        else if (!string.IsNullOrEmpty(ImageSearchBox.Text))
+            System.Windows.Clipboard.SetText(ImageSearchBox.Text);
+    }
+
+    private void ImageSearchPaste_Click(object sender, RoutedEventArgs e)
+    {
+        if (System.Windows.Clipboard.ContainsText())
+        {
+            var pasteText = System.Windows.Clipboard.GetText();
+            if (!string.IsNullOrEmpty(pasteText))
+            {
+                var caret = ImageSearchBox.CaretIndex;
+                ImageSearchBox.Text = ImageSearchBox.Text.Insert(caret, pasteText);
+                ImageSearchBox.CaretIndex = caret + pasteText.Length;
+            }
+        }
     }
 
     private void HistoryPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
