@@ -802,7 +802,7 @@ public sealed partial class ScrollingCaptureForm : Form
         }
         else if (!_isDragging)
         {
-            string hint = "Drag to select scrolling area";
+            string hint = "Drag to Select Scrolling Area";
             // Center the hint on each individual monitor instead of the
             // combined virtual desktop so the text doesn't get split across
             // monitor boundaries on multi-monitor setups.

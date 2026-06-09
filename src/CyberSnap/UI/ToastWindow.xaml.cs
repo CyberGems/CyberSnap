@@ -517,6 +517,9 @@ public partial class ToastWindow : Window
                        (kind != Helpers.ToastButtonKind.Delete || HasSavedFileOnDisk());
 
         button.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        // Hide the Edit button for non-image captures (e.g. MP4/GIF recordings)
+        if (kind == Helpers.ToastButtonKind.Edit && _spec.HideEditButton)
+            button.Visibility = Visibility.Collapsed;
         if (!visible)
             return;
 

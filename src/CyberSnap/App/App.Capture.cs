@@ -124,7 +124,8 @@ public partial class App
                                 path,
                                 false,
                                 transparentShell: false,
-                                showOverlayButtons: false));
+                                showOverlayButtons: true,
+                                hideEditButton: true));
                         }
                         else
                         {

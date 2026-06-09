@@ -25,6 +25,7 @@ internal sealed record ToastSpec
     public bool AutoPin { get; init; }
     public bool TransparentShell { get; init; }
     public bool ShowOverlayButtons { get; init; }
+    public bool HideEditButton { get; init; }
     public Stretch PreviewStretch { get; init; } = Stretch.Uniform;
     public Thickness PreviewMargin { get; init; }
     public double? PreviewMaxHeight { get; init; }
@@ -73,7 +74,8 @@ internal sealed record ToastSpec
         bool transparentShell,
         bool showOverlayButtons,
         string? clickActionUrl = null,
-        string? clickActionLabel = null) => new()
+        string? clickActionLabel = null,
+        bool hideEditButton = false) => new()
     {
         Title = title,
         Body = body,
@@ -83,7 +85,8 @@ internal sealed record ToastSpec
         ClickActionLabel = clickActionLabel,
         AutoPin = autoPin,
         TransparentShell = transparentShell,
-        ShowOverlayButtons = showOverlayButtons
+        ShowOverlayButtons = showOverlayButtons,
+        HideEditButton = hideEditButton
     };
 
     public static ToastSpec Sticker(Bitmap sticker) => new()
