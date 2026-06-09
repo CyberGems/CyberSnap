@@ -340,7 +340,11 @@
                                           AutomationProperties.Name="History category"
                                           SelectionChanged="HistoryCategoryCombo_Changed"
                                           PreviewMouseLeftButtonDown="HistoryCategoryCombo_PreviewMouseLeftButtonDown">
-                                    <ComboBoxItem Content="Images" IsSelected="True"
+                                    <ComboBoxItem Content="All" IsSelected="True"
+                                                  ToolTip="Show all capture history"
+                                                  AutomationProperties.Name="All history"
+                                                  AutomationProperties.HelpText="Show all saved captures."/>
+                                    <ComboBoxItem Content="Images"
                                                   ToolTip="Show screenshot history"
                                                   AutomationProperties.Name="Image history"
                                                   AutomationProperties.HelpText="Show saved screenshot captures."/>

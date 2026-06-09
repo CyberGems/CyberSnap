@@ -1432,6 +1432,8 @@ public partial class ToastWindow : Window
         menu.Items.Add(openViewerItem);
 
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+        menu.PlacementTarget = this; // ensure menu closes when clicking outside
+        menu.Closed += (_, _) => menu.Items.Clear(); // prevent leak
         menu.IsOpen = true;
     }
 
