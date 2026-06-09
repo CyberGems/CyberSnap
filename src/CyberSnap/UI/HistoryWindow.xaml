@@ -423,28 +423,6 @@
                                     <Border x:Name="ImageSearchBorder" Background="Transparent"
                                             BorderThickness="0" CornerRadius="7" Padding="8,5"
                                             Cursor="IBeam">
-                                        <Border.ContextMenu>
-                                            <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
-                                                         Style="{StaticResource HistoryActionsMenuStyle}"
-                                                         AutomationProperties.Name="Image search filter options">
-                                                <MenuItem x:Name="ImageSearchFileNameCheck" Header="File name" IsCheckable="True"
-                                                          ToolTip="Search screenshot file names"
-                                                          AutomationProperties.Name="Search file names"
-                                                          AutomationProperties.HelpText="Include screenshot file names in History search results."
-                                                          Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                                <MenuItem x:Name="ImageSearchOcrCheck" Header="OCR text" IsCheckable="True"
-                                                          ToolTip="Search recognized screenshot text"
-                                                          AutomationProperties.Name="Search OCR text"
-                                                          AutomationProperties.HelpText="Include recognized text from indexed screenshots in History search results."
-                                                          Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                                <Separator/>
-                                                <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
-                                                          ToolTip="Require exact phrase/token matches"
-                                                          AutomationProperties.Name="Exact match search"
-                                                          AutomationProperties.HelpText="Only show History search results that match the exact phrase or token."
-                                                          Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
-                                            </ContextMenu>
-                                        </Border.ContextMenu>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -469,6 +447,27 @@
                                                         <ScrollViewer x:Name="PART_ContentHost" Background="Transparent"/>
                                                     </ControlTemplate>
                                                 </TextBox.Template>
+                                                <TextBox.ContextMenu>
+                                                    <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
+                                                                 Style="{StaticResource HistoryActionsMenuStyle}"
+                                                                 AutomationProperties.Name="Search options">
+                                                        <MenuItem Header="Select all" InputGestureText="Ctrl+A"
+                                                                  Click="ImageSearchSelectAll_Click"/>
+                                                        <MenuItem Header="Delete" InputGestureText="Del"
+                                                                  Click="ImageSearchDeleteText_Click"/>
+                                                        <Separator/>
+                                                        <MenuItem x:Name="ImageSearchFileNameCheck" Header="Search file names" IsCheckable="True"
+                                                                  ToolTip="Include screenshot file names in search"
+                                                                  Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                        <MenuItem x:Name="ImageSearchOcrCheck" Header="Search OCR text" IsCheckable="True"
+                                                                  ToolTip="Include recognized screenshot text in search"
+                                                                  Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                        <Separator/>
+                                                        <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
+                                                                  ToolTip="Require exact phrase/token matches"
+                                                                  Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
+                                                    </ContextMenu>
+                                                </TextBox.ContextMenu>
                                             </TextBox>
                                             <TextBlock x:Name="ImageSearchPlaceholder" Grid.Column="1" Text="Search screenshots, OCR text, or filenames..."
                                                        FontSize="12" Opacity="0.28" VerticalAlignment="Center"
