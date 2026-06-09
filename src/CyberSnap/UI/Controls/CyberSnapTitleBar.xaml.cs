@@ -229,8 +229,9 @@ public partial class CyberSnapTitleBar : UserControl
         {
             var typeface = new System.Windows.Media.Typeface(new System.Windows.Media.FontFamily("Segoe UI Symbol"),
                 System.Windows.FontStyles.Normal, System.Windows.FontWeights.Normal, System.Windows.FontStretches.Normal);
-            var brush = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(color.R, color.G, color.B));
+            // Slightly translucent to match other title bar icons
+            var wpfColor = System.Windows.Media.Color.FromArgb(220, color.R, color.G, color.B);
+            var brush = new System.Windows.Media.SolidColorBrush(wpfColor);
             var formatted = new System.Windows.Media.FormattedText(text,
                 System.Globalization.CultureInfo.InvariantCulture,
                 System.Windows.FlowDirection.LeftToRight, typeface, size * 0.9, brush, 1.0);

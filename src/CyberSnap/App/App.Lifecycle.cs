@@ -89,6 +89,8 @@ public partial class App
     private void ShowSettingsWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService)
     {
         var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService);
+        if (_historyWindow is { IsVisible: true })
+            win.Owner = _historyWindow;
         Action hotkeyHandler = RegisterHotkeys;
         Action uninstallHandler = BeginUninstall;
         Action localizationHandler = () =>
