@@ -923,10 +923,10 @@ public partial class HistoryWindow
         return HistoryCategoryCombo.SelectedIndex switch
         {
             0 => CountAllSelectedCardsInVisualTree(HistoryStack),
-            1 => OcrStack.Children.OfType<Border>().Count(card => card.Tag is true),
-            2 => CountSelectedCardsInVisualTree(GifsPanel),
-            3 => ColorStack.Children.OfType<Border>().Count(card => card.Tag is ColorHistoryEntry),
-            4 => CodeStack.Children.OfType<Border>().Count(card => card.Tag is CodeHistoryEntry),
+            2 => OcrStack.Children.OfType<Border>().Count(card => card.Tag is true),
+            3 => CountSelectedCardsInVisualTree(GifsPanel),
+            4 => ColorStack.Children.OfType<Border>().Count(card => card.Tag is ColorHistoryEntry),
+            5 => CodeStack.Children.OfType<Border>().Count(card => card.Tag is CodeHistoryEntry),
             _ => 0
         };
     }
@@ -1054,9 +1054,9 @@ public partial class HistoryWindow
     {
         return HistoryCategoryCombo.SelectedIndex switch
         {
-            1 => OcrStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
-            3 => ColorStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
-            4 => CodeStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
+            2 => OcrStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
+            4 => ColorStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
+            5 => CodeStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
             _ => Enumerable.Empty<Border>()
         };
     }
@@ -1069,11 +1069,11 @@ public partial class HistoryWindow
 
     private void ClearSelectableCardSelection(Border card)
     {
-        if (HistoryCategoryCombo.SelectedIndex == 1)
+        if (HistoryCategoryCombo.SelectedIndex == 2)
             card.Tag = false;
-        else if (HistoryCategoryCombo.SelectedIndex == 3)
-            card.Tag = null;
         else if (HistoryCategoryCombo.SelectedIndex == 4)
+            card.Tag = null;
+        else if (HistoryCategoryCombo.SelectedIndex == 5)
             card.Tag = null;
 
         RefreshSelectableCardSelection(card);
@@ -1120,9 +1120,9 @@ public partial class HistoryWindow
             CancelImageSearchWork();
             if (HistoryCategoryCombo.SelectedIndex == 0) _historyService.ClearImages();
             else if (HistoryCategoryCombo.SelectedIndex == 2) DeleteMediaItems(_allGifItems);
-            else if (HistoryCategoryCombo.SelectedIndex == 1) _historyService.ClearOcr();
-            else if (HistoryCategoryCombo.SelectedIndex == 3) _historyService.ClearColors();
-            else if (HistoryCategoryCombo.SelectedIndex == 4) _historyService.ClearCodes();
+            else if (HistoryCategoryCombo.SelectedIndex == 2) _historyService.ClearOcr();
+            else if (HistoryCategoryCombo.SelectedIndex == 4) _historyService.ClearColors();
+            else if (HistoryCategoryCombo.SelectedIndex == 5) _historyService.ClearCodes();
 
             _selectMode = false;
             UpdateSelectModeControls();
@@ -1189,7 +1189,7 @@ public partial class HistoryWindow
             {
                 DeleteMediaItems(_filteredGifItems.Where(i => i.IsSelected).ToList());
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 1)
+            else if (HistoryCategoryCombo.SelectedIndex == 2)
             {
                 var entriesToDelete = OcrStack.Children.OfType<Border>()
                     .Where(b => b.Tag is true)
@@ -1198,13 +1198,13 @@ public partial class HistoryWindow
                     .ToList();
                 _historyService.DeleteOcrEntries(entriesToDelete);
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 3)
+            else if (HistoryCategoryCombo.SelectedIndex == 4)
             {
                 var toDelete = ColorStack.Children.OfType<Border>()
                     .Select(s => s.Tag).OfType<ColorHistoryEntry>().ToList();
                 _historyService.DeleteColorEntries(toDelete);
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 4)
+            else if (HistoryCategoryCombo.SelectedIndex == 5)
             {
                 var toDelete = CodeStack.Children.OfType<Border>()
                     .Select(s => s.Tag).OfType<CodeHistoryEntry>().ToList();

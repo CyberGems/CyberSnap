@@ -146,7 +146,7 @@ public partial class HistoryWindow
         AppendOcrHistoryEntries(_filteredOcrEntries, previousCount, _ocrRenderCount - previousCount);
         _ = Dispatcher.BeginInvoke(() =>
         {
-            if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 1)
+                if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 2)
                 TextPanel.ScrollToVerticalOffset(previousOffset);
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -162,7 +162,7 @@ public partial class HistoryWindow
         AppendColorHistoryEntries(_filteredColorEntries, previousCount, _colorRenderCount - previousCount);
         _ = Dispatcher.BeginInvoke(() =>
         {
-            if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 3)
+                if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 4)
                 ColorsPanel.ScrollToVerticalOffset(previousOffset);
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -170,14 +170,14 @@ public partial class HistoryWindow
     private void FlushOcrSearchDebounce(object? sender, EventArgs e)
     {
         _ocrSearchDebounceTimer.Stop();
-        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 1)
+        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 2)
             LoadOcrHistory();
     }
 
     private void FlushColorSearchDebounce(object? sender, EventArgs e)
     {
         _colorSearchDebounceTimer.Stop();
-        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 3)
+        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 4)
             LoadColorHistory();
     }
 

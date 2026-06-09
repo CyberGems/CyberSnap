@@ -541,7 +541,7 @@
                                                   ToolTip="Maximum total captures to keep (images, text, colors, QR/barcodes). Oldest items are pruned first."
                                                   AutomationProperties.Name="Limit history size"
                                                   SelectionChanged="HistoryCountLimitCombo_SelectionChanged">
-                                            <ComboBoxItem Content="Never limit" ToolTip="Do not prune history entries by count."/>
+                                            <ComboBoxItem Content="No limit" ToolTip="Do not prune history entries by count."/>
                                             <ComboBoxItem Content="50 captures" ToolTip="Keep only the 50 newest history entries."/>
                                             <ComboBoxItem Content="100 captures" ToolTip="Keep only the 100 newest history entries."/>
                                             <ComboBoxItem Content="250 captures" ToolTip="Keep only the 250 newest history entries."/>

@@ -79,19 +79,19 @@ public partial class HistoryWindow
         string automationName;
         string helpText;
 
-        if (HistoryCategoryCombo.SelectedIndex == 1)
+        if (HistoryCategoryCombo.SelectedIndex == 2)
         {
             placeholder = "Search text captures";
             automationName = "Text history search";
             helpText = "Search saved OCR text captures.";
         }
-        else if (HistoryCategoryCombo.SelectedIndex == 3)
+        else if (HistoryCategoryCombo.SelectedIndex == 4)
         {
             placeholder = "Search hex, RGB, or color names";
             automationName = "Color history search";
             helpText = "Search saved colors by hex value, RGB values, or color names.";
         }
-        else if (HistoryCategoryCombo.SelectedIndex == 4)
+        else if (HistoryCategoryCombo.SelectedIndex == 5)
         {
             placeholder = "Search QR/barcode text, links, or formats";
             automationName = "Code history search";
@@ -272,7 +272,7 @@ public partial class HistoryWindow
                 SetImageSearchLoading(true);
                 QueueImageSearchRefresh();
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 1)
+            else if (HistoryCategoryCombo.SelectedIndex == 2)
             {
                 _ocrSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_ocrSearchQuery) && !ImageSearchBox.IsKeyboardFocused
@@ -283,7 +283,7 @@ public partial class HistoryWindow
                 _ocrSearchDebounceTimer.Tick += FlushOcrSearchDebounce;
                 _ocrSearchDebounceTimer.Start();
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 3)
+            else if (HistoryCategoryCombo.SelectedIndex == 4)
             {
                 _colorSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_colorSearchQuery) && !ImageSearchBox.IsKeyboardFocused
@@ -294,7 +294,7 @@ public partial class HistoryWindow
                 _colorSearchDebounceTimer.Tick += FlushColorSearchDebounce;
                 _colorSearchDebounceTimer.Start();
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 4)
+            else if (HistoryCategoryCombo.SelectedIndex == 5)
             {
                 _codeSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_codeSearchQuery) && !ImageSearchBox.IsKeyboardFocused
