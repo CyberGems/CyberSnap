@@ -191,6 +191,13 @@ public partial class HistoryWindow
             catch (Exception ex) { ToastWindow.ShowError("Copy failed", ex.Message); }
         });
 
+        // Type badge in the image area
+        var badgeLabel = entry.Kind == HistoryKind.Video ? "VID"
+            : entry.Kind == HistoryKind.Gif ? "GIF" : "IMG";
+        var badgeColor = entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(255, 100, 100)
+            : entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60) : System.Windows.Media.Color.FromRgb(140, 160, 255);
+        AddTypeBadge(shell.ImageContainer, badgeLabel, badgeColor);
+
         var nameBlock = new TextBlock
         {
             Text = entry.FileName,
@@ -233,6 +240,7 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var iconArea = new Grid { Background = Theme.Brush(Theme.BgSecondary) };
+        AddTypeBadge(iconArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
         iconArea.Children.Add(new TextBlock
         {
             Text = "\uE8F1",
@@ -247,8 +255,10 @@ public partial class HistoryWindow
         root.Children.Add(iconArea);
 
         var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
-        var preview = text.Length > 60 ? text[..60] + "..." : text;
-        info.Children.Add(new TextBlock { Text = preview, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName) });
+        var typeLabel = new TextBlock { Text = "Text", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) };
+        info.Children.Add(typeLabel);
+        var preview = text.Length > 50 ? text[..50] + "..." : text;
+        info.Children.Add(new TextBlock { Text = preview, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), MaxHeight = 32, TextWrapping = TextWrapping.Wrap, ClipToBounds = true });
         info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
@@ -277,6 +287,7 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var swatchArea = new Grid();
+        AddTypeBadge(swatchArea, "CLR", System.Windows.Media.Color.FromRgb(255, 160, 80));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -288,6 +299,7 @@ public partial class HistoryWindow
         root.Children.Add(swatchArea);
 
         var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
+        info.Children.Add(new TextBlock { Text = "Color", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) });
         info.Children.Add(new TextBlock { Text = displayHex, FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName) });
         info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
 
@@ -315,6 +327,7 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var previewArea = new Grid { Background = Brushes.White };
+        AddTypeBadge(previewArea, "QR", System.Windows.Media.Color.FromRgb(120, 200, 120));
         var previewKey = $"{text}|{format}";
         if (!_allCodePreviewCache.TryGetValue(previewKey, out var previewSrc))
         {
@@ -334,6 +347,7 @@ public partial class HistoryWindow
         root.Children.Add(previewArea);
 
         var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
+        info.Children.Add(new TextBlock { Text = "Code", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) });
         info.Children.Add(new TextBlock { Text = HumanizeBarcodeFormat(format), FontSize = 11, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName) });
         info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
 
@@ -358,11 +372,32 @@ public partial class HistoryWindow
 
     // ── Helpers ──
 
+    private static void AddTypeBadge(Grid parent, string label, System.Windows.Media.Color color)
+    {
+        var pill = new Border
+        {
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, color.R, color.G, color.B)),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(6, 2, 6, 2),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 6, 6, 0),
+            Child = new TextBlock
+            {
+                Text = label,
+                FontSize = 8.5,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.White,
+                FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName)
+            }
+        };
+        parent.Children.Add(pill);
+    }
+
     private Border CreateBaseUnifiedCard(string automationName, string tooltip)
     {
         var card = new Border
         {
-            Width = HistoryCardPreferredWidth,
             MinWidth = HistoryCardMinWidth,
             MaxWidth = HistoryCardMaxWidth,
             Margin = new Thickness(HistoryCardMargin),
