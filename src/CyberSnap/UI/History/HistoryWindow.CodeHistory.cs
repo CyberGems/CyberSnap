@@ -83,7 +83,7 @@ public partial class HistoryWindow
         AppendCodeHistoryEntries(_filteredCodeEntries, previousCount, _codeRenderCount - previousCount);
         _ = Dispatcher.BeginInvoke(() =>
         {
-            if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 4)
+            if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 5)
                 CodesPanel.ScrollToVerticalOffset(previousOffset);
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -91,7 +91,7 @@ public partial class HistoryWindow
     private void FlushCodeSearchDebounce(object? sender, EventArgs e)
     {
         _codeSearchDebounceTimer.Stop();
-        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 4)
+        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 5)
             LoadCodeHistory();
     }
 
