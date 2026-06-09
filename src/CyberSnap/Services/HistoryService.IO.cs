@@ -290,21 +290,31 @@ public sealed partial class HistoryService
         if (maxCount <= 0 || _entries.Count <= maxCount)
             return;
 
+        // Prune image entries by count (newest first)
         var entriesToRemove = _entries.Skip(maxCount).ToList();
-
         foreach (var entry in entriesToRemove)
         {
             _entriesByPath.Remove(entry.FilePath);
             TryDeleteManagedThumbnail_NoLock(entry.FilePath);
             if (deleteOriginalFiles)
-            {
                 TryDeleteHistoryFile_NoLock(entry.FilePath, "count prune");
-            }
         }
-
         _entries.RemoveRange(maxCount, _entries.Count - maxCount);
+
+        // Also prune OCR, color, and code entries by same count limit (newest first)
+        if (_ocrEntries.Count > maxCount)
+            _ocrEntries.RemoveRange(maxCount, _ocrEntries.Count - maxCount);
+        if (_colorEntries.Count > maxCount)
+            _colorEntries.RemoveRange(maxCount, _colorEntries.Count - maxCount);
+        if (_codeEntries.Count > maxCount)
+            _codeEntries.RemoveRange(maxCount, _codeEntries.Count - maxCount);
+
         InvalidateFilteredCache();
         QueueEntryDeletes_NoLock(entriesToRemove.Select(e => e.FilePath));
+        MarkEntriesRewrite_NoLock();
+        _ocrDirty = true;
+        _colorDirty = true;
+        _codeDirty = true;
         ScheduleFlush_NoLock();
     }
 
