@@ -627,7 +627,9 @@
                     <!-- Empty states -->
                     <StackPanel x:Name="HistoryEmptyText" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Visibility="Collapsed" Margin="0,0,0,40" MaxWidth="300">
-                        <TextBlock x:Name="HistoryEmptyTitle" Text="No captures yet" FontSize="14"
+                        <Border Background="#CC121212" CornerRadius="8" Padding="20,16">
+                            <StackPanel>
+                                <TextBlock x:Name="HistoryEmptyTitle" Text="No captures yet" FontSize="14"
                                    FontFamily="Segoe UI Variable Text" FontWeight="SemiBold"
                                    Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                    HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Opacity="0.72"
@@ -649,6 +651,8 @@
                                 AutomationProperties.Name="Retry loading history"
                                 AutomationProperties.HelpText="Retry loading history"
                                 Cursor="Hand" Click="HistoryEmptyRetryButton_Click"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
 
                     <!-- Bottom bar -->
