@@ -205,7 +205,8 @@ public partial class App
         {
             prop.SetValue(_settingsService.Settings, value);
             _settingsService.Save();
-            RefreshHistoryWindowIfOpen();
+            // Light refresh: only update visibility, no full reload
+            _historyWindow?.RefreshVisibility();
         }
     }
 

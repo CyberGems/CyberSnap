@@ -67,7 +67,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             ActionBtn.Visibility = Visibility.Visible;
             ActionBtn.ToolTip = LocalizationService.Translate("Menu");
-            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("menu", titleIcon, 18);  // burger icon
+            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("filter", titleIcon, 18);  // three-line burger icon
 
             // Build burger menu with toggles + Configuration
             var menu = new ContextMenu();
