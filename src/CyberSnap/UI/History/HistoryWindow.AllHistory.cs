@@ -279,7 +279,8 @@ public partial class HistoryWindow
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
             Foreground = Theme.Brush(Theme.TextPrimary),
             Margin = new Thickness(10),
-            VerticalAlignment = VerticalAlignment.Center
+            VerticalAlignment = VerticalAlignment.Center,
+            MaxWidth = HistoryCardPreferredWidth - 20  // constrain to card width minus padding
         });
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
@@ -295,7 +296,7 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
-        card.MouseLeftButtonDown += (_, e) => { e.Handled = true; CopyTextToClipboard(capturedText); };
+        card.MouseLeftButtonDown += (_, e) => { if (e.OriginalSource is System.Windows.Controls.Button) return; e.Handled = true; CopyTextToClipboard(capturedText); };
         return card;
     }
 
@@ -337,7 +338,7 @@ public partial class HistoryWindow
         root.Children.Add(infoBorder);
 
         card.Child = root;
-        card.MouseLeftButtonDown += (_, e) => { e.Handled = true; CopyColorToClipboard(hex); };
+        card.MouseLeftButtonDown += (_, e) => { if (e.OriginalSource is System.Windows.Controls.Button) return; e.Handled = true; CopyColorToClipboard(hex); };
         return card;
     }
 
@@ -387,7 +388,7 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
-        card.MouseLeftButtonDown += (_, e) => { e.Handled = true; CopyTextToClipboard(capturedText); };
+        card.MouseLeftButtonDown += (_, e) => { if (e.OriginalSource is System.Windows.Controls.Button) return; e.Handled = true; CopyTextToClipboard(capturedText); };
         return card;
     }
 
