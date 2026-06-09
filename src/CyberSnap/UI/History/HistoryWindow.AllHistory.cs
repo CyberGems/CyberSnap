@@ -280,10 +280,10 @@ public partial class HistoryWindow
         Grid.SetRow(iconArea, 0);
         root.Children.Add(iconArea);
 
-        // Info area: type label → preview → time, with clean spacing
+        // Info area: type label → preview → time, single-line to match image card height
         var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
-        info.Children.Add(new TextBlock { Text = "Text", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold });
         var preview = text.Length > 40 ? text[..40] + "…" : text;
+        info.Children.Add(new TextBlock { Text = "Text", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold });
         info.Children.Add(new TextBlock
         {
             Text = preview,
@@ -296,8 +296,8 @@ public partial class HistoryWindow
         {
             Text = FormatTimeAgo(entry.CapturedAt),
             FontSize = 10,
-            Opacity = 0.35,
-            Margin = new Thickness(0, 6, 0, 0)
+            Opacity = 0.3,
+            Margin = new Thickness(0, 4, 0, 0)
         });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
