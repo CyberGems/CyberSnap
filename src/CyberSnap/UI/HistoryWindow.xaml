@@ -420,16 +420,36 @@
 
                                 <!-- Inline search bar -->
                                 <Grid x:Name="ImageSearchRow" VerticalAlignment="Center" Margin="8,0,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
                                     <Border x:Name="ImageSearchBorder" Background="Transparent"
-                                            BorderThickness="0" CornerRadius="7" Padding="8,5">
+                                            BorderThickness="0" CornerRadius="7" Padding="8,5"
+                                            Cursor="IBeam">
+                                        <Border.ContextMenu>
+                                            <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
+                                                         Style="{StaticResource HistoryActionsMenuStyle}"
+                                                         AutomationProperties.Name="Image search filter options">
+                                                <MenuItem x:Name="ImageSearchFileNameCheck" Header="File name" IsCheckable="True"
+                                                          ToolTip="Search screenshot file names"
+                                                          AutomationProperties.Name="Search file names"
+                                                          AutomationProperties.HelpText="Include screenshot file names in History search results."
+                                                          Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                <MenuItem x:Name="ImageSearchOcrCheck" Header="OCR text" IsCheckable="True"
+                                                          ToolTip="Search recognized screenshot text"
+                                                          AutomationProperties.Name="Search OCR text"
+                                                          AutomationProperties.HelpText="Include recognized text from indexed screenshots in History search results."
+                                                          Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
+                                                <Separator/>
+                                                <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
+                                                          ToolTip="Require exact phrase/token matches"
+                                                          AutomationProperties.Name="Exact match search"
+                                                          AutomationProperties.HelpText="Only show History search results that match the exact phrase or token."
+                                                          Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
+                                            </ContextMenu>
+                                        </Border.ContextMenu>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <Image x:Name="ImageSearchIcon" Width="18" Height="18" Stretch="Uniform"
                                                    VerticalAlignment="Center"/>
@@ -453,37 +473,13 @@
                                             <TextBlock x:Name="ImageSearchPlaceholder" Grid.Column="1" Text="Search screenshots, OCR text, or filenames..."
                                                        FontSize="12" Opacity="0.28" VerticalAlignment="Center"
                                                        IsHitTestVisible="False" Margin="8,0,0,0"/>
+                                            <!-- Dropdown chevron, only visible when focused -->
+                                            <TextBlock x:Name="ImageSearchChevron" Grid.Column="2" Text="▾" FontSize="10"
+                                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.45"
+                                                       VerticalAlignment="Center" Margin="6,0,0,0"
+                                                       Visibility="Collapsed" ToolTip="Right-click for search filters"/>
                                         </Grid>
                                     </Border>
-                                    <Button x:Name="ImageSearchFiltersBtn" Grid.Column="1" Content="Filters" Style="{StaticResource HistoryActionButton}"
-                                            Margin="6,0,0,0" VerticalAlignment="Center"
-                                            ToolTip="Choose image search sources and exact matching"
-                                            AutomationProperties.Name="Image search filters"
-                                            AutomationProperties.HelpText="Open search source and exact-match options for History."
-                                            Cursor="Hand" Click="ImageSearchFiltersBtn_Click">
-                                        <Button.ContextMenu>
-                                            <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
-                                                         Style="{StaticResource HistoryActionsMenuStyle}"
-                                                         AutomationProperties.Name="Image search filter options">
-                                                <MenuItem x:Name="ImageSearchFileNameCheck" Header="File name" IsCheckable="True"
-                                                          ToolTip="Search screenshot file names"
-                                                          AutomationProperties.Name="Search file names"
-                                                          AutomationProperties.HelpText="Include screenshot file names in History search results."
-                                                          Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                                <MenuItem x:Name="ImageSearchOcrCheck" Header="OCR text" IsCheckable="True"
-                                                          ToolTip="Search recognized screenshot text"
-                                                          AutomationProperties.Name="Search OCR text"
-                                                          AutomationProperties.HelpText="Include recognized text from indexed screenshots in History search results."
-                                                          Checked="ImageSearchSourcesCheck_Changed" Unchecked="ImageSearchSourcesCheck_Changed"/>
-                                                <Separator/>
-                                                <MenuItem x:Name="ImageSearchExactMatchCheck" Header="Exact match" IsCheckable="True"
-                                                          ToolTip="Require exact phrase/token matches"
-                                                          AutomationProperties.Name="Exact match search"
-                                                          AutomationProperties.HelpText="Only show History search results that match the exact phrase or token."
-                                                          Checked="ImageSearchExactMatchCheck_Changed" Unchecked="ImageSearchExactMatchCheck_Changed"/>
-                                            </ContextMenu>
-                                        </Button.ContextMenu>
-                                    </Button>
                                 </Grid>
                             </DockPanel>
 

@@ -326,11 +326,13 @@ public partial class HistoryWindow
             ImageSearchBorder.BorderThickness = new Thickness(1);
             ImageSearchBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(60, 0, 255, 255));  // very soft cyan
+            ImageSearchChevron.Visibility = Visibility.Visible;
         }
         else
         {
             ImageSearchBorder.BorderThickness = new Thickness(0);
             ImageSearchBorder.BorderBrush = null;
+            ImageSearchChevron.Visibility = Visibility.Collapsed;
         }
 
         ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(ImageSearchBox.Text) && !ImageSearchBox.IsKeyboardFocused
@@ -397,17 +399,6 @@ public partial class HistoryWindow
                 "Index refresh failed",
                 $"CyberSnap could not refresh the image search index. Existing search data is still available; try again from History.\n{ex.Message}");
         }
-    }
-
-    private void ImageSearchFiltersBtn_Click(object sender, RoutedEventArgs e)
-    {
-        ImageSearchFiltersMenu.PlacementTarget = ImageSearchFiltersBtn;
-        ImageSearchFiltersMenu.IsOpen = true;
-        _ = Dispatcher.BeginInvoke(() =>
-        {
-            ImageSearchFileNameCheck.Focus();
-            Keyboard.Focus(ImageSearchFileNameCheck);
-        });
     }
 
     private void HistoryPanel_ScrollChanged(object sender, ScrollChangedEventArgs e)
