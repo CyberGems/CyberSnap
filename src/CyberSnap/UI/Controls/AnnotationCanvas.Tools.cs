@@ -96,7 +96,7 @@ public sealed partial class AnnotationCanvas
     {
         Cursor = _activeTool switch
         {
-            CanvasTool.Pan => Cursors.SizeAll,
+            CanvasTool.Pan => Cursors.Hand,
             CanvasTool.Select => Cursors.Default,
             CanvasTool.Crop => Cursors.Cross,
             CanvasTool.Text => Cursors.IBeam,
@@ -484,8 +484,14 @@ public sealed partial class AnnotationCanvas
         }
         if (e.KeyCode == Keys.Escape)
         {
-            CancelInProgressTool();
-            CancelCropPending();
+            // Esc mirrors the right-click escape: cancel any in-progress action and
+            // deselect the active tool back to neutral Pan. When already neutral, just
+            // clear any stray in-progress/crop state.
+            if (!TryDeselectTool())
+            {
+                CancelInProgressTool();
+                CancelCropPending();
+            }
             e.Handled = true;
             return;
         }
