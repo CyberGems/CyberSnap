@@ -34,11 +34,13 @@ public partial class HistoryWindow
     }
 
     private List<UnifiedHistoryItem> _allUnifiedEntries = new();
+    private readonly Dictionary<Border, object> _unifiedCardEntries = new();  // card → raw entry (OcrHistoryEntry, etc.)
 
     private void LoadAllHistory()
     {
         var sw = Stopwatch.StartNew();
         HistoryStack.Children.Clear();
+        _unifiedCardEntries.Clear();
         HideHistoryEmptyState();
 
         var unified = new List<UnifiedHistoryItem>();
@@ -260,6 +262,7 @@ public partial class HistoryWindow
     {
         var text = entry.Text ?? "";
         var card = CreateBaseUnifiedCard("Text history item", "Copy this text");
+        _unifiedCardEntries[card] = entry;
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
@@ -268,6 +271,8 @@ public partial class HistoryWindow
         // Top: the actual text content (replaces the image thumbnail area)
         var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(textArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
+        var selBadge = CreateUnifiedSelectionBadge();
+        textArea.Children.Add(selBadge);
         var displayText = text.Length > 80 ? text[..80] + "…" : text;
         // Add TextBlock BEFORE AttachCardMenu so the action button sits on top (Z-order)
         textArea.Children.Add(new TextBlock
@@ -296,7 +301,20 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
-        card.MouseLeftButtonDown += (_, e) => { if (e.OriginalSource is System.Windows.Controls.Button) return; e.Handled = true; CopyTextToClipboard(capturedText); };
+        card.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.OriginalSource is System.Windows.Controls.Button) return;
+            e.Handled = true;
+            if (_selectMode)
+            {
+                var selected = card.Tag is not true;
+                card.Tag = selected;
+                UpdateUnifiedCardSelectionVisual(card, selected);
+                UpdateHistoryActionButtons();
+                return;
+            }
+            CopyTextToClipboard(capturedText);
+        };
         return card;
     }
 
@@ -310,6 +328,7 @@ public partial class HistoryWindow
         var displayHex = FormatColorHexForDisplay(hex);
 
         var card = CreateBaseUnifiedCard($"Color {displayHex}", "Copy this color");
+        _unifiedCardEntries[card] = entry;
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
@@ -317,6 +336,8 @@ public partial class HistoryWindow
 
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(swatchArea, "CLR", System.Windows.Media.Color.FromRgb(255, 160, 80));
+        var selBadge = CreateUnifiedSelectionBadge();
+        swatchArea.Children.Add(selBadge);
         AttachCardMenu(card, swatchArea, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
         swatchArea.Children.Add(new Border
         {
@@ -345,7 +366,20 @@ public partial class HistoryWindow
         root.Children.Add(infoBorder);
 
         card.Child = root;
-        card.MouseLeftButtonDown += (_, e) => { if (e.OriginalSource is System.Windows.Controls.Button) return; e.Handled = true; CopyColorToClipboard(hex); };
+        card.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.OriginalSource is System.Windows.Controls.Button) return;
+            e.Handled = true;
+            if (_selectMode)
+            {
+                var selected = card.Tag is not true;
+                card.Tag = selected;
+                UpdateUnifiedCardSelectionVisual(card, selected);
+                UpdateHistoryActionButtons();
+                return;
+            }
+            CopyColorToClipboard(hex);
+        };
         return card;
     }
 
@@ -358,6 +392,7 @@ public partial class HistoryWindow
         var text = entry.Text ?? "";
         var format = entry.Format ?? "";
         var card = CreateBaseUnifiedCard($"{HumanizeBarcodeFormat(format)} history item", "Copy this code text");
+        _unifiedCardEntries[card] = entry;
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) });
@@ -365,6 +400,8 @@ public partial class HistoryWindow
 
         var previewArea = new Grid { Background = Brushes.White, MaxWidth = HistoryCardPreferredWidth };
         AddTypeBadge(previewArea, "QR", System.Windows.Media.Color.FromRgb(120, 200, 120));
+        var selBadge = CreateUnifiedSelectionBadge();
+        previewArea.Children.Add(selBadge);
         var previewKey = $"{text}|{format}";
         if (!_allCodePreviewCache.TryGetValue(previewKey, out var previewSrc))
         {
@@ -395,7 +432,20 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
-        card.MouseLeftButtonDown += (_, e) => { if (e.OriginalSource is System.Windows.Controls.Button) return; e.Handled = true; CopyTextToClipboard(capturedText); };
+        card.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.OriginalSource is System.Windows.Controls.Button) return;
+            e.Handled = true;
+            if (_selectMode)
+            {
+                var selected = card.Tag is not true;
+                card.Tag = selected;
+                UpdateUnifiedCardSelectionVisual(card, selected);
+                UpdateHistoryActionButtons();
+                return;
+            }
+            CopyTextToClipboard(capturedText);
+        };
         return card;
     }
 
@@ -432,6 +482,67 @@ public partial class HistoryWindow
         parent.Children.Add(pill);
     }
 
+    /// <summary>Creates a centered checkmark badge for select mode (same style as image cards).</summary>
+    private static Border CreateUnifiedSelectionBadge()
+    {
+        var checkPath = new System.Windows.Shapes.Path
+        {
+            Data = System.Windows.Media.Geometry.Parse("M6,14 L11,19 L22,8"),
+            Stroke = Brushes.White,
+            StrokeThickness = 2.6,
+            StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
+            StrokeEndLineCap = System.Windows.Media.PenLineCap.Round,
+            Stretch = Stretch.Uniform,
+            Margin = new Thickness(8),
+            Visibility = Visibility.Hidden
+        };
+
+        var badge = new Border
+        {
+            Width = 36, Height = 36,
+            CornerRadius = new CornerRadius(18),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20)),
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false,
+            Visibility = Visibility.Collapsed,
+            Child = checkPath,
+            Tag = checkPath  // for easy access to the checkmark
+        };
+        System.Windows.Controls.Panel.SetZIndex(badge, 20);
+        return badge;
+    }
+
+    /// <summary>Updates a unified card's selection badge and Tag to match selection state.</summary>
+    private static void UpdateUnifiedCardSelectionVisual(Border card, bool selected)
+    {
+        if (card.Child is not Grid root) return;
+        // Find the selection badge in the card's visual tree
+        var badge = FindUnifiedSelectionBadge(root);
+        if (badge is null) return;
+        var checkPath = badge.Tag as UIElement;
+        badge.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+        if (checkPath is not null)
+            checkPath.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
+    }
+
+    private static Border? FindUnifiedSelectionBadge(Grid root)
+    {
+        foreach (var child in root.Children)
+        {
+            if (child is Border b && System.Windows.Controls.Panel.GetZIndex(b) == 20)
+                return b;
+            if (child is Grid g)
+            {
+                var found = FindUnifiedSelectionBadge(g);
+                if (found is not null) return found;
+            }
+        }
+        return null;
+    }
+
     private Border CreateBaseUnifiedCard(string automationName, string tooltip)
     {
         var card = new Border
@@ -456,7 +567,7 @@ public partial class HistoryWindow
         card.GotKeyboardFocus += (_, _) => { card.Background = HistoryCardHoverBrush; card.BorderBrush = HistoryCardFocusBrush; };
         card.LostKeyboardFocus += (_, _) => { if (!card.IsMouseOver) { card.Background = Theme.Brush(Theme.BgCard); card.BorderBrush = Theme.Brush(Theme.BorderSubtle); } };
 
-        card.Tag = "unified";  // so UpdateHistoryWrapPanelCardWidths resizes this card
+        card.Tag = false;  // selection state: false=unselected, true=selected; also marks for UpdateHistoryWrapPanelCardWidths
 
         return card;
     }
