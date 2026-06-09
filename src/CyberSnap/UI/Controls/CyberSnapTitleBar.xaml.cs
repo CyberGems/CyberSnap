@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using CyberSnap.Models;
 using CyberSnap.Services;
 using CyberSnap.UI;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -65,8 +66,52 @@ public partial class CyberSnapTitleBar : UserControl
             AnnotationBtn.Visibility = Visibility.Collapsed;
 
             ActionBtn.Visibility = Visibility.Visible;
-            ActionBtn.ToolTip = LocalizationService.Translate("Settings");
-            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 18);
+            ActionBtn.ToolTip = LocalizationService.Translate("Menu");
+            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("menu", titleIcon, 18);  // burger icon
+
+            // Build burger menu with toggles + Configuration
+            var menu = new ContextMenu();
+            menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+
+            var searchToggle = new MenuItem
+            {
+                Header = LocalizationService.Translate("Search bar"),
+                IsCheckable = true,
+                ToolTip = "Show or hide the search bar"
+            };
+            searchToggle.Checked += (_, _) => ToggleSetting("ShowImageSearchBar", true);
+            searchToggle.Unchecked += (_, _) => ToggleSetting("ShowImageSearchBar", false);
+            menu.Items.Add(searchToggle);
+
+            var pruneToggle = new MenuItem
+            {
+                Header = LocalizationService.Translate("Auto-Pruning"),
+                IsCheckable = true,
+                ToolTip = "Show or hide the auto-pruning controls"
+            };
+            pruneToggle.Checked += (_, _) => ToggleSetting("ShowAutoPrune", true);
+            pruneToggle.Unchecked += (_, _) => ToggleSetting("ShowAutoPrune", false);
+            menu.Items.Add(pruneToggle);
+
+            menu.Opened += (_, _) =>
+            {
+                var settings = ((App)Application.Current).GetSettings();
+                searchToggle.IsChecked = settings.ShowImageSearchBar;
+                pruneToggle.IsChecked = settings.ShowAutoPrune;
+            };
+
+            menu.Items.Add(new Separator());
+
+            var configItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Configuration"),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = "Open the full Settings window"
+            };
+            configItem.Click += (_, _) => ((App)Application.Current).ShowSettings();
+            menu.Items.Add(configItem);
+
+            ActionBtn.ContextMenu = menu;
         }
         else
         {
@@ -154,7 +199,16 @@ public partial class CyberSnapTitleBar : UserControl
         }
         else if (OwnerWindow is HistoryWindow)
         {
-            ((App)Application.Current).ShowSettings();
+            if (ActionBtn.ContextMenu is { } menu)
+            {
+                menu.PlacementTarget = ActionBtn;
+                menu.IsOpen = true;
+            }
         }
+    }
+
+    private static void ToggleSetting(string propertyName, bool value)
+    {
+        ((App)Application.Current).ToggleHistorySetting(propertyName, value);
     }
 }

@@ -483,6 +483,9 @@ public partial class HistoryWindow
         UpdateImageSearchActionButtons();
         UpdateImageSearchPlaceholderText();
         UpdateHistoryActionButtons();
+
+        // Auto-pruning card visibility
+        AutoPruneCard.Visibility = _settingsService.Settings.ShowAutoPrune ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SetImageSearchRowAutoHidden(bool hidden)

@@ -2,6 +2,7 @@ using System.IO;
 using System.Runtime;
 using System.Windows;
 using System.Windows.Threading;
+using CyberSnap.Models;
 using CyberSnap.Native;
 using CyberSnap.Services;
 using CyberSnap.UI;
@@ -194,6 +195,22 @@ public partial class App
             AppDiagnostics.LogError("lifecycle.show-history.toast", toastEx);
         }
     }
+
+    /// <summary>Toggles a boolean history setting by name and persists it.</summary>
+    public void ToggleHistorySetting(string propertyName, bool value)
+    {
+        if (_settingsService is null) return;
+        var prop = typeof(AppSettings).GetProperty(propertyName);
+        if (prop is not null && prop.CanWrite && prop.PropertyType == typeof(bool))
+        {
+            prop.SetValue(_settingsService.Settings, value);
+            _settingsService.Save();
+            RefreshHistoryWindowIfOpen();
+        }
+    }
+
+    /// <summary>Returns the current app settings (never null after startup).</summary>
+    public AppSettings GetSettings() => _settingsService?.Settings ?? new AppSettings();
 
     private void BeginUninstall()
     {

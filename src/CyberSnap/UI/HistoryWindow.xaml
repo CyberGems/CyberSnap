@@ -444,9 +444,11 @@
                                 </Button>
                             </Grid>
 
-                            <!-- Auto-Pruning Row -->
-                            <Border Margin="0,10,0,0" Padding="0,10,0,2" BorderBrush="{DynamicResource ThemeBorderSubtleBrush}" BorderThickness="0,1,0,0">
-                                <Grid>
+                            <!-- Auto-Pruning Card -->
+                            <Border x:Name="AutoPruneCard" Margin="0,10,0,0" Padding="0" CornerRadius="8"
+                                    Background="{DynamicResource ThemeBgSecondaryBrush}"
+                                    BorderBrush="{DynamicResource ThemeBorderSubtleBrush}" BorderThickness="1">
+                                <Grid Margin="12,10,12,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
