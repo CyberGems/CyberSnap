@@ -198,6 +198,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             CanvasTool.Circle => "Circle",
             CanvasTool.Eraser => "Eraser",
             CanvasTool.Highlight => "Highlight",
+            CanvasTool.Blur => "Blur",
+            CanvasTool.StepNumber => "Step Number",
+            CanvasTool.Magnifier => "Magnifier",
+            CanvasTool.Emoji => "Emoji",
             _ => tool.ToString()
         };
         return LocalizationService.Translate(key);
@@ -219,6 +223,28 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         }
     }
     private CanvasTool _activeTool = CanvasTool.Pan;
+
+    /// <summary>
+    /// Right-click "escape": cancels any in-progress action and returns to the neutral
+    /// Pan state (the editor's resting default). Shows an internal banner naming the tool
+    /// that was deselected. Returns <c>true</c> if a tool was actually deselected, so the
+    /// caller can suppress the context menu; <c>false</c> when already in the neutral state.
+    /// </summary>
+    public bool TryDeselectTool()
+    {
+        if (_activeTool == CanvasTool.Pan)
+            return false;
+
+        CancelInProgressTool();
+        CancelCropPending();
+        _activeTool = CanvasTool.Pan;
+        _selectedEmoji = null;
+        UpdateCursor();
+        ShowToolBanner(LocalizationService.Translate("Tool deselected"));
+        Invalidate();
+        OnStateChanged();
+        return true;
+    }
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool AnnotationStrokeShadow { get; set; } = true;

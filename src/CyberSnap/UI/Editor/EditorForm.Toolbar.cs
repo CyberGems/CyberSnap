@@ -849,6 +849,14 @@ public sealed partial class EditorForm
                 OpenEmojiPicker(button);
         };
         _toolButtons[tool] = button;
+
+        // The 3-column drawing grid truncates the longest names; surface the full
+        // label on hover for those so nothing is lost.
+        if (tool is AnnotationCanvas.CanvasTool.Magnifier
+                or AnnotationCanvas.CanvasTool.Rect
+                or AnnotationCanvas.CanvasTool.Highlight)
+            RegisterHoverTooltip(button, labelKey);
+
         parent.Controls.Add(button, column, row);
     }
 

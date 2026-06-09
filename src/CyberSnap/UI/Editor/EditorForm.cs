@@ -775,6 +775,13 @@ public sealed partial class EditorForm : Form
     private void OnCanvasMouseUp(object? sender, MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Right) return;
+
+        // Right-click escapes the active tool: it cancels any in-progress action and
+        // deselects the tool instead of opening a context menu. Only when no tool is
+        // active (neutral Pan state) does the canvas/image context menu appear.
+        if (_canvas.TryDeselectTool())
+            return;
+
         var imgPt = _canvas.PointFromScreenToImage(e.Location);
         bool onImage = imgPt.X >= 0 && imgPt.Y >= 0
             && imgPt.X < _canvas.BaseBitmap.Width
