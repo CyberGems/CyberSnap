@@ -288,27 +288,37 @@
             </Setter>
         </Style>
 
-        <!-- Themed scrollbar -->
+        <!-- Themed scrollbar — subtle, fades in on hover -->
         <Style x:Key="HistoryScrollThumbStyle" TargetType="{x:Type Thumb}">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Opacity" Value="0.4"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Thumb}">
-                        <Border CornerRadius="3" Background="{DynamicResource ThemeInputBorderBrush}" Margin="0,2"/>
+                        <Border x:Name="ThumbBorder" CornerRadius="3" Background="{DynamicResource ThemeTextSecondaryBrush}" Margin="0,2,4,2"/>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+                <Trigger Property="IsDragging" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="HistoryScrollBarStyle" TargetType="{x:Type ScrollBar}">
-            <Setter Property="Width" Value="10"/>
+            <Setter Property="Width" Value="8"/>
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Opacity" Value="0.6"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ScrollBar}">
                         <Grid Background="Transparent" Width="{TemplateBinding Width}">
-                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="0,4,2,4">
                                 <Track.DecreaseRepeatButton>
                                     <RepeatButton Command="ScrollBar.PageUpCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
                                 </Track.DecreaseRepeatButton>
@@ -323,6 +333,11 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
