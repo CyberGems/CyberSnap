@@ -287,6 +287,43 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Themed scrollbar -->
+        <Style x:Key="HistoryScrollBarStyle" TargetType="{x:Type ScrollBar}">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid Background="Transparent" Width="{TemplateBinding Width}">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource HistoryScrollThumbStyle}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="HistoryScrollThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border CornerRadius="3" Background="{DynamicResource ThemeInputBorderBrush}" Margin="0,2"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border Margin="1" CornerRadius="12">
@@ -352,9 +389,9 @@
                                                   ToolTip="Show OCR text history"
                                                   AutomationProperties.Name="Text history"
                                                   AutomationProperties.HelpText="Show saved OCR text captures."/>
-                                    <ComboBoxItem Content="Videos/GIFs"
+                                    <ComboBoxItem Content="Videos &amp; GIFs"
                                                   ToolTip="Show video and GIF history"
-                                                  AutomationProperties.Name="Video and GIF history"
+                                                  AutomationProperties.Name="Video &amp; GIF history"
                                                   AutomationProperties.HelpText="Show saved video recordings and GIF captures."/>
                                     <ComboBoxItem Content="Colors"
                                                   ToolTip="Show color history"
@@ -505,6 +542,9 @@
                     <!-- Images history -->
                     <ScrollViewer x:Name="ImagesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,10,4"
                                   ScrollChanged="HistoryPanel_ScrollChanged">
+                        <ScrollViewer.Resources>
+                            <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
+                        </ScrollViewer.Resources>
                         <StackPanel x:Name="HistoryStack"/>
                     </ScrollViewer>
 
@@ -512,6 +552,9 @@
                     <ScrollViewer x:Name="GifsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,10,4"
                                   ScrollChanged="GifPanel_ScrollChanged"
                                   Visibility="Collapsed">
+                        <ScrollViewer.Resources>
+                            <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
+                        </ScrollViewer.Resources>
                         <StackPanel x:Name="GifStack"/>
                     </ScrollViewer>
 
@@ -519,6 +562,9 @@
                     <ScrollViewer x:Name="TextPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   Padding="10,2,10,14" Visibility="Collapsed"
                                   ScrollChanged="OcrPanel_ScrollChanged">
+                        <ScrollViewer.Resources>
+                            <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
+                        </ScrollViewer.Resources>
                         <StackPanel x:Name="OcrStack"/>
                     </ScrollViewer>
 
@@ -526,6 +572,9 @@
                     <ScrollViewer x:Name="ColorsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   Padding="10,2,10,14" Visibility="Collapsed"
                                   ScrollChanged="ColorsPanel_ScrollChanged">
+                        <ScrollViewer.Resources>
+                            <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
+                        </ScrollViewer.Resources>
                         <StackPanel x:Name="ColorStack"/>
                     </ScrollViewer>
 
@@ -533,6 +582,9 @@
                     <ScrollViewer x:Name="CodesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   Padding="10,2,10,14" Visibility="Collapsed"
                                   ScrollChanged="CodesPanel_ScrollChanged">
+                        <ScrollViewer.Resources>
+                            <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
+                        </ScrollViewer.Resources>
                         <StackPanel x:Name="CodeStack"/>
                     </ScrollViewer>
 
