@@ -769,7 +769,7 @@ public partial class HistoryWindow : Window
         var textBase = LocalizationService.Translate(lang, "Text");
         var mediaBase = LocalizationService.Translate(lang, "Videos/GIFs");
         var colorsBase = LocalizationService.Translate(lang, "Colors");
-        var codesBase = LocalizationService.Translate(lang, "Codes");
+        var codesBase = LocalizationService.Translate(lang, "QR & Barcodes");
 
         var imagesCount = _historyService.ImageEntries.Count;
         var textCount = _historyService.OcrEntries.Count;
