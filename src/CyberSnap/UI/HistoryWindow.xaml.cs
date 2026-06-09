@@ -157,6 +157,17 @@ public partial class HistoryWindow : Window
         ScheduleHistoryTabLoad(preserveTransientState: true);
     }
 
+    /// <summary>Lightweight refresh: only updates search bar and auto-prune visibility without reloading.</summary>
+    public void RefreshVisibility()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(RefreshVisibility);
+            return;
+        }
+        UpdateImageSearchUi();
+    }
+
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();
 
     public void NavigateToItem(string filePath)
