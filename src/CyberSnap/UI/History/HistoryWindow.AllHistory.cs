@@ -43,8 +43,7 @@ public partial class HistoryWindow
         _unifiedCardEntries.Clear();
         HideHistoryEmptyState();
 
-        // Invalidate image-only cache so switching to Images tab forces a fresh load
-        _historyImageCacheReady = false;
+        // Clear and rebuild image cache so switching to Images is instant
         _allHistoryItems.Clear();
         _allHistoryItemsByPath.Clear();
         _filteredHistoryItems.Clear();
@@ -83,6 +82,15 @@ public partial class HistoryWindow
         AppendGroupedUnifiedItems(HistoryStack, page, CreateUnifiedCard);
         _allLastAppendIndex = pageSize;
         UpdateHistoryActionButtons();
+
+        // Mark image cache ready so Images tab is instant
+        _allImageHistoryEntries = unified
+            .Where(i => i.IsImageOrMedia)
+            .Select(i => (HistoryEntry)i.RawEntry)
+            .ToList();
+        _historyImageCacheReady = true;
+        PrimeHistoryFingerprint();
+
         sw.Stop();
         AppDiagnostics.LogInfo("history.load-all", $"items={unified.Count} rendered={pageSize} elapsedMs={sw.ElapsedMilliseconds}");
     }
@@ -99,6 +107,8 @@ public partial class HistoryWindow
         _allLastAppendIndex = Math.Min(_allLastAppendIndex + HistoryAppendPageSize, _allUnifiedEntries.Count);
         var added = _allUnifiedEntries.GetRange(prevCount, _allLastAppendIndex - prevCount);
         AppendGroupedUnifiedItems(HistoryStack, added, CreateUnifiedCard);
+        // Update fingerprint after appending more items
+        PrimeHistoryFingerprint();
         _ = Dispatcher.BeginInvoke(() =>
         {
             if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 0)
@@ -186,6 +196,11 @@ public partial class HistoryWindow
     {
         var vm = new HistoryItemVM();
         UpdateHistoryItemViewModel(vm, entry, isSelected: false, hydrateSearchMetadata: false);
+
+        // Register VM so Images view can reuse cached thumbnails
+        _allHistoryItems.Add(vm);
+        if (!string.IsNullOrEmpty(entry.FilePath))
+            _allHistoryItemsByPath[entry.FilePath] = vm;
 
         var shell = BuildMediaCardShell(vm, () =>
         {

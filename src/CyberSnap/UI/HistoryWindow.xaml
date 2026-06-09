@@ -485,7 +485,7 @@
                                             <!-- Dropdown chevron, only visible when focused, clickable -->
                                             <TextBlock x:Name="ImageSearchChevron" Grid.Column="2" Text="▾" FontSize="20" Height="20"
                                                        Foreground="{DynamicResource ThemeTextSecondaryBrush}" Opacity="0.45"
-                                                       VerticalAlignment="Center" Margin="4,0,0,0" Cursor="Hand"
+                                                       VerticalAlignment="Center" Margin="4,-2,0,0" Cursor="Hand"
                                                        Visibility="Collapsed" ToolTip="Search filters"
                                                        MouseLeftButtonDown="ImageSearchChevron_Click"/>
                                         </Grid>
