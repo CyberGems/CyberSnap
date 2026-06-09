@@ -433,7 +433,7 @@ public partial class HistoryWindow
 
     private void UpdateImageSearchUi()
     {
-        var isImages = HistoryCategoryCombo.SelectedIndex == 0;
+        var isImages = HistoryCategoryCombo.SelectedIndex == 0 || HistoryCategoryCombo.SelectedIndex == 1;
         var isText = HistoryCategoryCombo.SelectedIndex == 2;
         var isColors = HistoryCategoryCombo.SelectedIndex == 4;
         var isCodes = HistoryCategoryCombo.SelectedIndex == 5;
