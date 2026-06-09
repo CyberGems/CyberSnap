@@ -431,7 +431,8 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <Image x:Name="ImageSearchIcon" Width="18" Height="18" Stretch="Uniform"
-                                                   VerticalAlignment="Center"/>
+                                                   VerticalAlignment="Center" Cursor="Hand"
+                                                   MouseLeftButtonDown="ImageSearchIcon_Click"/>
                                             <TextBox x:Name="ImageSearchBox" Grid.Column="1" BorderThickness="0" Background="#121212"
                                                      Padding="0" MinHeight="0" Height="20" VerticalContentAlignment="Center"
                                                      Margin="8,0,0,0"
