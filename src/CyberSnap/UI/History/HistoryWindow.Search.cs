@@ -111,11 +111,11 @@ public partial class HistoryWindow
             else if (pendingThumbnailMatches)
                 ShowHistoryEmptyState("Loading matching screenshots", "Thumbnail previews are loading. Results will appear shortly.");
             else if (usingSearchAndUploadFilter)
-                ShowHistoryEmptyState("No screenshots match this search and filter", "Search and upload filters matched 0 saved screenshots.");
+                ShowHistoryEmptyState("No captures match this search and filter", "Search and upload filters matched 0 saved captures.");
             else if (usingSearch)
-                ShowHistoryEmptyState("No screenshots match your search", "Search matched 0 saved screenshots.");
+                ShowHistoryEmptyState("No captures match your search", "Search matched 0 saved captures.");
             else if (uploadFilterActive)
-                ShowHistoryEmptyState("No screenshots match this filter", "Filter matched 0 saved screenshots.");
+                ShowHistoryEmptyState("No captures match this filter", "Filter matched 0 saved captures.");
             else
                 ShowHistoryEmptyState("No captures yet", "Screenshots will appear here after capture.");
         }
@@ -249,11 +249,11 @@ public partial class HistoryWindow
                 : FormatImageSearchMatchCountText(_filteredHistoryItems.Count, uploadFilterActive, sizeStr);
 
             if (_filteredHistoryItems.Count == 0 && pendingThumbnailMatches)
-                ShowHistoryEmptyState("Loading matching screenshots", "Thumbnail previews are loading. Results will appear shortly.");
+                ShowHistoryEmptyState("Loading matching captures", "Thumbnail previews are loading. Results will appear shortly.");
             else if (_filteredHistoryItems.Count == 0 && uploadFilterActive)
-                ShowHistoryEmptyState("No screenshots match this search and filter", "Search and upload filters matched 0 saved screenshots.");
+                ShowHistoryEmptyState("No captures match this search and filter", "Search and upload filters matched 0 saved captures.");
             else if (_filteredHistoryItems.Count == 0)
-                ShowHistoryEmptyState("No screenshots match your search", "Search matched 0 saved screenshots.");
+                ShowHistoryEmptyState("No captures match your search", "Search matched 0 saved captures.");
             else
                 HideHistoryEmptyState();
 
