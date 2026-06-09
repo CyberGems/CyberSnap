@@ -85,6 +85,12 @@ public partial class HistoryWindow
             automationName = "Text history search";
             helpText = "Search saved OCR text captures.";
         }
+        else if (HistoryCategoryCombo.SelectedIndex == 3)
+        {
+            placeholder = "Search videos and GIFs...";
+            automationName = "Media history search";
+            helpText = "Search saved video recordings and GIF captures.";
+        }
         else if (HistoryCategoryCombo.SelectedIndex == 4)
         {
             placeholder = "Search hex, RGB, or color names";
@@ -256,7 +262,7 @@ public partial class HistoryWindow
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
-            if (HistoryCategoryCombo.SelectedIndex == 0)
+            if (HistoryCategoryCombo.SelectedIndex <= 1)  // All (0) or Images (1)
             {
                 _imageSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_imageSearchQuery) && !ImageSearchBox.IsKeyboardFocused
@@ -402,6 +408,13 @@ public partial class HistoryWindow
         e.Handled = true;
         ImageSearchFiltersMenu.PlacementTarget = ImageSearchBox;
         ImageSearchFiltersMenu.IsOpen = true;
+    }
+
+    private void ImageSearchIcon_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        ImageSearchBox.Focus();
+        ImageSearchBox.SelectAll();
     }
 
     private void ImageSearchSelectAll_Click(object sender, RoutedEventArgs e)

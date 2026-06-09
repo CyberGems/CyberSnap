@@ -433,11 +433,13 @@ public partial class HistoryWindow
 
     private void UpdateImageSearchUi()
     {
-        var isImages = HistoryCategoryCombo.SelectedIndex == 0 || HistoryCategoryCombo.SelectedIndex == 1;
+        var isImages = HistoryCategoryCombo.SelectedIndex <= 1;  // All (0) or Images (1)
+        var isMedia = HistoryCategoryCombo.SelectedIndex == 3;   // Videos & GIFs
         var isText = HistoryCategoryCombo.SelectedIndex == 2;
         var isColors = HistoryCategoryCombo.SelectedIndex == 4;
         var isCodes = HistoryCategoryCombo.SelectedIndex == 5;
         var showSearch = (isImages && _settingsService.Settings.ShowImageSearchBar && !_imageSearchRowAutoHidden) ||
+                         isMedia ||
                          isText ||
                          isColors ||
                          isCodes;
