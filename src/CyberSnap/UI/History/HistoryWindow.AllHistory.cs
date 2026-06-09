@@ -278,9 +278,8 @@ public partial class HistoryWindow
             TextTrimming = TextTrimming.CharacterEllipsis,
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
             Foreground = Theme.Brush(Theme.TextPrimary),
-            Margin = new Thickness(10, 10, 48, 10),  // extra right margin so text doesn't invade badge
-            VerticalAlignment = VerticalAlignment.Center,
-            MaxWidth = HistoryCardPreferredWidth - 20
+            Margin = new Thickness(10, 26, 10, 10),  // top margin clears the badge, right fills to edge
+            VerticalAlignment = VerticalAlignment.Top
         });
         AttachCardMenu(card, textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
         Grid.SetRow(textArea, 0);
@@ -330,9 +329,16 @@ public partial class HistoryWindow
         root.Children.Add(swatchArea);
 
         var info = new StackPanel { Margin = new Thickness(10, 8, 10, 10) };
-        info.Children.Add(new TextBlock { Text = "Color", FontSize = 9, Opacity = 0.5, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) });
-        info.Children.Add(new TextBlock { Text = displayHex, FontSize = 12, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName) });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 4, 0, 0) });
+        // Single line: "Color  #FF8844"
+        info.Children.Add(new TextBlock
+        {
+            Text = $"Color  {displayHex}",
+            FontSize = 11,
+            FontWeight = FontWeights.Bold,
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, Opacity = 0.35, Margin = new Thickness(0, 2, 0, 0) });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
@@ -449,6 +455,8 @@ public partial class HistoryWindow
         card.MouseLeave += (_, _) => { if (!card.IsKeyboardFocusWithin) { card.Background = Theme.Brush(Theme.BgCard); card.BorderBrush = Brushes.Transparent; } };
         card.GotKeyboardFocus += (_, _) => { card.Background = HistoryCardHoverBrush; card.BorderBrush = HistoryCardFocusBrush; };
         card.LostKeyboardFocus += (_, _) => { if (!card.IsMouseOver) { card.Background = Theme.Brush(Theme.BgCard); card.BorderBrush = Brushes.Transparent; } };
+
+        card.Tag = "unified";  // so UpdateHistoryWrapPanelCardWidths resizes this card
 
         return card;
     }
