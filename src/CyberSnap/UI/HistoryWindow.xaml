@@ -479,7 +479,7 @@
                                                     </ContextMenu>
                                                 </TextBox.ContextMenu>
                                             </TextBox>
-                                            <TextBlock x:Name="ImageSearchPlaceholder" Grid.Column="1" Text="Search screenshots, OCR text, or filenames..."
+                                            <TextBlock x:Name="ImageSearchPlaceholder" Grid.Column="1" Text="Search..."
                                                        FontSize="12" Opacity="0.28" VerticalAlignment="Center"
                                                        IsHitTestVisible="False" Margin="8,0,0,0"/>
                                             <!-- Dropdown chevron, only visible when focused, clickable -->
