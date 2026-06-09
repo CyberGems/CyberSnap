@@ -251,6 +251,7 @@ public partial class HistoryWindow
                 return;
 
             SetImageSearchRowAutoHidden(false);
+            SetAutoPruneRowAutoHidden(false);
             var text = ImageSearchBox.Text ?? "";
             ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(text) && !ImageSearchBox.IsKeyboardFocused
                 ? Visibility.Visible
@@ -319,7 +320,10 @@ public partial class HistoryWindow
     private void ImageSearchBox_FocusChanged(object sender, RoutedEventArgs e)
     {
         if (ImageSearchBox.IsKeyboardFocused)
+        {
             SetImageSearchRowAutoHidden(false);
+            SetAutoPruneRowAutoHidden(false);
+        }
 
         ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(ImageSearchBox.Text) && !ImageSearchBox.IsKeyboardFocused
             ? Visibility.Visible
@@ -407,6 +411,10 @@ public partial class HistoryWindow
                                    string.IsNullOrWhiteSpace(_imageSearchQuery);
             SetImageSearchRowAutoHidden(shouldHideSearch);
         }
+
+        // Auto-hide pruning card on scroll (same threshold as search)
+        var shouldHidePrune = e.VerticalOffset > 18;
+        SetAutoPruneRowAutoHidden(shouldHidePrune);
 
         // All view: infinite scroll
         if (HistoryCategoryCombo.SelectedIndex == 0)
