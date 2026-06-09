@@ -426,8 +426,7 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
                                     <Border x:Name="ImageSearchBorder" Background="Transparent"
-                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                            BorderThickness="1" CornerRadius="7" Padding="10,6">
+                                            BorderThickness="0" CornerRadius="7" Padding="10,6">
                                         <StackPanel>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -449,7 +448,15 @@
                                                              TextChanged="ImageSearchBox_TextChanged"
                                                              PreviewKeyDown="ImageSearchBox_PreviewKeyDown"
                                                              GotKeyboardFocus="ImageSearchBox_FocusChanged"
-                                                             LostKeyboardFocus="ImageSearchBox_FocusChanged"/>
+                                                             LostKeyboardFocus="ImageSearchBox_FocusChanged"
+                                                             Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                             CaretBrush="{DynamicResource ThemeTextPrimaryBrush}">
+                                                        <TextBox.Template>
+                                                            <ControlTemplate TargetType="TextBox">
+                                                                <ScrollViewer x:Name="PART_ContentHost" Background="Transparent"/>
+                                                            </ControlTemplate>
+                                                        </TextBox.Template>
+                                                    </TextBox>
                                                     <TextBlock x:Name="ImageSearchPlaceholder" Text="Search screenshots, OCR text, or filenames..."
                                                                FontSize="12" Opacity="0.28" VerticalAlignment="Center"
                                                                IsHitTestVisible="False" Margin="0,0,0,0"/>

@@ -323,12 +323,14 @@ public partial class HistoryWindow
         {
             SetImageSearchRowAutoHidden(false);
             SetAutoPruneRowAutoHidden(false);
+            ImageSearchBorder.BorderThickness = new Thickness(1);
             ImageSearchBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(60, 0, 255, 255));  // very soft cyan
         }
         else
         {
-            ImageSearchBorder.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush");
+            ImageSearchBorder.BorderThickness = new Thickness(0);
+            ImageSearchBorder.BorderBrush = null;
         }
 
         ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(ImageSearchBox.Text) && !ImageSearchBox.IsKeyboardFocused
