@@ -798,6 +798,17 @@ public sealed partial class RecordingForm : Form
 
     private void BuildHollowRegion()
     {
+        // During PreRecording, use a full region so the dimmed screenshot
+        // is visible and clicks are captured everywhere (handles + center-drag).
+        if (_state == State.PreRecording)
+        {
+            var fullRgn = Native.Gdi32.CreateRectRgn(0, 0, Bounds.Width, Bounds.Height);
+            Native.User32.SetWindowRgn(Handle, fullRgn, true);
+            Native.Gdi32.DeleteObject(fullRgn);
+            return;
+        }
+
+        // During Recording, use a hollow frame so the interior is capturable.
         const int RGN_OR = 2;
         const int frameThickness = 15; // covers border + glow + handles
         var rgn = Native.Gdi32.CreateRectRgn(0, 0, 0, 0);
