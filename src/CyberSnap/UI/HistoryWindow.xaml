@@ -555,7 +555,7 @@
                     </Border>
 
                     <!-- Images history -->
-                    <ScrollViewer x:Name="ImagesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,12,4"
+                    <ScrollViewer x:Name="ImagesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,14,4"
                                   ScrollChanged="HistoryPanel_ScrollChanged">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
@@ -575,7 +575,7 @@
 
                     <!-- Text history -->
                     <ScrollViewer x:Name="TextPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  Padding="10,2,12,14" Visibility="Collapsed"
+                                  Padding="10,2,14,14" Visibility="Collapsed"
                                   ScrollChanged="OcrPanel_ScrollChanged">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
@@ -585,7 +585,7 @@
 
                     <!-- Color history -->
                     <ScrollViewer x:Name="ColorsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  Padding="10,2,12,14" Visibility="Collapsed"
+                                  Padding="10,2,14,14" Visibility="Collapsed"
                                   ScrollChanged="ColorsPanel_ScrollChanged">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
@@ -595,7 +595,7 @@
 
                     <!-- Code/QR history -->
                     <ScrollViewer x:Name="CodesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  Padding="10,2,12,14" Visibility="Collapsed"
+                                  Padding="10,2,14,14" Visibility="Collapsed"
                                   ScrollChanged="CodesPanel_ScrollChanged">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
