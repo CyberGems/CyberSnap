@@ -445,7 +445,6 @@ public partial class HistoryWindow
                          isColors ||
                          isCodes;
         ImageSearchRow.Visibility = showSearch ? Visibility.Visible : Visibility.Collapsed;
-        ImageSearchFiltersBtn.Visibility = isImages ? Visibility.Visible : Visibility.Collapsed;
         if (!isImages)
             ImageSearchLoadingBar.Visibility = Visibility.Collapsed;
         if (showSearch)
