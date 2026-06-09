@@ -422,6 +422,7 @@
                                         Cursor="Hand" Click="ImageSearchFiltersBtn_Click">
                                     <Button.ContextMenu>
                                         <ContextMenu x:Name="ImageSearchFiltersMenu" Placement="Bottom"
+                                                     Style="{StaticResource HistoryActionsMenuStyle}"
                                                      AutomationProperties.Name="Image search filter options">
                                             <MenuItem x:Name="ImageSearchFileNameCheck" Header="File name" IsCheckable="True"
                                                       ToolTip="Search screenshot file names"
