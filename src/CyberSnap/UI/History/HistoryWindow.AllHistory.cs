@@ -309,7 +309,7 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
-        card.SizeChanged += (_, _) => imageRow.Height = new GridLength(GetHistoryCardImageHeight(card.ActualWidth));
+        SetupUnifiedCardHoverAndClip(card, root, imageRow);
         card.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
@@ -376,7 +376,7 @@ public partial class HistoryWindow
         root.Children.Add(infoBorder);
 
         card.Child = root;
-        card.SizeChanged += (_, _) => imageRow.Height = new GridLength(GetHistoryCardImageHeight(card.ActualWidth));
+        SetupUnifiedCardHoverAndClip(card, root, imageRow);
         card.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
@@ -451,7 +451,7 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
-        card.SizeChanged += (_, _) => imageRow.Height = new GridLength(GetHistoryCardImageHeight(card.ActualWidth));
+        SetupUnifiedCardHoverAndClip(card, root, imageRow);
         card.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
@@ -582,14 +582,59 @@ public partial class HistoryWindow
         AutomationProperties.SetName(card, automationName);
         AutomationProperties.SetHelpText(card, tooltip);
 
-        card.MouseEnter += (_, _) => { card.Background = HistoryCardHoverBrush; card.BorderBrush = HistoryCardFocusBrush; };
-        card.MouseLeave += (_, _) => { if (!card.IsKeyboardFocusWithin) { card.Background = Theme.Brush(Theme.BgCard); card.BorderBrush = Theme.Brush(Theme.BorderSubtle); } };
-        card.GotKeyboardFocus += (_, _) => { card.Background = HistoryCardHoverBrush; card.BorderBrush = HistoryCardFocusBrush; };
-        card.LostKeyboardFocus += (_, _) => { if (!card.IsMouseOver) { card.Background = Theme.Brush(Theme.BgCard); card.BorderBrush = Theme.Brush(Theme.BorderSubtle); } };
-
         card.Tag = false;  // selection state: false=unselected, true=selected; also marks for UpdateHistoryWrapPanelCardWidths
 
         return card;
+    }
+
+    /// <summary>Adds a hover overlay border and rounded-corner clip, matching image card behavior.</summary>
+    private void SetupUnifiedCardHoverAndClip(Border card, Grid root, RowDefinition imageRow)
+    {
+        var hoverBorder = new Border
+        {
+            BorderThickness = new Thickness(1),
+            BorderBrush = System.Windows.Media.Brushes.Transparent,
+            CornerRadius = new CornerRadius(7),
+            IsHitTestVisible = false,
+            Background = System.Windows.Media.Brushes.Transparent
+        };
+        Grid.SetRow(hoverBorder, 0);
+        Grid.SetRowSpan(hoverBorder, 2);
+        root.Children.Add(hoverBorder);
+
+        card.SizeChanged += (_, _) =>
+        {
+            imageRow.Height = new GridLength(GetHistoryCardImageHeight(card.ActualWidth));
+            card.Clip = new System.Windows.Media.RectangleGeometry(
+                new System.Windows.Rect(0, 0, card.ActualWidth, card.ActualHeight), 8, 8);
+        };
+
+        card.MouseEnter += (_, _) =>
+        {
+            card.Background = HistoryCardHoverBrush;
+            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+        };
+        card.MouseLeave += (_, _) =>
+        {
+            if (!card.IsKeyboardFocusWithin)
+            {
+                card.Background = Theme.Brush(Theme.BgCard);
+                hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+            }
+        };
+        card.GotKeyboardFocus += (_, _) =>
+        {
+            card.Background = HistoryCardHoverBrush;
+            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+        };
+        card.LostKeyboardFocus += (_, _) =>
+        {
+            if (!card.IsMouseOver)
+            {
+                card.Background = Theme.Brush(Theme.BgCard);
+                hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+            }
+        };
     }
 
     private static void CopyTextToClipboard(string text)
