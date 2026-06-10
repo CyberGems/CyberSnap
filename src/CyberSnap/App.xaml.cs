@@ -67,6 +67,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-tool-color", ex); }
     }
 
+    /// <summary>Persists the stroke width last chosen in the editor (shared with the capture overlay).</summary>
+    public void PersistEditorStrokeWidth(float width)
+    {
+        if (_settingsService is null) return;
+        if (Math.Abs(_settingsService.Settings.StrokeWidth - width) < 0.01f) return;
+        _settingsService.Settings.StrokeWidth = width;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-stroke-width", ex); }
+    }
+
     public void EnsureWidgetWindowCreated()
     {
         if (!Dispatcher.CheckAccess())
