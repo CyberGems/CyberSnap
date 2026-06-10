@@ -51,7 +51,6 @@ public partial class SettingsWindow : Window
     private bool _suppressStartWithWindowsChange;
 
     public event Action? HotkeyChanged;
-    public event Action? UninstallRequested;
     public event Action? LocalizationChanged;
 
     public SettingsWindow(SettingsService settingsService, HistoryService historyService, ImageSearchIndexService imageSearchIndexService)
@@ -187,6 +186,14 @@ public partial class SettingsWindow : Window
             mmi.ptMaxSize.X = Math.Abs(rcWork.Right - rcWork.Left);
             mmi.ptMaxSize.Y = Math.Abs(rcWork.Bottom - rcWork.Top);
         }
+
+        // Enforce the window's minimum size while the user drags a resize border. This window uses
+        // WindowStyle=None + AllowsTransparency and marks WM_GETMINMAXINFO as handled, which bypasses
+        // WPF's own MinWidth/MinHeight enforcement, so we populate ptMinTrackSize (physical pixels) here.
+        var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
+        mmi.ptMinTrackSize.X = (int)Math.Ceiling(MinWidth * dpi.DpiScaleX);
+        mmi.ptMinTrackSize.Y = (int)Math.Ceiling(MinHeight * dpi.DpiScaleY);
+
         Marshal.StructureToPtr(mmi, lParam, true);
     }
 

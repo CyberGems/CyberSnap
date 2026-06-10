@@ -100,11 +100,6 @@ public partial class SettingsWindow
             : Visibility.Visible;
     }
 
-    public void ShowUninstallCanceledStatus()
-    {
-        SetSettingsImportExportStatus("Uninstall canceled. CyberSnap was left installed.");
-    }
-
     private void ResetSettingsButton_Click(object sender, RoutedEventArgs e)
     {
         if (!ThemedConfirmDialog.Confirm(
@@ -166,42 +161,12 @@ public partial class SettingsWindow
             $"Defaults were not saved. Previous settings were restored. Try again after checking file permissions.\n{ex.Message}");
     }
 
-    private void UninstallButton_Click(object sender, RoutedEventArgs e)
-    {
-        var uninstall = UninstallRequested;
-        if (uninstall is null)
-        {
-            SetSettingsImportExportStatus("Uninstall is not available from this window.");
-            ToastWindow.ShowError("Uninstall unavailable", "Restart CyberSnap and try again.");
-            return;
-        }
-
-        try
-        {
-            SetSettingsImportExportStatus("Starting uninstall...");
-            uninstall.Invoke();
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.uninstall", ex);
-            ShowSettingsUninstallFailed(ex);
-        }
-    }
-
     private void ShowSettingsExportFailed(Exception ex)
     {
         SetSettingsImportExportStatus("Export failed. Choose another folder and try again.");
         ToastWindow.ShowError(
             "Export failed",
             $"CyberSnap could not write the settings export. Choose another folder and try again.\n{ex.Message}");
-    }
-
-    private void ShowSettingsUninstallFailed(Exception ex)
-    {
-        SetSettingsImportExportStatus("Uninstall failed. Restart CyberSnap and try again.");
-        ToastWindow.ShowError(
-            "Uninstall failed",
-            $"CyberSnap could not start uninstall. Restart CyberSnap and try again from Settings.\n{ex.Message}");
     }
 
     private void RestoreSettingsUiAfterFailedReset()
