@@ -173,7 +173,7 @@ public sealed partial class EditorForm : Form
         {
             Dock = DockStyle.Fill,
             BackColor = EditorColors.CanvasBg,
-            ToolColor = EditorColors.Accent,
+            ToolColor = settings != null ? Color.FromArgb(settings.EditorToolColorArgb) : EditorColors.Accent,
             StrokeWidth = settings?.StrokeWidth ?? 4f,
             FitToWindowOnLoad = settings?.EditorFitToWindowOnOpen ?? true,
         };
