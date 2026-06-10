@@ -214,6 +214,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         set
         {
             if (_activeTool == value) return;
+            // Leaving the Text tool by picking another one should keep what was typed,
+            // not throw it away. Commit first so CancelInProgressTool's discard no-ops.
+            CommitOrCancelInlineText(commit: true);
             CancelInProgressTool();
             _activeTool = value;
             UpdateCursor();
@@ -235,6 +238,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         if (_activeTool == CanvasTool.Pan)
             return false;
 
+        // Deselecting the Text tool keeps what was typed (use the Esc key inside the
+        // text box to discard instead). Commit first so the discard below no-ops.
+        CommitOrCancelInlineText(commit: true);
         CancelInProgressTool();
         CancelCropPending();
         _activeTool = CanvasTool.Pan;
