@@ -136,33 +136,27 @@
                                 ToolTip="Quick screenshot (Area Capture)">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Grid>
+                                    <Grid Background="Transparent">
                                         <!-- Glow/Outer Ring -->
-                                        <Ellipse x:Name="OuterRing" Stroke="{StaticResource WidgetAccent}" StrokeThickness="2" Fill="Transparent"/>
-                                        <!-- CyberGems Cyan Inner Button -->
-                                        <Ellipse x:Name="InnerCircle" Fill="#0D1F2D" Stroke="{StaticResource WidgetAccent}" StrokeThickness="1.5" Width="36" Height="36" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Ellipse.Effect>
-                                                <DropShadowEffect Color="#00FFFF" BlurRadius="8" ShadowDepth="0" Opacity="0.5"/>
-                                            </Ellipse.Effect>
-                                        </Ellipse>
+                                        <Path x:Name="OuterRing" Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2" Fill="{StaticResource WidgetAccent}" Stretch="Uniform" Width="54" Height="54"/>
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter TargetName="OuterRing" Property="Effect" Value="{StaticResource CyanGlow}"/>
-                                            <Setter TargetName="OuterRing" Property="StrokeThickness" Value="3"/>
-                                            <Setter TargetName="InnerCircle" Property="Fill" Value="#15354F"/>
-                                            <Setter TargetName="InnerCircle" Property="Effect" Value="{StaticResource CyanGlow}"/>
                                         </Trigger>
                                         <Trigger Property="IsPressed" Value="True">
-                                            <Setter TargetName="InnerCircle" Property="Width" Value="34"/>
-                                            <Setter TargetName="InnerCircle" Property="Height" Value="34"/>
+                                            <Setter TargetName="OuterRing" Property="Opacity" Value="0.7"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Button.Template>
                             <!-- Big capture icon as content -->
-                            <Image x:Name="BigCaptureIcon" Width="20" Height="20"/>
+                            <Image x:Name="BigCaptureIcon" Width="20" Height="20">
+                                <Image.Effect>
+                                    <DropShadowEffect Color="#00FFFF" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/>
+                                </Image.Effect>
+                            </Image>
                         </Button>
                     </Grid>
 
