@@ -198,7 +198,10 @@ public sealed partial class AnnotationCanvas
         var style = FontStyle.Regular;
         if (bold) style |= FontStyle.Bold;
         if (italic) style |= FontStyle.Italic;
-        using var font = new Font(fontFamily, fontSize, style);
+        // Pixel units to match how the text is actually drawn (RenderTextAnnotation /
+        // RenderInlineTextPreview), so the selection box, background and toolbar anchor
+        // line up with the glyphs instead of being measured ~33% too large.
+        using var font = new Font(fontFamily, fontSize, style, GraphicsUnit.Pixel);
         string display = text.Length > 0 ? text : "Type here...";
         SizeF size;
         using (var bmp = new Bitmap(1, 1))
@@ -231,7 +234,10 @@ public sealed partial class AnnotationCanvas
         if (_inlineTextBox is null) return;
 
         var style = (_textBold ? FontStyle.Bold : 0) | (_textItalic ? FontStyle.Italic : 0);
-        using var font = new Font(_textFontFamily, _textFontSize, style);
+        // Pixel units (not the default Point) so the live preview matches the committed
+        // annotation, which renders with GraphicsUnit.Pixel. Otherwise the text appears
+        // ~33% larger while typing and visibly shrinks the moment it is confirmed.
+        using var font = new Font(_textFontFamily, _textFontSize, style, GraphicsUnit.Pixel);
         var text = _inlineTextBox.Text.Length > 0 ? _inlineTextBox.Text : "Type here...";
         var color = ToolColor;
         var pos = new Point(_inlineTextOrigin.X, _inlineTextOrigin.Y);

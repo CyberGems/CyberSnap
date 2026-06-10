@@ -260,7 +260,7 @@ public sealed partial class EditorForm : Form
                 _canvas.Invalidate();
             }
         };
-        Shown += (_, _) => { UpdateWindowChromeRegion(); Activate(); BringToFront(); _canvas.Focus(); RefreshUi(); };
+        Shown += (_, _) => { MaybeAutoMaximizeForCapture(); UpdateWindowChromeRegion(); Activate(); BringToFront(); _canvas.Focus(); RefreshUi(); };
     }
 
     private void LoadCapture(Bitmap captured, string? savedFilePath)
@@ -268,6 +268,7 @@ public sealed partial class EditorForm : Form
         _savedFilePath = savedFilePath;
         _canvas.ResetState(new Bitmap(captured));
         _suppressCloseConfirm = false;
+        MaybeAutoMaximizeForCapture();
         UpdateCaptureCaption();
         RefreshUi();
     }
@@ -566,6 +567,33 @@ public sealed partial class EditorForm : Form
 
         ReleaseCapture();
         SendMessage(Handle, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
+    }
+
+    /// <summary>
+    /// If the freshly loaded capture is larger than the canvas can show at the current window
+    /// size, maximize the editor so the most possible is visible at first glance. Only ever
+    /// grows the window (never restores), so a smaller capture — or a window the user already
+    /// sized — is left untouched. No-op when already maximized or when the working area offers
+    /// no extra room.
+    /// </summary>
+    private void MaybeAutoMaximizeForCapture()
+    {
+        if (_isManualMaximized || _canvas is null)
+            return;
+
+        var bmp = _canvas.BaseBitmap;
+        var viewport = _canvas.ClientSize;
+        if (bmp is null || viewport.Width <= 0 || viewport.Height <= 0)
+            return;
+
+        if (bmp.Width <= viewport.Width && bmp.Height <= viewport.Height)
+            return; // the capture already fits at 100% — nothing to gain
+
+        var area = Screen.FromControl(this).WorkingArea;
+        if (area.Width <= Width && area.Height <= Height)
+            return; // already as big as the screen allows
+
+        ApplyManualMaximize();
     }
 
     private void ApplyManualMaximize()
