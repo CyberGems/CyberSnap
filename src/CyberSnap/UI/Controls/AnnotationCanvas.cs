@@ -125,6 +125,25 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool ShowCaptureFrame { get; set; } = false;
 
+    private bool _showBanners = true;
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool ShowBanners
+    {
+        get => _showBanners;
+        set
+        {
+            if (_showBanners == value) return;
+            _showBanners = value;
+            if (!_showBanners)
+            {
+                _bannerOpacity = 0f;
+                _bannerText = "";
+                _bannerTimer?.Stop();
+                Invalidate();
+            }
+        }
+    }
+
     private float _bannerOpacity = 0f;
     private string _bannerText = "";
     private System.Windows.Forms.Timer? _bannerTimer;
@@ -135,6 +154,19 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     private void ShowToolBanner(string text, bool sticky = false)
     {
+        if (!_showBanners) return;
+
+        if (_bannerText == text && _bannerOpacity > 0f)
+        {
+            _bannerIsSticky = sticky;
+            _bannerHoldTicks = 0;
+            if (_bannerState == BannerState.FadeOut)
+            {
+                _bannerState = BannerState.FadeIn;
+            }
+            return;
+        }
+
         _bannerText = text;
         _bannerIsSticky = sticky;
         _bannerState = BannerState.FadeIn;

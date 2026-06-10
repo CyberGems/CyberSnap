@@ -177,6 +177,7 @@ public sealed partial class EditorForm : Form
             StrokeWidth = settings?.StrokeWidth ?? 4f,
             TextFontSize = settings?.EditorTextFontSize ?? 24f,
             FitToWindowOnLoad = settings?.EditorFitToWindowOnOpen ?? true,
+            ShowBanners = settings?.EditorShowBanners ?? true,
         };
         _canvas.StateChanged += OnCanvasStateChanged;
         _canvas.TextFontSizeChanged += size =>

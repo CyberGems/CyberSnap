@@ -1044,6 +1044,7 @@ public sealed partial class EditorForm
 
         var borderItem = WindowsMenuRenderer.Item("Border", iconId: null);
         var fitItem = WindowsMenuRenderer.Item("Auto-fit", iconId: null);
+        var bannersItem = WindowsMenuRenderer.Item("Show banners", iconId: null);
         var settingsItem = WindowsMenuRenderer.Item("Configuration", iconId: "gear");
 
         borderItem.Click += (_, _) =>
@@ -1056,27 +1057,38 @@ public sealed partial class EditorForm
             _toggleFitSwitch.Checked = !_toggleFitSwitch.Checked;
         };
 
+        bannersItem.Click += (_, _) =>
+        {
+            _canvas.ShowBanners = !_canvas.ShowBanners;
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorShowBanners(_canvas.ShowBanners);
+            }
+        };
+
         settingsItem.Click += (_, _) => OpenSettingsWindow();
 
         menu.Items.Add(borderItem);
         menu.Items.Add(fitItem);
+        menu.Items.Add(bannersItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
 
         menu.Opened += (_, _) =>
         {
-            UpdateBurgerCheckmarks(borderItem, fitItem);
+            UpdateBurgerCheckmarks(borderItem, fitItem, bannersItem);
         };
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
     }
 
-    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem)
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem bannersItem)
     {
         var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
         borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         fitItem.Image = _toggleFitSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
     }
 }
 
