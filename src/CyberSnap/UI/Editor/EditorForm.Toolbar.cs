@@ -1211,6 +1211,10 @@ internal sealed class EditorZoomHostPanel : TableLayoutPanel
 
 internal sealed class EditorToolButton : EditorButtonBase
 {
+    // Slightly-elevated graphite resting fill so the tool buttons lift off the darker
+    // panel instead of blending into it, and read well against their cyan borders.
+    protected override Color IdleFill => Color.FromArgb(0x1C, 0x20, 0x30);
+
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Checked
     {
@@ -1552,10 +1556,15 @@ internal abstract class EditorButtonBase : Button
             return Color.FromArgb(44, 50, 74);
         if (_hover)
             return EditorColors.BgHover;
-        return ResolveEffectiveParentBackColor() == EditorColors.TitleBar
+        return IdleFill;
+    }
+
+    // Background fill in the resting state (enabled, not selected/hover/pressed).
+    // Exposed as virtual so individual button kinds can override just their idle look.
+    protected virtual Color IdleFill =>
+        ResolveEffectiveParentBackColor() == EditorColors.TitleBar
             ? Color.FromArgb(18, 0, 255, 255)
             : EditorColors.BgCard;
-    }
 
     private Color ResolveEffectiveParentBackColor()
     {
