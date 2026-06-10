@@ -254,6 +254,7 @@ public sealed partial class EditorForm : Form
             _hoverToolTip?.Dispose();
             _canvasMenu?.Dispose();
             _imageMenu?.Dispose();
+            _burgerMenu?.Dispose();
             if (ReferenceEquals(_instance, this)) _instance = null;
         };
         Resize += (_, _) =>
@@ -712,6 +713,7 @@ public sealed partial class EditorForm : Form
 
     private ContextMenuStrip? _canvasMenu;
     private ContextMenuStrip? _imageMenu;
+    private ContextMenuStrip? _burgerMenu;
 
     private void BuildContextMenus()
     {
