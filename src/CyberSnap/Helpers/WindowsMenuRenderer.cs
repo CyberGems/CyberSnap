@@ -44,7 +44,7 @@ public static class WindowsMenuRenderer
     private static void ApplyTheme(ToolStripDropDown dd, bool showImages)
     {
         CyberSnap.UI.Theme.Refresh();
-        var bg = UiChrome.IsDark ? Color.FromArgb(20, 20, 20) : Color.FromArgb(250, 250, 250);
+        var bg = UiChrome.IsDark ? Color.FromArgb(31, 31, 31) : Color.FromArgb(250, 250, 250);
         var fg = UiChrome.SurfaceTextPrimary;
         var accent = UiChrome.AccentColor;
         var hover = Color.FromArgb(22, accent.R, accent.G, accent.B);

@@ -49,6 +49,8 @@ public sealed partial class EditorForm
         Color.White,
         Color.FromArgb(15, 23, 42),
         Color.FromArgb(236, 72, 153),
+        Color.FromArgb(148, 163, 184),
+        Color.Black,
     };
 
     private void BuildToolbar()
@@ -554,7 +556,7 @@ public sealed partial class EditorForm
 
     private Control BuildToolSection()
     {
-        var section = MakeSectionPanel("Tools", 560);
+        var section = MakeSectionPanel("Tools", 530);
 
         // The Tools section keeps two visually distinct groups at the SAME total height
         // (so the editor window layout stays pixel-identical after a capture):
@@ -680,28 +682,39 @@ public sealed partial class EditorForm
     private Control BuildColorSection()
     {
         var section = MakeSectionPanel("Color && Width", 240);
-        var outer = new FlowLayoutPanel
+
+        int swatchSize = (int)Math.Round(28 * 1.35);
+        int strokeSize = (int)Math.Round(32 * 1.35);
+
+        // Palette (6 columns) stacked over the stroke-width row (5 columns). Both are grids that
+        // stretch to the full toolbar content width, so their right edge lines up with the Tools
+        // grid above and the swatches stay evenly distributed.
+        var outer = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoSize = true,
+            ColumnCount = 1,
+            RowCount = 2,
         };
+        EnableDoubleBuffering(outer);
+        outer.RowStyles.Add(new RowStyle(SizeType.Absolute, (swatchSize + 8) * 2));
+        outer.RowStyles.Add(new RowStyle(SizeType.Absolute, strokeSize + 8));
 
-        int swatchSize = (int)Math.Round(28 * 1.35);
-        int swatchMargin = 9;
-        int btnSize = (int)Math.Round(32 * 1.35);
-
-        var palette = new FlowLayoutPanel
+        const int paletteColumns = 6;
+        var palette = new TableLayoutPanel
         {
-            AutoSize = true,
-            MaximumSize = new Size(290, 0),
+            Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = true,
+            ColumnCount = paletteColumns,
+            RowCount = 2,
         };
+        EnableDoubleBuffering(palette);
+        for (int c = 0; c < paletteColumns; c++)
+            palette.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / paletteColumns));
+        palette.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+        palette.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
+        int index = 0;
         foreach (var color in PaletteColors)
         {
             var swatch = new EditorColorButton
@@ -709,7 +722,8 @@ public sealed partial class EditorForm
                 SwatchColor = color,
                 Width = swatchSize,
                 Height = swatchSize,
-                Margin = new Padding(0, 0, swatchMargin, swatchMargin),
+                Anchor = AnchorStyles.None, // center within the cell
+                Margin = new Padding(0),
             };
             swatch.Click += (_, _) =>
             {
@@ -719,29 +733,32 @@ public sealed partial class EditorForm
                     app.PersistEditorToolColor(color.ToArgb());
             };
             _colorButtons[color] = swatch;
-            palette.Controls.Add(swatch);
+            palette.Controls.Add(swatch, index % paletteColumns, index / paletteColumns);
+            index++;
         }
 
-        outer.Controls.Add(palette);
-
         var strokeWidths = new[] { 2f, 3f, 4f, 6f, 10f };
-        var widthRow = new FlowLayoutPanel
+        var widthRow = new TableLayoutPanel
         {
-            AutoSize = true,
-            MaximumSize = new Size(290, 0),
+            Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
+            ColumnCount = strokeWidths.Length,
+            RowCount = 1,
         };
+        EnableDoubleBuffering(widthRow);
+        for (int c = 0; c < strokeWidths.Length; c++)
+            widthRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / strokeWidths.Length));
 
+        int wIndex = 0;
         foreach (var w in strokeWidths)
         {
             var btn = new EditorStrokeWidthButton
             {
                 StrokeWidth = w,
-                Width = btnSize,
-                Height = btnSize,
-                Margin = new Padding(0, 0, swatchMargin, 0),
+                Width = strokeSize,
+                Height = strokeSize,
+                Anchor = AnchorStyles.None,
+                Margin = new Padding(0),
             };
             btn.Click += (_, _) =>
             {
@@ -751,10 +768,12 @@ public sealed partial class EditorForm
                     app.PersistEditorStrokeWidth(w);
             };
             _strokeWidthButtons.Add(btn);
-            widthRow.Controls.Add(btn);
+            widthRow.Controls.Add(btn, wIndex, 0);
+            wIndex++;
         }
 
-        outer.Controls.Add(widthRow);
+        outer.Controls.Add(palette, 0, 0);
+        outer.Controls.Add(widthRow, 0, 1);
         section.Controls.Add(outer, 0, 1);
         return section;
     }
