@@ -265,7 +265,7 @@
                                            VerticalAlignment="Center"
                                            FontFamily="Segoe UI Variable Display"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="Settings_Click" ToolTip="Settings">
+                            <Button Grid.Column="1" Style="{StaticResource WidgetActionButton}" Width="24" Height="24" Click="Settings_Click" ToolTip="Configuration">
                                 <Image x:Name="SettingsIcon" Width="16" Height="16"/>
                             </Button>
                         </Grid>

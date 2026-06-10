@@ -107,6 +107,13 @@ public partial class App
         };
         _settingsWindow = win;
         win.Show();
+        // The widget collapses as Settings opens, which releases foreground; under the Windows
+        // foreground lock a plain Show() can leave the window behind other apps. Force it to the
+        // front with a brief Topmost flip (canonical workaround) without keeping it always-on-top.
+        win.Activate();
+        win.Topmost = true;
+        win.Topmost = false;
+        win.Focus();
     }
 
     public void ShowHistory(string? navigateToFilePath = null)
