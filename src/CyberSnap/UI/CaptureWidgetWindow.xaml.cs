@@ -104,7 +104,7 @@ public partial class CaptureWidgetWindow : Window
         QrScanIcon.Source = Helpers.FluentIcons.RenderWpf("scan", normalIconColor, 22);
         ColorPickerIcon.Source = Helpers.FluentIcons.RenderWpf("picker", normalIconColor, 22);
         ScreenRecordIcon.Source = Helpers.FluentIcons.RenderWpf("record", normalIconColor, 22); // record dot for MP4
-        GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("play", normalIconColor, 22);      // play dot for GIF
+        GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("recordGif", normalIconColor, 22); // GIF format icon
         SettingsIcon.Source = Helpers.FluentIcons.RenderWpf("gear", normalIconColor, 16);
     }
 
