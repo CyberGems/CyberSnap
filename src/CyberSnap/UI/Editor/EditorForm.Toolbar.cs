@@ -1117,15 +1117,42 @@ internal sealed class EditorWindowFrame : DoubleBufferedPanel
         base.OnPaint(e);
 
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        var rect = new Rectangle(1, 1, Width - 3, Height - 3);
+        // Inset uniformly so the cyan frame stays concentric with the radius-12 window clip
+        // (inner radius = outer radius - inset), running parallel to the rounded edge.
+        int inset = EditorPaint.WindowFrameInset;
+        var rect = new Rectangle(inset, inset, Width - 2 * inset, Height - 2 * inset);
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
 
         using var border = new Pen(EditorColors.WindowBorder, 1.4f);
         using var glow = new Pen(Color.FromArgb(34, EditorColors.Accent), 3f);
-        using var path = EditorPaint.RoundedRect(rect, 10);
+        using var path = EditorPaint.RoundedRect(rect, EditorPaint.WindowCornerRadius - inset);
         e.Graphics.DrawPath(glow, path);
         e.Graphics.DrawPath(border, path);
+    }
+
+    private const int WM_NCHITTEST = 0x0084;
+    private const int HTTRANSPARENT = -1;
+
+    protected override void WndProc(ref Message m)
+    {
+        // This panel (Dock.Fill, Padding = ResizeHitSize) owns the outer resize ring, so no inner
+        // child sits there. Hand any hit-test inside that ring back to the parent EditorForm by
+        // returning HTTRANSPARENT; the form's WndProc then maps it to HTLEFT/HTTOP/... and Windows
+        // shows the resize cursors and runs the native resize loop.
+        if (m.Msg == WM_NCHITTEST)
+        {
+            var p = PointToClient(Cursor.Position);
+            int edge = EditorPaint.ResizeHitSize;
+            bool inResizeRing = p.X < edge || p.X >= Width - edge || p.Y < edge || p.Y >= Height - edge;
+            if (inResizeRing)
+            {
+                m.Result = (IntPtr)HTTRANSPARENT;
+                return;
+            }
+        }
+
+        base.WndProc(ref m);
     }
 }
 
@@ -1928,6 +1955,10 @@ internal sealed class EditorZoomSlider : Control
 
 internal static class EditorPaint
 {
+    public const int WindowCornerRadius = 12;   // matches WPF Settings/History root Border
+    public const int WindowFrameInset = 2;      // uniform inset of the cyan accent frame
+    public const int ResizeHitSize = 8;         // edge thickness that triggers window resize
+
     public static GraphicsPath RoundedRect(Rectangle rect, int radius)
     {
         var path = new GraphicsPath();
