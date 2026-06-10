@@ -178,7 +178,7 @@
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Button Style="{StaticResource WidgetActionButton}" Click="ColorPicker_Click" ToolTip="Color picker">
-                                <Image x:Name="ColorPickerIcon" Width="22" Height="22"/>
+                                <Image x:Name="ColorPickerIcon" Width="18" Height="18"/>
                             </Button>
                             <Button Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="Scan QR / Barcode">
                                 <Image x:Name="QrScanIcon" Width="22" Height="22"/>

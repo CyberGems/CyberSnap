@@ -101,7 +101,7 @@ public partial class CaptureWidgetWindow : Window
         ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, 22);
         GrabTextIcon.Source = Helpers.FluentIcons.RenderWpf("ocr", normalIconColor, 22);
         QrScanIcon.Source = Helpers.FluentIcons.RenderWpf("scan", normalIconColor, 22);
-        ColorPickerIcon.Source = Helpers.FluentIcons.RenderWpf("picker", normalIconColor, 22);
+        ColorPickerIcon.Source = Helpers.FluentIcons.RenderWpf("picker", normalIconColor, 18);
         ScreenRecordIcon.Source = Helpers.FluentIcons.RenderWpf("record", normalIconColor, 22); // record dot for MP4
         GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("recordGif", normalIconColor, 22); // GIF format icon
         RulerIcon.Source = Helpers.FluentIcons.RenderWpf("ruler", normalIconColor, 22); // Ruler tool icon
