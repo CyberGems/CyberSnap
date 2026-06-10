@@ -219,6 +219,11 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             CommitOrCancelInlineText(commit: true);
             CancelInProgressTool();
             _activeTool = value;
+            if (value == CanvasTool.Crop)
+            {
+                _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+                _cropHasRect = true;
+            }
             UpdateCursor();
             ShowToolBanner(GetToolName(value));
             Invalidate();

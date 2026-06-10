@@ -31,6 +31,9 @@ public sealed partial class AnnotationCanvas
     private Rectangle _cropRect = Rectangle.Empty;
     private bool _cropDragging;
     private bool _cropHasRect;
+    private int _activeCropHandle = -1;
+    private Point _cropDragStartImg;
+    private Rectangle _cropDragStartRect;
 
     // Inline text editor
     private TextBox? _inlineTextBox;
@@ -189,10 +192,55 @@ public sealed partial class AnnotationCanvas
                 Invalidate();
                 break;
             case CanvasTool.Crop:
-                _dragStartImg = img;
-                _dragLastImg = img;
-                _cropDragging = true;
-                _cropHasRect = false;
+                if (_cropHasRect)
+                {
+                    var screenPt = e.Location;
+                    var cropScreen = ImageToScreenRect(_cropRect);
+                    var handles = GetCropHandlePositionsScreen(cropScreen);
+                    int hitHandle = -1;
+                    const float hitRadius = 7f;
+                    for (int i = 0; i < handles.Length; i++)
+                    {
+                        var h = handles[i];
+                        if (Math.Abs(screenPt.X - h.X) <= hitRadius && Math.Abs(screenPt.Y - h.Y) <= hitRadius)
+                        {
+                            hitHandle = i;
+                            break;
+                        }
+                    }
+
+                    if (hitHandle >= 0)
+                    {
+                        _activeCropHandle = hitHandle;
+                        _cropDragging = true;
+                        _cropDragStartImg = img;
+                        _cropDragStartRect = _cropRect;
+                    }
+                    else if (cropScreen.Contains(screenPt))
+                    {
+                        _activeCropHandle = 8; // Move
+                        _cropDragging = true;
+                        _cropDragStartImg = img;
+                        _cropDragStartRect = _cropRect;
+                    }
+                    else
+                    {
+                        _activeCropHandle = -1;
+                        _cropRect = new Rectangle(img.X, img.Y, 0, 0);
+                        _dragStartImg = img;
+                        _dragLastImg = img;
+                        _cropDragging = true;
+                        _cropHasRect = false;
+                    }
+                }
+                else
+                {
+                    _activeCropHandle = -1;
+                    _dragStartImg = img;
+                    _dragLastImg = img;
+                    _cropDragging = true;
+                    _cropHasRect = false;
+                }
                 Invalidate();
                 OnStateChanged();
                 break;
@@ -267,14 +315,100 @@ public sealed partial class AnnotationCanvas
             return;
         }
 
+        if (_activeTool == CanvasTool.Crop)
+        {
+            if (_cropDragging)
+            {
+                Cursor = _activeCropHandle switch
+                {
+                    0 or 3 => Cursors.SizeNWSE,
+                    1 or 2 => Cursors.SizeNESW,
+                    4 or 6 => Cursors.SizeNS,
+                    5 or 7 => Cursors.SizeWE,
+                    8 => Cursors.SizeAll,
+                    _ => Cursors.Cross
+                };
+            }
+            else
+            {
+                Cursor = GetCropCursor(e.Location);
+            }
+        }
+
         if (!_isDragging && !_cropDragging) return;
 
         var img = ScreenToImage(e.Location);
 
         if (_cropDragging)
         {
-            _cropRect = NormRect(_dragStartImg, img);
-            _dragLastImg = img;
+            if (_activeCropHandle == -1)
+            {
+                _cropRect = NormRect(_dragStartImg, img);
+                _dragLastImg = img;
+            }
+            else if (_activeCropHandle == 8)
+            {
+                int dx = img.X - _cropDragStartImg.X;
+                int dy = img.Y - _cropDragStartImg.Y;
+                var r = _cropDragStartRect;
+                int nx = r.X + dx;
+                int ny = r.Y + dy;
+                nx = Math.Clamp(nx, 0, _baseBitmap.Width - r.Width);
+                ny = Math.Clamp(ny, 0, _baseBitmap.Height - r.Height);
+                _cropRect = new Rectangle(nx, ny, r.Width, r.Height);
+            }
+            else
+            {
+                int dx = img.X - _cropDragStartImg.X;
+                int dy = img.Y - _cropDragStartImg.Y;
+                var r = _cropDragStartRect;
+
+                int left = r.Left;
+                int right = r.Right;
+                int top = r.Top;
+                int bottom = r.Bottom;
+
+                const int minSize = 4;
+
+                switch (_activeCropHandle)
+                {
+                    case 0:
+                        left = Math.Min(r.Left + dx, r.Right - minSize);
+                        top = Math.Min(r.Top + dy, r.Bottom - minSize);
+                        break;
+                    case 1:
+                        right = Math.Max(r.Right + dx, r.Left + minSize);
+                        top = Math.Min(r.Top + dy, r.Bottom - minSize);
+                        break;
+                    case 2:
+                        left = Math.Min(r.Left + dx, r.Right - minSize);
+                        bottom = Math.Max(r.Bottom + dy, r.Top + minSize);
+                        break;
+                    case 3:
+                        right = Math.Max(r.Right + dx, r.Left + minSize);
+                        bottom = Math.Max(r.Bottom + dy, r.Top + minSize);
+                        break;
+                    case 4:
+                        top = Math.Min(r.Top + dy, r.Bottom - minSize);
+                        break;
+                    case 5:
+                        right = Math.Max(r.Right + dx, r.Left + minSize);
+                        break;
+                    case 6:
+                        bottom = Math.Max(r.Bottom + dy, r.Top + minSize);
+                        break;
+                    case 7:
+                        left = Math.Min(r.Left + dx, r.Right - minSize);
+                        break;
+                }
+
+                left = Math.Clamp(left, 0, _baseBitmap.Width);
+                right = Math.Clamp(right, 0, _baseBitmap.Width);
+                top = Math.Clamp(top, 0, _baseBitmap.Height);
+                bottom = Math.Clamp(bottom, 0, _baseBitmap.Height);
+
+                _cropRect = new Rectangle(left, top, right - left, bottom - top);
+            }
             Invalidate();
             return;
         }
@@ -328,12 +462,21 @@ public sealed partial class AnnotationCanvas
 
         if (_cropDragging)
         {
+            bool wasResized = _activeCropHandle >= 0 && _activeCropHandle <= 7;
             _cropDragging = false;
-            _cropRect = NormRect(_dragStartImg, _dragLastImg);
+            if (_activeCropHandle == -1)
+            {
+                _cropRect = NormRect(_dragStartImg, _dragLastImg);
+            }
             _cropHasRect = _cropRect.Width >= 4 && _cropRect.Height >= 4;
             if (!_cropHasRect) _cropRect = Rectangle.Empty;
+            _activeCropHandle = -1;
             Invalidate();
             OnStateChanged();
+            if (wasResized && _cropHasRect)
+            {
+                ShowToolBanner(CyberSnap.Services.LocalizationService.Translate("Enter / Double-click to confirm"));
+            }
             return;
         }
 
@@ -818,5 +961,64 @@ public sealed partial class AnnotationCanvas
             (MagnifierAnnotation o, MagnifierAnnotation m) => (m.Pos.X - o.Pos.X, m.Pos.Y - o.Pos.Y),
             _ => (0, 0),
         };
+    }
+
+    protected override void OnDoubleClick(EventArgs e)
+    {
+        base.OnDoubleClick(e);
+        if (_activeTool == CanvasTool.Crop && _cropHasRect)
+        {
+            var screenPt = PointToClient(Cursor.Position);
+            var imgPt = ScreenToImage(screenPt);
+            if (_cropRect.Contains(imgPt))
+            {
+                TryConfirmCrop();
+            }
+        }
+    }
+
+    private PointF[] GetCropHandlePositionsScreen(RectangleF rect)
+    {
+        return new PointF[]
+        {
+            new(rect.Left, rect.Top),
+            new(rect.Right, rect.Top),
+            new(rect.Left, rect.Bottom),
+            new(rect.Right, rect.Bottom),
+            new(rect.Left + rect.Width / 2f, rect.Top),
+            new(rect.Right, rect.Top + rect.Height / 2f),
+            new(rect.Left + rect.Width / 2f, rect.Bottom),
+            new(rect.Left, rect.Top + rect.Height / 2f),
+        };
+    }
+
+    private Cursor GetCropCursor(Point screenPt)
+    {
+        if (!_cropHasRect) return Cursors.Cross;
+
+        var cropScreen = ImageToScreenRect(_cropRect);
+        var handles = GetCropHandlePositionsScreen(cropScreen);
+        const float hitRadius = 7f;
+
+        for (int i = 0; i < handles.Length; i++)
+        {
+            var h = handles[i];
+            if (Math.Abs(screenPt.X - h.X) <= hitRadius && Math.Abs(screenPt.Y - h.Y) <= hitRadius)
+            {
+                return i switch
+                {
+                    0 or 3 => Cursors.SizeNWSE,
+                    1 or 2 => Cursors.SizeNESW,
+                    4 or 6 => Cursors.SizeNS,
+                    5 or 7 => Cursors.SizeWE,
+                    _ => Cursors.Cross
+                };
+            }
+        }
+
+        if (cropScreen.Contains(screenPt))
+            return Cursors.SizeAll;
+
+        return Cursors.Cross;
     }
 }

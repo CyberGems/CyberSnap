@@ -22,13 +22,6 @@ public sealed partial class EditorForm
     private Label _hintLabel = null!;
     private EditorZoomSlider _zoomSlider = null!;
     private bool _suppressZoomSliderChange;
-    private TableLayoutPanel _cropSection = null!;
-    private System.Windows.Forms.Timer _cropRevealTimer = null!;
-    private int _cropSectionTargetHeight;
-    private int _cropAnimFromHeight;
-    private readonly System.Diagnostics.Stopwatch _cropAnimClock = new();
-    private EditorCommandButton _confirmCropButton = null!;
-    private EditorCommandButton _cancelCropButton = null!;
     private EditorCommandButton _undoButton = null!;
     private EditorCommandButton _redoButton = null!;
     private EditorCommandButton _saveButton = null!;
@@ -43,8 +36,6 @@ public sealed partial class EditorForm
     private EmojiPickerPopup? _emojiPicker;
     private readonly Dictionary<Color, EditorColorButton> _colorButtons = new();
     private readonly List<EditorStrokeWidthButton> _strokeWidthButtons = new();
-    private const int CropSectionExpandedHeight = 86;
-    private const int CropAnimDurationMs = 200;
 
     private static readonly Color[] PaletteColors =
     {
@@ -63,8 +54,6 @@ public sealed partial class EditorForm
     private void BuildToolbar()
     {
         _topBarPanel = BuildTopBar();
-        _cropRevealTimer = new System.Windows.Forms.Timer { Interval = 15 };
-        _cropRevealTimer.Tick += CropRevealTimer_Tick;
 
         _toolbarPanel = new DoubleBufferedPanel
         {
@@ -84,16 +73,14 @@ public sealed partial class EditorForm
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
             ColumnCount = 1,
-            RowCount = 3,
+            RowCount = 2,
         };
         EnableDoubleBuffering(layout);
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         layout.Controls.Add(BuildToolSection(), 0, 0);
-        layout.Controls.Add(BuildCropSection(), 0, 1);
-        layout.Controls.Add(BuildColorSection(), 0, 2);
+        layout.Controls.Add(BuildColorSection(), 0, 1);
 
         _toolbarPanel.Controls.Add(layout);
     }
@@ -688,38 +675,7 @@ public sealed partial class EditorForm
         g.DrawLine(pen, 0, y, width, y);
     }
 
-    private Control BuildCropSection()
-    {
-        var section = MakeSectionPanel("Crop", 86);
-        _cropSection = section;
-        EnableDoubleBuffering(_cropSection);
-        _cropSection.Height = 0;
-        _cropSection.Visible = false;
-        var actions = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            BackColor = Color.Transparent,
-        };
-        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-        actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
 
-        _confirmCropButton = MakeCommandButton("select", LocalizationService.Translate("Confirm"), true);
-        _confirmCropButton.Dock = DockStyle.Fill;
-        _confirmCropButton.Margin = new Padding(0, 3, 5, 7);
-        _confirmCropButton.Click += (_, _) => _canvas.TryConfirmCrop();
-        actions.Controls.Add(_confirmCropButton, 0, 0);
-
-        _cancelCropButton = MakeCommandButton("close", LocalizationService.Translate("Cancel"), false);
-        _cancelCropButton.Dock = DockStyle.Fill;
-        _cancelCropButton.Margin = new Padding(5, 3, 0, 7);
-        _cancelCropButton.Click += (_, _) => _canvas.CancelCropPending();
-        actions.Controls.Add(_cancelCropButton, 1, 0);
-
-        section.Controls.Add(actions, 0, 1);
-        return section;
-    }
 
     private Control BuildColorSection()
     {
@@ -969,66 +925,8 @@ public sealed partial class EditorForm
         _redoButton.Primary = _canvas.CanRedo;
         _saveButton.Primary = _canvas.IsDirty;
         _pasteButton.Enabled = Clipboard.ContainsImage();
-        _confirmCropButton.Enabled = _canvas.HasPendingCrop;
-        _cancelCropButton.Enabled = _canvas.HasPendingCrop;
-        SetCropSectionVisible(_canvas.HasPendingCrop);
         UpdateColorSwatch();
         UpdateStrokeWidthButtons();
-    }
-
-    private void SetCropSectionVisible(bool visible)
-    {
-        var target = visible ? CropSectionExpandedHeight : 0;
-        if (_cropSectionTargetHeight == target)
-        {
-            // Already at (or already animating toward) the requested state; don't restart the clock.
-            if (_cropSection.Height == target || _cropRevealTimer.Enabled)
-                return;
-        }
-
-        _cropSectionTargetHeight = target;
-        if (visible)
-        {
-            _cropSection.Visible = true;
-            _cropSection.Enabled = true;
-        }
-        else
-        {
-            _cropSection.Enabled = false;
-        }
-
-        _cropAnimFromHeight = _cropSection.Height;
-        _cropAnimClock.Restart();
-        _cropRevealTimer.Start();
-    }
-
-    private void CropRevealTimer_Tick(object? sender, EventArgs e)
-    {
-        if (_cropSection is null) return;
-
-        double t = _cropAnimClock.ElapsedMilliseconds / (double)CropAnimDurationMs;
-        if (t >= 1.0)
-        {
-            _cropRevealTimer.Stop();
-            _cropAnimClock.Stop();
-            if (_cropSection.Height != _cropSectionTargetHeight)
-            {
-                _cropSection.Height = _cropSectionTargetHeight;
-                _toolbarPanel.PerformLayout();
-            }
-            if (_cropSectionTargetHeight == 0)
-                _cropSection.Visible = false;
-            return;
-        }
-
-        // easeOutCubic: fast start, smooth deceleration into place.
-        double eased = 1 - Math.Pow(1 - t, 3);
-        int height = _cropAnimFromHeight + (int)Math.Round((_cropSectionTargetHeight - _cropAnimFromHeight) * eased);
-        if (height != _cropSection.Height)
-        {
-            _cropSection.Height = height;
-            _toolbarPanel.PerformLayout();
-        }
     }
 
     // Turns on double buffering for panels that get repainted every animation frame
