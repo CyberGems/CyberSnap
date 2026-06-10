@@ -888,6 +888,8 @@ public partial class CaptureWidgetWindow : Window
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
         ((App)System.Windows.Application.Current).ShowSettings();
+        // Collapse the widget back to its peek state so it doesn't linger over the Configuration window.
+        CollapseWidget();
     }
 
     private void TriggerAppCapture(CyberSnap.Models.CaptureMode mode, bool forceMp4 = false, bool forceGif = false)
