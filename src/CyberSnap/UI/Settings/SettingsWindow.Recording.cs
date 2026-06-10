@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using CyberSnap.Models;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
+using Button = System.Windows.Controls.Button;
+using CheckBox = System.Windows.Controls.CheckBox;
 
 namespace CyberSnap.UI;
 
@@ -138,22 +140,180 @@ public partial class SettingsWindow
 
     private void SoundPackCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        // Replaced by per-sound customization UI below.
+    }
 
-        var previous = _settingsService.Settings.SoundPack;
-        var selected = (SoundPack)Math.Clamp(SoundPackCombo.SelectedIndex, 0, 2);
-        UpdateGeneralPreference(
-            "settings.sound-pack",
-            "Sound pack",
-            previous,
-            selected,
-            value => _settingsService.Settings.SoundPack = value,
-            value => SoundPackCombo.SelectedIndex = (int)value,
-            value =>
+    // ── Sound customization ────────────────────────────────────────────────
+
+    private static readonly (SoundEvent Event, string Label)[] SoundEventDefs =
+    [
+        (SoundEvent.Startup, "Startup"),
+        (SoundEvent.Capture, "Capture"),
+        (SoundEvent.Color, "Color picker"),
+        (SoundEvent.Text, "Text / OCR"),
+        (SoundEvent.Scan, "QR / Barcode scan"),
+        (SoundEvent.RecordStart, "Recording start"),
+        (SoundEvent.RecordStop, "Recording stop"),
+        (SoundEvent.Error, "Error"),
+    ];
+
+    private void PopulateSoundCustomizationPanel()
+    {
+        SoundCustomizationPanel.Children.Clear();
+        var s = _settingsService.Settings;
+
+        foreach (var (evt, label) in SoundEventDefs)
+        {
+            var row = new Grid { Style = (Style)FindResource("SettingRow"), Margin = new Thickness(0, 6, 0, 6) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(130) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(60) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(70) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(60) });
+
+            // Col 0: Mute checkbox
+            var muteCheck = new CheckBox
             {
-                SoundService.SetPack(value);
-                SoundService.PlayCaptureSound();
-            });
+                Width = 42, Height = 20, VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0),
+                IsChecked = s.MutedSounds.TryGetValue(evt, out var m) && m,
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+            muteCheck.Checked += (_, _) => SetSoundMuted(evt, true);
+            muteCheck.Unchecked += (_, _) => SetSoundMuted(evt, false);
+            Grid.SetColumn(muteCheck, 0);
+            row.Children.Add(muteCheck);
+
+            // Col 1: Label
+            var labelBlock = new TextBlock
+            {
+                Text = label,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(4, 0, 0, 0),
+                Style = (Style)FindResource("SettingTitle")
+            };
+            Grid.SetColumn(labelBlock, 1);
+            row.Children.Add(labelBlock);
+
+            // Col 2: Preview button
+            var previewBtn = new Button
+            {
+                Content = "\u25B6",
+                Width = 48, Height = 28, VerticalAlignment = VerticalAlignment.Center,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = "Preview this sound.",
+                Style = (Style)FindResource("ChromeButtonBase")
+            };
+            previewBtn.Click += (_, _) => SoundService.Play(evt);
+            Grid.SetColumn(previewBtn, 2);
+            row.Children.Add(previewBtn);
+
+            // Col 3: Source label
+            var sourceLabel = new TextBlock
+            {
+                VerticalAlignment = VerticalAlignment.Center,
+                FontSize = 11.5,
+                Opacity = 0.72,
+                Foreground = (System.Windows.Media.Brush)FindResource("ThemeTextSecondaryBrush"),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            Grid.SetColumn(sourceLabel, 3);
+            row.Children.Add(sourceLabel);
+
+            // Col 5: Reset button (declared first since browse references it)
+            var resetBtn = new Button
+            {
+                Content = "\u2715",
+                Width = 32, Height = 28, VerticalAlignment = VerticalAlignment.Center,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Visibility = Visibility.Collapsed,
+                ToolTip = "Revert to default sound.",
+                Style = (Style)FindResource("ChromeButtonBase")
+            };
+            resetBtn.Click += (_, _) => ResetCustomSound(evt, sourceLabel, resetBtn);
+            Grid.SetColumn(resetBtn, 5);
+            row.Children.Add(resetBtn);
+
+            // Col 4: Browse button
+            var browseBtn = new Button
+            {
+                Content = "Browse...",
+                Width = 62, Height = 28, VerticalAlignment = VerticalAlignment.Center,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Style = (Style)FindResource("ChromeButtonBase")
+            };
+            browseBtn.Click += (_, _) => BrowseCustomSound(evt, sourceLabel, resetBtn);
+            Grid.SetColumn(browseBtn, 4);
+            row.Children.Add(browseBtn);
+
+            // Update source label
+            UpdateSoundSourceLabel(evt, sourceLabel, resetBtn);
+
+            SoundCustomizationPanel.Children.Add(row);
+        }
+    }
+
+    private void UpdateSoundSourceLabel(SoundEvent evt, TextBlock label, Button resetBtn)
+    {
+        var customPath = _settingsService.Settings.CustomSounds.TryGetValue(evt, out var p) ? p : null;
+        if (!string.IsNullOrWhiteSpace(customPath))
+        {
+            label.Text = System.IO.Path.GetFileName(customPath);
+            resetBtn.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            label.Text = "Default";
+            resetBtn.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void SetSoundMuted(SoundEvent evt, bool muted)
+    {
+        _settingsService.Settings.MutedSounds[evt] = muted;
+        SoundService.SetSoundMuted(evt, muted);
+        _settingsService.Save();
+    }
+
+    private void BrowseCustomSound(SoundEvent evt, TextBlock sourceLabel, Button resetBtn)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = $"Choose custom sound for {evt}",
+            Filter = "MP3 files (*.mp3)|*.mp3|All files (*.*)|*.*",
+            DefaultExt = ".mp3"
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            _settingsService.Settings.CustomSounds[evt] = dlg.FileName;
+            SoundService.SetCustomSound(evt, dlg.FileName);
+            _settingsService.Save();
+            UpdateSoundSourceLabel(evt, sourceLabel, resetBtn);
+            // Preview the new sound
+            SoundService.Play(evt);
+        }
+    }
+
+    private void ResetCustomSound(SoundEvent evt, TextBlock sourceLabel, Button resetBtn)
+    {
+        _settingsService.Settings.CustomSounds.Remove(evt);
+        SoundService.SetCustomSound(evt, null);
+        _settingsService.Save();
+        UpdateSoundSourceLabel(evt, sourceLabel, resetBtn);
+    }
+
+    private void ResetAllSoundsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _settingsService.Settings.CustomSounds.Clear();
+        _settingsService.Settings.MutedSounds.Clear();
+        foreach (var (evt, _) in SoundEventDefs)
+        {
+            SoundService.SetCustomSound(evt, null);
+            SoundService.SetSoundMuted(evt, false);
+        }
+        _settingsService.Save();
+        PopulateSoundCustomizationPanel();
     }
 
     private void RecordingQualityCombo_Changed(object sender, SelectionChangedEventArgs e)

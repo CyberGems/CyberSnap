@@ -36,8 +36,7 @@ public partial class HistoryWindow
             _mediaHistoryCacheKey = cacheKey;
             QueueOrphanVideoThumbnailCleanup(_allGifItems);
         }
-        RefreshHistoryUploadProviderFilterItems(_allGifItems);
-        _filteredGifItems = ApplyHistoryUploadFilter(_allGifItems).ToList();
+        _filteredGifItems = _allGifItems.ToList();
 
         GifStack.Children.Clear();
 
@@ -52,13 +51,10 @@ public partial class HistoryWindow
             "video/GIF",
             "video/GIFs",
             sizeStr,
-            IsHistoryUploadFilterActive());
+            false);
         if (_filteredGifItems.Count == 0)
         {
-            if (_allGifItems.Count == 0)
-                ShowHistoryEmptyState("No videos or GIFs yet", "Recordings and GIF captures will appear here.");
-            else
-                ShowHistoryEmptyState("No videos or GIFs match the upload filter", "Upload filters matched 0 saved media items.");
+            ShowHistoryEmptyState("No videos or GIFs yet", "Recordings and GIF captures will appear here.");
         }
         else
         {
@@ -84,9 +80,6 @@ public partial class HistoryWindow
             hash.Add(entry.FileSizeBytes);
             hash.Add(entry.CapturedAt);
             hash.Add(entry.Kind);
-            hash.Add(entry.UploadUrl, StringComparer.OrdinalIgnoreCase);
-            hash.Add(entry.UploadProvider, StringComparer.OrdinalIgnoreCase);
-            hash.Add(entry.UploadError, StringComparer.OrdinalIgnoreCase);
         }
 
         return hash.ToHashCode().ToString("X8");
@@ -227,13 +220,6 @@ public partial class HistoryWindow
         {
             try
             {
-                if (!string.IsNullOrWhiteSpace(vm.Entry.UploadUrl))
-                {
-                    ClipboardService.CopyTextToClipboard(vm.Entry.UploadUrl);
-                    ToastWindow.Show("Upload link copied", vm.Entry.UploadUrl);
-                    return;
-                }
-
                 if (!File.Exists(filePath))
                 {
                     ShowHistoryFileMissingError(filePath);
@@ -247,21 +233,12 @@ public partial class HistoryWindow
             }
             catch (Exception ex)
             {
-                var recovery = !string.IsNullOrWhiteSpace(vm.Entry.UploadUrl)
-                    ? "Open History and copy the visible upload link manually."
-                    : "Try again from Config -> History, or open the saved GIF manually.";
                 ToastWindow.ShowError(
                     "Copy failed",
-                    $"CyberSnap could not copy this GIF history item. {recovery}\n{ex.Message}",
+                    $"CyberSnap could not copy this GIF history item. Try again from Config -> History, or open the saved GIF manually.\n{ex.Message}",
                     filePath);
             }
         });
-
-        if (!string.IsNullOrEmpty(vm.Entry.UploadProvider))
-        {
-            var badge = CreateProviderBadge(vm.Entry.UploadProvider);
-            if (badge != null) shell.ImageContainer.Children.Add(badge);
-        }
 
         var gifBadge = new Border
         {
@@ -284,7 +261,6 @@ public partial class HistoryWindow
         AutomationProperties.SetHelpText(gifBadge, "This history item is an animated GIF.");
         shell.ImageContainer.Children.Add(gifBadge);
         AddMediaInfo(shell.InfoPanel, vm.Entry.FileName, vm.TimeAgo, filePath);
-        AddUploadInfo(shell.InfoPanel, vm.Entry);
         return shell.Card;
     }
 
@@ -295,13 +271,6 @@ public partial class HistoryWindow
         {
             try
             {
-                if (!string.IsNullOrWhiteSpace(vm.Entry.UploadUrl))
-                {
-                    ClipboardService.CopyTextToClipboard(vm.Entry.UploadUrl);
-                    ToastWindow.Show("Upload link copied", vm.Entry.UploadUrl);
-                    return;
-                }
-
                 if (!File.Exists(filePath))
                 {
                     ShowHistoryFileMissingError(filePath);
@@ -315,23 +284,14 @@ public partial class HistoryWindow
             }
             catch (Exception ex)
             {
-                var recovery = !string.IsNullOrWhiteSpace(vm.Entry.UploadUrl)
-                    ? "Open History and copy the visible upload link manually."
-                    : "Try again from Config -> History, or open the saved video manually.";
                 ToastWindow.ShowError(
                     "Copy failed",
-                    $"CyberSnap could not copy this video history item. {recovery}\n{ex.Message}",
+                    $"CyberSnap could not copy this video history item. Try again from Config -> History, or open the saved video manually.\n{ex.Message}",
                     filePath);
             }
         });
 
         shell.Image.Stretch = Stretch.UniformToFill;
-
-        if (!string.IsNullOrEmpty(vm.Entry.UploadProvider))
-        {
-            var badge = CreateProviderBadge(vm.Entry.UploadProvider);
-            if (badge != null) shell.ImageContainer.Children.Add(badge);
-        }
 
         var playIcon = new Border
         {
@@ -358,7 +318,6 @@ public partial class HistoryWindow
         shell.ImageContainer.Children.Add(playIcon);
 
         AddMediaInfo(shell.InfoPanel, vm.Entry.FileName, vm.TimeAgo, filePath);
-        AddUploadInfo(shell.InfoPanel, vm.Entry);
         return shell.Card;
     }
 
@@ -523,70 +482,6 @@ public partial class HistoryWindow
 
     private void RefreshHistoryUploadProviderFilterItems(List<HistoryItemVM> items)
     {
-    }
-
-    private IEnumerable<HistoryItemVM> ApplyHistoryUploadFilter(IEnumerable<HistoryItemVM> items)
-    {
-        var providerFilter = _settingsService.Settings.HistoryUploadProviderFilter;
-        if (string.IsNullOrWhiteSpace(providerFilter))
-            return items;
-
-        return items.Where(item =>
-            string.Equals(item.Entry.UploadProvider, providerFilter, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private bool IsHistoryUploadFilterActive()
-    {
-        return !string.IsNullOrWhiteSpace(_settingsService.Settings.HistoryUploadProviderFilter);
-    }
-
-    private static void AddUploadInfo(StackPanel panel, HistoryEntry entry)
-    {
-        if (!string.IsNullOrWhiteSpace(entry.UploadProvider))
-        {
-            var providerBlock = new TextBlock
-            {
-                Text = entry.UploadProvider,
-                FontSize = 10,
-                FontFamily = new FontFamily(UiChrome.PreferredFamilyName),
-                Opacity = 0.3,
-                ToolTip = $"Uploaded via {entry.UploadProvider}"
-            };
-            AutomationProperties.SetName(providerBlock, "Upload provider");
-            AutomationProperties.SetHelpText(providerBlock, $"Uploaded via {entry.UploadProvider}");
-            panel.Children.Add(providerBlock);
-        }
-
-        if (!string.IsNullOrWhiteSpace(entry.UploadUrl))
-        {
-            var urlBlock = new TextBlock
-            {
-                Text = entry.UploadUrl,
-                FontSize = 10,
-                FontFamily = new FontFamily(UiChrome.PreferredFamilyName),
-                Opacity = 0.25,
-                TextTrimming = TextTrimming.CharacterEllipsis,
-                ToolTip = entry.UploadUrl
-            };
-            AutomationProperties.SetName(urlBlock, "Upload URL");
-            AutomationProperties.SetHelpText(urlBlock, entry.UploadUrl);
-            panel.Children.Add(urlBlock);
-        }
-
-        if (!string.IsNullOrWhiteSpace(entry.UploadError))
-        {
-            var errorBlock = new TextBlock
-            {
-                Text = $"Error: {entry.UploadError}",
-                FontSize = 10,
-                FontFamily = new FontFamily(UiChrome.PreferredFamilyName),
-                Opacity = 0.4,
-                ToolTip = entry.UploadError
-            };
-            AutomationProperties.SetName(errorBlock, "Upload error");
-            AutomationProperties.SetHelpText(errorBlock, entry.UploadError);
-            panel.Children.Add(errorBlock);
-        }
     }
 
     private static async Task<string> EnsureVideoThumbnailAsync(string videoPath, string thumbPath)

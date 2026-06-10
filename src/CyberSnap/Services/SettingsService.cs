@@ -326,7 +326,7 @@ public sealed class SettingsService : IDisposable
         }
         settings.HistoryRetention = NormalizeEnum(settings.HistoryRetention, HistoryRetentionPeriod.Never);
         settings.ToastPosition = NormalizeEnum(settings.ToastPosition, ToastPosition.Right);
-        settings.SoundPack = NormalizeEnum(settings.SoundPack, SoundPack.Default);
+
         settings.RecordingFormat = NormalizeEnum(settings.RecordingFormat, RecordingFormat.MP4);
         settings.RecordingQuality = NormalizeEnum(settings.RecordingQuality, RecordingQuality.Original);
         settings.CenterSelectionAspectRatio = NormalizeEnum(settings.CenterSelectionAspectRatio, CenterSelectionAspectRatio.Free);

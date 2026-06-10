@@ -157,40 +157,7 @@ public partial class PreviewWindow
 
         try
         {
-            if (!string.IsNullOrWhiteSpace(_uploadUrl) && !_uploadDead)
-            {
-                try
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = _uploadUrl,
-                        UseShellExecute = true
-                    });
-                    opened = true;
-                    RefreshPreviewWindowTooltip();
-                }
-                catch (Exception ex)
-                {
-                    AppDiagnostics.LogWarning("preview.upload-link-open", $"Failed to open upload link: {ex.Message}", ex);
-                    _uploadDead = true;
-                    if (_savedFilePath != null && File.Exists(_savedFilePath))
-                    {
-                        SetPreviewWindowStatusTooltip("Upload link unavailable - opening local file");
-                        Process.Start("explorer.exe", $"/select,\"{_savedFilePath}\"");
-                        ShowPreviewUploadFallback(_savedFilePath);
-                        opened = true;
-                    }
-                    else if (!string.IsNullOrWhiteSpace(_savedFilePath))
-                    {
-                        ShowPreviewUploadUnavailableMissingFile();
-                    }
-                    else
-                    {
-                        ShowPreviewUploadUnavailableNoLocalFile();
-                    }
-                }
-            }
-            else if (_savedFilePath != null && File.Exists(_savedFilePath))
+            if (_savedFilePath != null && File.Exists(_savedFilePath))
             {
                 Process.Start("explorer.exe", $"/select,\"{_savedFilePath}\"");
                 RefreshPreviewWindowTooltip();
@@ -258,23 +225,6 @@ public partial class PreviewWindow
         DragScale.BeginAnimation(ScaleTransform.ScaleYProperty, Motion.To(1, 140, Motion.SmoothOut));
         BeginAnimation(OpacityProperty, Motion.To(1, 140, Motion.SoftOut));
         SlideX.BeginAnimation(TranslateTransform.XProperty, Motion.To(0, 140, Motion.SmoothOut));
-    }
-
-    private static void ShowPreviewUploadFallback(string filePath)
-    {
-        ToastWindow.Show(ToastSpec.Standard("Upload link unavailable", "Opened local file.", filePath) with { SuppressSound = true });
-    }
-
-    private void ShowPreviewUploadUnavailableMissingFile()
-    {
-        SetPreviewWindowStatusTooltip("Upload link unavailable - saved file missing");
-        ToastWindow.ShowError("Upload link unavailable", "The upload link could not be opened, and the saved file is no longer on disk.");
-    }
-
-    private void ShowPreviewUploadUnavailableNoLocalFile()
-    {
-        SetPreviewWindowStatusTooltip("Upload link unavailable - no local file");
-        ToastWindow.ShowError("Upload link unavailable", "The upload link could not be opened, and no local file is available.");
     }
 
     private void ShowPreviewNoOpenTarget()

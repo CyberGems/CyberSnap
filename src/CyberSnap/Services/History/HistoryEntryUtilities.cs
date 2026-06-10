@@ -29,9 +29,6 @@ internal static class HistoryEntryUtilities
             Height = entry.Height,
             FileSizeBytes = entry.FileSizeBytes,
             Kind = entry.Kind,
-            UploadUrl = entry.UploadUrl,
-            UploadProvider = entry.UploadProvider,
-            UploadError = entry.UploadError,
         };
     }
 

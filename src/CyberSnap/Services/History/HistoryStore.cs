@@ -44,15 +44,10 @@ internal static class HistoryStore
                 width INTEGER NOT NULL,
                 height INTEGER NOT NULL,
                 file_size_bytes INTEGER NOT NULL,
-                kind INTEGER NOT NULL,
-                upload_url TEXT NULL,
-                upload_provider TEXT NULL,
-                upload_error TEXT NULL
+                kind INTEGER NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_history_entries_kind_captured_at
                 ON history_entries(kind, captured_at_ticks DESC);
-            CREATE INDEX IF NOT EXISTS idx_history_entries_upload_provider
-                ON history_entries(upload_provider);
 
             CREATE TABLE IF NOT EXISTS ocr_entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,7 +92,7 @@ internal static class HistoryStore
         using (var entriesCommand = connection.CreateCommand())
         {
             entriesCommand.CommandText = """
-                SELECT file_name, file_path, captured_at_ticks, width, height, file_size_bytes, kind, upload_url, upload_provider, upload_error
+                SELECT file_name, file_path, captured_at_ticks, width, height, file_size_bytes, kind
                 FROM history_entries
                 ORDER BY captured_at_ticks DESC;
                 """;
@@ -331,18 +326,15 @@ internal static class HistoryStore
         var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            INSERT INTO history_entries(file_path, file_name, captured_at_ticks, width, height, file_size_bytes, kind, upload_url, upload_provider, upload_error)
-            VALUES($filePath, $fileName, $capturedAtTicks, $width, $height, $fileSizeBytes, $kind, $uploadUrl, $uploadProvider, $uploadError)
+            INSERT INTO history_entries(file_path, file_name, captured_at_ticks, width, height, file_size_bytes, kind)
+            VALUES($filePath, $fileName, $capturedAtTicks, $width, $height, $fileSizeBytes, $kind)
             ON CONFLICT(file_path) DO UPDATE SET
                 file_name = excluded.file_name,
                 captured_at_ticks = excluded.captured_at_ticks,
                 width = excluded.width,
                 height = excluded.height,
                 file_size_bytes = excluded.file_size_bytes,
-                kind = excluded.kind,
-                upload_url = excluded.upload_url,
-                upload_provider = excluded.upload_provider,
-                upload_error = excluded.upload_error;
+                kind = excluded.kind;
             """;
         command.Parameters.Add("$filePath", SqliteType.Text);
         command.Parameters.Add("$fileName", SqliteType.Text);
@@ -351,9 +343,6 @@ internal static class HistoryStore
         command.Parameters.Add("$height", SqliteType.Integer);
         command.Parameters.Add("$fileSizeBytes", SqliteType.Integer);
         command.Parameters.Add("$kind", SqliteType.Integer);
-        command.Parameters.Add("$uploadUrl", SqliteType.Text);
-        command.Parameters.Add("$uploadProvider", SqliteType.Text);
-        command.Parameters.Add("$uploadError", SqliteType.Text);
         return command;
     }
 
@@ -366,9 +355,6 @@ internal static class HistoryStore
         command.Parameters["$height"].Value = entry.Height;
         command.Parameters["$fileSizeBytes"].Value = entry.FileSizeBytes;
         command.Parameters["$kind"].Value = (int)entry.Kind;
-        command.Parameters["$uploadUrl"].Value = (object?)entry.UploadUrl ?? DBNull.Value;
-        command.Parameters["$uploadProvider"].Value = (object?)entry.UploadProvider ?? DBNull.Value;
-        command.Parameters["$uploadError"].Value = (object?)entry.UploadError ?? DBNull.Value;
 
         command.ExecuteNonQuery();
     }
