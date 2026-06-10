@@ -157,6 +157,23 @@ public partial class SettingsWindow
         (SoundEvent.Error, "Error"),
     ];
 
+    private static readonly System.Windows.Media.SolidColorBrush SoundButtonBg =
+        new(System.Windows.Media.Color.FromRgb(0xA0, 0xB4, 0xD2));
+    private static readonly System.Windows.Media.SolidColorBrush SoundButtonFg =
+        new(System.Windows.Media.Color.FromRgb(0x1E, 0x28, 0x3A)); // dark text for contrast
+
+    private static void SoundButton_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (sender is Button btn)
+            btn.Foreground = SoundButtonBg;
+    }
+
+    private static void SoundButton_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (sender is Button btn)
+            btn.Foreground = SoundButtonFg;
+    }
+
     private void PopulateSoundCustomizationPanel()
     {
         SoundCustomizationPanel.Children.Clear();
@@ -164,19 +181,18 @@ public partial class SettingsWindow
 
         foreach (var (evt, label) in SoundEventDefs)
         {
-            var row = new Grid { Style = (Style)FindResource("SettingRow"), Margin = new Thickness(0, 6, 0, 6) };
+            var row = new Grid { Style = (Style)FindResource("SettingRow"), Margin = new Thickness(0, 6, 0, 6), HorizontalAlignment = System.Windows.HorizontalAlignment.Left };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(130) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(60) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(70) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(60) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(86) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
 
             // Col 0: Mute checkbox
             var muteCheck = new CheckBox
             {
                 Width = 42, Height = 20, VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 6, 0),
                 IsChecked = s.MutedSounds.TryGetValue(evt, out var m) && m,
                 Cursor = System.Windows.Input.Cursors.Hand
             };
@@ -203,8 +219,12 @@ public partial class SettingsWindow
                 Width = 48, Height = 28, VerticalAlignment = VerticalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,
                 ToolTip = "Preview this sound.",
-                Style = (Style)FindResource("ChromeButtonBase")
+                Style = (Style)FindResource("ChromeButtonBase"),
+                Background = SoundButtonBg,
+                Foreground = SoundButtonFg
             };
+            previewBtn.MouseEnter += SoundButton_MouseEnter;
+            previewBtn.MouseLeave += SoundButton_MouseLeave;
             previewBtn.Click += (_, _) => SoundService.Play(evt);
             Grid.SetColumn(previewBtn, 2);
             row.Children.Add(previewBtn);
@@ -229,8 +249,12 @@ public partial class SettingsWindow
                 Cursor = System.Windows.Input.Cursors.Hand,
                 Visibility = Visibility.Collapsed,
                 ToolTip = "Revert to default sound.",
-                Style = (Style)FindResource("ChromeButtonBase")
+                Style = (Style)FindResource("ChromeButtonBase"),
+                Background = SoundButtonBg,
+                Foreground = SoundButtonFg
             };
+            resetBtn.MouseEnter += SoundButton_MouseEnter;
+            resetBtn.MouseLeave += SoundButton_MouseLeave;
             resetBtn.Click += (_, _) => ResetCustomSound(evt, sourceLabel, resetBtn);
             Grid.SetColumn(resetBtn, 5);
             row.Children.Add(resetBtn);
@@ -239,10 +263,15 @@ public partial class SettingsWindow
             var browseBtn = new Button
             {
                 Content = "Browse...",
-                Width = 62, Height = 28, VerticalAlignment = VerticalAlignment.Center,
+                Width = 80, Height = 28, VerticalAlignment = VerticalAlignment.Center,
+                Padding = new Thickness(8, 0, 8, 0),
                 Cursor = System.Windows.Input.Cursors.Hand,
-                Style = (Style)FindResource("ChromeButtonBase")
+                Style = (Style)FindResource("ChromeButtonBase"),
+                Background = SoundButtonBg,
+                Foreground = SoundButtonFg
             };
+            browseBtn.MouseEnter += SoundButton_MouseEnter;
+            browseBtn.MouseLeave += SoundButton_MouseLeave;
             browseBtn.Click += (_, _) => BrowseCustomSound(evt, sourceLabel, resetBtn);
             Grid.SetColumn(browseBtn, 4);
             row.Children.Add(browseBtn);
