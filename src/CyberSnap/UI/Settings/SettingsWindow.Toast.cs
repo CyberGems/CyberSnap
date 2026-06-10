@@ -835,7 +835,7 @@ public partial class SettingsWindow
         RefreshToastButtonLayoutDesigner();
     }
 
-    private static string GetToastButtonDescription(ToastButtonKind button) => button switch
+    private static string? GetToastButtonDescription(ToastButtonKind button) => button switch
     {
         ToastButtonKind.Close => "Close the notification preview.",
         ToastButtonKind.Pin => "Keep the preview open until you dismiss it manually.",

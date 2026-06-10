@@ -162,7 +162,6 @@ public partial class SettingsWindow
             ShowImageSearchBarCheck.IsChecked = s.ShowImageSearchBar;
             ShowImageSearchDiagnosticsCheck.IsChecked = s.ShowImageSearchDiagnostics;
             AutoIndexImagesCheck.IsChecked = s.AutoIndexImages;
-            MuteSoundsCheck.IsChecked = s.MuteSounds;
             DisableAnimationsCheck.IsChecked = s.DisableAnimations;
             SelectUiScale(s.UiScale);
             OcrAutoCopyCheck.IsChecked = s.OcrAutoCopyToClipboard;
@@ -193,6 +192,7 @@ public partial class SettingsWindow
             NotificationsEnabledCheck.IsChecked = s.NotificationsEnabled;
             SystemNotificationsCheck.IsChecked = s.SystemNotificationsEnabled;
             UpdateSystemNotificationsRowState(s.NotificationsEnabled);
+            MuteSoundsCheck.IsChecked = !s.MuteSounds; // activator: checked = all sounds on
             PopulateSoundCustomizationPanel();
             ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
