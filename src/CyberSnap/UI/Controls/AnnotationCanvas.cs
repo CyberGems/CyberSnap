@@ -131,10 +131,12 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private int _bannerHoldTicks = 0;
     private enum BannerState { FadeIn, Hold, FadeOut }
     private BannerState _bannerState = BannerState.FadeIn;
+    private bool _bannerIsSticky;
 
-    private void ShowToolBanner(string text)
+    private void ShowToolBanner(string text, bool sticky = false)
     {
         _bannerText = text;
+        _bannerIsSticky = sticky;
         _bannerState = BannerState.FadeIn;
         _bannerOpacity = 0f;
         if (_bannerTimer == null)
@@ -145,6 +147,18 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _bannerTimer.Stop();
         _bannerTimer.Start();
         Invalidate();
+    }
+
+    public void HideToolBanner()
+    {
+        _bannerIsSticky = false;
+        _bannerState = BannerState.FadeOut;
+        if (_bannerTimer == null)
+        {
+            _bannerTimer = new System.Windows.Forms.Timer { Interval = 16 };
+            _bannerTimer.Tick += BannerTimer_Tick;
+        }
+        _bannerTimer.Start();
     }
 
     private void BannerTimer_Tick(object? sender, EventArgs e)
@@ -163,6 +177,11 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
                 break;
 
             case BannerState.Hold:
+                if (_bannerIsSticky)
+                {
+                    _bannerHoldTicks = 0;
+                    break;
+                }
                 _bannerHoldTicks++;
                 if (_bannerHoldTicks >= 45)
                 {

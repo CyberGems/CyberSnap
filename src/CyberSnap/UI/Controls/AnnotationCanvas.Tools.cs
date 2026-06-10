@@ -55,6 +55,14 @@ public sealed partial class AnnotationCanvas
         ClearCropPending();
         Push(new CropCommand(clamped));
         ZoomFit();
+        HideToolBanner();
+
+        if (_activeTool == CanvasTool.Crop)
+        {
+            _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+            _cropHasRect = true;
+        }
+
         return true;
     }
 
@@ -62,6 +70,7 @@ public sealed partial class AnnotationCanvas
     {
         if (!_cropHasRect && !_cropDragging) return;
         ClearCropPending();
+        HideToolBanner();
         Invalidate();
         OnStateChanged();
     }
@@ -475,7 +484,7 @@ public sealed partial class AnnotationCanvas
             OnStateChanged();
             if (wasResized && _cropHasRect)
             {
-                ShowToolBanner(CyberSnap.Services.LocalizationService.Translate("Enter / Double-click to confirm"));
+                ShowToolBanner(CyberSnap.Services.LocalizationService.Translate("Enter / Double-click to confirm"), sticky: true);
             }
             return;
         }
