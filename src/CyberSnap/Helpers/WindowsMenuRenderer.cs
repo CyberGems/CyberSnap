@@ -307,6 +307,8 @@ public static class WindowsMenuRenderer
 
         protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
         {
+            if (e.Item is null) return;
+
             // Default arrow renders dark-on-dark and is nearly invisible; draw a crisp chevron
             // in the menu foreground color instead.
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;

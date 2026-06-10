@@ -60,7 +60,9 @@ public sealed partial class RecordingForm : Form
     private readonly string? _micDeviceId;
     private readonly bool _recordDesktop;
     private readonly string? _desktopDeviceId;
+#pragma warning disable CS0414 // Field assigned but never used
     private readonly bool _showMarginBorder = true; // dummy or keep
+#pragma warning restore CS0414
     private readonly bool _showMagnifier;
     private readonly CaptureMagnifierHelper? _magHelper;
     private LiveSelectionAdornerForm? _selectionAdorner;

@@ -106,20 +106,37 @@ public partial class SettingsWindow
             : Visibility.Visible;
     }
 
+    private bool _suppressingSoundToggles;
+
     private void MuteSoundsCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressGeneralPreferenceChange) return;
 
-        var previous = _settingsService.Settings.MuteSounds;
-        var selected = MuteSoundsCheck.IsChecked == true;
-        UpdateGeneralPreference(
-            "settings.mute-sounds",
-            "Mute sounds",
-            previous,
-            selected,
-            value => _settingsService.Settings.MuteSounds = value,
-            value => MuteSoundsCheck.IsChecked = value,
-            value => SoundService.Muted = value);
+        // Master switch is an activator: checked = all sounds on, unchecked = all muted.
+        var enableAll = MuteSoundsCheck.IsChecked == true;
+        var muted = !enableAll;
+        _suppressingSoundToggles = true;
+        try
+        {
+            foreach (var (evt, _) in SoundEventDefs)
+            {
+                _settingsService.Settings.MutedSounds[evt] = muted;
+                SoundService.SetSoundMuted(evt, muted);
+            }
+            _settingsService.Settings.MuteSounds = muted;
+            SoundService.Muted = muted;
+            _settingsService.Save();
+
+            foreach (var child in SoundCustomizationPanel.Children)
+            {
+                if (child is Grid row && row.Children.Count > 0 && row.Children[0] is CheckBox cb)
+                    cb.IsChecked = enableAll;
+            }
+        }
+        finally
+        {
+            _suppressingSoundToggles = false;
+        }
     }
 
     private void DisableAnimationsCheck_Changed(object sender, RoutedEventArgs e)
@@ -189,17 +206,18 @@ public partial class SettingsWindow
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(86) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
 
-            // Col 0: Mute checkbox
-            var muteCheck = new CheckBox
+            // Col 0: Enable checkbox (checked = this sound plays)
+            var enableCheck = new CheckBox
             {
                 Width = 42, Height = 20, VerticalAlignment = VerticalAlignment.Center,
-                IsChecked = s.MutedSounds.TryGetValue(evt, out var m) && m,
-                Cursor = System.Windows.Input.Cursors.Hand
+                IsChecked = !(s.MutedSounds.TryGetValue(evt, out var m) && m),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = $"Enable the {label} sound."
             };
-            muteCheck.Checked += (_, _) => SetSoundMuted(evt, true);
-            muteCheck.Unchecked += (_, _) => SetSoundMuted(evt, false);
-            Grid.SetColumn(muteCheck, 0);
-            row.Children.Add(muteCheck);
+            enableCheck.Checked += (_, _) => SetSoundMuted(evt, false);
+            enableCheck.Unchecked += (_, _) => SetSoundMuted(evt, true);
+            Grid.SetColumn(enableCheck, 0);
+            row.Children.Add(enableCheck);
 
             // Col 1: Label
             var labelBlock = new TextBlock
@@ -300,6 +318,7 @@ public partial class SettingsWindow
 
     private void SetSoundMuted(SoundEvent evt, bool muted)
     {
+        if (_suppressingSoundToggles) return;
         _settingsService.Settings.MutedSounds[evt] = muted;
         SoundService.SetSoundMuted(evt, muted);
         _settingsService.Save();
@@ -310,7 +329,7 @@ public partial class SettingsWindow
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
             Title = $"Choose custom sound for {evt}",
-            Filter = "MP3 files (*.mp3)|*.mp3|All files (*.*)|*.*",
+            Filter = "Audio files (*.mp3;*.wav)|*.mp3;*.wav|MP3 files (*.mp3)|*.mp3|WAV files (*.wav)|*.wav|All files (*.*)|*.*",
             DefaultExt = ".mp3"
         };
         if (dlg.ShowDialog() == true)
@@ -336,12 +355,22 @@ public partial class SettingsWindow
     {
         _settingsService.Settings.CustomSounds.Clear();
         _settingsService.Settings.MutedSounds.Clear();
-        foreach (var (evt, _) in SoundEventDefs)
-        {
-            SoundService.SetCustomSound(evt, null);
-            SoundService.SetSoundMuted(evt, false);
-        }
+        _settingsService.Settings.MuteSounds = false; // reset master to "all on"
+        SoundService.Initialize(_settingsService.Settings.CustomSounds, _settingsService.Settings.MutedSounds);
+        SoundService.Muted = false;
         _settingsService.Save();
+
+        // Reflect the reset master in the UI without re-triggering the change handler.
+        _suppressGeneralPreferenceChange = true;
+        try
+        {
+            MuteSoundsCheck.IsChecked = true;
+        }
+        finally
+        {
+            _suppressGeneralPreferenceChange = false;
+        }
+
         PopulateSoundCustomizationPanel();
     }
 

@@ -51,28 +51,23 @@ public static class SoundService
                 }
             }
 
-            // Load custom MP3s from user paths
+            // Load custom sounds (MP3 or WAV) from user paths
             if (customSounds is not null)
             {
                 foreach (var kvp in customSounds)
                 {
                     if (!string.IsNullOrWhiteSpace(kvp.Value) && File.Exists(kvp.Value))
                     {
-                        try
-                        {
-                            _customWavs[kvp.Key] = DecodeMp3ToWav(File.ReadAllBytes(kvp.Value));
-                        }
-                        catch
-                        {
-                            // Invalid custom file — fall back to default
-                        }
+                        var decoded = TryDecodeCustomFile(kvp.Value);
+                        if (decoded is not null)
+                            _customWavs[kvp.Key] = decoded;
                     }
                 }
             }
         }
     }
 
-    /// <summary>Set a custom sound for an event. Pass null to revert to default.</summary>
+    /// <summary>Set a custom sound (MP3 or WAV) for an event. Pass null to revert to default.</summary>
     public static void SetCustomSound(SoundEvent evt, string? filePath)
     {
         lock (_cacheLock)
@@ -81,14 +76,9 @@ public static class SoundService
 
             if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
             {
-                try
-                {
-                    _customWavs[evt] = DecodeMp3ToWav(File.ReadAllBytes(filePath));
-                }
-                catch
-                {
-                    // Invalid file, custom sound won't play
-                }
+                var decoded = TryDecodeCustomFile(filePath);
+                if (decoded is not null)
+                    _customWavs[evt] = decoded;
             }
         }
     }
@@ -106,6 +96,7 @@ public static class SoundService
     {
         lock (_cacheLock)
         {
+            // Default (no entry) = not muted, i.e. the sound plays.
             return _mutedSounds.TryGetValue(evt, out var m) && m;
         }
     }
@@ -221,17 +212,56 @@ public static class SoundService
         while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
             pcmStream.Write(buffer, 0, read);
 
-        var pcmBytes = pcmStream.ToArray();
         var waveFormat = reader.WaveFormat;
+        return WriteWavHeader(pcmStream.ToArray(), waveFormat.SampleRate,
+            (short)waveFormat.Channels, (short)waveFormat.BitsPerSample);
+    }
 
-        // Prepend WAV header
+    /// <summary>
+    /// Decode a user-supplied audio file (MP3 or WAV, PCM or float) to PCM 16-bit WAV bytes.
+    /// Returns null on failure so the caller can fall back to the default sound.
+    /// </summary>
+    private static byte[]? TryDecodeCustomFile(string path)
+    {
+        try
+        {
+            // AudioFileReader handles MP3, WAV (PCM/float), and AIFF uniformly,
+            // exposing samples as normalized 32-bit float which we quantize to PCM16.
+            using var reader = new AudioFileReader(path);
+            var samples = reader.ToSampleProvider();
+            int sampleRate = reader.WaveFormat.SampleRate;
+            short channels = (short)reader.WaveFormat.Channels;
+
+            using var pcmStream = new MemoryStream();
+            var buffer = new float[4096];
+            int read;
+            while ((read = samples.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                for (int i = 0; i < read; i++)
+                {
+                    var clamped = Math.Clamp(buffer[i], -1f, 1f);
+                    short s = (short)(clamped * short.MaxValue);
+                    pcmStream.WriteByte((byte)(s & 0xFF));
+                    pcmStream.WriteByte((byte)((s >> 8) & 0xFF));
+                }
+            }
+
+            return WriteWavHeader(pcmStream.ToArray(), sampleRate, channels, 16);
+        }
+        catch
+        {
+            // Unsupported/corrupt file — fall back to default
+            return null;
+        }
+    }
+
+    /// <summary>Wrap raw PCM bytes in a canonical RIFF/WAVE header.</summary>
+    private static byte[] WriteWavHeader(byte[] pcmBytes, int sampleRate, short channels, short bitsPerSample)
+    {
         using var wavStream = new MemoryStream();
         using var bw = new BinaryWriter(wavStream);
 
         int dataSize = pcmBytes.Length;
-        int sampleRate = waveFormat.SampleRate;
-        short channels = (short)waveFormat.Channels;
-        short bitsPerSample = (short)waveFormat.BitsPerSample;
 
         bw.Write("RIFF"u8);
         bw.Write(36 + dataSize);
