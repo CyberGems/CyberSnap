@@ -57,6 +57,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-fit-pref", ex); }
     }
 
+    /// <summary>Persists the annotation editor's "show banners" preference.</summary>
+    public void PersistEditorShowBanners(bool showBanners)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorShowBanners == showBanners) return;
+        _settingsService.Settings.EditorShowBanners = showBanners;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-banners-pref", ex); }
+    }
+
     /// <summary>Persists the color last chosen for shapes/annotations in the editor.</summary>
     public void PersistEditorToolColor(int argb)
     {

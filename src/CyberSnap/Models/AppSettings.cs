@@ -192,6 +192,7 @@ public sealed class AppSettings
     public bool OpenEditorAfterCapture { get; set; }
     // Editor: when a capture loads, auto-fit it to the canvas (true) or show it at real 100% size (false).
     public bool EditorFitToWindowOnOpen { get; set; } = true;
+    public bool EditorShowBanners { get; set; } = true;
     public bool SaveToFile { get; set; } = true;
     public bool AskForFileNameOnSave { get; set; }
     public string FileNameTemplate { get; set; } = Helpers.FileNameTemplate.DefaultTemplate;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 
@@ -15,6 +16,8 @@ public sealed class CropCommand : IEditCommand
     private readonly Rectangle _cropRect;
     private Bitmap? _beforeBitmap; // pristine copy of the bitmap pre-crop
     private Bitmap? _afterBitmap;  // pristine copy of the bitmap post-crop
+    private List<Annotation>? _beforeAnnotations;
+    private List<Annotation>? _afterAnnotations;
     private bool _disposed;
 
     public CropCommand(Rectangle cropRect)
@@ -39,24 +42,36 @@ public sealed class CropCommand : IEditCommand
             _afterBitmap = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppPArgb);
             using var g = Graphics.FromImage(_afterBitmap);
             g.DrawImage(source, new Rectangle(0, 0, rect.Width, rect.Height), rect, GraphicsUnit.Pixel);
+
+            _beforeAnnotations = new List<Annotation>(ctx.Annotations);
+            _afterAnnotations = new List<Annotation>();
+
+            foreach (var a in ctx.Annotations)
+            {
+                var bounds = AnnotationTransforms.GetBounds(a);
+                if (bounds.IntersectsWith(rect))
+                {
+                    _afterAnnotations.Add(AnnotationTransforms.Translate(a, -rect.X, -rect.Y));
+                }
+            }
         }
 
         // Hand a clone to the context so the canvas's setter can dispose it freely.
         ctx.BaseBitmap = new Bitmap(_afterBitmap);
 
-        for (int i = 0; i < ctx.Annotations.Count; i++)
-            ctx.Annotations[i] = AnnotationTransforms.Translate(ctx.Annotations[i], -rect.X, -rect.Y);
+        ctx.Annotations.Clear();
+        ctx.Annotations.AddRange(_afterAnnotations!);
 
         ctx.Invalidate();
     }
 
     public void Revert(IEditorContext ctx)
     {
-        if (_disposed || _beforeBitmap is null) return;
+        if (_disposed || _beforeBitmap is null || _beforeAnnotations is null) return;
 
         ctx.BaseBitmap = new Bitmap(_beforeBitmap);
-        for (int i = 0; i < ctx.Annotations.Count; i++)
-            ctx.Annotations[i] = AnnotationTransforms.Translate(ctx.Annotations[i], _cropRect.X, _cropRect.Y);
+        ctx.Annotations.Clear();
+        ctx.Annotations.AddRange(_beforeAnnotations);
 
         ctx.Invalidate();
     }

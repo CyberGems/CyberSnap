@@ -29,9 +29,18 @@ public sealed partial class AnnotationCanvas
 
             g.DrawImage(_baseBitmap, 0, 0, _baseBitmap.Width, _baseBitmap.Height);
 
-            RenderAnnotations(g);
-            RenderToolPreview(g);
-            RenderInlineTextPreview(g);
+            var oldClip = g.Clip;
+            g.SetClip(new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+            try
+            {
+                RenderAnnotations(g);
+                RenderToolPreview(g);
+                RenderInlineTextPreview(g);
+            }
+            finally
+            {
+                g.Clip = oldClip;
+            }
         }
         finally
         {
