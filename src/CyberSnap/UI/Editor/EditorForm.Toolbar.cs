@@ -490,9 +490,13 @@ public sealed partial class EditorForm
         minimizeButton.Click += (_, _) => WindowState = FormWindowState.Minimized;
         topActions.Controls.Add(minimizeButton);
 
-        var settingsButton = MakeChromeButton("gear", LocalizationService.Translate("Settings"));
-        settingsButton.Click += (_, _) => OpenSettingsWindow();
-        topActions.Controls.Add(settingsButton);
+        var menuButton = MakeChromeButton("menu", LocalizationService.Translate("Menu"));
+        menuButton.Click += (s, _) =>
+        {
+            _burgerMenu ??= BuildBurgerMenu();
+            _burgerMenu.Show(menuButton, new Point(0, menuButton.Height));
+        };
+        topActions.Controls.Add(menuButton);
 
         // Spacer between settings and saveAs
         topActions.Controls.Add(new Label
@@ -1134,6 +1138,47 @@ public sealed partial class EditorForm
     private static GraphicsPath RoundedRect(Rectangle rect, int radius)
     {
         return EditorPaint.RoundedRect(rect, radius);
+    }
+
+    private ContextMenuStrip BuildBurgerMenu()
+    {
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
+
+        var borderItem = WindowsMenuRenderer.Item("Border", iconId: null);
+        var fitItem = WindowsMenuRenderer.Item("Auto-fit", iconId: null);
+        var settingsItem = WindowsMenuRenderer.Item("Configuration", iconId: "gear");
+
+        borderItem.Click += (_, _) =>
+        {
+            _toggleFrameSwitch.Checked = !_toggleFrameSwitch.Checked;
+        };
+
+        fitItem.Click += (_, _) =>
+        {
+            _toggleFitSwitch.Checked = !_toggleFitSwitch.Checked;
+        };
+
+        settingsItem.Click += (_, _) => OpenSettingsWindow();
+
+        menu.Items.Add(borderItem);
+        menu.Items.Add(fitItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(settingsItem);
+
+        menu.Opened += (_, _) =>
+        {
+            UpdateBurgerCheckmarks(borderItem, fitItem);
+        };
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu);
+        return menu;
+    }
+
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem)
+    {
+        var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
+        borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        fitItem.Image = _toggleFitSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
     }
 }
 
