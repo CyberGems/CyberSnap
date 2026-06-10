@@ -57,6 +57,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-fit-pref", ex); }
     }
 
+    /// <summary>Persists the color last chosen for shapes/annotations in the editor.</summary>
+    public void PersistEditorToolColor(int argb)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorToolColorArgb == argb) return;
+        _settingsService.Settings.EditorToolColorArgb = argb;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-tool-color", ex); }
+    }
+
     public void EnsureWidgetWindowCreated()
     {
         if (!Dispatcher.CheckAccess())

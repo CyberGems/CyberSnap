@@ -755,6 +755,8 @@ public sealed partial class EditorForm
             {
                 _canvas.ToolColor = color;
                 UpdateColorSwatch();
+                if (System.Windows.Application.Current is CyberSnap.App app)
+                    app.PersistEditorToolColor(color.ToArgb());
             };
             _colorButtons[color] = swatch;
             palette.Controls.Add(swatch);

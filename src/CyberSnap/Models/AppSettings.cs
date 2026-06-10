@@ -151,6 +151,9 @@ public sealed class AppSettings
     public bool AnnotationStrokeShadow { get; set; } = true;
     public float StrokeWidth { get; set; } = 6f;
     public int ToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(255, 220, 0).ToArgb(); // Default yellow
+    // Color picked for shapes/annotations in the post-capture Editor. Kept separate from the
+    // in-capture overlay's ToolColorArgb so each remembers its own choice. Default = editor accent (cyan).
+    public int EditorToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(0, 255, 255).ToArgb();
 
     // Color picker hotkey: Alt+C
     public uint PickerHotkeyModifiers { get; set; } = Native.User32.MOD_ALT;
