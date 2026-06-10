@@ -1,20 +1,24 @@
 ﻿using System.IO;
 using System.Media;
 using System.Collections.Concurrent;
+using System.Reflection;
 using CyberSnap.Models;
+using NAudio.Wave;
 
 namespace CyberSnap.Services;
 
 public static class SoundService
 {
     private const int MaxQueuedSounds = 8;
-    private static byte[]? _captureWav;
-    private static byte[]? _colorWav;
-    private static byte[]? _textWav;
-    private static byte[]? _scanWav;
-    private static byte[]? _recordStartWav;
-    private static byte[]? _recordStopWav;
-    private static byte[]? _errorWav;
+
+    // Cached WAV bytes per sound event (decoded from MP3 at load time)
+    private static readonly Dictionary<SoundEvent, byte[]> _defaultWavs = new();
+    private static readonly Dictionary<SoundEvent, byte[]> _customWavs = new();
+    private static readonly object _cacheLock = new();
+
+    // Per-sound mute flags (SoundEvent → muted)
+    private static Dictionary<SoundEvent, bool> _mutedSounds = new();
+
     private static readonly object PlaybackGate = new();
     private static BlockingCollection<byte[]>? _playbackQueue;
     private static Thread? _playbackThread;
@@ -23,38 +27,123 @@ public static class SoundService
     public static bool Muted { get; set; }
     internal static bool IsPlaybackSuppressed => Muted || Volatile.Read(ref _suppressionDepth) > 0;
 
-    private static SoundPack _currentPack = SoundPack.Default;
-    public static void SetPack(SoundPack pack) { _currentPack = pack; ClearCache(); }
-    public static SoundPack CurrentPack => _currentPack;
-
-    // Pack parameters: (pitch multiplier, character, volume)
-    // character: 0 = warm/round, 0.5 = balanced, 1 = bright/crisp
-    private static (double pitch, double character, double vol) PackParams => _currentPack switch
+    /// <summary>Initialize the sound service with user preferences.</summary>
+    public static void Initialize(Dictionary<SoundEvent, string?> customSounds, Dictionary<SoundEvent, bool> mutedSounds)
     {
-        SoundPack.Soft => (0.82, 0.15, 0.20),
-        SoundPack.Retro => (1.15, 0.85, 0.35),
-        _ => (1.0, 0.45, 0.28),
-    };
+        lock (_cacheLock)
+        {
+            _mutedSounds = new Dictionary<SoundEvent, bool>(mutedSounds);
+            _defaultWavs.Clear();
+            _customWavs.Clear();
 
-    private static void ClearCache()
-    {
-        _captureWav = _colorWav = _textWav = _scanWav = null;
-        _recordStartWav = _recordStopWav = _errorWav = null;
+            // Load default MP3s from embedded resources
+            foreach (SoundEvent evt in Enum.GetValues<SoundEvent>())
+            {
+                try
+                {
+                    var mp3Bytes = LoadEmbeddedMp3(evt);
+                    if (mp3Bytes is not null)
+                        _defaultWavs[evt] = DecodeMp3ToWav(mp3Bytes);
+                }
+                catch
+                {
+                    // Sound missing — no crash, just silent for that event
+                }
+            }
+
+            // Load custom MP3s from user paths
+            if (customSounds is not null)
+            {
+                foreach (var kvp in customSounds)
+                {
+                    if (!string.IsNullOrWhiteSpace(kvp.Value) && File.Exists(kvp.Value))
+                    {
+                        try
+                        {
+                            _customWavs[kvp.Key] = DecodeMp3ToWav(File.ReadAllBytes(kvp.Value));
+                        }
+                        catch
+                        {
+                            // Invalid custom file — fall back to default
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    public static void PlayCaptureSound() { if (!IsPlaybackSuppressed) PlayAsync(_captureWav ??= GenerateCaptureWav()); }
-    public static void PlayColorSound() { if (!IsPlaybackSuppressed) PlayAsync(_colorWav ??= GenerateColorWav()); }
-    public static void PlayTextSound() { if (!IsPlaybackSuppressed) PlayAsync(_textWav ??= GenerateTextWav()); }
-    public static void PlayScanSound() { if (!IsPlaybackSuppressed) PlayAsync(_scanWav ??= GenerateScanWav()); }
-    public static void PlayRecordStartSound() { if (!IsPlaybackSuppressed) PlayAsync(_recordStartWav ??= GenerateRecordStartWav()); }
-    public static void PlayRecordStopSound() { if (!IsPlaybackSuppressed) PlayAsync(_recordStopWav ??= GenerateRecordStopWav()); }
-    public static void PlayErrorSound() { if (!IsPlaybackSuppressed) PlayAsync(_errorWav ??= GenerateErrorWav()); }
+    /// <summary>Set a custom sound for an event. Pass null to revert to default.</summary>
+    public static void SetCustomSound(SoundEvent evt, string? filePath)
+    {
+        lock (_cacheLock)
+        {
+            _customWavs.Remove(evt);
+
+            if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
+            {
+                try
+                {
+                    _customWavs[evt] = DecodeMp3ToWav(File.ReadAllBytes(filePath));
+                }
+                catch
+                {
+                    // Invalid file, custom sound won't play
+                }
+            }
+        }
+    }
+
+    /// <summary>Set per-sound mute flag.</summary>
+    public static void SetSoundMuted(SoundEvent evt, bool muted)
+    {
+        lock (_cacheLock)
+        {
+            _mutedSounds[evt] = muted;
+        }
+    }
+
+    public static bool IsSoundMuted(SoundEvent evt)
+    {
+        lock (_cacheLock)
+        {
+            return _mutedSounds.TryGetValue(evt, out var m) && m;
+        }
+    }
+
+    public static void PlayCaptureSound() => Play(SoundEvent.Capture);
+    public static void PlayColorSound() => Play(SoundEvent.Color);
+    public static void PlayTextSound() => Play(SoundEvent.Text);
+    public static void PlayScanSound() => Play(SoundEvent.Scan);
+    public static void PlayRecordStartSound() => Play(SoundEvent.RecordStart);
+    public static void PlayRecordStopSound() => Play(SoundEvent.RecordStop);
+    public static void PlayErrorSound() => Play(SoundEvent.Error);
+    public static void PlayStartupSound() => Play(SoundEvent.Startup);
+
+    /// <summary>Play a sound by event type. Respects global mute, per-sound mute, and suppression.</summary>
+    public static void Play(SoundEvent evt)
+    {
+        if (IsPlaybackSuppressed) return;
+        if (IsSoundMuted(evt)) return;
+
+        byte[]? wav = null;
+        lock (_cacheLock)
+        {
+            _customWavs.TryGetValue(evt, out wav);
+            if (wav is null)
+                _defaultWavs.TryGetValue(evt, out wav);
+        }
+
+        if (wav is null) return;
+        PlayAsync(wav);
+    }
 
     public static IDisposable SuppressPlayback()
     {
         Interlocked.Increment(ref _suppressionDepth);
         return new PlaybackSuppressionHandle();
     }
+
+    // ── Internal ───────────────────────────────────────────────────────────
 
     private static void PlayAsync(byte[] wav)
     {
@@ -94,338 +183,72 @@ public static class SoundService
         }
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static double SoftClip(double x)
-        => Math.Tanh(x * 1.2) / Math.Tanh(1.2);
-
-    private static double Env(double t, double attackMs, double decayRate)
+    private static byte[]? LoadEmbeddedMp3(SoundEvent evt)
     {
-        double a = attackMs / 1000.0;
-        double atk = t < a ? Math.Sin(Math.PI * 0.5 * t / a) : 1.0;
-        return atk * Math.Exp(-t * decayRate);
-    }
+        var name = evt switch
+        {
+            SoundEvent.Capture => "capture",
+            SoundEvent.Color => "color",
+            SoundEvent.Text => "text",
+            SoundEvent.Scan => "scan",
+            SoundEvent.RecordStart => "record-start",
+            SoundEvent.RecordStop => "record-stop",
+            SoundEvent.Error => "error",
+            SoundEvent.Startup => "startup",
+            _ => null
+        };
+        if (name is null) return null;
 
-    // â”€â”€ Capture: soft, warm tap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static byte[] GenerateCaptureWav()
-    {
-        var (p, c, v) = PackParams;
-        const int sr = 44100;
-        const int durationMs = 90;
-        int n = sr * durationMs / 1000;
+        var resourceName = $"CyberSnap.Assets.Sounds.{name}.mp3";
+        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
+        if (stream is null) return null;
 
         using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        WriteWavHeader(bw, n, sr);
-
-        var rng = new Random(42);
-        for (int i = 0; i < n; i++)
-        {
-            double t = (double)i / sr;
-
-            // Gentle noise transient â€” very quiet, just adds a tiny "tick"
-            double noise = (rng.NextDouble() * 2 - 1) * Math.Exp(-t * 400) * 0.06;
-
-            // Warm fundamental with slow chirp settling
-            double f0 = (720 + 20 * Math.Exp(-t * 80)) * p;
-            double fund = Math.Sin(2 * Math.PI * f0 * t) * Env(t, 4, 32) * 0.30;
-
-            // Soft harmonic
-            double h2 = Math.Sin(2 * Math.PI * f0 * 2 * t) * Env(t, 4, 55) * (0.08 + c * 0.06);
-
-            // Sub body
-            double sub = Math.Sin(2 * Math.PI * 260 * p * t) * Env(t, 6, 25) * 0.12;
-
-            double sample = SoftClip(noise + fund + h2 + sub) * v;
-            bw.Write((short)(Math.Clamp(sample, -1.0, 1.0) * short.MaxValue));
-        }
+        stream.CopyTo(ms);
         return ms.ToArray();
     }
 
-    // â”€â”€ Color pick: gentle bell dyad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static byte[] GenerateColorWav()
+    /// <summary>Decode MP3 bytes to a WAV byte array (PCM 16-bit).</summary>
+    private static byte[] DecodeMp3ToWav(byte[] mp3Bytes)
     {
-        var (p, c, v) = PackParams;
-        const int sr = 44100;
-        const int durationMs = 120;
-        int n = sr * durationMs / 1000;
+        using var mp3Stream = new MemoryStream(mp3Bytes);
+        using var reader = new Mp3FileReader(mp3Stream);
 
-        using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        WriteWavHeader(bw, n, sr);
+        // Read all PCM samples
+        using var pcmStream = new MemoryStream();
+        var buffer = new byte[4096];
+        int read;
+        while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
+            pcmStream.Write(buffer, 0, read);
 
-        for (int i = 0; i < n; i++)
-        {
-            double t = (double)i / sr;
+        var pcmBytes = pcmStream.ToArray();
+        var waveFormat = reader.WaveFormat;
 
-            // Perfect fifth: gentle, pure
-            double f1 = 1050 * p;
-            double f2 = f1 * 1.5;
+        // Prepend WAV header
+        using var wavStream = new MemoryStream();
+        using var bw = new BinaryWriter(wavStream);
 
-            double tone1 = Math.Sin(2 * Math.PI * f1 * t) * Env(t, 3, 28) * 0.30;
-            double tone2 = Math.Sin(2 * Math.PI * f2 * t) * Env(t, 3, 35) * (0.16 + c * 0.04);
-            // Faint bell overtone
-            double bell = Math.Sin(2 * Math.PI * f1 * 3 * t) * Env(t, 2, 65) * 0.04;
+        int dataSize = pcmBytes.Length;
+        int sampleRate = waveFormat.SampleRate;
+        short channels = (short)waveFormat.Channels;
+        short bitsPerSample = (short)waveFormat.BitsPerSample;
 
-            double sample = SoftClip(tone1 + tone2 + bell) * v;
-            bw.Write((short)(Math.Clamp(sample, -1.0, 1.0) * short.MaxValue));
-        }
-        return ms.ToArray();
-    }
-
-    // â”€â”€ Text/OCR copy: quick soft chord â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static byte[] GenerateTextWav()
-    {
-        var (p, c, v) = PackParams;
-        const int sr = 44100;
-        const int durationMs = 90;
-        int n = sr * durationMs / 1000;
-
-        using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        WriteWavHeader(bw, n, sr);
-
-        for (int i = 0; i < n; i++)
-        {
-            double t = (double)i / sr;
-
-            double f1 = 680 * p;
-            double f2 = 880 * p;
-
-            double tone1 = Math.Sin(2 * Math.PI * f1 * t) * Env(t, 3, 34) * 0.28;
-            double tone2 = Math.Sin(2 * Math.PI * f2 * t) * Env(t, 3, 38) * (0.14 + c * 0.04);
-
-            double sample = SoftClip(tone1 + tone2) * v;
-            bw.Write((short)(Math.Clamp(sample, -1.0, 1.0) * short.MaxValue));
-        }
-        return ms.ToArray();
-    }
-
-    // â”€â”€ QR/Barcode scan: gentle ascending triple pip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static byte[] GenerateScanWav()
-    {
-        var (p, c, v) = PackParams;
-        const int sr = 44100;
-        const int durationMs = 170;
-        int n = sr * durationMs / 1000;
-
-        using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        WriteWavHeader(bw, n, sr);
-
-        double dur = durationMs / 1000.0;
-        double pipLen = dur / 4.5;
-        for (int i = 0; i < n; i++)
-        {
-            double t = (double)i / sr;
-            double sample = 0;
-            for (int b = 0; b < 3; b++)
-            {
-                double start = b * pipLen * 1.25;
-                double local = t - start;
-                if (local >= 0 && local < pipLen)
-                {
-                    double freq = (820 + b * 110) * p;
-                    double env = Math.Sin(Math.PI * local / pipLen);
-                    double tone = Math.Sin(2 * Math.PI * freq * local) * 0.30;
-                    double h = Math.Sin(2 * Math.PI * freq * 2 * local) * (0.04 + c * 0.03);
-                    sample += (tone + h) * env;
-                }
-            }
-            sample = SoftClip(sample) * v;
-            bw.Write((short)(Math.Clamp(sample, -1.0, 1.0) * short.MaxValue));
-        }
-        return ms.ToArray();
-    }
-
-    // â”€â”€ Record start: gentle ascending two-note â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static byte[] GenerateRecordStartWav()
-    {
-        var (p, c, v) = PackParams;
-        const int sr = 44100;
-        const int durationMs = 160;
-        int n = sr * durationMs / 1000;
-
-        using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        WriteWavHeader(bw, n, sr);
-
-        double dur = durationMs / 1000.0;
-        double pipLen = dur / 3.0;
-        double[] freqs = [480 * p, 600 * p]; // major third up
-        for (int i = 0; i < n; i++)
-        {
-            double t = (double)i / sr;
-            double sample = 0;
-            for (int b = 0; b < 2; b++)
-            {
-                double start = b * pipLen * 1.2;
-                double local = t - start;
-                if (local >= 0 && local < pipLen)
-                {
-                    double env = Math.Sin(Math.PI * local / pipLen);
-                    double tone = Math.Sin(2 * Math.PI * freqs[b] * local) * 0.28;
-                    double h = Math.Sin(2 * Math.PI * freqs[b] * 2 * local) * (0.06 + c * 0.03);
-                    sample += (tone + h) * env;
-                }
-            }
-            sample = SoftClip(sample) * v;
-            bw.Write((short)(Math.Clamp(sample, -1.0, 1.0) * short.MaxValue));
-        }
-        return ms.ToArray();
-    }
-
-    // â”€â”€ Record stop: gentle descending two-note â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static byte[] GenerateRecordStopWav()
-    {
-        var (p, c, v) = PackParams;
-        const int sr = 44100;
-        const int durationMs = 160;
-        int n = sr * durationMs / 1000;
-
-        using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        WriteWavHeader(bw, n, sr);
-
-        double dur = durationMs / 1000.0;
-        double pipLen = dur / 3.0;
-        double[] freqs = [600 * p, 480 * p]; // major third down
-        for (int i = 0; i < n; i++)
-        {
-            double t = (double)i / sr;
-            double sample = 0;
-            for (int b = 0; b < 2; b++)
-            {
-                double start = b * pipLen * 1.2;
-                double local = t - start;
-                if (local >= 0 && local < pipLen)
-                {
-                    double env = Math.Sin(Math.PI * local / pipLen);
-                    double tone = Math.Sin(2 * Math.PI * freqs[b] * local) * 0.28;
-                    double h = Math.Sin(2 * Math.PI * freqs[b] * 2 * local) * (0.06 + c * 0.03);
-                    sample += (tone + h) * env;
-                }
-            }
-            sample = SoftClip(sample) * v;
-            bw.Write((short)(Math.Clamp(sample, -1.0, 1.0) * short.MaxValue));
-        }
-        return ms.ToArray();
-    }
-
-    // â”€â”€ Upload start: soft anticipatory tone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static byte[] GenerateUploadStartWav()
-    {
-        var (p, c, v) = PackParams;
-        const int sr = 44100;
-        const int durationMs = 80;
-        int n = sr * durationMs / 1000;
-
-        using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        WriteWavHeader(bw, n, sr);
-
-        for (int i = 0; i < n; i++)
-        {
-            double t = (double)i / sr;
-            double f = (680 + 100 * Math.Exp(-t * 60)) * p; // gentle upward chirp
-            double tone = Math.Sin(2 * Math.PI * f * t) * Env(t, 3, 28) * 0.28;
-            double h = Math.Sin(2 * Math.PI * f * 1.5 * t) * Env(t, 3, 40) * (0.08 + c * 0.04);
-
-            double sample = SoftClip(tone + h) * v;
-            bw.Write((short)(Math.Clamp(sample, -1.0, 1.0) * short.MaxValue));
-        }
-        return ms.ToArray();
-    }
-
-    // â”€â”€ Upload done: resolved two-note chord â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static byte[] GenerateUploadDoneWav()
-    {
-        var (p, c, v) = PackParams;
-        const int sr = 44100;
-        const int durationMs = 140;
-        int n = sr * durationMs / 1000;
-
-        using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        WriteWavHeader(bw, n, sr);
-
-        double dur = durationMs / 1000.0;
-        double pipLen = dur / 2.5;
-        double[] freqs = [680 * p, 900 * p]; // ascending
-        for (int i = 0; i < n; i++)
-        {
-            double t = (double)i / sr;
-            double sample = 0;
-            for (int b = 0; b < 2; b++)
-            {
-                double start = b * pipLen * 1.1;
-                double local = t - start;
-                if (local >= 0 && local < pipLen)
-                {
-                    double env = Math.Sin(Math.PI * local / pipLen);
-                    double tone = Math.Sin(2 * Math.PI * freqs[b] * local) * 0.26;
-                    double h = Math.Sin(2 * Math.PI * freqs[b] * 2 * local) * (0.05 + c * 0.03);
-                    sample += (tone + h) * env;
-                }
-            }
-            sample = SoftClip(sample) * v;
-            bw.Write((short)(Math.Clamp(sample, -1.0, 1.0) * short.MaxValue));
-        }
-        return ms.ToArray();
-    }
-
-    // â”€â”€ Error: gentle descending minor interval â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    private static byte[] GenerateErrorWav()
-    {
-        var (p, c, v) = PackParams;
-        const int sr = 44100;
-        const int durationMs = 180;
-        int n = sr * durationMs / 1000;
-
-        using var ms = new MemoryStream();
-        using var bw = new BinaryWriter(ms);
-        WriteWavHeader(bw, n, sr);
-
-        double dur = durationMs / 1000.0;
-        double pipLen = dur / 2.6;
-        double[] freqs = [560 * p, 420 * p]; // descending minor third
-        for (int i = 0; i < n; i++)
-        {
-            double t = (double)i / sr;
-            double sample = 0;
-            for (int b = 0; b < 2; b++)
-            {
-                double start = b * pipLen * 1.15;
-                double local = t - start;
-                if (local >= 0 && local < pipLen)
-                {
-                    double env = Math.Sin(Math.PI * local / pipLen) * Math.Exp(-local * 10);
-                    double tone = Math.Sin(2 * Math.PI * freqs[b] * local) * 0.30;
-                    double h = Math.Sin(2 * Math.PI * freqs[b] * 1.5 * local) * Env(local, 3, 30) * 0.06;
-                    sample += (tone + h) * env;
-                }
-            }
-            sample = SoftClip(sample) * v;
-            bw.Write((short)(Math.Clamp(sample, -1.0, 1.0) * short.MaxValue));
-        }
-        return ms.ToArray();
-    }
-
-    private static void WriteWavHeader(BinaryWriter bw, int numSamples, int sampleRate)
-    {
-        int dataSize = numSamples * 2;
         bw.Write("RIFF"u8);
         bw.Write(36 + dataSize);
         bw.Write("WAVE"u8);
         bw.Write("fmt "u8);
         bw.Write(16);
-        bw.Write((short)1);
-        bw.Write((short)1);
+        bw.Write((short)1); // PCM
+        bw.Write(channels);
         bw.Write(sampleRate);
-        bw.Write(sampleRate * 2);
-        bw.Write((short)2);
-        bw.Write((short)16);
+        bw.Write(sampleRate * channels * bitsPerSample / 8);
+        bw.Write((short)(channels * bitsPerSample / 8));
+        bw.Write(bitsPerSample);
         bw.Write("data"u8);
         bw.Write(dataSize);
+        bw.Write(pcmBytes);
+
+        return wavStream.ToArray();
     }
 
     private sealed class PlaybackSuppressionHandle : IDisposable

@@ -23,9 +23,6 @@ public sealed class HistoryEntry
     public int Height { get; set; }
     public long FileSizeBytes { get; set; }
     public HistoryKind Kind { get; set; } = HistoryKind.Image;
-    public string? UploadUrl { get; set; }
-    public string? UploadProvider { get; set; }
-    public string? UploadError { get; set; }
 }
 
 public sealed class OcrHistoryEntry
@@ -257,7 +254,7 @@ public sealed partial class HistoryService : IDisposable
         return entry;
     }
 
-    public HistoryEntry TrackExistingCapture(string filePath, int width, int height, HistoryKind kind = HistoryKind.Image, string? providerName = null)
+    public HistoryEntry TrackExistingCapture(string filePath, int width, int height, HistoryKind kind = HistoryKind.Image)
     {
         var info = new FileInfo(filePath);
         if (!info.Exists)

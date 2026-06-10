@@ -671,7 +671,6 @@ public partial class HistoryWindow
         vm.TimeStatusTextBlock = timeStatusBlock;
         shell.InfoPanel.Children.Add(timeStatusBlock);
 
-        AddUploadInfo(shell.InfoPanel, vm.Entry);
         if (_settingsService.Settings.ShowImageSearchDiagnostics)
         {
             if (!string.IsNullOrWhiteSpace(vm.ImageSearchMatchText))

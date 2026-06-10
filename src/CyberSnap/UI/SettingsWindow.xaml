@@ -2023,28 +2023,17 @@
                                     <TextBlock Text="&#xE767;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Sound pack" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose the sound pack for notifications." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Sound customization" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Preview, mute, or override individual sounds with your own MP3 files." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
-                                <ComboBox x:Name="SoundPackCombo" Grid.Column="2" MinWidth="145"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Sound pack"
-                                          ToolTip="Choose the sound pack for notifications."
-                                          SelectionChanged="SoundPackCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Default"
-                                                  ToolTip="Use the default notification sounds."
-                                                  AutomationProperties.Name="Default sound pack"
-                                                  AutomationProperties.HelpText="Use CyberSnap's standard notification sounds."/>
-                                    <ComboBoxItem Content="Soft"
-                                                  ToolTip="Use quieter notification sounds."
-                                                  AutomationProperties.Name="Soft sound pack"
-                                                  AutomationProperties.HelpText="Use softer notification sounds for captures and previews."/>
-                                    <ComboBoxItem Content="Retro"
-                                                  ToolTip="Use retro notification sounds."
-                                                  AutomationProperties.Name="Retro sound pack"
-                                                  AutomationProperties.HelpText="Use retro-style notification sounds for captures and previews."/>
-                                </ComboBox>
+                                <Button x:Name="ResetAllSoundsBtn" Grid.Column="2" Content="Reset all" MinWidth="90"
+                                        VerticalAlignment="Center" Cursor="Hand"
+                                        ToolTip="Revert all sounds to their built-in defaults."
+                                        AutomationProperties.Name="Reset all sounds to defaults"
+                                        Click="ResetAllSoundsBtn_Click"/>
                             </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,4,0,4"/>
+                            <StackPanel x:Name="SoundCustomizationPanel"/>
                         </StackPanel>
                     </Border>
 

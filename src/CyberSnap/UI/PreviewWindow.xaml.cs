@@ -33,9 +33,6 @@ public partial class PreviewWindow : Window
     private bool _mouseIsDown;
     private string? _savedFilePath;
     private readonly bool _isGif;
-    private string? _uploadUrl;
-    private string? _uploadProvider;
-    private bool _uploadDead;
 
     private static PreviewWindow? _current;
     private static CyberSnap.Models.ToastPosition _position = CyberSnap.Models.ToastPosition.Right;
@@ -52,17 +49,6 @@ public partial class PreviewWindow : Window
             current.ForceCloseIfStillCurrent();
         else
             current.Dispatcher.BeginInvoke(current.ForceCloseIfStillCurrent);
-    }
-
-    public static void AttachUploadedLink(string localPath, string url, string provider)
-    {
-        var current = _current;
-        if (current is null) return;
-
-        if (current.Dispatcher.CheckAccess())
-            current.AttachUploadedLinkOnOwnerDispatcher(localPath, url, provider);
-        else
-            current.Dispatcher.BeginInvoke(() => current.AttachUploadedLinkOnOwnerDispatcher(localPath, url, provider));
     }
 
     public static void SetPosition(CyberSnap.Models.ToastPosition position) => _position = position;
@@ -162,23 +148,6 @@ public partial class PreviewWindow : Window
         Loaded += OnLoaded;
     }
 
-    private void SetUploadedLink(string url, string provider)
-    {
-        _uploadUrl = url;
-        _uploadProvider = provider;
-        _uploadDead = false;
-        RefreshPreviewAccessibility();
-    }
-
-    private void AttachUploadedLinkOnOwnerDispatcher(string localPath, string url, string provider)
-    {
-        if (_current != this) return;
-        if (_savedFilePath is null) return;
-        if (!string.Equals(_savedFilePath, localPath, StringComparison.OrdinalIgnoreCase)) return;
-
-        SetUploadedLink(url, provider);
-    }
-
     private void ForceCloseIfStillCurrent()
     {
         if (_current != this) return;
@@ -218,12 +187,6 @@ public partial class PreviewWindow : Window
 
     private string BuildPreviewWindowTooltip()
     {
-        if (!string.IsNullOrWhiteSpace(_uploadUrl) && !_uploadDead)
-        {
-            var provider = string.IsNullOrWhiteSpace(_uploadProvider) ? "upload provider" : _uploadProvider;
-            return $"Open {provider} link";
-        }
-
         return BuildPreviewImageHelpText();
     }
 
@@ -232,13 +195,6 @@ public partial class PreviewWindow : Window
         var fileName = string.IsNullOrWhiteSpace(_savedFilePath)
             ? ""
             : Path.GetFileName(_savedFilePath);
-        if (!string.IsNullOrWhiteSpace(_uploadUrl) && !_uploadDead)
-        {
-            var provider = string.IsNullOrWhiteSpace(_uploadProvider) ? "upload provider" : _uploadProvider;
-            return string.IsNullOrWhiteSpace(fileName)
-                ? $"Preview with {provider} upload link."
-                : $"Preview for {fileName} with {provider} upload link.";
-        }
 
         if (!string.IsNullOrWhiteSpace(fileName))
             return _isGif ? $"GIF preview for {fileName}." : $"Screenshot preview for {fileName}.";

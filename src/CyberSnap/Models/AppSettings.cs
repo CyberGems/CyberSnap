@@ -31,11 +31,16 @@ public enum ToastButtonSlot
     BottomRight
 }
 
-public enum SoundPack
+public enum SoundEvent
 {
-    Default,
-    Soft,
-    Retro
+    Capture,
+    Color,
+    Text,
+    Scan,
+    RecordStart,
+    RecordStop,
+    Error,
+    Startup
 }
 
 public enum RecordingFormat
@@ -235,7 +240,6 @@ public sealed class AppSettings
     public bool ImageSearchExactMatch { get; set; }
     public bool ShowImageSearchDiagnostics { get; set; }
     public bool AutoIndexImages { get; set; } = false;
-    public string? HistoryUploadProviderFilter { get; set; }
     public int HistoryCategoryFilter { get; set; } = 0; // 0=All (default)
 
     public double ToastDurationSeconds { get; set; } = 2.5;
@@ -250,7 +254,10 @@ public sealed class AppSettings
     public bool AutoPinPreviews { get; set; }
     public ToastButtonLayoutSettings ToastButtons { get; set; } = new();
     public Dictionary<string, string> OpenWithApps { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    public SoundPack SoundPack { get; set; } = SoundPack.Default;
+    // Per-sound customization: null = use built-in default MP3, string = path to user's custom MP3.
+    public Dictionary<SoundEvent, string?> CustomSounds { get; set; } = new();
+    // Per-sound mute: true = that specific sound is silenced. Master mute is MuteSounds above.
+    public Dictionary<SoundEvent, bool> MutedSounds { get; set; } = new();
 
     // Floating Quick-Capture Widget Settings
     public bool ShowCaptureWidget { get; set; } = true;

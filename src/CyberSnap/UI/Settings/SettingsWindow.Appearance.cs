@@ -193,7 +193,7 @@ public partial class SettingsWindow
             NotificationsEnabledCheck.IsChecked = s.NotificationsEnabled;
             SystemNotificationsCheck.IsChecked = s.SystemNotificationsEnabled;
             UpdateSystemNotificationsRowState(s.NotificationsEnabled);
-            SoundPackCombo.SelectedIndex = (int)s.SoundPack;
+            PopulateSoundCustomizationPanel();
             ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);

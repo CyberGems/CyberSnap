@@ -49,6 +49,7 @@ public partial class App
         {
             var name = HotkeyFormatter.Format(s.HotkeyModifiers, s.HotkeyKey);
             ToastWindow.Show("CyberSnap ready", $"{name} to capture, Alt+C for colors");
+            SoundService.PlayStartupSound();
         }
     }
 

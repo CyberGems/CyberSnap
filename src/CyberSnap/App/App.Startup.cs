@@ -74,7 +74,7 @@ public partial class App
         try { SyncStartupRegistry(_settingsService.Settings.StartWithWindows); } catch (Exception ex) { AppDiagnostics.LogError("startup.sync-startup-registry", ex); }
         System.Windows.Forms.Application.EnableVisualStyles();
         SoundService.Muted = _settingsService.Settings.MuteSounds;
-        SoundService.SetPack(_settingsService.Settings.SoundPack);
+        SoundService.Initialize(_settingsService.Settings.CustomSounds, _settingsService.Settings.MutedSounds);
         UI.Motion.Disabled = _settingsService.Settings.DisableAnimations;
         UiScale.Set(_settingsService.Settings.UiScale);
         Theme.Refresh();

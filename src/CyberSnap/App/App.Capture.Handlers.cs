@@ -166,8 +166,7 @@ public partial class App
                             filePath,
                             output.Width,
                             output.Height,
-                            HistoryKind.Image,
-                            providerName: null);
+                            HistoryKind.Image);
                     }
                     else
                     {
