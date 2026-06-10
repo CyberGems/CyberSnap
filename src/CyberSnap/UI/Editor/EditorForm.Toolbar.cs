@@ -787,6 +787,8 @@ public sealed partial class EditorForm
             {
                 _canvas.StrokeWidth = w;
                 UpdateStrokeWidthButtons();
+                if (System.Windows.Application.Current is CyberSnap.App app)
+                    app.PersistEditorStrokeWidth(w);
             };
             _strokeWidthButtons.Add(btn);
             widthRow.Controls.Add(btn);
