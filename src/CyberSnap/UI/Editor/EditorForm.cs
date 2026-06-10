@@ -162,7 +162,7 @@ public sealed partial class EditorForm : Form
                  ControlStyles.OptimizedDoubleBuffer |
                  ControlStyles.ResizeRedraw, true);
         ClientSize = new Size(1400, 920);
-        MinimumSize = new Size(1040, 760);
+        MinimumSize = new Size(1400, 920);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = EditorColors.BgPrimary;
         Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular, GraphicsUnit.Point);

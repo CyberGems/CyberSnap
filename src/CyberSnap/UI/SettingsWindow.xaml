@@ -2046,33 +2046,80 @@
                                        AutomationProperties.Name="Startup preference status"
                                        AutomationProperties.LiveSetting="Polite"
                                        Margin="34,0,0,8"/>
-                            <WrapPanel Orientation="Horizontal">
-                                <Button x:Name="ExportSettingsBtn" Content="Export settings" MinWidth="96"
-                                        Margin="0,0,10,8" ToolTip="Export redacted settings to a JSON file"
-                                        AutomationProperties.Name="Export settings"
-                                        Cursor="Hand" Click="ExportSettingsButton_Click"/>
-                                <Button x:Name="ImportSettingsBtn" Content="Import settings" MinWidth="96"
-                                        Margin="0,0,10,8" ToolTip="Import settings from a JSON file"
-                                        AutomationProperties.Name="Import settings"
-                                        Cursor="Hand" Click="ImportSettingsButton_Click"/>
-                            </WrapPanel>
+
+                            <TextBlock Text="Backup &amp; restore" Style="{StaticResource SectionLabel}"/>
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <Grid Style="{StaticResource SettingRow}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource SettingIconFrame}">
+                                            <TextBlock Text="&#xE74E;" Style="{StaticResource SettingIconGlyph}"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <TextBlock Text="Export settings" Style="{StaticResource SettingTitle}"/>
+                                            <TextBlock Text="Save a redacted copy of your settings to a JSON file." Style="{StaticResource SettingDescription}"/>
+                                        </StackPanel>
+                                        <Button x:Name="ExportSettingsBtn" Grid.Column="2" Content="Export" MinWidth="90"
+                                                VerticalAlignment="Center" Cursor="Hand"
+                                                ToolTip="Export redacted settings to a JSON file"
+                                                AutomationProperties.Name="Export settings"
+                                                Click="ExportSettingsButton_Click"/>
+                                    </Grid>
+                                    <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                    <Grid Style="{StaticResource SettingRow}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource SettingIconFrame}">
+                                            <TextBlock Text="&#xE8E5;" Style="{StaticResource SettingIconGlyph}"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <TextBlock Text="Import settings" Style="{StaticResource SettingTitle}"/>
+                                            <TextBlock Text="Restore your settings from a previously exported JSON file." Style="{StaticResource SettingDescription}"/>
+                                        </StackPanel>
+                                        <Button x:Name="ImportSettingsBtn" Grid.Column="2" Content="Import" MinWidth="90"
+                                                VerticalAlignment="Center" Cursor="Hand"
+                                                ToolTip="Import settings from a JSON file"
+                                                AutomationProperties.Name="Import settings"
+                                                Click="ImportSettingsButton_Click"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
                             <TextBlock x:Name="SettingsImportExportStatusText" Style="{StaticResource SettingsHelperText}"
                                        Visibility="Collapsed"
                                        ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                        AutomationProperties.Name="Settings import and export status"
                                        AutomationProperties.LiveSetting="Polite"
                                        Margin="0,0,0,10"/>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,4,0,12"/>
-                            <WrapPanel Orientation="Horizontal">
-                                <Button x:Name="ResetSettingsBtn" Content="Reset Settings" Style="{StaticResource DangerButton}"
-                                        ToolTip="Reset all settings to defaults"
-                                        AutomationProperties.Name="Reset settings"
-                                        Cursor="Hand" Click="ResetSettingsButton_Click" Margin="0,0,10,8"/>
-                                <Button x:Name="UninstallCyberSnapBtn" Content="Uninstall CyberSnap" Style="{StaticResource DangerButton}"
-                                        ToolTip="Start the CyberSnap uninstall flow"
-                                        AutomationProperties.Name="Uninstall CyberSnap"
-                                        Cursor="Hand" Click="UninstallButton_Click" Margin="0,0,10,8"/>
-                            </WrapPanel>
+
+                            <TextBlock Text="Reset &amp; maintenance" Style="{StaticResource SectionLabel}"/>
+                            <Border Style="{StaticResource Card}">
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}">
+                                        <TextBlock Text="&#xE72C;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="Reset Settings" Style="{StaticResource SettingTitle}"/>
+                                        <TextBlock Text="Restore every setting to its original defaults." Style="{StaticResource SettingDescription}"/>
+                                    </StackPanel>
+                                    <Button x:Name="ResetSettingsBtn" Grid.Column="2" Content="Reset" Style="{StaticResource DangerButton}"
+                                            VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Reset all settings to defaults"
+                                            AutomationProperties.Name="Reset settings"
+                                            Click="ResetSettingsButton_Click"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
 
                 </StackPanel>

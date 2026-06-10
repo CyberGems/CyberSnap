@@ -90,19 +90,16 @@ public partial class App
     {
         var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService);
         Action hotkeyHandler = RegisterHotkeys;
-        Action uninstallHandler = BeginUninstall;
         Action localizationHandler = () =>
         {
             _trayIcon?.RefreshLocalization();
             _widgetWindow?.RefreshLocalization();
         };
         win.HotkeyChanged += hotkeyHandler;
-        win.UninstallRequested += uninstallHandler;
         win.LocalizationChanged += localizationHandler;
         win.Closed += (_, _) =>
         {
             win.HotkeyChanged -= hotkeyHandler;
-            win.UninstallRequested -= uninstallHandler;
             win.LocalizationChanged -= localizationHandler;
             _settingsWindow = null;
             // Defer GC compact to avoid layout jump when History window regains focus
@@ -214,32 +211,6 @@ public partial class App
     /// <summary>Returns the current app settings (never null after startup).</summary>
     public AppSettings GetSettings() => _settingsService?.Settings ?? new AppSettings();
 
-    private void BeginUninstall()
-    {
-        Dispatcher.BeginInvoke(() =>
-        {
-            if (!ThemedConfirmDialog.Confirm(
-                    _settingsWindow,
-                    "Confirm uninstall",
-                    "Uninstall CyberSnap? This will remove the app data and try to remove the app folder.",
-                    "Uninstall",
-                    "Cancel"))
-            {
-                _settingsWindow?.ShowUninstallCanceledStatus();
-                ToastWindow.Show("Uninstall canceled", "CyberSnap was left installed.");
-                return;
-            }
-
-            try { UninstallService.RemoveStartupEntry(); } catch (Exception ex) { AppDiagnostics.LogError("lifecycle.uninstall.remove-startup-entry", ex); }
-            try { UninstallService.RemoveInstalledAppEntry(); } catch (Exception ex) { AppDiagnostics.LogError("lifecycle.uninstall.remove-installed-entry", ex); }
-            try { UninstallService.RemoveStartMenuShortcut(); } catch (Exception ex) { AppDiagnostics.LogError("lifecycle.uninstall.remove-start-menu", ex); }
-            try { UninstallService.RemoveAppData(); } catch (Exception ex) { AppDiagnostics.LogError("lifecycle.uninstall.remove-appdata", ex); }
-            try { UninstallService.ScheduleInstallFolderRemoval(); } catch (Exception ex) { AppDiagnostics.LogError("lifecycle.uninstall.schedule-folder-removal", ex); }
-
-            ToastWindow.Show("Uninstalling", "CyberSnap will close and remove its files.");
-            Shutdown();
-        });
-    }
     private HistoryService EnsureHistoryService()
     {
         lock (_historyGate)
