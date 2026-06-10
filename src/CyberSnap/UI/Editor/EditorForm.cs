@@ -18,8 +18,6 @@ namespace CyberSnap.UI.Editor;
 /// </summary>
 public sealed partial class EditorForm : Form
 {
-    private const int ResizeHitSize = 8;
-    private const int WindowCornerRadius = 12;
     private const int WS_EX_COMPOSITED = 0x02000000;
     private const int WM_NCHITTEST = 0x0084;
     private const int WM_NCLBUTTONDOWN = 0x00A1;
@@ -234,7 +232,8 @@ public sealed partial class EditorForm : Form
         {
             Dock = DockStyle.Fill,
             BackColor = EditorColors.BgPrimary,
-            Padding = new Padding(3),
+            // Owns the outer resize ring so edge hit-tests can bubble to the form (see EditorWindowFrame.WndProc).
+            Padding = new Padding(EditorPaint.ResizeHitSize),
         };
         windowFrame.Controls.Add(root);
         Controls.Add(windowFrame);
@@ -534,9 +533,19 @@ public sealed partial class EditorForm : Form
         get
         {
             var cp = base.CreateParams;
+            // Composite bottom-up so the nested panels present in one pass — without this the editor
+            // shows an unpainted flash on open and resizes less smoothly.
             cp.ExStyle |= WS_EX_COMPOSITED;
             return cp;
         }
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        // Matches the WPF windows (CyberSnapWindowChrome): rounded, anti-aliased corners on
+        // Windows 11. No-op on Windows 10, where UpdateWindowChromeRegion clips the corners instead.
+        CyberSnap.Native.Dwm.TrySetWindowCornerPreference(Handle, CyberSnap.Native.Dwm.DWMWCP_ROUND);
     }
 
     protected override void WndProc(ref Message m)
@@ -547,10 +556,10 @@ public sealed partial class EditorForm : Form
             return;
 
         var point = PointToClient(GetScreenPoint(m.LParam));
-        var left = point.X <= ResizeHitSize;
-        var right = point.X >= ClientSize.Width - ResizeHitSize;
-        var top = point.Y <= ResizeHitSize;
-        var bottom = point.Y >= ClientSize.Height - ResizeHitSize;
+        var left = point.X <= EditorPaint.ResizeHitSize;
+        var right = point.X >= ClientSize.Width - EditorPaint.ResizeHitSize;
+        var top = point.Y <= EditorPaint.ResizeHitSize;
+        var bottom = point.Y >= ClientSize.Height - EditorPaint.ResizeHitSize;
 
         if (top && left) m.Result = (IntPtr)HTTOPLEFT;
         else if (top && right) m.Result = (IntPtr)HTTOPRIGHT;
@@ -658,9 +667,13 @@ public sealed partial class EditorForm : Form
             return;
 
         Region? newRegion = null;
-        if (!_isManualMaximized)
+        if (!_isManualMaximized && !OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
         {
-            using var path = EditorPaint.RoundedRect(new Rectangle(0, 0, Width, Height), WindowCornerRadius);
+            // Match the WPF Settings/History windows: DPI-scaled radius so the rounding looks the
+            // same at any display scale. On Windows 11 leave the region null and let DWM round the
+            // corners (anti-aliased) via the corner preference set in OnHandleCreated.
+            int radius = (int)Math.Round(EditorPaint.WindowCornerRadius * (DeviceDpi / 96.0));
+            using var path = EditorPaint.RoundedRect(new Rectangle(0, 0, Width, Height), radius);
             newRegion = new Region(path);
         }
 
