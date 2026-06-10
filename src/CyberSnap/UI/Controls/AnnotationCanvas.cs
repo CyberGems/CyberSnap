@@ -258,6 +258,17 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public float StrokeWidth { get; set; } = 6f;
 
+    /// <summary>Current Text-tool font size (pixels). Backed by the toolbar's <c>_textFontSize</c>.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float TextFontSize
+    {
+        get => _textFontSize;
+        set => _textFontSize = Math.Clamp(value, 10f, 120f);
+    }
+
+    /// <summary>Raised when the user changes the Text-tool font size (toolbar buttons or wheel).</summary>
+    public event Action<float>? TextFontSizeChanged;
+
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool CanUndo => _undoStack.Count > 0;
 

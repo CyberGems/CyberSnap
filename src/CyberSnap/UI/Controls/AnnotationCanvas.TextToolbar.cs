@@ -369,6 +369,7 @@ public sealed partial class AnnotationCanvas
         _textFontSize = ns;
         UpdateInlineTextBoxStyle();
         Invalidate();
+        TextFontSizeChanged?.Invoke(ns);
     }
 
     /// <summary>Handles a left click while editing text. Returns true if the toolbar consumed it.</summary>

@@ -77,6 +77,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-stroke-width", ex); }
     }
 
+    /// <summary>Persists the Text tool font size last chosen in the editor.</summary>
+    public void PersistEditorTextFontSize(float size)
+    {
+        if (_settingsService is null) return;
+        if (Math.Abs(_settingsService.Settings.EditorTextFontSize - size) < 0.01f) return;
+        _settingsService.Settings.EditorTextFontSize = size;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-text-font-size", ex); }
+    }
+
     public void EnsureWidgetWindowCreated()
     {
         if (!Dispatcher.CheckAccess())

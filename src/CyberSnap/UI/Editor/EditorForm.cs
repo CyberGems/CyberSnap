@@ -175,9 +175,15 @@ public sealed partial class EditorForm : Form
             BackColor = EditorColors.CanvasBg,
             ToolColor = settings != null ? Color.FromArgb(settings.EditorToolColorArgb) : EditorColors.Accent,
             StrokeWidth = settings?.StrokeWidth ?? 4f,
+            TextFontSize = settings?.EditorTextFontSize ?? 24f,
             FitToWindowOnLoad = settings?.EditorFitToWindowOnOpen ?? true,
         };
         _canvas.StateChanged += OnCanvasStateChanged;
+        _canvas.TextFontSizeChanged += size =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.PersistEditorTextFontSize(size);
+        };
         _canvas.MouseMove += OnCanvasMouseMove;
         _canvas.MouseUp += OnCanvasMouseUp;
         _canvas.DoubleClick += OnCanvasDoubleClick;

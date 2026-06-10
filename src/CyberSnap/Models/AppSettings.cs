@@ -154,6 +154,9 @@ public sealed class AppSettings
     // Color picked for shapes/annotations in the post-capture Editor. Kept separate from the
     // in-capture overlay's ToolColorArgb so each remembers its own choice. Default = editor accent (cyan).
     public int EditorToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(0, 255, 255).ToArgb();
+    // Font size last chosen for the Text tool in the post-capture Editor (pixels). Editor-specific,
+    // like EditorToolColorArgb. Clamped to the same 10..120 range the Text toolbar enforces.
+    public float EditorTextFontSize { get; set; } = 24f;
 
     // Color picker hotkey: Alt+C
     public uint PickerHotkeyModifiers { get; set; } = Native.User32.MOD_ALT;
