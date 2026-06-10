@@ -166,4 +166,5 @@ public partial class App
     public void OnScrollCaptureHotkeyPressedProxy() => OnScrollCaptureHotkeyPressed();
     public void OnScanHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Scan);
     public void OnPickerHotkeyPressedProxy() => OnPickerHotkeyPressed();
+    public void OnRulerHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Ruler);
 }

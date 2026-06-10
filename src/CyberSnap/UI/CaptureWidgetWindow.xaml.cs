@@ -98,13 +98,13 @@ public partial class CaptureWidgetWindow : Window
 
         BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("center", accentColor, 20); // target crosshair
 
-        RegionCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("captureRect", normalIconColor, 22);
         ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, 22);
         GrabTextIcon.Source = Helpers.FluentIcons.RenderWpf("ocr", normalIconColor, 22);
         QrScanIcon.Source = Helpers.FluentIcons.RenderWpf("scan", normalIconColor, 22);
         ColorPickerIcon.Source = Helpers.FluentIcons.RenderWpf("picker", normalIconColor, 22);
         ScreenRecordIcon.Source = Helpers.FluentIcons.RenderWpf("record", normalIconColor, 22); // record dot for MP4
         GifRecordIcon.Source = Helpers.FluentIcons.RenderWpf("recordGif", normalIconColor, 22); // GIF format icon
+        RulerIcon.Source = Helpers.FluentIcons.RenderWpf("ruler", normalIconColor, 22); // Ruler tool icon
         SettingsIcon.Source = Helpers.FluentIcons.RenderWpf("gear", normalIconColor, 16);
     }
 
@@ -843,11 +843,6 @@ public partial class CaptureWidgetWindow : Window
         TriggerAppCapture(Models.CaptureMode.Rectangle);
     }
 
-    private void RegionCapture_Click(object sender, RoutedEventArgs e)
-    {
-        TriggerAppCapture(Models.CaptureMode.Rectangle);
-    }
-
     private void ScrollCapture_Click(object sender, RoutedEventArgs e)
     {
         TriggerAppCapture(Models.CaptureMode.ScrollCapture);
@@ -876,6 +871,11 @@ public partial class CaptureWidgetWindow : Window
     private void GifRecord_Click(object sender, RoutedEventArgs e)
     {
         TriggerAppCapture(Models.CaptureMode.Record, forceGif: true);
+    }
+
+    private void Ruler_Click(object sender, RoutedEventArgs e)
+    {
+        TriggerAppCapture(Models.CaptureMode.Ruler);
     }
 
     private void EnableEditorToggle_Changed(object sender, RoutedEventArgs e)
@@ -935,6 +935,9 @@ public partial class CaptureWidgetWindow : Window
                     break;
                 case Models.CaptureMode.Record:
                     app.OnGifHotkeyPressedProxy();
+                    break;
+                case Models.CaptureMode.Ruler:
+                    app.OnRulerHotkeyPressedProxy();
                     break;
             }
 

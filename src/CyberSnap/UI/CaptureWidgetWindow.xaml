@@ -163,28 +163,28 @@
                     <!-- Quick Action Shortcuts (Larger icons 22x22) -->
                     <StackPanel Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,0,10">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,2">
-                            <Button Style="{StaticResource WidgetActionButton}" Click="RegionCapture_Click" ToolTip="Area Capture">
-                                <Image x:Name="RegionCaptureIcon" Width="22" Height="22"/>
-                            </Button>
                             <Button Style="{StaticResource WidgetActionButton}" Click="ScrollCapture_Click" ToolTip="Scrolling capture">
                                 <Image x:Name="ScrollCaptureIcon" Width="22" Height="22"/>
                             </Button>
                             <Button Style="{StaticResource WidgetActionButton}" Click="GrabText_Click" ToolTip="Extract text (OCR)">
                                 <Image x:Name="GrabTextIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="Scan QR / Barcode">
-                                <Image x:Name="QrScanIcon" Width="22" Height="22"/>
+                            <Button Style="{StaticResource WidgetActionButton}" Click="ScreenRecord_Click" ToolTip="Record screen (Video MP4)">
+                                <Image x:Name="ScreenRecordIcon" Width="22" Height="22"/>
+                            </Button>
+                            <Button Style="{StaticResource WidgetActionButton}" Click="GifRecord_Click" ToolTip="Record animated GIF">
+                                <Image x:Name="GifRecordIcon" Width="22" Height="22"/>
                             </Button>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Button Style="{StaticResource WidgetActionButton}" Click="ColorPicker_Click" ToolTip="Color picker">
                                 <Image x:Name="ColorPickerIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="ScreenRecord_Click" ToolTip="Record screen (Video MP4)">
-                                <Image x:Name="ScreenRecordIcon" Width="22" Height="22"/>
+                            <Button Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="Scan QR / Barcode">
+                                <Image x:Name="QrScanIcon" Width="22" Height="22"/>
                             </Button>
-                            <Button Style="{StaticResource WidgetActionButton}" Click="GifRecord_Click" ToolTip="Record animated GIF">
-                                <Image x:Name="GifRecordIcon" Width="22" Height="22"/>
+                            <Button Style="{StaticResource WidgetActionButton}" Click="Ruler_Click" ToolTip="Ruler">
+                                <Image x:Name="RulerIcon" Width="22" Height="22"/>
                             </Button>
                         </StackPanel>
                     </StackPanel>
