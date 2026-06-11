@@ -21,6 +21,8 @@ public sealed partial class EditorForm : Form
     private const int WS_EX_COMPOSITED = 0x02000000;
     private const int WM_NCHITTEST = 0x0084;
     private const int WM_NCLBUTTONDOWN = 0x00A1;
+    private const int WM_ENTERSIZEMOVE = 0x0231;
+    private const int WM_EXITSIZEMOVE = 0x0232;
     private const int HTCLIENT = 1;
     private const int HTCAPTION = 2;
     private const int HTLEFT = 10;
@@ -40,6 +42,8 @@ public sealed partial class EditorForm : Form
     private bool _suppressCloseConfirm;
     private bool _isManualMaximized;
     private Rectangle _restoreBounds;
+    private FormWindowState _lastWindowState = FormWindowState.Normal;
+    private bool _enableComposited = true;
     private readonly System.Windows.Forms.Timer _saveStatusTimer = new() { Interval = 2200 };
 
     /// <summary>Opens or reuses the single editor instance.</summary>
@@ -261,13 +265,44 @@ public sealed partial class EditorForm : Form
         {
             UpdateWindowStateButton();
             UpdateWindowChromeRegion();
-            if (WindowState == FormWindowState.Normal && _canvas != null)
+            if (WindowState != FormWindowState.Minimized)
             {
-                RefreshUi();
-                _canvas.Invalidate();
+                if (_lastWindowState == FormWindowState.Minimized)
+                {
+                    RefreshLayoutAndRedraw();
+                }
+
+                if (_canvas != null)
+                {
+                    RefreshUi();
+                    _canvas.Invalidate();
+                }
             }
+            _lastWindowState = WindowState;
         };
-        Shown += (_, _) => { MaybeAutoMaximizeForCapture(); UpdateWindowChromeRegion(); Activate(); BringToFront(); _canvas.Focus(); RefreshUi(); };
+        Shown += (_, _) =>
+        {
+            MaybeAutoMaximizeForCapture();
+            UpdateWindowChromeRegion();
+            Activate();
+            BringToFront();
+            _canvas.Focus();
+            RefreshUi();
+
+            // Disable compositing after initial render to avoid layout corruption bugs when losing focus
+            _enableComposited = false;
+            UpdateStyles();
+            RefreshLayoutAndRedraw();
+        };
+    }
+
+    private void RefreshLayoutAndRedraw()
+    {
+        SuspendLayout();
+        PerformLayout();
+        ResumeLayout(true);
+        Invalidate(true);
+        Update();
     }
 
     private void LoadCapture(Bitmap captured, string? savedFilePath)
@@ -535,7 +570,10 @@ public sealed partial class EditorForm : Form
             var cp = base.CreateParams;
             // Composite bottom-up so the nested panels present in one pass — without this the editor
             // shows an unpainted flash on open and resizes less smoothly.
-            cp.ExStyle |= WS_EX_COMPOSITED;
+            if (_enableComposited)
+            {
+                cp.ExStyle |= WS_EX_COMPOSITED;
+            }
             return cp;
         }
     }
@@ -550,6 +588,18 @@ public sealed partial class EditorForm : Form
 
     protected override void WndProc(ref Message m)
     {
+        if (m.Msg == WM_ENTERSIZEMOVE)
+        {
+            _enableComposited = true;
+            UpdateStyles();
+        }
+        else if (m.Msg == WM_EXITSIZEMOVE)
+        {
+            _enableComposited = false;
+            UpdateStyles();
+            RefreshLayoutAndRedraw();
+        }
+
         base.WndProc(ref m);
 
         if (m.Msg != WM_NCHITTEST || _isManualMaximized || m.Result != (IntPtr)HTCLIENT)
@@ -621,6 +671,10 @@ public sealed partial class EditorForm : Form
         _restoreBounds = Bounds;
         var area = Screen.FromControl(this).WorkingArea;
         _isManualMaximized = true;
+
+        _enableComposited = true;
+        UpdateStyles();
+
         SuspendLayout();
         try
         {
@@ -630,6 +684,10 @@ public sealed partial class EditorForm : Form
         {
             ResumeLayout(true);
             UpdateWindowChromeRegion();
+
+            _enableComposited = false;
+            UpdateStyles();
+            RefreshLayoutAndRedraw();
         }
     }
 
@@ -649,6 +707,10 @@ public sealed partial class EditorForm : Form
         }
 
         _isManualMaximized = false;
+
+        _enableComposited = true;
+        UpdateStyles();
+
         SuspendLayout();
         try
         {
@@ -658,6 +720,10 @@ public sealed partial class EditorForm : Form
         {
             ResumeLayout(true);
             UpdateWindowChromeRegion();
+
+            _enableComposited = false;
+            UpdateStyles();
+            RefreshLayoutAndRedraw();
         }
     }
 
