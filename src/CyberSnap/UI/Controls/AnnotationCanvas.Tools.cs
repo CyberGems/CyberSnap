@@ -559,6 +559,7 @@ public sealed partial class AnnotationCanvas
                 _cropRect = NormRect(_dragStartImg, _dragLastImg);
             }
             _cropHasRect = _cropRect.Width >= 4 && _cropRect.Height >= 4;
+            bool clickedOutside = !_cropHasRect;
             if (!_cropHasRect)
             {
                 if (EditorAutoCropControls && _baseBitmap is not null)
@@ -574,7 +575,11 @@ public sealed partial class AnnotationCanvas
             _activeCropHandle = -1;
             Invalidate();
             OnStateChanged();
-            if (wasResized && _cropHasRect)
+            if (clickedOutside)
+            {
+                ShowToolBanner(CyberSnap.Services.LocalizationService.Translate("Crop canceled"));
+            }
+            else if (wasResized && _cropHasRect)
             {
                 ShowToolBanner(CyberSnap.Services.LocalizationService.Translate("Enter / Double-click to confirm"), sticky: true);
             }
