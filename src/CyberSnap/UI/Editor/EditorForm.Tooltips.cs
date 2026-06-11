@@ -39,9 +39,14 @@ public sealed partial class EditorForm
         _tooltipTimer.Start();
     }
 
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
     private void TooltipTimer_Tick(object? sender, EventArgs e)
     {
-        if (IsDisposed || !Visible || ActiveForm != this)
+        var fg = GetForegroundWindow();
+        bool isWindowActive = fg == Handle || (_hoverToolTip != null && fg == _hoverToolTip.Handle);
+        if (IsDisposed || !Visible || !isWindowActive)
         {
             if (_hoverAnchor is not null)
             {
