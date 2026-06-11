@@ -93,9 +93,17 @@ public sealed partial class AnnotationCanvas
 
     private void ClearCropPending()
     {
-        _cropRect = Rectangle.Empty;
         _cropDragging = false;
-        _cropHasRect = false;
+        if (EditorAutoCropControls && _baseBitmap is not null)
+        {
+            _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+            _cropHasRect = true;
+        }
+        else
+        {
+            _cropRect = Rectangle.Empty;
+            _cropHasRect = false;
+        }
     }
 
     private void CancelInProgressTool()
@@ -551,7 +559,18 @@ public sealed partial class AnnotationCanvas
                 _cropRect = NormRect(_dragStartImg, _dragLastImg);
             }
             _cropHasRect = _cropRect.Width >= 4 && _cropRect.Height >= 4;
-            if (!_cropHasRect) _cropRect = Rectangle.Empty;
+            if (!_cropHasRect)
+            {
+                if (EditorAutoCropControls && _baseBitmap is not null)
+                {
+                    _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+                    _cropHasRect = true;
+                }
+                else
+                {
+                    _cropRect = Rectangle.Empty;
+                }
+            }
             _activeCropHandle = -1;
             Invalidate();
             OnStateChanged();
