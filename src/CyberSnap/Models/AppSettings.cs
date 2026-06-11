@@ -194,6 +194,7 @@ public sealed class AppSettings
     public bool EditorFitToWindowOnOpen { get; set; } = true;
     public bool EditorShowBanners { get; set; } = true;
     public bool EditorAutoCropControls { get; set; } = true;
+    public bool EditorShowRulers { get; set; } = true;
     public bool SaveToFile { get; set; } = true;
     public bool AskForFileNameOnSave { get; set; }
     public string FileNameTemplate { get; set; } = Helpers.FileNameTemplate.DefaultTemplate;

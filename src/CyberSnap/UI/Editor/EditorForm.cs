@@ -39,6 +39,10 @@ public sealed partial class EditorForm : Form
     public static EditorForm? ActiveInstance => _instance is { IsDisposed: false, Visible: true } ? _instance : null;
 
     private readonly AnnotationCanvas _canvas;
+    private Panel? _topRulerContainer;
+    private HorizontalRuler? _topRuler;
+    private VerticalRuler? _leftRuler;
+    private RulerCornerBlock? _cornerBlock;
 
     private string? _savedFilePath;
     private bool _suppressCloseConfirm;
@@ -209,6 +213,38 @@ public sealed partial class EditorForm : Form
             BackColor = EditorColors.BgPrimary,
             Padding = new Padding(18),
         };
+
+        bool showRulers = settings?.EditorShowRulers ?? true;
+
+        _topRuler = new HorizontalRuler(_canvas)
+        {
+            Dock = DockStyle.Fill,
+            Visible = showRulers
+        };
+
+        _cornerBlock = new RulerCornerBlock
+        {
+            Dock = DockStyle.Left,
+            Width = 28,
+            Visible = showRulers
+        };
+
+        _topRulerContainer = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 28,
+            Visible = showRulers
+        };
+        _topRulerContainer.Controls.Add(_topRuler);
+        _topRulerContainer.Controls.Add(_cornerBlock);
+
+        _leftRuler = new VerticalRuler(_canvas)
+        {
+            Dock = DockStyle.Left,
+            Width = 28,
+            Visible = showRulers
+        };
+
         var canvasInner = new Panel
         {
             Dock = DockStyle.Fill,
@@ -216,6 +252,8 @@ public sealed partial class EditorForm : Form
             Padding = new Padding(1),
         };
         canvasInner.Controls.Add(_canvas);
+        canvasInner.Controls.Add(_leftRuler);
+        canvasInner.Controls.Add(_topRulerContainer);
         canvasContainer.Controls.Add(canvasInner);
 
         var workArea = new Panel
@@ -901,6 +939,32 @@ public sealed partial class EditorForm : Form
         if (_canvas.TryDeselectTool())
             return;
 
+        int hHover = _canvas.HitTestHorizontalGuide(e.Location);
+        int vHover = _canvas.HitTestVerticalGuide(e.Location);
+        if (hHover >= 0 || vHover >= 0)
+        {
+            var guideMenu = WindowsMenuRenderer.Create(showImages: false, minWidth: 160);
+            var deleteItem = WindowsMenuRenderer.Item("Delete Guide", iconId: null);
+            var clearAllItem = WindowsMenuRenderer.Item("Clear All Guides", iconId: null);
+
+            int hIdx = hHover;
+            int vIdx = vHover;
+
+            deleteItem.Click += (s, ev) => {
+                if (hIdx >= 0) _canvas.RemoveHorizontalGuideAt(hIdx);
+                else if (vIdx >= 0) _canvas.RemoveVerticalGuideAt(vIdx);
+            };
+
+            clearAllItem.Click += (s, ev) => {
+                _canvas.ClearAllGuides();
+            };
+
+            guideMenu.Items.Add(deleteItem);
+            guideMenu.Items.Add(clearAllItem);
+            guideMenu.Show(_canvas, e.Location);
+            return;
+        }
+
         var imgPt = _canvas.PointFromScreenToImage(e.Location);
         bool onImage = imgPt.X >= 0 && imgPt.Y >= 0
             && imgPt.X < _canvas.BaseBitmap.Width
@@ -959,5 +1023,14 @@ public sealed partial class EditorForm : Form
         {
             ThemedConfirmDialog.Alert(Handle, "Error", ex.Message, error: true);
         }
+    }
+
+    public void ToggleRulers(bool show)
+    {
+        if (_topRulerContainer != null) _topRulerContainer.Visible = show;
+        if (_leftRuler != null) _leftRuler.Visible = show;
+        if (_topRuler != null) _topRuler.Visible = show;
+        if (_cornerBlock != null) _cornerBlock.Visible = show;
+        RefreshLayoutAndRedraw();
     }
 }

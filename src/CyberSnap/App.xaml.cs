@@ -77,6 +77,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-autocrop-pref", ex); }
     }
 
+    /// <summary>Persists the annotation editor's "show rulers" preference.</summary>
+    public void PersistEditorShowRulers(bool showRulers)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorShowRulers == showRulers) return;
+        _settingsService.Settings.EditorShowRulers = showRulers;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-rulers-pref", ex); }
+    }
+
     /// <summary>Persists the color last chosen for shapes/annotations in the editor.</summary>
     public void PersistEditorToolColor(int argb)
     {
