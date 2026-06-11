@@ -41,7 +41,7 @@ public sealed partial class EditorForm
 
     private void TooltipTimer_Tick(object? sender, EventArgs e)
     {
-        if (IsDisposed || !Visible || !ContainsFocus)
+        if (IsDisposed || !Visible || ActiveForm != this)
         {
             if (_hoverAnchor is not null)
             {
