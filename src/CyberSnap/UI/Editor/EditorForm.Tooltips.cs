@@ -41,7 +41,14 @@ public sealed partial class EditorForm
 
     private void TooltipTimer_Tick(object? sender, EventArgs e)
     {
-        if (IsDisposed || !Visible) return;
+        if (IsDisposed || !Visible || !ContainsFocus)
+        {
+            if (_hoverAnchor is not null)
+            {
+                HideHoverTooltip(_hoverAnchor);
+            }
+            return;
+        }
 
         var screenPos = Cursor.Position;
         Control? hovered = null;
