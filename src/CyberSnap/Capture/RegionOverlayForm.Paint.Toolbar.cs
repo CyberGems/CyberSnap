@@ -405,7 +405,7 @@ public sealed partial class RegionOverlayForm
         int containerPadding = UiChrome.ScaleInt(4);
         int containerSize = buttonSize + containerPadding * 2;
         var primaryBtn = _toolbarButtons[_mergedCaptureButtonIndex];
-        int gap = UiChrome.ScaledToolbarButtonSpacing + 8;
+        int gap = UiChrome.ScaledToolbarInnerPadding;
 
         int x = primaryBtn.X + (primaryBtn.Width - containerSize) / 2;
         int y = primaryBtn.Y + (primaryBtn.Height - containerSize) / 2;

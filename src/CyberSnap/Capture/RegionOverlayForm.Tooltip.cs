@@ -11,6 +11,12 @@ public sealed partial class RegionOverlayForm
 {
     private void ShowToolbarTooltip()
     {
+        if (_isMouseDownOnCaptureBtn)
+        {
+            HideToolbarTooltip();
+            return;
+        }
+
         if (_hoveredAltCaptureBtn && _altCapturePopupOpen)
         {
             if (_tooltipButton == 999)
@@ -95,9 +101,20 @@ public sealed partial class RegionOverlayForm
             if (button == _mergedCaptureButtonIndex)
             {
                 var isSpanish = settings != null && string.Equals(settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
-                var suffix = isSpanish
-                    ? "\nMantén presionado 0.5s para ver la herramienta alternativa"
-                    : "\nHold for 0.5s to show alternative tool";
+                var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
+                string suffix;
+                if (defaultMode == CaptureMode.Center)
+                {
+                    suffix = isSpanish
+                        ? "\nMantén presionado para ver la herramienta Selección de área"
+                        : "\nHold to show Area Capture tool";
+                }
+                else
+                {
+                    suffix = isSpanish
+                        ? "\nMantén presionado para ver la herramienta Desde el centro"
+                        : "\nHold to show From Center tool";
+                }
                 text += suffix;
             }
         }

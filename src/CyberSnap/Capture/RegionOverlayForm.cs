@@ -807,10 +807,10 @@ public sealed partial class RegionOverlayForm : Form
     {
         bool changed = false;
 
-        // 1. Mouse hold check (0.5 seconds)
+        // 1. Mouse hold check (0.3 seconds)
         if (_isMouseDownOnCaptureBtn && _mouseDownStartTime != DateTime.MinValue)
         {
-            if ((DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds >= 500)
+            if ((DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds >= 300)
             {
                 if (!_altCapturePopupOpen)
                 {
@@ -824,7 +824,15 @@ public sealed partial class RegionOverlayForm : Form
         // 2. Tooltip delay and auto-hide check
         if (IsToolbarInteractive())
         {
-            if (_hoveredButton >= 0 || (_hoveredAltCaptureBtn && _altCapturePopupOpen))
+            if (_isMouseDownOnCaptureBtn)
+            {
+                if (_tooltipVisible)
+                {
+                    HideToolbarTooltip();
+                }
+                _hoverButtonStartTime = DateTime.MinValue;
+            }
+            else if (_hoveredButton >= 0 || (_hoveredAltCaptureBtn && _altCapturePopupOpen))
             {
                 if (!_tooltipVisible && !_tooltipDismissed)
                 {
