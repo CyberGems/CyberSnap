@@ -71,6 +71,7 @@ public sealed partial class RegionOverlayForm
                 {
                     _isMouseDownOnCaptureBtn = true;
                     _mouseDownStartTime = DateTime.UtcNow;
+                    HideToolbarTooltip();
                 }
                 else
                 {

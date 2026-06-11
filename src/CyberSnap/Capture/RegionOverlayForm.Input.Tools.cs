@@ -620,7 +620,7 @@ public sealed partial class RegionOverlayForm
             var holdTime = (DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds;
             _mouseDownStartTime = DateTime.MinValue;
 
-            if (holdTime < 500)
+            if (holdTime < 300)
             {
                 if (_mergedCaptureButtonIndex >= 0 && _mergedCaptureButtonIndex < _mainBarTools.Length)
                 {
