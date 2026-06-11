@@ -1065,6 +1065,7 @@ public sealed partial class EditorForm
         var fitItem = WindowsMenuRenderer.Item("Auto-fit", iconId: null);
         var cropHandlesItem = WindowsMenuRenderer.Item("Crop handles", iconId: null);
         var bannersItem = WindowsMenuRenderer.Item("Show banners", iconId: null);
+        var rulersItem = WindowsMenuRenderer.Item("Show rulers", iconId: null);
         var settingsItem = WindowsMenuRenderer.Item("Configuration", iconId: "gear");
 
         borderItem.Click += (_, _) =>
@@ -1095,31 +1096,43 @@ public sealed partial class EditorForm
             }
         };
 
+        rulersItem.Click += (_, _) =>
+        {
+            bool nextState = !(_topRulerContainer != null && _topRulerContainer.Visible);
+            ToggleRulers(nextState);
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorShowRulers(nextState);
+            }
+        };
+
         settingsItem.Click += (_, _) => OpenSettingsWindow();
 
         menu.Items.Add(borderItem);
         menu.Items.Add(fitItem);
         menu.Items.Add(cropHandlesItem);
         menu.Items.Add(bannersItem);
+        menu.Items.Add(rulersItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
 
         menu.Opened += (_, _) =>
         {
-            UpdateBurgerCheckmarks(borderItem, fitItem, cropHandlesItem, bannersItem);
+            UpdateBurgerCheckmarks(borderItem, fitItem, cropHandlesItem, bannersItem, rulersItem);
         };
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
     }
 
-    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem bannersItem)
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem)
     {
         var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
         borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         fitItem.Image = _toggleFitSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         cropHandlesItem.Image = _canvas.EditorAutoCropControls ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        rulersItem.Image = (_topRulerContainer != null && _topRulerContainer.Visible) ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
     }
 }
 

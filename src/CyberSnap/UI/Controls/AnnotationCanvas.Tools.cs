@@ -180,6 +180,22 @@ public sealed partial class AnnotationCanvas
             }
         }
 
+        if (e.Button == MouseButtons.Left)
+        {
+            if (_hoveredHorizontalGuideIndex >= 0)
+            {
+                _activeDraggedHorizontalGuideIndex = _hoveredHorizontalGuideIndex;
+                Capture = true;
+                return;
+            }
+            if (_hoveredVerticalGuideIndex >= 0)
+            {
+                _activeDraggedVerticalGuideIndex = _hoveredVerticalGuideIndex;
+                Capture = true;
+                return;
+            }
+        }
+
         if (e.Button == MouseButtons.Middle ||
             (e.Button == MouseButtons.Left && _activeTool == CanvasTool.Pan))
         {
@@ -329,6 +345,20 @@ public sealed partial class AnnotationCanvas
     {
         base.OnMouseMove(e);
 
+        if (_activeDraggedHorizontalGuideIndex >= 0)
+        {
+            _horizontalGuides[_activeDraggedHorizontalGuideIndex] = ScreenToImage(e.Location).Y;
+            Invalidate();
+            return;
+        }
+
+        if (_activeDraggedVerticalGuideIndex >= 0)
+        {
+            _verticalGuides[_activeDraggedVerticalGuideIndex] = ScreenToImage(e.Location).X;
+            Invalidate();
+            return;
+        }
+
         // Dragging the inline text box by its toolbar grip
         if (_textGripDragging && _inlineTextBox is not null)
         {
@@ -342,6 +372,33 @@ public sealed partial class AnnotationCanvas
         // Hovering the floating text toolbar (skip normal tool hover when over it)
         if (_inlineTextBox is not null && UpdateTextToolbarHover(e.Location))
             return;
+
+        if (!_isDragging && !_cropDragging && (_activeTool == CanvasTool.Pan || _activeTool == CanvasTool.Select))
+        {
+            int hHover = HitTestHorizontalGuide(e.Location);
+            int vHover = HitTestVerticalGuide(e.Location);
+            if (hHover != _hoveredHorizontalGuideIndex || vHover != _hoveredVerticalGuideIndex)
+            {
+                _hoveredHorizontalGuideIndex = hHover;
+                _hoveredVerticalGuideIndex = vHover;
+                Invalidate();
+            }
+
+            if (hHover >= 0 || vHover >= 0)
+            {
+                Cursor = hHover >= 0 ? Cursors.HSplit : Cursors.VSplit;
+                return;
+            }
+        }
+        else
+        {
+            if (_hoveredHorizontalGuideIndex != -1 || _hoveredVerticalGuideIndex != -1)
+            {
+                _hoveredHorizontalGuideIndex = -1;
+                _hoveredVerticalGuideIndex = -1;
+                Invalidate();
+            }
+        }
 
         if (_isPanning)
         {
@@ -534,6 +591,41 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
+
+        if (e.Button == MouseButtons.Left)
+        {
+            if (_activeDraggedHorizontalGuideIndex >= 0)
+            {
+                int idx = _activeDraggedHorizontalGuideIndex;
+                _activeDraggedHorizontalGuideIndex = -1;
+                Capture = false;
+
+                Point imgPt = ScreenToImage(e.Location);
+                bool offCanvas = e.Y < 0 || e.Y > ClientSize.Height || imgPt.Y < 0 || imgPt.Y > _baseBitmap.Height;
+                if (offCanvas)
+                {
+                    RemoveHorizontalGuideAt(idx);
+                }
+                Invalidate();
+                return;
+            }
+
+            if (_activeDraggedVerticalGuideIndex >= 0)
+            {
+                int idx = _activeDraggedVerticalGuideIndex;
+                _activeDraggedVerticalGuideIndex = -1;
+                Capture = false;
+
+                Point imgPt = ScreenToImage(e.Location);
+                bool offCanvas = e.X < 0 || e.X > ClientSize.Width || imgPt.X < 0 || imgPt.X > _baseBitmap.Width;
+                if (offCanvas)
+                {
+                    RemoveVerticalGuideAt(idx);
+                }
+                Invalidate();
+                return;
+            }
+        }
 
         if (_textGripDragging)
         {

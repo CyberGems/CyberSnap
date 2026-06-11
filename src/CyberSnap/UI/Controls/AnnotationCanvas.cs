@@ -61,6 +61,12 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private Annotation? _selectOriginalAnnotation;
     private Point _selectDragStartImg;
 
+    // Guide Lines hover and active drag state
+    private int _hoveredHorizontalGuideIndex = -1;
+    private int _hoveredVerticalGuideIndex = -1;
+    private int _activeDraggedHorizontalGuideIndex = -1;
+    private int _activeDraggedVerticalGuideIndex = -1;
+
     // Eraser hover highlight
     private int _eraserHoverIndex = -1;
 
@@ -130,6 +136,95 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             Invalidate();
             OnStateChanged();
         }
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public PointF Pan => _pan;
+
+    private readonly List<float> _horizontalGuides = new();
+    private readonly List<float> _verticalGuides = new();
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public List<float> HorizontalGuides => _horizontalGuides;
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public List<float> VerticalGuides => _verticalGuides;
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float? DraggingTempHorizontalGuide { get; set; }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public float? DraggingTempVerticalGuide { get; set; }
+
+    public void AddHorizontalGuide(float y)
+    {
+        if (!_horizontalGuides.Any(g => Math.Abs(g - y) < 2))
+        {
+            _horizontalGuides.Add(y);
+            Invalidate();
+        }
+    }
+
+    public void AddVerticalGuide(float x)
+    {
+        if (!_verticalGuides.Any(g => Math.Abs(g - x) < 2))
+        {
+            _verticalGuides.Add(x);
+            Invalidate();
+        }
+    }
+
+    public void RemoveHorizontalGuideAt(int index)
+    {
+        if (index >= 0 && index < _horizontalGuides.Count)
+        {
+            _horizontalGuides.RemoveAt(index);
+            Invalidate();
+        }
+    }
+
+    public void RemoveVerticalGuideAt(int index)
+    {
+        if (index >= 0 && index < _verticalGuides.Count)
+        {
+            _verticalGuides.RemoveAt(index);
+            Invalidate();
+        }
+    }
+
+    public void ClearAllGuides()
+    {
+        _horizontalGuides.Clear();
+        _verticalGuides.Clear();
+        Invalidate();
+    }
+
+    public int HitTestHorizontalGuide(Point clientPt)
+    {
+        const float tolerance = 5f; // Screen pixels tolerance
+        for (int i = 0; i < _horizontalGuides.Count; i++)
+        {
+            float y = (float)(_horizontalGuides[i] * _zoom + _pan.Y);
+            if (Math.Abs(clientPt.Y - y) <= tolerance)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public int HitTestVerticalGuide(Point clientPt)
+    {
+        const float tolerance = 5f;
+        for (int i = 0; i < _verticalGuides.Count; i++)
+        {
+            float x = (float)(_verticalGuides[i] * _zoom + _pan.X);
+            if (Math.Abs(clientPt.X - x) <= tolerance)
+            {
+                return i;
+            }
+        }
+        return -1;
     }
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]

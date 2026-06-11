@@ -49,6 +49,7 @@ public sealed partial class AnnotationCanvas
 
         RenderCropOverlay(g);
         RenderCheckerboardFrame(g);
+        RenderGuides(g);
         RenderToolBanner(g);
 
         if (IsDefaultBlank)
@@ -502,5 +503,57 @@ public sealed partial class AnnotationCanvas
 
         g.DrawString(titleText, titleFont, titleBrush, titleRect, sf);
         g.DrawString(descText, descFont, descBrush, descRect, sf);
+    }
+
+    private void RenderGuides(Graphics g)
+    {
+        var settings = Services.SettingsService.LoadStatic();
+        if (settings != null && !settings.EditorShowRulers) return;
+
+        using var normalPen = new Pen(Color.FromArgb(160, 0, 255, 255), 1f) { DashPattern = new float[] { 4, 4 } };
+        using var hoverPen = new Pen(Color.FromArgb(255, 0, 255, 255), 1.5f);
+        using var shadowPen = new Pen(Color.FromArgb(80, 0, 0, 0), 1f);
+
+        // Draw horizontal guides
+        for (int i = 0; i < _horizontalGuides.Count; i++)
+        {
+            float y = (float)(_horizontalGuides[i] * _zoom + _pan.Y);
+            if (y >= 0 && y <= ClientSize.Height)
+            {
+                bool isHovered = (i == _hoveredHorizontalGuideIndex || i == _activeDraggedHorizontalGuideIndex);
+                var pen = isHovered ? hoverPen : normalPen;
+                g.DrawLine(shadowPen, 0, y + 1, ClientSize.Width, y + 1);
+                g.DrawLine(pen, 0, y, ClientSize.Width, y);
+            }
+        }
+
+        // Draw vertical guides
+        for (int i = 0; i < _verticalGuides.Count; i++)
+        {
+            float x = (float)(_verticalGuides[i] * _zoom + _pan.X);
+            if (x >= 0 && x <= ClientSize.Width)
+            {
+                bool isHovered = (i == _hoveredVerticalGuideIndex || i == _activeDraggedVerticalGuideIndex);
+                var pen = isHovered ? hoverPen : normalPen;
+                g.DrawLine(shadowPen, x + 1, 0, x + 1, ClientSize.Height);
+                g.DrawLine(pen, x, 0, x, ClientSize.Height);
+            }
+        }
+
+        // Draw temporary horizontal guide currently being dragged from ruler
+        if (DraggingTempHorizontalGuide.HasValue)
+        {
+            float y = (float)(DraggingTempHorizontalGuide.Value * _zoom + _pan.Y);
+            g.DrawLine(shadowPen, 0, y + 1, ClientSize.Width, y + 1);
+            g.DrawLine(hoverPen, 0, y, ClientSize.Width, y);
+        }
+
+        // Draw temporary vertical guide currently being dragged from ruler
+        if (DraggingTempVerticalGuide.HasValue)
+        {
+            float x = (float)(DraggingTempVerticalGuide.Value * _zoom + _pan.X);
+            g.DrawLine(shadowPen, x + 1, 0, x + 1, ClientSize.Height);
+            g.DrawLine(hoverPen, x, 0, x, ClientSize.Height);
+        }
     }
 }
