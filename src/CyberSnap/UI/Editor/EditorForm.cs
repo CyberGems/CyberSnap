@@ -36,6 +36,8 @@ public sealed partial class EditorForm : Form
 
     private static EditorForm? _instance;
 
+    public static EditorForm? ActiveInstance => _instance is { IsDisposed: false, Visible: true } ? _instance : null;
+
     private readonly AnnotationCanvas _canvas;
 
     private string? _savedFilePath;

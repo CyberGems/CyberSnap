@@ -89,6 +89,16 @@ public partial class App
     private void ShowSettingsWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService)
     {
         var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService);
+
+        var activeEditor = UI.Editor.EditorForm.ActiveInstance;
+        if (activeEditor != null)
+        {
+            var helper = new System.Windows.Interop.WindowInteropHelper(win)
+            {
+                Owner = activeEditor.Handle
+            };
+        }
+
         Action hotkeyHandler = RegisterHotkeys;
         Action localizationHandler = () =>
         {
