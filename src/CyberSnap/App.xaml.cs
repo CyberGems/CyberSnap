@@ -67,6 +67,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-banners-pref", ex); }
     }
 
+    /// <summary>Persists the annotation editor's "auto crop controls" preference.</summary>
+    public void PersistEditorAutoCropControls(bool autoCropControls)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorAutoCropControls == autoCropControls) return;
+        _settingsService.Settings.EditorAutoCropControls = autoCropControls;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-autocrop-pref", ex); }
+    }
+
     /// <summary>Persists the color last chosen for shapes/annotations in the editor.</summary>
     public void PersistEditorToolColor(int argb)
     {
