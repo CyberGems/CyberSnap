@@ -1,13 +1,47 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Windows.Forms;
+using System.Linq;
 using CyberSnap.Helpers;
+using CyberSnap.Models;
+using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
 
 public sealed partial class RegionOverlayForm
 {
-    private void UpdateToolbarTooltip(Point cursor)
+    private void ShowToolbarTooltip()
     {
+        if (_hoveredAltCaptureBtn && _altCapturePopupOpen)
+        {
+            if (_tooltipButton == 999)
+                return;
+
+            _tooltipButton = 999;
+            _toolbarToolTip ??= new WindowsToolTip();
+
+            var settings = Services.SettingsService.LoadStatic();
+            var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
+            var altToolId = (defaultMode == CaptureMode.Center) ? "rect" : "center";
+            var altTool = ToolDef.AllTools.FirstOrDefault(t => t.Id == altToolId);
+            if (altTool != null)
+            {
+                var label = LocalizationService.Translate(altTool.Label);
+                var hotkey = settings?.GetToolHotkey(altTool.Id) ?? (0u, 0u);
+                if (hotkey.key != 0)
+                    label += $"  ({HotkeyFormatter.Format(hotkey.mod, hotkey.key)})";
+
+                var altAnchorScreen = new Rectangle(
+                    _virtualBounds.X + _altCaptureButtonRect.X,
+                    _virtualBounds.Y + _altCaptureButtonRect.Y,
+                    _altCaptureButtonRect.Width,
+                    _altCaptureButtonRect.Height);
+                _toolbarToolTip.ShowNear(this, label, altAnchorScreen, IsBottomDock);
+                _tooltipVisible = true;
+                _tooltipShowTime = DateTime.UtcNow;
+            }
+            return;
+        }
+
         if (!IsToolbarInteractive() || _hoveredButton < 0 || _hoveredButton >= _toolbarLabels.Length)
         {
             HideToolbarTooltip();
@@ -40,6 +74,8 @@ public sealed partial class RegionOverlayForm
             anchor.Width,
             anchor.Height);
         _toolbarToolTip.ShowNear(this, text, anchorScreen, IsBottomDock);
+        _tooltipVisible = true;
+        _tooltipShowTime = DateTime.UtcNow;
     }
 
     private string? GetToolbarTooltipText(int button)
@@ -51,9 +87,19 @@ public sealed partial class RegionOverlayForm
         if (button < _mainBarTools.Length)
         {
             var tool = _mainBarTools[button];
-            var hotkey = Services.SettingsService.LoadStatic()?.GetToolHotkey(tool.Id) ?? (0u, 0u);
+            var settings = Services.SettingsService.LoadStatic();
+            var hotkey = settings?.GetToolHotkey(tool.Id) ?? (0u, 0u);
             if (hotkey.key != 0)
                 text += $"  ({HotkeyFormatter.Format(hotkey.mod, hotkey.key)})";
+
+            if (button == _mergedCaptureButtonIndex)
+            {
+                var isSpanish = settings != null && string.Equals(settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
+                var suffix = isSpanish
+                    ? "\nMantén presionado 0.5s para ver la herramienta alternativa"
+                    : "\nHold for 0.5s to show alternative tool";
+                text += suffix;
+            }
         }
 
         return text;
@@ -62,6 +108,9 @@ public sealed partial class RegionOverlayForm
     private void HideToolbarTooltip()
     {
         _tooltipButton = -1;
+        _tooltipVisible = false;
+        _tooltipDismissed = true;
+        _tooltipShowTime = DateTime.MinValue;
         try { _toolbarToolTip?.Hide(); } catch { }
     }
 

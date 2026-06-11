@@ -796,7 +796,7 @@
                                            AutomationProperties.Name="Default capture method"
                                            ToolTip="Choose your default area selection mode."
                                            SelectionChanged="DefaultCaptureModeCombo_SelectionChanged">
-                                     <ComboBoxItem Content="Rectangle"
+                                     <ComboBoxItem Content="Area select"
                                                    ToolTip="Drag from corner to corner."
                                                    AutomationProperties.Name="Area Capture"
                                                    AutomationProperties.HelpText="Start captures with the standard area capture tool."/>

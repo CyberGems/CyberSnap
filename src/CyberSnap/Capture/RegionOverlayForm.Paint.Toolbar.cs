@@ -392,7 +392,75 @@ public sealed partial class RegionOverlayForm
         if (_colorPickerOpen) PaintColorPicker(g);
         if (_emojiPickerOpen) PaintEmojiPicker(g);
         if (_fontPickerOpen) PaintFontPicker(g);
+        if (_altCapturePopupOpen) PaintAltCaptureButton(g);
         g.Restore(state);
+    }
+
+    private void PaintAltCaptureButton(Graphics g)
+    {
+        if (_mergedCaptureButtonIndex < 0 || _mergedCaptureButtonIndex >= _toolbarButtons.Length)
+            return;
+
+        int buttonSize = UiChrome.ScaledToolbarButtonSize;
+        int containerPadding = UiChrome.ScaleInt(4);
+        int containerSize = buttonSize + containerPadding * 2;
+        var primaryBtn = _toolbarButtons[_mergedCaptureButtonIndex];
+        int gap = UiChrome.ScaledToolbarButtonSpacing + 8;
+
+        int x = primaryBtn.X + (primaryBtn.Width - containerSize) / 2;
+        int y = primaryBtn.Y + (primaryBtn.Height - containerSize) / 2;
+
+        var dock = ActiveDockSide;
+        if (dock == CaptureDockSide.Bottom)
+        {
+            y = primaryBtn.Y - containerSize - gap;
+        }
+        else if (dock == CaptureDockSide.Top)
+        {
+            y = primaryBtn.Bottom + gap;
+        }
+        else if (dock == CaptureDockSide.Left)
+        {
+            x = primaryBtn.Right + gap;
+        }
+        else if (dock == CaptureDockSide.Right)
+        {
+            x = primaryBtn.X - containerSize - gap;
+        }
+
+        _altCaptureButtonRect = new Rectangle(x, y, containerSize, containerSize);
+
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        float cr = UiChrome.ScaledToolbarCornerRadius;
+        WindowsDockRenderer.PaintShadow(g, _altCaptureButtonRect, cr);
+
+        using (var path = WindowsDockRenderer.RoundedRect(_altCaptureButtonRect, cr))
+        using (var brush = new SolidBrush(UiChrome.SurfaceTier1))
+            g.FillPath(brush, path);
+
+        using (var path = WindowsDockRenderer.RoundedRect(_altCaptureButtonRect, cr))
+        using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 80 : 50, UiChrome.AccentColor), 1f))
+            g.DrawPath(pen, path);
+
+        bool hover = _hoveredAltCaptureBtn;
+        var btnRect = new Rectangle(
+            _altCaptureButtonRect.X + containerPadding,
+            _altCaptureButtonRect.Y + containerPadding,
+            buttonSize,
+            buttonSize);
+
+        WindowsDockRenderer.PaintButton(g, btnRect, active: false, hovered: hover, accent: UiChrome.AccentColor);
+
+        var settings = Services.SettingsService.LoadStatic();
+        var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
+        var altToolId = (defaultMode == CaptureMode.Center) ? "rect" : "center";
+
+        var altIcon = altToolId switch { "crop" => "rect", "rect" => "captureRect", var id => id };
+
+        int ia = hover ? 240 : 200;
+        var iconColor = UiChrome.SurfaceTextPrimary;
+        DrawIcon(g, altIcon, btnRect, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active: false);
     }
 
     private void PaintColorPicker(Graphics g)

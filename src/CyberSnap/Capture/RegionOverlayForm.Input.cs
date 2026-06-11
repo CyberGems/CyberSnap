@@ -29,6 +29,35 @@ public sealed partial class RegionOverlayForm
                 return;
         }
 
+        if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location))
+        {
+            var settings = Services.SettingsService.LoadStatic();
+            var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
+            var targetMode = (defaultMode == CaptureMode.Center) ? CaptureMode.Rectangle : CaptureMode.Center;
+
+            // Notify settings service and save the preference
+            DefaultCaptureModeChanged?.Invoke(targetMode);
+
+            var targetTool = ToolDef.AllTools.FirstOrDefault(t => t.Mode == targetMode);
+            if (targetTool != null)
+            {
+                SetTool(targetTool);
+            }
+
+            // Immediately rebuild the toolbar tools to swap the buttons visually on screen
+            CalcToolbar();
+
+            _altCapturePopupOpen = false;
+            InvalidateToolbarArea();
+            return;
+        }
+
+        if (_altCapturePopupOpen && GetToolbarButtonAt(e.Location) != _mergedCaptureButtonIndex)
+        {
+            _altCapturePopupOpen = false;
+            InvalidateToolbarArea();
+        }
+
         int btn = GetToolbarButtonAt(e.Location);
         if (btn >= 0)
         {
@@ -38,8 +67,16 @@ public sealed partial class RegionOverlayForm
             if (btn == PositionButtonIndex) { ToggleToolbarPosition(); return; } // toggle position
             if (btn < _mainBarTools.Length)
             {
-                if (_mainBarTools[btn].Mode.HasValue)
-                    SetTool(_mainBarTools[btn]);
+                if (btn == _mergedCaptureButtonIndex)
+                {
+                    _isMouseDownOnCaptureBtn = true;
+                    _mouseDownStartTime = DateTime.UtcNow;
+                }
+                else
+                {
+                    if (_mainBarTools[btn].Mode.HasValue)
+                        SetTool(_mainBarTools[btn]);
+                }
             }
             else if (btn >= CloseButtonIndex + 1 && btn < BtnCount)
             {

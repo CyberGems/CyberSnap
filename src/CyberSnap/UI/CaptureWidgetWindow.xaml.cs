@@ -96,7 +96,8 @@ public partial class CaptureWidgetWindow : Window
         var accentColor = System.Drawing.Color.FromArgb(0, 255, 255); // Neon Cyan for CyberGems aesthetics
         var normalIconColor = System.Drawing.Color.FromArgb(230, 240, 255); // TextPrimary white-blue
 
-        BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("center", accentColor, 20); // target crosshair
+        string captureIconId = (_settings.DefaultCaptureMode == Models.CaptureMode.Center) ? "center" : "captureRect";
+        BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf(captureIconId, accentColor, 20);
 
         ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, 22);
         GrabTextIcon.Source = Helpers.FluentIcons.RenderWpf("ocr", normalIconColor, 22);
@@ -129,6 +130,17 @@ public partial class CaptureWidgetWindow : Window
         }
 
         UpdateEnableEditorState();
+        LoadIcons();
+
+        // Update tooltip based on the default capture mode
+        string originalTooltip = LocalizationService.Translate(_settings.InterfaceLanguage, "Quick screenshot (Area Capture)");
+        int openParen = originalTooltip.LastIndexOf('(');
+        if (openParen >= 0 && _settings.DefaultCaptureMode == Models.CaptureMode.Center)
+        {
+            string translatedCenter = LocalizationService.Translate(_settings.InterfaceLanguage, "From center");
+            originalTooltip = originalTooltip.Substring(0, openParen) + "(" + translatedCenter + ")";
+        }
+        CaptureButton.ToolTip = originalTooltip;
 
         // Apply scaling
         UiScale.ApplyToWindow(this, RootGrid, scaleWindowBounds: false);
@@ -840,7 +852,7 @@ public partial class CaptureWidgetWindow : Window
     // Capture Actions
     private void CaptureButton_Click(object sender, RoutedEventArgs e)
     {
-        TriggerAppCapture(Models.CaptureMode.Rectangle);
+        TriggerAppCapture(_settings.DefaultCaptureMode);
     }
 
     private void ScrollCapture_Click(object sender, RoutedEventArgs e)
@@ -922,6 +934,9 @@ public partial class CaptureWidgetWindow : Window
             {
                 case Models.CaptureMode.Rectangle:
                     app.OnHotkeyPressedProxy();
+                    break;
+                case Models.CaptureMode.Center:
+                    app.OnCenterHotkeyPressedProxy();
                     break;
                 case Models.CaptureMode.ScrollCapture:
                     app.OnScrollCaptureHotkeyPressedProxy();

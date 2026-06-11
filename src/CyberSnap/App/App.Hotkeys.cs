@@ -165,6 +165,7 @@ public partial class App
     public void OnGifHotkeyPressedProxy() => OnGifHotkeyPressed();
     public void OnScrollCaptureHotkeyPressedProxy() => OnScrollCaptureHotkeyPressed();
     public void OnScanHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Scan);
+    public void OnCenterHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Center);
     public void OnPickerHotkeyPressedProxy() => OnPickerHotkeyPressed();
     public void OnRulerHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Ruler);
 }

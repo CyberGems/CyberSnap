@@ -117,7 +117,35 @@ public sealed partial class RegionOverlayForm
         {
             _hoveredButton = btn;
             toolbarDirty = true;
-            UpdateToolbarTooltip(e.Location);
+            HideToolbarTooltip();
+            _tooltipDismissed = false;
+            _hoverButtonStartTime = DateTime.UtcNow;
+        }
+
+        bool prevHoveredAlt = _hoveredAltCaptureBtn;
+        _hoveredAltCaptureBtn = _altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location);
+        if (_hoveredAltCaptureBtn != prevHoveredAlt)
+        {
+            toolbarDirty = true;
+            HideToolbarTooltip();
+            _tooltipDismissed = false;
+            _hoverButtonStartTime = DateTime.UtcNow;
+        }
+
+        if (_altCapturePopupOpen)
+        {
+            bool nearToolbar = _toolbarRect.Contains(e.Location) || IsPointInOverlayUi(e.Location);
+            bool nearAltBtn = _altCaptureButtonRect.Contains(e.Location);
+            if (!nearToolbar && !nearAltBtn)
+            {
+                int distToolbar = DistToRect(e.Location, _toolbarRect);
+                int distAlt = DistToRect(e.Location, _altCaptureButtonRect);
+                if (Math.Min(distToolbar, distAlt) > 40)
+                {
+                    _altCapturePopupOpen = false;
+                    toolbarDirty = true;
+                }
+            }
         }
 
         // Text toolbar button hover tracking
@@ -270,6 +298,8 @@ public sealed partial class RegionOverlayForm
         }
         else if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
             target = IsPointInColorPickerSwatch(e.Location) ? Cursors.Hand : Cursors.Default;
+        else if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location))
+            target = _hoveredAltCaptureBtn ? Cursors.Hand : Cursors.Default;
         else if (_toolbarRect.Contains(e.Location))
             target = btn >= 0 ? Cursors.Hand : Cursors.Default;
         else if (_isTyping && _hoveredTextBtn == 8)
@@ -583,6 +613,28 @@ public sealed partial class RegionOverlayForm
     {
         if (e.Button != MouseButtons.Left) return;
         SetSnapGuides(false, false);
+
+        if (_isMouseDownOnCaptureBtn)
+        {
+            _isMouseDownOnCaptureBtn = false;
+            var holdTime = (DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds;
+            _mouseDownStartTime = DateTime.MinValue;
+
+            if (holdTime < 500)
+            {
+                if (_mergedCaptureButtonIndex >= 0 && _mergedCaptureButtonIndex < _mainBarTools.Length)
+                {
+                    var tool = _mainBarTools[_mergedCaptureButtonIndex];
+                    if (tool.Mode.HasValue)
+                    {
+                        SetTool(tool);
+                    }
+                }
+                _altCapturePopupOpen = false;
+                InvalidateToolbarArea();
+            }
+            return;
+        }
 
         // End confirm-mode handle drag
         if (_isConfirmingSelection && _confirmHandleDragIndex >= 0)

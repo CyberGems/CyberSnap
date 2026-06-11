@@ -141,6 +141,10 @@ public sealed partial class RegionOverlayForm
         Add(InflateIfNeeded(GetColorPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
         Add(InflateIfNeeded(GetFontPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
         Add(InflateIfNeeded(GetEmojiPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
+        if (_altCapturePopupOpen)
+        {
+            Add(InflateIfNeeded(_altCaptureButtonRect, Helpers.UiChrome.ScaleInt(12)));
+        }
         return bounds;
     }
 
@@ -150,6 +154,7 @@ public sealed partial class RegionOverlayForm
         if (_emojiPickerOpen && _emojiPickerRect.Contains(p)) return true;
         if (_fontPickerOpen && _fontPickerRect.Contains(p)) return true;
         if (_colorPickerOpen && _colorPickerRect.Contains(p)) return true;
+        if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(p)) return true;
         return false;
     }
 
