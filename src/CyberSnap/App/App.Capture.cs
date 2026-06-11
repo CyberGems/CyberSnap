@@ -378,6 +378,12 @@ public partial class App
                     _settingsService!.Settings.StrokeWidth = width;
                     _settingsService.Save();
                 };
+                overlay.DefaultCaptureModeChanged += mode =>
+                {
+                    _settingsService!.Settings.DefaultCaptureMode = mode;
+                    _settingsService.Save();
+                    RefreshWidgetWindowLayout();
+                };
 
                 overlay.RegionSelected += sel =>
                 {

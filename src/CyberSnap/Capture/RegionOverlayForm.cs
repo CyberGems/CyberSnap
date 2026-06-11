@@ -70,6 +70,21 @@ public sealed partial class RegionOverlayForm : Form
     private int _tooltipButton = -1;
     private WindowsToolTip? _toolbarToolTip;
 
+    // Hybrid button variables
+    private bool _altCapturePopupOpen = false;
+    private Rectangle _altCaptureButtonRect = Rectangle.Empty;
+    private bool _hoveredAltCaptureBtn = false;
+    private System.Windows.Forms.Timer? _hoverHoldTimer;
+    private DateTime _mouseDownStartTime = DateTime.MinValue;
+    private bool _isMouseDownOnCaptureBtn = false;
+    private int _mergedCaptureButtonIndex = -1;
+
+    // Tooltip timer variables
+    private DateTime _hoverButtonStartTime = DateTime.MinValue;
+    private DateTime _tooltipShowTime = DateTime.MinValue;
+    private bool _tooltipVisible = false;
+    private bool _tooltipDismissed = false;
+
     private bool _showToolNumberBadges = true;
     private Rectangle _toolbarRect;
     private Rectangle _toolbarAnchorArea;
@@ -288,6 +303,7 @@ public sealed partial class RegionOverlayForm : Form
     private const int StrokeWidthCount = 5;
     public event Action<Color>? ToolColorChanged;
     public event Action<CaptureDockSide>? DockSideChanged;
+    public event Action<CaptureMode>? DefaultCaptureModeChanged;
     private const int ColorPickerColumns = 6;
     private const int ColorPickerRows = 1;
     private const int ColorPickerSwatchSize = 28;
@@ -359,6 +375,7 @@ public sealed partial class RegionOverlayForm : Form
         _pickerTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
         _pickerTimer.Tick += OnPickerTick;
         if (_mode == CaptureMode.ColorPicker) _pickerTimer.Start();
+        InitHoverHoldTimer();
 
         _autoDetectTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
         _autoDetectTimer.Tick += (_, _) =>
@@ -638,8 +655,36 @@ public sealed partial class RegionOverlayForm : Form
         var mainBarTools = _visibleTools.Where(t => !flyoutIds.Contains(t.Id)).ToList();
         var flyoutTools = _visibleTools.Where(t => flyoutIds.Contains(t.Id)).ToList();
 
+        var rectTool = mainBarTools.FirstOrDefault(t => t.Id == "rect");
+        var centerTool = mainBarTools.FirstOrDefault(t => t.Id == "center");
+
+        _mergedCaptureButtonIndex = -1;
+        if (rectTool != null && centerTool != null)
+        {
+            var settings = Services.SettingsService.LoadStatic();
+            var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
+
+            if (defaultMode == CaptureMode.Center)
+            {
+                mainBarTools.Remove(rectTool);
+            }
+            else
+            {
+                mainBarTools.Remove(centerTool);
+            }
+        }
+
         _mainBarTools = mainBarTools.ToArray();
         _flyoutTools = flyoutTools.ToArray();
+
+        for (int i = 0; i < _mainBarTools.Length; i++)
+        {
+            if (_mainBarTools[i].Id == "rect" || _mainBarTools[i].Id == "center")
+            {
+                _mergedCaptureButtonIndex = i;
+                break;
+            }
+        }
     }
 
     private static int[] GetToolbarSeparatorIndices(IReadOnlyList<ToolDef> mainBarTools, bool hasMore)
@@ -748,5 +793,95 @@ public sealed partial class RegionOverlayForm : Form
         p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
         p.CloseFigure();
         return p;
+    }
+
+    private void InitHoverHoldTimer()
+    {
+        if (_hoverHoldTimer != null) return;
+        _hoverHoldTimer = new System.Windows.Forms.Timer { Interval = 50 };
+        _hoverHoldTimer.Tick += HoverHoldTimer_Tick;
+        _hoverHoldTimer.Start();
+    }
+
+    private void HoverHoldTimer_Tick(object? sender, EventArgs e)
+    {
+        bool changed = false;
+
+        // 1. Mouse hold check (0.5 seconds)
+        if (_isMouseDownOnCaptureBtn && _mouseDownStartTime != DateTime.MinValue)
+        {
+            if ((DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds >= 500)
+            {
+                if (!_altCapturePopupOpen)
+                {
+                    _altCapturePopupOpen = true;
+                    changed = true;
+                    HideToolbarTooltip();
+                }
+            }
+        }
+
+        // 2. Tooltip delay and auto-hide check
+        if (IsToolbarInteractive())
+        {
+            if (_hoveredButton >= 0 || (_hoveredAltCaptureBtn && _altCapturePopupOpen))
+            {
+                if (!_tooltipVisible && !_tooltipDismissed)
+                {
+                    if (_hoverButtonStartTime != DateTime.MinValue)
+                    {
+                        if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 500)
+                        {
+                            ShowToolbarTooltip();
+                        }
+                    }
+                    else
+                    {
+                        _hoverButtonStartTime = DateTime.UtcNow;
+                    }
+                }
+                else if (_tooltipVisible)
+                {
+                    if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 5000)
+                    {
+                        HideToolbarTooltip();
+                    }
+                }
+            }
+            else
+            {
+                if (_tooltipVisible)
+                {
+                    HideToolbarTooltip();
+                }
+                _hoverButtonStartTime = DateTime.MinValue;
+            }
+        }
+        else
+        {
+            if (_tooltipVisible)
+            {
+                HideToolbarTooltip();
+            }
+            _hoverButtonStartTime = DateTime.MinValue;
+        }
+
+        if (changed)
+        {
+            InvalidateToolbarArea();
+        }
+    }
+
+    private void InvalidateToolbarArea()
+    {
+        UpdateToolbarSurfaceOnly();
+        Invalidate(new Rectangle(_toolbarRect.X - 50, _toolbarRect.Y - 50, _toolbarRect.Width + 100, _toolbarRect.Height + 150));
+    }
+
+    private static int DistToRect(Point p, Rectangle r)
+    {
+        int dx = Math.Max(0, Math.Max(r.X - p.X, p.X - r.Right));
+        int dy = Math.Max(0, Math.Max(r.Y - p.Y, p.Y - r.Bottom));
+        return (int)Math.Sqrt(dx * dx + dy * dy);
     }
 }
