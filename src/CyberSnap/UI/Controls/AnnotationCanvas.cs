@@ -90,6 +90,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     {
         _baseBitmap = baseBitmap ?? throw new ArgumentNullException(nameof(baseBitmap));
 
+        // Initialize crop rect to full image size by default
+        _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+        _cropHasRect = true;
+
         DoubleBuffered = true;
         BackColor = Color.FromArgb(30, 30, 30);
         SetStyle(ControlStyles.AllPaintingInWmPaint |
@@ -111,6 +115,18 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             var old = _baseBitmap;
             _baseBitmap = value ?? throw new ArgumentNullException(nameof(value));
             old?.Dispose();
+
+            // Reset crop handles to the new bitmap size if auto crop controls is enabled
+            if (EditorAutoCropControls)
+            {
+                _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+                _cropHasRect = true;
+            }
+            else
+            {
+                ClearCropPending();
+            }
+
             Invalidate();
             OnStateChanged();
         }
@@ -269,14 +285,36 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             // not throw it away. Commit first so CancelInProgressTool's discard no-ops.
             CommitOrCancelInlineText(commit: true);
             CancelInProgressTool();
+
+            // Leaving Crop with a rectangle the user actually resized: apply it on the way out
+            // (the banner says so, and Undo reverses it) instead of silently abandoning the
+            // handles on the canvas. A pending rect that still covers the whole image is a no-op,
+            // so it's just discarded. The active tool is switched first so TryConfirmCrop won't
+            // re-arm a fresh full-image crop whose handles would then linger under the new tool.
+            bool leavingCrop = _activeTool == CanvasTool.Crop && value != CanvasTool.Crop;
+            bool applyCrop = leavingCrop && HasAdjustedPendingCrop;
             _activeTool = value;
+            bool cropApplied = false;
+            if (leavingCrop)
+            {
+                if (applyCrop)
+                    cropApplied = TryConfirmCrop();
+                if (!cropApplied)
+                    ClearCropPending();
+            }
+
             if (value == CanvasTool.Crop)
             {
-                _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
-                _cropHasRect = true;
+                if (!_cropHasRect || _cropRect.IsEmpty)
+                {
+                    _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+                    _cropHasRect = true;
+                }
             }
             UpdateCursor();
-            ShowToolBanner(GetToolName(value));
+            ShowToolBanner(cropApplied
+                ? LocalizationService.Translate("Crop applied")
+                : GetToolName(value));
             Invalidate();
             OnStateChanged();
         }
@@ -296,13 +334,17 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
         // Deselecting the Text tool keeps what was typed (use the Esc key inside the
         // text box to discard instead). Commit first so the discard below no-ops.
+        bool hadPendingCrop = HasPendingCrop;
         CommitOrCancelInlineText(commit: true);
         CancelInProgressTool();
         CancelCropPending();
         _activeTool = CanvasTool.Pan;
         _selectedEmoji = null;
         UpdateCursor();
-        ShowToolBanner(LocalizationService.Translate("Tool deselected"));
+        // CancelCropPending already announced "Crop canceled" when a crop was pending; only
+        // fall back to the generic deselect banner when there was no crop to cancel.
+        if (!hadPendingCrop)
+            ShowToolBanner(LocalizationService.Translate("Tool deselected"));
         Invalidate();
         OnStateChanged();
         return true;
@@ -364,7 +406,17 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         CancelInProgressTool();
         ActiveTool = CanvasTool.Pan;
         oldBaseBitmap?.Dispose();
-        ClearCropPending();
+
+        if (EditorAutoCropControls)
+        {
+            _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+            _cropHasRect = true;
+        }
+        else
+        {
+            ClearCropPending();
+        }
+
         ApplyInitialView();
         Invalidate();
         OnStateChanged();
@@ -386,7 +438,17 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _selectDragStartImg = Point.Empty;
         _eraserHoverIndex = -1;
         CancelInProgressTool();
-        ClearCropPending();
+
+        if (EditorAutoCropControls)
+        {
+            _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+            _cropHasRect = true;
+        }
+        else
+        {
+            ClearCropPending();
+        }
+
         Invalidate();
         OnStateChanged();
     }
@@ -521,6 +583,34 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     /// <summary>How a freshly loaded capture is framed: auto-fit to the canvas, or shown at real 100% size.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool FitToWindowOnLoad { get; set; } = true;
+
+    private bool _editorAutoCropControls = true;
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool EditorAutoCropControls
+    {
+        get => _editorAutoCropControls;
+        set
+        {
+            if (_editorAutoCropControls == value) return;
+            _editorAutoCropControls = value;
+            if (_editorAutoCropControls)
+            {
+                if (_baseBitmap != null && _activeTool != CanvasTool.Crop)
+                {
+                    _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+                    _cropHasRect = true;
+                }
+            }
+            else
+            {
+                if (_activeTool != CanvasTool.Crop)
+                {
+                    ClearCropPending();
+                }
+            }
+            Invalidate();
+        }
+    }
 
     /// <summary>Applies the configured initial view (fit-to-window or 100%) for the current image.</summary>
     public void ApplyInitialView()

@@ -42,6 +42,22 @@ public sealed partial class AnnotationCanvas
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool HasPendingCrop => _activeTool == CanvasTool.Crop && _cropHasRect;
 
+    /// <summary>
+    /// True when a crop is pending AND the user has actually shrunk it below the full image,
+    /// so confirming it would change the picture. A pending rect that still covers the whole
+    /// image (the default when entering Crop) counts as "not adjusted".
+    /// </summary>
+    private bool HasAdjustedPendingCrop
+    {
+        get
+        {
+            if (!_cropHasRect || _cropRect.Width < 2 || _cropRect.Height < 2)
+                return false;
+            var full = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+            return Rectangle.Intersect(_cropRect, full) != full;
+        }
+    }
+
     /// <summary>Triggers Apply on the pending crop rectangle. Idempotent.</summary>
     public bool TryConfirmCrop()
     {
@@ -70,7 +86,7 @@ public sealed partial class AnnotationCanvas
     {
         if (!_cropHasRect && !_cropDragging) return;
         ClearCropPending();
-        HideToolBanner();
+        ShowToolBanner(CyberSnap.Services.LocalizationService.Translate("Crop canceled"));
         Invalidate();
         OnStateChanged();
     }
@@ -132,6 +148,29 @@ public sealed partial class AnnotationCanvas
         }
 
         Focus();
+
+        if (e.Button == MouseButtons.Left && EditorAutoCropControls && _cropHasRect && _activeTool != CanvasTool.Crop)
+        {
+            var screenPt = e.Location;
+            var cropScreen = ImageToScreenRect(_cropRect);
+            var handles = GetCropHandlePositionsScreen(cropScreen);
+            int hitHandle = -1;
+            const float hitRadius = 9f;
+            for (int i = 0; i < handles.Length; i++)
+            {
+                var h = handles[i];
+                if (Math.Abs(screenPt.X - h.X) <= hitRadius && Math.Abs(screenPt.Y - h.Y) <= hitRadius)
+                {
+                    hitHandle = i;
+                    break;
+                }
+            }
+
+            if (hitHandle >= 0 && hitHandle <= 7)
+            {
+                ActiveTool = CanvasTool.Crop;
+            }
+        }
 
         if (e.Button == MouseButtons.Middle ||
             (e.Button == MouseButtons.Left && _activeTool == CanvasTool.Pan))
@@ -342,6 +381,40 @@ public sealed partial class AnnotationCanvas
             {
                 Cursor = GetCropCursor(e.Location);
             }
+        }
+        else if (!_isDragging && !_cropDragging)
+        {
+            if (EditorAutoCropControls && _cropHasRect)
+            {
+                var screenPt = e.Location;
+                var cropScreen = ImageToScreenRect(_cropRect);
+                var handles = GetCropHandlePositionsScreen(cropScreen);
+                int hitHandle = -1;
+                const float hitRadius = 7f;
+                for (int i = 0; i < handles.Length; i++)
+                {
+                    var h = handles[i];
+                    if (Math.Abs(screenPt.X - h.X) <= hitRadius && Math.Abs(screenPt.Y - h.Y) <= hitRadius)
+                    {
+                        hitHandle = i;
+                        break;
+                    }
+                }
+
+                if (hitHandle >= 0 && hitHandle <= 7)
+                {
+                    Cursor = hitHandle switch
+                    {
+                        0 or 3 => Cursors.SizeNWSE,
+                        1 or 2 => Cursors.SizeNESW,
+                        4 or 6 => Cursors.SizeNS,
+                        5 or 7 => Cursors.SizeWE,
+                        _ => Cursors.Default
+                    };
+                    return;
+                }
+            }
+            UpdateCursor();
         }
 
         if (!_isDragging && !_cropDragging) return;
@@ -743,25 +816,32 @@ public sealed partial class AnnotationCanvas
 
     private void RenderCropOverlay(Graphics g)
     {
-        if (_activeTool != CanvasTool.Crop) return;
+        bool showDefaultControls = EditorAutoCropControls && _cropHasRect;
+        if (_activeTool != CanvasTool.Crop && !showDefaultControls) return;
         if (!_cropDragging && !_cropHasRect) return;
         if (_cropRect.Width <= 0 || _cropRect.Height <= 0) return;
 
         var imgRect = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
         var cropScreen = ImageToScreenRect(_cropRect);
 
-        using (var dark = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
-        using (var region = new Region(imgRect))
+        if (_activeTool == CanvasTool.Crop)
         {
-            region.Exclude(cropScreen);
-            g.FillRegion(dark, region);
+            using (var dark = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
+            using (var region = new Region(imgRect))
+            {
+                region.Exclude(cropScreen);
+                g.FillRegion(dark, region);
+            }
         }
 
-        using (var glow = new Pen(Color.FromArgb(150, 0, 255, 255), 5f))
-        using (var pen = new Pen(Color.FromArgb(245, 230, 255, 255), 1.8f) { DashStyle = DashStyle.Dash })
+        if (_activeTool == CanvasTool.Crop)
         {
-            g.DrawRectangle(glow, cropScreen.X, cropScreen.Y, cropScreen.Width, cropScreen.Height);
-            g.DrawRectangle(pen, cropScreen.X, cropScreen.Y, cropScreen.Width, cropScreen.Height);
+            using (var shadowPen = new Pen(Color.FromArgb(120, 0, 0, 0), 1.5f))
+            using (var borderPen = new Pen(Color.FromArgb(255, 0, 255, 255), 1.5f) { DashStyle = DashStyle.Dash })
+            {
+                g.DrawRectangle(shadowPen, cropScreen.X + 1f, cropScreen.Y + 1f, cropScreen.Width, cropScreen.Height);
+                g.DrawRectangle(borderPen, cropScreen.X, cropScreen.Y, cropScreen.Width, cropScreen.Height);
+            }
         }
 
         if (_cropHasRect)
@@ -770,26 +850,61 @@ public sealed partial class AnnotationCanvas
 
     private static void DrawCropHandles(Graphics g, RectangleF rect)
     {
-        const float hs = 8f;
-        PointF[] corners =
-        {
-            new(rect.Left, rect.Top),
-            new(rect.Right, rect.Top),
-            new(rect.Left, rect.Bottom),
-            new(rect.Right, rect.Bottom),
-            new(rect.Left + rect.Width / 2f, rect.Top),
-            new(rect.Right, rect.Top + rect.Height / 2f),
-            new(rect.Left + rect.Width / 2f, rect.Bottom),
-            new(rect.Left, rect.Top + rect.Height / 2f),
-        };
-        using var fill = new SolidBrush(Color.FromArgb(245, 0, 255, 255));
-        using var stroke = new Pen(Color.FromArgb(220, 4, 20, 26), 1.2f);
-        foreach (var c in corners)
-        {
-            var r = new RectangleF(c.X - hs / 2f, c.Y - hs / 2f, hs, hs);
-            g.FillRectangle(fill, r);
-            g.DrawRectangle(stroke, r.X, r.Y, r.Width, r.Height);
-        }
+        // Modern premium crop handles: L-shaped corners and pill-shaped edge bars.
+        var accent = Color.FromArgb(255, 0, 255, 255);
+        var shadow = Color.FromArgb(100, 0, 0, 0);
+
+        using var thickPen = new Pen(accent, 3.5f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using var shadowPen = new Pen(shadow, 5.5f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+
+        // Corner line length
+        const float len = 12f;
+        // Offset from the actual crop boundary to float nicely (or aligned perfectly)
+        const float offset = 0f; 
+
+        // 1. Draw Corners (L-shapes)
+        // Top-Left
+        DrawL(g, shadowPen, rect.Left - offset, rect.Top - offset, len, len);
+        DrawL(g, thickPen, rect.Left - offset, rect.Top - offset, len, len);
+
+        // Top-Right
+        DrawL(g, shadowPen, rect.Right + offset, rect.Top - offset, -len, len);
+        DrawL(g, thickPen, rect.Right + offset, rect.Top - offset, -len, len);
+
+        // Bottom-Left
+        DrawL(g, shadowPen, rect.Left - offset, rect.Bottom + offset, len, -len);
+        DrawL(g, thickPen, rect.Left - offset, rect.Bottom + offset, len, -len);
+
+        // Bottom-Right
+        DrawL(g, shadowPen, rect.Right + offset, rect.Bottom + offset, -len, -len);
+        DrawL(g, thickPen, rect.Right + offset, rect.Bottom + offset, -len, -len);
+
+        // 2. Draw Mid-edges (Pills/bars)
+        float midX = rect.Left + rect.Width / 2f;
+        float midY = rect.Top + rect.Height / 2f;
+        const float barLen = 14f;
+
+        // Top edge
+        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
+        g.DrawLine(thickPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
+
+        // Bottom edge
+        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
+        g.DrawLine(thickPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
+
+        // Left edge
+        g.DrawLine(shadowPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
+        g.DrawLine(thickPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
+
+        // Right edge
+        g.DrawLine(shadowPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+        g.DrawLine(thickPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+    }
+
+    private static void DrawL(Graphics g, Pen pen, float x, float y, float dx, float dy)
+    {
+        g.DrawLine(pen, x, y, x + dx, y);
+        g.DrawLine(pen, x, y, x, y + dy);
     }
 
     private static Rectangle NormRect(Point a, Point b) =>

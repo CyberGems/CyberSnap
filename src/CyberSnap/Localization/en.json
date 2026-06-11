@@ -287,6 +287,8 @@
   "Open editor after capture": "Open editor after capture",
   "Paste": "Paste",
   "Crop": "Crop",
+  "Crop applied": "Crop applied",
+  "Crop canceled": "Crop canceled",
   "Confirm crop": "Confirm crop",
   "Cancel crop": "Cancel crop",
   "Discard changes?": "Discard changes?",
