@@ -507,6 +507,48 @@ public sealed partial class EditorForm : Form
         _saveStatusTimer.Start();
     }
 
+    private void DoNew()
+    {
+        if (_canvas.IsDirty)
+        {
+            var discard = ThemedConfirmDialog.Confirm(
+                Handle,
+                "Unsaved changes",
+                "Discard changes?",
+                "Discard",
+                "Keep editing",
+                danger: false);
+            if (!discard)
+                return;
+        }
+
+        var blank = new Bitmap(1024, 768);
+        using (var g = Graphics.FromImage(blank))
+        {
+            var color1 = Color.FromArgb(20, 22, 33);
+            var color2 = Color.FromArgb(28, 30, 43);
+            g.Clear(color1);
+            using (var brush = new SolidBrush(color2))
+            {
+                int size = 16;
+                for (int y = 0; y < blank.Height; y += size)
+                {
+                    for (int x = 0; x < blank.Width; x += size)
+                    {
+                        if (((x / size) + (y / size)) % 2 == 1)
+                        {
+                            g.FillRectangle(brush, x, y, size, size);
+                        }
+                    }
+                }
+            }
+        }
+
+        LoadCapture(blank, null);
+        _canvas.IsDefaultBlank = true;
+        _canvas.Invalidate();
+    }
+
     private void DoOpen()
     {
         if (_canvas.IsDirty)
@@ -602,6 +644,7 @@ public sealed partial class EditorForm : Form
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
+        if (keyData == (Keys.Control | Keys.N)) { DoNew(); return true; }
         if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
