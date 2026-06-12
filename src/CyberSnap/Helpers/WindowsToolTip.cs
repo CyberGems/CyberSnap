@@ -25,6 +25,23 @@ public sealed class WindowsToolTip : Form
 
     protected override bool ShowWithoutActivation => true;
 
+    // A tooltip must never absorb mouse input. Because it is a TopMost window painted
+    // *above* its anchor, it can overlap the control in the row above (e.g. the Emoji
+    // tool's hint sits over the Highlight button). Returning HTTRANSPARENT on hit-test
+    // makes the whole window click-/hover-through, so the mouse reaches the button below.
+    private const int WM_NCHITTEST = 0x0084;
+    private static readonly IntPtr HTTRANSPARENT = new(-1);
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == WM_NCHITTEST)
+        {
+            m.Result = HTTRANSPARENT;
+            return;
+        }
+        base.WndProc(ref m);
+    }
+
     protected override CreateParams CreateParams
     {
         get
