@@ -138,10 +138,16 @@ public sealed partial class AnnotationCanvas
 
     private void UpdateCursor()
     {
+        if (IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0)
+        {
+            Cursor = Cursors.SizeAll;
+            return;
+        }
+
         Cursor = _activeTool switch
         {
             CanvasTool.Pan => Cursors.Hand,
-            CanvasTool.Move => _moveHoverIndex >= 0 ? Cursors.SizeAll : Cursors.Default,
+            CanvasTool.Move => Cursors.Default,
             CanvasTool.Crop => Cursors.Cross,
             CanvasTool.Text => Cursors.IBeam,
             CanvasTool.Eraser => CursorFactory.EraserCursor,
@@ -228,6 +234,56 @@ public sealed partial class AnnotationCanvas
         // Commit any pending text first
         if (_inlineTextBox is not null && _activeTool != CanvasTool.Text)
             CommitOrCancelInlineText(commit: true);
+
+        if (IsDrawingOrMoveTool(_activeTool) && _activeTool != CanvasTool.Move)
+        {
+            int handle = -1;
+            int clickedIdx = -1;
+            if (_selectedAnnotationIndex >= 0)
+            {
+                handle = GetSelectHandle(e.Location, _selectedAnnotationIndex);
+                if (handle >= 0) clickedIdx = _selectedAnnotationIndex;
+            }
+            
+            int activeHoverIdx = _moveHoverIndex;
+            if (activeHoverIdx < 0)
+            {
+                activeHoverIdx = HitTestAnnotation(img);
+            }
+
+            if (handle < 0 && activeHoverIdx >= 0)
+            {
+                handle = GetSelectHandle(e.Location, activeHoverIdx);
+                if (handle >= 0) clickedIdx = activeHoverIdx;
+            }
+            if (handle < 0 && activeHoverIdx >= 0)
+            {
+                clickedIdx = activeHoverIdx;
+            }
+
+            if (clickedIdx >= 0)
+            {
+                ActiveTool = CanvasTool.Move;
+                _selectedAnnotationIndex = clickedIdx;
+                if (handle >= 0)
+                {
+                    _isSelectResizing = true;
+                    _selectResizeHandle = handle;
+                    _selectDragStartImg = img;
+                    _selectHandleBounds = GetAnnotationVisualBounds(_annotations[clickedIdx]);
+                    _selectResizeOriginalAnnotation = _annotations[clickedIdx];
+                    _isDragging = true;
+                }
+                else
+                {
+                    _selectOriginalAnnotation = _annotations[clickedIdx];
+                    _selectDragStartImg = img;
+                    _isDragging = true;
+                }
+                Invalidate();
+                return;
+            }
+        }
 
         switch (_activeTool)
         {
@@ -426,7 +482,7 @@ public sealed partial class AnnotationCanvas
             }
         }
 
-        if (_activeTool == CanvasTool.Move && !_isDragging)
+        if (IsDrawingOrMoveTool(_activeTool) && !_isDragging)
         {
             var imgPt = ScreenToImage(e.Location);
             UpdateMoveHover(imgPt);
@@ -511,9 +567,18 @@ public sealed partial class AnnotationCanvas
                     return;
                 }
             }
-            if (_activeTool == CanvasTool.Move && _selectedAnnotationIndex >= 0)
+            if (IsDrawingOrMoveTool(_activeTool))
             {
-                int sh = GetSelectHandle(e.Location);
+                int sh = -1;
+                if (_selectedAnnotationIndex >= 0)
+                {
+                    sh = GetSelectHandle(e.Location, _selectedAnnotationIndex);
+                }
+                if (sh < 0 && _moveHoverIndex >= 0)
+                {
+                    sh = GetSelectHandle(e.Location, _moveHoverIndex);
+                }
+
                 if (sh >= 0)
                 {
                     Cursor = sh switch
@@ -1362,11 +1427,21 @@ public sealed partial class AnnotationCanvas
         return Cursors.Cross;
     }
 
+    private bool IsDrawingOrMoveTool(CanvasTool tool)
+    {
+        return tool != CanvasTool.Pan && tool != CanvasTool.Crop && tool != CanvasTool.Eraser;
+    }
+
     private int GetSelectHandle(Point screenPt)
     {
-        if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count)
+        return GetSelectHandle(screenPt, _selectedAnnotationIndex);
+    }
+
+    private int GetSelectHandle(Point screenPt, int annotationIndex)
+    {
+        if (annotationIndex < 0 || annotationIndex >= _annotations.Count)
             return -1;
-        var selected = _annotations[_selectedAnnotationIndex];
+        var selected = _annotations[annotationIndex];
         var bounds = GetAnnotationVisualBounds(selected);
         var screenRect = Rectangle.Round(ImageToScreenRect(bounds));
         var selRect = Rectangle.Inflate(screenRect, 4, 4);

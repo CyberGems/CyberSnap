@@ -86,7 +86,7 @@ public sealed partial class AnnotationCanvas
         }
 
         // Move hover highlight
-        if (_activeTool == CanvasTool.Move && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count && _moveHoverIndex != _selectedAnnotationIndex)
+        if (IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count && _moveHoverIndex != _selectedAnnotationIndex)
         {
             var bounds = GetAnnotationVisualBounds(_annotations[_moveHoverIndex]);
             DrawMoveHandles(g, bounds, isSelected: false);
