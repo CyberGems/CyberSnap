@@ -1380,7 +1380,7 @@ public sealed partial class AnnotationCanvas
             DrawStroke ds => ds.Points.Any(p => Distance(p, pt) <= tol),
             TextAnnotation ta => MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background).Contains(pt),
             StepNumberAnnotation sn => Distance(sn.Pos, pt) <= tol * 3,
-            EmojiAnnotation em => Distance(em.Pos, pt) <= tol * 3,
+            EmojiAnnotation em => InflateRect(GetAnnotationVisualBounds(em), tol, tol).Contains(pt),
             MagnifierAnnotation mg => Distance(mg.Pos, pt) <= tol * 4,
             _ => false,
         };
