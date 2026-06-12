@@ -354,7 +354,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         var key = tool switch
         {
             CanvasTool.Pan => "Pan",
-            CanvasTool.Move => "Move",
+            CanvasTool.Move => "Move & Resize",
             CanvasTool.Crop => "Crop",
             CanvasTool.Text => "Text",
             CanvasTool.Draw => "Draw",
