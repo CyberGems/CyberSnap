@@ -397,7 +397,7 @@ public sealed partial class EditorForm
             Dock = DockStyle.Top,
             Height = 80,
             BackColor = EditorColors.TitleBar,
-            Padding = new Padding(22, 13, 18, 12),
+            Padding = new Padding(22, 9, 18, 8),
         };
         panel.Paint += (_, e) =>
         {
@@ -490,7 +490,7 @@ public sealed partial class EditorForm
         topActions.Controls.Add(MakeSeparator());
 
         var saveAsButton = MakeCommandButton("download", LocalizationService.Translate("Save As"), false);
-        saveAsButton.Width = 76;
+        saveAsButton.Width = 82;
         saveAsButton.Click += (_, _) => DoSaveAs();
         RegisterHoverTooltip(saveAsButton, () => WithShortcut("Save the image as a new file", "Ctrl+Shift+S"), above: false);
         topActions.Controls.Add(saveAsButton);
@@ -833,8 +833,8 @@ public sealed partial class EditorForm
             IconId = iconId,
             Text = text,
             Primary = primary,
-            Width = 68,
-            Height = 50,
+            Width = 74,
+            Height = 62,
             Margin = new Padding(2, 0, 2, 0),
         };
     }
@@ -1444,7 +1444,7 @@ internal sealed class EditorCommandButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
-        Font = new Font("Segoe UI Variable Text", 7f, FontStyle.Bold, GraphicsUnit.Point);
+        Font = new Font("Segoe UI Variable Text", 8f, FontStyle.Bold, GraphicsUnit.Point);
         TabStop = true;
     }
 
@@ -1512,15 +1512,15 @@ internal sealed class EditorCommandButton : Button
             g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
         }
 
-        var iconSize = 26;
+        var iconSize = 33;
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
-            rect.Top + 4,
+            rect.Top + 5,
             iconSize,
             iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed || Primary));
 
-        var textRect = new Rectangle(rect.Left + 2, rect.Top + 31, rect.Width - 4, 17);
+        var textRect = new Rectangle(rect.Left + 2, rect.Top + 40, rect.Width - 4, 18);
         TextRenderer.DrawText(
             g,
             Text,
