@@ -545,7 +545,7 @@ public sealed partial class AnnotationCanvas
         }
         else if (!_isDragging && !_cropDragging)
         {
-            if (EditorAutoCropControls && _cropHasRect)
+            if (EditorAutoCropControls && _cropHasRect && _preSpaceTool == null)
             {
                 var screenPt = e.Location;
                 var cropScreen = ImageToScreenRect(_cropRect);

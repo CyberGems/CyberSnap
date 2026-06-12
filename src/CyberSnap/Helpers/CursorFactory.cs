@@ -40,7 +40,7 @@ internal static class CursorFactory
 
     private static Cursor CreatePanCursor()
     {
-        const int size = 32;
+        const int size = 44;
         const int cx = size / 2, cy = size / 2;
 
         using var bmp = new Bitmap(size, size);
@@ -49,7 +49,7 @@ internal static class CursorFactory
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-        const int iconSize = 22;
+        const int iconSize = 30;
         int offset = (size - iconSize) / 2;
 
         var shadow = StreamlineIcons.RenderBitmap("pan", Color.FromArgb(160, 0, 0, 0), iconSize, active: true);
@@ -110,7 +110,7 @@ internal static class CursorFactory
 
     private static Cursor CreateEraserCursor()
     {
-        const int size = 32;
+        const int size = 44;
         const int cx = size / 2, cy = size / 2;
 
         using var bmp = new Bitmap(size, size);
@@ -121,7 +121,7 @@ internal static class CursorFactory
 
         // Render the toolbar eraser icon (Filled version for solid appearance).
         // Use a shadow technique (dark offset + white) for visibility on any background.
-        const int iconSize = 22;
+        const int iconSize = 30;
         int offset = (size - iconSize) / 2;
 
         // Shadow offset by 1px down-right — dark version first
