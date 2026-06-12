@@ -487,60 +487,44 @@ public sealed partial class EditorForm
         topActions.Controls.Add(menuButton);
 
         // Spacer between settings and saveAs
-        topActions.Controls.Add(new Label
-        {
-            Width = 24,
-            Height = 1,
-            BackColor = Color.Transparent,
-        });
+        topActions.Controls.Add(MakeSeparator());
 
         var saveAsButton = MakeCommandButton("folder", LocalizationService.Translate("Save As"), false);
-        saveAsButton.Width = 120;
+        saveAsButton.Width = 76;
         saveAsButton.Click += (_, _) => DoSaveAs();
         RegisterHoverTooltip(saveAsButton, () => WithShortcut("Save the image as a new file", "Ctrl+Shift+S"), above: false);
         topActions.Controls.Add(saveAsButton);
 
         _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
-        _saveButton.Width = 95;
         _saveButton.Click += (_, _) => DoSave();
         RegisterHoverTooltip(_saveButton, () => WithShortcut("Save the image", "Ctrl+S"), above: false);
         topActions.Controls.Add(_saveButton);
 
         _copyButton = MakeCommandButton("copy", LocalizationService.Translate("Copy"), false);
-        _copyButton.Width = 95;
         _copyButton.Click += (_, _) => DoCopy();
         RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
         topActions.Controls.Add(_copyButton);
 
         _pasteButton = MakeCommandButton("arrow", LocalizationService.Translate("Paste"), false);
-        _pasteButton.Width = 95;
         _pasteButton.Click += (_, _) => DoPaste();
         RegisterHoverTooltip(_pasteButton, () => WithShortcut("Paste image from clipboard", "Ctrl+V"), above: false);
         topActions.Controls.Add(_pasteButton);
 
         var openButton = MakeCommandButton("document", LocalizationService.Translate("Open"), false);
-        openButton.Width = 95;
         openButton.Click += (_, _) => DoOpen();
         RegisterHoverTooltip(openButton, () => WithShortcut("Open an image file", "Ctrl+O"), above: false);
         topActions.Controls.Add(openButton);
 
 
         // Spacer between undo/redo and the rest
-        topActions.Controls.Add(new Label
-        {
-            Width = 16,
-            Height = 1,
-            BackColor = Color.Transparent,
-        });
+        topActions.Controls.Add(MakeSeparator());
 
         _redoButton = MakeCommandButton("redo", LocalizationService.Translate("Redo"), false);
-        _redoButton.Width = 95;
         _redoButton.Click += (_, _) => _canvas.Redo();
         RegisterHoverTooltip(_redoButton, () => WithShortcut("Redo the last undone change", "Ctrl+Y"), above: false);
         topActions.Controls.Add(_redoButton);
 
         _undoButton = MakeCommandButton("undo", LocalizationService.Translate("Undo"), false);
-        _undoButton.Width = 95;
         _undoButton.Click += (_, _) => _canvas.Undo();
         RegisterHoverTooltip(_undoButton, () => WithShortcut("Undo the last change", "Ctrl+Z"), above: false);
         topActions.Controls.Add(_undoButton);
@@ -849,9 +833,9 @@ public sealed partial class EditorForm
             IconId = iconId,
             Text = text,
             Primary = primary,
-            Width = primary ? 132 : 100,
-            Height = 42,
-            Margin = new Padding(6, 3, 0, 3),
+            Width = 68,
+            Height = 44,
+            Margin = new Padding(2, 0, 2, 0),
         };
     }
 
@@ -861,8 +845,8 @@ public sealed partial class EditorForm
         {
             IconId = iconId,
             Width = 42,
-            Height = 42,
-            Margin = new Padding(6, 3, 0, 3),
+            Height = 44,
+            Margin = new Padding(4, 0, 0, 0),
             AccessibleName = tooltip,
         };
         // Top-bar chrome: open the CyberSnap-styled hint downward (below: above = false).
@@ -870,6 +854,23 @@ public sealed partial class EditorForm
         // at runtime (e.g. Maximize <-> Restore).
         RegisterHoverTooltip(button, () => button.AccessibleName ?? tooltip, above: false);
         return button;
+    }
+
+    private Control MakeSeparator()
+    {
+        var separator = new Panel
+        {
+            Width = 17,
+            Height = 32,
+            Margin = new Padding(2, 6, 2, 6),
+            BackColor = Color.Transparent,
+        };
+        separator.Paint += (s, e) =>
+        {
+            using var pen = new Pen(Color.FromArgb(40, 255, 255, 255));
+            e.Graphics.DrawLine(pen, 8, 4, 8, separator.Height - 4);
+        };
+        return separator;
     }
 
     private void ToggleWindowState()
@@ -1443,7 +1444,7 @@ internal sealed class EditorCommandButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
-        Font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold, GraphicsUnit.Point);
+        Font = new Font("Segoe UI Variable Text", 8f, FontStyle.Bold, GraphicsUnit.Point);
         TabStop = true;
     }
 
@@ -1454,63 +1455,79 @@ internal sealed class EditorCommandButton : Button
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
         var parentBackColor = Parent?.BackColor ?? EditorColors.TitleBar;
-        g.Clear(parentBackColor == Color.Transparent ? EditorColors.TitleBar : parentBackColor);
+        if (parentBackColor == Color.Transparent)
+        {
+            Control? p = Parent;
+            while (p != null && p.BackColor == Color.Transparent)
+            {
+                p = p.Parent;
+            }
+            if (p != null)
+            {
+                parentBackColor = p.BackColor;
+            }
+        }
+        if (parentBackColor == Color.Transparent)
+        {
+            parentBackColor = EditorColors.TitleBar;
+        }
+        g.Clear(parentBackColor);
 
-        var rect = new Rectangle(1, 1, Width - 3, Height - 3);
+        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
         if (rect.Width <= 0 || rect.Height <= 0) return;
 
-        Color fill;
-        Color contentColor;
-        Color glowColor;
-        Color borderColor;
+        Color fill = Color.Transparent;
+        Color contentColor = Enabled ? EditorColors.TextPrimary : Color.FromArgb(88, 105, 128);
 
-        if (!Enabled)
+        if (Enabled)
         {
-            fill = Color.FromArgb(16, 18, 28);
-            contentColor = Color.FromArgb(88, 105, 128);
-            glowColor = Color.Transparent;
-            borderColor = Color.FromArgb(26, 255, 255, 255);
-        }
-        else if (Primary)
-        {
-            fill = _pressed ? EditorColors.AccentPressed : EditorColors.Accent;
-            contentColor = Color.FromArgb(4, 20, 26);
-            glowColor = _pressed ? Color.FromArgb(70, EditorColors.Accent) : Color.FromArgb(42, EditorColors.Accent);
-            borderColor = fill;
-        }
-        else
-        {
-            fill = _pressed ? Color.FromArgb(24, 28, 42) : (_hover ? Color.FromArgb(18, 22, 33) : EditorColors.TitleBar);
-            contentColor = EditorColors.Accent;
-            glowColor = _pressed ? Color.FromArgb(70, EditorColors.Accent) : (_hover ? Color.FromArgb(60, EditorColors.Accent) : Color.FromArgb(42, EditorColors.Accent));
-            borderColor = _pressed ? Color.FromArgb(200, EditorColors.Accent) : (_hover ? Color.FromArgb(150, EditorColors.Accent) : EditorColors.Border);
-        }
-
-        using (var path = EditorPaint.RoundedRect(rect, 8))
-        using (var brush = new SolidBrush(fill))
-        using (var glowPen = new Pen(glowColor, 3f))
-        using (var borderPen = new Pen(borderColor, (Primary || _hover || _pressed) ? 1.4f : 1f))
-        {
-            g.FillPath(brush, path);
-            if (glowColor != Color.Transparent)
+            if (_pressed)
             {
-                g.DrawPath(glowPen, path);
+                fill = Color.FromArgb(36, EditorColors.Accent);
+                contentColor = EditorColors.Accent;
             }
-            g.DrawPath(borderPen, path);
+            else if (_hover)
+            {
+                fill = Color.FromArgb(20, EditorColors.Accent);
+                contentColor = EditorColors.Accent;
+            }
+            else if (Primary)
+            {
+                contentColor = EditorColors.Accent;
+            }
         }
 
-        var iconSize = Math.Min(20, Math.Max(16, rect.Height - 22));
-        var iconRect = new RectangleF(rect.Left + 12, rect.Top + (rect.Height - iconSize) / 2f, iconSize, iconSize);
-        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (Primary || _hover || _pressed));
+        if (fill != Color.Transparent)
+        {
+            using (var path = EditorPaint.RoundedRect(rect, 6))
+            using (var brush = new SolidBrush(fill))
+            {
+                g.FillPath(brush, path);
+            }
+        }
 
-        var textRect = new Rectangle(rect.Left + 36, rect.Top + 1, rect.Width - 42, rect.Height - 2);
+        if (Enabled && (_hover || _pressed || Primary))
+        {
+            using var underlineBrush = new SolidBrush(EditorColors.Accent);
+            g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
+        }
+
+        var iconSize = 18;
+        var iconRect = new RectangleF(
+            rect.Left + (rect.Width - iconSize) / 2f,
+            rect.Top + 5,
+            iconSize,
+            iconSize);
+        StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed || Primary));
+
+        var textRect = new Rectangle(rect.Left + 2, rect.Top + 25, rect.Width - 4, 16);
         TextRenderer.DrawText(
             g,
             Text,
             Font,
             textRect,
             contentColor,
-            TextFormatFlags.Left |
+            TextFormatFlags.HorizontalCenter |
             TextFormatFlags.VerticalCenter |
             TextFormatFlags.EndEllipsis |
             TextFormatFlags.NoPrefix);
