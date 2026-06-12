@@ -395,7 +395,7 @@ namespace CyberSnap.UI.Editor
             else if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control) { DoPaste(); e.Handled = true; }
         }
 
-        private void TitleBar_CloseRequested(object sender, RoutedEventArgs e)
+        private void TitleBar_CloseRequested(object sender, EventArgs e)
         {
             Close();
         }
