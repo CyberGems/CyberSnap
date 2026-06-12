@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Shell;
 using CyberSnap.Native;
@@ -7,7 +7,7 @@ namespace CyberSnap.UI;
 
 public static class CyberSnapWindowChrome
 {
-    private const double DefaultCornerRadius = 12;
+    private const double DefaultCornerRadius = 10;
 
     public static void Apply(Window window)
     {

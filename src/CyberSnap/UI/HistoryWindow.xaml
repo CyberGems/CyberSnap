@@ -341,8 +341,8 @@
         </Style>
     </Window.Resources>
 
-    <Border Margin="1" CornerRadius="12">
-        <Border x:Name="OuterBorder" CornerRadius="12" ClipToBounds="True" BorderThickness="1">
+    <Border Margin="1" CornerRadius="10">
+        <Border x:Name="OuterBorder" CornerRadius="10" ClipToBounds="True" BorderThickness="1">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
