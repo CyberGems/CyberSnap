@@ -572,7 +572,7 @@ public sealed partial class EditorForm
         nav.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
         AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
-        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Move & Resize");
+        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Move");
         AddToolButton(nav, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop");
         AddToolButton(nav, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser");
 
@@ -822,6 +822,8 @@ public sealed partial class EditorForm
                 or AnnotationCanvas.CanvasTool.Rect
                 or AnnotationCanvas.CanvasTool.Highlight)
             RegisterHoverTooltip(button, labelKey);
+        else if (tool is AnnotationCanvas.CanvasTool.Move)
+            RegisterHoverTooltip(button, "Move & Resize");
 
         parent.Controls.Add(button, column, row);
     }
