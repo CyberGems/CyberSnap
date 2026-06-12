@@ -90,10 +90,13 @@ public partial class App
     {
         var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService);
 
-        var activeEditor = UI.Editor.EditorWindow.ActiveInstance;
+        var activeEditor = UI.Editor.EditorForm.ActiveInstance;
         if (activeEditor != null)
         {
-            win.Owner = activeEditor;
+            var helper = new System.Windows.Interop.WindowInteropHelper(win)
+            {
+                Owner = activeEditor.Handle
+            };
         }
 
         Action hotkeyHandler = RegisterHotkeys;
@@ -183,10 +186,13 @@ public partial class App
     {
         var win = new HistoryWindow(_settingsService!, historyService, imageSearchIndexService);
 
-        var activeEditor = UI.Editor.EditorWindow.ActiveInstance;
+        var activeEditor = UI.Editor.EditorForm.ActiveInstance;
         if (activeEditor != null)
         {
-            win.Owner = activeEditor;
+            var helper = new System.Windows.Interop.WindowInteropHelper(win)
+            {
+                Owner = activeEditor.Handle
+            };
         }
 
         win.Closed += (_, _) =>
@@ -474,11 +480,11 @@ public partial class App
         {
             if (editorFilePath != null)
             {
-                CyberSnap.UI.Editor.EditorWindow.ShowEditorFromFile(editorFilePath);
+                CyberSnap.UI.Editor.EditorForm.ShowEditorFromFile(editorFilePath);
             }
             else
             {
-                CyberSnap.UI.Editor.EditorWindow.ShowEditorEmptyOrPrompt();
+                CyberSnap.UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();
             }
         }
     }
