@@ -21,11 +21,41 @@ public partial class CyberSnapTitleBar : UserControl
 
     public event EventHandler? CloseRequested;
 
+    private Window? _subscribedWindow;
+
     public CyberSnapTitleBar()
     {
         InitializeComponent();
-        Loaded += (_, _) => RefreshIcons();
+        Loaded += (s, e) =>
+        {
+            if (OwnerWindow is { } window)
+            {
+                if (_subscribedWindow != window)
+                {
+                    if (_subscribedWindow != null)
+                    {
+                        _subscribedWindow.StateChanged -= Window_StateChanged;
+                    }
+                    _subscribedWindow = window;
+                    _subscribedWindow.StateChanged += Window_StateChanged;
+                }
+            }
+            RefreshIcons();
+        };
+        Unloaded += (s, e) =>
+        {
+            if (_subscribedWindow != null)
+            {
+                _subscribedWindow.StateChanged -= Window_StateChanged;
+                _subscribedWindow = null;
+            }
+        };
         IsVisibleChanged += (_, _) => RefreshIcons();
+    }
+
+    private void Window_StateChanged(object? sender, EventArgs e)
+    {
+        RefreshIcons();
     }
 
     public string Title
@@ -40,9 +70,10 @@ public partial class CyberSnapTitleBar : UserControl
         var titleIcon = System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
         MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", titleIcon, 18);
 
-        string maxIconId = "fullscreen";
+        bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
+        string maxIconId = isMaximized ? "restore" : "maximize";
         MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, titleIcon, 18);
-        MaximizeBtn.ToolTip = OwnerWindow?.WindowState == WindowState.Maximized ? "Restore" : "Maximize";
+        MaximizeBtn.ToolTip = isMaximized ? "Restore" : "Maximize";
 
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", titleIcon, 18);
         AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("draw", titleIcon, 18);
