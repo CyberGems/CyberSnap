@@ -222,7 +222,7 @@ public sealed partial class EditorForm : Form
             Visible = showRulers
         };
 
-        _cornerBlock = new RulerCornerBlock
+        _cornerBlock = new RulerCornerBlock(_canvas)
         {
             Dock = DockStyle.Left,
             Width = 28,
@@ -1003,10 +1003,12 @@ public sealed partial class EditorForm : Form
             deleteItem.Click += (s, ev) => {
                 if (hIdx >= 0) _canvas.RemoveHorizontalGuideAt(hIdx);
                 else if (vIdx >= 0) _canvas.RemoveVerticalGuideAt(vIdx);
+                _canvas.ShowToolBanner(LocalizationService.Translate("Guide removed"));
             };
 
             clearAllItem.Click += (s, ev) => {
                 _canvas.ClearAllGuides();
+                _canvas.ShowToolBanner(LocalizationService.Translate("All Guides Cleared"));
             };
 
             guideMenu.Items.Add(deleteItem);

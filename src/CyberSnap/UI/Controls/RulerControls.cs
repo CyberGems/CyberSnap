@@ -4,6 +4,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Windows.Forms;
 using CyberSnap.UI.Editor;
+using CyberSnap.Services;
 
 namespace CyberSnap.UI.Controls;
 
@@ -115,12 +116,21 @@ public sealed class HorizontalRuler : EditorRuler
             Point screenPt = PointToScreen(e.Location);
             Point canvasPt = _canvas.PointToClient(screenPt);
 
-            if (tempY.HasValue && _canvas.ClientRectangle.Contains(canvasPt))
+            if (tempY.HasValue)
             {
-                Point imgPt = _canvas.PointFromScreenToImage(canvasPt);
-                if (imgPt.Y >= 0 && imgPt.Y <= _canvas.BaseBitmap.Height)
+                bool added = false;
+                if (_canvas.ClientRectangle.Contains(canvasPt))
                 {
-                    _canvas.AddHorizontalGuide(tempY.Value);
+                    Point imgPt = _canvas.PointFromScreenToImage(canvasPt);
+                    if (imgPt.Y >= 0 && imgPt.Y <= _canvas.BaseBitmap.Height)
+                    {
+                        _canvas.AddHorizontalGuide(tempY.Value);
+                        added = true;
+                    }
+                }
+                if (!added)
+                {
+                    _canvas.ShowToolBanner(LocalizationService.Translate("Place guides inside the canvas"));
                 }
             }
             _canvas.Invalidate();
@@ -248,12 +258,21 @@ public sealed class VerticalRuler : EditorRuler
             Point screenPt = PointToScreen(e.Location);
             Point canvasPt = _canvas.PointToClient(screenPt);
 
-            if (tempX.HasValue && _canvas.ClientRectangle.Contains(canvasPt))
+            if (tempX.HasValue)
             {
-                Point imgPt = _canvas.PointFromScreenToImage(canvasPt);
-                if (imgPt.X >= 0 && imgPt.X <= _canvas.BaseBitmap.Width)
+                bool added = false;
+                if (_canvas.ClientRectangle.Contains(canvasPt))
                 {
-                    _canvas.AddVerticalGuide(tempX.Value);
+                    Point imgPt = _canvas.PointFromScreenToImage(canvasPt);
+                    if (imgPt.X >= 0 && imgPt.X <= _canvas.BaseBitmap.Width)
+                    {
+                        _canvas.AddVerticalGuide(tempX.Value);
+                        added = true;
+                    }
+                }
+                if (!added)
+                {
+                    _canvas.ShowToolBanner(LocalizationService.Translate("Place guides inside the canvas"));
                 }
             }
             _canvas.Invalidate();
@@ -342,8 +361,13 @@ public sealed class VerticalRuler : EditorRuler
 
 public sealed class RulerCornerBlock : UserControl
 {
-    public RulerCornerBlock()
+    private readonly AnnotationCanvas _canvas;
+    private bool _isDraggingNewGuides = false;
+    private bool _isHovered = false;
+
+    public RulerCornerBlock(AnnotationCanvas canvas)
     {
+        _canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
         Size = new Size(28, 28);
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint |
@@ -352,14 +376,112 @@ public sealed class RulerCornerBlock : UserControl
         BackColor = EditorColors.BgPrimary;
     }
 
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        base.OnMouseEnter(e);
+        _isHovered = true;
+        Cursor = Cursors.Hand;
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _isHovered = false;
+        Cursor = Cursors.Default;
+        Invalidate();
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        if (e.Button == MouseButtons.Left && _canvas.BaseBitmap != null)
+        {
+            _isDraggingNewGuides = true;
+            Capture = true;
+        }
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (_isDraggingNewGuides)
+        {
+            Point screenPt = PointToScreen(e.Location);
+            Point canvasPt = _canvas.PointToClient(screenPt);
+            Point imgPt = _canvas.PointFromScreenToImage(canvasPt);
+            _canvas.DraggingTempHorizontalGuide = imgPt.Y;
+            _canvas.DraggingTempVerticalGuide = imgPt.X;
+            _canvas.Invalidate();
+        }
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        if (_isDraggingNewGuides)
+        {
+            _isDraggingNewGuides = false;
+            Capture = false;
+
+            float? tempY = _canvas.DraggingTempHorizontalGuide;
+            float? tempX = _canvas.DraggingTempVerticalGuide;
+            _canvas.DraggingTempHorizontalGuide = null;
+            _canvas.DraggingTempVerticalGuide = null;
+
+            Point screenPt = PointToScreen(e.Location);
+            Point canvasPt = _canvas.PointToClient(screenPt);
+
+            if (tempY.HasValue || tempX.HasValue)
+            {
+                bool addedHorizontal = false;
+                bool addedVertical = false;
+
+                if (_canvas.ClientRectangle.Contains(canvasPt))
+                {
+                    Point imgPt = _canvas.PointFromScreenToImage(canvasPt);
+                    
+                    if (tempY.HasValue && imgPt.Y >= 0 && imgPt.Y <= _canvas.BaseBitmap.Height)
+                    {
+                        _canvas.AddHorizontalGuide(tempY.Value);
+                        addedHorizontal = true;
+                    }
+                    if (tempX.HasValue && imgPt.X >= 0 && imgPt.X <= _canvas.BaseBitmap.Width)
+                    {
+                        _canvas.AddVerticalGuide(tempX.Value);
+                        addedVertical = true;
+                    }
+                }
+                
+                bool horizontalDiscarded = tempY.HasValue && !addedHorizontal;
+                bool verticalDiscarded = tempX.HasValue && !addedVertical;
+                
+                if (horizontalDiscarded || verticalDiscarded)
+                {
+                    _canvas.ShowToolBanner(LocalizationService.Translate("Place guides inside the canvas"));
+                }
+            }
+            _canvas.Invalidate();
+        }
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics;
         g.Clear(BackColor);
 
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
         // Subtle cross-border separating horizontal and vertical lines
         using var borderPen = new Pen(EditorColors.BorderSubtle, 1f);
         g.DrawLine(borderPen, Width - 1, 0, Width - 1, Height - 1);
         g.DrawLine(borderPen, 0, Height - 1, Width - 1, Height - 1);
+
+        // Draw arrow icon pointing down-right towards the canvas
+        Color arrowColor = _isHovered ? EditorColors.Accent : EditorColors.TextMuted;
+        using var arrowPen = new Pen(arrowColor, 1.5f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+        g.DrawLine(arrowPen, 9, 9, 17, 17);
+        g.DrawLine(arrowPen, 17, 17, 12, 17);
+        g.DrawLine(arrowPen, 17, 17, 17, 12);
     }
 }

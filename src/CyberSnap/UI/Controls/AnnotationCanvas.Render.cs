@@ -52,7 +52,7 @@ public sealed partial class AnnotationCanvas
         RenderGuides(g);
         RenderToolBanner(g);
 
-        if (IsDefaultBlank)
+        if (IsDefaultBlank && !_userPanned)
             RenderWelcomeText(g);
 
         if (_inlineTextBox is not null)

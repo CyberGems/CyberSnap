@@ -7,6 +7,7 @@ using CyberSnap.Capture;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Models.Commands;
+using CyberSnap.Services;
 
 namespace CyberSnap.UI.Controls;
 
@@ -776,6 +777,7 @@ public sealed partial class AnnotationCanvas
                 if (offCanvas)
                 {
                     RemoveHorizontalGuideAt(idx);
+                    ShowToolBanner(LocalizationService.Translate("Guide removed"));
                 }
                 Invalidate();
                 return;
@@ -792,6 +794,7 @@ public sealed partial class AnnotationCanvas
                 if (offCanvas)
                 {
                     RemoveVerticalGuideAt(idx);
+                    ShowToolBanner(LocalizationService.Translate("Guide removed"));
                 }
                 Invalidate();
                 return;
