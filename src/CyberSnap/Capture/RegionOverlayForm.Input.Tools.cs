@@ -281,7 +281,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // Cursor: show appropriate cursor for context
-        System.Windows.Forms.Cursor target;
+        System.Windows.Forms.Cursor target = Cursors.Default;
         if (_fontPickerOpen && _fontPickerRect.Contains(e.Location))
         {
             if (IsPointInFontPickerSearch(e.Location))
@@ -345,34 +345,72 @@ public sealed partial class RegionOverlayForm
                 Invalidate(InflateForRepaint(cancelBtn, 20));
             }
         }
-        else if (_mode == CaptureMode.Move)
+        else if (IsDrawingOrMoveMode(_mode))
         {
-            int sh = GetSelectHandle(e.Location);
-            if (sh >= 0)
+            bool handled = false;
+            if (!_isSelecting)
             {
-                target = sh switch
+                int sh = -1;
+                if (_selectedAnnotationIndex >= 0)
                 {
-                    0 or 3 => Cursors.SizeNWSE,
-                    1 or 2 => Cursors.SizeNESW,
-                    4 or 7 => Cursors.SizeNS,
-                    5 or 6 => Cursors.SizeWE,
-                    _ => Cursors.Default
-                };
+                    sh = GetSelectHandle(e.Location, _selectedAnnotationIndex);
+                }
+                if (sh < 0 && _moveHoverIndex >= 0)
+                {
+                    sh = GetSelectHandle(e.Location, _moveHoverIndex);
+                }
+
+                if (sh >= 0)
+                {
+                    target = sh switch
+                    {
+                        0 or 3 => Cursors.SizeNWSE,
+                        1 or 2 => Cursors.SizeNESW,
+                        4 or 7 => Cursors.SizeNS,
+                        5 or 6 => Cursors.SizeWE,
+                        _ => Cursors.Default
+                    };
+                    handled = true;
+                }
+                else if (_selectedAnnotationIndex >= 0 && GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]).Contains(e.Location))
+                {
+                    target = Cursors.SizeAll;
+                    handled = true;
+                }
+                else
+                {
+                    int h = HitTestAnnotation(e.Location);
+                    if (h != _moveHoverIndex)
+                    {
+                        if (_moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)
+                            Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[_moveHoverIndex]), 16, 16));
+                        _moveHoverIndex = h;
+                        if (h >= 0 && h < _undoStack.Count)
+                            Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[h]), 16, 16));
+                    }
+                    if (h >= 0)
+                    {
+                        target = Cursors.SizeAll;
+                        handled = true;
+                    }
+                }
             }
-            else if (_selectedAnnotationIndex >= 0 && GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]).Contains(e.Location))
-                target = Cursors.SizeAll;
-            else
+
+            if (!handled)
             {
-                int h = HitTestAnnotation(e.Location);
-                if (h != _moveHoverIndex)
+                if (_moveHoverIndex != -1)
                 {
                     if (_moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)
                         Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[_moveHoverIndex]), 16, 16));
-                    _moveHoverIndex = h;
-                    if (h >= 0 && h < _undoStack.Count)
-                        Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[h]), 16, 16));
+                    _moveHoverIndex = -1;
                 }
-                target = h >= 0 ? Cursors.Hand : Cursors.Default;
+
+                if (_mode == CaptureMode.Text && !_isTyping)
+                    target = Cursors.IBeam;
+                else if (_mode == CaptureMode.Move)
+                    target = Cursors.Default;
+                else
+                    target = Cursors.Cross;
             }
         }
         else if (_mode == CaptureMode.Eraser)
@@ -388,8 +426,6 @@ public sealed partial class RegionOverlayForm
             }
             target = CursorFactory.EraserCursor;
         }
-        else if (_mode == CaptureMode.Text && !_isTyping)
-            target = Cursors.IBeam;
         else
             target = Cursors.Cross;
 

@@ -262,6 +262,72 @@ public sealed partial class RegionOverlayForm
             }
         }
 
+        if (IsDrawingOrMoveMode(_mode) && _mode != CaptureMode.Move)
+        {
+            int handle = -1;
+            int clickedIdx = -1;
+            if (_selectedAnnotationIndex >= 0)
+            {
+                handle = GetSelectHandle(e.Location, _selectedAnnotationIndex);
+                if (handle >= 0) clickedIdx = _selectedAnnotationIndex;
+            }
+
+            int activeHoverIdx = _moveHoverIndex;
+            if (activeHoverIdx < 0)
+            {
+                activeHoverIdx = HitTestAnnotation(e.Location);
+            }
+
+            if (handle < 0 && activeHoverIdx >= 0)
+            {
+                handle = GetSelectHandle(e.Location, activeHoverIdx);
+                if (handle >= 0) clickedIdx = activeHoverIdx;
+            }
+            if (handle < 0 && activeHoverIdx >= 0)
+            {
+                clickedIdx = activeHoverIdx;
+            }
+
+            if (clickedIdx >= 0)
+            {
+                var targetTool = ToolDef.AllTools.FirstOrDefault(t => t.Mode == CaptureMode.Move);
+                if (targetTool != null)
+                {
+                    SetTool(targetTool);
+                    CalcToolbar();
+                    InvalidateToolbarArea();
+                }
+
+                _selectedAnnotationIndex = clickedIdx;
+                if (handle >= 0)
+                {
+                    _isSelectResizing = true;
+                    _selectResizeHandle = handle;
+                    _selectDragStart = e.Location;
+                    _selectHandleBounds = GetAnnotationBounds(_undoStack[clickedIdx]);
+                    _selectResizeOriginalAnnotation = _undoStack[clickedIdx];
+                    _selectPreviewAnnotation = _selectResizeOriginalAnnotation;
+                    _renderSkipIndex = clickedIdx;
+                    MarkCommittedAnnotationsDirty();
+                    ClearCrosshairGuides();
+                    Invalidate();
+                }
+                else
+                {
+                    _isSelectDragging = true;
+                    var bounds = GetAnnotationBounds(_undoStack[clickedIdx]);
+                    _selectPreviewAnnotation = _undoStack[clickedIdx];
+                    _selectDragStart = e.Location;
+                    _selectDragOffset = new Point(e.Location.X - bounds.X, e.Location.Y - bounds.Y);
+                    _renderSkipIndex = clickedIdx;
+                    MarkCommittedAnnotationsDirty();
+                    ClearCrosshairGuides();
+                    Invalidate();
+                }
+                return;
+            }
+        }
+
         // Select tool: check resize handles first, then hit-test annotations
         if (_mode == CaptureMode.Move)
         {

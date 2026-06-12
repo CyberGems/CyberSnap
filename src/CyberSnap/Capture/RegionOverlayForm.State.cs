@@ -463,12 +463,38 @@ public sealed partial class RegionOverlayForm
     private static Point Offset(Point p, int dx, int dy) => new(p.X + dx, p.Y + dy);
     private static Rectangle OffsetRect(Rectangle r, int dx, int dy) => new(r.X + dx, r.Y + dy, r.Width, r.Height);
 
+    private bool IsDrawingOrMoveMode(CaptureMode mode)
+    {
+        return mode switch
+        {
+            CaptureMode.Move => true,
+            CaptureMode.Draw => true,
+            CaptureMode.Highlight => true,
+            CaptureMode.RectShape => true,
+            CaptureMode.CircleShape => true,
+            CaptureMode.Arrow => true,
+            CaptureMode.CurvedArrow => true,
+            CaptureMode.Text => true,
+            CaptureMode.StepNumber => true,
+            CaptureMode.Blur => true,
+            CaptureMode.Magnifier => true,
+            CaptureMode.Emoji => true,
+            CaptureMode.Line => true,
+            _ => false
+        };
+    }
+
     /// <summary>Returns the handle index (0=TL,1=TR,2=BL,3=BR,4=T,5=L,6=R,7=B) at point, or -1.</summary>
     private int GetSelectHandle(Point p)
     {
-        if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _undoStack.Count)
+        return GetSelectHandle(p, _selectedAnnotationIndex);
+    }
+
+    private int GetSelectHandle(Point p, int annotationIndex)
+    {
+        if (annotationIndex < 0 || annotationIndex >= _undoStack.Count)
             return -1;
-        var bounds = GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]);
+        var bounds = GetAnnotationBounds(_undoStack[annotationIndex]);
         var selRect = Rectangle.Inflate(bounds, 4, 4);
         var handles = new[] {
             new Point(selRect.X, selRect.Y),                           // 0: TL
