@@ -98,11 +98,8 @@ public sealed partial class EditorForm
         };
         _statusBarPanel.Paint += (_, e) =>
         {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var glow = new Pen(Color.FromArgb(36, EditorColors.Accent), 4f);
-            using var border = new Pen(EditorColors.Border);
-            e.Graphics.DrawLine(glow, 0, 1, _statusBarPanel.Width, 1);
-            e.Graphics.DrawLine(border, 0, 0, _statusBarPanel.Width, 0);
+            using var pen = new Pen(EditorColors.BorderSubtle);
+            e.Graphics.DrawLine(pen, 0, 0, _statusBarPanel.Width, 0);
         };
 
         // Create the flow layout for the left side status items (matching the mockup)
