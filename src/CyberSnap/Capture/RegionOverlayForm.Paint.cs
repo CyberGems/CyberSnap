@@ -86,7 +86,7 @@ public sealed partial class RegionOverlayForm
         PaintAnnotations(g);
 
         // Move tool: hover highlight
-        if (IsDrawingOrMoveMode(_mode) && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex)
+        if (IsDrawingOrMoveMode(_mode) && !IsDraggingAnyAnnotation() && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex)
         {
             var hoverBounds = GetAnnotationBounds(_undoStack[_moveHoverIndex]);
             DrawMoveHandles(g, hoverBounds, isSelected: false);

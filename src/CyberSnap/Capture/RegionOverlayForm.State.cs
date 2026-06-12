@@ -460,6 +460,13 @@ public sealed partial class RegionOverlayForm
         _ => a
     };
 
+    private bool IsDraggingAnyAnnotation()
+    {
+        return _isSelecting || _isCurvedArrowDragging || _isHighlighting || 
+               _isRectShapeDragging || _isCircleShapeDragging || _isBlurring || 
+               _isArrowDragging || _isLineDragging || _isRulerDragging;
+    }
+
     private static Point Offset(Point p, int dx, int dy) => new(p.X + dx, p.Y + dy);
     private static Rectangle OffsetRect(Rectangle r, int dx, int dy) => new(r.X + dx, r.Y + dy, r.Width, r.Height);
 

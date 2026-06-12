@@ -348,7 +348,7 @@ public sealed partial class RegionOverlayForm
         else if (IsDrawingOrMoveMode(_mode))
         {
             bool handled = false;
-            if (!_isSelecting)
+            if (!IsDraggingAnyAnnotation())
             {
                 int sh = -1;
                 if (_selectedAnnotationIndex >= 0)
