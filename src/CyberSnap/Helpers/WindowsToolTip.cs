@@ -53,7 +53,7 @@ public sealed class WindowsToolTip : Form
             text,
             _font,
             new Size(MaxWidth - PadX * 2, 0),
-            TextFormatFlags.NoPadding | TextFormatFlags.WordBreak);
+            TextFormatFlags.NoPadding | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
         int width = Math.Min(MaxWidth, Math.Max(1, preferred.Width + PadX * 2));
         int height = Math.Max(1, preferred.Height + PadY * 2);
 
@@ -106,7 +106,7 @@ public sealed class WindowsToolTip : Form
             _font,
             textRect,
             UiChrome.SurfaceTextPrimary,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.WordBreak);
+            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
     }
 
     protected override void Dispose(bool disposing)
