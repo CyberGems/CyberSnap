@@ -130,7 +130,7 @@ public sealed class TrayIcon : IDisposable
         }
 
         var annotationEditorItem = WindowsMenuRenderer.Item(T("Annotations Editor..."), iconId: "draw");
-        var historyItem        = WindowsMenuRenderer.Item(T("Capture History..."), iconId: "folder");
+        var historyItem        = WindowsMenuRenderer.Item(T("Capture History..."), iconId: "history");
         var settingsItem       = WindowsMenuRenderer.Item(T("Configuration..."), iconId: "gear");
         var quitItem           = WindowsMenuRenderer.Item(T("Exit"), iconId: "close", danger: true);
 

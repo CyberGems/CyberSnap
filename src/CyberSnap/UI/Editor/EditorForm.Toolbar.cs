@@ -512,6 +512,14 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(openButton, () => WithShortcut("Open an image file", "Ctrl+O"), above: false);
         topActions.Controls.Add(openButton);
 
+        // Spacer between Open and History
+        topActions.Controls.Add(MakeSeparator());
+
+        var historyButton = MakeCommandButton("history", LocalizationService.Translate("History"), false);
+        historyButton.Click += (_, _) => OpenHistoryWindow();
+        RegisterHoverTooltip(historyButton, "Open Capture History", above: false);
+        topActions.Controls.Add(historyButton);
+
 
         // Spacer between undo/redo and the rest
         topActions.Controls.Add(MakeSeparator());
@@ -941,6 +949,20 @@ public sealed partial class EditorForm
         }
 
         _ = app.Dispatcher.BeginInvoke(app.ShowSettings);
+    }
+
+    private static void OpenHistoryWindow()
+    {
+        if (System.Windows.Application.Current is not CyberSnap.App app)
+            return;
+
+        if (app.Dispatcher.CheckAccess())
+        {
+            app.ShowHistory();
+            return;
+        }
+
+        _ = app.Dispatcher.BeginInvoke(app.ShowHistory);
     }
 
     private void UpdateToolButtonState()
