@@ -86,14 +86,14 @@ public sealed partial class RegionOverlayForm
         PaintAnnotations(g);
 
         // Move tool: hover highlight
-        if (_mode == CaptureMode.Move && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex)
+        if (IsDrawingOrMoveMode(_mode) && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex)
         {
             var hoverBounds = GetAnnotationBounds(_undoStack[_moveHoverIndex]);
             DrawMoveHandles(g, hoverBounds, isSelected: false);
         }
 
         // Move tool: draw selection highlight and handles
-        if (_mode == CaptureMode.Move && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
+        if (IsDrawingOrMoveMode(_mode) && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
         {
             var selected = _selectPreviewAnnotation ?? _undoStack[_selectedAnnotationIndex];
             var bounds = GetAnnotationBounds(selected);
