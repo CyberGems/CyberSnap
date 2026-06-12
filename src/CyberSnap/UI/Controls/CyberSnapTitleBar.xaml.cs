@@ -194,7 +194,7 @@ public partial class CyberSnapTitleBar : UserControl
         e.Handled = true;
         if (OwnerWindow is SettingsWindow)
         {
-            CyberSnap.UI.Editor.EditorWindow.ShowEditorEmptyOrPrompt();
+            CyberSnap.UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();
         }
     }
 

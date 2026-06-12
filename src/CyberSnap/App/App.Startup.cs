@@ -155,7 +155,7 @@ public partial class App
         _trayIcon.OnRuler += () => OnToolHotkeyPressed(Models.CaptureMode.Ruler);
         _trayIcon.OnRecordRequested += LaunchRecordingWithFormat;
         _trayIcon.OnScrollCapture += OnScrollCaptureHotkeyPressed;
-        _trayIcon.OnAnnotationEditor += () => UI.Editor.EditorWindow.ShowEditorEmptyOrPrompt();
+        _trayIcon.OnAnnotationEditor += () => UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();
         _trayIcon.OnSettings += () => ShowSettings();
         _trayIcon.OnHistory += () => ShowHistory();
         _trayIcon.OnQuit += () => Shutdown();
