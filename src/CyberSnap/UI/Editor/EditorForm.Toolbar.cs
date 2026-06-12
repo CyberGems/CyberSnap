@@ -1544,10 +1544,10 @@ internal sealed class EditorCommandButton : Button
             g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
         }
 
-        var iconSize = 30;
+        var iconSize = 34;
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
-            rect.Top + 5,
+            rect.Top + 3,
             iconSize,
             iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed || Primary));
