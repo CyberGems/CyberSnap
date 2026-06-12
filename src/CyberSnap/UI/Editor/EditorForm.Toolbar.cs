@@ -811,6 +811,7 @@ public sealed partial class EditorForm
         button.Click += (_, _) =>
         {
             _canvas.ActiveTool = tool;
+            _canvas.Focus();
             if (tool == AnnotationCanvas.CanvasTool.Emoji)
                 OpenEmojiPicker(button);
         };

@@ -8,6 +8,7 @@ namespace CyberSnap.Helpers;
 internal static class CursorFactory
 {
     private static Cursor? _eraserCursor;
+    private static Cursor? _panCursor;
 
     [DllImport("user32.dll")]
     private static extern IntPtr CreateIconIndirect(ref IconInfo iconInfo);
@@ -25,6 +26,76 @@ internal static class CursorFactory
         public int yHotspot;
         public IntPtr hbmMask;
         public IntPtr hbmColor;
+    }
+
+    public static Cursor PanCursor
+    {
+        get
+        {
+            if (_panCursor is null)
+                _panCursor = CreatePanCursor();
+            return _panCursor;
+        }
+    }
+
+    private static Cursor CreatePanCursor()
+    {
+        const int size = 32;
+        const int cx = size / 2, cy = size / 2;
+
+        using var bmp = new Bitmap(size, size);
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(Color.Transparent);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+        const int iconSize = 22;
+        int offset = (size - iconSize) / 2;
+
+        var shadow = StreamlineIcons.RenderBitmap("pan", Color.FromArgb(160, 0, 0, 0), iconSize, active: true);
+        if (shadow != null)
+        {
+            g.DrawImage(shadow, offset + 1, offset + 1, iconSize, iconSize);
+            shadow.Dispose();
+        }
+
+        var icon = StreamlineIcons.RenderBitmap("pan", Color.FromArgb(245, 255, 255, 255), iconSize, active: true);
+        if (icon != null)
+        {
+            g.DrawImage(icon, offset, offset, iconSize, iconSize);
+            icon.Dispose();
+        }
+
+        IntPtr hIcon = bmp.GetHicon();
+        try
+        {
+            var iconInfo = new IconInfo();
+            if (GetIconInfo(hIcon, ref iconInfo))
+            {
+                iconInfo.fIcon = false;
+                iconInfo.xHotspot = cx;
+                iconInfo.yHotspot = cy;
+
+                IntPtr hCursor = CreateIconIndirect(ref iconInfo);
+
+                if (iconInfo.hbmMask != IntPtr.Zero)
+                    DeleteObject(iconInfo.hbmMask);
+                if (iconInfo.hbmColor != IntPtr.Zero)
+                    DeleteObject(iconInfo.hbmColor);
+
+                if (hCursor != IntPtr.Zero)
+                {
+                    DestroyIcon(hIcon);
+                    return new Cursor(hCursor);
+                }
+            }
+        }
+        catch
+        {
+            DestroyIcon(hIcon);
+        }
+
+        return Cursors.Hand;
     }
 
     public static Cursor EraserCursor
