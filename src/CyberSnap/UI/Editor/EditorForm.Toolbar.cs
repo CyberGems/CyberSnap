@@ -905,9 +905,12 @@ public sealed partial class EditorForm
 
     private void OpenEmojiPicker(EditorToolButton? anchor)
     {
+        // Clicking Emoji while the picker is open toggles it shut. The deferred close in
+        // EmojiPickerPopup's Deactivate already dismisses it on outside clicks; this keeps
+        // the Emoji button itself a clean one-click toggle without a timing guard.
         if (_emojiPicker is { IsDisposed: false })
         {
-            _emojiPicker.Activate();
+            _emojiPicker.Close();
             return;
         }
 
@@ -918,7 +921,10 @@ public sealed partial class EditorForm
             _canvas.ActiveTool = AnnotationCanvas.CanvasTool.Emoji;
             _canvas.Focus();
         };
-        _emojiPicker.FormClosed += (_, _) => _emojiPicker = null;
+        _emojiPicker.FormClosed += (_, _) =>
+        {
+            _emojiPicker = null;
+        };
 
         var anchorRect = anchor is not null
             ? anchor.RectangleToScreen(anchor.ClientRectangle)

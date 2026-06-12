@@ -366,6 +366,13 @@ public sealed partial class EditorForm : Form
 
     private void OnCanvasStateChanged(object? sender, EventArgs e)
     {
+        // If the user switched away from Emoji, close the picker immediately so the
+        // next click on a tool button is never consumed by picker deactivation.
+        if (_canvas.ActiveTool != AnnotationCanvas.CanvasTool.Emoji
+            && _emojiPicker is { IsDisposed: false })
+        {
+            _emojiPicker.Close();
+        }
         RefreshUi();
     }
 

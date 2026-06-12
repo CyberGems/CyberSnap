@@ -407,7 +407,8 @@ public sealed partial class AnnotationCanvas
             case CanvasTool.Emoji:
                 if (!string.IsNullOrEmpty(_selectedEmoji))
                 {
-                    var emojiPos = new Point(img.X - (int)(_emojiPlaceSize / 2), img.Y - (int)(_emojiPlaceSize / 2));
+                    int bitmapSize = (int)(_emojiPlaceSize * 1.4f) + 4;
+                    var emojiPos = new Point(img.X - bitmapSize / 2, img.Y - bitmapSize / 2);
                     Push(new AddAnnotationCommand(new EmojiAnnotation(emojiPos, _selectedEmoji, _emojiPlaceSize)));
                 }
                 else
@@ -989,40 +990,45 @@ public sealed partial class AnnotationCanvas
         }
     }
 
+    public void StartTemporarySpacePan()
+    {
+        if (_preSpaceTool == null && _activeTool != CanvasTool.Pan)
+        {
+            _preSpaceTool = _activeTool;
+
+            if (_isDragging || _currentStroke is not null)
+            {
+                _isDragging = false;
+                _currentStroke = null;
+            }
+            if (_cropDragging)
+            {
+                _cropDragging = false;
+                _activeCropHandle = -1;
+            }
+            _isSelectResizing = false;
+            _selectResizeHandle = -1;
+
+            ActiveTool = CanvasTool.Pan;
+
+            if (Control.MouseButtons == MouseButtons.Left)
+            {
+                _isPanning = true;
+                _userPanned = true;
+                _viewFitsWindow = false;
+                _panStart = PointToClient(Cursor.Position);
+                _panStartOffset = _pan;
+            }
+        }
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
 
         if (e.KeyCode == Keys.Space && _inlineTextBox is null)
         {
-            if (_preSpaceTool == null && _activeTool != CanvasTool.Pan)
-            {
-                _preSpaceTool = _activeTool;
-
-                if (_isDragging || _currentStroke is not null)
-                {
-                    _isDragging = false;
-                    _currentStroke = null;
-                }
-                if (_cropDragging)
-                {
-                    _cropDragging = false;
-                    _activeCropHandle = -1;
-                }
-                _isSelectResizing = false;
-                _selectResizeHandle = -1;
-
-                ActiveTool = CanvasTool.Pan;
-
-                if (Control.MouseButtons == MouseButtons.Left)
-                {
-                    _isPanning = true;
-                    _userPanned = true;
-                    _viewFitsWindow = false;
-                    _panStart = PointToClient(Cursor.Position);
-                    _panStartOffset = _pan;
-                }
-            }
+            StartTemporarySpacePan();
             e.Handled = true;
             return;
         }
@@ -1097,7 +1103,8 @@ public sealed partial class AnnotationCanvas
         // Emoji ghost follows the cursor (click-to-place, so there is no drag).
         if (_activeTool == CanvasTool.Emoji && !string.IsNullOrEmpty(_selectedEmoji) && _hoverImgValid)
         {
-            var ghostPos = new Point(_hoverImg.X - (int)(_emojiPlaceSize / 2), _hoverImg.Y - (int)(_emojiPlaceSize / 2));
+            int bitmapSize = (int)(_emojiPlaceSize * 1.4f) + 4;
+            var ghostPos = new Point(_hoverImg.X - bitmapSize / 2, _hoverImg.Y - bitmapSize / 2);
             PaintEmoji(g, ghostPos, _selectedEmoji, _emojiPlaceSize, 0.6f);
         }
 
