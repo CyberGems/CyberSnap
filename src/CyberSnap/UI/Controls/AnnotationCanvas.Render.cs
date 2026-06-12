@@ -187,7 +187,8 @@ public sealed partial class AnnotationCanvas
         if (isSelected)
         {
             float knobR    = 8f / z;   // circle radius
-            float crossLen = 4.5f / z; // arm length of the interior crosshair
+            float armLen   = 5f / z;   // arm length of the interior move glyph
+            float headLen  = 2.3f / z; // arrowhead chevron length
 
             // Soft outer glow so the knob reads against any background color.
             using var glowBrush = new SolidBrush(Color.FromArgb(14, 0, 255, 255));
@@ -207,10 +208,32 @@ public sealed partial class AnnotationCanvas
             using var knobRing = new Pen(Color.FromArgb(200, 0, 255, 255), penWidthThick * 0.5f);
             g.DrawEllipse(knobRing, midX - knobR, midY - knobR, knobR * 2f, knobR * 2f);
 
-            // Interior crosshair
-            using var crossPen = new Pen(Color.FromArgb(200, 0, 255, 255), 1.2f / z) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-            g.DrawLine(crossPen, midX - crossLen, midY, midX + crossLen, midY);
-            g.DrawLine(crossPen, midX, midY - crossLen, midX, midY + crossLen);
+            // Interior 4-way move glyph — arrows pointing out signal "drag in any direction",
+            // echoing the OS move cursor.
+            using var glyphPen = new Pen(Color.FromArgb(200, 0, 255, 255), 1.2f / z)
+            {
+                StartCap = LineCap.Round,
+                EndCap   = LineCap.Round,
+                LineJoin = LineJoin.Round
+            };
+
+            // Stems
+            g.DrawLine(glyphPen, midX - armLen, midY, midX + armLen, midY);
+            g.DrawLine(glyphPen, midX, midY - armLen, midX, midY + armLen);
+
+            // Arrowheads (chevrons) at each tip, pointing outward
+            // Right
+            g.DrawLine(glyphPen, midX + armLen, midY, midX + armLen - headLen, midY - headLen);
+            g.DrawLine(glyphPen, midX + armLen, midY, midX + armLen - headLen, midY + headLen);
+            // Left
+            g.DrawLine(glyphPen, midX - armLen, midY, midX - armLen + headLen, midY - headLen);
+            g.DrawLine(glyphPen, midX - armLen, midY, midX - armLen + headLen, midY + headLen);
+            // Top
+            g.DrawLine(glyphPen, midX, midY - armLen, midX - headLen, midY - armLen + headLen);
+            g.DrawLine(glyphPen, midX, midY - armLen, midX + headLen, midY - armLen + headLen);
+            // Bottom
+            g.DrawLine(glyphPen, midX, midY + armLen, midX - headLen, midY + armLen - headLen);
+            g.DrawLine(glyphPen, midX, midY + armLen, midX + headLen, midY + armLen - headLen);
         }
     }
 

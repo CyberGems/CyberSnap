@@ -313,38 +313,59 @@ public sealed partial class AnnotationCanvas
                 Invalidate();
                 break;
             case CanvasTool.Move:
-                int handle = GetSelectHandle(e.Location);
-                // Handle 8 = center move knob → start a body-move drag, not a resize.
-                if (handle >= 0 && handle != 8 && _selectedAnnotationIndex >= 0)
+            {
+                int handle = -1;
+                int targetIdx = -1;
+
+                // Prefer a handle on the already-selected annotation.
+                if (_selectedAnnotationIndex >= 0)
                 {
+                    handle = GetSelectHandle(e.Location, _selectedAnnotationIndex);
+                    if (handle >= 0) targetIdx = _selectedAnnotationIndex;
+                }
+
+                // Otherwise, if hovering another annotation, check ITS handles too so that
+                // grabbing a resize handle of the hovered object resizes it instead of moving it.
+                if (handle < 0)
+                {
+                    int hoverIdx = (_moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count)
+                        ? _moveHoverIndex
+                        : HitTestAnnotation(img);
+                    if (hoverIdx >= 0)
+                    {
+                        int hoverHandle = GetSelectHandle(e.Location, hoverIdx);
+                        handle = hoverHandle;          // -1 if the click was on the body
+                        targetIdx = hoverIdx;
+                    }
+                }
+
+                // A real resize handle (anything but the center knob, handle 8) → resize.
+                if (handle >= 0 && handle != 8 && targetIdx >= 0)
+                {
+                    _selectedAnnotationIndex = targetIdx;
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
                     _selectDragStartImg = img;
-                    _selectHandleBounds = GetAnnotationVisualBounds(_annotations[_selectedAnnotationIndex]);
-                    _selectResizeOriginalAnnotation = _annotations[_selectedAnnotationIndex];
+                    _selectHandleBounds = GetAnnotationVisualBounds(_annotations[targetIdx]);
+                    _selectResizeOriginalAnnotation = _annotations[targetIdx];
+                    _isDragging = true;
+                }
+                else if (targetIdx >= 0)
+                {
+                    // Body or center-knob (handle 8) → move/select.
+                    _selectedAnnotationIndex = targetIdx;
+                    _selectOriginalAnnotation = _annotations[targetIdx];
+                    _selectDragStartImg = img;
                     _isDragging = true;
                 }
                 else
                 {
-                    // Center knob reuses the already-selected annotation; otherwise do a fresh hit-test.
-                    var hitIdx = (handle == 8 && _selectedAnnotationIndex >= 0)
-                        ? _selectedAnnotationIndex
-                        : HitTestAnnotation(img);
-                    if (hitIdx >= 0)
-                    {
-                        _selectedAnnotationIndex = hitIdx;
-                        _selectOriginalAnnotation = _annotations[hitIdx];
-                        _selectDragStartImg = img;
-                        _isDragging = true;
-                    }
-                    else
-                    {
-                        _selectedAnnotationIndex = -1;
-                        _selectOriginalAnnotation = null;
-                    }
+                    _selectedAnnotationIndex = -1;
+                    _selectOriginalAnnotation = null;
                 }
                 Invalidate();
                 break;
+            }
             case CanvasTool.Crop:
                 if (_cropHasRect)
                 {
