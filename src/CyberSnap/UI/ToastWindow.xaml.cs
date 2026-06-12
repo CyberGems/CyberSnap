@@ -691,7 +691,7 @@ public partial class ToastWindow : Window
 
         try
         {
-            CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(_previewBitmap), _savedFilePath);
+            CyberSnap.UI.Editor.EditorWindow.ShowEditor(new Bitmap(_previewBitmap), _savedFilePath);
         }
         catch (Exception ex)
         {
