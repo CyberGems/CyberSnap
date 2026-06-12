@@ -45,7 +45,7 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="6" Padding="{TemplateBinding Padding}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Image x:Name="BtnIcon" Width="16" Height="16" Margin="0,0,8,0" Stretch="Uniform"
+                                <Image x:Name="BtnIcon" Source="{TemplateBinding Tag}" Width="16" Height="16" Margin="0,0,8,0" Stretch="Uniform"
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                                 <TextBlock Text="{TemplateBinding Content}" FontSize="12" FontFamily="Segoe UI" FontWeight="Bold" VerticalAlignment="Center"/>
                             </StackPanel>
@@ -89,7 +89,7 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="6" Padding="6">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Image x:Name="ToolIcon" Width="16" Height="16" Margin="0,0,8,0" Stretch="Uniform"
+                                <Image x:Name="ToolIcon" Source="{TemplateBinding Tag}" Width="16" Height="16" Margin="0,0,8,0" Stretch="Uniform"
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                                 <TextBlock Text="{TemplateBinding Content}" FontSize="11.5" FontFamily="Segoe UI" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             </StackPanel>
