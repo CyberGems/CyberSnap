@@ -966,9 +966,32 @@ public sealed partial class AnnotationCanvas
 
     protected override bool IsInputKey(Keys keyData) => true;
 
+    protected override void OnKeyUp(KeyEventArgs e)
+    {
+        base.OnKeyUp(e);
+
+        if (e.KeyCode == Keys.Space && _preSpaceTool != null)
+        {
+            ActiveTool = _preSpaceTool.Value;
+            _preSpaceTool = null;
+            e.Handled = true;
+        }
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+
+        if (e.KeyCode == Keys.Space && _inlineTextBox is null)
+        {
+            if (_preSpaceTool == null && _activeTool != CanvasTool.Pan)
+            {
+                _preSpaceTool = _activeTool;
+                ActiveTool = CanvasTool.Pan;
+            }
+            e.Handled = true;
+            return;
+        }
 
         if (e.Control && e.KeyCode == Keys.Z)
         {
@@ -1429,7 +1452,7 @@ public sealed partial class AnnotationCanvas
 
     private bool IsDrawingOrMoveTool(CanvasTool tool)
     {
-        return tool != CanvasTool.Pan && tool != CanvasTool.Crop && tool != CanvasTool.Eraser;
+        return tool != CanvasTool.Crop && tool != CanvasTool.Eraser;
     }
 
     private int GetSelectHandle(Point screenPt)
