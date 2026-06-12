@@ -143,7 +143,7 @@ public sealed partial class EditorForm
         };
         var coordsIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
         coordsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "select", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
-        _coordsLabel = new Label
+        _coordsLabel = new DoubleBufferedLabel
         {
             AutoSize = true,
             Text = "0, 0",
@@ -176,7 +176,7 @@ public sealed partial class EditorForm
         };
         var dimsIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
         dimsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "rect", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
-        _dimensionsLabel = new Label
+        _dimensionsLabel = new DoubleBufferedLabel
         {
             AutoSize = true,
             Text = "0 x 0",
@@ -184,7 +184,7 @@ public sealed partial class EditorForm
             Font = new Font("Consolas", 10.5f, FontStyle.Bold),
             Margin = new Padding(0, 12, 2, 12),
         };
-        var pxLabel = new Label
+        var pxLabel = new DoubleBufferedLabel
         {
             AutoSize = true,
             Text = "px",
@@ -218,7 +218,7 @@ public sealed partial class EditorForm
         };
         var fileIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
         fileIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "camera", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
-        _fileNameLabel = new Label
+        _fileNameLabel = new DoubleBufferedLabel
         {
             AutoSize = true,
             Text = "Unsaved capture",
@@ -434,6 +434,7 @@ public sealed partial class EditorForm
         brandPanel.Paint += (_, e) =>
         {
             var g = e.Graphics;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int cy = brandPanel.Height / 2;
 
             if (_brandBitmap != null)
@@ -679,7 +680,7 @@ public sealed partial class EditorForm
 
     private Control BuildColorSection()
     {
-        var section = MakeSectionPanel("Color && Width", 240);
+        var section = MakeSectionPanel("Color & Width", 240);
 
         int swatchSize = (int)Math.Round(28 * 1.35);
         int strokeSize = (int)Math.Round(32 * 1.35);
@@ -790,7 +791,7 @@ public sealed partial class EditorForm
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var label = new Label
+        var label = new DoubleBufferedLabel
         {
             Dock = DockStyle.Top,
             Height = 24,
@@ -1240,8 +1241,92 @@ internal sealed class DoubleBufferedLabel : Label
     public DoubleBufferedLabel()
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint |
+                 ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer |
                  ControlStyles.ResizeRedraw, true);
+    }
+
+    public override Size GetPreferredSize(Size proposedSize)
+    {
+        var flags = TextFormatFlags.NoPrefix;
+        if (AutoSize)
+        {
+            flags |= TextFormatFlags.SingleLine;
+        }
+        else
+        {
+            flags |= TextFormatFlags.WordBreak;
+        }
+
+        var size = TextRenderer.MeasureText(
+            Text,
+            Font,
+            proposedSize,
+            flags);
+
+        size.Width += Padding.Horizontal;
+        size.Height += Padding.Vertical;
+        return size;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var backColor = BackColor;
+        if (backColor == Color.Transparent)
+        {
+            Control? p = Parent;
+            while (p != null && p.BackColor == Color.Transparent)
+            {
+                p = p.Parent;
+            }
+            if (p != null)
+            {
+                backColor = p.BackColor;
+            }
+        }
+        if (backColor == Color.Transparent)
+        {
+            backColor = EditorColors.BgSecondary;
+        }
+
+        using (var brush = new SolidBrush(backColor))
+        {
+            e.Graphics.FillRectangle(brush, ClientRectangle);
+        }
+
+        e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+        TextFormatFlags flags = TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix;
+
+        switch (TextAlign)
+        {
+            case ContentAlignment.TopLeft: flags |= TextFormatFlags.Top | TextFormatFlags.Left; break;
+            case ContentAlignment.TopCenter: flags |= TextFormatFlags.Top | TextFormatFlags.HorizontalCenter; break;
+            case ContentAlignment.TopRight: flags |= TextFormatFlags.Top | TextFormatFlags.Right; break;
+            case ContentAlignment.MiddleLeft: flags |= TextFormatFlags.VerticalCenter | TextFormatFlags.Left; break;
+            case ContentAlignment.MiddleCenter: flags |= TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter; break;
+            case ContentAlignment.MiddleRight: flags |= TextFormatFlags.VerticalCenter | TextFormatFlags.Right; break;
+            case ContentAlignment.BottomLeft: flags |= TextFormatFlags.Bottom | TextFormatFlags.Left; break;
+            case ContentAlignment.BottomCenter: flags |= TextFormatFlags.Bottom | TextFormatFlags.HorizontalCenter; break;
+            case ContentAlignment.BottomRight: flags |= TextFormatFlags.Bottom | TextFormatFlags.Right; break;
+        }
+
+        if (AutoSize)
+        {
+            flags |= TextFormatFlags.SingleLine;
+        }
+        else
+        {
+            flags |= TextFormatFlags.WordBreak;
+        }
+
+        TextRenderer.DrawText(
+            e.Graphics,
+            Text,
+            Font,
+            ClientRectangle,
+            ForeColor,
+            flags);
     }
 }
 
@@ -2058,6 +2143,7 @@ internal sealed class EditorZoomBarButton : Button
     {
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
         var parentBackColor = Parent?.BackColor ?? EditorColors.TitleBar;
         g.Clear(parentBackColor == Color.Transparent ? EditorColors.TitleBar : parentBackColor);
 
