@@ -117,13 +117,13 @@ public sealed partial class EditorForm
             Padding = new Padding(0),
         };
 
-        // BORDER switch
+        // BORDER switch (off-screen, instantiated for burger menu synchronization)
         _toggleFrameSwitch = new EditorToggleSwitch
         {
             LabelText = LocalizationService.Translate("Border"),
             Checked = _canvas.ShowCaptureFrame,
             Height = 42,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             Margin = new Padding(0),
         };
         _toggleFrameSwitch.CheckedChanged += (_, _) =>
@@ -131,35 +131,6 @@ public sealed partial class EditorForm
             _canvas.ShowCaptureFrame = _toggleFrameSwitch.Checked;
             _canvas.Invalidate();
         };
-        leftStatusFlow.Controls.Add(_toggleFrameSwitch);
-
-        // AUTO-FIT switch: fit the image to the canvas on load, or show it at real 100% size.
-        _toggleFitSwitch = new EditorToggleSwitch
-        {
-            LabelText = LocalizationService.Translate("Auto-fit"),
-            Checked = _canvas.FitToWindowOnLoad,
-            Height = 42,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
-            Margin = new Padding(18, 0, 0, 0),
-        };
-        _toggleFitSwitch.CheckedChanged += (_, _) =>
-        {
-            _canvas.FitToWindowOnLoad = _toggleFitSwitch.Checked;
-            _canvas.ApplyInitialView(); // re-frame the current image immediately for instant feedback
-            if (System.Windows.Application.Current is CyberSnap.App app)
-                app.PersistEditorFitPreference(_toggleFitSwitch.Checked);
-        };
-        leftStatusFlow.Controls.Add(_toggleFitSwitch);
-
-        // Separator 1
-        var sep1 = new Panel { Width = 24, Height = 42, BackColor = Color.Transparent, Margin = new Padding(0) };
-        sep1.Paint += (s, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(40, 255, 255, 255));
-            int y1 = (sep1.Height - 16) / 2;
-            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
-        };
-        leftStatusFlow.Controls.Add(sep1);
 
         // Coords: Icon + Label
         var coordsPanel = new FlowLayoutPanel
@@ -177,7 +148,7 @@ public sealed partial class EditorForm
             AutoSize = true,
             Text = "0, 0",
             ForeColor = EditorColors.TextPrimary,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular),
+            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
             Margin = new Padding(0, 12, 0, 12),
         };
         coordsPanel.Controls.Add(coordsIcon);
@@ -210,7 +181,7 @@ public sealed partial class EditorForm
             AutoSize = true,
             Text = "0 x 0",
             ForeColor = EditorColors.TextPrimary,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular),
+            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
             Margin = new Padding(0, 12, 2, 12),
         };
         var pxLabel = new Label
@@ -218,7 +189,7 @@ public sealed partial class EditorForm
             AutoSize = true,
             Text = "px",
             ForeColor = EditorColors.Accent,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular),
+            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
             Margin = new Padding(0, 12, 0, 12),
         };
         dimsPanel.Controls.Add(dimsIcon);
@@ -252,7 +223,7 @@ public sealed partial class EditorForm
             AutoSize = true,
             Text = "Unsaved capture",
             ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular),
+            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
             Margin = new Padding(0, 12, 0, 12),
         };
         filePanel.Controls.Add(fileIcon);
@@ -296,6 +267,31 @@ public sealed partial class EditorForm
             BackColor = Color.Transparent,
         };
 
+        // AUTO-FIT switch: fit the image to the canvas on load, or show it at real 100% size.
+        _toggleFitSwitch = new EditorToggleSwitch
+        {
+            Dock = DockStyle.Right,
+            LabelText = LocalizationService.Translate("Auto-fit"),
+            Checked = _canvas.FitToWindowOnLoad,
+            Height = 42,
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            Margin = new Padding(0),
+        };
+        _toggleFitSwitch.CheckedChanged += (_, _) =>
+        {
+            _canvas.FitToWindowOnLoad = _toggleFitSwitch.Checked;
+            _canvas.ApplyInitialView(); // re-frame the current image immediately for instant feedback
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.PersistEditorFitPreference(_toggleFitSwitch.Checked);
+        };
+
+        var zoomSpacerFit = new Label
+        {
+            Dock = DockStyle.Right,
+            Width = 10,
+            BackColor = Color.Transparent,
+        };
+
         _fitZoomBtn = new EditorZoomBarButton
         {
             Dock = DockStyle.Right,
@@ -317,14 +313,14 @@ public sealed partial class EditorForm
         var zoomHost = new EditorZoomHostPanel
         {
             Dock = DockStyle.Right,
-            Width = 315,
+            Width = 325,
             Height = 42,
             BackColor = EditorColors.TitleBar,
             ColumnCount = 3,
             RowCount = 1,
             Padding = new Padding(8, 3, 8, 3),
         };
-        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 55));
+        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 65));
         zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 65));
 
@@ -335,18 +331,18 @@ public sealed partial class EditorForm
             BackColor = EditorColors.TitleBar,
             Text = "100%",
             ForeColor = EditorColors.Accent,
-            Font = new Font("Segoe UI Variable Text", 10f, FontStyle.Bold, GraphicsUnit.Point),
+            Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleRight,
         };
 
         var zoomText = new DoubleBufferedLabel
         {
             Dock = DockStyle.Left,
-            Width = 55,
+            Width = 65,
             BackColor = EditorColors.TitleBar,
             Text = "Zoom",
             ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
         };
 
@@ -371,9 +367,11 @@ public sealed partial class EditorForm
 
         _statusBarPanel.Controls.Add(zoomHost);
         _statusBarPanel.Controls.Add(zoomSpacer2);
-        _statusBarPanel.Controls.Add(_fitZoomBtn);
-        _statusBarPanel.Controls.Add(zoomSpacer1);
         _statusBarPanel.Controls.Add(_resetZoomBtn);
+        _statusBarPanel.Controls.Add(zoomSpacer1);
+        _statusBarPanel.Controls.Add(_fitZoomBtn);
+        _statusBarPanel.Controls.Add(zoomSpacerFit);
+        _statusBarPanel.Controls.Add(_toggleFitSwitch);
         _statusBarPanel.Controls.Add(hintSpacer);
         _statusBarPanel.Controls.Add(_hintLabel);
 
@@ -382,7 +380,7 @@ public sealed partial class EditorForm
 
         // CyberSnap-styled hover hints for the bottom bar, matching the capture toolbar.
         // The bar sits at the bottom of the window, so the bubbles open upward (above: true).
-        RegisterHoverTooltip(_toggleFrameSwitch, "Show a frame around the capture");
+        // RegisterHoverTooltip(_toggleFrameSwitch, "Show a frame around the capture");
         RegisterHoverTooltip(_toggleFitSwitch, "Fit the image to the window when the editor opens");
         RegisterHoverTooltip(coordsPanel, "Cursor position over the image (X, Y)");
         RegisterHoverTooltip(dimsPanel, "Image size in pixels");
