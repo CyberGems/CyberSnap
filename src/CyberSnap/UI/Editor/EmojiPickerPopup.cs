@@ -63,12 +63,10 @@ internal sealed class EmojiPickerPopup : Form
         {
             if (e.KeyCode == Keys.Space)
             {
-                if (!Bounds.Contains(Cursor.Position))
-                {
-                    e.SuppressKeyPress = true;
-                    Close();
-                    _canvas.Focus();
-                }
+                e.SuppressKeyPress = true;
+                Close();
+                _canvas.Focus();
+                _canvas.StartTemporarySpacePan();
             }
         };
 
@@ -85,7 +83,14 @@ internal sealed class EmojiPickerPopup : Form
         border.Controls.Add(searchHost);
         Controls.Add(border);
 
-        Deactivate += (_, _) => Close();
+        // Defer the close: closing synchronously inside Deactivate (triggered by a click
+        // on another window) eats that click in WinForms, so switching to another tool
+        // would take two clicks. BeginInvoke lets the activating click finish first.
+        Deactivate += (_, _) =>
+        {
+            if (IsHandleCreated && !IsDisposed)
+                BeginInvoke(new Action(() => { if (!IsDisposed) Close(); }));
+        };
         Shown += (_, _) => _search.Focus();
     }
 
@@ -97,6 +102,16 @@ internal sealed class EmojiPickerPopup : Form
         {
             Close();
             e.Handled = true;
+            return;
+        }
+        // Space (from the grid or anywhere the TextBox didn't catch it) → pan
+        if (e.KeyCode == Keys.Space)
+        {
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            Close();
+            _canvas.Focus();
+            _canvas.StartTemporarySpacePan();
             return;
         }
         base.OnKeyDown(e);
