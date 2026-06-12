@@ -972,8 +972,16 @@ public sealed partial class AnnotationCanvas
 
         if (e.KeyCode == Keys.Space && _preSpaceTool != null)
         {
+            _isPanning = false;
+
             ActiveTool = _preSpaceTool.Value;
+            _selectedAnnotationIndex = _preSpaceSelectedAnnotationIndex;
+            _selectOriginalAnnotation = _preSpaceSelectOriginalAnnotation;
+
             _preSpaceTool = null;
+            _preSpaceSelectedAnnotationIndex = -1;
+            _preSpaceSelectOriginalAnnotation = null;
+
             e.Handled = true;
         }
     }
@@ -987,7 +995,32 @@ public sealed partial class AnnotationCanvas
             if (_preSpaceTool == null && _activeTool != CanvasTool.Pan)
             {
                 _preSpaceTool = _activeTool;
+                _preSpaceSelectedAnnotationIndex = _selectedAnnotationIndex;
+                _preSpaceSelectOriginalAnnotation = _selectOriginalAnnotation;
+
+                if (_isDragging || _currentStroke is not null)
+                {
+                    _isDragging = false;
+                    _currentStroke = null;
+                }
+                if (_cropDragging)
+                {
+                    _cropDragging = false;
+                    _activeCropHandle = -1;
+                }
+                _isSelectResizing = false;
+                _selectResizeHandle = -1;
+
                 ActiveTool = CanvasTool.Pan;
+
+                if (Control.MouseButtons == MouseButtons.Left)
+                {
+                    _isPanning = true;
+                    _userPanned = true;
+                    _viewFitsWindow = false;
+                    _panStart = PointToClient(Cursor.Position);
+                    _panStartOffset = _pan;
+                }
             }
             e.Handled = true;
             return;
