@@ -146,7 +146,7 @@ public sealed partial class AnnotationCanvas
 
         Cursor = _activeTool switch
         {
-            CanvasTool.Pan => Cursors.Hand,
+            CanvasTool.Pan => CursorFactory.PanCursor,
             CanvasTool.Move => Cursors.Default,
             CanvasTool.Crop => Cursors.Cross,
             CanvasTool.Text => Cursors.IBeam,
@@ -575,7 +575,7 @@ public sealed partial class AnnotationCanvas
                     return;
                 }
             }
-            if (IsDrawingOrMoveTool(_activeTool))
+            if (IsDrawingOrMoveTool(_activeTool) && _preSpaceTool == null)
             {
                 int sh = -1;
                 if (_selectedAnnotationIndex >= 0)

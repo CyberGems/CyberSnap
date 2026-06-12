@@ -392,7 +392,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             // handles on the canvas. A pending rect that still covers the whole image is a no-op,
             // so it's just discarded. The active tool is switched first so TryConfirmCrop won't
             // re-arm a fresh full-image crop whose handles would then linger under the new tool.
-            bool leavingCrop = _activeTool == CanvasTool.Crop && value != CanvasTool.Crop;
+            bool leavingCrop = _activeTool == CanvasTool.Crop && value != CanvasTool.Crop && _preSpaceTool == null;
             bool applyCrop = leavingCrop && HasAdjustedPendingCrop;
             _activeTool = value;
             bool cropApplied = false;
