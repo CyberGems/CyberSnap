@@ -463,22 +463,26 @@ public sealed partial class RegionOverlayForm
     private static Point Offset(Point p, int dx, int dy) => new(p.X + dx, p.Y + dy);
     private static Rectangle OffsetRect(Rectangle r, int dx, int dy) => new(r.X + dx, r.Y + dy, r.Width, r.Height);
 
-    /// <summary>Returns the handle index (0=TL,1=TR,2=BL,3=BR) at point, or -1.</summary>
+    /// <summary>Returns the handle index (0=TL,1=TR,2=BL,3=BR,4=T,5=L,6=R,7=B) at point, or -1.</summary>
     private int GetSelectHandle(Point p)
     {
         if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _undoStack.Count)
             return -1;
         var bounds = GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]);
         var selRect = Rectangle.Inflate(bounds, 4, 4);
-        var corners = new[] {
-            new Point(selRect.X, selRect.Y),
-            new Point(selRect.Right - 1, selRect.Y),
-            new Point(selRect.X, selRect.Bottom - 1),
-            new Point(selRect.Right - 1, selRect.Bottom - 1),
+        var handles = new[] {
+            new Point(selRect.X, selRect.Y),                           // 0: TL
+            new Point(selRect.Right - 1, selRect.Y),                   // 1: TR
+            new Point(selRect.X, selRect.Bottom - 1),                  // 2: BL
+            new Point(selRect.Right - 1, selRect.Bottom - 1),          // 3: BR
+            new Point(selRect.X + selRect.Width / 2, selRect.Y),       // 4: Top
+            new Point(selRect.X, selRect.Y + selRect.Height / 2),      // 5: Left
+            new Point(selRect.Right - 1, selRect.Y + selRect.Height / 2),// 6: Right
+            new Point(selRect.X + selRect.Width / 2, selRect.Bottom - 1)// 7: Bottom
         };
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 8; i++)
         {
-            var hr = WindowsHandleRenderer.HitRect(corners[i]);
+            var hr = WindowsHandleRenderer.HitRect(handles[i]);
             if (hr.Contains(p)) return i;
         }
         return -1;

@@ -130,7 +130,21 @@ public sealed partial class RegionOverlayForm
         HideFontSearchBox();
         _emojiHovered = -1;
         _eraserHoverIndex = -1;
+
+        // Reset and invalidate selection/hover states before switching tools to prevent trails/ghosts
+        if (_selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
+        {
+            var bounds = GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]);
+            Invalidate(Rectangle.Inflate(bounds, 16, 16));
+            _selectedAnnotationIndex = -1;
+        }
+        if (_moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)
+        {
+            var bounds = GetAnnotationBounds(_undoStack[_moveHoverIndex]);
+            Invalidate(Rectangle.Inflate(bounds, 16, 16));
+        }
         _moveHoverIndex = -1;
+
         _mode = m;
         _activeToolId = toolId ?? _visibleTools.FirstOrDefault(t => t.Mode == m)?.Id;
         _hasSelection = false;
