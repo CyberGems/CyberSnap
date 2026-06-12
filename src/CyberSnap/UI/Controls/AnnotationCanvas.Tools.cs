@@ -114,7 +114,7 @@ public sealed partial class AnnotationCanvas
             _currentStroke = null;
             Invalidate();
         }
-        if (_selectedAnnotationIndex >= 0 && !_isDragging)
+        if (_selectedAnnotationIndex >= 0 && !_isDragging && _preSpaceTool == null)
         {
             _selectedAnnotationIndex = -1;
             _selectOriginalAnnotation = null;
@@ -235,7 +235,7 @@ public sealed partial class AnnotationCanvas
         if (_inlineTextBox is not null && _activeTool != CanvasTool.Text)
             CommitOrCancelInlineText(commit: true);
 
-        if (IsDrawingOrMoveTool(_activeTool) && _activeTool != CanvasTool.Move)
+        if (_preSpaceTool == null && IsDrawingOrMoveTool(_activeTool) && _activeTool != CanvasTool.Move)
         {
             int handle = -1;
             int clickedIdx = -1;
@@ -484,8 +484,16 @@ public sealed partial class AnnotationCanvas
 
         if (IsDrawingOrMoveTool(_activeTool) && !_isDragging)
         {
-            var imgPt = ScreenToImage(e.Location);
-            UpdateMoveHover(imgPt);
+            if (_preSpaceTool == null)
+            {
+                var imgPt = ScreenToImage(e.Location);
+                UpdateMoveHover(imgPt);
+            }
+            else if (_moveHoverIndex != -1)
+            {
+                _moveHoverIndex = -1;
+                Invalidate();
+            }
         }
 
         if (_isPanning)
@@ -975,12 +983,7 @@ public sealed partial class AnnotationCanvas
             _isPanning = false;
 
             ActiveTool = _preSpaceTool.Value;
-            _selectedAnnotationIndex = _preSpaceSelectedAnnotationIndex;
-            _selectOriginalAnnotation = _preSpaceSelectOriginalAnnotation;
-
             _preSpaceTool = null;
-            _preSpaceSelectedAnnotationIndex = -1;
-            _preSpaceSelectOriginalAnnotation = null;
 
             e.Handled = true;
         }
@@ -995,8 +998,6 @@ public sealed partial class AnnotationCanvas
             if (_preSpaceTool == null && _activeTool != CanvasTool.Pan)
             {
                 _preSpaceTool = _activeTool;
-                _preSpaceSelectedAnnotationIndex = _selectedAnnotationIndex;
-                _preSpaceSelectOriginalAnnotation = _selectOriginalAnnotation;
 
                 if (_isDragging || _currentStroke is not null)
                 {
@@ -1181,7 +1182,7 @@ public sealed partial class AnnotationCanvas
             }
         }
 
-        if (_cropHasRect)
+        if (_cropHasRect && _preSpaceTool == null)
             DrawCropHandles(g, cropScreen);
     }
 

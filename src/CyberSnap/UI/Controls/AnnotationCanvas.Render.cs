@@ -86,14 +86,14 @@ public sealed partial class AnnotationCanvas
         }
 
         // Move hover highlight
-        if (IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count && _moveHoverIndex != _selectedAnnotationIndex)
+        if (_preSpaceTool == null && IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count && _moveHoverIndex != _selectedAnnotationIndex)
         {
             var bounds = GetAnnotationVisualBounds(_annotations[_moveHoverIndex]);
             DrawMoveHandles(g, bounds, isSelected: false);
         }
 
         // Selection highlight
-        if (_selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _annotations.Count)
+        if (_preSpaceTool == null && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _annotations.Count)
         {
             var bounds = GetAnnotationVisualBounds(_annotations[_selectedAnnotationIndex]);
             DrawMoveHandles(g, bounds, isSelected: true);
