@@ -395,7 +395,7 @@ public sealed partial class EditorForm
         var panel = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 76,
+            Height = 80,
             BackColor = EditorColors.TitleBar,
             Padding = new Padding(22, 13, 18, 12),
         };
@@ -410,7 +410,7 @@ public sealed partial class EditorForm
         var brandPanel = new Panel
         {
             Dock = DockStyle.Left,
-            Width = 320,
+            Width = 380,
             BackColor = Color.Transparent,
         };
         brandPanel.MouseDown += BeginWindowDrag;
@@ -439,19 +439,19 @@ public sealed partial class EditorForm
 
             if (_brandBitmap != null)
             {
-                g.DrawImage(_brandBitmap, new Rectangle(0, cy - 9, 18, 18));
+                g.DrawImage(_brandBitmap, new Rectangle(0, cy - 10, 20, 20));
             }
 
-            using var font1 = new Font("Segoe UI Variable Display", 10f, FontStyle.Bold, GraphicsUnit.Point);
+            using var font1 = new Font("Segoe UI Variable Display", 11f, FontStyle.Bold, GraphicsUnit.Point);
             var size1 = TextRenderer.MeasureText("CyberSnap", font1);
             TextRenderer.DrawText(g, "CyberSnap", font1,
-                new Rectangle(24, 0, size1.Width, brandPanel.Height),
+                new Rectangle(26, 0, size1.Width, brandPanel.Height),
                 EditorColors.Accent,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
-            using var font2 = new Font("Segoe UI Variable Display", 9f, FontStyle.Regular, GraphicsUnit.Point);
+            using var font2 = new Font("Consolas", 10.5f, FontStyle.Bold, GraphicsUnit.Point);
             TextRenderer.DrawText(g, LocalizationService.Translate("Annotations Editor"), font2,
-                new Rectangle(24 + size1.Width + 10, 0, 240, brandPanel.Height),
+                new Rectangle(26 + size1.Width + 12, 0, 280, brandPanel.Height),
                 EditorColors.TextPrimary,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         };
@@ -489,7 +489,7 @@ public sealed partial class EditorForm
         // Spacer between settings and saveAs
         topActions.Controls.Add(MakeSeparator());
 
-        var saveAsButton = MakeCommandButton("folder", LocalizationService.Translate("Save As"), false);
+        var saveAsButton = MakeCommandButton("download", LocalizationService.Translate("Save As"), false);
         saveAsButton.Width = 76;
         saveAsButton.Click += (_, _) => DoSaveAs();
         RegisterHoverTooltip(saveAsButton, () => WithShortcut("Save the image as a new file", "Ctrl+Shift+S"), above: false);
@@ -505,12 +505,12 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
         topActions.Controls.Add(_copyButton);
 
-        _pasteButton = MakeCommandButton("arrow", LocalizationService.Translate("Paste"), false);
+        _pasteButton = MakeCommandButton("paste", LocalizationService.Translate("Paste"), false);
         _pasteButton.Click += (_, _) => DoPaste();
         RegisterHoverTooltip(_pasteButton, () => WithShortcut("Paste image from clipboard", "Ctrl+V"), above: false);
         topActions.Controls.Add(_pasteButton);
 
-        var openButton = MakeCommandButton("document", LocalizationService.Translate("Open"), false);
+        var openButton = MakeCommandButton("folder", LocalizationService.Translate("Open"), false);
         openButton.Click += (_, _) => DoOpen();
         RegisterHoverTooltip(openButton, () => WithShortcut("Open an image file", "Ctrl+O"), above: false);
         topActions.Controls.Add(openButton);
@@ -834,7 +834,7 @@ public sealed partial class EditorForm
             Text = text,
             Primary = primary,
             Width = 68,
-            Height = 44,
+            Height = 50,
             Margin = new Padding(2, 0, 2, 0),
         };
     }
@@ -1444,7 +1444,7 @@ internal sealed class EditorCommandButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
-        Font = new Font("Segoe UI Variable Text", 8f, FontStyle.Bold, GraphicsUnit.Point);
+        Font = new Font("Segoe UI Variable Text", 7f, FontStyle.Bold, GraphicsUnit.Point);
         TabStop = true;
     }
 
@@ -1512,15 +1512,15 @@ internal sealed class EditorCommandButton : Button
             g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
         }
 
-        var iconSize = 18;
+        var iconSize = 26;
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
-            rect.Top + 5,
+            rect.Top + 4,
             iconSize,
             iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed || Primary));
 
-        var textRect = new Rectangle(rect.Left + 2, rect.Top + 25, rect.Width - 4, 16);
+        var textRect = new Rectangle(rect.Left + 2, rect.Top + 31, rect.Width - 4, 17);
         TextRenderer.DrawText(
             g,
             Text,
@@ -1580,7 +1580,7 @@ internal sealed class EditorChromeButton : EditorButtonBase
 
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
     {
-        var iconSize = Math.Min(22, Math.Max(18, rect.Height - 20));
+        var iconSize = Math.Min(24, Math.Max(20, rect.Height - 18));
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
             rect.Top + (rect.Height - iconSize) / 2f,
