@@ -512,7 +512,12 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(openButton, () => WithShortcut("Open an image file", "Ctrl+O"), above: false);
         topActions.Controls.Add(openButton);
 
-        // Spacer between Open and History
+        var newButton = MakeCommandButton("document", LocalizationService.Translate("New"), false);
+        newButton.Click += (_, _) => DoNew();
+        RegisterHoverTooltip(newButton, () => WithShortcut("Create a blank canvas", "Ctrl+N"), above: false);
+        topActions.Controls.Add(newButton);
+
+        // Spacer between New/Open and History
         topActions.Controls.Add(MakeSeparator());
 
         var historyButton = MakeCommandButton("history", LocalizationService.Translate("History"), false);
@@ -1610,6 +1615,15 @@ internal sealed class EditorChromeButton : EditorButtonBase
 {
     protected override Color DefaultTransparentBackColor => EditorColors.TitleBar;
 
+    protected override Color IdleFill => Color.Transparent;
+
+    protected override Color ResolveBorder(bool active)
+    {
+        if (active || _hover)
+            return base.ResolveBorder(active);
+        return Color.Transparent;
+    }
+
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
     {
         var iconSize = Math.Min(24, Math.Max(20, rect.Height - 18));
@@ -1624,7 +1638,7 @@ internal sealed class EditorChromeButton : EditorButtonBase
 
 internal abstract class EditorButtonBase : Button
 {
-    private bool _hover;
+    protected bool _hover;
     private bool _pressed;
     private bool _selected;
     private string _iconId = "";
@@ -1775,7 +1789,7 @@ internal abstract class EditorButtonBase : Button
         return parentBackColor == Color.Transparent ? DefaultTransparentBackColor : parentBackColor;
     }
 
-    private Color ResolveBorder(bool active)
+    protected virtual Color ResolveBorder(bool active)
     {
         if (!Enabled)
             return Color.FromArgb(26, 255, 255, 255);
