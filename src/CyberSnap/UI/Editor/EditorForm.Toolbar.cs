@@ -572,7 +572,7 @@ public sealed partial class EditorForm
         nav.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
         AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
-        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Move");
+        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Move & Resize");
         AddToolButton(nav, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop");
         AddToolButton(nav, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser");
 
@@ -1033,7 +1033,7 @@ public sealed partial class EditorForm
         return _canvas.ActiveTool switch
         {
             AnnotationCanvas.CanvasTool.Pan => "Pan",
-            AnnotationCanvas.CanvasTool.Move => "Move",
+            AnnotationCanvas.CanvasTool.Move => "Move & Resize",
             AnnotationCanvas.CanvasTool.Crop => "Crop",
             AnnotationCanvas.CanvasTool.Text => "Text",
             AnnotationCanvas.CanvasTool.Draw => "Draw",

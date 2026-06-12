@@ -418,7 +418,7 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("scan",        "QR/Barcode",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
         new("record",      "Screen Recorder (MP4)", '\uE7C8', CaptureMode.Record,      0), // video
         new("recordGif",   "Screen Recorder (GIF)", '\uE790', CaptureMode.RecordGif,   0), // gif
-        new("select",      "Move",        '\uE1E3', CaptureMode.Move,        1), // cursor-click   → 0x31
+        new("select",      "Move & Resize",        '\uE1E3', CaptureMode.Move,        1), // cursor-click   → 0x31
         new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser         → 0x33
         new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type           → 0x37
         new("arrow",       "Arrow",        '\uE051', CaptureMode.Arrow,       1), // arrow-up-right → 0x32
