@@ -1476,7 +1476,7 @@ internal sealed class EditorCommandButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
-        Font = new Font("Segoe UI Variable Text", 8f, FontStyle.Bold, GraphicsUnit.Point);
+        Font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold, GraphicsUnit.Point);
         TabStop = true;
     }
 
@@ -1544,7 +1544,7 @@ internal sealed class EditorCommandButton : Button
             g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
         }
 
-        var iconSize = 33;
+        var iconSize = 30;
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
             rect.Top + 5,
@@ -1552,7 +1552,7 @@ internal sealed class EditorCommandButton : Button
             iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed || Primary));
 
-        var textRect = new Rectangle(rect.Left + 2, rect.Top + 40, rect.Width - 4, 18);
+        var textRect = new Rectangle(rect.Left + 2, rect.Top + 40, rect.Width - 4, 20);
         TextRenderer.DrawText(
             g,
             Text,
