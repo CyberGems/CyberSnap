@@ -827,6 +827,8 @@ public sealed partial class EditorForm
             RegisterHoverTooltip(button, "Move & Resize");
         else if (tool is AnnotationCanvas.CanvasTool.Pan)
             RegisterHoverTooltip(button, "Pan (Hold Space)");
+        else if (tool is AnnotationCanvas.CanvasTool.Emoji)
+            RegisterHoverTooltip(button, "Emoji (Scroll Wheel to Resize)");
 
         parent.Controls.Add(button, column, row);
     }
@@ -909,7 +911,7 @@ public sealed partial class EditorForm
             return;
         }
 
-        _emojiPicker = new EmojiPickerPopup();
+        _emojiPicker = new EmojiPickerPopup(_canvas);
         _emojiPicker.EmojiChosen += emoji =>
         {
             _canvas.SelectedEmoji = emoji;

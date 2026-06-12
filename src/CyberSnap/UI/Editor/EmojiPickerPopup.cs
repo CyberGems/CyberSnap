@@ -6,6 +6,8 @@ using CyberSnap.Capture;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 
+using CyberSnap.UI.Controls;
+
 namespace CyberSnap.UI.Editor;
 
 /// <summary>
@@ -18,11 +20,13 @@ internal sealed class EmojiPickerPopup : Form
     private readonly EmojiRenderer _renderer = new();
     private readonly EmojiGrid _grid;
     private readonly TextBox _search;
+    private readonly AnnotationCanvas _canvas;
 
     public event Action<string>? EmojiChosen;
 
-    public EmojiPickerPopup()
+    public EmojiPickerPopup(AnnotationCanvas canvas)
     {
+        _canvas = canvas;
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         ShowInTaskbar = false;
@@ -55,6 +59,18 @@ internal sealed class EmojiPickerPopup : Form
             Height = 28,
         };
         _search.TextChanged += (_, _) => _grid.SetFilter(_search.Text);
+        _search.KeyDown += (sender, e) =>
+        {
+            if (e.KeyCode == Keys.Space)
+            {
+                if (!Bounds.Contains(Cursor.Position))
+                {
+                    e.SuppressKeyPress = true;
+                    Close();
+                    _canvas.Focus();
+                }
+            }
+        };
 
         var searchHost = new Panel { Dock = DockStyle.Top, Height = 38, BackColor = EditorColors.BgSecondary, Padding = new Padding(0, 0, 0, 10) };
         searchHost.Controls.Add(_search);

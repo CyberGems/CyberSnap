@@ -395,7 +395,7 @@ public sealed partial class RegionOverlayForm
         CircleShapeAnnotation cs => cs.Rect,
         EraserFill ef => ef.Rect,
         StepNumberAnnotation sn => new Rectangle(sn.Pos.X - 14, sn.Pos.Y - 14, 28, 28),
-        EmojiAnnotation em => new Rectangle(em.Pos.X, em.Pos.Y, (int)em.Size, (int)em.Size),
+        EmojiAnnotation em => new Rectangle(em.Pos.X, em.Pos.Y, (int)(em.Size * 1.4f) + 4, (int)(em.Size * 1.4f) + 4),
         MagnifierAnnotation mg => GetMagnifierVisualBounds(mg),
         TextAnnotation ta => GetTextBounds(ta),
         _ => Rectangle.Empty
