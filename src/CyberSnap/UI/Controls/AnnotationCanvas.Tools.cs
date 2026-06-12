@@ -120,6 +120,9 @@ public sealed partial class AnnotationCanvas
             _selectOriginalAnnotation = null;
             Invalidate();
         }
+        _isSelectResizing = false;
+        _selectResizeHandle = -1;
+        _selectResizeOriginalAnnotation = null;
         if (_eraserHoverIndex >= 0)
         {
             _eraserHoverIndex = -1;
@@ -253,18 +256,31 @@ public sealed partial class AnnotationCanvas
                 Invalidate();
                 break;
             case CanvasTool.Move:
-                var hitIdx = HitTestAnnotation(img);
-                if (hitIdx >= 0)
+                int handle = GetSelectHandle(e.Location);
+                if (handle >= 0 && _selectedAnnotationIndex >= 0)
                 {
-                    _selectedAnnotationIndex = hitIdx;
-                    _selectOriginalAnnotation = _annotations[hitIdx];
+                    _isSelectResizing = true;
+                    _selectResizeHandle = handle;
                     _selectDragStartImg = img;
+                    _selectHandleBounds = GetAnnotationVisualBounds(_annotations[_selectedAnnotationIndex]);
+                    _selectResizeOriginalAnnotation = _annotations[_selectedAnnotationIndex];
                     _isDragging = true;
                 }
                 else
                 {
-                    _selectedAnnotationIndex = -1;
-                    _selectOriginalAnnotation = null;
+                    var hitIdx = HitTestAnnotation(img);
+                    if (hitIdx >= 0)
+                    {
+                        _selectedAnnotationIndex = hitIdx;
+                        _selectOriginalAnnotation = _annotations[hitIdx];
+                        _selectDragStartImg = img;
+                        _isDragging = true;
+                    }
+                    else
+                    {
+                        _selectedAnnotationIndex = -1;
+                        _selectOriginalAnnotation = null;
+                    }
                 }
                 Invalidate();
                 break;
@@ -495,6 +511,22 @@ public sealed partial class AnnotationCanvas
                     return;
                 }
             }
+            if (_activeTool == CanvasTool.Move && _selectedAnnotationIndex >= 0)
+            {
+                int sh = GetSelectHandle(e.Location);
+                if (sh >= 0)
+                {
+                    Cursor = sh switch
+                    {
+                        0 or 3 => Cursors.SizeNWSE,
+                        1 or 2 => Cursors.SizeNESW,
+                        4 or 7 => Cursors.SizeNS,
+                        5 or 6 => Cursors.SizeWE,
+                        _ => Cursors.Default
+                    };
+                    return;
+                }
+            }
             UpdateCursor();
         }
 
@@ -578,6 +610,28 @@ public sealed partial class AnnotationCanvas
 
         switch (_activeTool)
         {
+            case CanvasTool.Move when _isSelectResizing && _selectedAnnotationIndex >= 0 && _selectResizeOriginalAnnotation is not null:
+                int rdx = img.X - _selectDragStartImg.X;
+                int rdy = img.Y - _selectDragStartImg.Y;
+                var ob = _selectHandleBounds;
+                Rectangle nb = _selectResizeHandle switch
+                {
+                    0 => Rectangle.FromLTRB(ob.Left + rdx, ob.Top + rdy, ob.Right, ob.Bottom),  // TL
+                    1 => Rectangle.FromLTRB(ob.Left, ob.Top + rdy, ob.Right + rdx, ob.Bottom),  // TR
+                    2 => Rectangle.FromLTRB(ob.Left + rdx, ob.Top, ob.Right, ob.Bottom + rdy),  // BL
+                    3 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + rdx, ob.Bottom + rdy),  // BR
+                    4 => Rectangle.FromLTRB(ob.Left, ob.Top + rdy, ob.Right, ob.Bottom),       // Top
+                    5 => Rectangle.FromLTRB(ob.Left + rdx, ob.Top, ob.Right, ob.Bottom),       // Left
+                    6 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + rdx, ob.Bottom),       // Right
+                    7 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right, ob.Bottom + rdy),       // Bottom
+                    _ => ob
+                };
+                if (nb.Width > 5 && nb.Height > 5)
+                {
+                    _annotations[_selectedAnnotationIndex] = AnnotationTransforms.Scale(_selectResizeOriginalAnnotation, ob, nb);
+                }
+                Invalidate();
+                break;
             case CanvasTool.Move when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
                 int dx = img.X - _selectDragStartImg.X;
                 int dy = img.Y - _selectDragStartImg.Y;
@@ -699,6 +753,17 @@ public sealed partial class AnnotationCanvas
 
         switch (_activeTool)
         {
+            case CanvasTool.Move when _isSelectResizing && _selectedAnnotationIndex >= 0 && _selectResizeOriginalAnnotation is not null:
+                var scaled = _annotations[_selectedAnnotationIndex];
+                if (!Equals(_selectResizeOriginalAnnotation, scaled))
+                {
+                    Push(new ReplaceAnnotationCommand(_selectedAnnotationIndex, _selectResizeOriginalAnnotation, scaled));
+                }
+                _isSelectResizing = false;
+                _selectResizeHandle = -1;
+                _selectResizeOriginalAnnotation = null;
+                Invalidate();
+                break;
             case CanvasTool.Move when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
                 var moved = _annotations[_selectedAnnotationIndex];
                 int tdx = 0, tdy = 0;
@@ -1295,5 +1360,31 @@ public sealed partial class AnnotationCanvas
             return Cursors.SizeAll;
 
         return Cursors.Cross;
+    }
+
+    private int GetSelectHandle(Point screenPt)
+    {
+        if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count)
+            return -1;
+        var selected = _annotations[_selectedAnnotationIndex];
+        var bounds = GetAnnotationVisualBounds(selected);
+        var screenRect = Rectangle.Round(ImageToScreenRect(bounds));
+        var selRect = Rectangle.Inflate(screenRect, 4, 4);
+        var handles = new[] {
+            new Point(selRect.X, selRect.Y),                           // 0: TL
+            new Point(selRect.Right - 1, selRect.Y),                   // 1: TR
+            new Point(selRect.X, selRect.Bottom - 1),                  // 2: BL
+            new Point(selRect.Right - 1, selRect.Bottom - 1),          // 3: BR
+            new Point(selRect.X + selRect.Width / 2, selRect.Y),       // 4: Top
+            new Point(selRect.X, selRect.Y + selRect.Height / 2),      // 5: Left
+            new Point(selRect.Right - 1, selRect.Y + selRect.Height / 2),// 6: Right
+            new Point(selRect.X + selRect.Width / 2, selRect.Bottom - 1)// 7: Bottom
+        };
+        for (int i = 0; i < 8; i++)
+        {
+            var hr = WindowsHandleRenderer.HitRect(handles[i]);
+            if (hr.Contains(screenPt)) return i;
+        }
+        return -1;
     }
 }

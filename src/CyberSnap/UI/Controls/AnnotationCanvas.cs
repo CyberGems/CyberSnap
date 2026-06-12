@@ -61,6 +61,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private int _moveHoverIndex = -1;
     private Annotation? _selectOriginalAnnotation;
     private Point _selectDragStartImg;
+    private bool _isSelectResizing;
+    private int _selectResizeHandle = -1;
+    private Rectangle _selectHandleBounds;
+    private Annotation? _selectResizeOriginalAnnotation;
 
     // Guide Lines hover and active drag state
     private int _hoveredHorizontalGuideIndex = -1;

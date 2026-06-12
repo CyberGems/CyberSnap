@@ -488,36 +488,9 @@ public sealed partial class RegionOverlayForm
         return -1;
     }
 
-    /// <summary>Scales an annotation by adjusting its bounds from a corner handle drag.</summary>
     private static Annotation ScaleAnnotation(Annotation a, Rectangle oldBounds, Rectangle newBounds)
     {
-        if (oldBounds.Width <= 0 || oldBounds.Height <= 0) return a;
-        double sx = (double)newBounds.Width / oldBounds.Width;
-        double sy = (double)newBounds.Height / oldBounds.Height;
-        int ox = newBounds.X - (int)(oldBounds.X * sx);
-        int oy = newBounds.Y - (int)(oldBounds.Y * sy);
-
-        Point ScalePt(Point p) => new((int)(p.X * sx) + ox, (int)(p.Y * sy) + oy);
-        Rectangle ScaleRect(Rectangle r) => new((int)(r.X * sx) + ox, (int)(r.Y * sy) + oy,
-            Math.Max(1, (int)(r.Width * sx)), Math.Max(1, (int)(r.Height * sy)));
-
-        return a switch
-        {
-            ArrowAnnotation arr => arr with { From = ScalePt(arr.From), To = ScalePt(arr.To) },
-            LineAnnotation ln => ln with { From = ScalePt(ln.From), To = ScalePt(ln.To) },
-            RulerAnnotation ru => ru with { From = ScalePt(ru.From), To = ScalePt(ru.To) },
-            BlurRect br => br with { Rect = ScaleRect(br.Rect) },
-            HighlightAnnotation hl => hl with { Rect = ScaleRect(hl.Rect) },
-            RectShapeAnnotation rs => rs with { Rect = ScaleRect(rs.Rect) },
-            CircleShapeAnnotation cs => cs with { Rect = ScaleRect(cs.Rect) },
-            EraserFill ef => ef with { Rect = ScaleRect(ef.Rect) },
-            EmojiAnnotation em => em with { Pos = ScalePt(em.Pos), Size = Math.Max(8f, em.Size * (float)Math.Max(sx, sy)) },
-            TextAnnotation ta => ta with { Pos = ScalePt(ta.Pos), FontSize = Math.Clamp(ta.FontSize * (float)Math.Max(sx, sy), 10f, 120f) },
-            StepNumberAnnotation sn => sn with { Pos = ScalePt(sn.Pos) },
-            DrawStroke ds => ds with { Points = ds.Points.Select(p => ScalePt(p)).ToList() },
-            CurvedArrowAnnotation ca => ca with { Points = ca.Points.Select(p => ScalePt(p)).ToList() },
-            _ => a
-        };
+        return AnnotationTransforms.Scale(a, oldBounds, newBounds);
     }
 
     private bool RemoveAnnotation(Annotation annotation)
