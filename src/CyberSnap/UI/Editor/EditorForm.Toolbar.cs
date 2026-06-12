@@ -824,6 +824,8 @@ public sealed partial class EditorForm
             RegisterHoverTooltip(button, labelKey);
         else if (tool is AnnotationCanvas.CanvasTool.Move)
             RegisterHoverTooltip(button, "Move & Resize");
+        else if (tool is AnnotationCanvas.CanvasTool.Pan)
+            RegisterHoverTooltip(button, "Pan");
 
         parent.Controls.Add(button, column, row);
     }

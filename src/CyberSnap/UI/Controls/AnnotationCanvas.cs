@@ -56,6 +56,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private Point _panStart;
     private PointF _panStartOffset;
     private CanvasTool? _preSpaceTool;
+    private int _preSpaceSelectedAnnotationIndex = -1;
+    private Annotation? _preSpaceSelectOriginalAnnotation;
 
     // Selection state (Move tool)
     private int _selectedAnnotationIndex = -1;
