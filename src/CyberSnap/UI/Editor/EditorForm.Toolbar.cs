@@ -1783,7 +1783,24 @@ internal sealed class EditorColorButton : Button
     {
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(Parent?.BackColor ?? EditorColors.BgSecondary);
+        var backColor = Parent?.BackColor ?? EditorColors.BgSecondary;
+        if (backColor == Color.Transparent)
+        {
+            Control? p = Parent;
+            while (p != null && p.BackColor == Color.Transparent)
+            {
+                p = p.Parent;
+            }
+            if (p != null)
+            {
+                backColor = p.BackColor;
+            }
+        }
+        if (backColor == Color.Transparent)
+        {
+            backColor = EditorColors.BgSecondary;
+        }
+        g.Clear(backColor);
 
         var outer = new Rectangle(0, 0, Width - 1, Height - 1);
         using (var outerPath = EditorPaint.RoundedRect(outer, 7))
@@ -1853,7 +1870,24 @@ internal sealed class EditorStrokeWidthButton : Button
     {
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(Parent?.BackColor ?? EditorColors.BgSecondary);
+        var backColor = Parent?.BackColor ?? EditorColors.BgSecondary;
+        if (backColor == Color.Transparent)
+        {
+            Control? p = Parent;
+            while (p != null && p.BackColor == Color.Transparent)
+            {
+                p = p.Parent;
+            }
+            if (p != null)
+            {
+                backColor = p.BackColor;
+            }
+        }
+        if (backColor == Color.Transparent)
+        {
+            backColor = EditorColors.BgSecondary;
+        }
+        g.Clear(backColor);
 
         var outer = new Rectangle(0, 0, Width - 1, Height - 1);
         using (var outerPath = EditorPaint.RoundedRect(outer, 7))
