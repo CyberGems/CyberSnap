@@ -359,5 +359,8 @@
   "System messages": "System messages",
   "Bottom Left": "Bottom Left",
   "Bottom Right": "Bottom Right",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Place guides inside the canvas": "Place guides inside the canvas",
+  "Guide removed": "Guide removed",
+  "All Guides Cleared": "All Guides Cleared"
 }

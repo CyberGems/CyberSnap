@@ -269,7 +269,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private BannerState _bannerState = BannerState.FadeIn;
     private bool _bannerIsSticky;
 
-    private void ShowToolBanner(string text, bool sticky = false)
+    public void ShowToolBanner(string text, bool sticky = false)
     {
         if (!_showBanners) return;
 
@@ -493,6 +493,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         var oldBaseBitmap = _baseBitmap;
         _baseBitmap = newBaseBitmap;
         _annotations.Clear();
+        ClearAllGuides();
         ClearEditHistory();
         _zoom = 1.0;
         _pan = PointF.Empty;

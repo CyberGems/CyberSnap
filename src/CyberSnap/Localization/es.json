@@ -411,5 +411,8 @@
   "Bottom Left": "Abajo a la izquierda",
   "Bottom Right": "Abajo a la derecha",
   "Paste an image (Ctrl+V) or double-click to open a file": "Pega una imagen (Ctrl+V) o haz doble clic para abrir un archivo",
-  "Enter / Double-click to confirm": "Enter / Doble clic para confirmar"
+  "Enter / Double-click to confirm": "Enter / Doble clic para confirmar",
+  "Place guides inside the canvas": "Coloca las guías dentro del lienzo",
+  "Guide removed": "Guía eliminada",
+  "All Guides Cleared": "Todas las guías eliminadas"
 }
