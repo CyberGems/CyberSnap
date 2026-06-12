@@ -1188,7 +1188,7 @@ internal static class EditorColors
     public static readonly Color AccentPressed = Color.FromArgb(0, 210, 230);
     public static readonly Color Border = Color.FromArgb(76, 0, 255, 255);
     public static readonly Color BorderSubtle = Color.FromArgb(34, 0, 255, 255);
-    public static readonly Color WindowBorder = Color.FromArgb(46, 255, 255, 255);
+    public static readonly Color WindowBorder = Color.FromArgb(75, 0, 255, 255);
 }
 
 internal sealed class EditorWindowFrame : DoubleBufferedPanel
@@ -1205,10 +1205,8 @@ internal sealed class EditorWindowFrame : DoubleBufferedPanel
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
 
-        using var border = new Pen(EditorColors.WindowBorder, 1.4f);
-        using var glow = new Pen(Color.FromArgb(34, EditorColors.Accent), 3f);
+        using var border = new Pen(EditorColors.WindowBorder, 1.0f);
         using var path = EditorPaint.RoundedRect(rect, EditorPaint.WindowCornerRadius - inset);
-        e.Graphics.DrawPath(glow, path);
         e.Graphics.DrawPath(border, path);
     }
 
