@@ -85,25 +85,19 @@ public sealed partial class RegionOverlayForm
         // Live tool previews (active drawing in progress)
         PaintAnnotations(g);
 
-        // Select tool: draw selection highlight and handles
-        if (_mode == CaptureMode.Select && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
+        // Move tool: hover highlight
+        if (_mode == CaptureMode.Move && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex)
+        {
+            var hoverBounds = GetAnnotationBounds(_undoStack[_moveHoverIndex]);
+            DrawMoveHandles(g, hoverBounds, isSelected: false);
+        }
+
+        // Move tool: draw selection highlight and handles
+        if (_mode == CaptureMode.Move && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
         {
             var selected = _selectPreviewAnnotation ?? _undoStack[_selectedAnnotationIndex];
             var bounds = GetAnnotationBounds(selected);
-            if (bounds.Width > 0 && bounds.Height > 0)
-            {
-                var selRect = Rectangle.Inflate(bounds, 4, 4);
-                SelectionFrameRenderer.DrawRectangle(g, selRect, fill: false);
-
-                var corners = new[] {
-                    new PointF(selRect.X, selRect.Y),
-                    new PointF(selRect.Right - 1, selRect.Y),
-                    new PointF(selRect.X, selRect.Bottom - 1),
-                    new PointF(selRect.Right - 1, selRect.Bottom - 1),
-                };
-                foreach (var c in corners)
-                    WindowsHandleRenderer.Paint(g, WindowsHandleRenderer.CenteredAt(c));
-            }
+            DrawMoveHandles(g, bounds, isSelected: true);
         }
 
         // Eraser hover highlight
@@ -477,6 +471,86 @@ public sealed partial class RegionOverlayForm
         {
             g.Restore(state);
         }
+    }
+
+    /// <summary>
+    /// Draws premium crop-style L-corner handles and mid-edge bars for the Move tool.
+    /// Mirrors <c>AnnotationCanvas.DrawMoveHandles</c> but operates in screen-space (no zoom).
+    /// </summary>
+    private static void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected)
+    {
+        if (bounds.Width <= 0 || bounds.Height <= 0) return;
+
+        const float penWidthThick  = 3.5f;
+        const float penWidthShadow = 5.5f;
+        const float len    = 12f;
+        const float barLen = 14f;
+        const float offset = 4f; // offset outside bounds
+
+        var rect = new RectangleF(
+            bounds.X - offset,
+            bounds.Y - offset,
+            bounds.Width  + 2 * offset,
+            bounds.Height + 2 * offset
+        );
+
+        int accentAlpha = isSelected ? 255 : 120;
+        int shadowAlpha = isSelected ? 100 : 50;
+        int fillAlpha   = isSelected ? 15  : 10;
+        int dashAlpha   = isSelected ? 180 : 80;
+
+        var accentColor = Color.FromArgb(accentAlpha, 0, 255, 255);
+        var shadowColor = Color.FromArgb(shadowAlpha, 0, 0, 0);
+
+        // Subtle cyan fill
+        using (var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, 0, 255, 255)))
+            g.FillRectangle(fillBrush, rect);
+
+        // Dashed outline
+        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, 0, 255, 255), 1.5f))
+        {
+            dashPen.DashStyle = DashStyle.Dash;
+            dashPen.DashPattern = new[] { 4f, 3f };
+            g.DrawRectangle(dashPen, rect.X, rect.Y, rect.Width, rect.Height);
+        }
+
+        using var thickPen  = new Pen(accentColor, penWidthThick)  { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using var shadowPen = new Pen(shadowColor, penWidthShadow) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+
+        // L-shaped corners
+        DrawL(g, shadowPen, rect.Left,  rect.Top,     len,  len);
+        DrawL(g, thickPen,  rect.Left,  rect.Top,     len,  len);
+
+        DrawL(g, shadowPen, rect.Right, rect.Top,    -len,  len);
+        DrawL(g, thickPen,  rect.Right, rect.Top,    -len,  len);
+
+        DrawL(g, shadowPen, rect.Left,  rect.Bottom,  len, -len);
+        DrawL(g, thickPen,  rect.Left,  rect.Bottom,  len, -len);
+
+        DrawL(g, shadowPen, rect.Right, rect.Bottom, -len, -len);
+        DrawL(g, thickPen,  rect.Right, rect.Bottom, -len, -len);
+
+        // Mid-edge bars
+        float midX = rect.Left + rect.Width  / 2f;
+        float midY = rect.Top  + rect.Height / 2f;
+
+        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Top,    midX + barLen / 2f, rect.Top);
+        g.DrawLine(thickPen,  midX - barLen / 2f, rect.Top,    midX + barLen / 2f, rect.Top);
+
+        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
+        g.DrawLine(thickPen,  midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
+
+        g.DrawLine(shadowPen, rect.Left,  midY - barLen / 2f, rect.Left,  midY + barLen / 2f);
+        g.DrawLine(thickPen,  rect.Left,  midY - barLen / 2f, rect.Left,  midY + barLen / 2f);
+
+        g.DrawLine(shadowPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+        g.DrawLine(thickPen,  rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+    }
+
+    private static void DrawL(Graphics g, Pen pen, float x, float y, float dx, float dy)
+    {
+        g.DrawLine(pen, x, y, x + dx, y);
+        g.DrawLine(pen, x, y, x, y + dy);
     }
 
 }

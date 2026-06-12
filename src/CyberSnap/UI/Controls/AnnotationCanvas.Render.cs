@@ -85,20 +85,102 @@ public sealed partial class AnnotationCanvas
             }
         }
 
+        // Move hover highlight
+        if (_activeTool == CanvasTool.Move && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count && _moveHoverIndex != _selectedAnnotationIndex)
+        {
+            var bounds = GetAnnotationVisualBounds(_annotations[_moveHoverIndex]);
+            DrawMoveHandles(g, bounds, isSelected: false);
+        }
+
         // Selection highlight
         if (_selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _annotations.Count)
         {
             var bounds = GetAnnotationVisualBounds(_annotations[_selectedAnnotationIndex]);
-            if (bounds.Width > 0 && bounds.Height > 0)
-            {
-                using var pen = new Pen(Color.FromArgb(220, 0, 136, 255), 1.5f)
-                {
-                    DashStyle = DashStyle.Dash,
-                    DashPattern = new[] { 4f, 3f }
-                };
-                g.DrawRectangle(pen, bounds.X - 4, bounds.Y - 4, bounds.Width + 8, bounds.Height + 8);
-            }
+            DrawMoveHandles(g, bounds, isSelected: true);
         }
+    }
+
+    private void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected)
+    {
+        if (bounds.Width <= 0 || bounds.Height <= 0) return;
+
+        float z = (float)_zoom;
+        if (z <= 0.01f) z = 1.0f;
+
+        float penWidthThick = 3.5f / z;
+        float penWidthShadow = 5.5f / z;
+        float len = 12f / z;
+        float barLen = 14f / z;
+        float offset = 4f / z; // offset outside bounds
+
+        var rect = new RectangleF(
+            bounds.X - offset,
+            bounds.Y - offset,
+            bounds.Width + 2 * offset,
+            bounds.Height + 2 * offset
+        );
+
+        // Alpha values
+        int accentAlpha = isSelected ? 255 : 120;
+        int shadowAlpha = isSelected ? 100 : 50;
+        int fillAlpha = isSelected ? 15 : 10; // subtle cyan tint
+        int dashAlpha = isSelected ? 180 : 80;
+
+        var accentColor = Color.FromArgb(accentAlpha, 0, 255, 255);
+        var shadowColor = Color.FromArgb(shadowAlpha, 0, 0, 0);
+
+        // Fill and dash
+        using (var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, 0, 255, 255)))
+        {
+            g.FillRectangle(fillBrush, rect);
+        }
+
+        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, 0, 255, 255), 1.5f / z))
+        {
+            dashPen.DashStyle = DashStyle.Dash;
+            dashPen.DashPattern = new[] { 4f, 3f };
+            g.DrawRectangle(dashPen, rect.X, rect.Y, rect.Width, rect.Height);
+        }
+
+        using var thickPen = new Pen(accentColor, penWidthThick) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        using var shadowPen = new Pen(shadowColor, penWidthShadow) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+
+        // 1. Draw Corners (L-shapes)
+        // Top-Left
+        DrawL(g, shadowPen, rect.Left, rect.Top, len, len);
+        DrawL(g, thickPen, rect.Left, rect.Top, len, len);
+
+        // Top-Right
+        DrawL(g, shadowPen, rect.Right, rect.Top, -len, len);
+        DrawL(g, thickPen, rect.Right, rect.Top, -len, len);
+
+        // Bottom-Left
+        DrawL(g, shadowPen, rect.Left, rect.Bottom, len, -len);
+        DrawL(g, thickPen, rect.Left, rect.Bottom, len, -len);
+
+        // Bottom-Right
+        DrawL(g, shadowPen, rect.Right, rect.Bottom, -len, -len);
+        DrawL(g, thickPen, rect.Right, rect.Bottom, -len, -len);
+
+        // 2. Draw Mid-edges (Pills/bars)
+        float midX = rect.Left + rect.Width / 2f;
+        float midY = rect.Top + rect.Height / 2f;
+
+        // Top edge
+        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
+        g.DrawLine(thickPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
+
+        // Bottom edge
+        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
+        g.DrawLine(thickPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
+
+        // Left edge
+        g.DrawLine(shadowPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
+        g.DrawLine(thickPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
+
+        // Right edge
+        g.DrawLine(shadowPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+        g.DrawLine(thickPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
     }
 
     private void RenderAnnotation(Graphics g, Annotation a)

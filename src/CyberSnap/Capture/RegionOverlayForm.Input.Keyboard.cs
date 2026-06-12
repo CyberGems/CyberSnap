@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Windows.Forms;
 using CyberSnap.Models;
 
@@ -148,7 +148,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // Delete selected annotation
-        if (e.KeyCode == Keys.Delete && _mode == CaptureMode.Select && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
+        if (e.KeyCode == Keys.Delete && _mode == CaptureMode.Move && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
         {
             DeleteAnnotationAt(_selectedAnnotationIndex);
             return;

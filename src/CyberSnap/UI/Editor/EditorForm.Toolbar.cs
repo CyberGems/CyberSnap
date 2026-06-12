@@ -572,7 +572,7 @@ public sealed partial class EditorForm
         nav.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
         AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
-        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Select, "select", "Select");
+        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Move");
         AddToolButton(nav, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop");
         AddToolButton(nav, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser");
 
@@ -1033,7 +1033,7 @@ public sealed partial class EditorForm
         return _canvas.ActiveTool switch
         {
             AnnotationCanvas.CanvasTool.Pan => "Pan",
-            AnnotationCanvas.CanvasTool.Select => "Select",
+            AnnotationCanvas.CanvasTool.Move => "Move",
             AnnotationCanvas.CanvasTool.Crop => "Crop",
             AnnotationCanvas.CanvasTool.Text => "Text",
             AnnotationCanvas.CanvasTool.Draw => "Draw",
@@ -2198,52 +2198,47 @@ internal sealed class EditorZoomBarButton : Button
         var parentBackColor = Parent?.BackColor ?? EditorColors.TitleBar;
         g.Clear(parentBackColor == Color.Transparent ? EditorColors.TitleBar : parentBackColor);
 
-        var rect = new Rectangle(1, 1, Width - 3, Height - 3);
+        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
         if (rect.Width <= 0 || rect.Height <= 0) return;
 
-        Color fill = EditorColors.TitleBar;
-        Color contentColor = EditorColors.Accent;
-        Color glowColor = Color.FromArgb(42, EditorColors.Accent);
-        Color borderColor = EditorColors.Border;
+        // Ghost-button styling that mirrors the top-bar command buttons: no chrome at rest,
+        // a soft accent wash + underline on hover/press. Label stays inline (horizontal) to
+        // respect the tighter vertical space of the status bar.
+        Color fill = Color.Transparent;
+        Color contentColor = Enabled ? EditorColors.TextPrimary : Color.FromArgb(88, 105, 128);
 
-        if (!Enabled)
+        if (Enabled)
         {
-            fill = Color.FromArgb(16, 18, 28);
-            contentColor = Color.FromArgb(88, 105, 128);
-            glowColor = Color.Transparent;
-            borderColor = Color.FromArgb(26, 255, 255, 255);
-        }
-        else if (_pressed)
-        {
-            fill = Color.FromArgb(24, 28, 42);
-            glowColor = Color.FromArgb(70, EditorColors.Accent);
-            borderColor = Color.FromArgb(200, EditorColors.Accent);
-        }
-        else if (_hover)
-        {
-            fill = Color.FromArgb(18, 22, 33);
-            glowColor = Color.FromArgb(60, EditorColors.Accent);
-            borderColor = Color.FromArgb(150, EditorColors.Accent);
-        }
-
-        using (var path = EditorPaint.RoundedRect(rect, 8))
-        using (var brush = new SolidBrush(fill))
-        using (var glowPen = new Pen(glowColor, 3f))
-        using (var borderPen = new Pen(borderColor, (_hover || _pressed) ? 1.4f : 1f))
-        {
-            g.FillPath(brush, path);
-            if (glowColor != Color.Transparent)
+            if (_pressed)
             {
-                g.DrawPath(glowPen, path);
+                fill = Color.FromArgb(36, EditorColors.Accent);
+                contentColor = EditorColors.Accent;
             }
-            g.DrawPath(borderPen, path);
+            else if (_hover)
+            {
+                fill = Color.FromArgb(20, EditorColors.Accent);
+                contentColor = EditorColors.Accent;
+            }
         }
 
-        var iconSize = Math.Min(20, Math.Max(16, rect.Height - 22));
+        if (fill != Color.Transparent)
+        {
+            using var path = EditorPaint.RoundedRect(rect, 6);
+            using var brush = new SolidBrush(fill);
+            g.FillPath(brush, path);
+        }
+
+        if (Enabled && (_hover || _pressed))
+        {
+            using var underlineBrush = new SolidBrush(EditorColors.Accent);
+            g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
+        }
+
+        var iconSize = 22;
         var iconRect = new RectangleF(rect.Left + 12, rect.Top + (rect.Height - iconSize) / 2f, iconSize, iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed));
 
-        var textRect = new Rectangle(rect.Left + 36, rect.Top + 1, rect.Width - 42, rect.Height - 2);
+        var textRect = new Rectangle(rect.Left + 40, rect.Top, rect.Width - 46, rect.Height);
         TextRenderer.DrawText(
             g,
             Text,

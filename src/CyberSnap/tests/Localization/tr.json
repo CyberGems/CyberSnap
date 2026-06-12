@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Genel",
   "Toast": "Tost",
   "Tools": "AraÃ§lar",
@@ -121,7 +121,7 @@
   "Uninstall CyberSnap": "CyberSnap'i KaldÄ±r",
   "Export settings": "AyarlarÄ± dÄ±ÅŸa aktar",
   "Import settings": "AyarlarÄ± iÃ§e aktar",
-  "Select": "SeÃ§",
+  "Move": "SeÃ§",
   "Clear all": "TÃ¼mÃ¼nÃ¼ temizle",
   "Delete selected": "SeÃ§ileni sil",
   "Images": "GÃ¶rseller",

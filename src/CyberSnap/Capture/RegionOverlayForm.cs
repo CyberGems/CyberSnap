@@ -211,6 +211,9 @@ public sealed partial class RegionOverlayForm : Form
     // Eraser hover highlight
     private int _eraserHoverIndex = -1;
 
+    // Move tool hover highlight (mirrors Editor's _moveHoverIndex)
+    private int _moveHoverIndex = -1;
+
     private bool _isTyping;
     private Point _textPos;
     private string _textBuffer = "";
