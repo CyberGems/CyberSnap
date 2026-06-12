@@ -36,6 +36,9 @@ namespace CyberSnap.UI.Editor
         private readonly List<ToggleButton> _strokeWidthButtons = new();
         private readonly Dictionary<AnnotationCanvas.CanvasTool, ToggleButton> _toolButtons = new();
 
+        private readonly Dictionary<AnnotationCanvas.CanvasTool, ImageSource> _toolNormalIcons = new();
+        private readonly Dictionary<AnnotationCanvas.CanvasTool, ImageSource> _toolActiveIcons = new();
+
         private static readonly Color[] PaletteColors =
         {
             Color.FromArgb(0, 255, 255),
@@ -222,25 +225,32 @@ namespace CyberSnap.UI.Editor
             BtnSave.Tag = FluentIcons.RenderWpf("save", white, 16);
             BtnSaveAs.Tag = FluentIcons.RenderWpf("folder", white, 16);
 
-            // Tools (Navigation)
-            ToolPan.Tag = FluentIcons.RenderWpf("pan", white, 16);
-            ToolSelect.Tag = FluentIcons.RenderWpf("select", white, 16);
-            ToolCrop.Tag = FluentIcons.RenderWpf("rect", white, 16);
-            ToolEraser.Tag = FluentIcons.RenderWpf("eraser", white, 16);
+            // Populate normal and active tool icon dictionaries
+            var toolIconIds = new Dictionary<AnnotationCanvas.CanvasTool, string>
+            {
+                { AnnotationCanvas.CanvasTool.Pan, "pan" },
+                { AnnotationCanvas.CanvasTool.Select, "select" },
+                { AnnotationCanvas.CanvasTool.Crop, "rect" },
+                { AnnotationCanvas.CanvasTool.Eraser, "eraser" },
+                { AnnotationCanvas.CanvasTool.Draw, "draw" },
+                { AnnotationCanvas.CanvasTool.Arrow, "arrow" },
+                { AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow" },
+                { AnnotationCanvas.CanvasTool.Line, "line" },
+                { AnnotationCanvas.CanvasTool.Rect, "rectShape" },
+                { AnnotationCanvas.CanvasTool.Circle, "circleShape" },
+                { AnnotationCanvas.CanvasTool.Text, "text" },
+                { AnnotationCanvas.CanvasTool.Highlight, "highlight" },
+                { AnnotationCanvas.CanvasTool.Blur, "blur" },
+                { AnnotationCanvas.CanvasTool.StepNumber, "step" },
+                { AnnotationCanvas.CanvasTool.Magnifier, "magnifier" },
+                { AnnotationCanvas.CanvasTool.Emoji, "emoji" }
+            };
 
-            // Tools (Drawing)
-            ToolDraw.Tag = FluentIcons.RenderWpf("draw", white, 16);
-            ToolArrow.Tag = FluentIcons.RenderWpf("arrow", white, 16);
-            ToolCurved.Tag = FluentIcons.RenderWpf("curvedArrow", white, 16);
-            ToolLine.Tag = FluentIcons.RenderWpf("line", white, 16);
-            ToolRect.Tag = FluentIcons.RenderWpf("rectShape", white, 16);
-            ToolCircle.Tag = FluentIcons.RenderWpf("circleShape", white, 16);
-            ToolText.Tag = FluentIcons.RenderWpf("text", white, 16);
-            ToolHighlight.Tag = FluentIcons.RenderWpf("highlight", white, 16);
-            ToolBlur.Tag = FluentIcons.RenderWpf("blur", white, 16);
-            ToolStep.Tag = FluentIcons.RenderWpf("step", white, 16);
-            ToolMagnifier.Tag = FluentIcons.RenderWpf("magnifier", white, 16);
-            ToolEmoji.Tag = FluentIcons.RenderWpf("emoji", white, 16);
+            foreach (var kv in toolIconIds)
+            {
+                _toolNormalIcons[kv.Key] = FluentIcons.RenderWpf(kv.Value, white, 22)!;
+                _toolActiveIcons[kv.Key] = FluentIcons.RenderWpf(kv.Value, accent, 22)!;
+            }
         }
 
         private void MapToolButtons()
@@ -272,11 +282,10 @@ namespace CyberSnap.UI.Editor
                 {
                     Width = 32,
                     Height = 32,
-                    Margin = new Thickness(2),
+                    Margin = new Thickness(3),
                     Cursor = System.Windows.Input.Cursors.Hand,
+                    Style = (Style)FindResource("SwatchButton"),
                     Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B)),
-                    BorderBrush = System.Windows.Media.Brushes.Transparent,
-                    BorderThickness = new Thickness(1),
                     ToolTip = color.Name
                 };
                 
@@ -300,17 +309,18 @@ namespace CyberSnap.UI.Editor
             {
                 var btn = new ToggleButton
                 {
-                    Height = 32,
-                    Width = 32,
-                    Margin = new Thickness(2),
+                    Height = 34,
+                    Margin = new Thickness(4),
                     Cursor = System.Windows.Input.Cursors.Hand,
+                    Style = (Style)FindResource("StrokeWidthButton"),
                     Content = new Border
                     {
                         Height = Math.Max(2, w),
                         Background = System.Windows.Media.Brushes.White,
                         CornerRadius = new CornerRadius(Math.Max(1, w / 2)),
                         VerticalAlignment = VerticalAlignment.Center,
-                        HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch
+                        HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+                        Margin = new Thickness(6, 0, 6, 0)
                     }
                 };
 
@@ -332,7 +342,6 @@ namespace CyberSnap.UI.Editor
             foreach (var kv in _colorButtons)
             {
                 kv.Value.IsChecked = kv.Key.ToArgb() == _canvas.ToolColor.ToArgb();
-                kv.Value.BorderBrush = kv.Value.IsChecked == true ? System.Windows.Media.Brushes.Cyan : System.Windows.Media.Brushes.Transparent;
             }
         }
 
@@ -345,7 +354,6 @@ namespace CyberSnap.UI.Editor
                 {
                     bool isChecked = Math.Abs(border.Height - _canvas.StrokeWidth) < 0.01f;
                     btn.IsChecked = isChecked;
-                    btn.BorderBrush = isChecked ? System.Windows.Media.Brushes.Cyan : System.Windows.Media.Brushes.Transparent;
                 }
             }
         }
@@ -370,6 +378,12 @@ namespace CyberSnap.UI.Editor
             }
             UpdateToolButtonState();
             UpdateCaptureCaption();
+
+            // Toggle watermark visibility
+            if (ImgWatermark != null && _canvas != null)
+            {
+                ImgWatermark.Visibility = _canvas.IsDefaultBlank ? Visibility.Visible : Visibility.Collapsed;
+            }
         }
 
         private void UpdateZoomStatus()
@@ -384,7 +398,16 @@ namespace CyberSnap.UI.Editor
             var active = _canvas.ActiveTool;
             foreach (var kv in _toolButtons)
             {
-                kv.Value.IsChecked = kv.Key == active;
+                bool isChecked = kv.Key == active;
+                kv.Value.IsChecked = isChecked;
+                if (isChecked && _toolActiveIcons.TryGetValue(kv.Key, out var activeIcon))
+                {
+                    kv.Value.Tag = activeIcon;
+                }
+                else if (_toolNormalIcons.TryGetValue(kv.Key, out var normalIcon))
+                {
+                    kv.Value.Tag = normalIcon;
+                }
             }
             UpdateColorSwatchSelection();
             UpdateStrokeWidthSelection();
