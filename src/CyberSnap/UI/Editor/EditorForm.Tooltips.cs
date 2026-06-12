@@ -44,6 +44,14 @@ public sealed partial class EditorForm
 
     private void TooltipTimer_Tick(object? sender, EventArgs e)
     {
+        // Never change tooltip visibility while a mouse button is held. Showing a tooltip
+        // window mid-click — e.g. right after a click activates the editor (the emoji picker
+        // was the foreground window) and the cursor sits on a tooltip-bearing tool button —
+        // steals the pressed button's mouse capture, so the click never completes and the
+        // user needs a second click to actually switch tools.
+        if (Control.MouseButtons != MouseButtons.None)
+            return;
+
         var fg = GetForegroundWindow();
         bool isWindowActive = fg == Handle || (_hoverToolTip != null && fg == _hoverToolTip.Handle);
         if (IsDisposed || !Visible || !isWindowActive)
