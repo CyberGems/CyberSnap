@@ -212,6 +212,35 @@ namespace CyberSnap.UI.Editor
             CoordsIcon.Source = FluentIcons.RenderWpf("select", accent, 20);
             DimsIcon.Source = FluentIcons.RenderWpf("rect", accent, 20);
             FileIcon.Source = FluentIcons.RenderWpf("camera", accent, 20);
+
+            // Action Buttons
+            BtnUndo.Tag = FluentIcons.RenderWpf("undo", white, 16);
+            BtnRedo.Tag = FluentIcons.RenderWpf("redo", white, 16);
+            BtnOpen.Tag = FluentIcons.RenderWpf("document", white, 16);
+            BtnPaste.Tag = FluentIcons.RenderWpf("arrow", white, 16);
+            BtnCopy.Tag = FluentIcons.RenderWpf("copy", white, 16);
+            BtnSave.Tag = FluentIcons.RenderWpf("save", white, 16);
+            BtnSaveAs.Tag = FluentIcons.RenderWpf("folder", white, 16);
+
+            // Tools (Navigation)
+            ToolPan.Tag = FluentIcons.RenderWpf("pan", white, 16);
+            ToolSelect.Tag = FluentIcons.RenderWpf("select", white, 16);
+            ToolCrop.Tag = FluentIcons.RenderWpf("rect", white, 16);
+            ToolEraser.Tag = FluentIcons.RenderWpf("eraser", white, 16);
+
+            // Tools (Drawing)
+            ToolDraw.Tag = FluentIcons.RenderWpf("draw", white, 16);
+            ToolArrow.Tag = FluentIcons.RenderWpf("arrow", white, 16);
+            ToolCurved.Tag = FluentIcons.RenderWpf("curvedArrow", white, 16);
+            ToolLine.Tag = FluentIcons.RenderWpf("line", white, 16);
+            ToolRect.Tag = FluentIcons.RenderWpf("rectShape", white, 16);
+            ToolCircle.Tag = FluentIcons.RenderWpf("circleShape", white, 16);
+            ToolText.Tag = FluentIcons.RenderWpf("text", white, 16);
+            ToolHighlight.Tag = FluentIcons.RenderWpf("highlight", white, 16);
+            ToolBlur.Tag = FluentIcons.RenderWpf("blur", white, 16);
+            ToolStep.Tag = FluentIcons.RenderWpf("step", white, 16);
+            ToolMagnifier.Tag = FluentIcons.RenderWpf("magnifier", white, 16);
+            ToolEmoji.Tag = FluentIcons.RenderWpf("emoji", white, 16);
         }
 
         private void MapToolButtons()
