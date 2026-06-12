@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Kenraali",
   "Toast": "PaahtoleipÃ¤Ã¤",
   "Tools": "TyÃ¶kalut",
@@ -121,7 +121,7 @@
   "Uninstall CyberSnap": "Poista CyberSnap",
   "Export settings": "Vie asetukset",
   "Import settings": "Tuo asetukset",
-  "Select": "Valitse",
+  "Move": "Valitse",
   "Clear all": "TyhjennÃ¤ kaikki",
   "Delete selected": "Poista valitut",
   "Images": "Kuvat",

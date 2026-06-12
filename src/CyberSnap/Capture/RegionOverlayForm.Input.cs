@@ -263,7 +263,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // Select tool: check resize handles first, then hit-test annotations
-        if (_mode == CaptureMode.Select)
+        if (_mode == CaptureMode.Move)
         {
             // Check resize handles on already-selected annotation
             int handle = GetSelectHandle(e.Location);

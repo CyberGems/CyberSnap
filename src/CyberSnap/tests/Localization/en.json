@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "General",
   "Toast": "Toast",
   "Tools": "Tools",
@@ -122,7 +122,7 @@
   "Uninstall CyberSnap": "Uninstall CyberSnap",
   "Export settings": "Export settings",
   "Import settings": "Import settings",
-  "Select": "Select",
+  "Move": "Select",
   "Clear all": "Clear all",
   "Delete selected": "Delete selected",
   "Images": "Images",

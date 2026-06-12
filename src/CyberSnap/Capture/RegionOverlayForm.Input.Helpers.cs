@@ -130,6 +130,7 @@ public sealed partial class RegionOverlayForm
         HideFontSearchBox();
         _emojiHovered = -1;
         _eraserHoverIndex = -1;
+        _moveHoverIndex = -1;
         _mode = m;
         _activeToolId = toolId ?? _visibleTools.FirstOrDefault(t => t.Mode == m)?.Id;
         _hasSelection = false;

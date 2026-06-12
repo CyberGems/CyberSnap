@@ -10,7 +10,7 @@ public enum CaptureMode
     Sticker = 5,
     Upscale = 6,
 
-    Select = 7,
+    Move = 7,
     Ruler = 8,
     Draw = 9,
     Highlight = 10,

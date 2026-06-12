@@ -125,6 +125,11 @@ public sealed partial class AnnotationCanvas
             _eraserHoverIndex = -1;
             Invalidate();
         }
+        if (_moveHoverIndex >= 0)
+        {
+            _moveHoverIndex = -1;
+            Invalidate();
+        }
         CommitOrCancelInlineText(commit: false);
     }
 
@@ -133,7 +138,7 @@ public sealed partial class AnnotationCanvas
         Cursor = _activeTool switch
         {
             CanvasTool.Pan => Cursors.Hand,
-            CanvasTool.Select => Cursors.Default,
+            CanvasTool.Move => _moveHoverIndex >= 0 ? Cursors.SizeAll : Cursors.Default,
             CanvasTool.Crop => Cursors.Cross,
             CanvasTool.Text => Cursors.IBeam,
             CanvasTool.Eraser => CursorFactory.EraserCursor,
@@ -247,7 +252,7 @@ public sealed partial class AnnotationCanvas
                 _isDragging = true;
                 Invalidate();
                 break;
-            case CanvasTool.Select:
+            case CanvasTool.Move:
                 var hitIdx = HitTestAnnotation(img);
                 if (hitIdx >= 0)
                 {
@@ -373,7 +378,7 @@ public sealed partial class AnnotationCanvas
         if (_inlineTextBox is not null && UpdateTextToolbarHover(e.Location))
             return;
 
-        if (!_isDragging && !_cropDragging && (_activeTool == CanvasTool.Pan || _activeTool == CanvasTool.Select))
+        if (!_isDragging && !_cropDragging && (_activeTool == CanvasTool.Pan || _activeTool == CanvasTool.Move))
         {
             int hHover = HitTestHorizontalGuide(e.Location);
             int vHover = HitTestVerticalGuide(e.Location);
@@ -387,6 +392,11 @@ public sealed partial class AnnotationCanvas
             if (hHover >= 0 || vHover >= 0)
             {
                 Cursor = hHover >= 0 ? Cursors.HSplit : Cursors.VSplit;
+                if (_moveHoverIndex != -1)
+                {
+                    _moveHoverIndex = -1;
+                    Invalidate();
+                }
                 return;
             }
         }
@@ -398,6 +408,12 @@ public sealed partial class AnnotationCanvas
                 _hoveredVerticalGuideIndex = -1;
                 Invalidate();
             }
+        }
+
+        if (_activeTool == CanvasTool.Move && !_isDragging)
+        {
+            var imgPt = ScreenToImage(e.Location);
+            UpdateMoveHover(imgPt);
         }
 
         if (_isPanning)
@@ -562,7 +578,7 @@ public sealed partial class AnnotationCanvas
 
         switch (_activeTool)
         {
-            case CanvasTool.Select when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
+            case CanvasTool.Move when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
                 int dx = img.X - _selectDragStartImg.X;
                 int dy = img.Y - _selectDragStartImg.Y;
                 _annotations[_selectedAnnotationIndex] = AnnotationTransforms.Translate(_selectOriginalAnnotation, dx, dy);
@@ -683,7 +699,7 @@ public sealed partial class AnnotationCanvas
 
         switch (_activeTool)
         {
-            case CanvasTool.Select when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
+            case CanvasTool.Move when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
                 var moved = _annotations[_selectedAnnotationIndex];
                 int tdx = 0, tdy = 0;
                 // Compute the actual translation by diffing the moved annotation against the original.
@@ -755,11 +771,30 @@ public sealed partial class AnnotationCanvas
             _eraserHoverIndex = -1;
             Invalidate();
         }
+        if (_moveHoverIndex >= 0)
+        {
+            _moveHoverIndex = -1;
+            Invalidate();
+        }
         if (_hoverImgValid)
         {
             _hoverImgValid = false;
             Invalidate();
         }
+    }
+
+    private void UpdateMoveHover(Point img)
+    {
+        int hitIdx = HitTestAnnotation(img);
+        if (hitIdx == _moveHoverIndex) return;
+
+        var oldIdx = _moveHoverIndex;
+        _moveHoverIndex = hitIdx;
+
+        if (oldIdx >= 0 || hitIdx >= 0)
+            Invalidate();
+
+        UpdateCursor();
     }
 
     private void UpdateEraserHover(Point img)

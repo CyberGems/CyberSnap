@@ -20,7 +20,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     public enum CanvasTool
     {
         Pan,
-        Select,
+        Move,
         Draw,
         Arrow,
         CurvedArrow,
@@ -56,8 +56,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private Point _panStart;
     private PointF _panStartOffset;
 
-    // Selection state (Select tool)
+    // Selection state (Move tool)
     private int _selectedAnnotationIndex = -1;
+    private int _moveHoverIndex = -1;
     private Annotation? _selectOriginalAnnotation;
     private Point _selectDragStartImg;
 
@@ -349,7 +350,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         var key = tool switch
         {
             CanvasTool.Pan => "Pan",
-            CanvasTool.Select => "Select",
+            CanvasTool.Move => "Move",
             CanvasTool.Crop => "Crop",
             CanvasTool.Text => "Text",
             CanvasTool.Draw => "Draw",

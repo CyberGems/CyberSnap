@@ -341,7 +341,7 @@ public sealed partial class RegionOverlayForm
                 Invalidate(InflateForRepaint(cancelBtn, 20));
             }
         }
-        else if (_mode == CaptureMode.Select)
+        else if (_mode == CaptureMode.Move)
         {
             int sh = GetSelectHandle(e.Location);
             if (sh >= 0) target = sh is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
@@ -350,6 +350,14 @@ public sealed partial class RegionOverlayForm
             else
             {
                 int h = HitTestAnnotation(e.Location);
+                if (h != _moveHoverIndex)
+                {
+                    if (_moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)
+                        Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[_moveHoverIndex]), 16, 16));
+                    _moveHoverIndex = h;
+                    if (h >= 0 && h < _undoStack.Count)
+                        Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[h]), 16, 16));
+                }
                 target = h >= 0 ? Cursors.Hand : Cursors.Default;
             }
         }

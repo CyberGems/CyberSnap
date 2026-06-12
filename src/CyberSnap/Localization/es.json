@@ -179,7 +179,7 @@
   "Save a redacted copy of your settings to a JSON file.": "Guarda una copia depurada de tus ajustes en un archivo JSON.",
   "Restore your settings from a previously exported JSON file.": "Restaura tus ajustes desde un archivo JSON exportado previamente.",
   "Restore every setting to its original defaults.": "Restablece cada ajuste a sus valores originales.",
-  "Select": "Seleccionar",
+  "Move": "Seleccionar",
   "Clear all": "Borrar todo",
   "Delete selected": "Eliminar seleccionados",
   "Images": "Imágenes",

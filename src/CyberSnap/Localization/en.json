@@ -150,7 +150,7 @@
   "Save a redacted copy of your settings to a JSON file.": "Save a redacted copy of your settings to a JSON file.",
   "Restore your settings from a previously exported JSON file.": "Restore your settings from a previously exported JSON file.",
   "Restore every setting to its original defaults.": "Restore every setting to its original defaults.",
-  "Select": "Select",
+  "Move": "Move",
   "Clear all": "Clear all",
   "Delete selected": "Delete selected",
   "Images": "Images",
