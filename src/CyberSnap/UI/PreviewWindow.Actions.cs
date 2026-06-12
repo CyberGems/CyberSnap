@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -387,7 +387,7 @@ public partial class PreviewWindow
 
         try
         {
-            CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(_screenshot), _savedFilePath);
+            CyberSnap.UI.Editor.EditorWindow.ShowEditor(new Bitmap(_screenshot), _savedFilePath);
         }
         catch (Exception ex)
         {

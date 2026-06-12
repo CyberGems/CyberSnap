@@ -141,7 +141,7 @@ public partial class HistoryWindow
                 try
                 {
                     using var bmp = new System.Drawing.Bitmap(vm.Entry.FilePath);
-                    CyberSnap.UI.Editor.EditorForm.ShowEditor(new System.Drawing.Bitmap(bmp), vm.Entry.FilePath);
+                    CyberSnap.UI.Editor.EditorWindow.ShowEditor(new System.Drawing.Bitmap(bmp), vm.Entry.FilePath);
                 }
                 catch (Exception ex)
                 {
