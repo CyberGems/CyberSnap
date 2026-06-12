@@ -121,10 +121,10 @@ public sealed partial class AnnotationCanvas
         );
 
         // Alpha values
-        int accentAlpha = isSelected ? 255 : 120;
-        int shadowAlpha = isSelected ? 100 : 50;
-        int fillAlpha = isSelected ? 15 : 10; // subtle cyan tint
-        int dashAlpha = isSelected ? 180 : 80;
+        int accentAlpha = isSelected ? 255 : 95;
+        int shadowAlpha = isSelected ? 100 : 35;
+        int fillAlpha = isSelected ? 15 : 6; // subtle cyan tint
+        int dashAlpha = isSelected ? 180 : 60;
 
         var accentColor = Color.FromArgb(accentAlpha, 0, 255, 255);
         var shadowColor = Color.FromArgb(shadowAlpha, 0, 0, 0);
@@ -181,6 +181,37 @@ public sealed partial class AnnotationCanvas
         // Right edge
         g.DrawLine(shadowPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
         g.DrawLine(thickPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+
+        // 3. Center move knob — only rendered when the annotation is actively selected.
+        // A cyan circle with a crosshair gives an unambiguous "grab here to move" affordance.
+        if (isSelected)
+        {
+            float knobR    = 8f / z;   // circle radius
+            float crossLen = 4.5f / z; // arm length of the interior crosshair
+
+            // Soft outer glow so the knob reads against any background color.
+            using var glowBrush = new SolidBrush(Color.FromArgb(14, 0, 255, 255));
+            g.FillEllipse(glowBrush,
+                midX - knobR * 1.7f, midY - knobR * 1.7f,
+                knobR * 3.4f,        knobR * 3.4f);
+
+            // Semi-transparent cyan fill
+            using var knobFill = new SolidBrush(Color.FromArgb(30, 0, 255, 255));
+            g.FillEllipse(knobFill, midX - knobR, midY - knobR, knobR * 2f, knobR * 2f);
+
+            // Drop-shadow ring
+            using var knobShadow = new Pen(Color.FromArgb(55, 0, 0, 0), penWidthShadow * 0.55f);
+            g.DrawEllipse(knobShadow, midX - knobR, midY - knobR, knobR * 2f, knobR * 2f);
+
+            // Accent ring — thin and slightly softened so a small selection doesn't read as a saturated blob.
+            using var knobRing = new Pen(Color.FromArgb(200, 0, 255, 255), penWidthThick * 0.5f);
+            g.DrawEllipse(knobRing, midX - knobR, midY - knobR, knobR * 2f, knobR * 2f);
+
+            // Interior crosshair
+            using var crossPen = new Pen(Color.FromArgb(200, 0, 255, 255), 1.2f / z) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            g.DrawLine(crossPen, midX - crossLen, midY, midX + crossLen, midY);
+            g.DrawLine(crossPen, midX, midY - crossLen, midX, midY + crossLen);
+        }
     }
 
     private void RenderAnnotation(Graphics g, Annotation a)

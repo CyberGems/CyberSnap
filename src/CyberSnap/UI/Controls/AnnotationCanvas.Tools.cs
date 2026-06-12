@@ -265,7 +265,8 @@ public sealed partial class AnnotationCanvas
             {
                 ActiveTool = CanvasTool.Move;
                 _selectedAnnotationIndex = clickedIdx;
-                if (handle >= 0)
+                // Handle 8 = center move knob: treat as a body drag, not a resize.
+                if (handle >= 0 && handle != 8)
                 {
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
@@ -313,7 +314,8 @@ public sealed partial class AnnotationCanvas
                 break;
             case CanvasTool.Move:
                 int handle = GetSelectHandle(e.Location);
-                if (handle >= 0 && _selectedAnnotationIndex >= 0)
+                // Handle 8 = center move knob → start a body-move drag, not a resize.
+                if (handle >= 0 && handle != 8 && _selectedAnnotationIndex >= 0)
                 {
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
@@ -324,7 +326,10 @@ public sealed partial class AnnotationCanvas
                 }
                 else
                 {
-                    var hitIdx = HitTestAnnotation(img);
+                    // Center knob reuses the already-selected annotation; otherwise do a fresh hit-test.
+                    var hitIdx = (handle == 8 && _selectedAnnotationIndex >= 0)
+                        ? _selectedAnnotationIndex
+                        : HitTestAnnotation(img);
                     if (hitIdx >= 0)
                     {
                         _selectedAnnotationIndex = hitIdx;
@@ -596,7 +601,8 @@ public sealed partial class AnnotationCanvas
                         1 or 2 => Cursors.SizeNESW,
                         4 or 7 => Cursors.SizeNS,
                         5 or 6 => Cursors.SizeWE,
-                        _ => Cursors.Default
+                        8       => Cursors.SizeAll,  // center move knob
+                        _       => Cursors.Default
                     };
                     return;
                 }
@@ -1524,6 +1530,15 @@ public sealed partial class AnnotationCanvas
             var hr = WindowsHandleRenderer.HitRect(handles[i]);
             if (hr.Contains(screenPt)) return i;
         }
+
+        // Handle 8: center move knob — circular hit area, slightly larger than the edge handles.
+        var center = new Point(selRect.X + selRect.Width / 2, selRect.Y + selRect.Height / 2);
+        const int centerHitRadius = 12;
+        int cdx = screenPt.X - center.X;
+        int cdy = screenPt.Y - center.Y;
+        if (cdx * cdx + cdy * cdy <= centerHitRadius * centerHitRadius)
+            return 8;
+
         return -1;
     }
 }
