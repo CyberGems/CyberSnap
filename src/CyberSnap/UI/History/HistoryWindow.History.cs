@@ -887,7 +887,7 @@ public partial class HistoryWindow
             1 => count == 1 ? "text capture" : "text captures",
             2 => count == 1 ? "video/GIF" : "videos & GIFs",
             3 => count == 1 ? "color" : "colors",
-            4 => count == 1 ? "QR/barcode scan" : "QR/barcode scans",
+            4 => count == 1 ? "QR & Barcode scan" : "QR & Barcode scans",
             _ => count == 1 ? "history item" : "history items"
         };
 

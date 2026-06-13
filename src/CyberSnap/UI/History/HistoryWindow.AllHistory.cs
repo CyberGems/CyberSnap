@@ -409,7 +409,7 @@ public partial class HistoryWindow
         return card;
     }
 
-    // ── Code (QR/Barcode) card ──
+    // ── Code (QR & Barcode) card ──
 
     private readonly Dictionary<string, BitmapSource> _allCodePreviewCache = new();
 

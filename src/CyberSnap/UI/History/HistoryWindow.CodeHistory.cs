@@ -44,9 +44,9 @@ public partial class HistoryWindow
         if (entries.Count == 0)
         {
             if (allEntries.Count == 0)
-                ShowHistoryEmptyState("No QR/barcode scans yet", "Scanned codes will appear here.");
+                ShowHistoryEmptyState("No QR & Barcode scans yet", "Scanned codes will appear here.");
             else
-                ShowHistoryEmptyState("No QR/barcode scans match your search", "Search matched 0 saved codes.");
+                ShowHistoryEmptyState("No QR & Barcode scans match your search", "Search matched 0 saved codes.");
         }
         else
         {
@@ -134,7 +134,7 @@ public partial class HistoryWindow
             BorderThickness = new Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand,
             Focusable = true,
-            ToolTip = "Copy this QR/barcode text",
+            ToolTip = "Copy this QR & Barcode text",
             DataContext = entry
         };
 
@@ -195,7 +195,7 @@ public partial class HistoryWindow
         var formatLabel = HumanizeBarcodeFormat(entry.Format);
         var isUrl = TryNormalizeUrl(entry.Text, out var url);
         AutomationProperties.SetName(card, $"{formatLabel} history item");
-        AutomationProperties.SetHelpText(card, "Press Enter or Space to copy this QR/barcode text. In select mode, press Enter or Space to select it.");
+        AutomationProperties.SetHelpText(card, "Press Enter or Space to copy this QR & Barcode text. In select mode, press Enter or Space to select it.");
         preview.ToolTip = $"{formatLabel} preview";
         AutomationProperties.SetName(preview, $"{formatLabel} preview");
         AutomationProperties.SetHelpText(preview, $"Preview image for this {formatLabel} history item.");
@@ -252,7 +252,7 @@ public partial class HistoryWindow
                 ToolTip = "Open this code URL"
             };
             AutomationProperties.SetName(openBtn, "Open code URL");
-            AutomationProperties.SetHelpText(openBtn, "Open this QR/barcode URL in your default browser.");
+            AutomationProperties.SetHelpText(openBtn, "Open this QR & Barcode URL in your default browser.");
             openBtn.Click += (_, _) => TryOpenExternalUrl(url);
             btnPanel.Children.Add(openBtn);
         }
@@ -264,10 +264,10 @@ public partial class HistoryWindow
             Padding = new Thickness(8, 3, 8, 3),
             VerticalAlignment = VerticalAlignment.Center,
             Cursor = System.Windows.Input.Cursors.Hand,
-            ToolTip = "Copy this QR/barcode text"
+            ToolTip = "Copy this QR & Barcode text"
         };
         AutomationProperties.SetName(copyBtn, "Copy code text");
-        AutomationProperties.SetHelpText(copyBtn, "Copy this QR/barcode text to the clipboard.");
+        AutomationProperties.SetHelpText(copyBtn, "Copy this QR & Barcode text to the clipboard.");
         var capturedText = entry.Text;
         copyBtn.Click += (_, _) => CopyCodeText();
         btnPanel.Children.Add(copyBtn);
@@ -299,7 +299,7 @@ public partial class HistoryWindow
             {
                 ToastWindow.ShowError(
                     "Copy failed",
-                    $"CyberSnap could not copy this QR/barcode history item. Try again from Config -> History, or copy the visible decoded value manually.\n{ex.Message}");
+                    $"CyberSnap could not copy this QR & Barcode history item. Try again from Config -> History, or copy the visible decoded value manually.\n{ex.Message}");
             }
         }
 

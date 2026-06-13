@@ -444,14 +444,14 @@ public partial class App
                             }
                             else
                             {
-                                ToastWindow.Show("Scan", "No QR/barcode found");
+                                ToastWindow.Show("Scan", "No QR & Barcode found");
                             }
                         }
                         catch (Exception ex)
                         {
                             ShowCaptureProcessingFailed(
                                 "Scan failed",
-                                "CyberSnap could not scan this region. Try a clearer QR/barcode region.",
+                                "CyberSnap could not scan this region. Try a clearer QR & Barcode region.",
                                 ex.Message);
                         }
                         finally

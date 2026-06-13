@@ -99,7 +99,7 @@ public partial class HistoryWindow
         }
         else if (HistoryCategoryCombo.SelectedIndex == 5)
         {
-            placeholder = "Search QR/barcode text, links, or formats";
+            placeholder = "Search QR & Barcode text, links, or formats";
             automationName = "Code history search";
             helpText = "Search saved QR and barcode text, links, or code formats.";
         }
