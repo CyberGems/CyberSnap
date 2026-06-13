@@ -346,12 +346,15 @@ public sealed partial class EditorForm : Form
         Update();
     }
 
-    private void LoadCapture(Bitmap captured, string? savedFilePath)
+    private void LoadCapture(Bitmap captured, string? savedFilePath, bool autoMaximize = true)
     {
         _savedFilePath = savedFilePath;
         _canvas.ResetState(new Bitmap(captured));
         _suppressCloseConfirm = false;
-        MaybeAutoMaximizeForCapture();
+        // Auto-maximize is desirable for real captures/opened files (show the whole image),
+        // but not for the blank "New" document — the user didn't ask to resize the window.
+        if (autoMaximize)
+            MaybeAutoMaximizeForCapture();
         UpdateCaptureCaption();
         RefreshUi();
     }
@@ -544,8 +547,12 @@ public sealed partial class EditorForm : Form
             }
         }
 
-        LoadCapture(blank, null);
+        LoadCapture(blank, null, autoMaximize: false);
         _canvas.IsDefaultBlank = true;
+        // The blank document has no real pixels worth inspecting at 100%, so always frame it
+        // to fit the window regardless of the user's auto-fit preference. Without this, the
+        // crop handles would sit off-screen when auto-fit is disabled (we no longer maximize).
+        _canvas.ZoomFit();
         _canvas.Invalidate();
     }
 
