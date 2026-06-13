@@ -139,10 +139,10 @@
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE768;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="OCR">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE8B7;"/>
+                                <Setter TargetName="Icon" Property="Text" Value="&#xE81C;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Gallery">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE81C;"/>
+                                <Setter TargetName="Icon" Property="Text" Value="&#xE8B7;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Uploads">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE898;"/>
@@ -2703,7 +2703,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE81C;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Save captures to Gallery" Style="{StaticResource SettingTitle}"/>
