@@ -496,6 +496,7 @@ public sealed partial class RegionOverlayForm : Form
         int maxPrimarySpan = Math.Max(tier1PrimarySpan, tier2PrimarySpan);
 
         int w, h;
+        int brandWidth = 0;
         if (IsVerticalDock)
         {
             w = pad * 2 + buttonSize * 2 + buttonSpacing;
@@ -512,7 +513,6 @@ public sealed partial class RegionOverlayForm : Form
             int tier2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             bool canShowText = (tier2Width - tier1Width >= UiChrome.ScaleInt(80)) || (_mainBarTools.Length >= 6);
             
-            int brandWidth;
             if (canShowText)
             {
                 brandWidth = logoSize + textWidth + UiChrome.ScaleInt(24); // logo + text + padding+buffer
@@ -632,6 +632,10 @@ public sealed partial class RegionOverlayForm : Form
             // Row 1: Capture & System Tools
             int row1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
             int row1StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row1Width) / 2;
+            if (row1StartX < _toolbarRect.X + brandWidth)
+            {
+                row1StartX = _toolbarRect.X + brandWidth;
+            }
             int row1Y = _toolbarRect.Y + pad;
 
             int cx = row1StartX;
@@ -655,6 +659,10 @@ public sealed partial class RegionOverlayForm : Form
             int row2Y = _toolbarRect.Y + pad + buttonSize + buttonSpacing;
             int row2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             int row2StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row2Width) / 2;
+            if (row2StartX < _toolbarRect.X + brandWidth)
+            {
+                row2StartX = _toolbarRect.X + brandWidth;
+            }
             int cx2 = row2StartX;
             int[] tier2Seps = { 1, 8 };
             for (int i = 0; i < _flyoutTools.Length; i++)

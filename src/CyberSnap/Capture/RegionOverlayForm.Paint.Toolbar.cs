@@ -171,9 +171,33 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            // Draw logo icon and name "CyberSnap" to the left of Row 1
-            float lx = _toolbarRect.X + pad + UiChrome.ScaleInt(6);
-            float ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f); // Visually level logo with button icons
+            int tier1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
+            int tier2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
+            bool canShowText = (tier2Width - tier1Width >= UiChrome.ScaleInt(80)) || (_mainBarTools.Length >= 6);
+
+            float availableBrandWidth = _toolbarButtons[0].X - _toolbarRect.X;
+            int tempLogoSz = UiChrome.ScaleInt(10);
+            float tempLx = _toolbarRect.X + pad + UiChrome.ScaleInt(6);
+            float tempTextX = tempLx + tempLogoSz + UiChrome.ScaleInt(6);
+            float tempTextW = _toolbarButtons[0].X - tempTextX - UiChrome.ScaleInt(6);
+            
+            bool drawText = canShowText && (tempTextW >= UiChrome.ScaleInt(50));
+
+            float lx;
+            float ly;
+            
+            if (drawText)
+            {
+                logoSz = tempLogoSz;
+                lx = tempLx;
+                ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
+            }
+            else
+            {
+                logoSz = UiChrome.ScaleInt(14); // Enlarged and centered when text is hidden
+                lx = _toolbarRect.X + (availableBrandWidth - logoSz) / 2f;
+                ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
+            }
             
             if (_brandBitmap != null)
             {
@@ -192,20 +216,12 @@ public sealed partial class RegionOverlayForm
                 FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary), 0f);
             }
 
-            using (var brandFont = UiChrome.ChromeFont(5.8f, FontStyle.Bold))
-            using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
+            if (drawText)
             {
-                int textX = (int)lx + logoSz + UiChrome.ScaleInt(6);
-                int textY = _toolbarRect.Y + pad - UiChrome.ScaleInt(1); // Visually level text baseline with button icons
-                int textW = _toolbarButtons[0].X - textX - UiChrome.ScaleInt(6);
-                
-                int tier1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
-                int tier2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
-                bool canShowText = (tier2Width - tier1Width >= UiChrome.ScaleInt(80)) || (_mainBarTools.Length >= 6);
-
-                if (textW >= UiChrome.ScaleInt(50) && canShowText)
+                using (var brandFont = UiChrome.ChromeFont(5.8f, FontStyle.Bold))
+                using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
                 {
-                    var textRect = new RectangleF(textX, textY, textW, buttonSize);
+                    var textRect = new RectangleF(tempTextX, _toolbarRect.Y + pad - UiChrome.ScaleInt(1), tempTextW, buttonSize);
                     var sf = new StringFormat
                     {
                         Alignment = StringAlignment.Near,
