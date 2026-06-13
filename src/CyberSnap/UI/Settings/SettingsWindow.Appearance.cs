@@ -51,7 +51,7 @@ public partial class SettingsWindow
         {
             [SettingsTab] = "\uE713", // General
             [ToastTab] = "\uEA8F", // Notifications
-            [HotkeysTab] = "\uEE6F", // Tools
+            [HotkeysTab] = "\uE765", // Hotkeys
             [CaptureTab] = "\uE7C2", // Capture
             [RecordingTab] = "\uE768", // Video
             [OcrTab] = "\uE8C8", // OCR
@@ -440,10 +440,28 @@ public partial class SettingsWindow
             LoadOcrTab();
     }
 
+    private void ResetToolbarBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var previous = (_settingsService.Settings.EnabledTools ?? ToolDef.DefaultEnabledIds()).ToList();
+        try
+        {
+            var defaults = ToolDef.DefaultEnabledIds();
+            _settingsService.Settings.EnabledTools = defaults;
+            _settingsService.Save();
+            ToastWindow.Show("Toolbar reset", "Capture toolbar layout has been reset to defaults.");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.reset-toolbar", ex);
+            _settingsService.Settings.EnabledTools = previous;
+            ToastWindow.ShowError("Reset failed", $"Failed to reset toolbar layout:\n{ex.Message}");
+        }
+    }
+
     private string GetSelectedSettingsPageTitle()
     {
         if (ToastTab.IsChecked == true) return "Notifications";
-        if (HotkeysTab.IsChecked == true) return "Tools";
+        if (HotkeysTab.IsChecked == true) return "Hotkeys";
         if (CaptureTab.IsChecked == true) return "Capture";
         if (RecordingTab.IsChecked == true) return "Video";
         if (OcrTab.IsChecked == true) return "OCR";
