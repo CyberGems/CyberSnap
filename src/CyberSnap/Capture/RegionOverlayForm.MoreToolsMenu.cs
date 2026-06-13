@@ -105,6 +105,18 @@ public sealed partial class RegionOverlayForm
         }
         menu.Items.Add(showHiddenSubmenu);
 
+        // 4. Show all hidden
+        if (hiddenTools.Count > 0)
+        {
+            menu.Items.Add(new ToolStripSeparator());
+            var showAllText = isSpanish ? "Mostrar todos" : "Show all hidden";
+            var showAllItem = new ToolStripMenuItem(showAllText);
+            showAllItem.Click += (s, e) => {
+                ShowAllTools();
+            };
+            menu.Items.Add(showAllItem);
+        }
+
         WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
         if (showHiddenSubmenu.DropDownItems.Count > 0)
         {
@@ -113,6 +125,15 @@ public sealed partial class RegionOverlayForm
 
         var screenPoint = PointToScreen(clickLocation);
         menu.Show(screenPoint);
+    }
+
+    private void ShowAllTools()
+    {
+        var enabled = ToolDef.AllTools.Select(t => t.Id).ToList();
+        EnabledToolsChanged?.Invoke(enabled);
+        SetEnabledTools(enabled);
+        CalcToolbar();
+        InvalidateToolbarArea();
     }
 
     private void HideTool(string toolId)
