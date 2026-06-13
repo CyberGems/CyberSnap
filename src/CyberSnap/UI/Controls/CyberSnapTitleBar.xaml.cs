@@ -87,7 +87,7 @@ public partial class CyberSnapTitleBar : UserControl
         var dv = new System.Windows.Media.DrawingVisual();
         using (var dc = dv.RenderOpen())
         {
-            var wpfColor = System.Windows.Media.Color.FromArgb(100, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+            var wpfColor = System.Windows.Media.Color.FromArgb(60, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
             var brush = new System.Windows.Media.SolidColorBrush(wpfColor);
             dc.DrawText(personalizeIcon, new System.Windows.Point(2, 1));
         }
