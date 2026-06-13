@@ -76,7 +76,7 @@ public partial class CyberSnapTitleBar : UserControl
         MaximizeBtn.ToolTip = isMaximized ? "Restore" : "Maximize";
 
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", titleIcon, 18);
-        AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("draw", titleIcon, 18);
+        AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("free", titleIcon, 18);
 
         InitializeActionBtn(titleIcon);
     }
