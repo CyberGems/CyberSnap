@@ -2182,7 +2182,7 @@
 
             <ScrollViewer x:Name="ToastPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,42,18,18">
                 <StackPanel>
-                    <TextBlock Text="Placement" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="Behavior" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
@@ -2459,12 +2459,7 @@
                                        AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
                                        AutomationProperties.LiveSetting="Polite"
                                        Margin="34,5,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="Behavior" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
