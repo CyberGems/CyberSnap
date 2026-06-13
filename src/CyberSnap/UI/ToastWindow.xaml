@@ -211,7 +211,7 @@
                         </LinearGradientBrush>
                     </Border.Background>
                     <Border.Effect>
-                        <DropShadowEffect Color="#FF7A00FF" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
+                        <DropShadowEffect x:Name="ProgressGlow" Color="#FF7A00FF" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
                     </Border.Effect>
                     <Border.RenderTransform>
                         <ScaleTransform x:Name="ProgressScale" ScaleX="1" ScaleY="1"/>
