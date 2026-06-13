@@ -17,6 +17,8 @@ public static class ToolIcons
         ["_fullscreen"] = "fullscreen",
         ["_activeWindow"] = "activeWindow",
         ["_scrollCapture"] = "scrollCapture",
+        ["scroll"] = "scrollCapture",
+        ["rect"] = "captureRect",
         ["_record"] = "record",
     };
 

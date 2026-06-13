@@ -119,7 +119,7 @@ public partial class App
             };
         }
 
-        Action hotkeyHandler = RegisterHotkeys;
+        Action hotkeyHandler = () => RegisterHotkeys(showReadyNotification: false);
         Action localizationHandler = () =>
         {
             _trayIcon?.RefreshLocalization();

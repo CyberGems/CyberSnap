@@ -105,8 +105,8 @@ public static class ToolListBuilder
                 hkBox.SetResourceReference(TextBox.StyleProperty, "HotkeyBox");
                 hkBox.Height = 28;
                 hkBox.MinHeight = 28;
-                hkBox.Width = 110;
-                hkBox.MinWidth = 110;
+                hkBox.Width = 135;
+                hkBox.MinWidth = 135;
                 hkBox.FontSize = 11;
 
                 var (initMod, initKey) = settingsService.Settings.GetToolHotkey(toolId);
@@ -201,11 +201,22 @@ public static class ToolListBuilder
             targetPanel.Children.Add(card);
         }
 
-        foreach (var t in ToolDef.AllTools.Where(t => t.Group == 0))
-            AddToolRow(capturePanel, t.Id, t.Label, t.Icon, true);
+        var captureItems = new System.Collections.Generic.List<(string id, string label, char icon)>
+        {
+            ("rect", "Area Capture", ToolDef.AllTools.First(t => t.Id == "rect").Icon),
+            ("center", "From Center", ToolDef.AllTools.First(t => t.Id == "center").Icon),
+            ("_scrollCapture", "Scrolling Capture", ToolGlyphs.ScrollCaptureGlyph),
+            ("ocr", "OCR", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
+            ("picker", "Color Picker", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
+            ("scan", "QR & Barcodes", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
+            ("record", "Screen Recorder (MP4)", ToolDef.AllTools.First(t => t.Id == "record").Icon),
+            ("recordGif", "Screen Recorder (GIF)", ToolDef.AllTools.First(t => t.Id == "recordGif").Icon),
+            ("_fullscreen", "Fullscreen capture", ToolGlyphs.FullscreenGlyph),
+            ("_activeWindow", "Active window", ToolGlyphs.ActiveWindowGlyph)
+        };
 
-        foreach (var (id, label, icon) in ExtraTools)
-            AddToolRow(capturePanel, id, label, icon, true);
+        foreach (var item in captureItems)
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true);
 
         foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
             AddToolRow(annotationPanel, t.Id, t.Label, t.Icon, true);

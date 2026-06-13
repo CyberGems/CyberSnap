@@ -751,13 +751,13 @@
                                  IsChecked="True" Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="ToastTab" Content="Notifications" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="HotkeysTab" Content="Hotkeys" GroupName="Main"
-                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="CaptureTab" Content="Capture" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="RecordingTab" Content="Video" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="OcrTab" Content="OCR" GroupName="Main"
+                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
+                    <RadioButton x:Name="HotkeysTab" Content="Hotkeys" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     
                     <RadioButton x:Name="HistoryTab" Content="Gallery" GroupName="Main"
@@ -786,8 +786,8 @@
                     <CheckBox x:Name="ShowToolNumberBadgesCheck" Visibility="Collapsed"
                               Checked="ShowToolNumberBadgesCheck_Changed" Unchecked="ShowToolNumberBadgesCheck_Changed"/>
                     <DockPanel LastChildFill="False" Margin="0,0,0,12">
-                        <Button x:Name="ResetToolbarBtn" Content="Reset Toolbar Layout"
-                                DockPanel.Dock="Right" MinWidth="140" Height="28" Click="ResetToolbarBtn_Click"/>
+                        <Button x:Name="ResetHotkeysBtn" Content="Reset to default hotkeys"
+                                DockPanel.Dock="Right" MinWidth="160" Height="28" Click="ResetHotkeysBtn_Click"/>
                     </DockPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -796,11 +796,11 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Capture &amp; Global Hotkeys" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
+                            <TextBlock Text="Capture &amp; Global" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
                             <StackPanel x:Name="CaptureToolsPanel"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2">
-                            <TextBlock Text="Annotation Hotkeys" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
+                            <TextBlock Text="Floating Annotation Toolbar" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
                             <StackPanel x:Name="AnnotationToolsPanel"/>
                         </StackPanel>
                     </Grid>
