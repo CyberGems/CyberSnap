@@ -76,7 +76,23 @@ public partial class CyberSnapTitleBar : UserControl
         MaximizeBtn.ToolTip = isMaximized ? "Restore" : "Maximize";
 
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", titleIcon, 18);
-        AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("free", titleIcon, 18);
+        // Use E771 (Personalize) icon from Segoe MDL2 Assets
+        var personalizeIcon = new System.Windows.Media.FormattedText("\uE771",
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Windows.FlowDirection.LeftToRight,
+            new System.Windows.Media.Typeface("Segoe MDL2 Assets"),
+            18,
+            System.Windows.Media.Brushes.White);
+        var dv = new System.Windows.Media.DrawingVisual();
+        using (var dc = dv.RenderOpen())
+        {
+            var wpfColor = System.Windows.Media.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+            var brush = new System.Windows.Media.SolidColorBrush(wpfColor);
+            dc.DrawText(personalizeIcon, new System.Windows.Point(0, 0));
+        }
+        var renderTarget = new System.Windows.Media.Imaging.RenderTargetBitmap(18, 18, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        renderTarget.Render(dv);
+        AnnotationIcon.Source = renderTarget;
 
         InitializeActionBtn(titleIcon);
     }
