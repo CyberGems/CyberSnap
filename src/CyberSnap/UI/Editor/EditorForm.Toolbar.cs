@@ -520,7 +520,7 @@ public sealed partial class EditorForm
         // Spacer between New/Open and Gallery
         topActions.Controls.Add(MakeSeparator());
 
-        var galleryButton = MakeCommandButton("history", LocalizationService.Translate("History"), false);
+        var galleryButton = MakeCommandButton("history", LocalizationService.Translate("Gallery"), false);
         galleryButton.Click += (_, _) => OpenHistoryWindow();
         RegisterHoverTooltip(galleryButton, "Open Capture Gallery", above: false);
         topActions.Controls.Add(galleryButton);
