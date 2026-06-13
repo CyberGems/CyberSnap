@@ -9,7 +9,7 @@ namespace CyberSnap;
 
 public partial class App
 {
-    public void RegisterHotkeys()
+    public void RegisterHotkeys(bool showReadyNotification = false)
     {
         _hotkeyService?.Dispose();
         _hotkeyService = new HotkeyService();
@@ -44,11 +44,14 @@ public partial class App
         TryRegister(_hotkeyService.RegisterActiveWindow(s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey), "Active Window", s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey);
         TryRegister(_hotkeyService.RegisterScrollCapture(s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey), "Scroll Capture", s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey);
         if (failed.Count > 0)
-            ToastWindow.ShowError("Hotkey conflict", $"{string.Join(", ", failed)} â€” already in use by another app");
-        else
+            ToastWindow.ShowError("Hotkey conflict", $"{string.Join(", ", failed)} — already in use by another app");
+        else if (showReadyNotification)
         {
             var name = HotkeyFormatter.Format(s.HotkeyModifiers, s.HotkeyKey);
-            ToastWindow.Show("CyberSnap ready", $"{name} to capture, Alt+C for colors");
+            var pickerName = HotkeyFormatter.Format(s.PickerHotkeyModifiers, s.PickerHotkeyKey);
+            var bodyTemplate = LocalizationService.Translate("{0} to capture, {1} for colors");
+            var body = string.Format(bodyTemplate, name, pickerName);
+            ToastWindow.Show("CyberSnap ready", body);
             SoundService.PlayStartupSound();
         }
     }

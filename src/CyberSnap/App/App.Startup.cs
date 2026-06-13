@@ -102,7 +102,7 @@ public partial class App
         }
 
         ConfigureTrayIcon();
-        RegisterHotkeys();
+        RegisterHotkeys(showReadyNotification: true);
         WarmDxgiCapture();
         Helpers.FluentIcons.Preload();
 

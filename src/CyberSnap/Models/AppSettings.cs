@@ -141,12 +141,12 @@ public sealed class AppSettings
         public ToastButtonSlot EditSlot { get; set; } = ToastButtonSlot.BottomInnerLeft;
     }
 
-    public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT;
-    public uint HotkeyKey { get; set; } = 0xC0; // VK_OEM_3 = backtick/tilde
+    public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+    public uint HotkeyKey { get; set; } = 0x41; // Alt+Shift+A
 
-    // OCR hotkey: Alt+Shift+`
+    // OCR hotkey: Alt+Shift+O
     public uint OcrHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint OcrHotkeyKey { get; set; } = 0xC0;
+    public uint OcrHotkeyKey { get; set; } = 0x4F;
     public string OcrLanguageTag { get; set; } = "auto";
     public int OcrModelQuality { get; set; } // 0 = Fast (~1 MB), 1 = Standard (~4 MB)
     public string OcrDefaultTranslateFrom { get; set; } = "auto";
@@ -165,29 +165,37 @@ public sealed class AppSettings
     // like EditorToolColorArgb. Clamped to the same 10..120 range the Text toolbar enforces.
     public float EditorTextFontSize { get; set; } = 24f;
 
-    // Color picker hotkey: Alt+C
-    public uint PickerHotkeyModifiers { get; set; } = Native.User32.MOD_ALT;
-    public uint PickerHotkeyKey { get; set; } = 0x43; // VK_C
+    // Color picker hotkey: Alt+Shift+C
+    public uint PickerHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+    public uint PickerHotkeyKey { get; set; } = 0x43;
 
-    // Optional custom-tool hotkeys (disabled by default)
-    public uint ScanHotkeyModifiers { get; set; }
-    public uint ScanHotkeyKey { get; set; }
+    // Optional custom-tool hotkeys (now enabled by default as requested)
+    public uint ScanHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+    public uint ScanHotkeyKey { get; set; } = 0x51; // Alt+Shift+Q
     public uint CenterHotkeyModifiers { get; set; }
     public uint CenterHotkeyKey { get; set; }
-    public uint FullscreenHotkeyModifiers { get; set; }
-    public uint FullscreenHotkeyKey { get; set; }
-    public uint ActiveWindowHotkeyModifiers { get; set; }
-    public uint ActiveWindowHotkeyKey { get; set; }
+    public uint FullscreenHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+    public uint FullscreenHotkeyKey { get; set; } = 0x46; // Alt+Shift+F
+    public uint ActiveWindowHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+    public uint ActiveWindowHotkeyKey { get; set; } = 0x57; // Alt+Shift+W
     public uint RulerHotkeyModifiers { get; set; }
     public uint RulerHotkeyKey { get; set; }
 
-    // Scrolling capture hotkey (disabled by default)
-    public uint ScrollCaptureHotkeyModifiers { get; set; }
-    public uint ScrollCaptureHotkeyKey { get; set; }
+    // Toolbar Screen Recorder (MP4)
+    public uint RecordHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+    public uint RecordHotkeyKey { get; set; } = 0x4D; // Alt+Shift+M
 
-    // GIF recording hotkey (disabled by default)
-    public uint GifHotkeyModifiers { get; set; }
-    public uint GifHotkeyKey { get; set; }
+    // Toolbar Screen Recorder (GIF)
+    public uint RecordGifHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+    public uint RecordGifHotkeyKey { get; set; } = 0x47; // Alt+Shift+G
+
+    // Scrolling capture hotkey: Alt+Shift+S
+    public uint ScrollCaptureHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+    public uint ScrollCaptureHotkeyKey { get; set; } = 0x53;
+
+    // GIF recording global hotkey (Alt+Shift+R)
+    public uint GifHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+    public uint GifHotkeyKey { get; set; } = 0x52;
     public int GifFps { get; set; } = 15;
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
@@ -343,6 +351,8 @@ public sealed class AppSettings
         "picker" => (PickerHotkeyModifiers, PickerHotkeyKey),
         "scan" => (ScanHotkeyModifiers, ScanHotkeyKey),
         "center" => (CenterHotkeyModifiers, CenterHotkeyKey),
+        "record" => (RecordHotkeyModifiers, RecordHotkeyKey),
+        "recordGif" => (RecordGifHotkeyModifiers, RecordGifHotkeyKey),
         "_fullscreen" => (FullscreenHotkeyModifiers, FullscreenHotkeyKey),
         "_activeWindow" => (ActiveWindowHotkeyModifiers, ActiveWindowHotkeyKey),
         "_scrollCapture" => (ScrollCaptureHotkeyModifiers, ScrollCaptureHotkeyKey),
@@ -376,6 +386,8 @@ public sealed class AppSettings
             case "picker": PickerHotkeyModifiers = mod; PickerHotkeyKey = key; break;
             case "scan": ScanHotkeyModifiers = mod; ScanHotkeyKey = key; break;
             case "center": CenterHotkeyModifiers = mod; CenterHotkeyKey = key; break;
+            case "record": RecordHotkeyModifiers = mod; RecordHotkeyKey = key; break;
+            case "recordGif": RecordGifHotkeyModifiers = mod; RecordGifHotkeyKey = key; break;
             // ruler handled by generic path (annotation tool with default key 9)
             case "_fullscreen": FullscreenHotkeyModifiers = mod; FullscreenHotkeyKey = key; break;
             case "_activeWindow": ActiveWindowHotkeyModifiers = mod; ActiveWindowHotkeyKey = key; break;
@@ -408,6 +420,35 @@ public sealed class AppSettings
         }
 
         return null;
+    }
+
+    public void ResetToDefaultHotkeys()
+    {
+        HotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        HotkeyKey = 0x41;
+        OcrHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        OcrHotkeyKey = 0x4F;
+        PickerHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        PickerHotkeyKey = 0x43;
+        ScanHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        ScanHotkeyKey = 0x51;
+        CenterHotkeyModifiers = 0;
+        CenterHotkeyKey = 0;
+        FullscreenHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        FullscreenHotkeyKey = 0x46;
+        ActiveWindowHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        ActiveWindowHotkeyKey = 0x57;
+        RulerHotkeyModifiers = 0;
+        RulerHotkeyKey = 0;
+        RecordHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        RecordHotkeyKey = 0x4D;
+        RecordGifHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        RecordGifHotkeyKey = 0x47;
+        ScrollCaptureHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        ScrollCaptureHotkeyKey = 0x53;
+        GifHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        GifHotkeyKey = 0x52;
+        ToolHotkeys?.Clear();
     }
 }
 
