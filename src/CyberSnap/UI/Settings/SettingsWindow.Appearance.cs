@@ -133,6 +133,7 @@ public partial class SettingsWindow
             AfterCaptureCombo.SelectedIndex = GetAfterCaptureSelectedIndex(
                 new AfterCapturePreference(afterCapture, s.OpenEditorAfterCapture));
             SaveToFileCheck.IsChecked = s.SaveToFile;
+            AskFileNameCheck.IsChecked = s.AskForFileNameOnSave;
             AutoOpenCapturedImagesCheck.IsChecked = s.AutoOpenCapturedImages;
             CaptureFormatCombo.SelectedIndex = (int)s.CaptureImageFormat;
             JpegQualityCombo.SelectedIndex = s.JpegQuality switch
@@ -170,10 +171,9 @@ public partial class SettingsWindow
             OverlayAllMonitorsCheck.IsChecked = s.OverlayCaptureAllMonitors;
             AutoCheckUpdateCheck.IsChecked = s.AutoCheckForUpdates;
             ShowToolNumberBadgesCheck.IsChecked = s.ShowToolNumberBadges;
-            AskFileNameCheck.IsChecked = s.AskForFileNameOnSave;
             MonthlyFoldersCheck.IsChecked = s.SaveInMonthlyFolders;
             LoadFileNameTemplate(s.FileNameTemplate);
-            ToastPositionCombo.SelectedIndex = (int)s.ToastPosition;
+            SelectToastPositionUi(s.ToastPosition);
             PopulateToastMonitorOptions();
             SelectToastMonitor(s.ToastMonitorIndex);
             CaptureDockSideCombo.SelectedIndex = (int)s.CaptureDockSide;

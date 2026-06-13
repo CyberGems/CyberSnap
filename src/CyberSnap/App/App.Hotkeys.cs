@@ -48,10 +48,9 @@ public partial class App
         else if (showReadyNotification)
         {
             var name = HotkeyFormatter.Format(s.HotkeyModifiers, s.HotkeyKey);
-            var pickerName = HotkeyFormatter.Format(s.PickerHotkeyModifiers, s.PickerHotkeyKey);
-            var bodyTemplate = LocalizationService.Translate("{0} to capture, {1} for colors");
-            var body = string.Format(bodyTemplate, name, pickerName);
-            ToastWindow.Show("CyberSnap ready", body);
+            var bodyTemplate = LocalizationService.Translate("Press {0} to capture");
+            var body = string.Format(bodyTemplate, name);
+            ToastWindow.Show($"CyberSnap {UpdateService.GetCurrentVersionLabel()} ready", body);
             SoundService.PlayStartupSound();
         }
     }

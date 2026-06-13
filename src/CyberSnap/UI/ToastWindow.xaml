@@ -167,12 +167,13 @@
                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
                         <TextBlock x:Name="TitleText" FontSize="12.75" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"
+                                   TextAlignment="Center"
                                    ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                    AutomationProperties.Name="Toast title"
                                    AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
                                    AutomationProperties.LiveSetting="Polite"/>
                         <TextBlock x:Name="BodyText" FontSize="11.5" Opacity="0.72" TextWrapping="Wrap"
-                                   FontFamily="Segoe UI Variable Text"
+                                   FontFamily="Segoe UI Variable Text" TextAlignment="Center"
                                    MaxWidth="292" Margin="0,2,0,0"
                                    ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                    AutomationProperties.Name="Toast message"

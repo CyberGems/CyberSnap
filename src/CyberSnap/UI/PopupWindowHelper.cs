@@ -72,14 +72,10 @@ internal static class PopupWindowHelper
         var bottomEdge = edge + Math.Max(0, bottomLift);
         return position switch
         {
-            ToastPosition.Left =>
-                (workArea.Left + edge, workArea.Top + (workArea.Height - actualHeight) / 2, workArea.Left - actualWidth - offScreenDistance, workArea.Top + (workArea.Height - actualHeight) / 2, true),
             ToastPosition.TopLeft =>
                 (workArea.Left + edge, workArea.Top + edge, workArea.Left + edge, workArea.Top - actualHeight - offScreenDistance, false),
             ToastPosition.TopRight =>
                 (workArea.Right - actualWidth - edge, workArea.Top + edge, workArea.Right - actualWidth - edge, workArea.Top - actualHeight - offScreenDistance, false),
-            ToastPosition.Right =>
-                (workArea.Right - actualWidth - edge, workArea.Top + (workArea.Height - actualHeight) / 2, workArea.Right + offScreenDistance, workArea.Top + (workArea.Height - actualHeight) / 2, true),
             ToastPosition.BottomLeft =>
                 (workArea.Left + edge, workArea.Bottom - actualHeight - bottomEdge, workArea.Left - actualWidth - offScreenDistance, workArea.Bottom - actualHeight - bottomEdge, true),
             ToastPosition.BottomRight =>
@@ -105,14 +101,10 @@ internal static class PopupWindowHelper
         var bottomEdge = edge + Math.Max(0, bottomLift);
         return position switch
         {
-            ToastPosition.Left =>
-                (workArea.Left - actualWidth - exitDistance, workArea.Top + (workArea.Height - actualHeight) / 2, true),
             ToastPosition.TopLeft =>
                 (workArea.Left + edge, workArea.Top - actualHeight - exitDistance, false),
             ToastPosition.TopRight =>
                 (workArea.Right - actualWidth - edge, workArea.Top - actualHeight - exitDistance, false),
-            ToastPosition.Right =>
-                (workArea.Right + exitDistance, workArea.Top + (workArea.Height - actualHeight) / 2, true),
             ToastPosition.BottomLeft =>
                 (workArea.Left - actualWidth - exitDistance, workArea.Bottom - actualHeight - bottomEdge, true),
             ToastPosition.BottomRight =>
