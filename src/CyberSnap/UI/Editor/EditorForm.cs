@@ -833,7 +833,7 @@ public sealed partial class EditorForm : Form
         Region? newRegion = null;
         if (!_isManualMaximized && !OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
         {
-            // Match the WPF Settings/History windows: DPI-scaled radius so the rounding looks the
+            // Match the WPF Settings/Gallery windows: DPI-scaled radius so the rounding looks the
             // same at any display scale. On Windows 11 leave the region null and let DWM round the
             // corners (anti-aliased) via the corner preference set in OnHandleCreated.
             int radius = (int)Math.Round(EditorPaint.WindowCornerRadius * (DeviceDpi / 96.0));
