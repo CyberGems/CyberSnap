@@ -105,12 +105,12 @@ public partial class ToastWindow
     public static void ShowError(string title, string body = "", string? filePath = null)
         => Show(ToastSpec.Error(title, body, filePath));
 
-    public static void ShowImagePreview(Bitmap screenshot, string? filePath, bool autoPin)
+    public static void ShowImagePreview(Bitmap screenshot, string? filePath, bool autoPin, bool celebrate = false)
     {
-        ShowImagePreview(screenshot, DefaultImagePreviewTitle, "", filePath, autoPin);
+        ShowImagePreview(screenshot, DefaultImagePreviewTitle, "", filePath, autoPin, celebrate);
     }
 
-    public static void ShowImagePreview(Bitmap screenshot, string title, string body, string? filePath, bool autoPin)
+    public static void ShowImagePreview(Bitmap screenshot, string title, string body, string? filePath, bool autoPin, bool celebrate = false)
     {
         Show(ToastSpec.ImagePreview(
             screenshot,
@@ -119,7 +119,7 @@ public partial class ToastWindow
             filePath,
             autoPin,
             transparentShell: false,
-            showOverlayButtons: true));
+            showOverlayButtons: true) with { Celebrate = celebrate });
     }
 
     public static void ShowImagePreview(Bitmap screenshot, string title, string body, string? filePath, bool autoPin, string? clickActionUrl, string? clickActionLabel)

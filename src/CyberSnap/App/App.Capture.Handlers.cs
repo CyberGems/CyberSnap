@@ -97,7 +97,8 @@ public partial class App
                     }
                     else if (ShouldPreviewAfterCapture(action))
                     {
-                        ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
+                        var celebrate = ShouldCelebrateFirstCaptureOfDay(settings);
+                        ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews, celebrate);
                     }
                     else
                     {
@@ -186,6 +187,23 @@ public partial class App
                 };
             }
         });
+    }
+
+    // Celebration trigger: returns true once per local day for the first preview shown,
+    // when celebrations are enabled. Persists the date so it only fires once a day.
+    private bool ShouldCelebrateFirstCaptureOfDay(AppSettings settings)
+    {
+        if (!settings.CelebrationsEnabled)
+            return false;
+
+        var today = DateTime.Now.ToString("yyyy-MM-dd");
+        if (settings.LastCelebrationDate == today)
+            return false;
+
+        settings.LastCelebrationDate = today;
+        try { _settingsService!.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogWarning("capture.celebration-save", ex.Message, ex); }
+        return true;
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
