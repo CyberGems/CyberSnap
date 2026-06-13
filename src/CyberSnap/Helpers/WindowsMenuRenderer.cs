@@ -222,6 +222,9 @@ public static class WindowsMenuRenderer
 
         protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
         {
+            if (!e.Item.Enabled)
+                return;
+
             bool active = e.Item.Tag is true;
             if (!e.Item.Selected && !active)
                 return;
@@ -276,12 +279,17 @@ public static class WindowsMenuRenderer
                 0,
                 Math.Max(24, item.Width - left - shortcutWidth - 12),
                 item.Height);
+            
+            var textColor = item.Enabled
+                ? (item.ForeColor.IsEmpty ? _fg : item.ForeColor)
+                : _muted;
+
             TextRenderer.DrawText(
                 e.Graphics,
                 item.Text,
                 item.Font,
                 labelRect,
-                item.ForeColor.IsEmpty ? _fg : item.ForeColor,
+                textColor,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
 
             if (shortcut.Length == 0)
@@ -316,7 +324,7 @@ public static class WindowsMenuRenderer
             int cx = e.Item.Width - 16;
             int cy = r.Y + r.Height / 2;
             const int w = 4, h = 7;
-            using var pen = new Pen(_fg, 1.6f)
+            using var pen = new Pen(e.Item.Enabled ? _fg : _muted, 1.6f)
             {
                 StartCap = LineCap.Round,
                 EndCap = LineCap.Round,
