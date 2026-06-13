@@ -107,6 +107,11 @@
                                     <TextBlock x:Name="Icon" Grid.Column="0" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                                FontSize="14" Text="&#xE713;" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                                Opacity="0.74" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                    <Path x:Name="VectorIcon" Grid.Column="0" Width="14" Height="14" 
+                                           Stretch="Uniform" Fill="{DynamicResource ThemeTextPrimaryBrush}"
+                                           Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="0.3"
+                                           Opacity="0.74" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                           Visibility="Collapsed"/>
                                     <TextBlock x:Name="Tb" Grid.Column="1" Text="{TemplateBinding Content}" FontSize="12"
                                                FontFamily="Segoe UI Variable Text"
                                                Foreground="{DynamicResource ThemeTextPrimaryBrush}" Opacity="0.82"
@@ -124,25 +129,33 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="Content" Value="General">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE9E9;"/>
+                                <Setter TargetName="Icon" Property="Text" Value="&#xE713;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Capture">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xEE6F;"/>
+                                <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="VectorIcon" Property="Data" Value="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2ZM10 8.25a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5Z"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Notifications">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xEA8F;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Tools">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE90F;"/>
+                                <Setter TargetName="Icon" Property="Text" Value="&#xEE6F;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Video">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE768;"/>
+                                <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="VectorIcon" Property="Data" Value="M5 4C3.34315 4 2 5.34315 2 7V13C2 14.6569 3.34315 16 5 16H10C11.6569 16 13 14.6569 13 13V12.6787L16.0372 14.7759C16.8664 15.3484 17.9975 14.7549 17.9975 13.7473V6.25215C17.9975 5.24453 16.8664 4.65101 16.0372 5.22353L13 7.32067V7C13 5.34315 11.6569 4 10 4H5ZM13 8.53588L16.6054 6.04643C16.7712 5.93193 16.9975 6.05063 16.9975 6.25215V13.7473C16.9975 13.9488 16.7712 14.0675 16.6054 13.953L13 11.4635V8.53588ZM3 7C3 5.89543 3.89543 5 5 5H10C11.1046 5 12 5.89543 12 7V13C12 14.1046 11.1046 15 10 15H5C3.89543 15 3 14.1046 3 13V7Z"/>
                             </Trigger>
                             <Trigger Property="Content" Value="OCR">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE53C;"/>
+                                <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="VectorIcon" Property="Data" Value="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2Zm-9-11a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Zm0 3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7ZM6 12.5c0-.28.22-.5.5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5Z"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Gallery">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE8B7;"/>
+                                <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="VectorIcon" Property="Data" Value="M14 7.5C14 8.32843 13.3284 9 12.5 9C11.6716 9 11 8.32843 11 7.5C11 6.67157 11.6716 6 12.5 6C13.3284 6 14 6.67157 14 7.5ZM13 7.5C13 7.22386 12.7761 7 12.5 7C12.2239 7 12 7.22386 12 7.5C12 7.77614 12.2239 8 12.5 8C12.7761 8 13 7.77614 13 7.5ZM3 6C3 4.34315 4.34315 3 6 3H14C15.6569 3 17 4.34315 17 6V14C17 15.6569 15.6569 17 14 17H6C4.34315 17 3 15.6569 3 14V6ZM6 4C4.89543 4 4 4.89543 4 6V14C4 14.3726 4.10191 14.7215 4.27937 15.0201L8.94868 10.432C9.53227 9.85859 10.4677 9.85859 11.0513 10.432L15.7206 15.0201C15.8981 14.7215 16 14.3726 16 14V6C16 4.89543 15.1046 4 14 4H6ZM6 16H14C14.3692 16 14.7149 15.9 15.0118 15.7256L10.3504 11.1453C10.1559 10.9542 9.84409 10.9542 9.64956 11.1453L4.98824 15.7256C5.28505 15.9 5.63085 16 6 16Z"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Uploads">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE898;"/>
@@ -157,12 +170,16 @@
                                 <Setter TargetName="Tb" Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
                                 <Setter TargetName="Icon" Property="Opacity" Value="1"/>
                                 <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="VectorIcon" Property="Opacity" Value="1"/>
+                                <Setter TargetName="VectorIcon" Property="Fill" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="VectorIcon" Property="Stroke" Value="{DynamicResource ThemeAccentBrush}"/>
                                 <Setter TargetName="ActiveIndicator" Property="Opacity" Value="1"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
                                 <Setter TargetName="Tb" Property="Opacity" Value="0.9"/>
                                 <Setter TargetName="Icon" Property="Opacity" Value="0.84"/>
+                                <Setter TargetName="VectorIcon" Property="Opacity" Value="0.84"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -785,7 +802,10 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xEE6F;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <Path Width="14" Height="14" Stretch="Uniform" 
+                                          Fill="{DynamicResource ThemeTextPrimaryBrush}"
+                                          Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="0.3"
+                                          Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2ZM10 8.25a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5Z"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Default capture method" Style="{StaticResource SettingTitle}"/>
@@ -1570,7 +1590,10 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Border Style="{StaticResource SettingIconFrame}">
-                                <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
+                                <Path Width="14" Height="14" Stretch="Uniform" 
+                                      Fill="{DynamicResource ThemeTextPrimaryBrush}"
+                                      Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="0.3"
+                                      Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2Zm-9-11a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Zm0 3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7ZM6 12.5c0-.28.22-.5.5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5Z"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="OCR language" Style="{StaticResource SettingTitle}"/>
@@ -2693,7 +2716,7 @@
             <!-- Gallery -->
             <ScrollViewer x:Name="HistoryPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
                 <StackPanel>
-                    <TextBlock Text="Gallery" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="Storage &amp; Retention" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
@@ -2703,7 +2726,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE74E;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Save captures to Gallery" Style="{StaticResource SettingTitle}"/>

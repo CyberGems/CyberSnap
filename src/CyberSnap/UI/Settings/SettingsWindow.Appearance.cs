@@ -49,13 +49,13 @@ public partial class SettingsWindow
         // Mapping of each tab RadioButton to its glyph icon (Unicode character)
         var iconMap = new System.Collections.Generic.Dictionary<System.Windows.Controls.RadioButton, string>
         {
-            [SettingsTab] = "\uE9E9", // General
+            [SettingsTab] = "\uE713", // General
             [ToastTab] = "\uEA8F", // Notifications
-            [HotkeysTab] = "\uE90F", // Tools
-            [CaptureTab] = "\uEE6F", // Capture
+            [HotkeysTab] = "\uEE6F", // Tools
+            [CaptureTab] = "\uE7C2", // Capture
             [RecordingTab] = "\uE768", // Video
-            [OcrTab] = "\uE8B7", // OCR
-            [HistoryTab] = "\uE81C", // History
+            [OcrTab] = "\uE8C8", // OCR
+            [HistoryTab] = "\uEB9F", // History
             [AboutTab] = "\uE946" // About
         };
 
@@ -447,7 +447,7 @@ public partial class SettingsWindow
         if (CaptureTab.IsChecked == true) return "Capture";
         if (RecordingTab.IsChecked == true) return "Video";
         if (OcrTab.IsChecked == true) return "OCR";
-        if (HistoryTab.IsChecked == true) return "History";
+        if (HistoryTab.IsChecked == true) return "Gallery";
         if (AboutTab.IsChecked == true) return "About";
         return "General";
     }
