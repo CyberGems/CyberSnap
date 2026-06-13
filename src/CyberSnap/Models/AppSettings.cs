@@ -232,6 +232,11 @@ public sealed class AppSettings
     public int JpegQuality { get; set; } = 85;
     public bool HasCompletedSetup { get; set; }
     public ToastPosition ToastPosition { get; set; } = ToastPosition.TopCenter;
+
+    // Celebration mode: occasional milestone toasts get a flourish. Master toggle.
+    public bool CelebrationsEnabled { get; set; } = true;
+    // Local date (yyyy-MM-dd) of the last "first capture of the day" celebration.
+    public string? LastCelebrationDate { get; set; }
     public int ToastMonitorIndex { get; set; } = -1; // -1 = Auto/Follow, 0+ = fixed index
     public CaptureMode DefaultCaptureMode { get; set; } = CaptureMode.Rectangle;
     public CenterSelectionAspectRatio CenterSelectionAspectRatio { get; set; } = CenterSelectionAspectRatio.Free;

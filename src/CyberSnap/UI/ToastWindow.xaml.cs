@@ -19,6 +19,10 @@ public partial class ToastWindow : Window
     private const double RootCornerRadius = 10;
     private readonly DispatcherTimer _timer;
     private ToastSpec _spec;
+    // Celebration timeline: cached default brush + the flowing celebration brush/sweep.
+    private System.Windows.Media.Brush? _defaultProgressBrush;
+    private System.Windows.Media.LinearGradientBrush? _celebrationBrush;
+    private TranslateTransform? _celebrationSweep;
     private bool _isDismissing;
     private bool _isHovered;
     private bool _isFading;
@@ -223,6 +227,8 @@ public partial class ToastWindow : Window
         _isPinned = false;
         ConfigureShell();
         ProgressBar.Visibility = Visibility.Visible;
+        // Capture the XAML gradient once, before any error/celebration swap, so we can restore it.
+        _defaultProgressBrush ??= ProgressBar.Background;
         ApplyToastOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
 
         _savedFilePath = spec.FilePath;
@@ -290,6 +296,8 @@ public partial class ToastWindow : Window
             ProgressBar.Background = Theme.Brush(Color.FromArgb(180, red.R, red.G, red.B));
             TitleText.Foreground = Theme.Brush(red);
         }
+
+        ApplyCelebrationVisual(spec.Celebrate && !spec.IsError);
 
         RefreshInteractiveTooltip(spec);
 
@@ -1958,6 +1966,57 @@ public partial class ToastWindow : Window
         CyberSnap.Models.ToastPosition.BottomCenter => (0, 32),
         _ => (56, 0)
     };
+
+    // Celebration flourish: swaps the timeline to a seamless flowing rainbow that
+    // sweeps continuously; restores the normal gradient when off. Cheapest effect of
+    // the celebration-mode roadmap.
+    private void ApplyCelebrationVisual(bool on)
+    {
+        if (on)
+        {
+            if (_celebrationBrush is null)
+            {
+                _celebrationSweep = new TranslateTransform();
+                _celebrationBrush = new System.Windows.Media.LinearGradientBrush
+                {
+                    StartPoint = new System.Windows.Point(0, 0.5),
+                    EndPoint = new System.Windows.Point(1, 0.5),
+                    MappingMode = BrushMappingMode.RelativeToBoundingBox,
+                    SpreadMethod = GradientSpreadMethod.Repeat,
+                    // Symmetric, periodic stops (start color == end color) so a 0->1
+                    // translate loops with no visible seam.
+                    GradientStops = new GradientStopCollection
+                    {
+                        new GradientStop(Color.FromRgb(0x00, 0xF2, 0xFF), 0.0),  // cyan
+                        new GradientStop(Color.FromRgb(0x7A, 0x00, 0xFF), 0.25), // purple
+                        new GradientStop(Color.FromRgb(0xFF, 0x00, 0xD0), 0.5),  // magenta
+                        new GradientStop(Color.FromRgb(0x7A, 0x00, 0xFF), 0.75), // purple
+                        new GradientStop(Color.FromRgb(0x00, 0xF2, 0xFF), 1.0),  // cyan
+                    },
+                    // RelativeTransform (not Transform): a translate of X here is a
+                    // fraction of the bar width, so 0->1 slides a full width. Using
+                    // Transform would translate in absolute units (~1px) and be invisible.
+                    RelativeTransform = _celebrationSweep
+                };
+            }
+
+            ProgressBar.Background = _celebrationBrush;
+            _celebrationSweep!.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation
+            {
+                From = 0,
+                To = 1,
+                Duration = Motion.Sec(1.4),
+                RepeatBehavior = RepeatBehavior.Forever
+            });
+        }
+        else
+        {
+            _celebrationSweep?.BeginAnimation(TranslateTransform.XProperty, null);
+            // Don't clobber the red error brush; restore the normal gradient otherwise.
+            if (!_spec.IsError && _defaultProgressBrush is not null)
+                ProgressBar.Background = _defaultProgressBrush;
+        }
+    }
 
     // Places the timeline bar on the screen-facing edge (top for Top* positions,
     // bottom otherwise) and makes it shrink symmetrically toward the center for

@@ -32,6 +32,9 @@ internal sealed record ToastSpec
     public int? MaxWidthOverride { get; init; }
     public int? MinWidthOverride { get; init; }
     public double? DurationSeconds { get; init; }
+    // When true, the toast plays a celebratory flourish (animated sweep timeline).
+    // Only honored for non-error toasts.
+    public bool Celebrate { get; init; }
 
     public static ToastSpec Standard(string title, string body = "", string? filePath = null) => new()
     {
