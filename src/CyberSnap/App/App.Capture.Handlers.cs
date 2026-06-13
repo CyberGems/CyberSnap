@@ -97,8 +97,11 @@ public partial class App
                     }
                     else if (ShouldPreviewAfterCapture(action))
                     {
-                        var celebrate = ShouldCelebrateFirstCaptureOfDay(settings);
-                        ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews, celebrate);
+                        var celebration = TryGetCaptureCelebration(settings);
+                        if (celebration is { } copy)
+                            ToastWindow.ShowImagePreview(persisted.Output, copy.Title, copy.Body, persisted.FilePath, settings.AutoPinPreviews, celebrate: true);
+                        else
+                            ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
                     }
                     else
                     {
@@ -189,21 +192,24 @@ public partial class App
         });
     }
 
-    // Celebration trigger: returns true once per local day for the first preview shown,
-    // when celebrations are enabled. Persists the date so it only fires once a day.
-    private bool ShouldCelebrateFirstCaptureOfDay(AppSettings settings)
+    // Celebration trigger: fires once per local day for the first preview shown, when
+    // celebrations are enabled. Returns the trigger-specific copy (so the flourish has
+    // context), or null when not celebrating. Persists the date so it only fires once a day.
+    private (string Title, string Body)? TryGetCaptureCelebration(AppSettings settings)
     {
         if (!settings.CelebrationsEnabled)
-            return false;
+            return null;
 
         var today = DateTime.Now.ToString("yyyy-MM-dd");
         if (settings.LastCelebrationDate == today)
-            return false;
+            return null;
 
         settings.LastCelebrationDate = today;
         try { _settingsService!.Save(); }
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.celebration-save", ex.Message, ex); }
-        return true;
+
+        // First capture of the day. Future triggers (milestones, streaks) bring their own copy.
+        return ("Good morning! 📸", "Your first capture today");
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
