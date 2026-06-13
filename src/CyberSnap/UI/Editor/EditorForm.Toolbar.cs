@@ -517,13 +517,13 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(newButton, () => WithShortcut("Create a blank canvas", "Ctrl+N"), above: false);
         topActions.Controls.Add(newButton);
 
-        // Spacer between New/Open and History
+        // Spacer between New/Open and Gallery
         topActions.Controls.Add(MakeSeparator());
 
-        var historyButton = MakeCommandButton("history", LocalizationService.Translate("History"), false);
-        historyButton.Click += (_, _) => OpenHistoryWindow();
-        RegisterHoverTooltip(historyButton, "Open Capture Gallery", above: false);
-        topActions.Controls.Add(historyButton);
+        var galleryButton = MakeCommandButton("history", LocalizationService.Translate("History"), false);
+        galleryButton.Click += (_, _) => OpenHistoryWindow();
+        RegisterHoverTooltip(galleryButton, "Open Capture Gallery", above: false);
+        topActions.Controls.Add(galleryButton);
 
 
         // Spacer between undo/redo and the rest
@@ -2191,7 +2191,7 @@ internal sealed class EditorZoomSlider : Control
 
 internal static class EditorPaint
 {
-    public const int WindowCornerRadius = 12;   // matches WPF Settings/History root Border
+    public const int WindowCornerRadius = 12;   // matches WPF Settings/Gallery root Border
     public const int WindowFrameInset = 2;      // uniform inset of the cyan accent frame
     public const int ResizeHitSize = 8;         // edge thickness that triggers window resize
 
