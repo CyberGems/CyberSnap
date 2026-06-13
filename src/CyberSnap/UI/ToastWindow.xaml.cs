@@ -233,7 +233,7 @@ public partial class ToastWindow : Window
 
         _savedFilePath = spec.FilePath;
 
-        TitleText.Text = LocalizationService.Translate(spec.Title);
+        SetTitleContent(LocalizationService.Translate(spec.Title), spec.Celebrate && !spec.IsError);
         BodyText.Text = LocalizationService.Translate(spec.Body);
         TitleText.Visibility = string.IsNullOrWhiteSpace(spec.Title) ? Visibility.Collapsed : Visibility.Visible;
         BodyText.Visibility = string.IsNullOrWhiteSpace(spec.Body) ? Visibility.Collapsed : Visibility.Visible;
@@ -1966,6 +1966,35 @@ public partial class ToastWindow : Window
         CyberSnap.Models.ToastPosition.BottomCenter => (0, 32),
         _ => (56, 0)
     };
+
+    // Sets the title text, optionally prefixed with the app's signature capture icon
+    // (the same "captureRect" icon shown for Area Capture in the widget) for celebrations.
+    private void SetTitleContent(string text, bool withCelebrationIcon)
+    {
+        TitleText.Inlines.Clear();
+
+        if (!withCelebrationIcon)
+        {
+            TitleText.Text = text;
+            return;
+        }
+
+        var icon = new System.Windows.Controls.Image
+        {
+            Source = FluentIcons.RenderWpf("captureRect", System.Drawing.Color.FromArgb(0x00, 0xF2, 0xFF), 16),
+            Width = 14,
+            Height = 14,
+            Margin = new Thickness(0, 0, 5, 0),
+            Stretch = Stretch.Uniform
+        };
+        RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.HighQuality);
+
+        TitleText.Inlines.Add(new System.Windows.Documents.InlineUIContainer(icon)
+        {
+            BaselineAlignment = BaselineAlignment.Center
+        });
+        TitleText.Inlines.Add(new System.Windows.Documents.Run(text));
+    }
 
     // Celebration flourish: swaps the timeline to a seamless flowing rainbow that
     // sweeps continuously; restores the normal gradient when off. Cheapest effect of
