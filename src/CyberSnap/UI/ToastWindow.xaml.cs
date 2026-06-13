@@ -33,7 +33,7 @@ public partial class ToastWindow : Window
     private bool _resumeDismissOnMouseLeave;
 
     private static ToastWindow? _current;
-    private static CyberSnap.Models.ToastPosition _position = CyberSnap.Models.ToastPosition.Right;
+    private static CyberSnap.Models.ToastPosition _position = CyberSnap.Models.ToastPosition.TopCenter;
     private static double _durationSeconds = 2.5;
     private static double _systemDurationSeconds = 4.0;
     private static bool _notificationsEnabled = true;
@@ -1655,6 +1655,8 @@ public partial class ToastWindow : Window
 
     private void ApplyPlacement(bool animateEntry, bool subtleEntry)
     {
+        ApplyTimelineLayout();
+
         // 1. Get the target monitor
         var screens = PopupWindowHelper.GetSortedScreens();
         var screen = (_monitorIndex >= 0 && _monitorIndex < screens.Length)
@@ -1952,8 +1954,38 @@ public partial class ToastWindow : Window
         CyberSnap.Models.ToastPosition.TopLeft => (0, -32),
         CyberSnap.Models.ToastPosition.TopRight => (0, -32),
         CyberSnap.Models.ToastPosition.BottomLeft => (-56, 0),
+        CyberSnap.Models.ToastPosition.TopCenter => (0, -32),
+        CyberSnap.Models.ToastPosition.BottomCenter => (0, 32),
         _ => (56, 0)
     };
+
+    // Places the timeline bar on the screen-facing edge (top for Top* positions,
+    // bottom otherwise) and makes it shrink symmetrically toward the center for
+    // the centered positions. Driven by the current static _position.
+    private void ApplyTimelineLayout()
+    {
+        bool topEdge = _position is CyberSnap.Models.ToastPosition.TopLeft
+            or CyberSnap.Models.ToastPosition.TopRight
+            or CyberSnap.Models.ToastPosition.TopCenter;
+        bool centered = _position is CyberSnap.Models.ToastPosition.TopCenter
+            or CyberSnap.Models.ToastPosition.BottomCenter;
+
+        System.Windows.Controls.Grid.SetRow(ProgressHost, topEdge ? 0 : 2);
+        TopProgressRow.Height = new GridLength(topEdge ? 4 : 0);
+        BottomProgressRow.Height = new GridLength(topEdge ? 0 : 4);
+
+        // Centered toasts shrink from both ends toward the middle; the others keep
+        // the left-anchored right-to-left shrink.
+        ProgressBar.RenderTransformOrigin = centered
+            ? new System.Windows.Point(0.5, 0.5)
+            : new System.Windows.Point(0, 0.5);
+
+        // When the bar sits on top, square the image's upper corners so the rounded
+        // notch doesn't peek out beneath the timeline.
+        ImageFrame.CornerRadius = topEdge
+            ? new CornerRadius(0)
+            : new CornerRadius(RootCornerRadius, RootCornerRadius, 0, 0);
+    }
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int virtualKey);

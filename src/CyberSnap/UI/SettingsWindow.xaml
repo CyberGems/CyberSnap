@@ -2241,6 +2241,12 @@
                                      <ComboBoxItem Content="Bottom Right" ToolTip="Show previews in the bottom-right corner."
                                                    AutomationProperties.Name="Bottom-right notification position"
                                                    AutomationProperties.HelpText="Place screenshot previews in the bottom-right corner of the screen."/>
+                                     <ComboBoxItem Content="Top Center" ToolTip="Show previews centered along the top edge."
+                                                   AutomationProperties.Name="Top-center notification position"
+                                                   AutomationProperties.HelpText="Place screenshot previews centered along the top edge of the screen."/>
+                                     <ComboBoxItem Content="Bottom Center" ToolTip="Show previews centered along the bottom edge."
+                                                   AutomationProperties.Name="Bottom-center notification position"
+                                                   AutomationProperties.HelpText="Place screenshot previews centered along the bottom edge of the screen."/>
                                  </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>

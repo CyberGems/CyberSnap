@@ -16,7 +16,9 @@ public enum ToastPosition
     TopLeft,
     TopRight,
     BottomLeft,
-    BottomRight
+    BottomRight,
+    TopCenter,
+    BottomCenter
 }
 
 public enum ToastButtonSlot
@@ -229,7 +231,7 @@ public sealed class AppSettings
     public bool CompressHistory { get; set; }
     public int JpegQuality { get; set; } = 85;
     public bool HasCompletedSetup { get; set; }
-    public ToastPosition ToastPosition { get; set; } = ToastPosition.Right;
+    public ToastPosition ToastPosition { get; set; } = ToastPosition.TopCenter;
     public int ToastMonitorIndex { get; set; } = -1; // -1 = Auto/Follow, 0+ = fixed index
     public CaptureMode DefaultCaptureMode { get; set; } = CaptureMode.Rectangle;
     public CenterSelectionAspectRatio CenterSelectionAspectRatio { get; set; } = CenterSelectionAspectRatio.Free;

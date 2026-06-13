@@ -301,7 +301,7 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressToastPreferenceChange) return;
 
         var previous = _settingsService.Settings.ToastPosition;
-        var selected = (ToastPosition)Math.Clamp(ToastPositionCombo.SelectedIndex, 0, 5);
+        var selected = (ToastPosition)Math.Clamp(ToastPositionCombo.SelectedIndex, 0, 7);
         UpdateToastPreference(
             "settings.toast-position",
             "Toast position",
