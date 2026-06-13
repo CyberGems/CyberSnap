@@ -183,6 +183,8 @@ public partial class App
                 if (!result.IsUpdateAvailable)
                     return;
 
+                LatestUpdateResult = result;
+
                 if (Application.Current is null) return;
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -190,7 +192,7 @@ public partial class App
                     {
                         Title = "Update available",
                         Body = $"CyberSnap {result.LatestVersionLabel} is out!\nYou're on {UpdateService.GetCurrentVersionLabel()}",
-                        ClickActionUrl = result.ReleaseUrl,
+                        ClickActionUrl = "cybersnap://update",
                         ClickActionLabel = "Download",
                         DurationSeconds = 12,
                         SuppressSound = true

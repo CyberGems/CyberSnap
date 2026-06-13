@@ -11,6 +11,8 @@ namespace CyberSnap;
 
 public partial class App
 {
+    public Services.UpdateCheckResult? LatestUpdateResult { get; set; }
+
     private const long IdleTrimPrivateBytesThreshold = 384L * 1024 * 1024;
     private static readonly TimeSpan MinimumIdleTrimInterval = TimeSpan.FromMinutes(2);
 
@@ -69,6 +71,24 @@ public partial class App
                 }, DispatcherPriority.Background);
             }
         });
+    }
+
+    public void ShowSettingsAndDownloadUpdate(UpdateCheckResult result)
+    {
+        ShowSettings();
+        _ = Dispatcher.BeginInvoke(async () =>
+        {
+            for (int i = 0; i < 20; i++)
+            {
+                if (_settingsWindow is { IsVisible: true })
+                    break;
+                await Task.Delay(100);
+            }
+            if (_settingsWindow != null)
+            {
+                await _settingsWindow.StartUpdateDownloadAsync(result);
+            }
+        }, DispatcherPriority.Background);
     }
 
     private static void ShowSettingsOpenFailed(Exception ex, string diagnosticKey, string toastDiagnosticKey)

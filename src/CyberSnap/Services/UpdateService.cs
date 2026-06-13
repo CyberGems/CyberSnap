@@ -1,4 +1,6 @@
-﻿using System.Net.Http;
+using System.IO;
+using System.Diagnostics;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -133,5 +135,51 @@ public static class UpdateService
                 currentVersion, null, currentLabel, string.Empty, null, null, null, null, false,
                 "Unexpected response from update server.");
         }
+    }
+
+    public static async Task DownloadUpdateAsync(string downloadUrl, string destinationPath, IProgress<double> progress, CancellationToken cancellationToken = default)
+    {
+        var dir = Path.GetDirectoryName(destinationPath);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        using var response = await GitHubHttp.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+        using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
+
+        var buffer = new byte[8192];
+        var totalRead = 0L;
+        int bytesRead;
+
+        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
+        {
+            await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken).ConfigureAwait(false);
+            totalRead += bytesRead;
+
+            if (totalBytes > 0)
+            {
+                var percentage = (double)totalRead / totalBytes * 100.0;
+                progress.Report(percentage);
+            }
+        }
+    }
+
+    public static void LaunchInstallerAndExit(string installerPath)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = installerPath,
+            UseShellExecute = true
+        };
+        Process.Start(psi);
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            System.Windows.Application.Current.Shutdown();
+        });
     }
 }
