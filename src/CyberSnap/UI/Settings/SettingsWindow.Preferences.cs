@@ -1007,19 +1007,26 @@ public partial class SettingsWindow
                         g.FillRectangle(brush, 0, 0, 320, 200);
                     }
 
-                    // Logo text
-                    using (var font = new System.Drawing.Font("Segoe UI", 16, System.Drawing.FontStyle.Bold))
-                    using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.White))
+                    // Draw centered strings using StringFormat
+                    using (var sf = new System.Drawing.StringFormat())
                     {
-                        g.DrawString("CyberSnap", font, brush, 24, 24);
-                    }
+                        sf.Alignment = System.Drawing.StringAlignment.Center;
 
-                    // Description text
-                    using (var font = new System.Drawing.Font("Segoe UI", 10))
-                    using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(220, 255, 255, 255)))
-                    {
-                        g.DrawString("This is a notification preview.", font, brush, 24, 64);
-                        g.DrawString("Position, duration and alignment tests.", font, brush, 24, 86);
+                        // Logo text with dynamic version
+                        string versionLabel = UpdateService.GetCurrentVersionLabel();
+                        using (var font = new System.Drawing.Font("Segoe UI", 16, System.Drawing.FontStyle.Bold))
+                        using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.White))
+                        {
+                            g.DrawString($"CyberSnap {versionLabel}", font, brush, new System.Drawing.RectangleF(0, 24, 320, 40), sf);
+                        }
+
+                        // Description text
+                        using (var font = new System.Drawing.Font("Segoe UI", 10))
+                        using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(220, 255, 255, 255)))
+                        {
+                            g.DrawString("This is a notification preview.", font, brush, new System.Drawing.RectangleF(0, 68, 320, 30), sf);
+                            g.DrawString("Position, duration and alignment tests.", font, brush, new System.Drawing.RectangleF(0, 94, 320, 30), sf);
+                        }
                     }
                 }
 
