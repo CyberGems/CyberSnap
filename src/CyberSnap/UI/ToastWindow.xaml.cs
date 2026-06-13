@@ -1552,9 +1552,21 @@ public partial class ToastWindow : Window
         while (child != null)
         {
             if (child == parent) return true;
-            child = VisualTreeHelper.GetParent(child);
+            child = GetVisualOrLogicalParent(child);
         }
         return false;
+    }
+
+    // VisualTreeHelper.GetParent throws on non-Visuals (e.g. a Run from an inline
+    // TextBlock). Walk the visual tree for Visuals and fall back to the logical tree
+    // for ContentElements so hit-test sources over inline text don't crash.
+    private static DependencyObject? GetVisualOrLogicalParent(DependencyObject child)
+    {
+        if (child is Visual or System.Windows.Media.Media3D.Visual3D)
+            return VisualTreeHelper.GetParent(child);
+
+        return LogicalTreeHelper.GetParent(child)
+            ?? (child as FrameworkContentElement)?.Parent;
     }
 
     private bool IsToastOverlayButtonSource(DependencyObject? source) =>
@@ -2062,6 +2074,11 @@ public partial class ToastWindow : Window
                 AutoReverse = true,
                 RepeatBehavior = RepeatBehavior.Forever
             });
+
+            // The bar's host clips to its 4px row, which would swallow the glow halo.
+            // Let it bleed into the toast body during celebrations (the rounded Root
+            // still clips the outer edge).
+            ProgressHost.ClipToBounds = false;
         }
         else
         {
@@ -2070,6 +2087,7 @@ public partial class ToastWindow : Window
             ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, null);
             ProgressGlow.BlurRadius = 8;
             ProgressGlow.Opacity = 0.8;
+            ProgressHost.ClipToBounds = true;
             // Don't clobber the red error brush; restore the normal gradient otherwise.
             if (!_spec.IsError && _defaultProgressBrush is not null)
                 ProgressBar.Background = _defaultProgressBrush;
