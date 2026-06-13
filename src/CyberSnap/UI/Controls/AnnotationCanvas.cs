@@ -40,6 +40,12 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private const int UndoStackLimit = 200;
     private const double MinZoom = 0.1;
     private const double MaxZoom = 8.0;
+
+    // Above this source-pixel count, zoom gestures draw a fast (slightly soft) draft and
+    // refine to crisp on settle. Below it, a full-quality rescale per frame is cheap enough
+    // that the draft would only add a visible blur + snap-back, so we skip it. ~4 MP keeps
+    // typical screenshots (1080p/1200p/1440p) crisp while large images stay fluid.
+    private const long DraftZoomPixelThreshold = 4_000_000;
     public const int MinZoomPercent = 10;
     public const int MaxZoomPercent = 800;
 
@@ -50,6 +56,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     private double _zoom = 1.0;
     private PointF _pan; // pixel offset of image-space origin relative to control client
+    private bool _zoomInteracting;       // user is mid zoom gesture: draw fast, refine on settle
+    private System.Windows.Forms.Timer? _zoomSettleTimer;
     private bool _viewFitsWindow = true; // image auto-fits the canvas until the user zooms
     private bool _userPanned;            // user has manually dragged the image
     private bool _isPanning;
@@ -127,6 +135,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             var old = _baseBitmap;
             _baseBitmap = value ?? throw new ArgumentNullException(nameof(value));
             old?.Dispose();
+            InvalidateScaledCache();
 
             // Reset crop handles to the new bitmap size if auto crop controls is enabled
             if (EditorAutoCropControls)
@@ -492,6 +501,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
         var oldBaseBitmap = _baseBitmap;
         _baseBitmap = newBaseBitmap;
+        InvalidateScaledCache();
         _annotations.Clear();
         ClearAllGuides();
         ClearEditHistory();
@@ -532,6 +542,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         var oldBaseBitmap = _baseBitmap;
         _baseBitmap = new Bitmap(renderedBitmap);
         oldBaseBitmap?.Dispose();
+        InvalidateScaledCache();
         _annotations.Clear();
         ClearEditHistory();
         _isPanning = false;
@@ -659,8 +670,38 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _pan = new PointF(
             screenAnchor.X - (float)(imageAnchor.X * _zoom),
             screenAnchor.Y - (float)(imageAnchor.Y * _zoom));
+        BeginZoomInteraction();
         Invalidate();
         OnStateChanged();
+    }
+
+    /// <summary>
+    /// Marks an active zoom gesture so the next repaints draw the base image fast
+    /// (cheap interpolation straight from the source) instead of rebuilding the crisp
+    /// pre-scaled cache on every wheel tick. A one-shot timer clears the flag shortly
+    /// after the last zoom step and forces one final high-quality repaint.
+    /// </summary>
+    private void BeginZoomInteraction()
+    {
+        // Small images rebuild the crisp cache cheaply enough every frame; engaging the
+        // draft path would only add a perceptible blur and a snap back to sharp. Reserve
+        // it for large bitmaps where the per-frame bicubic rescale is the actual cost.
+        if ((long)_baseBitmap.Width * _baseBitmap.Height < DraftZoomPixelThreshold)
+            return;
+
+        _zoomInteracting = true;
+        if (_zoomSettleTimer is null)
+        {
+            _zoomSettleTimer = new System.Windows.Forms.Timer { Interval = 140 };
+            _zoomSettleTimer.Tick += (_, _) =>
+            {
+                _zoomSettleTimer!.Stop();
+                _zoomInteracting = false;
+                Invalidate(); // rebuilds the HQ cache for the settled zoom level
+            };
+        }
+        _zoomSettleTimer.Stop();
+        _zoomSettleTimer.Start();
     }
 
     public void ZoomToPercent(int percent)
@@ -769,6 +810,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         {
             _bannerTimer?.Stop();
             _bannerTimer?.Dispose();
+            _zoomSettleTimer?.Stop();
+            _zoomSettleTimer?.Dispose();
+            _scaledCache?.Dispose();
             ClearEditHistory();
             _emojiRenderer.Dispose();
             _blurScratch?.Dispose();
