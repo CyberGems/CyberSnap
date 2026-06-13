@@ -89,8 +89,8 @@ public partial class CyberSnapTitleBar : UserControl
             AnnotationBtn.ToolTip = LocalizationService.Translate("Annotations Editor");
 
             ActionBtn.Visibility = Visibility.Visible;
-            ActionBtn.ToolTip = LocalizationService.Translate("Capture History");
-            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("folder", titleIcon, 18);
+            ActionBtn.ToolTip = LocalizationService.Translate("Capture Gallery");
+            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("history", titleIcon, 18);
         }
         else if (OwnerWindow is HistoryWindow)
         {
