@@ -505,7 +505,7 @@ public sealed partial class RegionOverlayForm : Form
         else
         {
             int logoSize = UiChrome.ScaleInt(10);
-            int textWidth = UiChrome.ScaleInt(50); // "CyberSnap" text estimate at 5.8pt bold
+            int textWidth = UiChrome.ScaleInt(60); // "CyberSnap" text estimate at 5.8pt bold
             
             // Check if there is enough space to show the text.
             // If the annotation bar is significantly wider than the main bar, or if we have at least 6 tools enabled in the main bar, show the text.

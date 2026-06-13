@@ -181,7 +181,7 @@ public sealed partial class RegionOverlayForm
             float tempTextX = tempLx + tempLogoSz + UiChrome.ScaleInt(6);
             float tempTextW = _toolbarButtons[0].X - tempTextX - UiChrome.ScaleInt(6);
             
-            bool drawText = canShowText && (tempTextW >= UiChrome.ScaleInt(50));
+            bool drawText = canShowText && (tempTextW >= UiChrome.ScaleInt(60));
 
             float lx;
             float ly;
