@@ -209,7 +209,8 @@ public partial class App
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.celebration-save", ex.Message, ex); }
 
         // First capture of the day. Future triggers (milestones, streaks) bring their own copy.
-        return ("Good morning! 📸", "Your first capture today");
+        // Time-neutral greeting (works for night owls); the capture icon is added by the toast.
+        return ("Welcome back!", "Your first capture today");
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
