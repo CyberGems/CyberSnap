@@ -11,6 +11,12 @@ public sealed partial class RegionOverlayForm
 {
     private void ShowToolbarTooltip()
     {
+        if (_toolbarContextMenu != null && _toolbarContextMenu.Visible)
+        {
+            HideToolbarTooltip();
+            return;
+        }
+
         if (_isMouseDownOnCaptureBtn)
         {
             HideToolbarTooltip();

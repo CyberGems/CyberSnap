@@ -505,7 +505,23 @@ public sealed partial class RegionOverlayForm : Form
         {
             int logoSize = UiChrome.ScaleInt(10);
             int textWidth = UiChrome.ScaleInt(50); // "CyberSnap" text estimate at 5.8pt bold
-            int brandWidth = logoSize + textWidth + UiChrome.ScaleInt(24); // logo + text + padding+buffer
+            
+            // Check if there is enough space to show the text.
+            // If the annotation bar is significantly wider than the main bar, or if we have at least 6 tools enabled in the main bar, show the text.
+            int tier1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
+            int tier2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
+            bool canShowText = (tier2Width - tier1Width >= UiChrome.ScaleInt(80)) || (_mainBarTools.Length >= 6);
+            
+            int brandWidth;
+            if (canShowText)
+            {
+                brandWidth = logoSize + textWidth + UiChrome.ScaleInt(24); // logo + text + padding+buffer
+            }
+            else
+            {
+                brandWidth = logoSize + UiChrome.ScaleInt(16); // only logo + small padding
+            }
+            
             w = maxPrimarySpan + brandWidth;
             h = pad * 2 + buttonSize * 2 + buttonSpacing;
         }
