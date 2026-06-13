@@ -94,7 +94,7 @@ public partial class CyberSnapTitleBar : UserControl
         var renderTarget = new System.Windows.Media.Imaging.RenderTargetBitmap(18, 18, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
         renderTarget.Render(dv);
         AnnotationIcon.Source = renderTarget;
-        AnnotationIcon.Opacity = 0.55;
+        AnnotationIcon.Opacity = 0.5;
 
         InitializeActionBtn(titleIcon);
     }
