@@ -1984,16 +1984,17 @@ public partial class ToastWindow : Window
             Source = FluentIcons.RenderWpf("captureRect", System.Drawing.Color.FromArgb(0x00, 0xF2, 0xFF), 16),
             Width = 14,
             Height = 14,
-            Margin = new Thickness(0, 0, 5, 0),
+            Margin = new Thickness(5, 0, 0, 0),
             Stretch = Stretch.Uniform
         };
         RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.HighQuality);
 
+        // Trailing icon — reads as a friendly "stamp" beside the greeting.
+        TitleText.Inlines.Add(new System.Windows.Documents.Run(text));
         TitleText.Inlines.Add(new System.Windows.Documents.InlineUIContainer(icon)
         {
             BaselineAlignment = BaselineAlignment.Center
         });
-        TitleText.Inlines.Add(new System.Windows.Documents.Run(text));
     }
 
     // Celebration flourish: swaps the timeline to a seamless flowing rainbow that
@@ -2037,10 +2038,33 @@ public partial class ToastWindow : Window
                 Duration = Motion.Sec(1.4),
                 RepeatBehavior = RepeatBehavior.Forever
             });
+
+            // Gentle "breathing" glow that pulses while the rainbow flows, so the
+            // flourish clearly reads as celebratory rather than a rendering glitch.
+            ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, new DoubleAnimation
+            {
+                From = 8,
+                To = 15,
+                Duration = Motion.Sec(0.9),
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever
+            });
+            ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, new DoubleAnimation
+            {
+                From = 0.8,
+                To = 1.0,
+                Duration = Motion.Sec(0.9),
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever
+            });
         }
         else
         {
             _celebrationSweep?.BeginAnimation(TranslateTransform.XProperty, null);
+            ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, null);
+            ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, null);
+            ProgressGlow.BlurRadius = 8;
+            ProgressGlow.Opacity = 0.8;
             // Don't clobber the red error brush; restore the normal gradient otherwise.
             if (!_spec.IsError && _defaultProgressBrush is not null)
                 ProgressBar.Background = _defaultProgressBrush;
