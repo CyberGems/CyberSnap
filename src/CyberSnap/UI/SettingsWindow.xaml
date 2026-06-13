@@ -141,7 +141,7 @@
                             <Trigger Property="Content" Value="OCR">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE8B7;"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="History">
+                            <Trigger Property="Content" Value="Gallery">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE81C;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Uploads">
