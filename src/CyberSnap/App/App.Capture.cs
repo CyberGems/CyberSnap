@@ -361,6 +361,11 @@ public partial class App
                     ConfirmRegionBeforeCapture = _settingsService.Settings.ConfirmRegionBeforeCapture
                 };
                 overlay.SetEnabledTools(_settingsService.Settings.EnabledTools);
+                overlay.EnabledToolsChanged += enabledTools =>
+                {
+                    _settingsService!.Settings.EnabledTools = enabledTools;
+                    _settingsService.Save();
+                };
                 overlay.SetShowToolNumberBadges(_settingsService.Settings.ShowToolNumberBadges);
                 overlay.SetToolColor(System.Drawing.Color.FromArgb(_settingsService.Settings.ToolColorArgb));
                 overlay.ToolColorChanged += color =>

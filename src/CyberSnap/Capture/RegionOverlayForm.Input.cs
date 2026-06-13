@@ -9,7 +9,17 @@ public sealed partial class RegionOverlayForm
     protected override void OnMouseDown(MouseEventArgs e)
     {
         Focus();
-        if (e.Button == MouseButtons.Right) { Cancel(); return; }
+        if (e.Button == MouseButtons.Right)
+        {
+            int rightClickBtn = GetToolbarButtonAt(e.Location);
+            if (rightClickBtn >= 0)
+            {
+                ShowToolbarContextMenu(rightClickBtn, e.Location);
+                return;
+            }
+            Cancel();
+            return;
+        }
         if (e.Button != MouseButtons.Left) return;
 
         // Prioritize open pickers if click is inside them, to avoid overlapping toolbar buttons

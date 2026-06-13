@@ -27,19 +27,17 @@ public static class ToolListBuilder
     };
 
     private static readonly Dictionary<TextBox, bool> RecordingFlags = new();
-    private static readonly HashSet<StackPanel> RestoringEnabledToolPanels = new();
 
     public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null)
     {
         capturePanel.Children.Clear();
         annotationPanel.Children.Clear();
         var s = settingsService.Settings;
-        var enabled = s.EnabledTools ?? ToolDef.DefaultEnabledIds();
         // Icon color for rendering Fluent glyphs to bitmaps
         var iconColor = Theme.IsDark ? System.Drawing.Color.FromArgb(225, 255, 255, 255) : System.Drawing.Color.FromArgb(210, 0, 0, 0);
         var segoe = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName);
 
-        void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool hasToolbarToggle, bool showHotkey)
+        void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool showHotkey)
         {
             var card = new Border
             {
@@ -84,21 +82,6 @@ public static class ToolListBuilder
                 System.Windows.Media.RenderOptions.SetBitmapScalingMode(img, System.Windows.Media.BitmapScalingMode.HighQuality);
                 iconFrame.Child = img;
                 left.Children.Add(iconFrame);
-            }
-
-            if (hasToolbarToggle)
-            {
-                var cb = new CheckBox
-                {
-                    IsChecked = enabled.Contains(toolId),
-                    Tag = toolId,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 8, 0),
-                    Cursor = Cursors.Hand,
-                };
-                cb.Checked += (_, _) => SaveEnabledTools(capturePanel, annotationPanel, settingsService);
-                cb.Unchecked += (_, _) => SaveEnabledTools(capturePanel, annotationPanel, settingsService);
-                left.Children.Add(cb);
             }
 
             var labelBlock = new TextBlock
@@ -219,107 +202,16 @@ public static class ToolListBuilder
         }
 
         foreach (var t in ToolDef.AllTools.Where(t => t.Group == 0))
-            AddToolRow(capturePanel, t.Id, t.Label, t.Icon, true, true);
+            AddToolRow(capturePanel, t.Id, t.Label, t.Icon, true);
 
         foreach (var (id, label, icon) in ExtraTools)
-            AddToolRow(capturePanel, id, label, icon, false, true);
+            AddToolRow(capturePanel, id, label, icon, true);
 
         foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
-            AddToolRow(annotationPanel, t.Id, t.Label, t.Icon, true, true);
+            AddToolRow(annotationPanel, t.Id, t.Label, t.Icon, true);
 
         LocalizationService.ApplyTo(capturePanel, settingsService.Settings.InterfaceLanguage);
         LocalizationService.ApplyTo(annotationPanel, settingsService.Settings.InterfaceLanguage);
-    }
-
-    private static void SaveEnabledTools(StackPanel capturePanel, StackPanel annotationPanel, SettingsService svc)
-    {
-        if (RestoringEnabledToolPanels.Contains(capturePanel) || RestoringEnabledToolPanels.Contains(annotationPanel))
-            return;
-
-        var previous = (svc.Settings.EnabledTools ?? ToolDef.DefaultEnabledIds()).ToList();
-        var enabledIds = new System.Collections.Generic.List<string>();
-
-        void ScanPanel(StackPanel p)
-        {
-            foreach (var card in p.Children.OfType<Border>())
-            {
-                if (card.Child is not Grid g) continue;
-                foreach (var sp in g.Children.OfType<StackPanel>())
-                foreach (var cb in sp.Children.OfType<CheckBox>())
-                {
-                    if (cb.Tag is string id && cb.IsChecked == true)
-                        enabledIds.Add(id);
-                }
-            }
-        }
-
-        ScanPanel(capturePanel);
-        ScanPanel(annotationPanel);
-
-        if (!enabledIds.Any(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 0)))
-        {
-            RestoreEnabledToolChecks(capturePanel, annotationPanel, previous);
-            ToastWindow.ShowError("Tool required", "Keep at least one capture tool enabled.");
-            return;
-        }
-
-        try
-        {
-            svc.Settings.EnabledTools = enabledIds;
-            svc.Save();
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.enabled-tools", ex);
-            svc.Settings.EnabledTools = previous;
-            try
-            {
-                svc.Save();
-            }
-            catch (Exception rollbackEx)
-            {
-                AppDiagnostics.LogError("settings.enabled-tools-rollback", rollbackEx);
-            }
-
-            RestoreEnabledToolChecks(capturePanel, annotationPanel, previous);
-            ShowEnabledToolsSaveFailed(ex);
-        }
-    }
-
-    private static void ShowEnabledToolsSaveFailed(Exception ex)
-    {
-        ToastWindow.ShowError(
-            "Tool setting failed",
-            $"The previous enabled tools were restored. Check Config -> Tools and try again.\n{ex.Message}");
-    }
-
-    private static void RestoreEnabledToolChecks(StackPanel capturePanel, StackPanel annotationPanel, IReadOnlyCollection<string> enabledIds)
-    {
-        RestoringEnabledToolPanels.Add(capturePanel);
-        RestoringEnabledToolPanels.Add(annotationPanel);
-        try
-        {
-            void RestorePanel(StackPanel p)
-            {
-                foreach (var card in p.Children.OfType<Border>())
-                {
-                    if (card.Child is not Grid g) continue;
-                    foreach (var sp in g.Children.OfType<StackPanel>())
-                    foreach (var cb in sp.Children.OfType<CheckBox>())
-                    {
-                        if (cb.Tag is string id)
-                            cb.IsChecked = enabledIds.Contains(id);
-                    }
-                }
-            }
-            RestorePanel(capturePanel);
-            RestorePanel(annotationPanel);
-        }
-        finally
-        {
-            RestoringEnabledToolPanels.Remove(capturePanel);
-            RestoringEnabledToolPanels.Remove(annotationPanel);
-        }
     }
 
     public sealed record HotkeyConflict(string ToolId, string Label);

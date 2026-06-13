@@ -751,7 +751,7 @@
                                  IsChecked="True" Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="ToastTab" Content="Notifications" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="HotkeysTab" Content="Tools" GroupName="Main"
+                    <RadioButton x:Name="HotkeysTab" Content="Hotkeys" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="CaptureTab" Content="Capture" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
@@ -780,11 +780,15 @@
                            IsHitTestVisible="False"/>
 
 
-            <!-- Tools (unified hotkeys + toolbar) -->
+            <!-- Hotkeys (unified hotkeys + reset toolbar) -->
             <ScrollViewer x:Name="HotkeysPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,36,18,18">
                 <StackPanel>
                     <CheckBox x:Name="ShowToolNumberBadgesCheck" Visibility="Collapsed"
                               Checked="ShowToolNumberBadgesCheck_Changed" Unchecked="ShowToolNumberBadgesCheck_Changed"/>
+                    <DockPanel LastChildFill="False" Margin="0,0,0,12">
+                        <Button x:Name="ResetToolbarBtn" Content="Reset Toolbar Layout"
+                                DockPanel.Dock="Right" MinWidth="140" Height="28" Click="ResetToolbarBtn_Click"/>
+                    </DockPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -792,11 +796,11 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Capture Tools &amp; Actions" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
+                            <TextBlock Text="Capture &amp; Global Hotkeys" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
                             <StackPanel x:Name="CaptureToolsPanel"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2">
-                            <TextBlock Text="Annotation Tools" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
+                            <TextBlock Text="Annotation Hotkeys" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
                             <StackPanel x:Name="AnnotationToolsPanel"/>
                         </StackPanel>
                     </Grid>

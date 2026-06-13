@@ -90,17 +90,18 @@ public sealed partial class RegionOverlayForm
             return null;
 
         var text = _toolbarLabels[button];
+        var settings = Services.SettingsService.LoadStatic();
+        var isSpanish = settings != null && string.Equals(settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
+
         if (button < _mainBarTools.Length)
         {
             var tool = _mainBarTools[button];
-            var settings = Services.SettingsService.LoadStatic();
             var hotkey = settings?.GetToolHotkey(tool.Id) ?? (0u, 0u);
             if (hotkey.key != 0)
                 text += $"  ({HotkeyFormatter.Format(hotkey.mod, hotkey.key)})";
 
             if (button == _mergedCaptureButtonIndex)
             {
-                var isSpanish = settings != null && string.Equals(settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
                 var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
                 string suffix;
                 if (defaultMode == CaptureMode.Center)
@@ -117,6 +118,24 @@ public sealed partial class RegionOverlayForm
                 }
                 text += suffix;
             }
+        }
+        else if (button >= CloseButtonIndex + 1 && button < BtnCount)
+        {
+            int flyoutIdx = button - (CloseButtonIndex + 1);
+            if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length)
+            {
+                var tool = _flyoutTools[flyoutIdx];
+                var hotkey = settings?.GetToolHotkey(tool.Id) ?? (0u, 0u);
+                if (hotkey.key != 0)
+                    text += $"  ({HotkeyFormatter.Format(hotkey.mod, hotkey.key)})";
+            }
+        }
+
+        // Append right-click to hide hint for hideable tools
+        bool isHideable = (button < _mainBarTools.Length) || (button >= CloseButtonIndex + 1 && button < BtnCount);
+        if (isHideable)
+        {
+            text += isSpanish ? "\nClick derecho para ocultar" : "\nRight-click to hide";
         }
 
         return text;
