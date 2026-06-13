@@ -233,8 +233,8 @@ public partial class ToastWindow : Window
 
         _savedFilePath = spec.FilePath;
 
-        SetTitleContent(LocalizationService.Translate(spec.Title), spec.Celebrate && !spec.IsError);
-        BodyText.Text = LocalizationService.Translate(spec.Body);
+        TitleText.Text = LocalizationService.Translate(spec.Title);
+        SetBodyContent(LocalizationService.Translate(spec.Body), spec.Celebrate && !spec.IsError);
         TitleText.Visibility = string.IsNullOrWhiteSpace(spec.Title) ? Visibility.Collapsed : Visibility.Visible;
         BodyText.Visibility = string.IsNullOrWhiteSpace(spec.Body) ? Visibility.Collapsed : Visibility.Visible;
         TextContentPanel.Visibility = (TitleText.Visibility == Visibility.Collapsed && BodyText.Visibility == Visibility.Collapsed)
@@ -1730,8 +1730,13 @@ public partial class ToastWindow : Window
         SlideTransform.X = offsetX;
         SlideTransform.Y = offsetY;
 
-        var dur = Motion.Ms(subtleEntry ? 160 : 200);
-        var ease = Motion.Ease(Motion.SmoothOut);
+        // Celebrations settle in with a small elastic overshoot; everything else uses
+        // the calm smooth-out glide.
+        var celebrateEntry = _spec.Celebrate && !_spec.IsError && !subtleEntry;
+        var dur = Motion.Ms(celebrateEntry ? 360 : (subtleEntry ? 160 : 200));
+        IEasingFunction? ease = celebrateEntry
+            ? new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.3 }
+            : Motion.Ease(Motion.SmoothOut);
         SlideTransform.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation
         {
             To = 0,
@@ -1967,15 +1972,16 @@ public partial class ToastWindow : Window
         _ => (56, 0)
     };
 
-    // Sets the title text, optionally prefixed with the app's signature capture icon
-    // (the same "captureRect" icon shown for Area Capture in the widget) for celebrations.
-    private void SetTitleContent(string text, bool withCelebrationIcon)
+    // Sets the body text, optionally followed by the app's signature capture icon
+    // (the same "captureRect" icon shown for Area Capture in the widget) for celebrations —
+    // a friendly "stamp" at the end of the second line.
+    private void SetBodyContent(string text, bool withCelebrationIcon)
     {
-        TitleText.Inlines.Clear();
+        BodyText.Inlines.Clear();
 
         if (!withCelebrationIcon)
         {
-            TitleText.Text = text;
+            BodyText.Text = text;
             return;
         }
 
@@ -1989,9 +1995,8 @@ public partial class ToastWindow : Window
         };
         RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.HighQuality);
 
-        // Trailing icon — reads as a friendly "stamp" beside the greeting.
-        TitleText.Inlines.Add(new System.Windows.Documents.Run(text));
-        TitleText.Inlines.Add(new System.Windows.Documents.InlineUIContainer(icon)
+        BodyText.Inlines.Add(new System.Windows.Documents.Run(text));
+        BodyText.Inlines.Add(new System.Windows.Documents.InlineUIContainer(icon)
         {
             BaselineAlignment = BaselineAlignment.Center
         });
@@ -2039,21 +2044,21 @@ public partial class ToastWindow : Window
                 RepeatBehavior = RepeatBehavior.Forever
             });
 
-            // Gentle "breathing" glow that pulses while the rainbow flows, so the
+            // Pronounced "breathing" glow that pulses while the rainbow flows, so the
             // flourish clearly reads as celebratory rather than a rendering glitch.
             ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, new DoubleAnimation
             {
-                From = 8,
-                To = 15,
-                Duration = Motion.Sec(0.9),
+                From = 9,
+                To = 26,
+                Duration = Motion.Sec(0.8),
                 AutoReverse = true,
                 RepeatBehavior = RepeatBehavior.Forever
             });
             ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, new DoubleAnimation
             {
-                From = 0.8,
+                From = 0.65,
                 To = 1.0,
-                Duration = Motion.Sec(0.9),
+                Duration = Motion.Sec(0.8),
                 AutoReverse = true,
                 RepeatBehavior = RepeatBehavior.Forever
             });
