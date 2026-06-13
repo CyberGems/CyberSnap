@@ -233,8 +233,23 @@ public partial class ToastWindow : Window
 
         _savedFilePath = spec.FilePath;
 
+        var celebrating = spec.Celebrate && !spec.IsError;
         TitleText.Text = LocalizationService.Translate(spec.Title);
-        SetBodyContent(LocalizationService.Translate(spec.Body), spec.Celebrate && !spec.IsError);
+        SetBodyContent(LocalizationService.Translate(spec.Body), celebrating);
+
+        // Celebrations read as a little festive card (centered); normal toasts keep the
+        // professional left alignment (ClearValue restores the inherited/RTL default).
+        if (celebrating)
+        {
+            TitleText.TextAlignment = TextAlignment.Center;
+            BodyText.TextAlignment = TextAlignment.Center;
+        }
+        else
+        {
+            TitleText.ClearValue(System.Windows.Controls.TextBlock.TextAlignmentProperty);
+            BodyText.ClearValue(System.Windows.Controls.TextBlock.TextAlignmentProperty);
+        }
+
         TitleText.Visibility = string.IsNullOrWhiteSpace(spec.Title) ? Visibility.Collapsed : Visibility.Visible;
         BodyText.Visibility = string.IsNullOrWhiteSpace(spec.Body) ? Visibility.Collapsed : Visibility.Visible;
         TextContentPanel.Visibility = (TitleText.Visibility == Visibility.Collapsed && BodyText.Visibility == Visibility.Collapsed)
@@ -2060,15 +2075,15 @@ public partial class ToastWindow : Window
             // flourish clearly reads as celebratory rather than a rendering glitch.
             ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, new DoubleAnimation
             {
-                From = 9,
-                To = 26,
+                From = 10,
+                To = 34,
                 Duration = Motion.Sec(0.8),
                 AutoReverse = true,
                 RepeatBehavior = RepeatBehavior.Forever
             });
             ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, new DoubleAnimation
             {
-                From = 0.65,
+                From = 0.55,
                 To = 1.0,
                 Duration = Motion.Sec(0.8),
                 AutoReverse = true,
