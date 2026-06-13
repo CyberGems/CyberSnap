@@ -316,21 +316,20 @@ public sealed class AppSettings
         0x30, 0xBD, 0xBB, 0xDB, 0xDD, 0xDC // 0, -, =, [, ], \
     };
 
-    /// <summary>Compute annotation tool defaults from stable tool order.</summary>
     private Dictionary<string, uint> GetAnnotationDefaults()
     {
         var result = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
         {
-            ["select"] = 0x31,
-            ["arrow"] = 0x32,
-            ["eraser"] = 0x33,
-            ["draw"] = 0x34,
-            ["curvedArrow"] = 0x35,
-            ["line"] = 0x36,
-            ["text"] = 0x37,
-            ["circleShape"] = 0x38,
-            ["rectShape"] = 0x39,
-            ["ruler"] = 0x30,
+            ["select"] = 0x31,      // 1 (Move & Resize)
+            ["eraser"] = 0x32,      // 2 (Eraser)
+            ["text"] = 0x33,        // 3 (Text)
+            ["arrow"] = 0x34,       // 4 (Arrow)
+            ["line"] = 0x35,        // 5 (Line)
+            ["draw"] = 0x36,        // 6 (FreeHand)
+            ["curvedArrow"] = 0x37, // 7 (Curved Arrow)
+            ["circleShape"] = 0x38, // 8 (Circle)
+            ["rectShape"] = 0x39,   // 9 (Rectangle)
+            ["ruler"] = 0x30,       // 0 (Ruler)
         };
 
         var remainingKeys = AnnotationKeyVks.Where(k => !result.Values.Contains(k)).ToList();
