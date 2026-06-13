@@ -139,7 +139,7 @@
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE768;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="OCR">
-                                <Setter TargetName="Icon" Property="Text" Value="&#xE81C;"/>
+                                <Setter TargetName="Icon" Property="Text" Value="&#xE53C;"/>
                             </Trigger>
                             <Trigger Property="Content" Value="Gallery">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE8B7;"/>
