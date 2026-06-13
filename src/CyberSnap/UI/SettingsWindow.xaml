@@ -785,10 +785,24 @@
                 <StackPanel>
                     <CheckBox x:Name="ShowToolNumberBadgesCheck" Visibility="Collapsed"
                               Checked="ShowToolNumberBadgesCheck_Changed" Unchecked="ShowToolNumberBadgesCheck_Changed"/>
-                    <DockPanel LastChildFill="False" Margin="0,0,0,12">
-                        <Button x:Name="ResetHotkeysBtn" Content="Reset to default hotkeys"
-                                DockPanel.Dock="Right" MinWidth="160" Height="28" Click="ResetHotkeysBtn_Click"/>
-                    </DockPanel>
+                    <Border Style="{StaticResource Card}" Margin="0,14,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}" Margin="0,0,10,0" VerticalAlignment="Center" Grid.Column="0">
+                                <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                                <TextBlock Text="To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it."
+                                           Style="{StaticResource InfoText}"/>
+                            </StackPanel>
+                            <Button x:Name="ResetHotkeysBtn" Content="Reset to default hotkeys"
+                                    Grid.Column="2" MinWidth="160" Height="28" VerticalAlignment="Center" Click="ResetHotkeysBtn_Click"/>
+                        </Grid>
+                    </Border>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />

@@ -429,5 +429,6 @@
   "Enter / Double-click to confirm": "Enter / Doble clic para confirmar",
   "Place guides inside the canvas": "Coloca las guías dentro del lienzo",
   "Guide removed": "Guía eliminada",
-  "All Guides Cleared": "Todas las guías eliminadas"
+  "All Guides Cleared": "Todas las guías eliminadas",
+  "To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it.": "Para asignar un atajo personalizado, haz clic en la casilla de entrada junto a la herramienta y presiona la combinación de teclas deseada (ej. Ctrl+Shift+A). Haz clic en el botón × para borrarlo."
 }
