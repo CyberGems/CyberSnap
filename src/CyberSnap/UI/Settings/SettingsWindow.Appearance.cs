@@ -242,7 +242,7 @@ public partial class SettingsWindow
         ToolListBuilder.ExtraTools;
 
     private void PopulateToolToggles() =>
-        ToolListBuilder.Build(ToolTogglePanel, _settingsService, this, () => HotkeyChanged?.Invoke());
+        ToolListBuilder.Build(CaptureToolsPanel, AnnotationToolsPanel, _settingsService, this, () => HotkeyChanged?.Invoke());
 
     private void PopulateInterfaceLanguageOptions()
     {

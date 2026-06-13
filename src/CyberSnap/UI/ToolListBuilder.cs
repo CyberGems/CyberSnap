@@ -29,36 +29,24 @@ public static class ToolListBuilder
     private static readonly Dictionary<TextBox, bool> RecordingFlags = new();
     private static readonly HashSet<StackPanel> RestoringEnabledToolPanels = new();
 
-    public static void Build(StackPanel panel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null)
+    public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null)
     {
-        panel.Children.Clear();
+        capturePanel.Children.Clear();
+        annotationPanel.Children.Clear();
         var s = settingsService.Settings;
         var enabled = s.EnabledTools ?? ToolDef.DefaultEnabledIds();
         // Icon color for rendering Fluent glyphs to bitmaps
         var iconColor = Theme.IsDark ? System.Drawing.Color.FromArgb(225, 255, 255, 255) : System.Drawing.Color.FromArgb(210, 0, 0, 0);
         var segoe = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName);
 
-        void AddHeader(string text)
-        {
-            panel.Children.Add(new TextBlock
-            {
-                Text = text,
-                FontSize = 13.5,
-                FontWeight = FontWeights.SemiBold,
-                FontFamily = segoe,
-                Opacity = 0.92,
-                Margin = new Thickness(2, 14, 0, 7),
-            });
-        }
-
-        void AddToolRow(string toolId, string label, char icon, bool hasToolbarToggle, bool showHotkey)
+        void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool hasToolbarToggle, bool showHotkey)
         {
             var card = new Border
             {
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(16, 12, 16, 12),
-                Margin = new Thickness(0, 0, 0, 8),
-                MinHeight = 64,
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(12, 6, 12, 6),
+                Margin = new Thickness(0, 0, 0, 6),
+                MinHeight = 44,
                 BorderThickness = new Thickness(1),
             };
             card.SetResourceReference(Border.BackgroundProperty, "ThemeCardBrush");
@@ -74,11 +62,11 @@ public static class ToolListBuilder
             {
                 var iconFrame = new Border
                 {
-                    Width = 32,
-                    Height = 32,
-                    CornerRadius = new CornerRadius(8),
+                    Width = 26,
+                    Height = 26,
+                    CornerRadius = new CornerRadius(6),
                     BorderThickness = new Thickness(1),
-                    Margin = new Thickness(0, 0, 12, 0),
+                    Margin = new Thickness(0, 0, 8, 0),
                     VerticalAlignment = VerticalAlignment.Center,
                 };
                 iconFrame.SetResourceReference(Border.BackgroundProperty, "ThemeTabActiveBrush");
@@ -86,9 +74,9 @@ public static class ToolListBuilder
 
                 var img = new System.Windows.Controls.Image
                 {
-                    Source = ToolIcons.RenderToolIconWpf(toolId, icon, iconColor, 16),
-                    Width = 16,
-                    Height = 16,
+                    Source = ToolIcons.RenderToolIconWpf(toolId, icon, iconColor, 14),
+                    Width = 14,
+                    Height = 14,
                     Opacity = 1,
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
@@ -105,18 +93,18 @@ public static class ToolListBuilder
                     IsChecked = enabled.Contains(toolId),
                     Tag = toolId,
                     VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(0, 0, 7, 0),
+                    Margin = new Thickness(0, 0, 8, 0),
                     Cursor = Cursors.Hand,
                 };
-                cb.Checked += (_, _) => SaveEnabledTools(panel, settingsService);
-                cb.Unchecked += (_, _) => SaveEnabledTools(panel, settingsService);
+                cb.Checked += (_, _) => SaveEnabledTools(capturePanel, annotationPanel, settingsService);
+                cb.Unchecked += (_, _) => SaveEnabledTools(capturePanel, annotationPanel, settingsService);
                 left.Children.Add(cb);
             }
 
             var labelBlock = new TextBlock
             {
                 Text = label,
-                FontSize = 12.5,
+                FontSize = 12,
                 FontFamily = segoe,
                 VerticalAlignment = VerticalAlignment.Center,
             };
@@ -132,12 +120,23 @@ public static class ToolListBuilder
 
                 var hkBox = new TextBox();
                 hkBox.SetResourceReference(TextBox.StyleProperty, "HotkeyBox");
+                hkBox.Height = 28;
+                hkBox.MinHeight = 28;
+                hkBox.Width = 110;
+                hkBox.MinWidth = 110;
+                hkBox.FontSize = 11;
 
                 var (initMod, initKey) = settingsService.Settings.GetToolHotkey(toolId);
                 hkBox.Text = HotkeyFormatter.Format(initMod, initKey);
 
                 var clearBtn = new Button { Content = "×" };
                 clearBtn.SetResourceReference(Button.StyleProperty, "ClearBtn");
+                clearBtn.Height = 28;
+                clearBtn.MinHeight = 28;
+                clearBtn.Width = 28;
+                clearBtn.MinWidth = 28;
+                clearBtn.Margin = new Thickness(6, 0, 0, 0);
+                clearBtn.FontSize = 12;
                 var capturedBox = hkBox;
                 var capturedId = toolId;
 
@@ -216,44 +215,50 @@ public static class ToolListBuilder
             }
 
             card.Child = grid;
-            panel.Children.Add(card);
+            targetPanel.Children.Add(card);
         }
 
-        AddHeader("Capture tools");
         foreach (var t in ToolDef.AllTools.Where(t => t.Group == 0))
-            AddToolRow(t.Id, t.Label, t.Icon, true, true);
+            AddToolRow(capturePanel, t.Id, t.Label, t.Icon, true, true);
 
-        AddHeader("Capture actions");
         foreach (var (id, label, icon) in ExtraTools)
-            AddToolRow(id, label, icon, false, true);
+            AddToolRow(capturePanel, id, label, icon, false, true);
 
-        AddHeader("Annotation tools");
         foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
-            AddToolRow(t.Id, t.Label, t.Icon, true, true);
+            AddToolRow(annotationPanel, t.Id, t.Label, t.Icon, true, true);
 
-        LocalizationService.ApplyTo(panel, settingsService.Settings.InterfaceLanguage);
+        LocalizationService.ApplyTo(capturePanel, settingsService.Settings.InterfaceLanguage);
+        LocalizationService.ApplyTo(annotationPanel, settingsService.Settings.InterfaceLanguage);
     }
 
-    private static void SaveEnabledTools(StackPanel panel, SettingsService svc)
+    private static void SaveEnabledTools(StackPanel capturePanel, StackPanel annotationPanel, SettingsService svc)
     {
-        if (RestoringEnabledToolPanels.Contains(panel))
+        if (RestoringEnabledToolPanels.Contains(capturePanel) || RestoringEnabledToolPanels.Contains(annotationPanel))
             return;
 
         var previous = (svc.Settings.EnabledTools ?? ToolDef.DefaultEnabledIds()).ToList();
         var enabledIds = new System.Collections.Generic.List<string>();
-        foreach (var card in panel.Children.OfType<Border>())
+
+        void ScanPanel(StackPanel p)
         {
-            if (card.Child is not Grid g) continue;
-            foreach (var sp in g.Children.OfType<StackPanel>())
-            foreach (var cb in sp.Children.OfType<CheckBox>())
+            foreach (var card in p.Children.OfType<Border>())
             {
-                if (cb.Tag is string id && cb.IsChecked == true)
-                    enabledIds.Add(id);
+                if (card.Child is not Grid g) continue;
+                foreach (var sp in g.Children.OfType<StackPanel>())
+                foreach (var cb in sp.Children.OfType<CheckBox>())
+                {
+                    if (cb.Tag is string id && cb.IsChecked == true)
+                        enabledIds.Add(id);
+                }
             }
         }
+
+        ScanPanel(capturePanel);
+        ScanPanel(annotationPanel);
+
         if (!enabledIds.Any(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 0)))
         {
-            RestoreEnabledToolChecks(panel, previous);
+            RestoreEnabledToolChecks(capturePanel, annotationPanel, previous);
             ToastWindow.ShowError("Tool required", "Keep at least one capture tool enabled.");
             return;
         }
@@ -276,7 +281,7 @@ public static class ToolListBuilder
                 AppDiagnostics.LogError("settings.enabled-tools-rollback", rollbackEx);
             }
 
-            RestoreEnabledToolChecks(panel, previous);
+            RestoreEnabledToolChecks(capturePanel, annotationPanel, previous);
             ShowEnabledToolsSaveFailed(ex);
         }
     }
@@ -288,25 +293,32 @@ public static class ToolListBuilder
             $"The previous enabled tools were restored. Check Config -> Tools and try again.\n{ex.Message}");
     }
 
-    private static void RestoreEnabledToolChecks(StackPanel panel, IReadOnlyCollection<string> enabledIds)
+    private static void RestoreEnabledToolChecks(StackPanel capturePanel, StackPanel annotationPanel, IReadOnlyCollection<string> enabledIds)
     {
-        RestoringEnabledToolPanels.Add(panel);
+        RestoringEnabledToolPanels.Add(capturePanel);
+        RestoringEnabledToolPanels.Add(annotationPanel);
         try
         {
-            foreach (var card in panel.Children.OfType<Border>())
+            void RestorePanel(StackPanel p)
             {
-                if (card.Child is not Grid g) continue;
-                foreach (var sp in g.Children.OfType<StackPanel>())
-                foreach (var cb in sp.Children.OfType<CheckBox>())
+                foreach (var card in p.Children.OfType<Border>())
                 {
-                    if (cb.Tag is string id)
-                        cb.IsChecked = enabledIds.Contains(id);
+                    if (card.Child is not Grid g) continue;
+                    foreach (var sp in g.Children.OfType<StackPanel>())
+                    foreach (var cb in sp.Children.OfType<CheckBox>())
+                    {
+                        if (cb.Tag is string id)
+                            cb.IsChecked = enabledIds.Contains(id);
+                    }
                 }
             }
+            RestorePanel(capturePanel);
+            RestorePanel(annotationPanel);
         }
         finally
         {
-            RestoringEnabledToolPanels.Remove(panel);
+            RestoringEnabledToolPanels.Remove(capturePanel);
+            RestoringEnabledToolPanels.Remove(annotationPanel);
         }
     }
 
