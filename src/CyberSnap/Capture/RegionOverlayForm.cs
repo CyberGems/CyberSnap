@@ -659,10 +659,6 @@ public sealed partial class RegionOverlayForm : Form
             int row2Y = _toolbarRect.Y + pad + buttonSize + buttonSpacing;
             int row2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             int row2StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row2Width) / 2;
-            if (row2StartX < _toolbarRect.X + brandWidth)
-            {
-                row2StartX = _toolbarRect.X + brandWidth;
-            }
             int cx2 = row2StartX;
             int[] tier2Seps = { 1, 8 };
             for (int i = 0; i < _flyoutTools.Length; i++)
