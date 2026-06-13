@@ -7,7 +7,7 @@ Coloca aquí tus archivos MP3 con los siguientes nombres exactos:
 | `capture.mp3`         | Se completa una captura                       |
 | `color.mp3`           | Se usa el color picker                        |
 | `text.mp3`            | Se copia texto OCR                            |
-| `scan.mp3`            | Se detecta un QR/barcode                      |
+| `scan.mp3`            | Se detecta un QR y Códigos de Barra           |
 | `record-start.mp3`    | Inicia una grabación                          |
 | `record-stop.mp3`     | Termina una grabación                         |
 | `error.mp3`           | Ocurre un error                               |

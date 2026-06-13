@@ -534,7 +534,7 @@
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="Keep:" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                         <ComboBox x:Name="HistoryRetentionCombo" MinWidth="110" FontSize="11" VerticalAlignment="Center"
-                                                  ToolTip="Auto-delete captures older than this period (all types: images, text, colors, QR/barcodes)."
+                                                  ToolTip="Auto-delete captures older than this period (all types: images, text, colors, QR &amp; Barcodes)."
                                                   AutomationProperties.Name="Auto-clear history"
                                                   SelectionChanged="HistoryRetentionCombo_SelectionChanged">
                                             <ComboBoxItem Content="Never" ToolTip="Keep history until manually cleared"/>
@@ -546,7 +546,7 @@
 
                                         <TextBlock Text="Limit:" FontSize="12" Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center" Margin="18,0,6,0"/>
                                         <ComboBox x:Name="HistoryCountLimitCombo" MinWidth="110" FontSize="11" VerticalAlignment="Center"
-                                                  ToolTip="Maximum total captures to keep (images, text, colors, QR/barcodes). Oldest items are pruned first."
+                                                  ToolTip="Maximum total captures to keep (images, text, colors, QR &amp; Barcodes). Oldest items are pruned first."
                                                   AutomationProperties.Name="Limit history size"
                                                   SelectionChanged="HistoryCountLimitCombo_SelectionChanged">
                                             <ComboBoxItem Content="No limit" ToolTip="Do not prune history entries by count."/>
