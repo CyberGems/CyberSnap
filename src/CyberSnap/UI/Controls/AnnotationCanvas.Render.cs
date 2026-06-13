@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.Windows.Forms;
 using CyberSnap.Capture;
@@ -15,7 +16,11 @@ public sealed partial class AnnotationCanvas
     {
         var g = e.Graphics;
         g.Clear(BackColor);
-        g.InterpolationMode = _zoom >= 1.0 ? InterpolationMode.NearestNeighbor : InterpolationMode.HighQualityBicubic;
+
+        // Draw the base image from a pre-scaled cache so repaints don't re-run an
+        // expensive full-resolution rescale every frame. See DrawBaseImage.
+        DrawBaseImage(g);
+
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
@@ -26,8 +31,6 @@ public sealed partial class AnnotationCanvas
         {
             g.TranslateTransform(_pan.X, _pan.Y);
             g.ScaleTransform((float)_zoom, (float)_zoom);
-
-            g.DrawImage(_baseBitmap, 0, 0, _baseBitmap.Width, _baseBitmap.Height);
 
             var oldClip = g.Clip;
             g.SetClip(new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height));
@@ -57,6 +60,92 @@ public sealed partial class AnnotationCanvas
 
         if (_inlineTextBox is not null)
             RenderInlineTextToolbar(g);
+    }
+
+    // ── Base-image draw cache ──────────────────────────────────────────────
+    // Scaling the full-resolution base bitmap on every OnPaint (especially with
+    // HighQualityBicubic when zoomed out) is the dominant cost for large images.
+    // We render the scaled image once per (zoom, size) into _scaledCache and blit
+    // it 1:1 on subsequent repaints (banner fades, caret blink, hover, pan, etc.).
+    private Bitmap? _scaledCache;
+    private int _scaledCacheW = -1;
+    private int _scaledCacheH = -1;
+
+    /// <summary>Draws the base bitmap at the current zoom/pan, using the pre-scaled cache.</summary>
+    private void DrawBaseImage(Graphics g)
+    {
+        int scaledW = Math.Max(1, (int)Math.Round(_baseBitmap.Width * _zoom));
+        int scaledH = Math.Max(1, (int)Math.Round(_baseBitmap.Height * _zoom));
+
+        // Zoomed in (>= 1): NearestNeighbor straight from the source is already cheap —
+        // GDI+ clips rasterization to the visible region, so cost scales with on-screen
+        // pixels, not the (potentially huge) destination size. Caching here would mean
+        // allocating a larger-than-screen bitmap (e.g. 28000×16000 at 8×), so we don't.
+        // This also preserves the crisp pixel-peeping look of the original code.
+        if (_zoom >= 1.0)
+        {
+            g.InterpolationMode = InterpolationMode.NearestNeighbor;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.DrawImage(_baseBitmap, _pan.X, _pan.Y, scaledW, scaledH);
+            return;
+        }
+
+        // Zoomed out (< 1): the expensive bicubic-downscale case.
+        // During an active zoom gesture, stretch the last settled cache (≈ screen-sized,
+        // far fewer source pixels to sample than the full-res bitmap) for a cheap draft;
+        // the settle timer then rebuilds the crisp cache once. Only the full source as a
+        // fallback when no cache exists yet.
+        if (_zoomInteracting)
+        {
+            g.InterpolationMode = InterpolationMode.Bilinear;
+            g.PixelOffsetMode = PixelOffsetMode.Half;
+            g.DrawImage((Image?)_scaledCache ?? _baseBitmap, _pan.X, _pan.Y, scaledW, scaledH);
+            return;
+        }
+
+        EnsureScaledCache(scaledW, scaledH);
+
+        // Blit the cache 1:1 (dest size == cache size) — NearestNeighbor here is a copy,
+        // not a resample, so there's no quality loss versus the cached HQ render.
+        g.InterpolationMode = InterpolationMode.NearestNeighbor;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.DrawImage(_scaledCache!, _pan.X, _pan.Y, scaledW, scaledH);
+    }
+
+    /// <summary>Rebuilds _scaledCache when the requested on-screen size changes.</summary>
+    private void EnsureScaledCache(int scaledW, int scaledH)
+    {
+        if (_scaledCache is not null && _scaledCacheW == scaledW && _scaledCacheH == scaledH)
+            return;
+
+        _scaledCache?.Dispose();
+        _scaledCache = null;
+
+        var cache = new Bitmap(scaledW, scaledH, PixelFormat.Format32bppPArgb);
+        using (var cg = Graphics.FromImage(cache))
+        {
+            // Match the original quality rule: crisp pixels when zoomed in, smooth
+            // bicubic when zoomed out. This runs once per zoom level, not per frame.
+            cg.InterpolationMode = _zoom >= 1.0
+                ? InterpolationMode.NearestNeighbor
+                : InterpolationMode.HighQualityBicubic;
+            cg.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            cg.CompositingMode = CompositingMode.SourceCopy;
+            cg.DrawImage(_baseBitmap, new Rectangle(0, 0, scaledW, scaledH));
+        }
+
+        _scaledCache = cache;
+        _scaledCacheW = scaledW;
+        _scaledCacheH = scaledH;
+    }
+
+    /// <summary>Discards the pre-scaled cache; call whenever the base bitmap content changes.</summary>
+    private void InvalidateScaledCache()
+    {
+        _scaledCache?.Dispose();
+        _scaledCache = null;
+        _scaledCacheW = -1;
+        _scaledCacheH = -1;
     }
 
     /// <summary>Renders committed annotations. Called inside the zoom/pan transform.</summary>
