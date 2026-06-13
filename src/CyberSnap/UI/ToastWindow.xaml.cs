@@ -237,18 +237,10 @@ public partial class ToastWindow : Window
         TitleText.Text = LocalizationService.Translate(spec.Title);
         SetBodyContent(LocalizationService.Translate(spec.Body), celebrating);
 
-        // Celebrations read as a little festive card (centered); normal toasts keep the
-        // professional left alignment (ClearValue restores the inherited/RTL default).
-        if (celebrating)
-        {
-            TitleText.TextAlignment = TextAlignment.Center;
-            BodyText.TextAlignment = TextAlignment.Center;
-        }
-        else
-        {
-            TitleText.ClearValue(System.Windows.Controls.TextBlock.TextAlignmentProperty);
-            BodyText.ClearValue(System.Windows.Controls.TextBlock.TextAlignmentProperty);
-        }
+        // Always center-align toast text notifications as requested by the user.
+        TitleText.TextAlignment = TextAlignment.Center;
+        BodyText.TextAlignment = TextAlignment.Center;
+
 
         TitleText.Visibility = string.IsNullOrWhiteSpace(spec.Title) ? Visibility.Collapsed : Visibility.Visible;
         BodyText.Visibility = string.IsNullOrWhiteSpace(spec.Body) ? Visibility.Collapsed : Visibility.Visible;
@@ -1059,13 +1051,13 @@ public partial class ToastWindow : Window
         try
         {
             Services.OfficeExportService.SendBitmap(_previewBitmap, _savedFilePath, target);
-            Show(ToastSpec.Standard("Sent to Office", Services.OfficeExportService.GetTargetName(target), GetExistingSavedFilePathOrNull()) with { SuppressSound = true });
+            Show(ToastSpec.Standard("Send to", Services.OfficeExportService.GetTargetName(target), GetExistingSavedFilePathOrNull()) with { SuppressSound = true });
         }
         catch (Exception ex)
         {
             Show(ToastSpec.Error(
-                "Office send failed",
-                BuildToastActionFailureBody("CyberSnap could not send the image to Office. Save the capture and insert it manually, or try another Office target.", ex.Message),
+                "Send to failed",
+                BuildToastActionFailureBody("CyberSnap could not send the image. Save the capture and insert it manually, or try another target.", ex.Message),
                 GetExistingSavedFilePathOrNull()));
         }
         finally
@@ -1990,7 +1982,6 @@ public partial class ToastWindow : Window
 
     private static (double x, double y) GetDismissOffset() => _position switch
     {
-        CyberSnap.Models.ToastPosition.Left => (-56, 0),
         CyberSnap.Models.ToastPosition.TopLeft => (0, -32),
         CyberSnap.Models.ToastPosition.TopRight => (0, -32),
         CyberSnap.Models.ToastPosition.BottomLeft => (-56, 0),

@@ -11,8 +11,6 @@ public enum AfterCaptureAction
 
 public enum ToastPosition
 {
-    Right,
-    Left,
     TopLeft,
     TopRight,
     BottomLeft,
@@ -144,9 +142,9 @@ public sealed class AppSettings
     public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
     public uint HotkeyKey { get; set; } = 0x41; // Alt+Shift+A
 
-    // OCR hotkey: Alt+Shift+O
-    public uint OcrHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint OcrHotkeyKey { get; set; } = 0x4F;
+    // OCR hotkey: unbound by default
+    public uint OcrHotkeyModifiers { get; set; }
+    public uint OcrHotkeyKey { get; set; }
     public string OcrLanguageTag { get; set; } = "auto";
     public int OcrModelQuality { get; set; } // 0 = Fast (~1 MB), 1 = Standard (~4 MB)
     public string OcrDefaultTranslateFrom { get; set; } = "auto";
@@ -165,37 +163,37 @@ public sealed class AppSettings
     // like EditorToolColorArgb. Clamped to the same 10..120 range the Text toolbar enforces.
     public float EditorTextFontSize { get; set; } = 24f;
 
-    // Color picker hotkey: Alt+Shift+C
-    public uint PickerHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint PickerHotkeyKey { get; set; } = 0x43;
+    // Color picker hotkey: unbound by default
+    public uint PickerHotkeyModifiers { get; set; }
+    public uint PickerHotkeyKey { get; set; }
 
-    // Optional custom-tool hotkeys (now enabled by default as requested)
-    public uint ScanHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint ScanHotkeyKey { get; set; } = 0x51; // Alt+Shift+Q
+    // Optional custom-tool hotkeys: unbound by default
+    public uint ScanHotkeyModifiers { get; set; }
+    public uint ScanHotkeyKey { get; set; }
     public uint CenterHotkeyModifiers { get; set; }
     public uint CenterHotkeyKey { get; set; }
-    public uint FullscreenHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint FullscreenHotkeyKey { get; set; } = 0x46; // Alt+Shift+F
-    public uint ActiveWindowHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint ActiveWindowHotkeyKey { get; set; } = 0x57; // Alt+Shift+W
+    public uint FullscreenHotkeyModifiers { get; set; }
+    public uint FullscreenHotkeyKey { get; set; }
+    public uint ActiveWindowHotkeyModifiers { get; set; }
+    public uint ActiveWindowHotkeyKey { get; set; }
     public uint RulerHotkeyModifiers { get; set; }
     public uint RulerHotkeyKey { get; set; }
 
-    // Toolbar Screen Recorder (MP4)
-    public uint RecordHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint RecordHotkeyKey { get; set; } = 0x4D; // Alt+Shift+M
+    // Toolbar Screen Recorder (MP4): unbound by default
+    public uint RecordHotkeyModifiers { get; set; }
+    public uint RecordHotkeyKey { get; set; }
 
-    // Toolbar Screen Recorder (GIF)
-    public uint RecordGifHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint RecordGifHotkeyKey { get; set; } = 0x47; // Alt+Shift+G
+    // Toolbar Screen Recorder (GIF): unbound by default
+    public uint RecordGifHotkeyModifiers { get; set; }
+    public uint RecordGifHotkeyKey { get; set; }
 
-    // Scrolling capture hotkey: Alt+Shift+S
-    public uint ScrollCaptureHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint ScrollCaptureHotkeyKey { get; set; } = 0x53;
+    // Scrolling capture hotkey: unbound by default
+    public uint ScrollCaptureHotkeyModifiers { get; set; }
+    public uint ScrollCaptureHotkeyKey { get; set; }
 
-    // GIF recording global hotkey (Alt+Shift+R)
-    public uint GifHotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-    public uint GifHotkeyKey { get; set; } = 0x52;
+    // GIF recording global hotkey: unbound by default
+    public uint GifHotkeyModifiers { get; set; }
+    public uint GifHotkeyKey { get; set; }
     public int GifFps { get; set; } = 15;
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
@@ -425,28 +423,28 @@ public sealed class AppSettings
     {
         HotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
         HotkeyKey = 0x41;
-        OcrHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-        OcrHotkeyKey = 0x4F;
-        PickerHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-        PickerHotkeyKey = 0x43;
-        ScanHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-        ScanHotkeyKey = 0x51;
+        OcrHotkeyModifiers = 0;
+        OcrHotkeyKey = 0;
+        PickerHotkeyModifiers = 0;
+        PickerHotkeyKey = 0;
+        ScanHotkeyModifiers = 0;
+        ScanHotkeyKey = 0;
         CenterHotkeyModifiers = 0;
         CenterHotkeyKey = 0;
-        FullscreenHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-        FullscreenHotkeyKey = 0x46;
-        ActiveWindowHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-        ActiveWindowHotkeyKey = 0x57;
+        FullscreenHotkeyModifiers = 0;
+        FullscreenHotkeyKey = 0;
+        ActiveWindowHotkeyModifiers = 0;
+        ActiveWindowHotkeyKey = 0;
         RulerHotkeyModifiers = 0;
         RulerHotkeyKey = 0;
-        RecordHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-        RecordHotkeyKey = 0x4D;
-        RecordGifHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-        RecordGifHotkeyKey = 0x47;
-        ScrollCaptureHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-        ScrollCaptureHotkeyKey = 0x53;
-        GifHotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
-        GifHotkeyKey = 0x52;
+        RecordHotkeyModifiers = 0;
+        RecordHotkeyKey = 0;
+        RecordGifHotkeyModifiers = 0;
+        RecordGifHotkeyKey = 0;
+        ScrollCaptureHotkeyModifiers = 0;
+        ScrollCaptureHotkeyKey = 0;
+        GifHotkeyModifiers = 0;
+        GifHotkeyKey = 0;
         ToolHotkeys?.Clear();
     }
 }

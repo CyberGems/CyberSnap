@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using CyberSnap.Models;
 using CyberSnap.Services;
 
@@ -296,24 +297,64 @@ public partial class SettingsWindow
             value => AnnotationStrokeShadowCheck.IsChecked = value);
     }
 
-    private void ToastPositionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ToastPositionBlock_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (!IsLoaded || _suppressToastPreferenceChange) return;
+        if (sender is not FrameworkElement el || el.Tag is not string tag) return;
+        if (!Enum.TryParse<ToastPosition>(tag, out var selected)) return;
 
         var previous = _settingsService.Settings.ToastPosition;
-        var selected = (ToastPosition)Math.Clamp(ToastPositionCombo.SelectedIndex, 0, 7);
         UpdateToastPreference(
             "settings.toast-position",
             "Toast position",
             previous,
             selected,
             value => _settingsService.Settings.ToastPosition = value,
-            value => ToastPositionCombo.SelectedIndex = (int)value,
+            value => SelectToastPositionUi(value),
             value =>
             {
                 ToastWindow.SetPosition(value);
                 PreviewWindow.SetPosition(value);
-            });
+            },
+            value => SelectToastPositionUi(value));
+    }
+
+    private void SelectToastPositionUi(ToastPosition position)
+    {
+        var accentBrush = (System.Windows.Media.Brush)Resources["ThemeAccentBrush"];
+        var defaultBorderBrush = System.Windows.Media.Brushes.Transparent;
+        var activeBg = Theme.Brush(Theme.AccentSubtle);
+        var defaultBg = System.Windows.Media.Brushes.Transparent;
+
+        var dotActiveBrush = accentBrush;
+        var dotInactiveBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(64, 128, 128, 128));
+
+        var blocks = new[]
+        {
+            (PosBlock_TopLeft, PosDot_TopLeft, ToastPosition.TopLeft),
+            (PosBlock_TopCenter, PosDot_TopCenter, ToastPosition.TopCenter),
+            (PosBlock_TopRight, PosDot_TopRight, ToastPosition.TopRight),
+            (PosBlock_BottomLeft, PosDot_BottomLeft, ToastPosition.BottomLeft),
+            (PosBlock_BottomCenter, PosDot_BottomCenter, ToastPosition.BottomCenter),
+            (PosBlock_BottomRight, PosDot_BottomRight, ToastPosition.BottomRight)
+        };
+
+        foreach (var (block, dot, pos) in blocks)
+        {
+            if (block is null || dot is null) continue;
+            if (pos == position)
+            {
+                block.BorderBrush = accentBrush;
+                block.Background = activeBg;
+                dot.Background = dotActiveBrush;
+            }
+            else
+            {
+                block.BorderBrush = defaultBorderBrush;
+                block.Background = defaultBg;
+                dot.Background = dotInactiveBrush;
+            }
+        }
     }
 
     private void UiScaleCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -944,5 +985,60 @@ public partial class SettingsWindow
         WidgetDockEdgeRow.Visibility = visibility;
         WidgetHoverDelaySeparator.Visibility = visibility;
         WidgetHoverDelayRow.Visibility = visibility;
+    }
+
+    private void TestToastBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // Generate a small mock screenshot to preview the image layout
+            using (var bmp = new System.Drawing.Bitmap(320, 200))
+            {
+                using (var g = System.Drawing.Graphics.FromImage(bmp))
+                {
+                    // Gradient background matching modern/premium aesthetics
+                    using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                        new System.Drawing.Point(0, 0),
+                        new System.Drawing.Point(320, 200),
+                        System.Drawing.Color.FromArgb(99, 102, 241), // Indigo
+                        System.Drawing.Color.FromArgb(168, 85, 247)  // Purple
+                    ))
+                    {
+                        g.FillRectangle(brush, 0, 0, 320, 200);
+                    }
+
+                    // Logo text
+                    using (var font = new System.Drawing.Font("Segoe UI", 16, System.Drawing.FontStyle.Bold))
+                    using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.White))
+                    {
+                        g.DrawString("CyberSnap", font, brush, 24, 24);
+                    }
+
+                    // Description text
+                    using (var font = new System.Drawing.Font("Segoe UI", 10))
+                    using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(220, 255, 255, 255)))
+                    {
+                        g.DrawString("This is a notification preview.", font, brush, 24, 64);
+                        g.DrawString("Position, duration and alignment tests.", font, brush, 24, 86);
+                    }
+                }
+
+                // Show the toast with overlay buttons and no system suppression
+                ToastWindow.Show(ToastSpec.ImagePreview(
+                    (System.Drawing.Bitmap)bmp.Clone(),
+                    "Notification Preview",
+                    "Testing layout & alignment",
+                    filePath: null,
+                    autoPin: false,
+                    transparentShell: false,
+                    showOverlayButtons: true
+                ) with { IsSystemMessage = false });
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.test-toast", ex);
+            ToastWindow.ShowError("Test failed", $"Could not show test toast notification:\n{ex.Message}");
+        }
     }
 }

@@ -2236,36 +2236,66 @@
                                     <TextBlock Text="Notification position" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Choose where screenshot previews appear." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
-                                 <ComboBox x:Name="ToastPositionCombo" Grid.Column="2" MinWidth="150"
-                                           VerticalAlignment="Center"
-                                           AutomationProperties.Name="notification position"
-                                           ToolTip="Choose where screenshot previews appear."
-                                           SelectionChanged="ToastPositionCombo_SelectionChanged">
-                                     <ComboBoxItem Content="Right" ToolTip="Show previews near the right edge."
-                                                   AutomationProperties.Name="Right notification position"
-                                                   AutomationProperties.HelpText="Place screenshot previews near the right edge of the screen."/>
-                                     <ComboBoxItem Content="Left" ToolTip="Show previews near the left edge."
-                                                   AutomationProperties.Name="Left notification position"
-                                                   AutomationProperties.HelpText="Place screenshot previews near the left edge of the screen."/>
-                                     <ComboBoxItem Content="Top Left" ToolTip="Show previews in the top-left corner."
-                                                   AutomationProperties.Name="Top-left notification position"
-                                                   AutomationProperties.HelpText="Place screenshot previews in the top-left corner of the screen."/>
-                                     <ComboBoxItem Content="Top Right" ToolTip="Show previews in the top-right corner."
-                                                   AutomationProperties.Name="Top-right notification position"
-                                                   AutomationProperties.HelpText="Place screenshot previews in the top-right corner of the screen."/>
-                                     <ComboBoxItem Content="Bottom Left" ToolTip="Show previews in the bottom-left corner."
-                                                   AutomationProperties.Name="Bottom-left notification position"
-                                                   AutomationProperties.HelpText="Place screenshot previews in the bottom-left corner of the screen."/>
-                                     <ComboBoxItem Content="Bottom Right" ToolTip="Show previews in the bottom-right corner."
-                                                   AutomationProperties.Name="Bottom-right notification position"
-                                                   AutomationProperties.HelpText="Place screenshot previews in the bottom-right corner of the screen."/>
-                                     <ComboBoxItem Content="Top Center" ToolTip="Show previews centered along the top edge."
-                                                   AutomationProperties.Name="Top-center notification position"
-                                                   AutomationProperties.HelpText="Place screenshot previews centered along the top edge of the screen."/>
-                                     <ComboBoxItem Content="Bottom Center" ToolTip="Show previews centered along the bottom edge."
-                                                   AutomationProperties.Name="Bottom-center notification position"
-                                                   AutomationProperties.HelpText="Place screenshot previews centered along the bottom edge of the screen."/>
-                                 </ComboBox>
+                                 <Border Grid.Column="2" Width="144" Height="96" CornerRadius="8"
+                                         Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                         BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                         BorderThickness="1" Padding="4" VerticalAlignment="Center"
+                                         ToolTip="Choose where screenshot previews appear.">
+                                     <Border.Resources>
+                                         <Style x:Key="PositionBlockStyle" TargetType="Border">
+                                             <Setter Property="Background" Value="Transparent"/>
+                                             <Setter Property="BorderBrush" Value="Transparent"/>
+                                             <Setter Property="BorderThickness" Value="1.5"/>
+                                             <Setter Property="CornerRadius" Value="5"/>
+                                             <Style.Triggers>
+                                                 <Trigger Property="IsMouseOver" Value="True">
+                                                     <Setter Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                                                 </Trigger>
+                                             </Style.Triggers>
+                                         </Style>
+                                     </Border.Resources>
+                                     <Grid>
+                                         <Grid.RowDefinitions>
+                                             <RowDefinition Height="*"/>
+                                             <RowDefinition Height="*"/>
+                                         </Grid.RowDefinitions>
+                                         <Grid.ColumnDefinitions>
+                                             <ColumnDefinition Width="*"/>
+                                             <ColumnDefinition Width="*"/>
+                                             <ColumnDefinition Width="*"/>
+                                         </Grid.ColumnDefinitions>
+
+                                         <!-- Top Left -->
+                                         <Border x:Name="PosBlock_TopLeft" Grid.Row="0" Grid.Column="0" Margin="3" Style="{StaticResource PositionBlockStyle}" Cursor="Hand" MouseLeftButtonDown="ToastPositionBlock_Click" ToolTip="Top Left" Tag="TopLeft">
+                                             <Border x:Name="PosDot_TopLeft" Width="10" Height="10" CornerRadius="2.5" Background="#40808080" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4"/>
+                                         </Border>
+
+                                         <!-- Top Center -->
+                                         <Border x:Name="PosBlock_TopCenter" Grid.Row="0" Grid.Column="1" Margin="3" Style="{StaticResource PositionBlockStyle}" Cursor="Hand" MouseLeftButtonDown="ToastPositionBlock_Click" ToolTip="Top Center" Tag="TopCenter">
+                                             <Border x:Name="PosDot_TopCenter" Width="10" Height="10" CornerRadius="2.5" Background="#40808080" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="4"/>
+                                         </Border>
+
+                                         <!-- Top Right -->
+                                         <Border x:Name="PosBlock_TopRight" Grid.Row="0" Grid.Column="2" Margin="3" Style="{StaticResource PositionBlockStyle}" Cursor="Hand" MouseLeftButtonDown="ToastPositionBlock_Click" ToolTip="Top Right" Tag="TopRight">
+                                             <Border x:Name="PosDot_TopRight" Width="10" Height="10" CornerRadius="2.5" Background="#40808080" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4"/>
+                                         </Border>
+
+                                         <!-- Bottom Left -->
+                                         <Border x:Name="PosBlock_BottomLeft" Grid.Row="1" Grid.Column="0" Margin="3" Style="{StaticResource PositionBlockStyle}" Cursor="Hand" MouseLeftButtonDown="ToastPositionBlock_Click" ToolTip="Bottom Left" Tag="BottomLeft">
+                                             <Border x:Name="PosDot_BottomLeft" Width="10" Height="10" CornerRadius="2.5" Background="#40808080" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="4"/>
+                                         </Border>
+
+                                         <!-- Bottom Center -->
+                                         <Border x:Name="PosBlock_BottomCenter" Grid.Row="1" Grid.Column="1" Margin="3" Style="{StaticResource PositionBlockStyle}" Cursor="Hand" MouseLeftButtonDown="ToastPositionBlock_Click" ToolTip="Bottom Center" Tag="BottomCenter">
+                                             <Border x:Name="PosDot_BottomCenter" Width="10" Height="10" CornerRadius="2.5" Background="#40808080" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="4"/>
+                                         </Border>
+
+                                         <!-- Bottom Right -->
+                                         <Border x:Name="PosBlock_BottomRight" Grid.Row="1" Grid.Column="2" Margin="3" Style="{StaticResource PositionBlockStyle}" Cursor="Hand" MouseLeftButtonDown="ToastPositionBlock_Click" ToolTip="Bottom Right" Tag="BottomRight">
+                                             <Border x:Name="PosDot_BottomRight" Width="10" Height="10" CornerRadius="2.5" Background="#40808080" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="4"/>
+                                         </Border>
+                                     </Grid>
+                                 </Border>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -2286,6 +2316,22 @@
                                           SelectionChanged="ToastMonitorCombo_SelectionChanged">
                                     <ComboBoxItem Content="Automatic" Tag="-1"/>
                                 </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE724;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Test notification" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Send a test preview notification to verify position and layout." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <Button x:Name="TestToastBtn" Grid.Column="2" Content="Send Test" MinWidth="150" Height="28" Cursor="Hand" Click="TestToastBtn_Click"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
