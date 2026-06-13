@@ -49,11 +49,14 @@ public sealed partial class RegionOverlayForm
             _toolbarContextMenu = null;
         };
 
-        // 1. Tip item
-        var tipText = isSpanish ? "Click derecho en herramienta para ocultar" : "Right-click a tool to hide";
-        var tipItem = new ToolStripMenuItem(tipText) { Enabled = false };
-        menu.Items.Add(tipItem);
-        menu.Items.Add(new ToolStripSeparator());
+        // 1. Tip item (only when right-clicking toolbar background/system buttons)
+        if (tool == null)
+        {
+            var tipText = isSpanish ? "Click derecho en herramienta para ocultar" : "Right-click a tool to hide";
+            var tipItem = new ToolStripMenuItem(tipText) { Enabled = false };
+            menu.Items.Add(tipItem);
+            menu.Items.Add(new ToolStripSeparator());
+        }
 
         // 2. Hide option (only if hideable button with tool clicked)
         if (tool != null)
