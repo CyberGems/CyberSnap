@@ -746,7 +746,11 @@ public partial class HistoryWindow : Window
             case 1: // Images
                 ImagesPanel.Visibility = Visibility.Visible;
                 if (CanReuseLoadedImageHistory())
+                {
+                    // Reset render count to initial page size when switching to Images filter
+                    _historyRenderCount = Math.Min(ImageHistoryPageSize, _allImageHistoryEntries.Count);
                     ApplyImageSearchFilter();
+                }
                 else
                     _ = LoadHistoryAsync();
                 break;
