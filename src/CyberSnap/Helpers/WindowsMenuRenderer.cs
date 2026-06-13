@@ -290,7 +290,7 @@ public static class WindowsMenuRenderer
                 item.Font,
                 labelRect,
                 textColor,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
 
             if (shortcut.Length == 0)
                 return;
