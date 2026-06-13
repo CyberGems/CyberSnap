@@ -2199,6 +2199,7 @@
                                     <TextBlock Text="Turn all pop-up notifications on or off." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="NotificationsEnabledCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          Width="150" HorizontalAlignment="Left"
                                           AutomationProperties.Name="Show notifications"
                                           ToolTip="Turn all pop-up notifications on or off."
                                           Checked="NotificationsEnabledCheck_Changed" Unchecked="NotificationsEnabledCheck_Changed"/>
@@ -2218,9 +2219,30 @@
                                     <TextBlock Text="Show brief status messages such as &quot;Sent to the editor&quot;. Capture previews and error alerts are not affected." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="SystemNotificationsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          Width="150" HorizontalAlignment="Left"
                                           AutomationProperties.Name="System messages"
                                           ToolTip="Show brief status messages such as &quot;Sent to the editor&quot;."
                                           Checked="SystemNotificationsCheck_Changed" Unchecked="SystemNotificationsCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE840;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Auto-pin screenshot previews" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Keep new previews open until dismissed." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="AutoPinPreviewsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                      Width="150" HorizontalAlignment="Left"
+                                      AutomationProperties.Name="Auto-pin screenshot previews"
+                                      ToolTip="Keep new previews open until dismissed."
+                                      Checked="AutoPinPreviewsCheck_Changed" Unchecked="AutoPinPreviewsCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -2460,25 +2482,7 @@
                                        AutomationProperties.LiveSetting="Polite"
                                        Margin="34,5,0,0"/>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE840;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Auto-pin screenshot previews" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Keep new previews open until dismissed." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="AutoPinPreviewsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                      AutomationProperties.Name="Auto-pin screenshot previews"
-                                      ToolTip="Keep new previews open until dismissed."
-                                      Checked="AutoPinPreviewsCheck_Changed" Unchecked="AutoPinPreviewsCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            
                             <Grid x:Name="ToastFadeDurationRow" Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
