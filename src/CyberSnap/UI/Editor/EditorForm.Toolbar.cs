@@ -2159,19 +2159,33 @@ internal sealed class EditorZoomSlider : Control
     private Rectangle GetTrackRect()
         => new(10, (Height - 6) / 2, Math.Max(1, Width - 20), 6);
 
+    // Zoom is perceived multiplicatively (the wheel steps by a constant factor), so the
+    // thumb is positioned on a logarithmic scale. A linear mapping crammed the whole
+    // fit-to-100% range into a sliver near the left edge for large images, making the
+    // thumb appear stuck at the side while zooming. Log mapping spreads equal zoom
+    // factors over equal track distance and centers 100% regardless of image size.
+    private double ValueToFraction(int value)
+    {
+        double lmin = Math.Log(Math.Max(1, Minimum));
+        double lmax = Math.Log(Math.Max(1, Maximum));
+        if (lmax - lmin < 1e-9) return 0.0;
+        double lval = Math.Log(Math.Clamp(value, Math.Max(1, Minimum), Math.Max(1, Maximum)));
+        return (lval - lmin) / (lmax - lmin);
+    }
+
     private int GetThumbX()
     {
         var track = GetTrackRect();
-        var range = Math.Max(1, Maximum - Minimum);
-        var t = (Value - Minimum) / (double)range;
-        return track.Left + (int)Math.Round(track.Width * t);
+        return track.Left + (int)Math.Round(track.Width * ValueToFraction(Value));
     }
 
     private void SetValueFromX(int x)
     {
         var track = GetTrackRect();
         var t = Math.Clamp((x - track.Left) / (double)Math.Max(1, track.Width), 0.0, 1.0);
-        Value = Minimum + (int)Math.Round((Maximum - Minimum) * t);
+        double lmin = Math.Log(Math.Max(1, Minimum));
+        double lmax = Math.Log(Math.Max(1, Maximum));
+        Value = (int)Math.Round(Math.Exp(lmin + (lmax - lmin) * t));
     }
 }
 
