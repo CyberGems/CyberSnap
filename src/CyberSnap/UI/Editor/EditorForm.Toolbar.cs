@@ -522,7 +522,7 @@ public sealed partial class EditorForm
 
         var historyButton = MakeCommandButton("history", LocalizationService.Translate("History"), false);
         historyButton.Click += (_, _) => OpenHistoryWindow();
-        RegisterHoverTooltip(historyButton, "Open Capture History", above: false);
+        RegisterHoverTooltip(historyButton, "Open Capture Gallery", above: false);
         topActions.Controls.Add(historyButton);
 
 

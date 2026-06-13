@@ -743,7 +743,7 @@
                     <RadioButton x:Name="OcrTab" Content="OCR" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     
-                    <RadioButton x:Name="HistoryTab" Content="History" GroupName="Main"
+                    <RadioButton x:Name="HistoryTab" Content="Gallery" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="AboutTab" Content="About" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
@@ -2690,10 +2690,10 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- History -->
+            <!-- Gallery -->
             <ScrollViewer x:Name="HistoryPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
                 <StackPanel>
-                    <TextBlock Text="History" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="Gallery" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
@@ -2706,12 +2706,12 @@
                                     <TextBlock Text="&#xE81C;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Save capture history" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Keep captures available in the History page." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Save captures to Gallery" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="When enabled, captures will be saved in the Gallery." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="SaveHistoryCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Keep captures available in the History page"
-                                          AutomationProperties.Name="Save capture history"
+                                          ToolTip="When enabled, captures will be saved in the Gallery."
+                                          AutomationProperties.Name="Save captures to Gallery"
                                           Checked="SaveHistoryCheck_Changed" Unchecked="SaveHistoryCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -2725,34 +2725,34 @@
                                     <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Auto-clear history" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Automatically prune old capture entries." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Auto-delete old captures" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Automatically removes old items from the Gallery." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="HistoryRetentionCombo" Grid.Column="2" MinWidth="125"
                                           VerticalAlignment="Center"
-                                          AutomationProperties.Name="Auto-clear history"
-                                          ToolTip="Automatically prune old capture entries."
+                                          AutomationProperties.Name="Auto-delete old captures"
+                                          ToolTip="Automatically removes old items from the Gallery."
                                           SelectionChanged="HistoryRetentionCombo_SelectionChanged">
                                     <ComboBoxItem Content="Never"
-                                                  ToolTip="Keep history until manually cleared"
-                                                  AutomationProperties.Name="Never auto-clear history"
-                                                  AutomationProperties.HelpText="Keep saved capture history until you clear it manually."/>
+                                                  ToolTip="Keep gallery until manually cleared"
+                                                  AutomationProperties.Name="Never auto-clear gallery"
+                                                  AutomationProperties.HelpText="Keep saved capture gallery until you clear it manually."/>
                                     <ComboBoxItem Content="1 day"
-                                                  ToolTip="Keep history for 1 day"
-                                                  AutomationProperties.Name="Keep history for 1 day"
-                                                  AutomationProperties.HelpText="Automatically remove capture history older than 1 day."/>
+                                                  ToolTip="Keep gallery for 1 day"
+                                                  AutomationProperties.Name="Keep gallery for 1 day"
+                                                  AutomationProperties.HelpText="Automatically remove capture gallery older than 1 day."/>
                                     <ComboBoxItem Content="7 days"
-                                                  ToolTip="Keep history for 7 days"
-                                                  AutomationProperties.Name="Keep history for 7 days"
-                                                  AutomationProperties.HelpText="Automatically remove capture history older than 7 days."/>
+                                                  ToolTip="Keep gallery for 7 days"
+                                                  AutomationProperties.Name="Keep gallery for 7 days"
+                                                  AutomationProperties.HelpText="Automatically remove capture gallery older than 7 days."/>
                                     <ComboBoxItem Content="30 days"
-                                                  ToolTip="Keep history for 30 days"
-                                                  AutomationProperties.Name="Keep history for 30 days"
-                                                  AutomationProperties.HelpText="Automatically remove capture history older than 30 days."/>
+                                                  ToolTip="Keep gallery for 30 days"
+                                                  AutomationProperties.Name="Keep gallery for 30 days"
+                                                  AutomationProperties.HelpText="Automatically remove capture gallery older than 30 days."/>
                                     <ComboBoxItem Content="3 months"
-                                                  ToolTip="Keep history for 3 months"
-                                                  AutomationProperties.Name="Keep history for 3 months"
-                                                  AutomationProperties.HelpText="Automatically remove capture history older than 3 months."/>
+                                                  ToolTip="Keep gallery for 3 months"
+                                                  AutomationProperties.Name="Keep gallery for 3 months"
+                                                  AutomationProperties.HelpText="Automatically remove capture gallery older than 3 months."/>
                                 </ComboBox>
                             </Grid>
                             <TextBlock x:Name="HistoryPreferenceStatusText"
