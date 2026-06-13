@@ -30,11 +30,12 @@
                 SnapsToDevicePixels="True">
             <Grid>
             <Grid.RowDefinitions>
+                <RowDefinition x:Name="TopProgressRow" Height="0"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="4"/>
+                <RowDefinition x:Name="BottomProgressRow" Height="4"/>
             </Grid.RowDefinitions>
 
-            <Grid x:Name="ContentGrid" Grid.Row="0">
+            <Grid x:Name="ContentGrid" Grid.Row="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -195,7 +196,7 @@
                 </Grid>
             </Grid>
 
-            <Grid Grid.Row="1" ClipToBounds="True">
+            <Grid x:Name="ProgressHost" Grid.Row="2" ClipToBounds="True">
                 <Border x:Name="ProgressTrack"
                         Background="Transparent"
                         HorizontalAlignment="Stretch"/>
@@ -219,7 +220,7 @@
             </Grid>
 
             <Border x:Name="ShellStroke"
-                    Grid.RowSpan="2"
+                    Grid.RowSpan="3"
                     Margin="0"
                     CornerRadius="10"
                     Background="Transparent"

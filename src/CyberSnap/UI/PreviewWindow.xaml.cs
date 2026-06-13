@@ -35,7 +35,7 @@ public partial class PreviewWindow : Window
     private readonly bool _isGif;
 
     private static PreviewWindow? _current;
-    private static CyberSnap.Models.ToastPosition _position = CyberSnap.Models.ToastPosition.Right;
+    private static CyberSnap.Models.ToastPosition _position = CyberSnap.Models.ToastPosition.TopCenter;
     private static bool _autoPin;
 
     public static void SetAutoPin(bool autoPin) => _autoPin = autoPin;

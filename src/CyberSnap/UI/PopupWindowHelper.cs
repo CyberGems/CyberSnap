@@ -84,6 +84,10 @@ internal static class PopupWindowHelper
                 (workArea.Left + edge, workArea.Bottom - actualHeight - bottomEdge, workArea.Left - actualWidth - offScreenDistance, workArea.Bottom - actualHeight - bottomEdge, true),
             ToastPosition.BottomRight =>
                 (workArea.Right - actualWidth - edge, workArea.Bottom - actualHeight - bottomEdge, workArea.Right + offScreenDistance, workArea.Bottom - actualHeight - bottomEdge, true),
+            ToastPosition.TopCenter =>
+                (workArea.Left + (workArea.Width - actualWidth) / 2, workArea.Top + edge, workArea.Left + (workArea.Width - actualWidth) / 2, workArea.Top - actualHeight - offScreenDistance, false),
+            ToastPosition.BottomCenter =>
+                (workArea.Left + (workArea.Width - actualWidth) / 2, workArea.Bottom - actualHeight - bottomEdge, workArea.Left + (workArea.Width - actualWidth) / 2, workArea.Bottom + offScreenDistance, false),
             _ =>
                 (workArea.Right - actualWidth - edge, workArea.Bottom - actualHeight - bottomEdge, workArea.Right + offScreenDistance, workArea.Bottom - actualHeight - bottomEdge, true),
         };
@@ -113,6 +117,10 @@ internal static class PopupWindowHelper
                 (workArea.Left - actualWidth - exitDistance, workArea.Bottom - actualHeight - bottomEdge, true),
             ToastPosition.BottomRight =>
                 (workArea.Right + exitDistance, workArea.Bottom - actualHeight - bottomEdge, true),
+            ToastPosition.TopCenter =>
+                (workArea.Left + (workArea.Width - actualWidth) / 2, workArea.Top - actualHeight - exitDistance, false),
+            ToastPosition.BottomCenter =>
+                (workArea.Left + (workArea.Width - actualWidth) / 2, workArea.Bottom + exitDistance, false),
             _ =>
                 (workArea.Right + exitDistance, workArea.Bottom - actualHeight - bottomEdge, true),
         };
