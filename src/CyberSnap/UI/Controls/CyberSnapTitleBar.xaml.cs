@@ -81,14 +81,14 @@ public partial class CyberSnapTitleBar : UserControl
             System.Globalization.CultureInfo.InvariantCulture,
             System.Windows.FlowDirection.LeftToRight,
             new System.Windows.Media.Typeface("Segoe MDL2 Assets"),
-            16,
+            14,
             System.Windows.Media.Brushes.White);
         var dv = new System.Windows.Media.DrawingVisual();
         using (var dc = dv.RenderOpen())
         {
-            var wpfColor = System.Windows.Media.Color.FromArgb(180, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+            var wpfColor = System.Windows.Media.Color.FromArgb(150, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
             var brush = new System.Windows.Media.SolidColorBrush(wpfColor);
-            dc.DrawText(personalizeIcon, new System.Windows.Point(1, 1));
+            dc.DrawText(personalizeIcon, new System.Windows.Point(2, 2));
         }
         var renderTarget = new System.Windows.Media.Imaging.RenderTargetBitmap(18, 18, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
         renderTarget.Render(dv);
