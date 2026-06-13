@@ -297,13 +297,7 @@ public sealed class SettingsService : IDisposable
         settings.OcrDefaultTranslateFrom = TranslationService.ResolveSourceLanguage(settings.OcrDefaultTranslateFrom);
         settings.OcrDefaultTranslateTo = NormalizeTranslationTargetSetting(settings.OcrDefaultTranslateTo);
 
-        // Migrate older settings to include newly added default tools.
-        if (settings.EnabledTools is { Count: > 0 })
-        {
-            foreach (var tool in ToolDef.DefaultEnabledIds())
-                if (!settings.EnabledTools.Contains(tool))
-                    settings.EnabledTools.Add(tool);
-        }
+        // Preserved user configuration of enabled tools without forcing missing ones back on.
 
         NormalizeUnsafeModifierlessHotkeys(settings);
         NormalizeToastButtonLayout(settings.ToastButtons);
