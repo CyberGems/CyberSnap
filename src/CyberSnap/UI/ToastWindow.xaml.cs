@@ -1359,6 +1359,21 @@ public partial class ToastWindow : Window
 
         if (!string.IsNullOrWhiteSpace(_spec.ClickActionUrl))
         {
+            if (_spec.ClickActionUrl == "cybersnap://update")
+            {
+                DismissAnimated();
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var app = (App)Application.Current;
+                    var result = app.LatestUpdateResult;
+                    if (result != null)
+                    {
+                        app.ShowSettingsAndDownloadUpdate(result);
+                    }
+                });
+                return;
+            }
+
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
