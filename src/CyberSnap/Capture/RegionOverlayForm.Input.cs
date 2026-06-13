@@ -12,8 +12,9 @@ public sealed partial class RegionOverlayForm
         if (e.Button == MouseButtons.Right)
         {
             int rightClickBtn = GetToolbarButtonAt(e.Location);
-            if (rightClickBtn >= 0)
+            if (rightClickBtn >= 0 || _toolbarRect.Contains(e.Location))
             {
+                HideToolbarTooltip();
                 ShowToolbarContextMenu(rightClickBtn, e.Location);
                 return;
             }

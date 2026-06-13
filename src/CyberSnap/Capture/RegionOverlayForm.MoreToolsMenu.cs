@@ -13,64 +13,75 @@ public sealed partial class RegionOverlayForm
 {
     public event Action<List<string>>? EnabledToolsChanged;
 
+    private ContextMenuStrip? _toolbarContextMenu;
+
     private void ShowToolbarContextMenu(int buttonIndex, Point clickLocation)
     {
-        // System buttons (Color, Stroke Width, Position, Close) cannot be hidden
-        if (buttonIndex == ColorButtonIndex ||
-            buttonIndex == StrokeWidthButtonIndex ||
-            buttonIndex == PositionButtonIndex ||
-            buttonIndex == CloseButtonIndex)
-        {
-            return;
-        }
-
         ToolDef? tool = null;
-        if (buttonIndex < _mainBarTools.Length)
+        bool isHideable = buttonIndex >= 0 &&
+                          buttonIndex != ColorButtonIndex &&
+                          buttonIndex != StrokeWidthButtonIndex &&
+                          buttonIndex != PositionButtonIndex &&
+                          buttonIndex != CloseButtonIndex;
+
+        if (isHideable)
         {
-            tool = _mainBarTools[buttonIndex];
-        }
-        else if (buttonIndex >= CloseButtonIndex + 1 && buttonIndex < BtnCount)
-        {
-            int flyoutIdx = buttonIndex - (CloseButtonIndex + 1);
-            if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length)
-                tool = _flyoutTools[flyoutIdx];
+            if (buttonIndex < _mainBarTools.Length)
+            {
+                tool = _mainBarTools[buttonIndex];
+            }
+            else if (buttonIndex >= CloseButtonIndex + 1 && buttonIndex < BtnCount)
+            {
+                int flyoutIdx = buttonIndex - (CloseButtonIndex + 1);
+                if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length)
+                    tool = _flyoutTools[flyoutIdx];
+            }
         }
 
-        if (tool == null)
-            return;
-
-        var menu = new ContextMenuStrip();
         var settings = Services.SettingsService.LoadStatic();
         if (settings == null) return;
 
         var isSpanish = string.Equals(settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
 
-        // 1. Hide option
-        var hideText = isSpanish ? $"Ocultar \"{LocalizationService.Translate(tool.Label)}\"" : $"Hide \"{LocalizationService.Translate(tool.Label)}\"";
-        var hideItem = new ToolStripMenuItem(hideText);
-        hideItem.Click += (s, e) => {
-            HideTool(tool.Id);
+        var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: 200);
+        _toolbarContextMenu = menu;
+        menu.Closed += (s, e) => {
+            _toolbarContextMenu = null;
         };
 
-        // Don't allow hiding the last capture tool
-        if (tool.Group == 0)
-        {
-            var enabled = settings.EnabledTools ?? ToolDef.DefaultEnabledIds();
-            var captureToolsCount = enabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 0));
-            if (captureToolsCount <= 1)
-            {
-                hideItem.Enabled = false;
-                hideItem.ToolTipText = isSpanish ? "Debe haber al menos una herramienta de captura activa." : "Keep at least one capture tool enabled.";
-            }
-        }
-        menu.Items.Add(hideItem);
-
-        // 2. Separator
+        // 1. Tip item
+        var tipText = isSpanish ? "Click derecho en herramienta para ocultar" : "Right-click a tool to hide";
+        var tipItem = new ToolStripMenuItem(tipText) { Enabled = false };
+        menu.Items.Add(tipItem);
         menu.Items.Add(new ToolStripSeparator());
+
+        // 2. Hide option (only if hideable button with tool clicked)
+        if (tool != null)
+        {
+            var hideText = isSpanish ? $"Ocultar \"{LocalizationService.Translate(tool.Label)}\"" : $"Hide \"{LocalizationService.Translate(tool.Label)}\"";
+            var hideItem = new ToolStripMenuItem(hideText);
+            hideItem.Click += (s, e) => {
+                HideTool(tool.Id);
+            };
+
+            // Don't allow hiding the last capture tool
+            if (tool.Group == 0)
+            {
+                var enabled = settings.EnabledTools ?? ToolDef.DefaultEnabledIds();
+                var captureToolsCount = enabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 0));
+                if (captureToolsCount <= 1)
+                {
+                    hideItem.Enabled = false;
+                    hideItem.ToolTipText = isSpanish ? "Debe haber al menos una herramienta de captura activa." : "Keep at least one capture tool enabled.";
+                }
+            }
+            menu.Items.Add(hideItem);
+            menu.Items.Add(new ToolStripSeparator());
+        }
 
         // 3. Show Hidden submenu
         var showHiddenText = isSpanish ? "Mostrar ocultos" : "Show Hidden";
-        var showHiddenSubmenu = new ToolStripMenuItem(showHiddenText);
+        var showHiddenSubmenu = WindowsMenuRenderer.Submenu(showHiddenText, showImages: false);
 
         var allTools = ToolDef.AllTools;
         var currentlyEnabled = settings.EnabledTools ?? ToolDef.DefaultEnabledIds();
@@ -93,6 +104,12 @@ public sealed partial class RegionOverlayForm
             }
         }
         menu.Items.Add(showHiddenSubmenu);
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
+        if (showHiddenSubmenu.DropDownItems.Count > 0)
+        {
+            WindowsMenuRenderer.NormalizeDropDownWidths(showHiddenSubmenu, 160);
+        }
 
         var screenPoint = PointToScreen(clickLocation);
         menu.Show(screenPoint);

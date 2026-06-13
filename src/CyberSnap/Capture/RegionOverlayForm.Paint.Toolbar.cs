@@ -198,7 +198,12 @@ public sealed partial class RegionOverlayForm
                 int textX = (int)lx + logoSz + UiChrome.ScaleInt(6);
                 int textY = _toolbarRect.Y + pad - UiChrome.ScaleInt(1); // Visually level text baseline with button icons
                 int textW = _toolbarButtons[0].X - textX - UiChrome.ScaleInt(6);
-                if (textW > 0)
+                
+                int tier1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
+                int tier2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
+                bool canShowText = (tier2Width - tier1Width >= UiChrome.ScaleInt(80)) || (_mainBarTools.Length >= 6);
+
+                if (textW >= UiChrome.ScaleInt(50) && canShowText)
                 {
                     var textRect = new RectangleF(textX, textY, textW, buttonSize);
                     var sf = new StringFormat
