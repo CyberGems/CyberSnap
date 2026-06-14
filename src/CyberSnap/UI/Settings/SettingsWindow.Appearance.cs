@@ -245,15 +245,24 @@ public partial class SettingsWindow
 
     private void PopulateInterfaceLanguageOptions()
     {
+        _languageItemSources.Clear();
         InterfaceLanguageCombo.Items.Clear();
+
+        var autoLabel = "Auto (system language)";
+        var autoToolTip = "Uses Windows language when CyberSnap has translations for it.";
+        var autoAutomationName = "Auto interface language";
+        var autoAutomationHelp = "Use the Windows language when CyberSnap has app translations for it.";
+        _languageItemSources[LocalizationService.AutoLanguageCode] =
+            (autoLabel, autoToolTip, autoAutomationName, autoAutomationHelp);
+
         var autoLanguageItem = new ComboBoxItem
         {
-            Content = "Auto (system language)",
+            Content = autoLabel,
             Tag = LocalizationService.AutoLanguageCode,
-            ToolTip = "Uses Windows language when CyberSnap has translations for it.",
+            ToolTip = autoToolTip,
         };
-        AutomationProperties.SetName(autoLanguageItem, "Auto interface language");
-        AutomationProperties.SetHelpText(autoLanguageItem, "Use the Windows language when CyberSnap has app translations for it.");
+        AutomationProperties.SetName(autoLanguageItem, autoAutomationName);
+        AutomationProperties.SetHelpText(autoLanguageItem, autoAutomationHelp);
         InterfaceLanguageCombo.Items.Add(autoLanguageItem);
 
         foreach (var language in LocalizationService.Languages)
@@ -262,20 +271,43 @@ public partial class SettingsWindow
             var label = string.Equals(language.EnglishName, language.NativeName, StringComparison.OrdinalIgnoreCase)
                 ? language.EnglishName
                 : $"{language.EnglishName} - {language.NativeName}";
+            var contentLabel = available ? label : $"{label} (not translated yet)";
+            var toolTip = available
+                ? $"Use {label} for the CyberSnap interface."
+                : "This language is recognized, but CyberSnap does not have app translations for it yet.";
+            var automationName = $"{label} interface language";
+            var automationHelp = available
+                ? $"Use {label} for CyberSnap menus, settings, and prompts."
+                : $"{label} is recognized, but CyberSnap does not have app translations for it yet.";
+            _languageItemSources[language.Code] = (contentLabel, toolTip, automationName, automationHelp);
+
             var item = new ComboBoxItem
             {
-                Content = available ? label : $"{label} (not translated yet)",
+                Content = contentLabel,
                 Tag = language.Code,
                 IsEnabled = available,
-                ToolTip = available
-                    ? $"Use {label} for the CyberSnap interface."
-                    : "This language is recognized, but CyberSnap does not have app translations for it yet.",
+                ToolTip = toolTip,
             };
-            AutomationProperties.SetName(item, $"{label} interface language");
-            AutomationProperties.SetHelpText(item, available
-                ? $"Use {label} for CyberSnap menus, settings, and prompts."
-                : $"{label} is recognized, but CyberSnap does not have app translations for it yet.");
+            AutomationProperties.SetName(item, automationName);
+            AutomationProperties.SetHelpText(item, automationHelp);
             InterfaceLanguageCombo.Items.Add(item);
+        }
+    }
+
+    private readonly Dictionary<string, (string Label, string ToolTip, string AutomationName, string AutomationHelp)> _languageItemSources = new();
+
+    private void RefreshLanguageComboDisplay()
+    {
+        foreach (var item in InterfaceLanguageCombo.Items.OfType<ComboBoxItem>())
+        {
+            var code = item.Tag?.ToString();
+            if (code == null || !_languageItemSources.TryGetValue(code, out var info))
+                continue;
+
+            item.Content = LocalizationService.Translate(info.Label);
+            item.ToolTip = LocalizationService.Translate(info.ToolTip);
+            AutomationProperties.SetName(item, LocalizationService.Translate(info.AutomationName));
+            AutomationProperties.SetHelpText(item, LocalizationService.Translate(info.AutomationHelp));
         }
     }
 
@@ -391,6 +423,7 @@ public partial class SettingsWindow
     {
         LocalizationService.ApplyCurrentCulture(_settingsService.Settings.InterfaceLanguage);
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
+        RefreshLanguageComboDisplay();
         UpdateWindowTitle();
     }
 
