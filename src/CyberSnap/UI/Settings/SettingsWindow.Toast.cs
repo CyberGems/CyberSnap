@@ -689,6 +689,8 @@ public partial class SettingsWindow
         border.Opacity = 1;
         border.Background = new SolidColorBrush(Color.FromArgb(180, 26, 46, 37));
         icon.Source = Helpers.FluentIcons.RenderWpf(iconId, GetToastLayoutIconColor(active: false), 22);
+
+        // Don't override tooltip - let XAML localization handle it
     }
 
     private void RefreshToastSlotIndicators()
@@ -849,14 +851,14 @@ public partial class SettingsWindow
 
     private static string FormatToastButtonLabel(ToastButtonKind button) => button switch
     {
-        ToastButtonKind.Close => "close",
-        ToastButtonKind.Pin => "pin",
-        ToastButtonKind.Save => "save",
-        ToastButtonKind.Office => "send to",
-        ToastButtonKind.Delete => "delete",
-        ToastButtonKind.History => "gallery",
-        ToastButtonKind.Edit => "edit",
-        _ => "notification"
+        ToastButtonKind.Close => Services.LocalizationService.Translate("close"),
+        ToastButtonKind.Pin => Services.LocalizationService.Translate("pin"),
+        ToastButtonKind.Save => Services.LocalizationService.Translate("save"),
+        ToastButtonKind.Office => Services.LocalizationService.Translate("send to"),
+        ToastButtonKind.Delete => Services.LocalizationService.Translate("delete"),
+        ToastButtonKind.History => Services.LocalizationService.Translate("gallery"),
+        ToastButtonKind.Edit => Services.LocalizationService.Translate("edit"),
+        _ => Services.LocalizationService.Translate("notification")
     };
 
     private static string FormatCornerLabel(ToastCorner corner) => corner switch
