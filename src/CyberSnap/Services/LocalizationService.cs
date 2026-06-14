@@ -48,14 +48,23 @@ public static class LocalizationService
     private static readonly DependencyProperty SourceTextProperty =
         DependencyProperty.RegisterAttached("SourceText", typeof(string), typeof(LocalizationService));
 
+    public static string GetSourceText(DependencyObject obj) => (string)obj.GetValue(SourceTextProperty);
+    public static void SetSourceText(DependencyObject obj, string value) => obj.SetValue(SourceTextProperty, value);
+
     private static readonly DependencyProperty SourceContentProperty =
         DependencyProperty.RegisterAttached("SourceContent", typeof(string), typeof(LocalizationService));
+
+    public static string GetSourceContent(DependencyObject obj) => (string)obj.GetValue(SourceContentProperty);
+    public static void SetSourceContent(DependencyObject obj, string value) => obj.SetValue(SourceContentProperty, value);
 
     private static readonly DependencyProperty SourceHeaderProperty =
         DependencyProperty.RegisterAttached("SourceHeader", typeof(string), typeof(LocalizationService));
 
     private static readonly DependencyProperty SourceToolTipProperty =
         DependencyProperty.RegisterAttached("SourceToolTip", typeof(string), typeof(LocalizationService));
+
+    public static string GetSourceToolTip(DependencyObject obj) => (string)obj.GetValue(SourceToolTipProperty);
+    public static void SetSourceToolTip(DependencyObject obj, string value) => obj.SetValue(SourceToolTipProperty, value);
 
     private static readonly object Gate = new();
     private static readonly Dictionary<string, IReadOnlyDictionary<string, string>> TranslationCache =
@@ -183,13 +192,12 @@ public static class LocalizationService
             return text;
 
         var resolved = ResolveLanguageCode(languageCode);
-        if (string.Equals(resolved, DefaultLanguageCode, StringComparison.OrdinalIgnoreCase))
-            return text;
-
         var translations = GetTranslations(resolved);
-        return translations.TryGetValue(text, out var translated) && !string.IsNullOrWhiteSpace(translated)
-            ? translated
-            : text;
+        
+        if (translations.TryGetValue(text, out var translated) && !string.IsNullOrWhiteSpace(translated))
+            return translated;
+
+        return text;
     }
 
     public static void ApplyTo(DependencyObject root, string? languageSetting = null)
@@ -245,10 +253,19 @@ public static class LocalizationService
                 foreach (var inline in textBlock.Inlines.ToArray())
                     ApplyToInline(inline, languageCode);
             }
-            else if (!string.IsNullOrEmpty(textBlock.Text))
+            else
             {
-                var source = GetOrSetSource(textBlock, SourceTextProperty, textBlock.Text);
-                textBlock.Text = Translate(languageCode, source);
+                // Check if SourceText attached property is set
+                var sourceText = textBlock.GetValue(SourceTextProperty) as string;
+                if (!string.IsNullOrEmpty(sourceText))
+                {
+                    textBlock.Text = Translate(languageCode, sourceText);
+                }
+                else if (!string.IsNullOrEmpty(textBlock.Text))
+                {
+                    var source = GetOrSetSource(textBlock, SourceTextProperty, textBlock.Text);
+                    textBlock.Text = Translate(languageCode, source);
+                }
             }
         }
 
@@ -258,16 +275,34 @@ public static class LocalizationService
             headered.Header = Translate(languageCode, source);
         }
 
-        if (element is ContentControl contentControl && contentControl.Content is string content)
+        if (element is ContentControl contentControl)
         {
-            var source = GetOrSetSource(contentControl, SourceContentProperty, content);
-            contentControl.Content = Translate(languageCode, source);
+            // Check if SourceContent attached property is set
+            var sourceContent = contentControl.GetValue(SourceContentProperty) as string;
+            if (!string.IsNullOrEmpty(sourceContent))
+            {
+                contentControl.Content = Translate(languageCode, sourceContent);
+            }
+            else if (contentControl.Content is string content)
+            {
+                var source = GetOrSetSource(contentControl, SourceContentProperty, content);
+                contentControl.Content = Translate(languageCode, source);
+            }
         }
 
-        if (element is FrameworkElement { ToolTip: string toolTip } toolTipElement)
+        if (element is FrameworkElement toolTipElement)
         {
-            var source = GetOrSetSource(toolTipElement, SourceToolTipProperty, toolTip);
-            toolTipElement.ToolTip = Translate(languageCode, source);
+            // Check if SourceToolTip attached property is set
+            var sourceToolTip = toolTipElement.GetValue(SourceToolTipProperty) as string;
+            if (!string.IsNullOrEmpty(sourceToolTip))
+            {
+                toolTipElement.ToolTip = Translate(languageCode, sourceToolTip);
+            }
+            else if (toolTipElement.ToolTip is string toolTip)
+            {
+                var source = GetOrSetSource(toolTipElement, SourceToolTipProperty, toolTip);
+                toolTipElement.ToolTip = Translate(languageCode, source);
+            }
         }
     }
 

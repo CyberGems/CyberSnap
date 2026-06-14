@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:Services="clr-namespace:CyberSnap.Services"
         Title="CyberSnap"
         Height="680" Width="960"
         MinHeight="560" MinWidth="860"
@@ -1168,15 +1169,15 @@
                                                   ToolTip="Open capture immediately."
                                                   AutomationProperties.Name="No capture delay"
                                                   AutomationProperties.HelpText="Start the capture overlay immediately after choosing capture."/>
-                                    <ComboBoxItem Content="3 seconds"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="3 seconds delay"
                                                   ToolTip="Wait 3 seconds before capture."
                                                   AutomationProperties.Name="3 second capture delay"
                                                   AutomationProperties.HelpText="Wait 3 seconds before opening the capture overlay."/>
-                                    <ComboBoxItem Content="5 seconds"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="5 seconds delay"
                                                   ToolTip="Wait 5 seconds before capture."
                                                   AutomationProperties.Name="5 second capture delay"
                                                   AutomationProperties.HelpText="Wait 5 seconds before opening the capture overlay."/>
-                                    <ComboBoxItem Content="10 seconds"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="10 seconds delay"
                                                   ToolTip="Wait 10 seconds before capture."
                                                   AutomationProperties.Name="10 second capture delay"
                                                   AutomationProperties.HelpText="Wait 10 seconds before opening the capture overlay."/>
@@ -2195,13 +2196,13 @@
                                     <TextBlock Text="&#xEA8F;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Show notifications" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Turn all pop-up notifications on or off." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Show notifications" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Turn all pop-up notifications on or off." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="NotificationsEnabledCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           Width="150" HorizontalAlignment="Left"
                                           AutomationProperties.Name="Show notifications"
-                                          ToolTip="Turn all pop-up notifications on or off."
+                                          Services:LocalizationService.SourceToolTip="Turn all pop-up notifications on or off."
                                           Checked="NotificationsEnabledCheck_Changed" Unchecked="NotificationsEnabledCheck_Changed"/>
                             </Grid>
                             <Border x:Name="SystemNotificationsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -2215,13 +2216,13 @@
                                     <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="System messages" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Show brief status messages such as &quot;Sent to the editor&quot;. Capture previews and error alerts are not affected." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="System messages" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Show brief status messages such as &quot;Sent to the editor&quot;. Capture previews and error alerts are not affected." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="SystemNotificationsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           Width="150" HorizontalAlignment="Left"
                                           AutomationProperties.Name="System messages"
-                                          ToolTip="Show brief status messages such as &quot;Sent to the editor&quot;."
+                                          Services:LocalizationService.SourceToolTip="Show brief status messages such as &quot;Sent to the editor&quot;. Capture previews and error alerts are not affected."
                                           Checked="SystemNotificationsCheck_Changed" Unchecked="SystemNotificationsCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -2235,13 +2236,13 @@
                                     <TextBlock Text="&#xE840;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Auto-pin screenshot previews" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Keep new previews open until dismissed." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Auto-pin screenshot previews" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Keep new previews open until dismissed." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="AutoPinPreviewsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                       Width="150" HorizontalAlignment="Left"
                                       AutomationProperties.Name="Auto-pin screenshot previews"
-                                      ToolTip="Keep new previews open until dismissed."
+                                      Services:LocalizationService.SourceToolTip="Keep new previews open until dismissed."
                                       Checked="AutoPinPreviewsCheck_Changed" Unchecked="AutoPinPreviewsCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -2255,14 +2256,14 @@
                                     <TextBlock Text="&#xE90D;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Notification position" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose where screenshot previews appear." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Notification position" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Choose where screenshot previews appear." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                  <Border Grid.Column="2" Width="144" Height="96" CornerRadius="8"
                                          Background="{DynamicResource ThemeInputBackgroundBrush}"
                                          BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                          BorderThickness="1" Padding="4" VerticalAlignment="Center"
-                                         ToolTip="Choose where screenshot previews appear.">
+                                         Services:LocalizationService.SourceToolTip="Choose where screenshot previews appear.">
                                      <Border.Resources>
                                          <Style x:Key="PositionBlockStyle" TargetType="Border">
                                              <Setter Property="Background" Value="Transparent"/>
@@ -2330,13 +2331,13 @@
                                     <TextBlock Text="&#xE7F4;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Notification monitor" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose which monitor to show previews on." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Notification monitor" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Choose which monitor to show previews on." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="ToastMonitorCombo" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Center"
                                           SelectionChanged="ToastMonitorCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Automatic" Tag="-1"/>
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="Automatic" Tag="-1"/>
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -2350,10 +2351,10 @@
                                     <TextBlock Text="&#xE724;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Test notification" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Send a test preview notification to verify position and layout." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Test notification" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Send a test preview notification to verify position and layout." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
-                                <Button x:Name="TestToastBtn" Grid.Column="2" Content="Send Test" MinWidth="150" Height="28" Cursor="Hand" Click="TestToastBtn_Click"/>
+                                <Button x:Name="TestToastBtn" Grid.Column="2" Services:LocalizationService.SourceContent="Send Test" MinWidth="150" Height="28" Cursor="Hand" Click="TestToastBtn_Click"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -2366,49 +2367,49 @@
                                     <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Capture notification duration" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Set how long screenshot previews stay visible." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Capture notification duration" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Set how long screenshot previews stay visible." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="ToastDurationCombo" Grid.Column="2" MinWidth="150"
                                            VerticalAlignment="Center"
                                            SelectionChanged="ToastDurationCombo_SelectionChanged">
-                                    <ComboBoxItem Content="1.5 seconds" Tag="1.5"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="1.5 seconds" Tag="1.5"
                                                   ToolTip="Hide previews after 1.5 seconds."
                                                   AutomationProperties.Name="1.5 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 1.5 seconds."/>
-                                    <ComboBoxItem Content="2 seconds" Tag="2"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="2 seconds" Tag="2"
                                                   ToolTip="Hide previews after 2 seconds."
                                                   AutomationProperties.Name="2 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 2 seconds."/>
-                                    <ComboBoxItem Content="2.5 seconds" Tag="2.5"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="2.5 seconds" Tag="2.5"
                                                   ToolTip="Hide previews after 2.5 seconds."
                                                   AutomationProperties.Name="2.5 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 2.5 seconds."/>
-                                    <ComboBoxItem Content="3 seconds" Tag="3"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="3 seconds" Tag="3"
                                                   ToolTip="Hide previews after 3 seconds."
                                                   AutomationProperties.Name="3 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 3 seconds."/>
-                                    <ComboBoxItem Content="4 seconds" Tag="4"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="4 seconds" Tag="4"
                                                   ToolTip="Hide previews after 4 seconds."
                                                   AutomationProperties.Name="4 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 4 seconds."/>
-                                    <ComboBoxItem Content="5 seconds" Tag="5"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="5 seconds" Tag="5"
                                                   ToolTip="Hide previews after 5 seconds."
                                                   AutomationProperties.Name="5 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 5 seconds."/>
-                                    <ComboBoxItem Content="10 seconds" Tag="10"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="10 seconds" Tag="10"
                                                   ToolTip="Hide previews after 10 seconds."
                                                   AutomationProperties.Name="10 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 10 seconds."/>
-                                    <ComboBoxItem Content="20 seconds" Tag="20"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="20 seconds" Tag="20"
                                                   ToolTip="Hide previews after 20 seconds."
                                                   AutomationProperties.Name="20 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 20 seconds."/>
-                                    <ComboBoxItem Content="40 seconds" Tag="40"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="40 seconds" Tag="40"
                                                   ToolTip="Hide previews after 40 seconds."
                                                   AutomationProperties.Name="40 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 40 seconds."/>
-                                    <ComboBoxItem Content="60 seconds" Tag="60"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="60 seconds" Tag="60"
                                                   ToolTip="Hide previews after 60 seconds."
                                                   AutomationProperties.Name="60 second notification duration"
                                                   AutomationProperties.HelpText="Keep screenshot previews visible for 60 seconds."/>
@@ -2425,49 +2426,49 @@
                                     <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="System notification duration" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Set how long system alert notifications stay visible." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="System notification duration" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Set how long system alert notifications stay visible." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="SystemToastDurationCombo" Grid.Column="2" MinWidth="150"
                                            VerticalAlignment="Center"
                                            SelectionChanged="SystemToastDurationCombo_SelectionChanged">
-                                    <ComboBoxItem Content="1.5 seconds" Tag="1.5"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="1.5 seconds" Tag="1.5"
                                                   ToolTip="Hide notifications after 1.5 seconds."
                                                   AutomationProperties.Name="1.5 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 1.5 seconds."/>
-                                    <ComboBoxItem Content="2 seconds" Tag="2"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="2 seconds" Tag="2"
                                                   ToolTip="Hide notifications after 2 seconds."
                                                   AutomationProperties.Name="2 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 2 seconds."/>
-                                    <ComboBoxItem Content="2.5 seconds" Tag="2.5"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="2.5 seconds" Tag="2.5"
                                                   ToolTip="Hide notifications after 2.5 seconds."
                                                   AutomationProperties.Name="2.5 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 2.5 seconds."/>
-                                    <ComboBoxItem Content="3 seconds" Tag="3"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="3 seconds" Tag="3"
                                                   ToolTip="Hide notifications after 3 seconds."
                                                   AutomationProperties.Name="3 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 3 seconds."/>
-                                    <ComboBoxItem Content="4 seconds" Tag="4"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="4 seconds" Tag="4"
                                                   ToolTip="Hide notifications after 4 seconds."
                                                   AutomationProperties.Name="4 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 4 seconds."/>
-                                    <ComboBoxItem Content="5 seconds" Tag="5"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="5 seconds" Tag="5"
                                                   ToolTip="Hide notifications after 5 seconds."
                                                   AutomationProperties.Name="5 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 5 seconds."/>
-                                    <ComboBoxItem Content="10 seconds" Tag="10"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="10 seconds" Tag="10"
                                                   ToolTip="Hide notifications after 10 seconds."
                                                   AutomationProperties.Name="10 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 10 seconds."/>
-                                    <ComboBoxItem Content="20 seconds" Tag="20"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="20 seconds" Tag="20"
                                                   ToolTip="Hide notifications after 20 seconds."
                                                   AutomationProperties.Name="20 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 20 seconds."/>
-                                    <ComboBoxItem Content="40 seconds" Tag="40"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="40 seconds" Tag="40"
                                                   ToolTip="Hide notifications after 40 seconds."
                                                   AutomationProperties.Name="40 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 40 seconds."/>
-                                    <ComboBoxItem Content="60 seconds" Tag="60"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="60 seconds" Tag="60"
                                                   ToolTip="Hide notifications after 60 seconds."
                                                   AutomationProperties.Name="60 second system duration"
                                                   AutomationProperties.HelpText="Keep system notifications visible for 60 seconds."/>
@@ -2493,27 +2494,27 @@
                                     <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Fade-out duration" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Control how quickly faded previews disappear." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Fade-out duration" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Control how quickly faded previews disappear." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="ToastFadeDurationCombo" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="Fade-out duration"
-                                          ToolTip="Control how quickly faded previews disappear."
+                                          Services:LocalizationService.SourceToolTip="Control how quickly faded previews disappear."
                                           SelectionChanged="ToastFadeDurationCombo_SelectionChanged">
-                                    <ComboBoxItem Content="1 second" Tag="1"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="1 second" Tag="1"
                                                   ToolTip="Fade previews out over 1 second."
                                                   AutomationProperties.Name="1 second fade-out duration"
                                                   AutomationProperties.HelpText="Dismiss screenshot previews with a 1 second fade-out animation."/>
-                                    <ComboBoxItem Content="2 seconds" Tag="2"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="2 seconds" Tag="2"
                                                   ToolTip="Fade previews out over 2 seconds."
                                                   AutomationProperties.Name="2 second fade-out duration"
                                                   AutomationProperties.HelpText="Dismiss screenshot previews with a 2 second fade-out animation."/>
-                                    <ComboBoxItem Content="3 seconds" Tag="3"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="3 seconds" Tag="3"
                                                   ToolTip="Fade previews out over 3 seconds."
                                                   AutomationProperties.Name="3 second fade-out duration"
                                                   AutomationProperties.HelpText="Dismiss screenshot previews with a 3 second fade-out animation."/>
-                                    <ComboBoxItem Content="5 seconds" Tag="5"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="5 seconds" Tag="5"
                                                   ToolTip="Fade previews out over 5 seconds."
                                                   AutomationProperties.Name="5 second fade-out duration"
                                                   AutomationProperties.HelpText="Dismiss screenshot previews with a 5 second fade-out animation."/>
@@ -2522,12 +2523,12 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Overlay Buttons" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <TextBlock Services:LocalizationService.SourceText="Overlay Buttons" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid>
                                 <StackPanel>
-                                    <TextBlock Text="Choose which buttons appear on screenshot previews and where. Use a preset or the dropdowns, drag a button onto the preview to add or move it, and double-click or right-click a button to remove it." FontSize="13" TextWrapping="Wrap"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Overlay Buttons description" FontSize="13" TextWrapping="Wrap"/>
                                     <TextBlock x:Name="ToastLayoutSelectionText" Text="" Style="{StaticResource InfoText}" Margin="0,4,0,0"
                                                Visibility="Collapsed"
                                                ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
@@ -2537,29 +2538,29 @@
                                 </StackPanel>
                             </Grid>
 
-                            <TextBlock Text="Presets" FontSize="12.5" FontWeight="SemiBold" Margin="0,16,0,8"
+                            <TextBlock Services:LocalizationService.SourceText="Presets" FontSize="12.5" FontWeight="SemiBold" Margin="0,16,0,8"
                                        HorizontalAlignment="Left"
                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                             <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left">
-                                <Button x:Name="ToastPresetMinimalBtn" Content="Minimal" Margin="0,0,8,0" Cursor="Hand"
+                                <Button x:Name="ToastPresetMinimalBtn" Services:LocalizationService.SourceContent="Minimal" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Minimal preset"
                                         AutomationProperties.HelpText="Show only the close button."
-                                        ToolTip="Show only the close button" Click="ToastPresetMinimalBtn_Click"/>
-                                <Button x:Name="ToastPresetStandardBtn" Content="Standard" Margin="0,0,8,0" Cursor="Hand"
+                                        Services:LocalizationService.SourceToolTip="Show only the close button." Click="ToastPresetMinimalBtn_Click"/>
+                                <Button x:Name="ToastPresetStandardBtn" Services:LocalizationService.SourceContent="Standard" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Standard preset"
                                         AutomationProperties.HelpText="Show pin, close, gallery and save."
-                                        ToolTip="Show pin, close, gallery and save" Click="ToastPresetStandardBtn_Click"/>
-                                <Button x:Name="ToastPresetFullBtn" Content="Full" Margin="0,0,8,0" Cursor="Hand"
+                                        Services:LocalizationService.SourceToolTip="Show pin, close, gallery and save." Click="ToastPresetStandardBtn_Click"/>
+                                <Button x:Name="ToastPresetFullBtn" Services:LocalizationService.SourceContent="Full" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Full preset"
                                         AutomationProperties.HelpText="Show every button."
-                                        ToolTip="Show every button" Click="ToastPresetFullBtn_Click"/>
-                                <Button x:Name="ToastManualBtn" Content="Manual" Margin="0,0,8,0" Cursor="Hand"
+                                        Services:LocalizationService.SourceToolTip="Show every button." Click="ToastPresetFullBtn_Click"/>
+                                <Button x:Name="ToastManualBtn" Services:LocalizationService.SourceContent="Manual" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Manual layout"
                                         AutomationProperties.HelpText="Unlock the per-button controls to place each button yourself."
-                                        ToolTip="Customize each button yourself" Click="ToastManualBtn_Click"/>
-                                <Button x:Name="ResetToastButtonsBtn" Content="Reset" Margin="8,0,0,0" Cursor="Hand"
+                                        Services:LocalizationService.SourceToolTip="Customize each button yourself" Click="ToastManualBtn_Click"/>
+                                <Button x:Name="ResetToastButtonsBtn" Services:LocalizationService.SourceContent="Reset" Margin="8,0,0,0" Cursor="Hand"
                                         AutomationProperties.Name="Reset notification button layout"
-                                        ToolTip="Restore the default notification button layout"
+                                        Services:LocalizationService.SourceToolTip="Restore the default notification button layout"
                                         Click="ResetToastButtonsBtn_Click"/>
                             </StackPanel>
 
@@ -2576,7 +2577,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid x:Name="ToastLayoutSurfaceRoot" Grid.Column="0" Margin="0,0,24,0">
-                                    <StackPanel x:Name="ToastLayoutStack" Width="300" HorizontalAlignment="Center">
+                                    <StackPanel x:Name="ToastLayoutStack" Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border Width="300" Height="236" CornerRadius="18"
                                             Background="#FF000000"
                                             BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
@@ -2588,7 +2589,8 @@
                                                 <RowDefinition Height="4"/>
                                             </Grid.RowDefinitions>
 
-                                            <Border Grid.Row="0" Margin="12,12,12,0" CornerRadius="14,14,10,10" Background="#FF2A5FA6">
+                                            <Border Grid.Row="0" Margin="12,12,12,12" CornerRadius="14,14,10,10" Background="#FF1A4F96"
+                                                    Services:LocalizationService.SourceToolTip="Notification Preview">
                                                 <Grid>
                                                     <!-- Slot placeholders — always visible, dashed when empty, hidden when occupied -->
                                                     <Border x:Name="ToastLayoutSlotTopLeft"
@@ -2669,7 +2671,7 @@
                                                             Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                            ToolTip="Move the close notification button"
+                                                            Services:LocalizationService.SourceToolTip="Move the close notification button"
                                                             AutomationProperties.Name="Close notification button"                                                            Tag="Close">
                                                         <Image x:Name="ToastLayoutCloseIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                                RenderOptions.BitmapScalingMode="HighQuality"
@@ -2680,7 +2682,7 @@
                                                             Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                            ToolTip="Move the pin notification button"
+                                                            Services:LocalizationService.SourceToolTip="Move the pin notification button"
                                                             AutomationProperties.Name="Pin notification button"                                                            Tag="Pin">
                                                         <Image x:Name="ToastLayoutPinIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                                RenderOptions.BitmapScalingMode="HighQuality"
@@ -2691,7 +2693,7 @@
                                                             Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                            ToolTip="Move the save notification button"
+                                                            Services:LocalizationService.SourceToolTip="Move the save notification button"
                                                             AutomationProperties.Name="Save notification button"                                                            Tag="Save">
                                                         <Image x:Name="ToastLayoutSaveIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                                RenderOptions.BitmapScalingMode="HighQuality"
@@ -2702,7 +2704,7 @@
                                                             Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                            ToolTip="Move the send to notification button"
+                                                            Services:LocalizationService.SourceToolTip="Move the send to notification button"
                                                             AutomationProperties.Name="Send to notification button"                                                            Tag="Office">
                                                         <Image x:Name="ToastLayoutOfficeIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                                RenderOptions.BitmapScalingMode="HighQuality"
@@ -2713,7 +2715,7 @@
                                                             Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                            ToolTip="Move the delete notification button"
+                                                            Services:LocalizationService.SourceToolTip="Move the delete notification button"
                                                             AutomationProperties.Name="Delete notification button"                                                            Tag="Delete">
                                                         <Image x:Name="ToastLayoutDeleteIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                                RenderOptions.BitmapScalingMode="HighQuality"
@@ -2725,7 +2727,7 @@
                                                                Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                                Cursor="Hand"
                                                                PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                               ToolTip="Move the gallery notification button"
+                                                               Services:LocalizationService.SourceToolTip="Move the gallery notification button"
                                                                AutomationProperties.Name="Gallery notification button"                                                               Tag="History">
                                                            <Image x:Name="ToastLayoutAiRedirectIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                                   RenderOptions.BitmapScalingMode="HighQuality"
@@ -2736,7 +2738,7 @@
                                                                Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                                Cursor="Hand"
                                                                PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                               ToolTip="Move the edit notification button"
+                                                               Services:LocalizationService.SourceToolTip="Move the edit notification button"
                                                                AutomationProperties.Name="Edit notification button"                                                               Tag="Edit">
                                                            <Image x:Name="ToastLayoutEditIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                                   RenderOptions.BitmapScalingMode="HighQuality"
@@ -2745,13 +2747,13 @@
                                                 </Grid>
                                             </Border>
 
-                                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="14,10,14,8">
+                                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="14,10,14,8" Visibility="Collapsed">
                                                 <Border Width="30" Height="30" CornerRadius="9" Background="#12FFFFFF" Margin="0,0,12,0"/>
                                                 <StackPanel>
                                                     <TextBlock Text="Screenshot saved" FontSize="12.5" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" Visibility="Collapsed"/>
                                                     <TextBlock Text="Preview notification with overlay buttons." FontSize="11.5" Opacity="0.62"
-                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" Visibility="Collapsed"/>
                                                 </StackPanel>
                                             </StackPanel>
 
@@ -2771,7 +2773,7 @@
                                                   Width="14" Height="12" Stretch="Uniform" Margin="0,0,8,0"
                                                   Fill="{DynamicResource ThemeTextPrimaryBrush}"
                                                   Data="M7,0 L0,6 L7,12 L7,8 L14,8 L14,4 L7,4 Z"/>
-                                            <TextBlock Text="Drag onto the preview" VerticalAlignment="Center"
+                                            <TextBlock Services:LocalizationService.SourceText="Drag onto the preview" VerticalAlignment="Center"
                                                        FontSize="11.5"
                                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                         </StackPanel>
