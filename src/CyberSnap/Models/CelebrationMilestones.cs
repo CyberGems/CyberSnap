@@ -10,8 +10,14 @@ public static class CelebrationMilestones
     // Checked by exact match in the capture pipeline, so each fires its flourish once.
     public static readonly int[] Values = { 50, 100, 250, 500, 750, 1000, 1500, 2000, 3000, 5000 };
 
+    // Consecutive-day streak lengths that earn a celebratory toast (checked by exact match).
+    public static readonly int[] StreakDays = { 3, 7, 14, 30, 60, 100, 365 };
+
     // True when this exact count lands on a milestone (drives the in-the-moment flourish).
     public static bool IsMilestone(int count) => System.Array.IndexOf(Values, count) >= 0;
+
+    // True when this exact streak length earns a streak toast.
+    public static bool IsStreakMilestone(int days) => System.Array.IndexOf(StreakDays, days) >= 0;
 
     // The highest milestone reached at the given count, or 0 if none reached yet.
     public static int HighestAchieved(int count) => Values.Where(m => m <= count).DefaultIfEmpty(0).Max();

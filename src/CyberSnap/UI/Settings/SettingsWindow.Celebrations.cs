@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
@@ -12,6 +13,7 @@ using MediaColor = System.Windows.Media.Color;
 using Point = System.Windows.Point;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
+using FontFamily = System.Windows.Media.FontFamily;
 
 namespace CyberSnap.UI;
 
@@ -67,7 +69,7 @@ public partial class SettingsWindow
         MilestoneRailHost.Opacity = s.CelebrationsEnabled ? 1.0 : 0.32;
 
         BuildRailElements(values, count, highestAchieved, isNew);
-        UpdateRailCaption(count, next);
+        UpdateRailCaption(count, next, s.CurrentStreak);
 
         // Position + (optionally) animate after layout, when the canvas has a real width.
         MilestoneRailHost.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
@@ -298,7 +300,7 @@ public partial class SettingsWindow
         }
     }
 
-    private void UpdateRailCaption(int count, int? next)
+    private void UpdateRailCaption(int count, int? next, int streak)
     {
         if (MilestoneRailHost is null) return;
 
@@ -309,13 +311,26 @@ public partial class SettingsWindow
 
         var caption = new TextBlock
         {
-            Text = $"{countText}    ·    {tailText}",
             FontSize = 11,
             Opacity = 0.55,
             VerticalAlignment = VerticalAlignment.Bottom,
             TextTrimming = TextTrimming.CharacterEllipsis,
             Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White
         };
+        caption.Inlines.Add(new Run($"{countText}    ·    {tailText}"));
+
+        // Passive streak awareness — a warm flame + day count once a streak is going (>= 2 days).
+        if (streak >= 2)
+        {
+            caption.Inlines.Add(new Run("    ·    "));
+            caption.Inlines.Add(new Run("🔥")
+            {
+                FontFamily = new FontFamily("Segoe UI Emoji"),
+                Foreground = new SolidColorBrush(MediaColor.FromRgb(0xFF, 0x9A, 0x3D))
+            });
+            caption.Inlines.Add(new Run(" " + string.Format(LocalizationService.Translate("{0}-day streak"), streak)));
+        }
+
         MilestoneRailHost.Children.Add(caption);
     }
 }

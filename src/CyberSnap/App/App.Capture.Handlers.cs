@@ -210,32 +210,48 @@ public partial class App
         ToastWindow.Show(ToastSpec.Standard(title, body, filePath) with { Celebrate = true });
 
     // Counting core, shared by every capture path (image, OCR, video/GIF). Bumps the running
-    // total, stamps the local day for the daily greeting, and persists (Save is debounced, so
-    // per-capture saving is cheap). Returns null when celebrations are off — then nothing counts,
-    // matching the previous behavior. Callers pick how to surface the flourish from the result.
-    private (int Count, bool IsFirstToday)? RegisterCaptureForCelebration(AppSettings settings)
+    // total, updates the consecutive-day streak on the first capture of each day, stamps the local
+    // day, and persists (Save is debounced, so per-capture saving is cheap). Returns null when
+    // celebrations are off — then nothing counts, matching the previous behavior. Callers pick how
+    // to surface the flourish from the result.
+    private (int Count, bool IsFirstToday, int Streak)? RegisterCaptureForCelebration(AppSettings settings)
     {
         if (!settings.CelebrationsEnabled)
             return null;
 
         var count = ++settings.CelebrationCaptureCount;
 
-        var today = DateTime.Now.ToString("yyyy-MM-dd");
+        var todayDate = DateTime.Now.Date;
+        var today = todayDate.ToString("yyyy-MM-dd");
         var isFirstToday = settings.LastCelebrationDate != today;
         if (isFirstToday)
+        {
+            // Continue the streak when this day directly follows the previous capture day; otherwise
+            // start over at 1. An unparseable/empty previous date is treated as a fresh start.
+            settings.CurrentStreak =
+                DateTime.TryParseExact(settings.LastCelebrationDate, "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var prev)
+                && (todayDate - prev.Date).Days == 1
+                    ? settings.CurrentStreak + 1
+                    : 1;
+            if (settings.CurrentStreak > settings.LongestStreak)
+                settings.LongestStreak = settings.CurrentStreak;
             settings.LastCelebrationDate = today;
+        }
 
         try { _settingsService!.Save(); }
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.celebration-save", ex.Message, ex); }
 
-        return (count, isFirstToday);
+        return (count, isFirstToday, settings.CurrentStreak);
     }
 
     // Image-capture trigger: counts the capture, then picks the highest-priority flourish and
     // returns its copy (the image toast replaces its text with this celebration copy), or null
     // when nothing fires:
     //   1. A milestone count (50, 100, 250, ...) — rarer, so it outranks the daily greeting.
-    //   2. The first capture of the local day.
+    //   2. A streak milestone (3, 7, 14, ... consecutive days), on the first capture of the day.
+    //   3. The plain first capture of the local day.
     private (string Title, string Body)? TryGetCaptureCelebration(AppSettings settings)
     {
         if (RegisterCaptureForCelebration(settings) is not { } reg)
@@ -248,6 +264,11 @@ public partial class App
         if (CelebrationMilestones.IsMilestone(reg.Count))
             return ("Milestone reached!", string.Format(
                 LocalizationService.Translate("{0} captures and counting"), reg.Count));
+
+        // Streak milestone — only on the first capture of the day, since the streak just advanced.
+        if (reg.IsFirstToday && CelebrationMilestones.IsStreakMilestone(reg.Streak))
+            return ("On a roll!", string.Format(
+                LocalizationService.Translate("{0}-day streak"), reg.Streak));
 
         // First capture of the day. Time-neutral greeting (works for night owls); the capture icon
         // is added by the toast.
