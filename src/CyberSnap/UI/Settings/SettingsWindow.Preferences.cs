@@ -524,6 +524,23 @@ public partial class SettingsWindow
             ToastWindow.SetSystemNotificationsEnabled);
     }
 
+    private void CelebrationsCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToastPreferenceChange) return;
+
+        var previous = _settingsService.Settings.CelebrationsEnabled;
+        var enabled = CelebrationsCheck.IsChecked == true;
+        // No runtime setter needed: the celebration trigger reads CelebrationsEnabled
+        // live from settings on each capture.
+        UpdateToastPreference(
+            "settings.celebrations-enabled",
+            "Celebrations",
+            previous,
+            enabled,
+            value => _settingsService.Settings.CelebrationsEnabled = value,
+            value => CelebrationsCheck.IsChecked = value);
+    }
+
     // The "System messages" sub-toggle only applies while the master switch is on, so it is
     // greyed out and disabled when notifications are turned off entirely.
     private void UpdateSystemNotificationsRowState(bool notificationsEnabled)
