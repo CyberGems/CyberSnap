@@ -253,15 +253,21 @@ public static class LocalizationService
                 foreach (var inline in textBlock.Inlines.ToArray())
                     ApplyToInline(inline, languageCode);
             }
-            else
+            else if (!string.IsNullOrEmpty(textBlock.Text))
             {
-                // Check if SourceText attached property is set
+                // TextBlocks auto-generated inside a ComboBox (selection display,
+                // dropdown items) are managed by WPF's ContentPresenter and change
+                // dynamically when the selection changes. Skip them here —
+                // ComboBox items are explicitly translated via RefreshLanguageComboDisplay.
+                if (IsInsideComboBox(textBlock))
+                    return;
+
                 var sourceText = textBlock.GetValue(SourceTextProperty) as string;
                 if (!string.IsNullOrEmpty(sourceText))
                 {
                     textBlock.Text = Translate(languageCode, sourceText);
                 }
-                else if (!string.IsNullOrEmpty(textBlock.Text))
+                else
                 {
                     var source = GetOrSetSource(textBlock, SourceTextProperty, textBlock.Text);
                     textBlock.Text = Translate(languageCode, source);
@@ -317,6 +323,18 @@ public static class LocalizationService
 
     private static bool ShouldPreserveLeftToRight(FrameworkElement element) =>
         element is TextBlock textBlock && IsIconTextBlock(textBlock);
+
+    private static bool IsInsideComboBox(DependencyObject element)
+    {
+        var current = element;
+        while (current != null)
+        {
+            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            if (current is System.Windows.Controls.ComboBox)
+                return true;
+        }
+        return false;
+    }
 
     private static bool IsIconTextBlock(TextBlock textBlock)
     {
