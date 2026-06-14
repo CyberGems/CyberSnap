@@ -539,6 +539,9 @@ public partial class SettingsWindow
             enabled,
             value => _settingsService.Settings.CelebrationsEnabled = value,
             value => CelebrationsCheck.IsChecked = value);
+
+        // Reflect the new on/off state in the milestone rail (dims when off, lights up when on).
+        RefreshMilestoneRail(reveal: true);
     }
 
     // The "System messages" sub-toggle only applies while the master switch is on, so it is

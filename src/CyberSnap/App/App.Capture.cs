@@ -115,6 +115,11 @@ public partial class App
                         var copiedToClipboard = TryCopyRecordingFileToClipboard(path);
                         bool isGif = string.Equals(Path.GetExtension(path), ".gif", StringComparison.OrdinalIgnoreCase);
 
+                        // Recordings count toward milestones too; when one earns a flourish, its toast
+                        // rides the celebratory sweep while keeping its functional text (file size, copy
+                        // status). The milestone also surfaces afterwards in the Settings rail.
+                        bool flourish = TryRegisterCaptureFlourish(s);
+
                         if (firstFrame != null)
                         {
                             ToastWindow.Show(ToastSpec.ImagePreview(
@@ -125,7 +130,7 @@ public partial class App
                                 false,
                                 transparentShell: false,
                                 showOverlayButtons: true,
-                                hideEditButton: true));
+                                hideEditButton: true) with { Celebrate = flourish });
                         }
                         else
                         {
@@ -135,7 +140,7 @@ public partial class App
                                 ? $"{fi.Length / 1024.0 / 1024.0:F1} MB"
                                 : $"{fi.Length / 1024:N0} KB";
                             var copyStatus = copiedToClipboard ? "File copied to clipboard" : "Saved; clipboard copy failed";
-                            ToastWindow.Show($"{label} recorded", $"{fi.Name} Â· {size} Â· {copyStatus}", path);
+                            ToastWindow.Show(ToastSpec.Standard($"{label} recorded", $"{fi.Name} Â· {size} Â· {copyStatus}", path) with { Celebrate = flourish });
                         }
 
                         ScheduleIdleMemoryTrim();

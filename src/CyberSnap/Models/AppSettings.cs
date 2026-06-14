@@ -243,6 +243,12 @@ public sealed class AppSettings
     public bool CelebrationsEnabled { get; set; } = true;
     // Local date (yyyy-MM-dd) of the last "first capture of the day" celebration.
     public string? LastCelebrationDate { get; set; }
+    // Running total of all captures (image, OCR, and video/GIF recordings alike). Drives
+    // milestone celebrations (50, 100, 250, ...) and the milestone rail in Settings.
+    public int CelebrationCaptureCount { get; set; }
+    // Highest milestone value the user has already seen acknowledged in the Settings rail.
+    // When HighestAchieved(count) exceeds this, the rail flares as "new" until viewed.
+    public int LastSeenMilestone { get; set; }
     public int ToastMonitorIndex { get; set; } = -1; // -1 = Auto/Follow, 0+ = fixed index
     public CaptureMode DefaultCaptureMode { get; set; } = CaptureMode.Rectangle;
     public CenterSelectionAspectRatio CenterSelectionAspectRatio { get; set; } = CenterSelectionAspectRatio.Free;
