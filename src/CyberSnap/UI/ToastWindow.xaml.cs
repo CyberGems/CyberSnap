@@ -590,7 +590,7 @@ public partial class ToastWindow : Window
             Helpers.ToastButtonKind.Delete => _isDeletingSavedFile
                 ? ("Deleting file", "Delete is already running.")
                 : ("Delete file", "Delete the saved file for this preview."),
-            Helpers.ToastButtonKind.History => ("Open the History Window", "Open the History Window."),
+            Helpers.ToastButtonKind.History => ("Open the Gallery Window", "Open the Gallery Window."),
             _ => ("Toast action", "Run this toast action.")
         };
         SetToastElementAccessibility(button, name, helpText);

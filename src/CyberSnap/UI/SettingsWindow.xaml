@@ -2547,8 +2547,8 @@
                                         ToolTip="Show only the close button" Click="ToastPresetMinimalBtn_Click"/>
                                 <Button x:Name="ToastPresetStandardBtn" Content="Standard" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Standard preset"
-                                        AutomationProperties.HelpText="Show pin, close, history and save."
-                                        ToolTip="Show pin, close, history and save" Click="ToastPresetStandardBtn_Click"/>
+                                        AutomationProperties.HelpText="Show pin, close, gallery and save."
+                                        ToolTip="Show pin, close, gallery and save" Click="ToastPresetStandardBtn_Click"/>
                                 <Button x:Name="ToastPresetFullBtn" Content="Full" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Full preset"
                                         AutomationProperties.HelpText="Show every button."
@@ -2578,7 +2578,7 @@
                                     <Grid x:Name="ToastLayoutSurfaceRoot" Grid.Column="0" Margin="0,0,24,0">
                                     <StackPanel x:Name="ToastLayoutStack" Width="300" HorizontalAlignment="Center">
                                     <Border Width="300" Height="236" CornerRadius="18"
-                                            Background="#12000000"
+                                            Background="#FF000000"
                                             BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
                                             BorderThickness="1">
                                         <Grid x:Name="ToastLayoutPreviewSurface" AllowDrop="True" PreviewMouseMove="ToastPreviewSurface_PreviewMouseMove">
@@ -2588,7 +2588,7 @@
                                                 <RowDefinition Height="4"/>
                                             </Grid.RowDefinitions>
 
-                                            <Border Grid.Row="0" Margin="12,12,12,0" CornerRadius="14,14,10,10" Background="#D35A93E6">
+                                            <Border Grid.Row="0" Margin="12,12,12,0" CornerRadius="14,14,10,10" Background="#FFCAE0F1">
                                                 <Grid>
                                                     <!-- Slot placeholders — always visible, dashed when empty, hidden when occupied -->
                                                     <Border x:Name="ToastLayoutSlotTopLeft"
@@ -2725,8 +2725,8 @@
                                                                Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                                                                Cursor="Hand"
                                                                PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                               ToolTip="Move the history notification button"
-                                                               AutomationProperties.Name="History notification button"                                                               Tag="History">
+                                                               ToolTip="Move the gallery notification button"
+                                                               AutomationProperties.Name="Gallery notification button"                                                               Tag="History">
                                                            <Image x:Name="ToastLayoutAiRedirectIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                                   RenderOptions.BitmapScalingMode="HighQuality"
                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -2882,11 +2882,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Show image search bar" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Display the search bar in the Capture History window." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Display the search bar in the Capture Gallery window." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="ShowImageSearchBarCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Show image search bar"
-                                          ToolTip="Display the search bar in the Capture History window."
+                                          ToolTip="Display the search bar in the Capture Gallery window."
                                           Checked="ShowImageSearchBarCheck_Changed" Unchecked="ShowImageSearchBarCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -2985,7 +2985,7 @@
                         <TextBlock Style="{StaticResource InfoText}" LineHeight="20">
                             CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. 
                             Built with performance in mind, it combines rapid image capture with advanced features like 
-                            local OCR, instant translation, and comprehensive history management.
+                            local OCR, instant translation, and comprehensive gallery management.
                         </TextBlock>
                     </Border>
 

@@ -842,7 +842,7 @@ public partial class SettingsWindow
         ToastButtonKind.Save => "Save the captured image to a file.",
         ToastButtonKind.Office => "Open the screenshot with another app (Word, PowerPoint, etc.).",
         ToastButtonKind.Delete => "Delete the saved file for this preview.",
-        ToastButtonKind.History => "Open the capture history window.",
+        ToastButtonKind.History => "Open the capture gallery window.",
         ToastButtonKind.Edit => "Open the preview in the post-capture editor.",
         _ => null
     };
@@ -854,7 +854,7 @@ public partial class SettingsWindow
         ToastButtonKind.Save => "save",
         ToastButtonKind.Office => "send to",
         ToastButtonKind.Delete => "delete",
-        ToastButtonKind.History => "history",
+        ToastButtonKind.History => "gallery",
         ToastButtonKind.Edit => "edit",
         _ => "notification"
     };
