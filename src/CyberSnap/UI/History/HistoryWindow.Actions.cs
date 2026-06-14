@@ -111,8 +111,8 @@ public partial class HistoryWindow
                 : "Search...";
             automationName = "History search";
             helpText = isIndexing
-                ? "Search your capture history while the index continues updating."
-                : "Search your capture history by file name, OCR text, color hex, or code content.";
+                ? "Search your capture gallery while the index continues updating."
+                : "Search your capture gallery by file name, OCR text, color hex, or code content.";
         }
 
         ImageSearchPlaceholder.Text = placeholder;

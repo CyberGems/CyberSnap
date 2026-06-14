@@ -25,7 +25,7 @@ public partial class SettingsWindow
         var selected = SaveHistoryCheck.IsChecked == true;
         UpdateHistoryPreference(
             "settings.save-history",
-            "Save capture history",
+            "Save capture gallery",
             previous,
             selected,
             value => _settingsService.Settings.SaveHistory = value,

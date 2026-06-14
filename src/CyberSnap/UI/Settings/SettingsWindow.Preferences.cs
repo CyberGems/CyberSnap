@@ -779,10 +779,10 @@ public partial class SettingsWindow
         catch (Exception ex)
         {
             AppDiagnostics.LogError("settings.auto-index-images-history-refresh", ex);
-            SetImageIndexMaintenanceStatus("Image indexing saved, but History did not refresh.");
+            SetImageIndexMaintenanceStatus("Image indexing saved, but Gallery did not refresh.");
             ToastWindow.ShowError(
-                "History refresh failed",
-                $"The image indexing setting was saved, but History did not refresh. Switch tabs or use Retry in History.\n{ex.Message}");
+                "Gallery refresh failed",
+                $"The image indexing setting was saved, but Gallery did not refresh. Switch tabs or use Retry in Gallery.\n{ex.Message}");
         }
     }
 
@@ -834,10 +834,10 @@ public partial class SettingsWindow
             catch (Exception ex)
             {
                 AppDiagnostics.LogError("settings.image-index-reset-history-refresh", ex);
-                SetImageIndexMaintenanceStatus("Image index reset requested, but History did not refresh.");
+                SetImageIndexMaintenanceStatus("Image index reset requested, but Gallery did not refresh.");
                 ToastWindow.ShowError(
-                    "History refresh failed",
-                    $"The image index reset was requested, but History did not refresh. Switch tabs or use Retry in History.\n{ex.Message}");
+                    "Gallery refresh failed",
+                    $"The image index reset was requested, but Gallery did not refresh. Switch tabs or use Retry in Gallery.\n{ex.Message}");
             }
         }
         finally
