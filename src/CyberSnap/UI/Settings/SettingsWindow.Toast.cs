@@ -687,7 +687,7 @@ public partial class SettingsWindow
         // or an eviction-preview occupant at 0.20 that ended up not evicted). Without this,
         // the stale transparency persists across refreshes and presets.
         border.Opacity = 1;
-        border.Background = Theme.Brush(Theme.IsDark ? Color.FromArgb(64, 0, 0, 0) : Color.FromArgb(40, 0, 0, 0));
+        border.Background = new SolidColorBrush(Color.FromArgb(180, 26, 46, 37));
         icon.Source = Helpers.FluentIcons.RenderWpf(iconId, GetToastLayoutIconColor(active: false), 22);
     }
 
