@@ -249,6 +249,12 @@ public sealed class AppSettings
     // Highest milestone value the user has already seen acknowledged in the Settings rail.
     // When HighestAchieved(count) exceeds this, the rail flares as "new" until viewed.
     public int LastSeenMilestone { get; set; }
+    // Consecutive days with at least one capture. Bumped on the first capture of each day when
+    // it directly follows the previous capture day; reset to 1 after a gap. Drives streak toasts
+    // and the streak shown in the Settings rail.
+    public int CurrentStreak { get; set; }
+    // Best streak ever reached (kept for records / future display).
+    public int LongestStreak { get; set; }
     public int ToastMonitorIndex { get; set; } = -1; // -1 = Auto/Follow, 0+ = fixed index
     public CaptureMode DefaultCaptureMode { get; set; } = CaptureMode.Rectangle;
     public CenterSelectionAspectRatio CenterSelectionAspectRatio { get; set; } = CenterSelectionAspectRatio.Free;
