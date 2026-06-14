@@ -253,24 +253,24 @@ public static class LocalizationService
                 foreach (var inline in textBlock.Inlines.ToArray())
                     ApplyToInline(inline, languageCode);
             }
-            else if (!string.IsNullOrEmpty(textBlock.Text))
+            else
             {
-                // TextBlocks auto-generated inside a ComboBox (selection display,
-                // dropdown items) are managed by WPF's ContentPresenter and change
-                // dynamically when the selection changes. Skip them here —
-                // ComboBox items are explicitly translated via RefreshLanguageComboDisplay.
-                if (IsInsideComboBox(textBlock))
-                    return;
-
                 var sourceText = textBlock.GetValue(SourceTextProperty) as string;
-                if (!string.IsNullOrEmpty(sourceText))
+                if (!string.IsNullOrEmpty(textBlock.Text))
+                {
+                    if (!string.IsNullOrEmpty(sourceText))
+                    {
+                        textBlock.Text = Translate(languageCode, sourceText);
+                    }
+                    else
+                    {
+                        var source = GetOrSetSource(textBlock, SourceTextProperty, textBlock.Text);
+                        textBlock.Text = Translate(languageCode, source);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(sourceText))
                 {
                     textBlock.Text = Translate(languageCode, sourceText);
-                }
-                else
-                {
-                    var source = GetOrSetSource(textBlock, SourceTextProperty, textBlock.Text);
-                    textBlock.Text = Translate(languageCode, source);
                 }
             }
         }
@@ -283,6 +283,17 @@ public static class LocalizationService
 
         if (element is ContentControl contentControl)
         {
+            // Skip ContentControls inside a ComboBoxItem template (e.g. the
+            // ContentPresenter that renders the selected item display).  The visual-
+            // tree walk reaches this ContentPresenter, caches its string Content via
+            // SourceContentProperty, then re-translates from the stale cache on every
+            // ApplyTo pass — overwriting the correct labels set by
+            // RefreshLanguageComboDisplay.  ComboBoxItems themselves are NOT skipped
+            // so that other ComboBoxes (toast duration, monitor, etc.) still get their
+            // SourceContent translated.
+            if (element is not ComboBoxItem && IsInsideComboBoxItem(contentControl))
+                return;
+
             // Check if SourceContent attached property is set
             var sourceContent = contentControl.GetValue(SourceContentProperty) as string;
             if (!string.IsNullOrEmpty(sourceContent))
@@ -296,7 +307,7 @@ public static class LocalizationService
             }
         }
 
-        if (element is FrameworkElement toolTipElement)
+        if (element is FrameworkElement toolTipElement && element is not ComboBoxItem)
         {
             // Check if SourceToolTip attached property is set
             var sourceToolTip = toolTipElement.GetValue(SourceToolTipProperty) as string;
@@ -331,6 +342,18 @@ public static class LocalizationService
         {
             current = System.Windows.Media.VisualTreeHelper.GetParent(current);
             if (current is System.Windows.Controls.ComboBox)
+                return true;
+        }
+        return false;
+    }
+
+    private static bool IsInsideComboBoxItem(DependencyObject element)
+    {
+        var current = element;
+        while (current != null)
+        {
+            current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            if (current is System.Windows.Controls.ComboBoxItem)
                 return true;
         }
         return false;
