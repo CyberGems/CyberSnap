@@ -2588,7 +2588,7 @@
                                                 <RowDefinition Height="4"/>
                                             </Grid.RowDefinitions>
 
-                                            <Border Grid.Row="0" Margin="12,12,12,0" CornerRadius="14,14,10,10" Background="#FFCAE0F1">
+                                            <Border Grid.Row="0" Margin="12,12,12,0" CornerRadius="14,14,10,10" Background="#FF2A5FA6">
                                                 <Grid>
                                                     <!-- Slot placeholders — always visible, dashed when empty, hidden when occupied -->
                                                     <Border x:Name="ToastLayoutSlotTopLeft"
@@ -2666,7 +2666,7 @@
 
                                                     <Border x:Name="ToastLayoutCloseBtn"
                                                             Width="30" Height="30" CornerRadius="9"
-                                                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                            Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the close notification button"
@@ -2677,7 +2677,7 @@
                                                     </Border>
                                                     <Border x:Name="ToastLayoutPinBtn"
                                                             Width="30" Height="30" CornerRadius="9"
-                                                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                            Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the pin notification button"
@@ -2688,7 +2688,7 @@
                                                     </Border>
                                                     <Border x:Name="ToastLayoutSaveBtn"
                                                             Width="30" Height="30" CornerRadius="9"
-                                                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                            Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the save notification button"
@@ -2699,7 +2699,7 @@
                                                     </Border>
                                                     <Border x:Name="ToastLayoutOfficeBtn"
                                                             Width="30" Height="30" CornerRadius="9"
-                                                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                            Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the send to notification button"
@@ -2710,7 +2710,7 @@
                                                     </Border>
                                                     <Border x:Name="ToastLayoutDeleteBtn"
                                                             Width="30" Height="30" CornerRadius="9"
-                                                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                            Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                             Cursor="Hand"
                                                             PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                             ToolTip="Move the delete notification button"
@@ -2722,7 +2722,7 @@
 
                                                        <Border x:Name="ToastLayoutAiRedirectBtn"
                                                                Width="30" Height="30" CornerRadius="9"
-                                                               Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                               Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                                Cursor="Hand"
                                                                PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                                ToolTip="Move the gallery notification button"
@@ -2733,7 +2733,7 @@
                                                        </Border>
                                                        <Border x:Name="ToastLayoutEditBtn"
                                                                Width="30" Height="30" CornerRadius="9"
-                                                               Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                                                               Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
                                                                Cursor="Hand"
                                                                PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                                ToolTip="Move the edit notification button"
