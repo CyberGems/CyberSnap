@@ -68,6 +68,11 @@ public partial class App
                         TryCopyCaptureOutputToClipboard(persisted.Output);
                     ResetCapturing();
 
+                    // Evaluated once per capture, before the action branches, so every capture counts
+                    // toward milestones — including straight-to-editor and copy-only, which never show
+                    // a preview. Each branch below surfaces the flourish in its own toast shape.
+                    var celebration = TryGetCaptureCelebration(settings);
+
                     if (settings.OpenEditorAfterCapture &&
                         persisted.HistoryEntry?.Kind != Services.HistoryKind.Video &&
                         persisted.HistoryEntry?.Kind != Services.HistoryKind.Gif)
@@ -88,16 +93,19 @@ public partial class App
                         persisted.Output.Dispose();
 
                         // No preview toast is shown when the editor opens directly, so surface a
-                        // lightweight system message confirming where the capture went. A text-only
+                        // lightweight system message confirming where the capture went — unless this
+                        // capture earned a celebration, which takes the toast instead. A text-only
                         // toast (no preview bitmap) is treated as a system message by ToastWindow.
-                        ToastWindow.Show(
-                            LocalizationService.Translate("Sent to the editor"),
-                            LocalizationService.Translate("Your capture is open in the editor."),
-                            persisted.FilePath);
+                        if (celebration is { } editorCopy)
+                            ShowCelebrationToast(editorCopy.Title, editorCopy.Body, persisted.FilePath);
+                        else
+                            ToastWindow.Show(
+                                LocalizationService.Translate("Sent to the editor"),
+                                LocalizationService.Translate("Your capture is open in the editor."),
+                                persisted.FilePath);
                     }
                     else if (ShouldPreviewAfterCapture(action))
                     {
-                        var celebration = TryGetCaptureCelebration(settings);
                         if (celebration is { } copy)
                             ToastWindow.ShowImagePreview(persisted.Output, copy.Title, copy.Body, persisted.FilePath, settings.AutoPinPreviews, celebrate: true);
                         else
@@ -106,7 +114,10 @@ public partial class App
                     else
                     {
                         persisted.Output.Dispose();
-                        ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
+                        if (celebration is { } copy)
+                            ShowCelebrationToast(copy.Title, copy.Body, persisted.FilePath);
+                        else
+                            ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
                     }
 
                     if (settings.AutoOpenCapturedImages && !string.IsNullOrEmpty(persisted.FilePath) && File.Exists(persisted.FilePath))
@@ -192,25 +203,70 @@ public partial class App
         });
     }
 
-    // Celebration trigger: fires once per local day for the first preview shown, when
-    // celebrations are enabled. Returns the trigger-specific copy (so the flourish has
-    // context), or null when not celebrating. Persists the date so it only fires once a day.
-    private (string Title, string Body)? TryGetCaptureCelebration(AppSettings settings)
+    // A text-only celebration toast for the branches that show no preview (straight-to-editor,
+    // copy-only). The rainbow/glow flourish rides the toast's progress bar, so it reads as
+    // celebratory without a preview image. Title is translated by the toast; body arrives ready.
+    private static void ShowCelebrationToast(string title, string body, string? filePath) =>
+        ToastWindow.Show(ToastSpec.Standard(title, body, filePath) with { Celebrate = true });
+
+    // Counting core, shared by every capture path (image, OCR, video/GIF). Bumps the running
+    // total, stamps the local day for the daily greeting, and persists (Save is debounced, so
+    // per-capture saving is cheap). Returns null when celebrations are off — then nothing counts,
+    // matching the previous behavior. Callers pick how to surface the flourish from the result.
+    private (int Count, bool IsFirstToday)? RegisterCaptureForCelebration(AppSettings settings)
     {
         if (!settings.CelebrationsEnabled)
             return null;
 
-        var today = DateTime.Now.ToString("yyyy-MM-dd");
-        if (settings.LastCelebrationDate == today)
-            return null;
+        var count = ++settings.CelebrationCaptureCount;
 
-        settings.LastCelebrationDate = today;
+        var today = DateTime.Now.ToString("yyyy-MM-dd");
+        var isFirstToday = settings.LastCelebrationDate != today;
+        if (isFirstToday)
+            settings.LastCelebrationDate = today;
+
         try { _settingsService!.Save(); }
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.celebration-save", ex.Message, ex); }
 
-        // First capture of the day. Future triggers (milestones, streaks) bring their own copy.
-        // Time-neutral greeting (works for night owls); the capture icon is added by the toast.
-        return ("Welcome back!", "Your first capture today");
+        return (count, isFirstToday);
+    }
+
+    // Image-capture trigger: counts the capture, then picks the highest-priority flourish and
+    // returns its copy (the image toast replaces its text with this celebration copy), or null
+    // when nothing fires:
+    //   1. A milestone count (50, 100, 250, ...) — rarer, so it outranks the daily greeting.
+    //   2. The first capture of the local day.
+    private (string Title, string Body)? TryGetCaptureCelebration(AppSettings settings)
+    {
+        if (RegisterCaptureForCelebration(settings) is not { } reg)
+            return null;
+
+        // Milestones win when both land on the same capture; the daily date is still stamped above
+        // so tomorrow's greeting fires normally.
+        // The number is formatted into a translatable template; the toast translates the
+        // raw title key ("Milestone reached!") on its own.
+        if (CelebrationMilestones.IsMilestone(reg.Count))
+            return ("Milestone reached!", string.Format(
+                LocalizationService.Translate("{0} captures and counting"), reg.Count));
+
+        // First capture of the day. Time-neutral greeting (works for night owls); the capture icon
+        // is added by the toast.
+        if (reg.IsFirstToday)
+            return ("Welcome back!", "Your first capture today");
+
+        return null;
+    }
+
+    // OCR / video-GIF trigger: counts the capture and reports whether it earned a flourish, without
+    // producing copy — those paths keep their own functional toast text ("OCR copied", file size)
+    // and only ride the celebratory sweep on top. Returns false when celebrations are off or nothing
+    // fires. The milestone is still surfaced afterwards by the Settings rail.
+    private bool TryRegisterCaptureFlourish(AppSettings settings)
+    {
+        if (RegisterCaptureForCelebration(settings) is not { } reg)
+            return false;
+
+        return CelebrationMilestones.IsMilestone(reg.Count) || reg.IsFirstToday;
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
@@ -260,11 +316,17 @@ public partial class App
                     if (_settingsService!.Settings.SaveHistory)
                         EnsureHistoryService().SaveOcrEntry(text);
 
+                    // Count this OCR toward milestones (covers both the auto-copy toast and the
+                    // workbench window). When it earns a flourish, the "OCR copied" toast rides the
+                    // celebratory sweep while keeping its functional text; the no-toast workbench
+                    // path just counts silently and surfaces the milestone in the Settings rail.
+                    var ocrFlourish = TryRegisterCaptureFlourish(_settingsService.Settings);
+
                     if (_settingsService.Settings.OcrAutoCopyToClipboard)
                     {
                         var copied = TryCopyCaptureTextToClipboard(text);
                         ToastWindow.Show(copied
-                            ? ToastSpec.Standard("OCR copied", FormatOcrAutoCopyToastPreview(text)) with { SuppressSound = true }
+                            ? ToastSpec.Standard("OCR copied", FormatOcrAutoCopyToastPreview(text)) with { SuppressSound = true, Celebrate = ocrFlourish }
                             : ToastSpec.Standard("OCR ready", "Clipboard copy failed."));
                         if (!copied)
                         {

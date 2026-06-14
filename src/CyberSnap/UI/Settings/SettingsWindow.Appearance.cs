@@ -191,6 +191,7 @@ public partial class SettingsWindow
             NotificationsEnabledCheck.IsChecked = s.NotificationsEnabled;
             SystemNotificationsCheck.IsChecked = s.SystemNotificationsEnabled;
             CelebrationsCheck.IsChecked = s.CelebrationsEnabled;
+            RefreshMilestoneRail(reveal: false);
             UpdateSystemNotificationsRowState(s.NotificationsEnabled);
             MuteSoundsCheck.IsChecked = !s.MuteSounds; // activator: checked = all sounds on
             PopulateSoundCustomizationPanel();
@@ -471,6 +472,11 @@ public partial class SettingsWindow
 
         if (OcrTab.IsChecked == true)
             LoadOcrTab();
+
+        // Reveal the milestone rail when the Notifications tab is shown, so a newly reached
+        // milestone gets its one-shot flourish at the moment the user actually sees it.
+        if (ToastTab.IsChecked == true)
+            RefreshMilestoneRail(reveal: true);
     }
 
     private void ResetHotkeysBtn_Click(object sender, RoutedEventArgs e)
