@@ -129,39 +129,39 @@
                             </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="Content" Value="General">
+                            <Trigger Property="Tag" Value="General">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE713;"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="Capture">
+                            <Trigger Property="Tag" Value="Capture">
                                 <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
                                 <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="VectorIcon" Property="Data" Value="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2ZM10 8.25a1.75 1.75 0 1 1 0 3.5 1.75 1.75 0 0 1 0-3.5Z"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="Notifications">
+                            <Trigger Property="Tag" Value="Notifications">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xEA8F;"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="Tools">
+                            <Trigger Property="Tag" Value="Tools">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xEE6F;"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="Video">
+                            <Trigger Property="Tag" Value="Video">
                                 <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
                                 <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="VectorIcon" Property="Data" Value="M5 4C3.34315 4 2 5.34315 2 7V13C2 14.6569 3.34315 16 5 16H10C11.6569 16 13 14.6569 13 13V12.6787L16.0372 14.7759C16.8664 15.3484 17.9975 14.7549 17.9975 13.7473V6.25215C17.9975 5.24453 16.8664 4.65101 16.0372 5.22353L13 7.32067V7C13 5.34315 11.6569 4 10 4H5ZM13 8.53588L16.6054 6.04643C16.7712 5.93193 16.9975 6.05063 16.9975 6.25215V13.7473C16.9975 13.9488 16.7712 14.0675 16.6054 13.953L13 11.4635V8.53588ZM3 7C3 5.89543 3.89543 5 5 5H10C11.1046 5 12 5.89543 12 7V13C12 14.1046 11.1046 15 10 15H5C3.89543 15 3 14.1046 3 13V7Z"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="OCR">
+                            <Trigger Property="Tag" Value="OCR">
                                 <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
                                 <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="VectorIcon" Property="Data" Value="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2Zm-9-11a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Zm0 3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7ZM6 12.5c0-.28.22-.5.5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5Z"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="Gallery">
+                            <Trigger Property="Tag" Value="Gallery">
                                 <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
                                 <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="VectorIcon" Property="Data" Value="M14 7.5C14 8.32843 13.3284 9 12.5 9C11.6716 9 11 8.32843 11 7.5C11 6.67157 11.6716 6 12.5 6C13.3284 6 14 6.67157 14 7.5ZM13 7.5C13 7.22386 12.7761 7 12.5 7C12.2239 7 12 7.22386 12 7.5C12 7.77614 12.2239 8 12.5 8C12.7761 8 13 7.77614 13 7.5ZM3 6C3 4.34315 4.34315 3 6 3H14C15.6569 3 17 4.34315 17 6V14C17 15.6569 15.6569 17 14 17H6C4.34315 17 3 15.6569 3 14V6ZM6 4C4.89543 4 4 4.89543 4 6V14C4 14.3726 4.10191 14.7215 4.27937 15.0201L8.94868 10.432C9.53227 9.85859 10.4677 9.85859 11.0513 10.432L15.7206 15.0201C15.8981 14.7215 16 14.3726 16 14V6C16 4.89543 15.1046 4 14 4H6ZM6 16H14C14.3692 16 14.7149 15.9 15.0118 15.7256L10.3504 11.1453C10.1559 10.9542 9.84409 10.9542 9.64956 11.1453L4.98824 15.7256C5.28505 15.9 5.63085 16 6 16Z"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="Uploads">
+                            <Trigger Property="Tag" Value="Uploads">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE898;"/>
                             </Trigger>
-                            <Trigger Property="Content" Value="About">
+                            <Trigger Property="Tag" Value="About">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE946;"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
@@ -748,22 +748,22 @@
             <Border Grid.Column="0" BorderBrush="{DynamicResource ThemeSeparatorBrush}" BorderThickness="0,0,1,0"
                     Padding="10,14,8,18">
                 <StackPanel>
-                    <RadioButton x:Name="SettingsTab" Content="General" GroupName="Main"
+                    <RadioButton x:Name="SettingsTab" Content="General" Tag="General" GroupName="Main"
                                  IsChecked="True" Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="ToastTab" Content="Notifications" GroupName="Main"
+                    <RadioButton x:Name="ToastTab" Content="Notifications" Tag="Notifications" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="CaptureTab" Content="Capture" GroupName="Main"
+                    <RadioButton x:Name="CaptureTab" Content="Capture" Tag="Capture" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="RecordingTab" Content="Video" GroupName="Main"
+                    <RadioButton x:Name="RecordingTab" Content="Video" Tag="Video" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="OcrTab" Content="OCR" GroupName="Main"
+                    <RadioButton x:Name="OcrTab" Content="OCR" Tag="OCR" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="HotkeysTab" Content="Hotkeys" GroupName="Main"
+                    <RadioButton x:Name="HotkeysTab" Content="Hotkeys" Tag="Hotkeys" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    
-                    <RadioButton x:Name="HistoryTab" Content="Gallery" GroupName="Main"
+
+                    <RadioButton x:Name="HistoryTab" Content="Gallery" Tag="Gallery" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="AboutTab" Content="About" GroupName="Main"
+                    <RadioButton x:Name="AboutTab" Content="About" Tag="About" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                 </StackPanel>
             </Border>
@@ -1026,7 +1026,7 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Behavior" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <TextBlock Text="Capture behavior" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
@@ -1046,6 +1046,43 @@
                                           AutomationProperties.Name="Window detection"
                                           ToolTip="Detect windows when hovering before selection."
                                           Checked="WindowDetectionCheck_Changed" Unchecked="WindowDetectionCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Capture delay" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Wait before the capture overlay opens." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="CaptureDelayCombo" Grid.Column="2" MinWidth="150"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Capture delay"
+                                          ToolTip="Wait before the capture overlay opens."
+                                          SelectionChanged="CaptureDelayCombo_SelectionChanged">
+                                    <ComboBoxItem Content="None"
+                                                  ToolTip="Open capture immediately."
+                                                  AutomationProperties.Name="No capture delay"
+                                                  AutomationProperties.HelpText="Start the capture overlay immediately after choosing capture."/>
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="3 seconds delay"
+                                                  ToolTip="Wait 3 seconds before capture."
+                                                  AutomationProperties.Name="3 second capture delay"
+                                                  AutomationProperties.HelpText="Wait 3 seconds before opening the capture overlay."/>
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="5 seconds delay"
+                                                  ToolTip="Wait 5 seconds before capture."
+                                                  AutomationProperties.Name="5 second capture delay"
+                                                  AutomationProperties.HelpText="Wait 5 seconds before opening the capture overlay."/>
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="10 seconds delay"
+                                                  ToolTip="Wait 10 seconds before capture."
+                                                  AutomationProperties.Name="10 second capture delay"
+                                                  AutomationProperties.HelpText="Wait 10 seconds before opening the capture overlay."/>
+                                </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -1076,36 +1113,12 @@
                                                   AutomationProperties.HelpText="Place the capture toolbar at the bottom of the screen."/>
                                 </ComboBox>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE7F0;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Scrolling capture mode" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose whether scrolling capture collects frames itself or only when you click capture." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="ScrollingCaptureModeCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Scrolling capture mode"
-                                          ToolTip="Choose whether scrolling capture collects frames itself or only when you click capture."
-                                          SelectionChanged="ScrollingCaptureModeCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Automatic"
-                                                  ToolTip="Let CyberSnap collect scrolling frames automatically."
-                                                  AutomationProperties.Name="Automatic scrolling capture"
-                                                  AutomationProperties.HelpText="Automatically collect frames while scrolling capture is active."/>
-                                    <ComboBoxItem Content="Autoscroll"
-                                                  ToolTip="Automatically scroll and capture the window content."
-                                                  AutomationProperties.Name="Autoscroll capture"
-                                                  AutomationProperties.HelpText="Automatically scroll the target window and stitch frames until the end is reached."/>
-                                </ComboBox>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="After capture" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -1159,11 +1172,40 @@
                                               Checked="AfterCaptureCopyCheck_Changed" Unchecked="AfterCaptureCopyCheck_Changed"/>
                                 </Grid>
 
-                                <TextBlock x:Name="AfterCaptureSummaryText" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-                                           Style="{StaticResource SettingsHelperText}"
-                                           Margin="0,8,0,0"/>
+                                <Border Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                        Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                        BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Padding="9,6"
+                                        Margin="0,12,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="&#xE946;"
+                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                   Opacity="0.9"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0"/>
+                                        <TextBlock x:Name="AfterCaptureSummaryText" Grid.Column="1"
+                                                   FontSize="11.5"
+                                                   FontFamily="Segoe UI Variable Text"
+                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                   Opacity="0.9"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Scrolling capture" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -1171,33 +1213,25 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE7F0;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Capture delay" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Wait before the capture overlay opens." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Scrolling capture mode" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Choose whether scrolling capture collects frames itself or only when you click capture." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
-                                <ComboBox x:Name="CaptureDelayCombo" Grid.Column="2" MinWidth="150"
+                                <ComboBox x:Name="ScrollingCaptureModeCombo" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Center"
-                                          AutomationProperties.Name="Capture delay"
-                                          ToolTip="Wait before the capture overlay opens."
-                                          SelectionChanged="CaptureDelayCombo_SelectionChanged">
-                                    <ComboBoxItem Content="None"
-                                                  ToolTip="Open capture immediately."
-                                                  AutomationProperties.Name="No capture delay"
-                                                  AutomationProperties.HelpText="Start the capture overlay immediately after choosing capture."/>
-                                    <ComboBoxItem Services:LocalizationService.SourceContent="3 seconds delay"
-                                                  ToolTip="Wait 3 seconds before capture."
-                                                  AutomationProperties.Name="3 second capture delay"
-                                                  AutomationProperties.HelpText="Wait 3 seconds before opening the capture overlay."/>
-                                    <ComboBoxItem Services:LocalizationService.SourceContent="5 seconds delay"
-                                                  ToolTip="Wait 5 seconds before capture."
-                                                  AutomationProperties.Name="5 second capture delay"
-                                                  AutomationProperties.HelpText="Wait 5 seconds before opening the capture overlay."/>
-                                    <ComboBoxItem Services:LocalizationService.SourceContent="10 seconds delay"
-                                                  ToolTip="Wait 10 seconds before capture."
-                                                  AutomationProperties.Name="10 second capture delay"
-                                                  AutomationProperties.HelpText="Wait 10 seconds before opening the capture overlay."/>
+                                          AutomationProperties.Name="Scrolling capture mode"
+                                          ToolTip="Choose whether scrolling capture collects frames itself or only when you click capture."
+                                          SelectionChanged="ScrollingCaptureModeCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Automatic"
+                                                  ToolTip="Let CyberSnap collect scrolling frames automatically."
+                                                  AutomationProperties.Name="Automatic scrolling capture"
+                                                  AutomationProperties.HelpText="Automatically collect frames while scrolling capture is active."/>
+                                    <ComboBoxItem Content="Autoscroll"
+                                                  ToolTip="Automatically scroll and capture the window content."
+                                                  AutomationProperties.Name="Autoscroll capture"
+                                                  AutomationProperties.HelpText="Automatically scroll the target window and stitch frames until the end is reached."/>
                                 </ComboBox>
                             </Grid>
                         </StackPanel>
@@ -2674,6 +2708,24 @@
                                     BorderThickness="1"
                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
                                     Padding="16">
+                                <StackPanel>
+                                <!-- State-aware guide: explains, in plain language, why image captures and
+                                     video/GIF captures can show different notifications, and names the Editor
+                                     toggle that drives it. Text is set in RefreshEditorPreviewState(). -->
+                                <Border x:Name="EditorPreviewGuideBanner" CornerRadius="8" Margin="0,0,0,14"
+                                        Padding="12,9" BorderThickness="1"
+                                        Background="{DynamicResource ThemeTabActiveBrush}"
+                                        BorderBrush="{DynamicResource ThemeInputBorderBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                   Margin="0,1,10,0" VerticalAlignment="Top"
+                                                   Foreground="{DynamicResource ThemeAccentBrush}"/>
+                                        <TextBlock x:Name="EditorPreviewGuide" Text="" FontSize="12.5"
+                                                   TextWrapping="Wrap" MaxWidth="620"
+                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                   AutomationProperties.LiveSetting="Polite"/>
+                                    </StackPanel>
+                                </Border>
                                 <Grid x:Name="ToastDesignerRoot" HorizontalAlignment="Left" Background="Transparent"
                                       AllowDrop="True" DragOver="ToastDesigner_DragOver">
                                     <Grid.ColumnDefinitions>
@@ -2684,15 +2736,27 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
                                     <!-- LEFT card: faithful mock of the text-only toast shown when the editor
                                          opens image captures directly (no preview, no overlay buttons). -->
                                     <StackPanel x:Name="EditorToastMockCard" Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Top">
-                                        <TextBlock x:Name="EditorPreviewImagesCaption"
-                                                   Services:LocalizationService.SourceText="Image captures"
-                                                   FontSize="12.5" FontWeight="SemiBold" Margin="2,0,0,8"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
+                                            <TextBlock x:Name="EditorPreviewImagesCaption"
+                                                       Services:LocalizationService.SourceText="Image captures"
+                                                       FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                            <!-- "Automatic": this view is fixed (not customizable). -->
+                                            <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                    BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                    Services:LocalizationService.SourceToolTip="This view is fixed and can't be customized.">
+                                                <TextBlock Services:LocalizationService.SourceText="Automatic"
+                                                           FontSize="10.5" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ThemeMutedBrush}"/>
+                                            </Border>
+                                        </StackPanel>
                                         <Border x:Name="EditorToastMockShell" Width="196" CornerRadius="12"
                                                 BorderThickness="1" HorizontalAlignment="Left">
                                             <Grid Margin="14,11,14,11">
@@ -2727,12 +2791,28 @@
                                                    MaxWidth="196" HorizontalAlignment="Left"/>
                                     </StackPanel>
 
+                                    <!-- Divider separating the fixed informational view (left) from the
+                                         editable designer + its button palette (right). -->
+                                    <Border Grid.Column="1" Width="1" Margin="0,2,16,2" VerticalAlignment="Stretch"
+                                            Background="{DynamicResource ThemeSeparatorBrush}"/>
+
                                     <!-- RIGHT card: the drag-and-drop button designer. Applies to every capture
                                          when the editor is off, or only to video/GIF when the editor is on. -->
-                                    <StackPanel x:Name="EditorButtonsCard" Grid.Column="1" VerticalAlignment="Top">
-                                        <TextBlock x:Name="EditorPreviewOtherCaption" Text=""
-                                                   FontSize="12.5" FontWeight="SemiBold" Margin="2,0,0,8"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <StackPanel x:Name="EditorButtonsCard" Grid.Column="2" VerticalAlignment="Top">
+                                        <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
+                                            <TextBlock x:Name="EditorPreviewOtherCaption" Text=""
+                                                       FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                            <!-- "Customizable": the editable designer — drag buttons here. -->
+                                            <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Background="{DynamicResource ThemeTabActiveBrush}"
+                                                    BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="1"
+                                                    Services:LocalizationService.SourceToolTip="Drag buttons here to customize this notification.">
+                                                <TextBlock Services:LocalizationService.SourceText="Customizable"
+                                                           FontSize="10.5" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ThemeAccentBrush}"/>
+                                            </Border>
+                                        </StackPanel>
                                     <StackPanel x:Name="ToastLayoutStack" Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border Width="300" Height="236" CornerRadius="18"
                                             Background="#FF000000"
@@ -2960,6 +3040,7 @@
                                         </Image.Effect>
                                     </Image>
                                 </Grid>
+                                </StackPanel>
                             </Border>
                         </Grid>
                     </Border>

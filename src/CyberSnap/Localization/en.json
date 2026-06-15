@@ -73,6 +73,8 @@
   "Span screenshot overlay across all monitors": "Span screenshot overlay across all monitors",
   "Annotation stroke and shadow": "Annotation stroke and shadow",
   "Behavior": "Behavior",
+  "Capture behavior": "Capture behavior",
+  "Scrolling capture": "Scrolling capture",
   "Window detection": "Window detection",
   "Off": "Off",
   "Windows only": "Windows only",
