@@ -248,6 +248,15 @@ public static class LocalizationService
                 return;
             }
 
+            // Skip the ComboBox "selection box" (the ContentPresenter/TextBlock in the
+            // ComboBox chrome that mirrors the selected item while closed). It is NOT a
+            // ComboBoxItem, so it would otherwise be translated directly here — caching a
+            // stale SourceText (e.g. "English") and re-translating it on the next pass,
+            // overwriting the correct selected-item display. Letting it mirror the already-
+            // translated selected ComboBoxItem.Content keeps it correct without double work.
+            if (IsInComboBoxSelectionBox(textBlock))
+                return;
+
             if (textBlock.Inlines.Count > 0)
             {
                 foreach (var inline in textBlock.Inlines.ToArray())
@@ -358,6 +367,14 @@ public static class LocalizationService
         }
         return false;
     }
+
+    // True for elements that live in a ComboBox's selection box (the chrome that
+    // mirrors the selected item while the popup is closed): inside a ComboBox but
+    // not inside any ComboBoxItem. Used to keep ApplyTo from translating — and thus
+    // caching a stale source for — the selected-item display.
+    private static bool IsInComboBoxSelectionBox(DependencyObject element) =>
+        IsInsideComboBox(element) && !IsInsideComboBoxItem(element);
+
 
     private static bool IsIconTextBlock(TextBlock textBlock)
     {
