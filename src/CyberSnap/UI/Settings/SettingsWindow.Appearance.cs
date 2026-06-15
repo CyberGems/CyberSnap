@@ -160,7 +160,6 @@ public partial class SettingsWindow
             SaveHistoryCheck.IsChecked = s.SaveHistory;
             HistoryRetentionCombo.SelectedIndex = (int)s.HistoryRetention;
             ShowImageSearchBarCheck.IsChecked = s.ShowImageSearchBar;
-            ShowImageSearchDiagnosticsCheck.IsChecked = s.ShowImageSearchDiagnostics;
             AutoIndexImagesCheck.IsChecked = s.AutoIndexImages;
             DisableAnimationsCheck.IsChecked = s.DisableAnimations;
             SelectUiScale(s.UiScale);

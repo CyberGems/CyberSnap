@@ -724,25 +724,6 @@ public partial class SettingsWindow
             });
     }
 
-    private void ShowImageSearchDiagnosticsCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
-
-        var previous = _settingsService.Settings.ShowImageSearchDiagnostics;
-        var selected = ShowImageSearchDiagnosticsCheck.IsChecked == true;
-        UpdateGeneralPreference(
-            "settings.show-image-search-diagnostics",
-            "Search diagnostics",
-            previous,
-            selected,
-            value => _settingsService.Settings.ShowImageSearchDiagnostics = value,
-            value => ShowImageSearchDiagnosticsCheck.IsChecked = value,
-            _ =>
-            {
-                ((App)Application.Current).RefreshHistoryWindowIfOpen();
-            });
-    }
-
     private void AutoIndexImagesCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressAutoIndexImagesChange) return;
