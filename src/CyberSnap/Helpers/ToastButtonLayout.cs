@@ -8,6 +8,7 @@ public enum ToastButtonKind
     Close,
     Pin,
     Save,
+    Copy,
     Office,
     Delete,
     History,
@@ -54,6 +55,7 @@ public static class ToastButtonLayout
             ToastButtonKind.Close => settings.CloseSlot,
             ToastButtonKind.Pin => settings.PinSlot,
             ToastButtonKind.Save => settings.SaveSlot,
+            ToastButtonKind.Copy => settings.CopySlot,
             ToastButtonKind.Office => settings.OfficeSlot,
             ToastButtonKind.History => settings.HistorySlot,
             ToastButtonKind.Edit => settings.EditSlot,
@@ -66,6 +68,7 @@ public static class ToastButtonLayout
             ToastButtonKind.Close => settings.ShowClose,
             ToastButtonKind.Pin => settings.ShowPin,
             ToastButtonKind.Save => settings.ShowSave,
+            ToastButtonKind.Copy => settings.ShowCopy,
             ToastButtonKind.Office => settings.ShowOffice,
             ToastButtonKind.History => settings.ShowHistory,
             ToastButtonKind.Edit => settings.ShowEdit,
@@ -79,6 +82,7 @@ public static class ToastButtonLayout
             case ToastButtonKind.Close: settings.ShowClose = visible; break;
             case ToastButtonKind.Pin: settings.ShowPin = visible; break;
             case ToastButtonKind.Save: settings.ShowSave = visible; break;
+            case ToastButtonKind.Copy: settings.ShowCopy = visible; break;
             case ToastButtonKind.Office: settings.ShowOffice = visible; break;
             case ToastButtonKind.History: settings.ShowHistory = visible; break;
             case ToastButtonKind.Edit: settings.ShowEdit = visible; break;
@@ -149,6 +153,7 @@ public static class ToastButtonLayout
         if (settings.CloseSlot == slot) return ToastButtonKind.Close;
         if (settings.PinSlot == slot) return ToastButtonKind.Pin;
         if (settings.SaveSlot == slot) return ToastButtonKind.Save;
+        if (settings.CopySlot == slot) return ToastButtonKind.Copy;
         if (settings.OfficeSlot == slot) return ToastButtonKind.Office;
         if (settings.DeleteSlot == slot) return ToastButtonKind.Delete;
         if (settings.HistorySlot == slot) return ToastButtonKind.History;
@@ -163,6 +168,7 @@ public static class ToastButtonLayout
             case ToastButtonKind.Close: settings.CloseSlot = slot; break;
             case ToastButtonKind.Pin: settings.PinSlot = slot; break;
             case ToastButtonKind.Save: settings.SaveSlot = slot; break;
+            case ToastButtonKind.Copy: settings.CopySlot = slot; break;
             case ToastButtonKind.Office: settings.OfficeSlot = slot; break;
             case ToastButtonKind.History: settings.HistorySlot = slot; break;
             case ToastButtonKind.Edit: settings.EditSlot = slot; break;
@@ -176,6 +182,7 @@ public static class ToastButtonLayout
         ToastButtonKind.Pin,
         ToastButtonKind.Close,
         ToastButtonKind.Save,
+        ToastButtonKind.Copy,
         ToastButtonKind.History,
         ToastButtonKind.Office,
         ToastButtonKind.Delete,
@@ -258,6 +265,7 @@ public static class ToastButtonLayout
                 Place(ToastButtonKind.Delete, ToastButtonSlot.BottomLeft);
                 Place(ToastButtonKind.Edit, ToastButtonSlot.BottomInnerLeft);
                 Place(ToastButtonKind.Save, ToastButtonSlot.BottomRight);
+                Place(ToastButtonKind.Copy, ToastButtonSlot.BottomInnerRight);
                 break;
 
             default: // Standard — matches the default ToastButtonLayoutSettings layout; one button per corner.

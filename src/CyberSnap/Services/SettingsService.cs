@@ -374,9 +374,10 @@ public sealed class SettingsService : IDisposable
         settings.CloseSlot = TakeSlot(settings.CloseSlot, ToastButtonSlot.TopRight, used);
         settings.PinSlot = TakeSlot(settings.PinSlot, ToastButtonSlot.TopLeft, used);
         settings.SaveSlot = TakeSlot(settings.SaveSlot, ToastButtonSlot.BottomRight, used);
+        settings.CopySlot = TakeSlot(settings.CopySlot, ToastButtonSlot.BottomInnerRight, used);
         settings.OfficeSlot = TakeSlot(settings.OfficeSlot, ToastButtonSlot.TopInnerLeft, used);
         settings.HistorySlot = TakeSlot(settings.HistorySlot, ToastButtonSlot.TopInnerRight, used);
-        settings.DeleteSlot = TakeSlot(settings.DeleteSlot, ToastButtonSlot.BottomInnerRight, used);
+        settings.DeleteSlot = TakeSlot(settings.DeleteSlot, ToastButtonSlot.BottomLeft, used);
     }
 
     private static Dictionary<string, string> NormalizeOpenWithApps(Dictionary<string, string>? apps)

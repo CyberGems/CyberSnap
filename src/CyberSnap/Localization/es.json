@@ -473,6 +473,7 @@
   "Move the delete notification button": "Mover el botón de eliminar notificación",
   "Move the gallery notification button": "Mover el botón de galería de notificación",
   "Move the edit notification button": "Mover el botón de editar notificación",
+  "Move the copy notification button": "Mover el botón de copiar notificación",
   "Turn all pop-up notifications on or off.": "Activar o desactivar todas las notificaciones emergentes.",
   "Show brief status messages such as \"Sent to the editor\". Capture previews and error alerts are not affected.": "Mostrar mensajes de estado breves como \"Enviado al editor\". Las vistas previas de capturas y alertas de error no se ven afectadas.",
   "Auto-pin screenshot previews": "Fijar automáticamente las vistas previas de capturas",
@@ -526,5 +527,7 @@
   "delete": "eliminar",
   "gallery": "galería",
   "edit": "editar",
+  "copy": "copiar",
+  "Copied": "Copiado",
   "notification": "notificación"
 }

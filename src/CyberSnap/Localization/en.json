@@ -397,6 +397,7 @@
   "Move the delete notification button": "Move the delete notification button",
   "Move the gallery notification button": "Move the gallery notification button",
   "Move the edit notification button": "Move the edit notification button",
+  "Move the copy notification button": "Move the copy notification button",
   "Turn all pop-up notifications on or off.": "Turn all pop-up notifications on or off.",
   "Show brief status messages such as \"Sent to the editor\". Capture previews and error alerts are not affected.": "Show brief status messages such as \"Sent to the editor\". Capture previews and error alerts are not affected.",
   "Auto-pin screenshot previews": "Auto-pin screenshot previews",
@@ -450,5 +451,7 @@
   "delete": "delete",
   "gallery": "gallery",
   "edit": "edit",
+  "copy": "copy",
+  "Copied": "Copied",
   "notification": "notification"
 }
