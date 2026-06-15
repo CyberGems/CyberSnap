@@ -2235,7 +2235,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <ScrollViewer x:Name="ToastPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
+            <ScrollViewer x:Name="ToastPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,42,18,18">
                 <StackPanel>
                     <TextBlock Text="Behavior" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
@@ -2604,23 +2604,31 @@
 
                     <TextBlock Services:LocalizationService.SourceText="Overlay Buttons" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
                     <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid>
-                                <StackPanel>
-                                    <TextBlock Services:LocalizationService.SourceText="Overlay Buttons description" FontSize="13" TextWrapping="Wrap"/>
-                                    <TextBlock x:Name="ToastLayoutSelectionText" Text="" Style="{StaticResource InfoText}" Margin="0,4,0,0"
-                                               Visibility="Collapsed"
-                                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                               AutomationProperties.Name="notification layout selection"
-                                               AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                               AutomationProperties.LiveSetting="Polite"/>
-                                </StackPanel>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Services:LocalizationService.SourceText="Overlay Buttons description" FontSize="13" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Row="1" x:Name="ToastLayoutSelectionText" Text="" Style="{StaticResource InfoText}" Margin="0,4,0,0"
+                                           Visibility="Collapsed"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.Name="notification layout selection"
+                                           AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.LiveSetting="Polite"/>
                             </Grid>
 
-                            <TextBlock Services:LocalizationService.SourceText="Presets" FontSize="12.5" FontWeight="SemiBold" Margin="0,16,0,8"
+                            <TextBlock Grid.Row="1" Services:LocalizationService.SourceText="Presets" FontSize="12.5" FontWeight="SemiBold" Margin="0,16,0,8"
                                        HorizontalAlignment="Left"
                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                            <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left">
+                            <StackPanel Grid.Row="2" x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left">
                                 <Button x:Name="ToastPresetMinimalBtn" Services:LocalizationService.SourceContent="Minimal" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Minimal preset"
                                         AutomationProperties.HelpText="Show only the close button."
@@ -2643,7 +2651,7 @@
                                         Click="ResetToastButtonsBtn_Click"/>
                             </StackPanel>
 
-                            <Border Margin="0,14,0,0"
+                            <Border Grid.Row="3" Margin="0,14,0,0"
                                     CornerRadius="12"
                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                     BorderThickness="1"
@@ -2925,7 +2933,7 @@
                                     </Image>
                                 </Grid>
                             </Border>
-                        </StackPanel>
+                        </Grid>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
