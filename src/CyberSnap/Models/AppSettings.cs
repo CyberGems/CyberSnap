@@ -6,7 +6,8 @@ public enum AfterCaptureAction
 {
     CopyToClipboard,
     PreviewAndCopy,
-    PreviewOnly
+    PreviewOnly,
+    None
 }
 
 public enum ToastPosition

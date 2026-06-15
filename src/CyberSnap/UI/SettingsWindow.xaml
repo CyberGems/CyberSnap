@@ -1107,44 +1107,61 @@
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
+                                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,10,0">
                                     <TextBlock Text="&#xE930;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Top">
                                     <TextBlock Text="After capture" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Choose what CyberSnap does after saving the selection." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
-                                <ComboBox x:Name="AfterCaptureCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="After capture"
-                                          ToolTip="Choose what CyberSnap does after saving the selection."
+                                <ComboBox x:Name="AfterCaptureCombo" Grid.Row="0" Grid.Column="2" MinWidth="150"
+                                          VerticalAlignment="Top"
+                                          AutomationProperties.Name="Open after capture"
+                                          ToolTip="Choose what CyberSnap opens after saving the selection."
                                           SelectionChanged="AfterCaptureCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Copy to clipboard"
-                                                  ToolTip="Copy the capture without opening a preview."
-                                                  AutomationProperties.Name="Copy after capture"
-                                                  AutomationProperties.HelpText="Copy the saved capture to the clipboard and skip the preview window."/>
-                                    <ComboBoxItem Content="Preview + Copy"
-                                                  ToolTip="Open a preview and copy the capture."
-                                                  AutomationProperties.Name="Preview and copy after capture"
-                                                  AutomationProperties.HelpText="Open the preview window and also copy the saved capture to the clipboard."/>
-                                    <ComboBoxItem Content="Preview only"
-                                                  ToolTip="Open a preview without copying."
-                                                  AutomationProperties.Name="Preview only after capture"
-                                                  AutomationProperties.HelpText="Open the preview window without copying the saved capture to the clipboard."/>
-                                    <ComboBoxItem Content="Editor + Copy"
-                                                  ToolTip="Open the editor and copy the capture."
-                                                  AutomationProperties.Name="Open editor and copy after capture"
-                                                  AutomationProperties.HelpText="Open the post-capture editor directly and also copy the saved capture to the clipboard."/>
-                                    <ComboBoxItem Content="Editor only"
-                                                  ToolTip="Open the editor without copying."
-                                                  AutomationProperties.Name="Open editor only after capture"
-                                                  AutomationProperties.HelpText="Open the post-capture editor directly without copying the saved capture to the clipboard."/>
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="Preview"
+                                                  ToolTip="Open the preview window after capture."
+                                                  AutomationProperties.Name="Open preview after capture"
+                                                  AutomationProperties.HelpText="Show the post-capture preview window."/>
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="Editor"
+                                                  ToolTip="Open the editor after capture."
+                                                  AutomationProperties.Name="Open editor after capture"
+                                                  AutomationProperties.HelpText="Open the post-capture editor directly."/>
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="Save only"
+                                                  ToolTip="Save the capture without opening a window."
+                                                  AutomationProperties.Name="Save capture only"
+                                                  AutomationProperties.HelpText="Write the file and skip both preview and editor."/>
                                 </ComboBox>
+
+                                <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="Copy capture to clipboard" Style="{StaticResource SettingTitle}" FontSize="12"/>
+                                        <TextBlock Text="Automatically copy the saved image to the clipboard." Style="{StaticResource SettingDescription}" FontSize="11" Opacity="0.65"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="AfterCaptureCopyCheck" Grid.Column="1" Content="" VerticalAlignment="Center"
+                                              ToolTip="Copy the saved capture to the clipboard"
+                                              AutomationProperties.Name="Copy capture to clipboard"
+                                              AutomationProperties.HelpText="Automatically copy the saved image to the clipboard after capture."
+                                              Checked="AfterCaptureCopyCheck_Changed" Unchecked="AfterCaptureCopyCheck_Changed"/>
+                                </Grid>
+
+                                <TextBlock x:Name="AfterCaptureSummaryText" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                           Style="{StaticResource SettingsHelperText}"
+                                           Margin="0,8,0,0"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
