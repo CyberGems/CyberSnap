@@ -1935,7 +1935,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Enable editor" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Open the annotation editor automatically after each image capture, instead of showing the preview notification. Skipped for video and GIF captures." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Open the annotation editor after each image capture (not for video or GIF)." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="WidgetEnableEditorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Enable editor"
