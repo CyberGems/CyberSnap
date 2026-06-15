@@ -84,9 +84,23 @@ public static class Theme
         resources["ThemeTooltipBorderBrush"] = Brush(IsDark ? CA(255, 255, 255, 26) : CA(0, 0, 0, 16));
     }
 
+    private static Models.AppThemeMode _forcedMode = Models.AppThemeMode.System;
+
+    /// <summary>Set the app-wide theme mode and refresh IsDark.</summary>
+    public static void SetMode(Models.AppThemeMode mode)
+    {
+        _forcedMode = mode;
+        Refresh();
+    }
+
     public static void Refresh()
     {
-        IsDark = DetectDarkMode();
+        IsDark = _forcedMode switch
+        {
+            Models.AppThemeMode.Dark => true,
+            Models.AppThemeMode.Light => false,
+            _ => DetectDarkMode()
+        };
     }
 
     private static bool DetectDarkMode()

@@ -10,7 +10,6 @@ using CyberSnap.Models;
 using Color = System.Windows.Media.Color;
 using Image = System.Windows.Controls.Image;
 using Button = System.Windows.Controls.Button;
-using ComboBox = System.Windows.Controls.ComboBox;
 using DragEventArgs = System.Windows.DragEventArgs;
 using DragDropEffects = System.Windows.DragDropEffects;
 using GiveFeedbackEventArgs = System.Windows.GiveFeedbackEventArgs;
@@ -22,19 +21,12 @@ namespace CyberSnap.UI;
 
 public partial class SettingsWindow
 {
-    // ComboBox per button row, keyed by kind so the designer can refresh selections
-    // and corner-occupancy without walking the visual tree.
-    private readonly Dictionary<ToastButtonKind, ComboBox> _toastComboBoxes = new();
-
     // Preview button Borders keyed by kind, for drag-over eviction preview.
     private Dictionary<ToastButtonKind, Border> _previewButtonBorders = null!;
 
     // Button temporarily dimmed during drag-over so the user sees which occupant
     // would be evicted on drop. Restored on DragLeave.
     private Border? _dragDimmedButton;
-
-    // Guard to suppress re-entrant SelectionChanged during programmatic refresh.
-    private bool _refreshingToastCombos;
 
     // Drag is armed on mouse-down and only started once the pointer crosses the system drag
     // threshold in PreviewMouseMove — starting DoDragDrop straight from mouse-down is unreliable
@@ -74,16 +66,26 @@ public partial class SettingsWindow
         RefreshToastButtonLayoutDesigner();
     }
 
-    // Each preview button can be dragged to move it, or sent back to the list with a double-click
-    // or right-click. Wired once; the tooltip/help text advertise both gestures.
+    // Each preview button can be dragged to move it, double-clicked to send it back to the list,
+    // or right-clicked / opened with the Menu key for a context menu (Move to… + Remove) that
+    // replaces the old per-row placement combo and keeps the designer keyboard-accessible.
     private void WireToastPreviewButtonGestures()
     {
         foreach (var (kind, border) in _previewButtonBorders)
         {
             var captured = kind;
-            border.MouseRightButtonUp += (_, e) => { RemoveToastButton(captured); e.Handled = true; };
 
-            string help = $"Drag to move the {FormatToastButtonLabel(kind)} button. Double-click or right-click to send it back to the list.";
+            // Right-click and the keyboard Menu/Shift+F10 key both open the placement menu;
+            // it is rebuilt on each open so corner-occupancy and visibility stay current.
+            border.Focusable = true;
+            border.ContextMenuOpening += (_, e) =>
+            {
+                border.ContextMenu = BuildToastButtonContextMenu(captured);
+                if (border.ContextMenu is not null)
+                    border.ContextMenu.PlacementTarget = border;
+            };
+
+            string help = $"Drag to move the {FormatToastButtonLabel(kind)} button. Double-click to remove it, or right-click (or press the Menu key) for placement options.";
             border.ToolTip = help;
             ToolTipService.SetInitialShowDelay(border, 300);
             AutomationProperties.SetHelpText(border, help);
@@ -92,7 +94,6 @@ public partial class SettingsWindow
 
     private void BuildToastButtonRows()
     {
-        _toastComboBoxes.Clear();
         ToastButtonRows.Children.Clear();
 
         foreach (var kind in ToastButtonLayout.AllButtons)
@@ -103,15 +104,14 @@ public partial class SettingsWindow
     {
         var label = FormatToastButtonLabel(kind);
 
-        // Left-packed with a fixed label column so the ComboBox stays near the label and aligned
-        // across rows, instead of being pushed to the far right edge on wide windows.
+        // Icon + name only: placement is done by dragging the row onto the preview, or via the
+        // right-click / Menu-key context menu (Move to…). No per-row combo any more.
         var grid = new Grid
         {
             Margin = new Thickness(0, 0, 0, 6),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Left
         };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var icon = new Image
@@ -149,97 +149,98 @@ public partial class SettingsWindow
         Grid.SetColumn(name, 1);
         grid.Children.Add(name);
 
-        var combo = new ComboBox
-        {
-            Width = 130,
-            VerticalAlignment = System.Windows.VerticalAlignment.Center,
-            Cursor = System.Windows.Input.Cursors.Arrow,
-            Tag = kind
-        };
-        AutomationProperties.SetName(combo, $"Placement for {label} button");
-        AutomationProperties.SetHelpText(combo, $"Choose which corner the {label} button appears in, or hide it.");
-        if (desc is not null)
-        {
-            combo.ToolTip = desc;
-            ToolTipService.SetInitialShowDelay(combo, 200);
-            AutomationProperties.SetHelpText(combo, desc);
-        }
-
-        combo.Items.Add(CreateCornerComboItem("Hidden", null, $"Hide the {label} button"));
-        combo.Items.Add(CreateCornerComboItem("Top Left", ToastCorner.TopLeft, $"Place the {label} button in the top-left corner"));
-        combo.Items.Add(CreateCornerComboItem("Top Right", ToastCorner.TopRight, $"Place the {label} button in the top-right corner"));
-        combo.Items.Add(CreateCornerComboItem("Bottom Left", ToastCorner.BottomLeft, $"Place the {label} button in the bottom-left corner"));
-        combo.Items.Add(CreateCornerComboItem("Bottom Right", ToastCorner.BottomRight, $"Place the {label} button in the bottom-right corner"));
-
-        combo.SelectionChanged += ToastButtonCombo_SelectionChanged;
-        Grid.SetColumn(combo, 2);
-        grid.Children.Add(combo);
-
-        _toastComboBoxes[kind] = combo;
-
         // The whole row is a drag handle for adding this button to the preview (the icon stays in
-        // the list; a ghost follows the cursor). The ComboBox keeps its own behaviour — drags are
-        // suppressed when the gesture starts inside it (see ToastRow_PreviewMouseLeftButtonDown).
+        // the list; a ghost follows the cursor). Right-click / Menu key opens the same placement
+        // menu as the preview buttons so the layout stays fully keyboard-accessible.
         var row = new Border
         {
             Child = grid,
             Tag = kind,
             Cursor = System.Windows.Input.Cursors.Hand,
             Background = System.Windows.Media.Brushes.Transparent,
-            ToolTip = "Drag onto the preview to add this button"
+            Focusable = true,
+            ToolTip = "Drag onto the preview to add this button, or right-click (Menu key) to place it by keyboard."
         };
         ToolTipService.SetInitialShowDelay(row, 300);
+        AutomationProperties.SetName(row, $"{ToTitleCase(label)} button");
+        AutomationProperties.SetHelpText(row, $"Drag onto the preview to add the {label} button, or right-click (or press the Menu key) to place it in a corner.");
         row.PreviewMouseLeftButtonDown += ToastRow_PreviewMouseLeftButtonDown;
         row.PreviewMouseMove += ToastRow_PreviewMouseMove;
+        row.ContextMenuOpening += (_, _) =>
+        {
+            row.ContextMenu = BuildToastButtonContextMenu(kind);
+            if (row.ContextMenu is not null)
+                row.ContextMenu.PlacementTarget = row;
+        };
         return row;
     }
 
-    private static ComboBoxItem CreateCornerComboItem(string text, ToastCorner? corner, string tooltip)
+    /// <summary>Build the placement context menu for a button (shared by the preview buttons and
+    /// the list rows). "Move to…" corner items reuse <see cref="ToastButtonLayout.AssignCorner"/>
+    /// just as the old combo did; a full corner is disabled, and the current corner is checked.
+    /// A final "Remove" item sends the button back to the list. Rebuilt on each open so the state
+    /// is always current.</summary>
+    private ContextMenu BuildToastButtonContextMenu(ToastButtonKind kind)
     {
-        var item = new ComboBoxItem
+        var label = FormatToastButtonLabel(kind);
+        bool visible = ToastButtonLayout.IsVisible(ToastButtons, kind);
+        ToastCorner? currentCorner = visible ? ToastButtonLayout.GetCorner(ToastButtons, kind) : null;
+
+        var menu = new ContextMenu();
+
+        var header = new MenuItem
         {
-            Content = text,
-            Tag = corner,
-            ToolTip = tooltip
+            Header = Services.LocalizationService.Translate("Move to"),
+            IsEnabled = false
         };
-        AutomationProperties.SetName(item, text);
-        AutomationProperties.SetHelpText(item, tooltip);
-        return item;
+        menu.Items.Add(header);
+
+        foreach (var corner in new[] { ToastCorner.TopLeft, ToastCorner.TopRight, ToastCorner.BottomLeft, ToastCorner.BottomRight })
+        {
+            var capturedCorner = corner;
+            bool isCurrent = visible && currentCorner == corner;
+            var item = new MenuItem
+            {
+                Header = FormatCornerMenuLabel(corner),
+                IsCheckable = true,
+                IsChecked = isCurrent,
+                // A full corner can't take this button — unless the button already lives there.
+                IsEnabled = isCurrent || !IsCornerFull(ToastButtons, corner, kind)
+            };
+            item.Click += (_, _) => MoveToastButtonToCorner(kind, capturedCorner);
+            menu.Items.Add(item);
+        }
+
+        menu.Items.Add(new Separator());
+
+        var remove = new MenuItem
+        {
+            Header = Services.LocalizationService.Translate("Remove from notification"),
+            IsEnabled = visible
+        };
+        remove.Click += (_, _) => RemoveToastButton(kind);
+        menu.Items.Add(remove);
+
+        return menu;
     }
 
-    private void ToastButtonCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    // Place (or move) a button into a corner from the context menu — the keyboard-accessible
+    // equivalent of dragging it there. Mirrors the old combo's assign-or-warn behaviour.
+    private void MoveToastButtonToCorner(ToastButtonKind kind, ToastCorner corner)
     {
-        if (_refreshingToastCombos)
-            return;
-
-        if (sender is not ComboBox combo || combo.Tag is not ToastButtonKind kind)
-            return;
-        if (combo.SelectedItem is not ComboBoxItem item)
-            return;
-
-        var corner = item.Tag as ToastCorner?;
-
-        if (corner is null)
+        if (ToastButtonLayout.AssignCorner(ToastButtons, kind, corner))
         {
-            ToastButtonLayout.SetVisible(ToastButtons, kind, false);
+            ToastButtons.Manual = true;
             _toastLayoutHint = null;
             PersistToastButtonLayout();
             return;
         }
 
-        if (ToastButtonLayout.AssignCorner(ToastButtons, kind, corner.Value))
-        {
-            _toastLayoutHint = null;
-            PersistToastButtonLayout();
-            return;
-        }
-
-        // Corner full — shouldn't happen when disabled items work, but guard anyway.
-        _toastLayoutHint = $"The {FormatCornerLabel(corner.Value)} corner is full (2 buttons max). Move another button out first.";
+        _toastLayoutHint = $"The {FormatCornerLabel(corner)} corner is full (2 buttons max). Move another button out first.";
         PersistToastButtonLayout();
     }
 
-    /// <summary>Whether the per-button combo boxes should be interactive.
+    /// <summary>Whether the per-button placement controls should be interactive.
     /// True when the user has explicitly opted into Manual mode, or when the current
     /// layout doesn't match any preset (legacy custom layout from before the Manual flag).
     /// </summary>
@@ -253,7 +254,7 @@ public partial class SettingsWindow
         if (!Enum.TryParse<ToastButtonKind>(tag, out var kind))
             return;
 
-        // Double-click sends the button back to the list (the same as right-click).
+        // Double-click sends the button back to the list (right-click now opens the placement menu).
         if (e.ClickCount == 2)
         {
             RemoveToastButton(kind);
@@ -288,13 +289,10 @@ public partial class SettingsWindow
         StartToastDrag();
     }
 
-    // Drag a button in from the list. The row's icon/label act as the grab handle; the gesture is
-    // suppressed when it starts inside the ComboBox so the dropdown keeps working.
+    // Drag a button in from the list. The row's icon/label act as the grab handle.
     private void ToastRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is not Border { Tag: ToastButtonKind kind })
-            return;
-        if (FindAncestor<ComboBox>(e.OriginalSource as DependencyObject) is not null)
             return;
 
         _toastDragSource = null;          // null source marks a drag originating from the list
@@ -494,20 +492,6 @@ public partial class SettingsWindow
         PersistToastButtonLayout();
     }
 
-    private static T? FindAncestor<T>(DependencyObject? start) where T : DependencyObject
-    {
-        var node = start;
-        while (node is not null)
-        {
-            if (node is T match)
-                return match;
-            if (node is not Visual && node is not System.Windows.Media.Media3D.Visual3D)
-                return null; // can't walk the visual tree above a ContentElement
-            node = VisualTreeHelper.GetParent(node);
-        }
-        return null;
-    }
-
     private void ToastSlot_DragEnter(object sender, DragEventArgs e)
     {
         if (!e.Data.GetDataPresent(typeof(ToastButtonKind)) || sender is not Border slot)
@@ -642,9 +626,9 @@ public partial class SettingsWindow
     {
         RefreshToastPreview();
         RefreshToastSlotIndicators();
-        RefreshToastComboBoxes();
         RefreshToastPresetButtons();
         RefreshToastLayoutStatus();
+        RefreshEditorPreviewState();
     }
 
     private void RefreshToastPreview()
@@ -732,47 +716,6 @@ public partial class SettingsWindow
         }
     }
 
-    private void RefreshToastComboBoxes()
-    {
-        bool manual = IsManualMode;
-        _refreshingToastCombos = true;
-        try
-        {
-            foreach (var (kind, combo) in _toastComboBoxes)
-            {
-                // Enable the entire combo box only when Manual mode is active.
-                combo.IsEnabled = manual;
-
-                bool visible = ToastButtonLayout.IsVisible(ToastButtons, kind);
-                ToastCorner? currentCorner = visible
-                    ? ToastButtonLayout.GetCorner(ToastButtons, kind)
-                    : null;
-
-                foreach (ComboBoxItem item in combo.Items)
-                {
-                    var itemCorner = item.Tag as ToastCorner?;
-
-                    // Select the item that matches the current state.
-                    bool isMatch = itemCorner is null
-                        ? !visible
-                        : visible && itemCorner.Value == currentCorner;
-
-                    if (isMatch && !ReferenceEquals(combo.SelectedItem, item))
-                        combo.SelectedItem = item;
-
-                    // Disable corner options whose two slots are already occupied by
-                    // other visible buttons.
-                    if (itemCorner is not null)
-                        item.IsEnabled = !IsCornerFull(ToastButtons, itemCorner.Value, kind);
-                }
-            }
-        }
-        finally
-        {
-            _refreshingToastCombos = false;
-        }
-    }
-
     private static bool IsCornerFull(AppSettings.ToastButtonLayoutSettings settings, ToastCorner corner, ToastButtonKind exclude)
     {
         var (outer, inner) = ToastButtonLayout.CornerSlots(corner);
@@ -837,6 +780,46 @@ public partial class SettingsWindow
         RefreshToastButtonLayoutDesigner();
     }
 
+    /// <summary>Reflect the "Enable editor" state across the two side-by-side mock-ups: the text
+    /// toast on the left is what image captures show when the editor is on; the button designer on
+    /// the right applies to every capture when the editor is off, or only to video/GIF when it is
+    /// on. The card that actually applies is emphasised; the other is dimmed with a hint. Also
+    /// recolours the text-toast mock to match the real toast (called on theme changes too).</summary>
+    private void RefreshEditorPreviewState()
+    {
+        // Guard: this runs from theme refreshes that can fire before the designer is built.
+        if (EditorToastMockShell is null || EditorButtonsCard is null)
+            return;
+
+        bool editorOn = _settingsService.Settings.OpenEditorAfterCapture;
+
+        // Keep the text-toast mock faithful to the real one (Theme.ToastBg / ToastBorder), and
+        // render its decorative close glyph in the same muted tone the real toast uses.
+        EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
+        EditorToastMockShell.BorderBrush = Theme.Brush(Theme.ToastBorder);
+        if (EditorToastMockCloseIcon is not null)
+            EditorToastMockCloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", GetToastLayoutIconColor(active: false), 16);
+
+        // Left (image-capture text toast) is the active path only when the editor is on.
+        ApplyEditorPreviewEmphasis(EditorToastMockCard, active: editorOn);
+        if (EditorToastMockNote is not null)
+            EditorToastMockNote.Visibility = editorOn ? Visibility.Collapsed : Visibility.Visible;
+
+        // Right (button designer) always applies to something, so it's never fully dimmed; its
+        // caption states exactly what it covers given the current editor state.
+        ApplyEditorPreviewEmphasis(EditorButtonsCard, active: true);
+        if (EditorPreviewOtherCaption is not null)
+        {
+            string caption = Services.LocalizationService.Translate(
+                editorOn ? "Video and GIF captures" : "All captures");
+            EditorPreviewOtherCaption.Text = caption;
+            AutomationProperties.SetName(EditorPreviewOtherCaption, caption);
+        }
+    }
+
+    private static void ApplyEditorPreviewEmphasis(UIElement card, bool active)
+        => card.Opacity = active ? 1.0 : 0.55;
+
     private static string? GetToastButtonDescription(ToastButtonKind button) => button switch
     {
         ToastButtonKind.Close => "Close the notification preview.",
@@ -867,6 +850,16 @@ public partial class SettingsWindow
         ToastCorner.TopRight => "top-right",
         ToastCorner.BottomLeft => "bottom-left",
         _ => "bottom-right"
+    };
+
+    // Localized, title-cased corner label for the context menu (the dashed corner-label form
+    // above is reserved for the lowercase "the … corner is full" sentence).
+    private static string FormatCornerMenuLabel(ToastCorner corner) => corner switch
+    {
+        ToastCorner.TopLeft => Services.LocalizationService.Translate("Top Left"),
+        ToastCorner.TopRight => Services.LocalizationService.Translate("Top Right"),
+        ToastCorner.BottomLeft => Services.LocalizationService.Translate("Bottom Left"),
+        _ => Services.LocalizationService.Translate("Bottom Right")
     };
 
     private static string ToastButtonIconId(ToastButtonKind button) => button switch

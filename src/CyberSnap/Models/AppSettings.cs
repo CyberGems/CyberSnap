@@ -114,6 +114,13 @@ public enum ImageSearchSourceOptions
     All = FileName | Ocr
 }
 
+public enum AppThemeMode
+{
+    System,
+    Dark,
+    Light
+}
+
 public sealed class AppSettings
 {
     public sealed class ToastButtonLayoutSettings
@@ -226,6 +233,7 @@ public sealed class AppSettings
     public bool SaveHistory { get; set; } = true;
     public bool MuteSounds { get; set; }
     public bool DisableAnimations { get; set; }
+    public AppThemeMode ThemeMode { get; set; } = AppThemeMode.System;
     public double UiScale { get; set; } = 1.0;
     public string InterfaceLanguage { get; set; } = "en";
     public bool ShowCrosshairGuides { get; set; } // off by default

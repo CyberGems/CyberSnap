@@ -2000,9 +2000,42 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Audio &amp; Effects" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="Appearance &amp; Sound Effects" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
+                            <!-- App Theme -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE793;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="App theme" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Choose dark, light, or follow your Windows theme." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <RadioButton x:Name="ThemeSystemRadio" Content="System" GroupName="AppTheme"
+                                                 Margin="0,0,10,0" VerticalAlignment="Center" Cursor="Hand"
+                                                 AutomationProperties.Name="System theme"
+                                                 ToolTip="Follow the Windows system theme."
+                                                 Checked="AppThemeRadio_Changed"/>
+                                    <RadioButton x:Name="ThemeDarkRadio" Content="Dark" GroupName="AppTheme"
+                                                 Margin="0,0,10,0" VerticalAlignment="Center" Cursor="Hand"
+                                                 AutomationProperties.Name="Dark theme"
+                                                 ToolTip="Always use the dark theme."
+                                                 Checked="AppThemeRadio_Changed"/>
+                                    <RadioButton x:Name="ThemeLightRadio" Content="Light" GroupName="AppTheme"
+                                                 VerticalAlignment="Center" Cursor="Hand"
+                                                 AutomationProperties.Name="Light theme"
+                                                 ToolTip="Always use the light theme."
+                                                 Checked="AppThemeRadio_Changed"/>
+                                </StackPanel>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -2202,7 +2235,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <ScrollViewer x:Name="ToastPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,42,18,18">
+            <ScrollViewer x:Name="ToastPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
                 <StackPanel>
                     <TextBlock Text="Behavior" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
@@ -2623,6 +2656,58 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid x:Name="ToastLayoutSurfaceRoot" Grid.Column="0" Margin="0,0,24,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- LEFT card: faithful mock of the text-only toast shown when the editor
+                                         opens image captures directly (no preview, no overlay buttons). -->
+                                    <StackPanel x:Name="EditorToastMockCard" Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Top">
+                                        <TextBlock x:Name="EditorPreviewImagesCaption"
+                                                   Services:LocalizationService.SourceText="Image captures"
+                                                   FontSize="12.5" FontWeight="SemiBold" Margin="2,0,0,8"
+                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                        <Border x:Name="EditorToastMockShell" Width="196" CornerRadius="12"
+                                                BorderThickness="1" HorizontalAlignment="Left">
+                                            <Grid Margin="14,11,14,11">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                    <TextBlock x:Name="EditorToastMockTitle"
+                                                               Services:LocalizationService.SourceText="Sent to the editor"
+                                                               FontSize="12.75" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
+                                                               TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                                    <TextBlock x:Name="EditorToastMockBody"
+                                                               Services:LocalizationService.SourceText="Your capture is open in the editor."
+                                                               FontSize="11.5" FontFamily="Segoe UI Variable Text"
+                                                               TextWrapping="Wrap" Opacity="0.72" Margin="0,2,0,0"
+                                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                                </StackPanel>
+                                                <Border Grid.Column="1" Width="22" Height="22" CornerRadius="6"
+                                                        Margin="10,-2,-4,0" VerticalAlignment="Top"
+                                                        Background="Transparent">
+                                                    <Image x:Name="EditorToastMockCloseIcon" Width="11" Height="11"
+                                                           Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                        <TextBlock x:Name="EditorToastMockNote"
+                                                   Services:LocalizationService.SourceText="Appears when the editor is enabled"
+                                                   Style="{StaticResource InfoText}" Margin="2,8,0,0" TextWrapping="Wrap"
+                                                   MaxWidth="196" HorizontalAlignment="Left"/>
+                                    </StackPanel>
+
+                                    <!-- RIGHT card: the drag-and-drop button designer. Applies to every capture
+                                         when the editor is off, or only to video/GIF when the editor is on. -->
+                                    <StackPanel x:Name="EditorButtonsCard" Grid.Column="1" VerticalAlignment="Top">
+                                        <TextBlock x:Name="EditorPreviewOtherCaption" Text=""
+                                                   FontSize="12.5" FontWeight="SemiBold" Margin="2,0,0,8"
+                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                     <StackPanel x:Name="ToastLayoutStack" Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Border Width="300" Height="236" CornerRadius="18"
                                             Background="#FF000000"
@@ -2807,6 +2892,7 @@
                                         </Grid>
                                     </Border>
 
+                                    </StackPanel>
                                     </StackPanel>
                                     </Grid>
 
