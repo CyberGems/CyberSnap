@@ -69,6 +69,7 @@ public partial class SettingsWindow : Window
         Loaded += (_, _) => ApplyMicaBackdrop();
         Loaded += (_, _) => EnsureSettingsWindowFitsWorkArea();
         StateChanged += (_, _) => SettingsTitleBar.RefreshIcons();
+        LocalizationChanged += () => RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
         Activated += (_, _) =>
         {
@@ -287,10 +288,8 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
-        var previous = new AfterCapturePreference(
-            NormalizeAfterCaptureAction(_settingsService.Settings.AfterCapture),
-            _settingsService.Settings.OpenEditorAfterCapture);
-        var selected = GetAfterCapturePreference(AfterCaptureCombo.SelectedIndex);
+        var previous = GetAfterCaptureViewPreference();
+        var selected = GetAfterCaptureViewPreferenceFromControls();
 
         UpdateCaptureSavePreference(
             "settings.after-capture",
@@ -299,44 +298,100 @@ public partial class SettingsWindow : Window
             selected,
             value =>
             {
-                _settingsService.Settings.AfterCapture = value.Action;
-                _settingsService.Settings.OpenEditorAfterCapture = value.OpenEditor;
+                SetAfterCaptureViewPreference(value);
+                RefreshAfterCaptureSummary(value);
                 // Keep the notification dual preview's emphasis in step with the editor state.
                 RefreshEditorPreviewState();
             },
             value =>
             {
-                AfterCaptureCombo.SelectedIndex = GetAfterCaptureSelectedIndex(value);
+                ApplyAfterCaptureViewPreference(value);
                 ((App)Application.Current).RefreshWidgetWindowLayout();
                 RefreshEditorPreviewState();
             },
             () => ((App)Application.Current).RefreshWidgetWindowLayout());
     }
 
-    private static AfterCapturePreference GetAfterCapturePreference(int selectedIndex) =>
-        selectedIndex switch
-        {
-            0 => new AfterCapturePreference(AfterCaptureAction.CopyToClipboard, false),
-            2 => new AfterCapturePreference(AfterCaptureAction.PreviewOnly, false),
-            3 => new AfterCapturePreference(AfterCaptureAction.PreviewAndCopy, true),
-            4 => new AfterCapturePreference(AfterCaptureAction.PreviewOnly, true),
-            _ => new AfterCapturePreference(AfterCaptureAction.PreviewAndCopy, false)
-        };
-
-    private static int GetAfterCaptureSelectedIndex(AfterCapturePreference preference)
+    private void AfterCaptureCopyCheck_Changed(object sender, RoutedEventArgs e)
     {
-        var action = NormalizeAfterCaptureAction(preference.Action);
-        if (preference.OpenEditor)
-        {
-            return action == AfterCaptureAction.PreviewOnly ? 4 : 3;
-        }
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
+
+        var previous = GetAfterCaptureViewPreference();
+        var selected = GetAfterCaptureViewPreferenceFromControls();
+
+        UpdateCaptureSavePreference(
+            "settings.after-capture-copy",
+            "Copy capture to clipboard",
+            previous,
+            selected,
+            value =>
+            {
+                SetAfterCaptureViewPreference(value);
+                RefreshAfterCaptureSummary(value);
+            },
+            value => ApplyAfterCaptureViewPreference(value),
+            () => ((App)Application.Current).RefreshWidgetWindowLayout());
+    }
+
+    private AfterCaptureViewPreference GetAfterCaptureViewPreference()
+    {
+        var action = NormalizeAfterCaptureAction(_settingsService.Settings.AfterCapture);
+        var openEditor = _settingsService.Settings.OpenEditorAfterCapture;
 
         return action switch
         {
-            AfterCaptureAction.CopyToClipboard => 0,
-            AfterCaptureAction.PreviewOnly => 2,
-            _ => 1
+            AfterCaptureAction.CopyToClipboard => new AfterCaptureViewPreference(2, true),
+            AfterCaptureAction.None => new AfterCaptureViewPreference(2, false),
+            _ => openEditor
+                ? new AfterCaptureViewPreference(1, action == AfterCaptureAction.PreviewAndCopy)
+                : new AfterCaptureViewPreference(0, action == AfterCaptureAction.PreviewAndCopy)
         };
+    }
+
+    private static void SetAfterCaptureViewPreference(AfterCaptureViewPreference preference, AppSettings settings)
+    {
+        (AfterCaptureAction action, bool openEditor) = preference.WindowIndex switch
+        {
+            0 => preference.Copy
+                ? (AfterCaptureAction.PreviewAndCopy, false)
+                : (AfterCaptureAction.PreviewOnly, false),
+            1 => preference.Copy
+                ? (AfterCaptureAction.PreviewAndCopy, true)
+                : (AfterCaptureAction.PreviewOnly, true),
+            _ => preference.Copy
+                ? (AfterCaptureAction.CopyToClipboard, false)
+                : (AfterCaptureAction.None, false)
+        };
+
+        settings.AfterCapture = action;
+        settings.OpenEditorAfterCapture = openEditor;
+    }
+
+    private void SetAfterCaptureViewPreference(AfterCaptureViewPreference preference) =>
+        SetAfterCaptureViewPreference(preference, _settingsService.Settings);
+
+    private void ApplyAfterCaptureViewPreference(AfterCaptureViewPreference preference)
+    {
+        AfterCaptureCombo.SelectedIndex = preference.WindowIndex;
+        AfterCaptureCopyCheck.IsChecked = preference.Copy;
+        RefreshAfterCaptureSummary(preference);
+    }
+
+    private AfterCaptureViewPreference GetAfterCaptureViewPreferenceFromControls() =>
+        new(AfterCaptureCombo.SelectedIndex, AfterCaptureCopyCheck.IsChecked == true);
+
+    private void RefreshAfterCaptureSummary(AfterCaptureViewPreference preference)
+    {
+        string key = preference switch
+        {
+            (0, true) => "After capture: open preview and copy to clipboard.",
+            (0, false) => "After capture: open preview only.",
+            (1, true) => "After capture: open editor and copy to clipboard.",
+            (1, false) => "After capture: open editor only.",
+            (2, true) => "After capture: copy to clipboard.",
+            _ => "After capture: save the file only."
+        };
+        AfterCaptureSummaryText.Text = LocalizationService.Translate(key);
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
@@ -344,7 +399,7 @@ public partial class SettingsWindow : Window
             ? action
             : AfterCaptureAction.PreviewAndCopy;
 
-    private readonly record struct AfterCapturePreference(AfterCaptureAction Action, bool OpenEditor);
+    private readonly record struct AfterCaptureViewPreference(int WindowIndex, bool Copy);
 
     private void DefaultCaptureModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

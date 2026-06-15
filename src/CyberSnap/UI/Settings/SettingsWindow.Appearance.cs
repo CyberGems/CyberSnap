@@ -127,11 +127,11 @@ public partial class SettingsWindow
                 ? (int)s.CenterSelectionAspectRatio
                 : 0;
 
-            var afterCapture = Enum.IsDefined(typeof(AfterCaptureAction), s.AfterCapture)
-                ? s.AfterCapture
-                : AfterCaptureAction.PreviewAndCopy;
-            AfterCaptureCombo.SelectedIndex = GetAfterCaptureSelectedIndex(
-                new AfterCapturePreference(afterCapture, s.OpenEditorAfterCapture));
+            var afterCaptureView = GetAfterCaptureViewPreference();
+            AfterCaptureCombo.SelectedIndex = afterCaptureView.WindowIndex;
+            AfterCaptureCopyCheck.IsChecked = afterCaptureView.Copy;
+            RefreshAfterCaptureSummary(afterCaptureView);
+
             SaveToFileCheck.IsChecked = s.SaveToFile;
             AskFileNameCheck.IsChecked = s.AskForFileNameOnSave;
             AutoOpenCapturedImagesCheck.IsChecked = s.AutoOpenCapturedImages;
