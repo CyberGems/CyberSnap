@@ -400,12 +400,14 @@ public partial class ToastWindow : Window
         CloseIcon.Source = FluentIcons.RenderWpf("close", IconWhite, 20);
         PinIcon.Source = FluentIcons.RenderWpf("pin", IconWhite, 20);
         SaveIcon.Source = FluentIcons.RenderWpf("download", IconWhite, 20);
+        CopyIcon.Source = FluentIcons.RenderWpf("copy", IconWhite, 20);
         OfficeIcon.Source = FluentIcons.RenderWpf("arrow", IconWhite, 20);
         DeleteIcon.Source = FluentIcons.RenderWpf("trash", IconWhite, 20);
         EditIcon.Source = FluentIcons.RenderWpf("draw", IconWhite, 20);
         ApplyToastOverlayButtonVisual(CloseBtn, CloseIcon, "close", active: false);
         ApplyToastOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
         ApplyToastOverlayButtonVisual(SaveBtn, SaveIcon, "download", active: false);
+        ApplyToastOverlayButtonVisual(CopyBtn, CopyIcon, "copy", active: false);
         ApplyToastOverlayButtonVisual(OfficeBtn, OfficeIcon, "arrow", active: false);
         ApplyToastOverlayButtonVisual(DeleteBtn, DeleteIcon, "trash", active: false);
         ApplyToastOverlayButtonVisual(HistoryBtn, HistoryIcon, "history", active: false);
@@ -415,6 +417,7 @@ public partial class ToastWindow : Window
         HookOverlayHover(CloseBtn, CloseIcon, "close");
         HookOverlayHover(PinBtn, PinIcon, "pin");
         HookOverlayHover(SaveBtn, SaveIcon, "download");
+        HookOverlayHover(CopyBtn, CopyIcon, "copy");
         HookOverlayHover(OfficeBtn, OfficeIcon, "arrow");
         HookOverlayHover(DeleteBtn, DeleteIcon, "trash");
         HookOverlayHover(HistoryBtn, HistoryIcon, "history");
@@ -482,6 +485,7 @@ public partial class ToastWindow : Window
         CloseBtn.MouseLeftButtonDown -= CloseBtn_MouseLeftButtonDown;
         PinBtn.MouseLeftButtonDown -= PinBtn_MouseLeftButtonDown;
         SaveBtn.MouseLeftButtonDown -= SaveBtn_MouseLeftButtonDown;
+        CopyBtn.MouseLeftButtonDown -= CopyBtn_MouseLeftButtonDown;
         OfficeBtn.MouseLeftButtonDown -= OfficeBtn_MouseLeftButtonDown;
         DeleteBtn.MouseLeftButtonDown -= DeleteBtn_MouseLeftButtonDown;
         HistoryBtn.MouseLeftButtonDown -= HistoryBtn_MouseLeftButtonDown;
@@ -497,6 +501,7 @@ public partial class ToastWindow : Window
         CloseBtn.MouseLeftButtonDown += CloseBtn_MouseLeftButtonDown;
         PinBtn.MouseLeftButtonDown += PinBtn_MouseLeftButtonDown;
         SaveBtn.MouseLeftButtonDown += SaveBtn_MouseLeftButtonDown;
+        CopyBtn.MouseLeftButtonDown += CopyBtn_MouseLeftButtonDown;
         OfficeBtn.MouseLeftButtonDown += OfficeBtn_MouseLeftButtonDown;
         DeleteBtn.MouseLeftButtonDown += DeleteBtn_MouseLeftButtonDown;
         HistoryBtn.MouseLeftButtonDown += HistoryBtn_MouseLeftButtonDown;
@@ -508,6 +513,7 @@ public partial class ToastWindow : Window
         ApplyOverlayButton(CloseBtn, Helpers.ToastButtonKind.Close);
         ApplyOverlayButton(PinBtn, Helpers.ToastButtonKind.Pin);
         ApplyOverlayButton(SaveBtn, Helpers.ToastButtonKind.Save);
+        ApplyOverlayButton(CopyBtn, Helpers.ToastButtonKind.Copy);
         ApplyOverlayButton(OfficeBtn, Helpers.ToastButtonKind.Office);
         ApplyOverlayButton(DeleteBtn, Helpers.ToastButtonKind.Delete);
         ApplyOverlayButton(HistoryBtn, Helpers.ToastButtonKind.History);
@@ -582,6 +588,7 @@ public partial class ToastWindow : Window
             Helpers.ToastButtonKind.Save => _isSavingPreview
                 ? ("Saving preview", "Save is already running.")
                 : ("Save preview", "Save this preview image."),
+            Helpers.ToastButtonKind.Copy => ("Copy to clipboard", "Copy this preview to the clipboard."),
             Helpers.ToastButtonKind.Office => _isRunningOfficeAction
                 ? ("Send to action running", "Open with or send action is already running.")
                 : ("Send to", "Open the screenshot with another app."),
@@ -655,6 +662,27 @@ public partial class ToastWindow : Window
 
         e.Handled = true;
         SavePreview();
+    }
+
+    private void CopyBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!CanActivateMouseControl(sender))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        e.Handled = true;
+        CopyPreview();
+    }
+
+    private void CopyBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (!CanActivateKeyboardControl(sender, e))
+            return;
+
+        e.Handled = true;
+        CopyPreview();
     }
 
     private void HistoryBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -796,6 +824,26 @@ public partial class ToastWindow : Window
             _isSavingPreview = false;
             SaveBtn.IsEnabled = true;
             RefreshOverlayButtonAccessibility(SaveBtn, Helpers.ToastButtonKind.Save);
+        }
+    }
+
+    private void CopyPreview()
+    {
+        if (_previewBitmap is null)
+            return;
+
+        try
+        {
+            ClipboardService.CopyToClipboard(_previewBitmap, _savedFilePath);
+            Show(ToastSpec.Standard(Services.LocalizationService.Translate("Copied"), ""));
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("toast.copy-preview", ex.Message, ex);
+            Show(ToastSpec.Error(
+                "Copy failed",
+                BuildToastActionFailureBody("CyberSnap could not copy the preview to the clipboard.", ex.Message),
+                GetExistingSavedFilePathOrNull()));
         }
     }
 
@@ -1243,6 +1291,7 @@ public partial class ToastWindow : Window
     {
         CloseBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
         SaveBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
+        CopyBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
         OfficeBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
         DeleteBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
         HistoryBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));

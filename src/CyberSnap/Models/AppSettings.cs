@@ -136,6 +136,8 @@ public sealed class AppSettings
         public ToastButtonSlot PinSlot { get; set; } = ToastButtonSlot.TopLeft;
         public bool ShowSave { get; set; } = true;
         public ToastButtonSlot SaveSlot { get; set; } = ToastButtonSlot.BottomRight;
+        public bool ShowCopy { get; set; }
+        public ToastButtonSlot CopySlot { get; set; } = ToastButtonSlot.BottomInnerRight;
         public bool ShowOffice { get; set; }
         public ToastButtonSlot OfficeSlot { get; set; } = ToastButtonSlot.TopInnerLeft;
         public bool ShowDelete { get; set; }

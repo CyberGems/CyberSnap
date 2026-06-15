@@ -37,6 +37,8 @@ public partial class ToastWindow
                 PinSlot = layout.PinSlot,
                 ShowSave = layout.ShowSave,
                 SaveSlot = layout.SaveSlot,
+                ShowCopy = layout.ShowCopy,
+                CopySlot = layout.CopySlot,
                 ShowOffice = layout.ShowOffice,
                 OfficeSlot = layout.OfficeSlot,
                 ShowDelete = layout.ShowDelete,

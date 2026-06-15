@@ -2838,6 +2838,17 @@
                                                                RenderOptions.BitmapScalingMode="HighQuality"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
+                                                    <Border x:Name="ToastLayoutCopyBtn"
+                                                            Width="30" Height="30" CornerRadius="9"
+                                                            Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
+                                                            Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
+                                                            Services:LocalizationService.SourceToolTip="Move the copy notification button"
+                                                            AutomationProperties.Name="Copy notification button"                                                            Tag="Copy">
+                                                        <Image x:Name="ToastLayoutCopyIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                               RenderOptions.BitmapScalingMode="HighQuality"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
                                                     <Border x:Name="ToastLayoutOfficeBtn"
                                                             Width="30" Height="30" CornerRadius="9"
                                                             Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"

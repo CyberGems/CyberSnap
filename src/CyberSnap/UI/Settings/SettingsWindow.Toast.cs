@@ -55,6 +55,7 @@ public partial class SettingsWindow
             [ToastButtonKind.Close] = ToastLayoutCloseBtn,
             [ToastButtonKind.Pin] = ToastLayoutPinBtn,
             [ToastButtonKind.Save] = ToastLayoutSaveBtn,
+            [ToastButtonKind.Copy] = ToastLayoutCopyBtn,
             [ToastButtonKind.Office] = ToastLayoutOfficeBtn,
             [ToastButtonKind.Delete] = ToastLayoutDeleteBtn,
             [ToastButtonKind.History] = ToastLayoutAiRedirectBtn,
@@ -639,6 +640,7 @@ public partial class SettingsWindow
         UpdateToastPreviewButton(ToastLayoutCloseBtn, ToastLayoutCloseIcon, "close", ToastButtonKind.Close);
         UpdateToastPreviewButton(ToastLayoutPinBtn, ToastLayoutPinIcon, "pin", ToastButtonKind.Pin);
         UpdateToastPreviewButton(ToastLayoutSaveBtn, ToastLayoutSaveIcon, "download", ToastButtonKind.Save);
+        UpdateToastPreviewButton(ToastLayoutCopyBtn, ToastLayoutCopyIcon, "copy", ToastButtonKind.Copy);
         UpdateToastPreviewButton(ToastLayoutOfficeBtn, ToastLayoutOfficeIcon, "arrow", ToastButtonKind.Office);
         UpdateToastPreviewButton(ToastLayoutDeleteBtn, ToastLayoutDeleteIcon, "trash", ToastButtonKind.Delete);
         UpdateToastPreviewButton(ToastLayoutAiRedirectBtn, ToastLayoutAiRedirectIcon, "history", ToastButtonKind.History);
@@ -650,6 +652,7 @@ public partial class SettingsWindow
         ToastLayoutCloseBtn.Visibility = Visibility.Collapsed;
         ToastLayoutPinBtn.Visibility = Visibility.Collapsed;
         ToastLayoutSaveBtn.Visibility = Visibility.Collapsed;
+        ToastLayoutCopyBtn.Visibility = Visibility.Collapsed;
         ToastLayoutOfficeBtn.Visibility = Visibility.Collapsed;
         ToastLayoutDeleteBtn.Visibility = Visibility.Collapsed;
         ToastLayoutAiRedirectBtn.Visibility = Visibility.Collapsed;
@@ -825,6 +828,7 @@ public partial class SettingsWindow
         ToastButtonKind.Close => "Close the notification preview.",
         ToastButtonKind.Pin => "Keep the preview open until you dismiss it manually.",
         ToastButtonKind.Save => "Save the captured image to a file.",
+        ToastButtonKind.Copy => "Copy the captured image to the clipboard.",
         ToastButtonKind.Office => "Open the screenshot with another app (Word, PowerPoint, etc.).",
         ToastButtonKind.Delete => "Delete the saved file for this preview.",
         ToastButtonKind.History => "Open the capture gallery window.",
@@ -837,6 +841,7 @@ public partial class SettingsWindow
         ToastButtonKind.Close => Services.LocalizationService.Translate("close"),
         ToastButtonKind.Pin => Services.LocalizationService.Translate("pin"),
         ToastButtonKind.Save => Services.LocalizationService.Translate("save"),
+        ToastButtonKind.Copy => Services.LocalizationService.Translate("copy"),
         ToastButtonKind.Office => Services.LocalizationService.Translate("send to"),
         ToastButtonKind.Delete => Services.LocalizationService.Translate("delete"),
         ToastButtonKind.History => Services.LocalizationService.Translate("gallery"),
@@ -867,6 +872,7 @@ public partial class SettingsWindow
         ToastButtonKind.Close => "close",
         ToastButtonKind.Pin => "pin",
         ToastButtonKind.Save => "download",
+        ToastButtonKind.Copy => "copy",
         ToastButtonKind.Office => "arrow",
         ToastButtonKind.Delete => "trash",
         ToastButtonKind.History => "history",
