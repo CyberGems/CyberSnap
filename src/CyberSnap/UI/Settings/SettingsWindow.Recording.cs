@@ -118,7 +118,7 @@ public partial class SettingsWindow
         _suppressingSoundToggles = true;
         try
         {
-            foreach (var (evt, _) in SoundEventDefs)
+            foreach (var (evt, _, _) in SoundEventDefs)
             {
                 _settingsService.Settings.MutedSounds[evt] = muted;
                 SoundService.SetSoundMuted(evt, muted);
@@ -129,7 +129,7 @@ public partial class SettingsWindow
 
             foreach (var child in SoundCustomizationPanel.Children)
             {
-                if (child is Grid row && row.Children.Count > 0 && row.Children[0] is CheckBox cb)
+                if (child is Border card && card.Child is Grid row && row.Children.Count > 0 && row.Children[0] is CheckBox cb)
                     cb.IsChecked = enableAll;
             }
         }
@@ -162,156 +162,162 @@ public partial class SettingsWindow
 
     // ── Sound customization ────────────────────────────────────────────────
 
-    private static readonly (SoundEvent Event, string Label)[] SoundEventDefs =
+    private static readonly (SoundEvent Event, string Label, string IconId)[] SoundEventDefs =
     [
-        (SoundEvent.Startup, "Startup"),
-        (SoundEvent.Capture, "Capture"),
-        (SoundEvent.Color, "Color picker"),
-        (SoundEvent.Text, "Text / OCR"),
-        (SoundEvent.Scan, "QR / Barcode scan"),
-        (SoundEvent.RecordStart, "Recording start"),
-        (SoundEvent.RecordStop, "Recording stop"),
-        (SoundEvent.Error, "Error"),
+        (SoundEvent.Startup, "Startup", "home"),
+        (SoundEvent.Capture, "Capture", "captureRect"),
+        (SoundEvent.Color, "Color picker", "picker"),
+        (SoundEvent.Text, "Text / OCR", "ocr"),
+        (SoundEvent.Scan, "QR / Barcode scan", "scan"),
+        (SoundEvent.RecordStart, "Recording start", "record"),
+        (SoundEvent.RecordStop, "Recording stop", "stop"),
+        (SoundEvent.Error, "Error", "warning"),
     ];
-
-    private static readonly System.Windows.Media.SolidColorBrush SoundButtonBg =
-        new(System.Windows.Media.Color.FromRgb(0xA0, 0xB4, 0xD2));
-    private static readonly System.Windows.Media.SolidColorBrush SoundButtonFg =
-        new(System.Windows.Media.Color.FromRgb(0x1E, 0x28, 0x3A)); // dark text for contrast
-
-    private static void SoundButton_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (sender is Button btn)
-            btn.Foreground = SoundButtonBg;
-    }
-
-    private static void SoundButton_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (sender is Button btn)
-            btn.Foreground = SoundButtonFg;
-    }
 
     private void PopulateSoundCustomizationPanel()
     {
         SoundCustomizationPanel.Children.Clear();
         var s = _settingsService.Settings;
 
-        foreach (var (evt, label) in SoundEventDefs)
+        foreach (var (evt, label, iconId) in SoundEventDefs)
         {
-            var row = new Grid { Style = (Style)FindResource("SettingRow"), Margin = new Thickness(0, 6, 0, 6), HorizontalAlignment = System.Windows.HorizontalAlignment.Left };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(86) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
+            var card = new Border { Style = (Style)FindResource("SoundItemCard") };
+
+            var row = new Grid { VerticalAlignment = VerticalAlignment.Center };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
 
             // Col 0: Enable checkbox (checked = this sound plays)
             var enableCheck = new CheckBox
             {
                 Width = 42, Height = 20, VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0),
                 IsChecked = !(s.MutedSounds.TryGetValue(evt, out var m) && m),
                 Cursor = System.Windows.Input.Cursors.Hand,
                 ToolTip = $"Enable the {label} sound."
             };
+            AutomationProperties.SetName(enableCheck, $"Enable {label} sound");
             enableCheck.Checked += (_, _) => SetSoundMuted(evt, false);
             enableCheck.Unchecked += (_, _) => SetSoundMuted(evt, true);
             Grid.SetColumn(enableCheck, 0);
             row.Children.Add(enableCheck);
 
-            // Col 1: Label
+            // Col 1: Event icon
+            var iconFrame = new Border { Style = (Style)FindResource("SoundItemIconFrame") };
+            var iconColor = System.Drawing.Color.FromArgb(Theme.TextPrimary.A, Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B);
+            var iconSource = Helpers.FluentIcons.RenderWpf(iconId, iconColor, 16);
+            var iconImage = new System.Windows.Controls.Image
+            {
+                Source = iconSource,
+                Width = 16,
+                Height = 16,
+                Stretch = System.Windows.Media.Stretch.Uniform,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Opacity = 0.9
+            };
+            iconFrame.Child = iconImage;
+            Grid.SetColumn(iconFrame, 1);
+            row.Children.Add(iconFrame);
+
+            // Col 2: Label
             var labelBlock = new TextBlock
             {
                 Text = label,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(4, 0, 0, 0),
+                Margin = new Thickness(8, 0, 12, 0),
                 Style = (Style)FindResource("SettingTitle")
             };
-            Grid.SetColumn(labelBlock, 1);
+            Grid.SetColumn(labelBlock, 2);
             row.Children.Add(labelBlock);
 
-            // Col 2: Preview button
+            // Col 3: Preview button
             var previewBtn = new Button
             {
-                Content = "\u25B6",
-                Width = 48, Height = 28, VerticalAlignment = VerticalAlignment.Center,
+                Content = "\uE768",
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,
                 ToolTip = "Preview this sound.",
-                Style = (Style)FindResource("ChromeButtonBase"),
-                Background = SoundButtonBg,
-                Foreground = SoundButtonFg
+                Style = (Style)FindResource("SoundItemPlayButton")
             };
-            previewBtn.MouseEnter += SoundButton_MouseEnter;
-            previewBtn.MouseLeave += SoundButton_MouseLeave;
+            AutomationProperties.SetName(previewBtn, $"Preview {label} sound");
             previewBtn.Click += (_, _) => SoundService.Play(evt);
-            Grid.SetColumn(previewBtn, 2);
+            Grid.SetColumn(previewBtn, 3);
             row.Children.Add(previewBtn);
 
-            // Col 3: Source label
-            var sourceLabel = new TextBlock
-            {
-                VerticalAlignment = VerticalAlignment.Center,
-                FontSize = 11.5,
-                Opacity = 0.72,
-                Foreground = (System.Windows.Media.Brush)FindResource("ThemeTextSecondaryBrush"),
-                TextTrimming = TextTrimming.CharacterEllipsis
-            };
-            Grid.SetColumn(sourceLabel, 3);
-            row.Children.Add(sourceLabel);
+            // Col 4: Source pill
+            var sourcePill = new Border { Style = (Style)FindResource("SoundItemSourcePill"), Margin = new Thickness(12, 0, 10, 0) };
+            var sourceLabel = new TextBlock { Style = (Style)FindResource("SoundItemSourceText") };
+            sourcePill.Child = sourceLabel;
+            Grid.SetColumn(sourcePill, 4);
+            row.Children.Add(sourcePill);
 
-            // Col 5: Reset button (declared first since browse references it)
+            // Col 5: Browse button
+            var browseBtn = new Button
+            {
+                Content = "\uE8B7",
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = "Choose a custom sound file.",
+                Style = (Style)FindResource("SoundItemActionButton")
+            };
+            AutomationProperties.SetName(browseBtn, $"Choose custom sound for {label}");
+            Grid.SetColumn(browseBtn, 5);
+            row.Children.Add(browseBtn);
+
+            // Col 6: Reset button
             var resetBtn = new Button
             {
-                Content = "\u2715",
-                Width = 32, Height = 28, VerticalAlignment = VerticalAlignment.Center,
+                Content = "\uE711",
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,
                 Visibility = Visibility.Collapsed,
                 ToolTip = "Revert to default sound.",
-                Style = (Style)FindResource("ChromeButtonBase"),
-                Background = SoundButtonBg,
-                Foreground = SoundButtonFg
+                Style = (Style)FindResource("SoundItemActionButton")
             };
-            resetBtn.MouseEnter += SoundButton_MouseEnter;
-            resetBtn.MouseLeave += SoundButton_MouseLeave;
-            resetBtn.Click += (_, _) => ResetCustomSound(evt, sourceLabel, resetBtn);
-            Grid.SetColumn(resetBtn, 5);
+            AutomationProperties.SetName(resetBtn, $"Reset {label} sound to default");
+            resetBtn.Click += (_, _) => ResetCustomSound(evt, sourceLabel, sourcePill, resetBtn);
+            Grid.SetColumn(resetBtn, 6);
             row.Children.Add(resetBtn);
 
-            // Col 4: Browse button
-            var browseBtn = new Button
-            {
-                Content = "Browse...",
-                Width = 80, Height = 28, VerticalAlignment = VerticalAlignment.Center,
-                Padding = new Thickness(8, 0, 8, 0),
-                Cursor = System.Windows.Input.Cursors.Hand,
-                Style = (Style)FindResource("ChromeButtonBase"),
-                Background = SoundButtonBg,
-                Foreground = SoundButtonFg
-            };
-            browseBtn.MouseEnter += SoundButton_MouseEnter;
-            browseBtn.MouseLeave += SoundButton_MouseLeave;
-            browseBtn.Click += (_, _) => BrowseCustomSound(evt, sourceLabel, resetBtn);
-            Grid.SetColumn(browseBtn, 4);
-            row.Children.Add(browseBtn);
+            // Wire browse now that resetBtn exists
+            browseBtn.Click += (_, _) => BrowseCustomSound(evt, sourceLabel, sourcePill, resetBtn);
+
+            card.Child = row;
 
             // Update source label
-            UpdateSoundSourceLabel(evt, sourceLabel, resetBtn);
+            UpdateSoundSourceLabel(evt, sourceLabel, sourcePill, resetBtn);
 
-            SoundCustomizationPanel.Children.Add(row);
+            SoundCustomizationPanel.Children.Add(card);
         }
     }
 
-    private void UpdateSoundSourceLabel(SoundEvent evt, TextBlock label, Button resetBtn)
+    private void UpdateSoundSourceLabel(SoundEvent evt, TextBlock label, Border sourcePill, Button resetBtn)
     {
         var customPath = _settingsService.Settings.CustomSounds.TryGetValue(evt, out var p) ? p : null;
         if (!string.IsNullOrWhiteSpace(customPath))
         {
             label.Text = System.IO.Path.GetFileName(customPath);
+            label.Foreground = (System.Windows.Media.Brush)FindResource("ThemeTextPrimaryBrush");
+            sourcePill.Background = (System.Windows.Media.Brush)FindResource("SoundItemCustomSourceBrush");
+            sourcePill.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeTextSecondaryBrush");
             resetBtn.Visibility = Visibility.Visible;
         }
         else
         {
-            label.Text = "Default";
+            label.Text = LocalizationService.Translate("Default");
+            label.Foreground = (System.Windows.Media.Brush)FindResource("ThemeTextSecondaryBrush");
+            sourcePill.Background = (System.Windows.Media.Brush)FindResource("ThemeTabActiveBrush");
+            sourcePill.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush");
             resetBtn.Visibility = Visibility.Collapsed;
         }
     }
@@ -324,7 +330,7 @@ public partial class SettingsWindow
         _settingsService.Save();
     }
 
-    private void BrowseCustomSound(SoundEvent evt, TextBlock sourceLabel, Button resetBtn)
+    private void BrowseCustomSound(SoundEvent evt, TextBlock sourceLabel, Border sourcePill, Button resetBtn)
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
@@ -337,18 +343,18 @@ public partial class SettingsWindow
             _settingsService.Settings.CustomSounds[evt] = dlg.FileName;
             SoundService.SetCustomSound(evt, dlg.FileName);
             _settingsService.Save();
-            UpdateSoundSourceLabel(evt, sourceLabel, resetBtn);
+            UpdateSoundSourceLabel(evt, sourceLabel, sourcePill, resetBtn);
             // Preview the new sound
             SoundService.Play(evt);
         }
     }
 
-    private void ResetCustomSound(SoundEvent evt, TextBlock sourceLabel, Button resetBtn)
+    private void ResetCustomSound(SoundEvent evt, TextBlock sourceLabel, Border sourcePill, Button resetBtn)
     {
         _settingsService.Settings.CustomSounds.Remove(evt);
         SoundService.SetCustomSound(evt, null);
         _settingsService.Save();
-        UpdateSoundSourceLabel(evt, sourceLabel, resetBtn);
+        UpdateSoundSourceLabel(evt, sourceLabel, sourcePill, resetBtn);
     }
 
     private void ResetAllSoundsBtn_Click(object sender, RoutedEventArgs e)
