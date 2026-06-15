@@ -161,6 +161,7 @@ public partial class SettingsWindow
             HistoryRetentionCombo.SelectedIndex = (int)s.HistoryRetention;
             ShowImageSearchBarCheck.IsChecked = s.ShowImageSearchBar;
             AutoIndexImagesCheck.IsChecked = s.AutoIndexImages;
+            UpdateImageIndexVisibility(s.AutoIndexImages);
             DisableAnimationsCheck.IsChecked = s.DisableAnimations;
             SelectUiScale(s.UiScale);
             OcrAutoCopyCheck.IsChecked = s.OcrAutoCopyToClipboard;

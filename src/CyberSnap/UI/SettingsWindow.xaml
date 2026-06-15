@@ -2956,8 +2956,8 @@
                                           ToolTip="Automatically index new images for search."
                                           Checked="AutoIndexImagesCheck_Changed" Unchecked="AutoIndexImagesCheck_Changed"/>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
+                            <Border x:Name="ImageIndexSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="ImageIndexRow" Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
@@ -2967,8 +2967,8 @@
                                     <TextBlock Text="&#xE8FD;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Image index cache" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Manage or rebuild the search index cache." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Image search index" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="OCR-extracted text index for searching within screenshots." Style="{StaticResource SettingDescription}"/>
                                     <TextBlock x:Name="ImageIndexMaintenanceStatusText"
                                                Style="{StaticResource SettingsStatusText}"
                                                Visibility="Collapsed"
@@ -2977,10 +2977,10 @@
                                                AutomationProperties.LiveSetting="Polite"
                                                Margin="0,6,0,0"/>
                                 </StackPanel>
-                                <Button x:Name="ResetImageIndexesBtn" Grid.Column="2" Content="Reset cache"
+                                <Button x:Name="ResetImageIndexesBtn" Grid.Column="2" Content="Reset index"
                                         MinWidth="120" VerticalAlignment="Center"
-                                        AutomationProperties.Name="Reset image search cache"
-                                        ToolTip="Reset the image search index cache"
+                                        AutomationProperties.Name="Reset image search index"
+                                        ToolTip="Clear and rebuild the text index from all captures"
                                         Cursor="Hand" Click="ResetImageIndexesBtn_Click"/>
                             </Grid>
                         </StackPanel>

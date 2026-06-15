@@ -742,6 +742,8 @@ public partial class SettingsWindow
             SetImageIndexMaintenanceStatus(enabled
                 ? "Automatic image indexing enabled."
                 : "Automatic image indexing disabled.");
+
+            UpdateImageIndexVisibility(enabled);
         }
         catch (Exception ex)
         {
@@ -844,7 +846,7 @@ public partial class SettingsWindow
         finally
         {
             ImageIndexResetInProgress = false;
-            ResetImageIndexesBtn.Content = "Reset cache";
+            ResetImageIndexesBtn.Content = "Reset index";
             ResetImageIndexesBtn.IsEnabled = true;
         }
     }
@@ -1016,6 +1018,13 @@ public partial class SettingsWindow
         WidgetDockEdgeRow.Visibility = visibility;
         WidgetHoverDelaySeparator.Visibility = visibility;
         WidgetHoverDelayRow.Visibility = visibility;
+    }
+
+    private void UpdateImageIndexVisibility(bool visible)
+    {
+        var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        ImageIndexSeparator.Visibility = visibility;
+        ImageIndexRow.Visibility = visibility;
     }
 
     private void TestToastBtn_Click(object sender, RoutedEventArgs e)
