@@ -619,7 +619,7 @@ public partial class HistoryWindow
 
     private Border CreateHistoryCard(HistoryItemVM vm)
     {
-        if (_settingsService.Settings.ShowImageSearchDiagnostics || ShouldShowHistoryCardStatus(vm.ImageSearchStatusText))
+        if (ShouldShowHistoryCardStatus(vm.ImageSearchStatusText))
             HydrateHistoryItemSearchMetadataIfNeeded(vm);
 
         var shell = BuildMediaCardShell(vm, () =>
@@ -671,30 +671,6 @@ public partial class HistoryWindow
         vm.TimeStatusTextBlock = timeStatusBlock;
         shell.InfoPanel.Children.Add(timeStatusBlock);
 
-        if (_settingsService.Settings.ShowImageSearchDiagnostics)
-        {
-            if (!string.IsNullOrWhiteSpace(vm.ImageSearchMatchText))
-            {
-                var matchBlock = new TextBlock
-                {
-                    Text = vm.ImageSearchMatchText,
-                    FontSize = 9.5,
-                    FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
-                    Opacity = 0.38,
-                    TextTrimming = TextTrimming.CharacterEllipsis
-                };
-                vm.ImageSearchMatchTextBlock = matchBlock;
-                shell.InfoPanel.Children.Add(matchBlock);
-            }
-
-            if (!string.IsNullOrWhiteSpace(vm.ImageSearchDiagnosticsText))
-                shell.Card.ToolTip = vm.ImageSearchDiagnosticsText;
-        }
-        else
-        {
-            vm.ImageSearchMatchTextBlock = null;
-        }
-
         RefreshHistoryCardTextMetadata(vm);
         return shell.Card;
     }
@@ -704,7 +680,7 @@ public partial class HistoryWindow
         if (vm.Card is Border existing)
         {
             DetachElementFromParent(existing);
-            if (_settingsService.Settings.ShowImageSearchDiagnostics || ShouldShowHistoryCardStatus(vm.ImageSearchStatusText))
+            if (ShouldShowHistoryCardStatus(vm.ImageSearchStatusText))
                 HydrateHistoryItemSearchMetadataIfNeeded(vm);
             RefreshHistoryCardTextMetadata(vm);
             UpdateCardSelection(vm);
@@ -739,19 +715,9 @@ public partial class HistoryWindow
             AutomationProperties.SetHelpText(vm.TimeStatusTextBlock, timeAndStatus);
         }
 
-        if (vm.ImageSearchMatchTextBlock != null)
-        {
-            vm.ImageSearchMatchTextBlock.Text = vm.ImageSearchMatchText;
-            vm.ImageSearchMatchTextBlock.ToolTip = vm.ImageSearchMatchText;
-            AutomationProperties.SetName(vm.ImageSearchMatchTextBlock, "Image search match");
-            AutomationProperties.SetHelpText(vm.ImageSearchMatchTextBlock, vm.ImageSearchMatchText);
-        }
-
         if (vm.Card != null)
         {
-            vm.Card.ToolTip = _settingsService.Settings.ShowImageSearchDiagnostics && !string.IsNullOrWhiteSpace(vm.ImageSearchDiagnosticsText)
-                ? vm.ImageSearchDiagnosticsText
-                : $"Open this {GetHistoryKindLabel(vm.Entry.Kind)} history item";
+            vm.Card.ToolTip = $"Open this {GetHistoryKindLabel(vm.Entry.Kind)} history item";
         }
     }
 
