@@ -163,6 +163,7 @@ public partial class SettingsWindow
             AutoIndexImagesCheck.IsChecked = s.AutoIndexImages;
             UpdateImageIndexVisibility(s.AutoIndexImages);
             DisableAnimationsCheck.IsChecked = s.DisableAnimations;
+            SelectAppTheme(s.ThemeMode);
             SelectUiScale(s.UiScale);
             OcrAutoCopyCheck.IsChecked = s.OcrAutoCopyToClipboard;
             CrosshairGuidesCheck.IsChecked = s.ShowCrosshairGuides;
@@ -477,6 +478,63 @@ public partial class SettingsWindow
         }
 
         SelectComboByTag(UiScaleCombo, "1.0");
+    }
+
+    private void SelectAppTheme(Models.AppThemeMode mode)
+    {
+        ThemeSystemRadio.IsChecked = mode == Models.AppThemeMode.System;
+        ThemeDarkRadio.IsChecked = mode == Models.AppThemeMode.Dark;
+        ThemeLightRadio.IsChecked = mode == Models.AppThemeMode.Light;
+    }
+
+    private void AppThemeRadio_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var selected = ThemeDarkRadio.IsChecked == true ? Models.AppThemeMode.Dark
+            : ThemeLightRadio.IsChecked == true ? Models.AppThemeMode.Light
+            : Models.AppThemeMode.System;
+
+        var previous = _settingsService.Settings.ThemeMode;
+        if (selected == previous) return;
+
+        UpdateGeneralPreference(
+            "settings.app-theme",
+            "App theme",
+            previous,
+            selected,
+            value => _settingsService.Settings.ThemeMode = value,
+            SelectAppTheme,
+            value =>
+            {
+                Theme.SetMode(value);
+                Theme.ApplyTo(Application.Current.Resources);
+
+                // Update WPF native ThemeMode so scrollbars, checkboxes, etc. match.
+                Application.Current.ThemeMode = value switch
+                {
+                    Models.AppThemeMode.Dark => System.Windows.ThemeMode.Dark,
+                    Models.AppThemeMode.Light => System.Windows.ThemeMode.Light,
+                    _ => System.Windows.ThemeMode.System
+                };
+
+                ApplyThemeColors();
+
+                // Live-refresh all open windows.
+                foreach (Window w in Application.Current.Windows)
+                {
+                    if (w == this || !w.IsLoaded) continue;
+                    try
+                    {
+                        Theme.ApplyTo(Application.Current.Resources);
+                        w.InvalidateVisual();
+                    }
+                    catch (Exception ex)
+                    {
+                        Services.AppDiagnostics.LogWarning("settings.theme-refresh-window", $"Failed to refresh {w.GetType().Name}", ex);
+                    }
+                }
+            });
     }
 
     private void TabChanged(object sender, RoutedEventArgs e)

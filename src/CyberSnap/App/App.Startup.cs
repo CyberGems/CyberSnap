@@ -77,8 +77,15 @@ public partial class App
         SoundService.Initialize(_settingsService.Settings.CustomSounds, _settingsService.Settings.MutedSounds);
         UI.Motion.Disabled = _settingsService.Settings.DisableAnimations;
         UiScale.Set(_settingsService.Settings.UiScale);
+        Theme.SetMode(_settingsService.Settings.ThemeMode);
         Theme.Refresh();
         Theme.ApplyTo(Resources);
+        ThemeMode = _settingsService.Settings.ThemeMode switch
+        {
+            Models.AppThemeMode.Dark => System.Windows.ThemeMode.Dark,
+            Models.AppThemeMode.Light => System.Windows.ThemeMode.Light,
+            _ => System.Windows.ThemeMode.System
+        };
         Helpers.UiChrome.DetectRefreshRate();
         ToastWindow.SetPosition(_settingsService.Settings.ToastPosition);
         ToastWindow.SetMonitorIndex(_settingsService.Settings.ToastMonitorIndex);

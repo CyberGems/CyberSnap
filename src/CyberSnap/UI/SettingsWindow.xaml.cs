@@ -301,11 +301,14 @@ public partial class SettingsWindow : Window
             {
                 _settingsService.Settings.AfterCapture = value.Action;
                 _settingsService.Settings.OpenEditorAfterCapture = value.OpenEditor;
+                // Keep the notification dual preview's emphasis in step with the editor state.
+                RefreshEditorPreviewState();
             },
             value =>
             {
                 AfterCaptureCombo.SelectedIndex = GetAfterCaptureSelectedIndex(value);
                 ((App)Application.Current).RefreshWidgetWindowLayout();
+                RefreshEditorPreviewState();
             },
             () => ((App)Application.Current).RefreshWidgetWindowLayout());
     }

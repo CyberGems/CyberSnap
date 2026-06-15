@@ -941,6 +941,9 @@ public partial class SettingsWindow
             value => WidgetEnableEditorCheck.IsChecked = value,
             // Keep the widget's own "Enable editor" toggle in lockstep when it's open.
             value => ((App)Application.Current).SyncWidgetEnableEditorToggle());
+
+        // Re-emphasise the notification mock-ups so the dual preview tracks the new editor state.
+        RefreshEditorPreviewState();
     }
 
     // Pulls the "Enable editor" checkbox back into sync after the change originated on the widget's
@@ -952,6 +955,9 @@ public partial class SettingsWindow
         _suppressGeneralPreferenceChange = true;
         try { WidgetEnableEditorCheck.IsChecked = _settingsService.Settings.OpenEditorAfterCapture; }
         finally { _suppressGeneralPreferenceChange = false; }
+
+        // The editor state drives which notification mock-up is emphasised.
+        RefreshEditorPreviewState();
     }
 
     private void WidgetDockEdgeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
