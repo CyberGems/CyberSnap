@@ -196,6 +196,7 @@ public partial class SettingsWindow
             MuteSoundsCheck.IsChecked = !s.MuteSounds; // activator: checked = all sounds on
             PopulateSoundCustomizationPanel();
             ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
+            WidgetEnableEditorCheck.IsChecked = s.OpenEditorAfterCapture;
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
             UpdateWidgetOptionsVisibility(s.ShowCaptureWidget);

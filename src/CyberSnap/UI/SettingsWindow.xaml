@@ -1922,7 +1922,28 @@
                                           Checked="ShowCaptureWidgetCheck_Changed" Unchecked="ShowCaptureWidgetCheck_Changed"/>
                             </Grid>
                             <Border x:Name="WidgetOptionsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            
+
+                            <!-- Enable Editor CheckBox (mirrors the widget's own "Enable editor" toggle) -->
+                            <Grid x:Name="WidgetEnableEditorRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Enable editor" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Open the annotation editor automatically after each image capture, instead of showing the preview notification. Skipped for video and GIF captures." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="WidgetEnableEditorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Enable editor"
+                                          ToolTip="Open the post-capture editor for annotations after capturing."
+                                          Checked="WidgetEnableEditorCheck_Changed" Unchecked="WidgetEnableEditorCheck_Changed"/>
+                            </Grid>
+                            <Border x:Name="WidgetEnableEditorSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+
                             <!-- Widget Dock Edge ComboBox -->
                             <Grid x:Name="WidgetDockEdgeRow" Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>

@@ -161,4 +161,30 @@ public partial class App : Application
 
         _widgetWindow?.RefreshLayout();
     }
+
+    // Settings → widget: push the current OpenEditorAfterCapture value onto the widget's own
+    // "Enable editor" toggle so both controls always show the same state. No-op if no widget.
+    public void SyncWidgetEnableEditorToggle()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(SyncWidgetEnableEditorToggle);
+            return;
+        }
+
+        _widgetWindow?.RefreshEnableEditorToggle();
+    }
+
+    // Widget → Settings: when the widget's toggle flips, pull the open Settings window's checkbox
+    // back into sync. No-op if Settings isn't open.
+    public void SyncSettingsEnableEditorCheck()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(SyncSettingsEnableEditorCheck);
+            return;
+        }
+
+        _settingsWindow?.RefreshEnableEditorCheck();
+    }
 }
