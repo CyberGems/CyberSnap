@@ -266,7 +266,6 @@ public partial class SettingsWindow
         };
         AutomationProperties.SetName(autoLanguageItem, autoAutomationName);
         AutomationProperties.SetHelpText(autoLanguageItem, autoAutomationHelp);
-        InterfaceLanguageCombo.Items.Add(autoLanguageItem);
 
         foreach (var language in LocalizationService.Languages)
         {
@@ -295,6 +294,12 @@ public partial class SettingsWindow
             AutomationProperties.SetHelpText(item, automationHelp);
             InterfaceLanguageCombo.Items.Add(item);
         }
+
+        // English (added first by LocalizationService.Languages) stays at the top as the
+        // default; insert Auto right after it so auto-detection is second until every
+        // language is fully translated.
+        int autoIndex = InterfaceLanguageCombo.Items.Count > 0 ? 1 : 0;
+        InterfaceLanguageCombo.Items.Insert(autoIndex, autoLanguageItem);
     }
 
     private readonly Dictionary<string, (string Label, string ToolTip, string AutomationName, string AutomationHelp)> _languageItemSources = new();
@@ -311,6 +316,26 @@ public partial class SettingsWindow
             item.ToolTip = LocalizationService.Translate(info.ToolTip);
             AutomationProperties.SetName(item, LocalizationService.Translate(info.AutomationName));
             AutomationProperties.SetHelpText(item, LocalizationService.Translate(info.AutomationHelp));
+        }
+
+        // The ComboBox selection box caches the selected item's content as a snapshot
+        // taken at selection time; mutating item.Content above does not refresh it.
+        // Re-assign the selection (under the suppress guard so the handler is a no-op)
+        // to force the closed combo to display the freshly translated label.
+        var selected = InterfaceLanguageCombo.SelectedItem;
+        if (selected != null)
+        {
+            var wasSuppressed = _suppressGeneralPreferenceChange;
+            _suppressGeneralPreferenceChange = true;
+            try
+            {
+                InterfaceLanguageCombo.SelectedItem = null;
+                InterfaceLanguageCombo.SelectedItem = selected;
+            }
+            finally
+            {
+                _suppressGeneralPreferenceChange = wasSuppressed;
+            }
         }
     }
 

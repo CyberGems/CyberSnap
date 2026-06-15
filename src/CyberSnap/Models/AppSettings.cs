@@ -227,7 +227,7 @@ public sealed class AppSettings
     public bool MuteSounds { get; set; }
     public bool DisableAnimations { get; set; }
     public double UiScale { get; set; } = 1.0;
-    public string InterfaceLanguage { get; set; } = "auto";
+    public string InterfaceLanguage { get; set; } = "en";
     public bool ShowCrosshairGuides { get; set; } // off by default
     public bool ShowCursor { get; set; }
     public bool ShowCaptureMagnifier { get; set; } = true;
