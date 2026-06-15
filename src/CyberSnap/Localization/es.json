@@ -81,6 +81,8 @@
   "Annotation stroke and shadow": "Trazo y sombra de anotación",
   "Keep annotations readable on mixed backgrounds.": "Mantiene las anotaciones legibles sobre fondos variados.",
   "Behavior": "Comportamiento",
+  "Capture behavior": "Comportamiento de captura",
+  "Scrolling capture": "Captura con desplazamiento",
   "Window detection": "Detección de ventanas",
   "Detect windows when hovering before selection.": "Detecta ventanas al pasar el cursor antes de seleccionar.",
   "Off": "Apagado",
