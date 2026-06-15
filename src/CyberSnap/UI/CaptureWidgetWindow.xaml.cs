@@ -22,6 +22,7 @@ public partial class CaptureWidgetWindow : Window
     private bool _isDragging;
     private bool _isDragArmed;
     private bool _suppressHoverExpand; // brief grace after a drag so it doesn't auto-expand under the resting cursor
+    private bool _suppressEditorToggle; // reflecting OpenEditorAfterCapture into the toggle without re-saving/syncing
     private bool _contextMenuOpen;     // keep the widget from collapsing while its context menu is open
     private System.Windows.Media.Effects.Effect? _panelShadow; // soft shadow, applied only when expanded
     private System.Windows.Point _dragStartPoint;
@@ -243,8 +244,13 @@ public partial class CaptureWidgetWindow : Window
 
     private void UpdateEnableEditorState()
     {
-        EnableEditorToggle.IsChecked = _settings.OpenEditorAfterCapture;
+        _suppressEditorToggle = true;
+        try { EnableEditorToggle.IsChecked = _settings.OpenEditorAfterCapture; }
+        finally { _suppressEditorToggle = false; }
     }
+
+    // Settings → widget: re-read the persisted value so the toggle matches the Settings checkbox.
+    public void RefreshEnableEditorToggle() => UpdateEnableEditorState();
 
     /// <summary>
     /// Transparent shadow halo per side. The docked side gets ZERO halo so the window sits flush
@@ -892,9 +898,13 @@ public partial class CaptureWidgetWindow : Window
 
     private void EnableEditorToggle_Changed(object sender, RoutedEventArgs e)
     {
+        if (_suppressEditorToggle) return; // value pushed in from Settings — don't echo back
+
         var enabled = EnableEditorToggle.IsChecked == true;
         _settings.OpenEditorAfterCapture = enabled;
         _settingsService.Save();
+        // Keep the Settings window's "Enable editor" checkbox in lockstep when it's open.
+        ((App)System.Windows.Application.Current).SyncSettingsEnableEditorCheck();
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e)

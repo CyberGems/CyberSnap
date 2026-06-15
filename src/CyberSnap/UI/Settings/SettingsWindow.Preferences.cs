@@ -943,6 +943,34 @@ public partial class SettingsWindow
             });
     }
 
+    private void WidgetEnableEditorCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.OpenEditorAfterCapture;
+        var selected = WidgetEnableEditorCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.open-editor-after-capture",
+            "Enable editor",
+            previous,
+            selected,
+            value => _settingsService.Settings.OpenEditorAfterCapture = value,
+            value => WidgetEnableEditorCheck.IsChecked = value,
+            // Keep the widget's own "Enable editor" toggle in lockstep when it's open.
+            value => ((App)Application.Current).SyncWidgetEnableEditorToggle());
+    }
+
+    // Pulls the "Enable editor" checkbox back into sync after the change originated on the widget's
+    // own toggle. Suppressed so reflecting the value doesn't echo back into a save/sync round-trip.
+    public void RefreshEnableEditorCheck()
+    {
+        if (WidgetEnableEditorCheck is null) return;
+
+        _suppressGeneralPreferenceChange = true;
+        try { WidgetEnableEditorCheck.IsChecked = _settingsService.Settings.OpenEditorAfterCapture; }
+        finally { _suppressGeneralPreferenceChange = false; }
+    }
+
     private void WidgetDockEdgeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded || _suppressGeneralPreferenceChange) return;
@@ -1002,6 +1030,8 @@ public partial class SettingsWindow
     {
         var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         WidgetOptionsSeparator.Visibility = visibility;
+        WidgetEnableEditorRow.Visibility = visibility;
+        WidgetEnableEditorSeparator.Visibility = visibility;
         WidgetDockEdgeRow.Visibility = visibility;
         WidgetHoverDelaySeparator.Visibility = visibility;
         WidgetHoverDelayRow.Visibility = visibility;
