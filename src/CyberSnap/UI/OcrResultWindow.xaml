@@ -344,11 +344,12 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="3" Margin="14,8,14,0"
+            <Border x:Name="TranslatedOutputPanel" Grid.Row="3" Margin="14,8,14,0"
                     CornerRadius="8" Padding="2"
                     Background="{DynamicResource ThemeInputBackgroundBrush}"
                     BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                    MinHeight="70" MaxHeight="200">
+                    MinHeight="70" MaxHeight="200"
+                    Visibility="Collapsed">
                 <Grid>
                     <TextBox x:Name="TranslatedTextBox" AcceptsReturn="True" TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" IsReadOnly="True"

@@ -160,6 +160,7 @@ public partial class OcrResultWindow : Window
     {
         var expand = TranslationPanel.Visibility != Visibility.Visible;
         TranslationPanel.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
+        TranslatedOutputPanel.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
         ToggleTranslationBtn.Content = expand ? "\u25BC Translation" : "\u25B6 Translation";
     }
 
