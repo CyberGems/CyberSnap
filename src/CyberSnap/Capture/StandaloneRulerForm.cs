@@ -196,13 +196,14 @@ public sealed class StandaloneRulerForm : Form
 
         if (_isDragging)
         {
-            var oldBounds = RulerRenderer.GetPaintBounds(_rulerStart, GetRulerEnd(prevCursorPos));
-            var newBounds = RulerRenderer.GetPaintBounds(_rulerStart, GetRulerEnd(e.Location));
-            Invalidate(Rectangle.Union(oldBounds, newBounds));
+            var oldEnd = GetRulerEnd(prevCursorPos);
+            var newEnd = GetRulerEnd(e.Location);
+            Invalidate(SweepBounds(_rulerStart, oldEnd, _rulerStart, newEnd));
         }
         else if (_editState != EditState.None)
         {
-            var oldBounds = RulerRenderer.GetPaintBounds(_lastFrom, _lastTo);
+            var oldFrom = _lastFrom;
+            var oldTo = _lastTo;
             switch (_editState)
             {
                 case EditState.Moving:
@@ -235,8 +236,7 @@ public sealed class StandaloneRulerForm : Form
                         _lastTo = e.Location;
                     break;
             }
-            var newBounds = RulerRenderer.GetPaintBounds(_lastFrom, _lastTo);
-            Invalidate(Rectangle.Union(oldBounds, newBounds));
+            Invalidate(SweepBounds(oldFrom, oldTo, _lastFrom, _lastTo));
         }
         else if (_hasLastMeasurement)
         {
@@ -297,6 +297,19 @@ public sealed class StandaloneRulerForm : Form
     }
 
     // ── Helpers ──
+
+    /// <summary>Conservative bounds covering two line segments and their labels (sweep-safe).</summary>
+    private static Rectangle SweepBounds(Point a1, Point a2, Point b1, Point b2)
+    {
+        int minX = Math.Min(Math.Min(a1.X, a2.X), Math.Min(b1.X, b2.X));
+        int minY = Math.Min(Math.Min(a1.Y, a2.Y), Math.Min(b1.Y, b2.Y));
+        int maxX = Math.Max(Math.Max(a1.X, a2.X), Math.Max(b1.X, b2.X));
+        int maxY = Math.Max(Math.Max(a1.Y, a2.Y), Math.Max(b1.Y, b2.Y));
+
+        // Inflate to cover line ticks and floating label (conservative: 320px each direction)
+        const int pad = 320;
+        return Rectangle.FromLTRB(minX - pad, minY - pad, maxX + pad, maxY + pad);
+    }
 
     private Point GetRulerEnd(Point current)
     {
