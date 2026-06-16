@@ -253,10 +253,8 @@ public static class TranslationService
 
         if (model == TranslationModel.MyMemory)
         {
-            // MyMemory doesn't support auto-detect — default source to English
-            if (string.Equals(fromCode, "auto", StringComparison.OrdinalIgnoreCase))
-                fromCode = "en";
-
+            // MyMemory supports auto-detect via the literal "Autodetect" source code
+            // (handled inside TranslateWithMyMemoryAsync).
             try
             {
                 return await TranslateWithMyMemoryAsync(text, fromCode, toCode, cancellationToken).ConfigureAwait(false);
@@ -319,7 +317,7 @@ public static class TranslationService
     public static bool HasGoogleApiKey => !string.IsNullOrWhiteSpace(_googleApiKey);
 
     public static bool SupportsAutoDetect(TranslationModel model) =>
-        model is TranslationModel.Google or TranslationModel.OpenSourceLocal;
+        model is TranslationModel.Google or TranslationModel.OpenSourceLocal or TranslationModel.MyMemory;
 
     public static async Task<string?> GetConfigurationErrorAsync(string fromCode, TranslationModel model, CancellationToken cancellationToken = default)
     {
@@ -329,11 +327,7 @@ public static class TranslationService
                 : null;
 
         if (model == TranslationModel.MyMemory)
-        {
-            if (string.Equals(fromCode, "auto", StringComparison.OrdinalIgnoreCase))
-                return LocalizationService.Translate("MyMemory doesn't support auto-detect. Pick a source language or switch to Google Translate.");
-            return null; // Free web API — always ready
-        }
+            return null; // Free web API — always ready; supports auto-detect via "Autodetect"
 
         if (model == TranslationModel.OpenSourceLocal)
         {
@@ -440,9 +434,10 @@ public static class TranslationService
     private static async Task<string> TranslateWithMyMemoryAsync(string text, string fromCode, string toCode, CancellationToken cancellationToken)
     {
         // Build language pair: MyMemory requires literal "|" (not URL-encoded).
-        // When source is "auto", send only the target — MyMemory auto-detects.
+        // For auto-detect, MyMemory expects the literal source code "Autodetect"
+        // (a bare target, or "auto", returns INVALID LANGUAGE PAIR).
         var isAuto = string.Equals(fromCode, "auto", StringComparison.OrdinalIgnoreCase);
-        var langPair = isAuto ? toCode : $"{fromCode}|{toCode}";
+        var langPair = isAuto ? $"Autodetect|{toCode}" : $"{fromCode}|{toCode}";
 
         // Only escape the text; the | in langPair must stay literal
         var url = $"get?q={Uri.EscapeDataString(text)}&langpair={langPair}";
