@@ -214,7 +214,8 @@ public static class ToolListBuilder
             ("_fullscreen", "Fullscreen capture", ToolGlyphs.FullscreenGlyph),
             ("_activeWindow", "Active window", ToolGlyphs.ActiveWindowGlyph),
             ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon),
-            ("_standaloneColorPicker", "Color Picker (Standalone)", ToolDef.AllTools.First(t => t.Id == "picker").Icon)
+            ("_standaloneColorPicker", "Color Picker (Standalone)", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
+            ("_standaloneOcr", "OCR (Standalone)", ToolDef.AllTools.First(t => t.Id == "ocr").Icon)
             // Future standalone tools follow the convention: ("_standalone{name}", "Label", icon)
         };
 

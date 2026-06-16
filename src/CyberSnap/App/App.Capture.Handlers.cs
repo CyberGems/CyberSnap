@@ -347,8 +347,8 @@ public partial class App
                     {
                         var copied = TryCopyCaptureTextToClipboard(text);
                         ToastWindow.Show(copied
-                            ? ToastSpec.Standard("OCR copied", FormatOcrAutoCopyToastPreview(text)) with { SuppressSound = true, Celebrate = ocrFlourish }
-                            : ToastSpec.Standard("OCR ready", "Clipboard copy failed."));
+                            ? ToastSpec.Standard(LocalizationService.Translate("OCR copied"), FormatOcrAutoCopyToastPreview(text)) with { SuppressSound = true, Celebrate = ocrFlourish }
+                            : ToastSpec.Standard(LocalizationService.Translate("OCR ready"), LocalizationService.Translate("Clipboard copy failed.")));
                         if (!copied)
                         {
                             var window = new OcrResultWindow(text, _settingsService);
@@ -363,7 +363,7 @@ public partial class App
                 }
                 else
                 {
-                    ToastWindow.Show("OCR", "No text found");
+                    ToastWindow.Show(LocalizationService.Translate("OCR"), LocalizationService.Translate("No text found"));
                 }
             }
             catch (Exception ex)
