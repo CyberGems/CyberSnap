@@ -65,6 +65,11 @@ public sealed class TrayIcon : IDisposable
         _notifyIcon.ContextMenuStrip = _menu;
     }
 
+    public void CloseContextMenu()
+    {
+        _menu?.Close();
+    }
+
     public void UpdateRecordingState(bool isRecording)
     {
         if (isRecording == _isShowingRecording) return;

@@ -166,6 +166,9 @@ public partial class App
 
     private void OnStandaloneRulerHotkeyPressed()
     {
+        // Dismiss tray context menu so it doesn't appear frozen in the screenshot
+        _trayIcon?.CloseContextMenu();
+
         var thread = new Thread(() =>
         {
             try

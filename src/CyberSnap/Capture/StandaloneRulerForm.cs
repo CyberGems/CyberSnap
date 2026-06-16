@@ -363,8 +363,8 @@ public sealed class StandaloneRulerForm : Form
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // Center on the primary screen's working area
-            var screen = Screen.PrimaryScreen;
+            // Center on the screen where the cursor currently is
+            var screen = Screen.FromPoint(Cursor.Position);
             float y = screen.WorkingArea.Top + 18;
 
             using var font = new Font("Segoe UI Variable Display", 13f, FontStyle.Regular, GraphicsUnit.Point);
