@@ -160,6 +160,7 @@ public sealed class AppSettings
     public string OcrDefaultTranslateFrom { get; set; } = "auto";
     public string OcrDefaultTranslateTo { get; set; } = "auto";
     public bool OcrAutoCopyToClipboard { get; set; }
+    public bool OcrTranslationPanelExpanded { get; set; }
     public string? GoogleTranslateApiKey { get; set; }
     public bool TranslationRuntimeInstalled { get; set; }
     public int TranslationModel { get; set; } = 3; // 0 = Argos, 1 = Google, 2 = Open-source local, 3 = MyMemory (free web)

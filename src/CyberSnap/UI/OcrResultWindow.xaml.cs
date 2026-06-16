@@ -45,7 +45,9 @@ public partial class OcrResultWindow : Window
 
         PopulateLanguageCombos();
         SelectTranslationModelCombo(settingsService.Settings.TranslationModel);
+        SetTranslationPanelExpanded(settingsService.Settings.OcrTranslationPanelExpanded, animate: false);
         LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
+        OcrTitleBar.Title = LocalizationService.Translate("Text capture");
 
         Loaded += (_, _) =>
         {
@@ -82,6 +84,8 @@ public partial class OcrResultWindow : Window
         Resources["ThemeWindowBorderBrush"] = Theme.Brush(Theme.WindowBorder);
         Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
+        Resources["TranslationTintBrush"] = Theme.Brush(Theme.AccentSubtle);
+        Resources["TranslationTintBorderBrush"] = Theme.Brush(Theme.AccentHover);
         Icon = ThemedLogo.Square(32);
     }
 
@@ -159,15 +163,52 @@ public partial class OcrResultWindow : Window
     private void ToggleTranslationBtn_Click(object sender, RoutedEventArgs e)
     {
         var expand = TranslationPanel.Visibility != Visibility.Visible;
+        SetTranslationPanelExpanded(expand, animate: true);
+        PersistTranslationPanelExpanded(expand);
+    }
+
+    private void SetTranslationPanelExpanded(bool expand, bool animate)
+    {
         TranslationPanel.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
-        TranslatedOutputPanel.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
-        ToggleTranslationBtn.Content = expand ? "\u25BC Translation" : "\u25B6 Translation";
+        TranslatedSection.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
+
+        var targetAngle = expand ? 90.0 : 0.0;
+        if (animate)
+        {
+            var spin = new DoubleAnimation(targetAngle, TimeSpan.FromMilliseconds(160))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            TranslationChevronRotation.BeginAnimation(RotateTransform.AngleProperty, spin);
+        }
+        else
+        {
+            // Clear any running animation before setting the value directly.
+            TranslationChevronRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+            TranslationChevronRotation.Angle = targetAngle;
+        }
+    }
+
+    private void PersistTranslationPanelExpanded(bool expanded)
+    {
+        if (_settingsService.Settings.OcrTranslationPanelExpanded == expanded)
+            return;
+
+        try
+        {
+            _settingsService.Settings.OcrTranslationPanelExpanded = expanded;
+            _settingsService.Save();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("ocr-result.translation-panel-expanded", ex.Message, ex);
+        }
     }
 
     private void UpdateCharCount()
     {
         var text = OcrTextBox.Text ?? "";
-        CharCountText.Text = $"{text.Length} characters";
+        CharCountText.Text = $"{text.Length} {LocalizationService.Translate("characters")}";
     }
 
     private void OcrTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -561,13 +602,13 @@ public partial class OcrResultWindow : Window
         TranslateStatus.Text = "Checking translation setup...";
         CopyTranslationBtn.Visibility = Visibility.Collapsed;
         TranslateBtn.IsEnabled = false;
-        TranslateBtn.Content = "Checking...";
+        TranslateBtn.Content = LocalizationService.Translate("Checking...");
     }
 
     private void StopTranslationConfigurationCheck()
     {
         TranslateBtn.IsEnabled = true;
-        TranslateBtn.Content = "Translate";
+        TranslateBtn.Content = LocalizationService.Translate("Translate");
     }
 
     private void StartTranslationLoading(TranslationModel model)
@@ -577,7 +618,7 @@ public partial class OcrResultWindow : Window
         TranslationLoadingOverlay.Visibility = Visibility.Visible;
         CopyTranslationBtn.Visibility = Visibility.Collapsed;
         TranslateBtn.IsEnabled = false;
-        TranslateBtn.Content = "Translating...";
+        TranslateBtn.Content = LocalizationService.Translate("Translating...");
         FromLanguageCombo.IsEnabled = false;
         ToLanguageCombo.IsEnabled = false;
         ModelCombo.IsEnabled = false;
@@ -593,7 +634,7 @@ public partial class OcrResultWindow : Window
         TranslationLoadingOverlay.Visibility = Visibility.Collapsed;
         TranslateProgressBar.IsIndeterminate = false;
         TranslateBtn.IsEnabled = true;
-        TranslateBtn.Content = "Translate";
+        TranslateBtn.Content = LocalizationService.Translate("Translate");
         FromLanguageCombo.IsEnabled = true;
         ToLanguageCombo.IsEnabled = true;
         ModelCombo.IsEnabled = true;

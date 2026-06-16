@@ -26,6 +26,9 @@
         <SolidColorBrush x:Key="ThemeAccentBrush" Color="#FFFFFFFF"/>
         <SolidColorBrush x:Key="ThemeSeparatorBrush" Color="#0CFFFFFF"/>
         <SolidColorBrush x:Key="TranslationShimmerBrush" Color="#14FFFFFF"/>
+        <!-- Accent tint for the translated-output box (overridden per-theme in ApplyTheme) -->
+        <SolidColorBrush x:Key="TranslationTintBrush" Color="#1400FFFF"/>
+        <SolidColorBrush x:Key="TranslationTintBorderBrush" Color="#2800FFFF"/>
 
         <Style x:Key="OcrThumbStyle" TargetType="{x:Type Thumb}">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
@@ -247,6 +250,31 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Shared copy icon (Lucide "copy" outline) for the section-header action buttons -->
+        <Geometry x:Key="CopyIconGeometry">M10,8 H20 A2,2 0 0 1 22,10 V20 A2,2 0 0 1 20,22 H10 A2,2 0 0 1 8,20 V10 A2,2 0 0 1 10,8 Z M4,16 A2,2 0 0 1 2,14 V4 A2,2 0 0 1 4,2 H14 A2,2 0 0 1 16,4</Geometry>
+
+        <!-- Section header label ("Recognized text" / "Translation") -->
+        <Style x:Key="OcrSectionHeaderText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Opacity" Value="0.85"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+        </Style>
+
+        <!-- Compact ghost button used for the per-section Copy actions -->
+        <Style x:Key="OcrHeaderActionButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="MinHeight" Value="24"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
     </Window.Resources>
 
     <Border x:Name="RootBorder" CornerRadius="12" ClipToBounds="True">
@@ -254,68 +282,131 @@
             <DropShadowEffect BlurRadius="24" ShadowDepth="2" Opacity="0.4" Color="Black"/>
         </Border.Effect>
 
-        <Grid>
+        <Grid Margin="0,0,0,14">
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <controls:CyberSnapTitleBar Grid.Row="0"
+            <controls:CyberSnapTitleBar x:Name="OcrTitleBar" Grid.Row="0"
                                       Title="Text capture"
                                       CloseRequested="TitleBar_CloseRequested"/>
 
-            <Border Grid.Row="1" Margin="14,0,14,0" CornerRadius="8" Padding="2"
-                    Background="{DynamicResource ThemeInputBackgroundBrush}"
-                    BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
-                <TextBox x:Name="OcrTextBox" AcceptsReturn="True" TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto"
-                         FontSize="13"
-                         Padding="10,8"
-                         Background="Transparent" BorderThickness="0"
-                         Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                         CaretBrush="{DynamicResource ThemeTextPrimaryBrush}"
-                         Style="{StaticResource OcrTextBoxStyle}">
-                    <TextBox.Resources>
-                        <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource OcrScrollBarStyle}"/>
-                    </TextBox.Resources>
-                </TextBox>
-            </Border>
+            <!-- OCR zone: section header (label + char count + copy) over the text box -->
+            <Grid Grid.Row="1" Margin="14,2,14,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="2,0,2,5">
+                    <TextBlock Text="Recognized text" Style="{StaticResource OcrSectionHeaderText}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <TextBlock x:Name="CharCountText" VerticalAlignment="Center"
+                                   FontSize="10.5" Opacity="0.4"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                   FontFamily="Segoe UI Variable Text"/>
+                        <Button x:Name="CopyBtn" Click="CopyBtn_Click"
+                                Style="{StaticResource OcrHeaderActionButton}" Margin="10,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource CopyIconGeometry}"
+                                      Stroke="{DynamicResource ThemeTextSecondaryBrush}" StrokeThickness="2.2"
+                                      StrokeLineJoin="Round" Fill="Transparent"
+                                      Width="12" Height="12" Stretch="Uniform" VerticalAlignment="Center"/>
+                                <TextBlock Text="Copy text" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <Border Grid.Row="1" CornerRadius="8" Padding="2"
+                        Background="{DynamicResource ThemeInputBackgroundBrush}"
+                        BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
+                    <TextBox x:Name="OcrTextBox" AcceptsReturn="True" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             FontSize="15"
+                             Padding="10,8"
+                             Background="Transparent" BorderThickness="0"
+                             Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                             CaretBrush="{DynamicResource ThemeTextPrimaryBrush}"
+                             Style="{StaticResource OcrTextBoxStyle}">
+                        <TextBox.Resources>
+                            <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource OcrScrollBarStyle}"/>
+                        </TextBox.Resources>
+                    </TextBox>
+                </Border>
+            </Grid>
 
             <Border Grid.Row="2" Margin="14,8,14,0">
                 <StackPanel>
-                    <!-- Collapse toggle -->
-                    <Button x:Name="ToggleTranslationBtn" Content="&#x25B6; Translation"
-                            FontSize="11" Padding="8,4" Margin="0,0,0,4"
+                    <!-- Divider separating the OCR zone from the translation zone -->
+                    <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,0,0,8"/>
+
+                    <!-- Collapse toggle: rotating chevron + localizable label (the chevron is a
+                         separate Path so the text matches the "Translation" localization key). -->
+                    <Button x:Name="ToggleTranslationBtn"
                             HorizontalAlignment="Left"
+                            Padding="9,5" Margin="0,0,0,4"
                             Click="ToggleTranslationBtn_Click"
                             Style="{StaticResource ChromeButtonBase}"
                             Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Cursor="Hand" MinHeight="28" FontWeight="Normal"/>
+                            Background="#08FFFFFF"
+                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                            BorderThickness="1"
+                            Cursor="Hand" MinHeight="26">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path x:Name="TranslationChevron"
+                                  Width="7" Height="9"
+                                  Data="M 0 0 L 5 4.5 L 0 9 Z"
+                                  Fill="{DynamicResource ThemeTextSecondaryBrush}"
+                                  Stretch="Fill"
+                                  VerticalAlignment="Center"
+                                  RenderTransformOrigin="0.5,0.5">
+                                <Path.RenderTransform>
+                                    <RotateTransform x:Name="TranslationChevronRotation" Angle="0"/>
+                                </Path.RenderTransform>
+                            </Path>
+                            <TextBlock Text="Translation"
+                                       Margin="8,0,2,0"
+                                       FontSize="11.5" FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        </StackPanel>
+                    </Button>
 
                     <!-- Translation controls (collapsed by default) -->
                     <StackPanel x:Name="TranslationPanel" Visibility="Collapsed">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <ComboBox x:Name="FromLanguageCombo" Style="{StaticResource OcrComboStyle}" Width="125"
+                        <!-- Fixed-column grid: each control is anchored so the row never reflows
+                             regardless of the selected language name length. -->
+                        <Grid VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <ComboBox x:Name="FromLanguageCombo" Grid.Column="0" Style="{StaticResource OcrComboStyle}"
                                       Margin="0,0,2,6"
                                       IsEditable="True" IsTextSearchEnabled="False"
                                       ItemContainerStyle="{StaticResource OcrComboItemStyle}"
                                       PreviewTextInput="FilterCombo_PreviewTextInput" PreviewKeyDown="FilterCombo_PreviewKeyDown"
                                       SelectionChanged="FromLanguageCombo_Changed"/>
-                            <TextBlock Text="&#x2192;" FontSize="15" Margin="2,0,2,6" VerticalAlignment="Center" Opacity="0.35"
+                            <TextBlock Grid.Column="1" Text="&#x2192;" FontSize="15" Margin="2,0,2,6" VerticalAlignment="Center" Opacity="0.35"
                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontWeight="Bold"/>
-                            <ComboBox x:Name="ToLanguageCombo" Style="{StaticResource OcrComboStyle}" Width="125"
+                            <ComboBox x:Name="ToLanguageCombo" Grid.Column="2" Style="{StaticResource OcrComboStyle}"
                                       Margin="0,0,2,6"
                                       IsEditable="True" IsTextSearchEnabled="False"
                                       ItemContainerStyle="{StaticResource OcrComboItemStyle}"
                                       PreviewTextInput="FilterCombo_PreviewTextInput" PreviewKeyDown="FilterCombo_PreviewKeyDown"
                                       SelectionChanged="ToLanguageCombo_Changed"/>
-                            <Border Width="1" Height="18" Background="{DynamicResource ThemeInputBorderBrush}" Margin="4,0,4,6"/>
-                            <ComboBox x:Name="ModelCombo" Style="{StaticResource OcrComboStyle}" Width="135"
+                            <Border Grid.Column="3" Width="1" Height="18" Background="{DynamicResource ThemeInputBorderBrush}" Margin="4,0,4,6"/>
+                            <ComboBox x:Name="ModelCombo" Grid.Column="4" Style="{StaticResource OcrComboStyle}"
                                       Margin="0,0,4,6"
                                       ItemContainerStyle="{StaticResource OcrComboItemStyle}"
                                       SelectionChanged="ModelCombo_Changed">
@@ -325,14 +416,15 @@
                                 <ComboBoxItem Content="Local model" Tag="2"/>
                             </ComboBox>
 
-                            <Button x:Name="TranslateBtn" Content="Translate"
+                            <Button x:Name="TranslateBtn" Grid.Column="5" Content="Translate"
+                                    HorizontalAlignment="Left"
                                     FontSize="12" Padding="14,6" Margin="0,0,0,6"
                                     Click="TranslateBtn_Click" Style="{StaticResource ChromeButtonBase}"
                                     Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
                                     Cursor="Hand" MinHeight="30" FontWeight="SemiBold"/>
-                        </StackPanel>
+                        </Grid>
                         <TextBlock x:Name="TranslationPreferenceStatusText"
                                    FontSize="11"
                                    Margin="2,4,0,0"
@@ -344,16 +436,32 @@
                 </StackPanel>
             </Border>
 
-            <Border x:Name="TranslatedOutputPanel" Grid.Row="3" Margin="14,8,14,0"
-                    CornerRadius="8" Padding="2"
-                    Background="{DynamicResource ThemeInputBackgroundBrush}"
-                    BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                    MinHeight="70" MaxHeight="200"
-                    Visibility="Collapsed">
+            <!-- Translation zone: section header (label + copy) over the translated text box -->
+            <StackPanel x:Name="TranslatedSection" Grid.Row="3" Margin="14,8,14,0" Visibility="Collapsed">
+                <Grid Margin="2,0,2,5">
+                    <TextBlock Text="Translation" Style="{StaticResource OcrSectionHeaderText}"/>
+                    <Button x:Name="CopyTranslationBtn" Click="CopyTranslationBtn_Click"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource OcrHeaderActionButton}" Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource CopyIconGeometry}"
+                                  Stroke="{DynamicResource ThemeTextSecondaryBrush}" StrokeThickness="2.2"
+                                  StrokeLineJoin="Round" Fill="Transparent"
+                                  Width="12" Height="12" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock Text="Copy result" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <Border x:Name="TranslatedOutputPanel"
+                        CornerRadius="8" Padding="2"
+                        Background="{DynamicResource TranslationTintBrush}"
+                        BorderBrush="{DynamicResource TranslationTintBorderBrush}" BorderThickness="1"
+                        MinHeight="70" MaxHeight="200">
                 <Grid>
                     <TextBox x:Name="TranslatedTextBox" AcceptsReturn="True" TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" IsReadOnly="True"
-                             FontSize="13" FontFamily="Segoe UI"
+                             FontSize="15" FontFamily="Segoe UI"
                              Padding="10,8"
                              Background="Transparent" BorderThickness="0"
                              Foreground="{DynamicResource ThemeTextPrimaryBrush}"
@@ -392,31 +500,8 @@
                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                IsHitTestVisible="False" Visibility="Collapsed"/>
                 </Grid>
-            </Border>
-
-            <Border Grid.Row="4" Padding="14,10,14,12">
-                <DockPanel>
-                    <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
-                        <Button x:Name="CopyTranslationBtn" Content="Copy result" FontSize="11" Padding="10,6" Margin="0,0,6,4"
-                                Click="CopyTranslationBtn_Click" Style="{StaticResource ChromeButtonBase}"
-                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                                Cursor="Hand" MinHeight="30" Visibility="Collapsed"/>
-                        <Button x:Name="CopyBtn" Content="Copy text" FontSize="11" Padding="10,6" Margin="0,0,0,4"
-                                Click="CopyBtn_Click" Style="{StaticResource ChromeButtonBase}"
-                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                                Cursor="Hand" MinHeight="30"/>
-                    </WrapPanel>
-                    <TextBlock x:Name="CharCountText" FontSize="10.5" Opacity="0.3" VerticalAlignment="Center"
-                               Margin="0,0,12,4"
-                               TextTrimming="CharacterEllipsis"
-                               TextWrapping="NoWrap"
-                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontFamily="Segoe UI Variable Text"/>
-                </DockPanel>
-            </Border>
+                </Border>
+            </StackPanel>
         </Grid>
     </Border>
 </Window>
