@@ -286,47 +286,61 @@
 
             <Border Grid.Row="2" Margin="14,8,14,0">
                 <StackPanel>
-                    <WrapPanel VerticalAlignment="Center">
-                        <ComboBox x:Name="FromLanguageCombo" Style="{StaticResource OcrComboStyle}" MinWidth="120"
-                                  Margin="0,0,6,6"
-                                  IsEditable="True" IsTextSearchEnabled="False"
-                                  ItemContainerStyle="{StaticResource OcrComboItemStyle}"
-                                  PreviewTextInput="FilterCombo_PreviewTextInput" PreviewKeyDown="FilterCombo_PreviewKeyDown"
-                                  SelectionChanged="FromLanguageCombo_Changed"/>
-                        <TextBlock Text="&#x2192;" FontSize="15" Margin="0,0,6,6" VerticalAlignment="Center" Opacity="0.35"
-                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontWeight="Bold"/>
-                        <ComboBox x:Name="ToLanguageCombo" Style="{StaticResource OcrComboStyle}" MinWidth="120"
-                                  Margin="0,0,8,6"
-                                  IsEditable="True" IsTextSearchEnabled="False"
-                                  ItemContainerStyle="{StaticResource OcrComboItemStyle}"
-                                  PreviewTextInput="FilterCombo_PreviewTextInput" PreviewKeyDown="FilterCombo_PreviewKeyDown"
-                                  SelectionChanged="ToLanguageCombo_Changed"/>
-                        <Border Width="1" Height="18" Background="{DynamicResource ThemeInputBorderBrush}" Margin="0,0,8,6"/>
-                        <ComboBox x:Name="ModelCombo" Style="{StaticResource OcrComboStyle}" MinWidth="130"
-                                  Margin="0,0,8,6"
-                                  ItemContainerStyle="{StaticResource OcrComboItemStyle}"
-                                  SelectionChanged="ModelCombo_Changed">
-                            <ComboBoxItem Content="MyMemory (free web)" Tag="3"/>
-                            <ComboBoxItem Content="Google Translate" Tag="1"/>
-                            <ComboBoxItem Content="Argos (offline)" Tag="0"/>
-                            <ComboBoxItem Content="Local model" Tag="2"/>
-                        </ComboBox>
+                    <!-- Collapse toggle -->
+                    <Button x:Name="ToggleTranslationBtn" Content="&#x25B6; Translation"
+                            FontSize="11" Padding="8,4" Margin="0,0,0,4"
+                            HorizontalAlignment="Left"
+                            Click="ToggleTranslationBtn_Click"
+                            Style="{StaticResource ChromeButtonBase}"
+                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Cursor="Hand" MinHeight="28" FontWeight="Normal"/>
 
-                        <Button x:Name="TranslateBtn" Content="Translate"
-                                FontSize="12" Padding="16,6" Margin="0,0,0,6"
-                                Click="TranslateBtn_Click" Style="{StaticResource ChromeButtonBase}"
-                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                                Cursor="Hand" MinHeight="30" FontWeight="SemiBold"/>
-                    </WrapPanel>
-                    <TextBlock x:Name="TranslationPreferenceStatusText"
-                               FontSize="11"
-                               Margin="2,6,0,0"
-                               Opacity="0.45"
-                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                               TextWrapping="Wrap"
-                               Visibility="Collapsed"/>
+                    <!-- Translation controls (collapsed by default) -->
+                    <StackPanel x:Name="TranslationPanel" Visibility="Collapsed">
+                        <WrapPanel VerticalAlignment="Center">
+                            <ComboBox x:Name="FromLanguageCombo" Style="{StaticResource OcrComboStyle}" MinWidth="105"
+                                      Margin="0,0,4,6"
+                                      IsEditable="True" IsTextSearchEnabled="False"
+                                      ItemContainerStyle="{StaticResource OcrComboItemStyle}"
+                                      PreviewTextInput="FilterCombo_PreviewTextInput" PreviewKeyDown="FilterCombo_PreviewKeyDown"
+                                      SelectionChanged="FromLanguageCombo_Changed"/>
+                            <TextBlock Text="&#x2192;" FontSize="15" Margin="4,0,4,6" VerticalAlignment="Center" Opacity="0.35"
+                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontWeight="Bold"/>
+                            <ComboBox x:Name="ToLanguageCombo" Style="{StaticResource OcrComboStyle}" MinWidth="105"
+                                      Margin="0,0,4,6"
+                                      IsEditable="True" IsTextSearchEnabled="False"
+                                      ItemContainerStyle="{StaticResource OcrComboItemStyle}"
+                                      PreviewTextInput="FilterCombo_PreviewTextInput" PreviewKeyDown="FilterCombo_PreviewKeyDown"
+                                      SelectionChanged="ToLanguageCombo_Changed"/>
+                            <Border Width="1" Height="18" Background="{DynamicResource ThemeInputBorderBrush}" Margin="4,0,4,6"/>
+                            <ComboBox x:Name="ModelCombo" Style="{StaticResource OcrComboStyle}" MinWidth="115"
+                                      Margin="0,0,4,6"
+                                      ItemContainerStyle="{StaticResource OcrComboItemStyle}"
+                                      SelectionChanged="ModelCombo_Changed">
+                                <ComboBoxItem Content="MyMemory (free web)" Tag="3"/>
+                                <ComboBoxItem Content="Google Translate" Tag="1"/>
+                                <ComboBoxItem Content="Argos (offline)" Tag="0"/>
+                                <ComboBoxItem Content="Local model" Tag="2"/>
+                            </ComboBox>
+
+                            <Button x:Name="TranslateBtn" Content="Translate"
+                                    FontSize="12" Padding="14,6" Margin="0,0,0,6"
+                                    Click="TranslateBtn_Click" Style="{StaticResource ChromeButtonBase}"
+                                    Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                    Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                    BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                    Cursor="Hand" MinHeight="30" FontWeight="SemiBold"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="TranslationPreferenceStatusText"
+                                   FontSize="11"
+                                   Margin="2,4,0,0"
+                                   Opacity="0.45"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Visibility="Collapsed"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
