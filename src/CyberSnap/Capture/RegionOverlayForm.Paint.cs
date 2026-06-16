@@ -44,38 +44,36 @@ public sealed partial class RegionOverlayForm
         bool isScan = _mode == CaptureMode.Scan;
         bool isSelectionMode = _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;
 
-        // Dynamic dimming/accent overlay
-        if (isSelectionMode)
-        {
-            var accent = UiChrome.AccentColor;
-            var overlayColor = Color.FromArgb(4, accent.R, accent.G, accent.B);
+        // Subtle dimming overlay — always present to indicate overlay is active.
+        // In selection mode, the selected region is excluded (kept clear).
+        var accent = UiChrome.AccentColor;
+        var overlayColor = Color.FromArgb(4, accent.R, accent.G, accent.B);
 
-            if (_isSelecting || _isConfirmingSelection)
+        if (_isSelecting || _isConfirmingSelection)
+        {
+            var activeSelectionRect = _isConfirmingSelection ? _confirmRect : _selectionRect;
+            var state = g.Save();
+            try
             {
-                var activeSelectionRect = _isConfirmingSelection ? _confirmRect : _selectionRect;
-                var state = g.Save();
-                try
+                if (activeSelectionRect.Width > 0 && activeSelectionRect.Height > 0)
                 {
-                    if (activeSelectionRect.Width > 0 && activeSelectionRect.Height > 0)
-                    {
-                        g.ExcludeClip(activeSelectionRect);
-                    }
-                    using (var dimBrush = new SolidBrush(overlayColor))
-                    {
-                        g.FillRectangle(dimBrush, ClientRectangle);
-                    }
+                    g.ExcludeClip(activeSelectionRect);
                 }
-                finally
-                {
-                    g.Restore(state);
-                }
-            }
-            else if (!_hasSelection && !_autoDetectActive)
-            {
                 using (var dimBrush = new SolidBrush(overlayColor))
                 {
                     g.FillRectangle(dimBrush, ClientRectangle);
                 }
+            }
+            finally
+            {
+                g.Restore(state);
+            }
+        }
+        else if (!_hasSelection && !_autoDetectActive)
+        {
+            using (var dimBrush = new SolidBrush(overlayColor))
+            {
+                g.FillRectangle(dimBrush, ClientRectangle);
             }
         }
 
