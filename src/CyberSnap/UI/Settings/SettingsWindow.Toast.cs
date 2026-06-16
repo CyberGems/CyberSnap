@@ -796,10 +796,13 @@ public partial class SettingsWindow
 
         bool editorOn = _settingsService.Settings.OpenEditorAfterCapture;
 
-        // Keep the text-toast mock faithful to the real one (Theme.ToastBg / ToastBorder), and
-        // render its decorative close glyph in the same muted tone the real toast uses.
+        // Keep the text-toast mock faithful to the real one: Theme.ToastBg fill and the same
+        // cyan/blue accent stroke ConfigureShell() gives the real toast's OuterShell, plus the
+        // muted close glyph. (Theme.ToastBorder is the wrong, white-ish stroke.)
         EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
-        EditorToastMockShell.BorderBrush = Theme.Brush(Theme.ToastBorder);
+        EditorToastMockShell.BorderBrush = Theme.Brush(Theme.IsDark
+            ? Color.FromArgb(160, 0, 200, 215)
+            : Color.FromArgb(160, 0, 110, 205));
         if (EditorToastMockCloseIcon is not null)
             EditorToastMockCloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", GetToastLayoutIconColor(active: false), 16);
 
@@ -817,6 +820,17 @@ public partial class SettingsWindow
                 editorOn ? "Video and GIF captures" : "All captures");
             EditorPreviewOtherCaption.Text = caption;
             AutomationProperties.SetName(EditorPreviewOtherCaption, caption);
+        }
+
+        // Plain-language guide that names the Editor toggle and explains why the two sides can
+        // differ — the single biggest clarity win for this panel.
+        if (EditorPreviewGuide is not null)
+        {
+            string guide = Services.LocalizationService.Translate(editorOn
+                ? "The editor is on, so image captures open straight in it and show this brief message. Video and GIF captures still use the notification you design on the right."
+                : "Every capture uses the notification you design on the right. If you turn the editor on, image captures will open in it and show the message on the left instead.");
+            EditorPreviewGuide.Text = guide;
+            AutomationProperties.SetName(EditorPreviewGuide, guide);
         }
     }
 
