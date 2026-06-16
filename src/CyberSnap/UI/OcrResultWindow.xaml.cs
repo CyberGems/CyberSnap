@@ -156,6 +156,13 @@ public partial class OcrResultWindow : Window
         else if (combo.Items.Count > 0) combo.SelectedIndex = 0;
     }
 
+    private void ToggleTranslationBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var expand = TranslationPanel.Visibility != Visibility.Visible;
+        TranslationPanel.Visibility = expand ? Visibility.Visible : Visibility.Collapsed;
+        ToggleTranslationBtn.Content = expand ? "\u25BC Translation" : "\u25B6 Translation";
+    }
+
     private void UpdateCharCount()
     {
         var text = OcrTextBox.Text ?? "";
