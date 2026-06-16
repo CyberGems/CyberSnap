@@ -145,12 +145,7 @@ public sealed partial class RegionOverlayForm
         }
         _moveHoverIndex = -1;
 
-        // Full repaint when crossing between selection and annotation modes
-        // to clear or apply the dimming overlay uniformly.
-        bool wasSelection = IsSelectionMode(_mode);
         _mode = m;
-        if (wasSelection != IsSelectionMode(m))
-            Invalidate();
         _activeToolId = toolId ?? _visibleTools.FirstOrDefault(t => t.Mode == m)?.Id;
         _hasSelection = false;
         _hasDragged = false;
@@ -265,9 +260,6 @@ public sealed partial class RegionOverlayForm
 
     private static bool IsOverlaySwitchableMode(CaptureMode mode) =>
         ToolDef.AllTools.Any(tool => tool.Mode == mode);
-
-    private static bool IsSelectionMode(CaptureMode mode) =>
-        mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;
 
     private Point GetRulerEnd(Point current)
     {
