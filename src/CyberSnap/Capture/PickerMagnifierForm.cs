@@ -11,14 +11,12 @@ public sealed class PickerMagnifierForm : Form
 {
     public const int LensSize = 110;
     public const int Pad = 5;
-    // TotalW is the minimum form width (lens + padding). The form can grow
-    // wider when the info pill text (RGB) requires more horizontal space.
+    // MinFormW: wide enough for RGB info pill text without clipping
     public const int TotalW = LensSize + Pad * 2;
-    // Minimum total form width including padding
-    private const int MinFormW = TotalW;
+    private const int MinFormW = 190;
 
     private const int InfoGap = 10;
-    private const int InfoH = 42;
+    private const int InfoH = 52;
     private const int LensRadius = 14;
 
     private Bitmap? _surface;
@@ -38,8 +36,8 @@ public sealed class PickerMagnifierForm : Form
     private int _lastPickedArgb;
 
     // Cached GDI objects — styled to match RulerRenderer data box
-    private readonly Font _hexFont = UiChrome.ChromeFont(9.5f, FontStyle.Bold);
-    private readonly Font _rgbFont = UiChrome.ChromeFont(8.5f);
+    private readonly Font _hexFont = new("Segoe UI Variable Text", 10f, FontStyle.Bold, GraphicsUnit.Point);
+    private readonly Font _rgbFont = new("Segoe UI Variable Text", 8.5f, FontStyle.Regular, GraphicsUnit.Point);
     private readonly SolidBrush _labelBrush = new(UiChrome.SurfaceTextPrimary);
     private readonly SolidBrush _accentBrush = new(UiChrome.AccentColor);
     private readonly SolidBrush _bgBrush = new(UiChrome.SurfaceTier1);
@@ -105,17 +103,7 @@ public sealed class PickerMagnifierForm : Form
 
     public void UpdateMagnifier(Bitmap magnifier, Point cursor, Color picked, string hex, string rgb, bool showInfo = true)
     {
-        // Calculate required form width: lens size or pill text width, whichever is wider
-        int formW = MinFormW;
-        if (showInfo)
-        {
-            using var g = CreateGraphics();
-            var hexSz = TextRenderer.MeasureText(g, $"#{hex}", _hexFont);
-            var rgbSz = TextRenderer.MeasureText(g, rgb, _rgbFont);
-            int pillW = Math.Max(hexSz.Width, rgbSz.Width) + 32;
-            formW = Math.Max(MinFormW, pillW + Pad * 2);
-        }
-
+        int formW = showInfo ? MinFormW : MinFormW;
         var targetSize = new Size(formW, GetTotalHeight(showInfo));
         if (_lastSurfaceSize == targetSize &&
             _lastShowInfo == showInfo &&
@@ -209,14 +197,12 @@ public sealed class PickerMagnifierForm : Form
 
         if (_showInfo)
         {
-            // Info pill below circle — use TextRenderer for accurate measurement
+            // Info pill below lens — fixed wide width for RGB text, with separator
             string hexLabel = $"#{_hex}";
             string rgbLabel = $"R: {_picked.R}  G: {_picked.G}  B: {_picked.B}";
-            var hexSize = TextRenderer.MeasureText(g, hexLabel, _hexFont);
-            var rgbSize = TextRenderer.MeasureText(g, rgbLabel, _rgbFont);
-            int pillW = Math.Max(hexSize.Width, rgbSize.Width) + 32;
+            int pillW = sz.Width - Pad * 2; // fill form width
             int pillH = InfoH;
-            int pillX = cx - pillW / 2;
+            int pillX = Pad;
             int pillY = lensRect.Bottom + InfoGap;
             var pillRect = new Rectangle(pillX, pillY, pillW, pillH);
 
@@ -224,11 +210,18 @@ public sealed class PickerMagnifierForm : Form
             g.FillPath(_pillBg, pillPath);
             g.DrawPath(_pillBorder, pillPath);
 
-            // Center text horizontally within the pill
-            var hexRect = new Rectangle(pillX, pillY + 2, pillW, pillH / 2);
-            var rgbRect = new Rectangle(pillX, pillY + pillH / 2 - 1, pillW, pillH / 2);
-            TextRenderer.DrawText(g, hexLabel, _hexFont, hexRect, UiChrome.AccentColor,
+            // Hex row (top half): accent color, bold
+            var hexRect = new Rectangle(pillX, pillY, pillW, pillH / 2);
+            TextRenderer.DrawText(g, hexLabel, _hexFont, hexRect, _accentBrush.Color,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+
+            // Separator line
+            int sepY = pillY + pillH / 2;
+            using var sepPen = new Pen(Color.FromArgb(40, UiChrome.SurfaceTextPrimary), 1f);
+            g.DrawLine(sepPen, pillX + 14, sepY, pillX + pillW - 14, sepY);
+
+            // RGB row (bottom half): normal text
+            var rgbRect = new Rectangle(pillX, sepY, pillW, pillH / 2);
             TextRenderer.DrawText(g, rgbLabel, _rgbFont, rgbRect, UiChrome.SurfaceTextPrimary,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         }

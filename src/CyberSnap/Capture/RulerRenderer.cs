@@ -53,8 +53,8 @@ public static class RulerRenderer
         _borderPen = new Pen(border, 1.0f);
         _fgBrush = new SolidBrush(text);
         _accentBrush = new SolidBrush(accent);
-        _font ??= Helpers.UiChrome.ChromeFont(9.5f);
-        _distFont ??= Helpers.UiChrome.ChromeFont(11.5f, System.Drawing.FontStyle.Bold);
+        _font ??= new Font("Segoe UI Variable Text", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
+        _distFont ??= new Font("Segoe UI Variable Text", 11.5f, FontStyle.Bold, GraphicsUnit.Point);
         _themeKey = key;
     }
 
