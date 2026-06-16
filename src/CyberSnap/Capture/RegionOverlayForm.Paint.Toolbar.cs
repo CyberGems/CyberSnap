@@ -30,6 +30,23 @@ public sealed partial class RegionOverlayForm
         return _swatchSelectionPen;
     }
 
+    private static Pen? _swatchOutlinePen;
+    private static int _swatchOutlinePenKey;
+
+    /// <summary>Subtle outline so dark swatches don't disappear against the background.</summary>
+    private static Pen GetSwatchOutlinePen()
+    {
+        var color = Color.FromArgb(68, UiChrome.SurfaceTextPrimary);
+        int key = color.ToArgb();
+        if (_swatchOutlinePen is null || _swatchOutlinePenKey != key)
+        {
+            _swatchOutlinePen?.Dispose();
+            _swatchOutlinePen = new Pen(color, 1f);
+            _swatchOutlinePenKey = key;
+        }
+        return _swatchOutlinePen;
+    }
+
     private void PaintToolbar(Graphics g)
     {
         g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -501,6 +518,8 @@ public sealed partial class RegionOverlayForm
         {
             var swatchRect = GetColorPickerSwatchRect(i);
             g.FillEllipse(SketchRenderer.GetToolColorBrush(ToolColors[i]), swatchRect);
+            // Subtle outline so dark swatches remain visible against the background
+            g.DrawEllipse(GetSwatchOutlinePen(), swatchRect);
             if (ToolColors[i] == _toolColor)
                 g.DrawEllipse(GetSwatchSelectionPen(), swatchRect);
         }

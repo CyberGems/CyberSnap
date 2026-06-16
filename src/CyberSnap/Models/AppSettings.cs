@@ -207,8 +207,15 @@ public sealed class AppSettings
     public int GifFps { get; set; } = 15;
 
     // Standalone ruler hotkey: unbound by default
+    // Naming convention for future standalone tools:
+    //   public uint Standalone{Name}HotkeyModifiers { get; set; }
+    //   public uint Standalone{Name}HotkeyKey { get; set; }
     public uint StandaloneRulerHotkeyModifiers { get; set; }
     public uint StandaloneRulerHotkeyKey { get; set; }
+
+    // Standalone color picker hotkey: unbound by default
+    public uint StandaloneColorPickerHotkeyModifiers { get; set; }
+    public uint StandaloneColorPickerHotkeyKey { get; set; }
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
     public bool OpenEditorAfterCapture { get; set; }
@@ -377,7 +384,9 @@ public sealed class AppSettings
         "_activeWindow" => (ActiveWindowHotkeyModifiers, ActiveWindowHotkeyKey),
         "_scrollCapture" => (ScrollCaptureHotkeyModifiers, ScrollCaptureHotkeyKey),
         "_record" => (GifHotkeyModifiers, GifHotkeyKey),
+        // Standalone tools use the convention: "_standalone{Name}" → Standalone{Name}HotkeyModifiers/Key
         "_standaloneRuler" => (StandaloneRulerHotkeyModifiers, StandaloneRulerHotkeyKey),
+        "_standaloneColorPicker" => (StandaloneColorPickerHotkeyModifiers, StandaloneColorPickerHotkeyKey),
         _ => GetGenericToolHotkey(toolId),
     };
 
@@ -414,7 +423,9 @@ public sealed class AppSettings
             case "_activeWindow": ActiveWindowHotkeyModifiers = mod; ActiveWindowHotkeyKey = key; break;
             case "_scrollCapture": ScrollCaptureHotkeyModifiers = mod; ScrollCaptureHotkeyKey = key; break;
             case "_record": GifHotkeyModifiers = mod; GifHotkeyKey = key; break;
+            // Standalone tools: "_standalone{Name}" → Standalone{Name}HotkeyModifiers/Key
             case "_standaloneRuler": StandaloneRulerHotkeyModifiers = mod; StandaloneRulerHotkeyKey = key; break;
+            case "_standaloneColorPicker": StandaloneColorPickerHotkeyModifiers = mod; StandaloneColorPickerHotkeyKey = key; break;
             default:
                 ToolHotkeys ??= new();
                 ToolHotkeys[toolId] = new[] { mod, key };
@@ -472,6 +483,8 @@ public sealed class AppSettings
         GifHotkeyKey = 0;
         StandaloneRulerHotkeyModifiers = 0;
         StandaloneRulerHotkeyKey = 0;
+        StandaloneColorPickerHotkeyModifiers = 0;
+        StandaloneColorPickerHotkeyKey = 0;
         ToolHotkeys?.Clear();
     }
 }

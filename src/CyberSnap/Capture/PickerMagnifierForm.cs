@@ -11,7 +11,11 @@ public sealed class PickerMagnifierForm : Form
 {
     public const int LensSize = 110;
     public const int Pad = 5;
+    // TotalW is the minimum form width (lens + padding). The form can grow
+    // wider when the info pill text (RGB) requires more horizontal space.
     public const int TotalW = LensSize + Pad * 2;
+    // Minimum total form width including padding
+    private const int MinFormW = TotalW;
 
     private const int InfoGap = 10;
     private const int InfoH = 42;
@@ -33,17 +37,19 @@ public sealed class PickerMagnifierForm : Form
     private string _lastRgb = "";
     private int _lastPickedArgb;
 
-    // Cached GDI objects
+    // Cached GDI objects — styled to match RulerRenderer data box
     private readonly Font _hexFont = UiChrome.ChromeFont(9.5f, FontStyle.Bold);
     private readonly Font _rgbFont = UiChrome.ChromeFont(8.5f);
     private readonly SolidBrush _labelBrush = new(UiChrome.SurfaceTextPrimary);
-    private readonly SolidBrush _bgBrush = new(UiChrome.SurfaceElevated);
-    private readonly Pen _ringPen = new(UiChrome.SurfaceBorderStrong, 1.5f);
-    private readonly Pen _outerRingPen = new(UiChrome.SurfaceBorderSubtle, 1f);
-    private readonly SolidBrush _pillBg = new(UiChrome.SurfacePill);
-    private readonly Pen _pillBorder = new(UiChrome.SurfaceBorderSubtle, 1f);
+    private readonly SolidBrush _accentBrush = new(UiChrome.AccentColor);
+    private readonly SolidBrush _bgBrush = new(UiChrome.SurfaceTier1);
+    // Lens border: matches RulerRenderer accent (cyan/blue with alpha ~160)
+    private readonly Pen _lensBorderPen = new(Color.FromArgb(160, UiChrome.AccentColor), 1.2f);
+    private readonly SolidBrush _pillBg = new(UiChrome.SurfaceTier1);
+    private readonly Pen _pillBorder = new(Color.FromArgb(160, UiChrome.AccentColor), 1f);
     private readonly SolidBrush _dotFill = new(UiChrome.SurfaceTextPrimary);
-    private readonly Pen _dotBorder = new(UiChrome.SurfaceBorderStrong, 1f);
+    // Crosshair dot border: thin accent
+    private readonly Pen _dotBorder = new(UiChrome.AccentColor, 1f);
 
     // Lens shadow passes are constant â€” cache the brushes once.
     private static readonly (int dx, int dy, SolidBrush brush)[] LensShadowPasses =
@@ -99,7 +105,18 @@ public sealed class PickerMagnifierForm : Form
 
     public void UpdateMagnifier(Bitmap magnifier, Point cursor, Color picked, string hex, string rgb, bool showInfo = true)
     {
-        var targetSize = new Size(TotalW, GetTotalHeight(showInfo));
+        // Calculate required form width: lens size or pill text width, whichever is wider
+        int formW = MinFormW;
+        if (showInfo)
+        {
+            using var g = CreateGraphics();
+            var hexSz = TextRenderer.MeasureText(g, $"#{hex}", _hexFont);
+            var rgbSz = TextRenderer.MeasureText(g, rgb, _rgbFont);
+            int pillW = Math.Max(hexSz.Width, rgbSz.Width) + 32;
+            formW = Math.Max(MinFormW, pillW + Pad * 2);
+        }
+
+        var targetSize = new Size(formW, GetTotalHeight(showInfo));
         if (_lastSurfaceSize == targetSize &&
             _lastShowInfo == showInfo &&
             ReferenceEquals(_lastMagnifier, magnifier) &&
@@ -156,9 +173,9 @@ public sealed class PickerMagnifierForm : Form
         g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 
-        int cx = Pad + LensSize / 2;
+        int cx = sz.Width / 2;
         int cy = Pad + LensSize / 2;
-        var lensRect = new Rectangle(Pad, Pad, LensSize, LensSize);
+        var lensRect = new Rectangle(cx - LensSize / 2, Pad, LensSize, LensSize);
 
         var shadowRect = lensRect;
         shadowRect.Inflate(1, 1);
@@ -183,37 +200,37 @@ public sealed class PickerMagnifierForm : Form
             g.Restore(state);
         }
 
-        g.DrawPath(_outerRingPen, lensPath);
-        var innerRing = lensRect;
-        innerRing.Inflate(-1, -1);
-        using (var innerPath = RoundedRect(innerRing, LensRadius - 1))
-            g.DrawPath(_ringPen, innerPath);
+        g.DrawPath(_lensBorderPen, lensPath);
 
+        // Crosshair dot at center
         int dotSize = 4;
         g.FillRectangle(_dotFill, cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
         g.DrawRectangle(_dotBorder, cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
 
         if (_showInfo)
         {
-            // Info pill below circle
+            // Info pill below circle — use TextRenderer for accurate measurement
             string hexLabel = $"#{_hex}";
             string rgbLabel = $"R: {_picked.R}  G: {_picked.G}  B: {_picked.B}";
-            var hexSize = g.MeasureString(hexLabel, _hexFont);
-            var rgbSize = g.MeasureString(rgbLabel, _rgbFont);
-            int pillW = (int)Math.Ceiling(Math.Max(hexSize.Width, rgbSize.Width)) + 20;
+            var hexSize = TextRenderer.MeasureText(g, hexLabel, _hexFont);
+            var rgbSize = TextRenderer.MeasureText(g, rgbLabel, _rgbFont);
+            int pillW = Math.Max(hexSize.Width, rgbSize.Width) + 32;
             int pillH = InfoH;
             int pillX = cx - pillW / 2;
             int pillY = lensRect.Bottom + InfoGap;
-            var pillRect = new RectangleF(pillX, pillY, pillW, pillH);
+            var pillRect = new Rectangle(pillX, pillY, pillW, pillH);
 
             using var pillPath = RoundedPill(pillRect, pillH / 2f);
             g.FillPath(_pillBg, pillPath);
             g.DrawPath(_pillBorder, pillPath);
 
-            var hexX = pillX + (pillW - hexSize.Width) / 2f;
-            var rgbX = pillX + (pillW - rgbSize.Width) / 2f;
-            g.DrawString(hexLabel, _hexFont, _labelBrush, hexX, pillY + 3);
-            g.DrawString(rgbLabel, _rgbFont, _labelBrush, rgbX, pillY + 21);
+            // Center text horizontally within the pill
+            var hexRect = new Rectangle(pillX, pillY + 2, pillW, pillH / 2);
+            var rgbRect = new Rectangle(pillX, pillY + pillH / 2 - 1, pillW, pillH / 2);
+            TextRenderer.DrawText(g, hexLabel, _hexFont, hexRect, UiChrome.AccentColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            TextRenderer.DrawText(g, rgbLabel, _rgbFont, rgbRect, UiChrome.SurfaceTextPrimary,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         }
 
         g.Flush(FlushIntention.Sync);
@@ -282,8 +299,8 @@ public sealed class PickerMagnifierForm : Form
             _rgbFont.Dispose();
             _labelBrush.Dispose();
             _bgBrush.Dispose();
-            _ringPen.Dispose();
-            _outerRingPen.Dispose();
+            _lensBorderPen.Dispose();
+            _accentBrush.Dispose();
             _pillBg.Dispose();
             _pillBorder.Dispose();
             _dotFill.Dispose();

@@ -31,14 +31,8 @@ public sealed class StandaloneRulerForm : Form
     private EditState _editState = EditState.None;
     private Point _editOffset; // cursor offset from _lastFrom during move
 
-    // ── Banner ──
-    private float _bannerOpacity;
-    private System.Windows.Forms.Timer? _bannerTimer;
-    private int _bannerHoldTicks;
-    private RectangleF _bannerRect;
-    private enum BannerState { FadeIn, Hold, FadeOut }
-    private BannerState _bannerState = BannerState.FadeIn;
-    private static readonly string BannerText = "Click & drag to measure  ·  Right-click or Esc to close  ·  Hold Shift to constrain";
+    // ── Banner (reusable animated instruction overlay) ──
+    private readonly StandaloneToolBanner _banner;
 
     public StandaloneRulerForm()
     {
@@ -65,71 +59,27 @@ public sealed class StandaloneRulerForm : Form
 
         Cursor = Cursors.Cross;
 
-        // ── Banner timer ──
-        _bannerTimer = new System.Windows.Forms.Timer { Interval = 16 };
-        _bannerTimer.Tick += BannerTimer_Tick;
-        _bannerTimer.Start();
+        // ── Banner ──
+        _banner = new StandaloneToolBanner(
+            "Click & drag to measure  ·  Right-click or Esc to close  ·  Hold Shift to constrain",
+            _bannerWorkingArea,
+            Bounds,
+            onInvalidate: () => Invalidate());
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            _bannerTimer?.Stop();
-            _bannerTimer?.Dispose();
+            _banner.Dispose();
             _screenshot?.Dispose();
         }
         base.Dispose(disposing);
     }
 
-    // ── Banner animation ──
-
-    private void BannerTimer_Tick(object? sender, EventArgs e)
-    {
-        switch (_bannerState)
-        {
-            case BannerState.FadeIn:
-                _bannerOpacity += 0.12f;
-                if (_bannerOpacity >= 1.0f)
-                {
-                    _bannerOpacity = 1.0f;
-                    _bannerState = BannerState.Hold;
-                    _bannerHoldTicks = 0;
-                }
-                Invalidate();
-                break;
-
-            case BannerState.Hold:
-                _bannerHoldTicks++;
-                // Keep banner visible while hovering over it
-                if (_bannerRect.Contains(_cursorPos))
-                {
-                    _bannerHoldTicks = 0;
-                    break;
-                }
-                if (_bannerHoldTicks >= 90) // ~1.5s hold
-                {
-                    _bannerState = BannerState.FadeOut;
-                }
-                break;
-
-            case BannerState.FadeOut:
-                // Revive if cursor moves over banner during fade-out
-                if (_bannerRect.Contains(_cursorPos))
-                {
-                    _bannerState = BannerState.FadeIn;
-                    break;
-                }
-                _bannerOpacity -= 0.08f;
-                if (_bannerOpacity <= 0.0f)
-                {
-                    _bannerOpacity = 0.0f;
-                    _bannerTimer?.Stop();
-                }
-                Invalidate();
-                break;
-        }
-    }
+    // ── Banner animation (delegated to StandaloneToolBanner) ──
+    // The banner timer is self-contained; we just need to revive it on hover
+    // and trigger repaints via Invalidate. See StandaloneToolBanner.Revive().
 
     // ── Keyboard ──
 
@@ -193,6 +143,10 @@ public sealed class StandaloneRulerForm : Form
     {
         var prevCursorPos = _cursorPos;
         _cursorPos = e.Location;
+
+        // Revive banner if cursor moves over it (keep instructions visible)
+        if (_banner.ContainsCursor(_cursorPos))
+            _banner.Revive();
 
         if (_isDragging)
         {
@@ -292,8 +246,8 @@ public sealed class StandaloneRulerForm : Form
             RulerRenderer.Paint(g, _lastFrom, _lastTo, ClientRectangle, Theme.IsDark);
         }
 
-        // Draw banner
-        RenderBanner(g);
+        // Draw banner (handled by reusable StandaloneToolBanner)
+        _banner.Render(g);
     }
 
     // ── Helpers ──
@@ -374,72 +328,7 @@ public sealed class StandaloneRulerForm : Form
         return dx * dx + dy * dy;
     }
 
-    private void RenderBanner(Graphics g)
-    {
-        if (_bannerOpacity <= 0f) return;
-
-        var state = g.Save();
-        try
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-
-            // Center on the detected screen — convert from screen to client coordinates
-            using var font = new Font("Segoe UI Variable Display", 13f, FontStyle.Regular, GraphicsUnit.Point);
-            var size = g.MeasureString(BannerText, font);
-
-            int paddingH = 26;
-            int paddingV = 15;
-            float width = size.Width + paddingH * 2;
-            float height = size.Height + paddingV * 2;
-
-            float y = _bannerWorkingArea.Top - Bounds.Top + 18;
-            float x = _bannerWorkingArea.Left - Bounds.Left + (_bannerWorkingArea.Width - width) / 2f;
-
-            _bannerRect = new RectangleF(x, y, width, height);
-
-            int alphaBg = (int)(180 * _bannerOpacity);
-            int alphaBorder = (int)(120 * _bannerOpacity);
-            int alphaGlow = (int)(30 * _bannerOpacity);
-            int alphaText = (int)(255 * _bannerOpacity);
-
-            var accent = Theme.IsDark
-                ? Color.FromArgb(75, 130, 246)
-                : Color.FromArgb(0, 120, 215);
-
-            using var path = RoundedRect(new RectangleF(x, y, width, height), 10);
-            using var bgBrush = new SolidBrush(Color.FromArgb(alphaBg, 13, 15, 23));
-            using var glowPen = new Pen(Color.FromArgb(alphaGlow, accent), 3f);
-            using var borderPen = new Pen(Color.FromArgb(alphaBorder, accent), 1.2f);
-            using var textBrush = new SolidBrush(Color.FromArgb(alphaText, accent));
-
-            g.FillPath(bgBrush, path);
-            g.DrawPath(glowPen, path);
-            g.DrawPath(borderPen, path);
-
-            var textRect = new RectangleF(x + paddingH, y + paddingV, size.Width, size.Height);
-            using var sf = new StringFormat
-            {
-                Alignment = StringAlignment.Center,
-                LineAlignment = StringAlignment.Center
-            };
-            g.DrawString(BannerText, font, textBrush, textRect, sf);
-        }
-        finally
-        {
-            g.Restore(state);
-        }
-    }
-
-    private static GraphicsPath RoundedRect(RectangleF r, float rad)
-    {
-        var path = new GraphicsPath();
-        path.AddArc(r.X, r.Y, rad * 2, rad * 2, 180, 90);
-        path.AddArc(r.Right - rad * 2, r.Y, rad * 2, rad * 2, 270, 90);
-        path.AddArc(r.Right - rad * 2, r.Bottom - rad * 2, rad * 2, rad * 2, 0, 90);
-        path.AddArc(r.X, r.Bottom - rad * 2, rad * 2, rad * 2, 90, 90);
-        path.CloseFigure();
-        return path;
-    }
+    // RenderBanner and RoundedRect moved to reusable StandaloneToolBanner helper.
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {

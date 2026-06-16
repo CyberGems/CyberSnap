@@ -1038,19 +1038,19 @@ public partial class SettingsWindow
         try
         {
             // Generate a small mock screenshot to preview the image layout
-            using (var bmp = new System.Drawing.Bitmap(320, 200))
+            using (var bmp = new System.Drawing.Bitmap(280, 200))
             {
                 using (var g = System.Drawing.Graphics.FromImage(bmp))
                 {
                     // Gradient background matching modern/premium aesthetics
                     using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
                         new System.Drawing.Point(0, 0),
-                        new System.Drawing.Point(320, 200),
+                        new System.Drawing.Point(280, 200),
                         System.Drawing.Color.FromArgb(99, 102, 241), // Indigo
                         System.Drawing.Color.FromArgb(168, 85, 247)  // Purple
                     ))
                     {
-                        g.FillRectangle(brush, 0, 0, 320, 200);
+                        g.FillRectangle(brush, 0, 0, 280, 200);
                     }
 
                     // Draw centered strings using StringFormat
@@ -1060,23 +1060,24 @@ public partial class SettingsWindow
 
                         // Logo text with dynamic version
                         string versionLabel = UpdateService.GetCurrentVersionLabel();
+                        string brandLine = string.Format(LocalizationService.Translate("CyberSnap {0}"), versionLabel);
                         using (var font = new System.Drawing.Font("Segoe UI", 16, System.Drawing.FontStyle.Bold))
                         using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.White))
                         {
-                            g.DrawString($"CyberSnap {versionLabel}", font, brush, new System.Drawing.RectangleF(0, 24, 320, 40), sf);
+                            g.DrawString(brandLine, font, brush, new System.Drawing.RectangleF(0, 24, 280, 40), sf);
                         }
 
-                        // Description text
+                        // Description text (44 px tall to fit two-line phrases in any language)
                         using (var font = new System.Drawing.Font("Segoe UI", 10))
                         using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(220, 255, 255, 255)))
                         {
-                            g.DrawString("This is a notification preview.", font, brush, new System.Drawing.RectangleF(0, 68, 320, 30), sf);
-                            g.DrawString("Position, duration and alignment tests.", font, brush, new System.Drawing.RectangleF(0, 94, 320, 30), sf);
+                            g.DrawString(LocalizationService.Translate("This is a notification preview."), font, brush, new System.Drawing.RectangleF(0, 66, 280, 44), sf);
+                            g.DrawString(LocalizationService.Translate("Position, duration and alignment tests."), font, brush, new System.Drawing.RectangleF(0, 112, 280, 44), sf);
                         }
                     }
                 }
 
-                // Show the toast with overlay buttons and no system suppression
+                // Show the toast without overlay buttons and no system suppression
                 ToastWindow.Show(ToastSpec.ImagePreview(
                     (System.Drawing.Bitmap)bmp.Clone(),
                     "Notification Preview",
@@ -1084,14 +1085,16 @@ public partial class SettingsWindow
                     filePath: null,
                     autoPin: false,
                     transparentShell: false,
-                    showOverlayButtons: true
+                    showOverlayButtons: false
                 ) with { IsSystemMessage = false });
             }
         }
         catch (Exception ex)
         {
             AppDiagnostics.LogError("settings.test-toast", ex);
-            ToastWindow.ShowError("Test failed", $"Could not show test toast notification:\n{ex.Message}");
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Test failed"),
+                $"{LocalizationService.Translate("Could not show test toast notification:")}\n{ex.Message}");
         }
     }
 }

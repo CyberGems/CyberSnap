@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Windows.Forms;
 
 namespace CyberSnap.Capture;
 
@@ -84,8 +85,8 @@ public static class RulerRenderer
         // Build label text in two parts: distance (larger, accent) + rest (normal)
         string distText = $"{(int)dist}px";
         string restText = $"  \u2022  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  \u2022  {angle:0.0}\u00b0";
-        var distSz = g.MeasureString(distText, _distFont!);
-        var restSz = g.MeasureString(restText, _font!);
+        var distSz = TextRenderer.MeasureText(g, distText, _distFont!);
+        var restSz = TextRenderer.MeasureText(g, restText, _font!);
         float totalW = distSz.Width + restSz.Width;
         float maxH = Math.Max(distSz.Height, restSz.Height);
         var mid = new PointF((from.X + to.X) / 2f, (from.Y + to.Y) / 2f);
@@ -136,13 +137,13 @@ public static class RulerRenderer
         g.FillPath(_bgBrush!, path);
         g.DrawPath(_borderPen!, path);
         // Center the text block horizontally within the label
-        float textX = label.X + padH;
-        // Vertical center for each font
-        float distY = label.Y + padV + (maxH - distSz.Height) / 2f;
-        float restY = label.Y + padV + (maxH - restSz.Height) / 2f;
-
-        g.DrawString(distText, _distFont!, _accentBrush!, textX, distY);
-        g.DrawString(restText, _font!, _fgBrush!, textX + distSz.Width, restY);
+        // Use TextRenderer (GDI) for accurate measurement and rendering
+        var distRect = new Rectangle((int)(label.X + padH), (int)(label.Y + padV), distSz.Width, (int)maxH);
+        var restRect = new Rectangle(distRect.Right, (int)(label.Y + padV), restSz.Width, (int)maxH);
+        TextRenderer.DrawText(g, distText, _distFont!, distRect, _accentBrush!.Color,
+            TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+        TextRenderer.DrawText(g, restText, _font!, restRect, _fgBrush!.Color,
+            TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
         g.SmoothingMode = SmoothingMode.Default;

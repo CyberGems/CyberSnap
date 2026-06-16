@@ -171,7 +171,8 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <Border x:Name="ColorSwatch" Grid.Column="0" Width="28" Height="28" CornerRadius="8"
-                            Margin="0,0,12,0" Visibility="Collapsed" VerticalAlignment="Center"/>
+                            Margin="0,0,12,0" Visibility="Collapsed" VerticalAlignment="Center"
+                            BorderBrush="#44FFFFFF" BorderThickness="1"/>
                     <Border x:Name="InlinePreviewHost" Grid.Column="1" Width="44" Height="44" CornerRadius="8"
                             Margin="0,0,12,0" Visibility="Collapsed" VerticalAlignment="Center"
                             Background="#12FFFFFF" BorderBrush="#22FFFFFF" BorderThickness="1">
