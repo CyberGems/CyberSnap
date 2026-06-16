@@ -25,6 +25,11 @@ public sealed class StandaloneRulerForm : Form
     private Point _lastTo;
     private bool _hasLastMeasurement;
 
+    // Post-drag editing: move or resize the committed ruler
+    private enum EditState { None, Moving, ResizingFrom, ResizingTo }
+    private EditState _editState = EditState.None;
+    private Point _editOffset; // cursor offset from _lastFrom during move
+
     // ── Banner ──
     private float _bannerOpacity;
     private System.Windows.Forms.Timer? _bannerTimer;
@@ -143,6 +148,30 @@ public sealed class StandaloneRulerForm : Form
 
         if (e.Button == MouseButtons.Left)
         {
+            // If there's a committed ruler, check if we're editing it
+            if (_hasLastMeasurement && _editState == EditState.None)
+            {
+                var hit = HitTestRuler(e.Location);
+                switch (hit)
+                {
+                    case EditState.Moving:
+                        _editState = EditState.Moving;
+                        _editOffset = new Point(e.Location.X - _lastFrom.X, e.Location.Y - _lastFrom.Y);
+                        Invalidate();
+                        return;
+                    case EditState.ResizingFrom:
+                        _editState = EditState.ResizingFrom;
+                        Invalidate();
+                        return;
+                    case EditState.ResizingTo:
+                        _editState = EditState.ResizingTo;
+                        Invalidate();
+                        return;
+                }
+            }
+
+            // Not editing existing ruler — start a fresh drag
+            _editState = EditState.None;
             _hasLastMeasurement = false;
             _isDragging = true;
             _rulerStart = e.Location;
@@ -155,13 +184,48 @@ public sealed class StandaloneRulerForm : Form
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
+        var prevCursorPos = _cursorPos;
         _cursorPos = e.Location;
+
         if (_isDragging)
         {
-            var oldBounds = RulerRenderer.GetPaintBounds(_rulerStart, GetRulerEnd(e.Location));
-            // Invalidate conservatively to clear previous frame's label
+            var oldBounds = RulerRenderer.GetPaintBounds(_rulerStart, GetRulerEnd(prevCursorPos));
             var newBounds = RulerRenderer.GetPaintBounds(_rulerStart, GetRulerEnd(e.Location));
             Invalidate(Rectangle.Union(oldBounds, newBounds));
+        }
+        else if (_editState != EditState.None)
+        {
+            var oldBounds = RulerRenderer.GetPaintBounds(_lastFrom, _lastTo);
+            switch (_editState)
+            {
+                case EditState.Moving:
+                    int dx = e.Location.X - _editOffset.X;
+                    int dy = e.Location.Y - _editOffset.Y;
+                    int moveDx = dx - _lastFrom.X;
+                    int moveDy = dy - _lastFrom.Y;
+                    _lastFrom = new Point(dx, dy);
+                    _lastTo = new Point(_lastTo.X + moveDx, _lastTo.Y + moveDy);
+                    break;
+                case EditState.ResizingFrom:
+                    _lastFrom = e.Location;
+                    break;
+                case EditState.ResizingTo:
+                    _lastTo = GetRulerEnd(e.Location);
+                    break;
+            }
+            var newBounds = RulerRenderer.GetPaintBounds(_lastFrom, _lastTo);
+            Invalidate(Rectangle.Union(oldBounds, newBounds));
+        }
+        else if (_hasLastMeasurement)
+        {
+            // Update cursor to hint editability
+            var hit = HitTestRuler(e.Location);
+            Cursor = hit switch
+            {
+                EditState.Moving => Cursors.SizeAll,
+                EditState.ResizingFrom or EditState.ResizingTo => Cursors.Cross,
+                _ => Cursors.Cross
+            };
         }
 
         base.OnMouseMove(e);
@@ -175,6 +239,11 @@ public sealed class StandaloneRulerForm : Form
             _lastFrom = _rulerStart;
             _lastTo = GetRulerEnd(_cursorPos);
             _hasLastMeasurement = true;
+            Invalidate();
+        }
+        else if (_editState != EditState.None && e.Button == MouseButtons.Left)
+        {
+            _editState = EditState.None;
             Invalidate();
         }
         base.OnMouseUp(e);
@@ -216,6 +285,52 @@ public sealed class StandaloneRulerForm : Form
         if (Math.Abs(dx) >= Math.Abs(dy))
             return new Point(current.X, _rulerStart.Y);
         return new Point(_rulerStart.X, current.Y);
+    }
+
+    /// <summary>Hit-test the committed ruler: returns which part the cursor is near.</summary>
+    private EditState HitTestRuler(Point p)
+    {
+        if (!_hasLastMeasurement) return EditState.None;
+
+        const int endpointRadius = 16;
+        const int lineThreshold = 10;
+
+        // Check endpoints first (they take priority over the line)
+        int distFrom = DistSq(p, _lastFrom);
+        int distTo = DistSq(p, _lastTo);
+        if (distFrom <= endpointRadius * endpointRadius)
+            return EditState.ResizingFrom;
+        if (distTo <= endpointRadius * endpointRadius)
+            return EditState.ResizingTo;
+
+        // Check distance to the line segment
+        float lineDist = DistToSegmentSq(p, _lastFrom, _lastTo);
+        if (lineDist <= lineThreshold * lineThreshold)
+            return EditState.Moving;
+
+        return EditState.None;
+    }
+
+    private static int DistSq(Point a, Point b)
+    {
+        int dx = a.X - b.X;
+        int dy = a.Y - b.Y;
+        return dx * dx + dy * dy;
+    }
+
+    private static float DistToSegmentSq(Point p, Point a, Point b)
+    {
+        float abx = b.X - a.X;
+        float aby = b.Y - a.Y;
+        float lenSq = abx * abx + aby * aby;
+        if (lenSq < 0.5f) return DistSq(p, a);
+
+        float t = Math.Clamp(((p.X - a.X) * abx + (p.Y - a.Y) * aby) / lenSq, 0f, 1f);
+        float projX = a.X + t * abx;
+        float projY = a.Y + t * aby;
+        float dx = p.X - projX;
+        float dy = p.Y - projY;
+        return dx * dx + dy * dy;
     }
 
     private void RenderBanner(Graphics g)
