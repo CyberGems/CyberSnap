@@ -81,7 +81,7 @@ public static class RulerRenderer
 
         // Build label text in two parts: distance (accent) + rest (normal)
         string distText = $"{(int)dist}px";
-        string restText = $"  \u00b7  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  \u00b7  {angle:0.0}\u00b0";
+        string restText = $"  \u2022  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  \u2022  {angle:0.0}\u00b0";
         var distSz = g.MeasureString(distText, _font!);
         var restSz = g.MeasureString(restText, _font!);
         float totalW = distSz.Width + restSz.Width;
