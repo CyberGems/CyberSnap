@@ -201,16 +201,31 @@ public sealed class StandaloneRulerForm : Form
                 case EditState.Moving:
                     int dx = e.Location.X - _editOffset.X;
                     int dy = e.Location.Y - _editOffset.Y;
+                    if ((ModifierKeys & Keys.Shift) != 0)
+                    {
+                        int rawDx = dx - _lastFrom.X;
+                        int rawDy = dy - _lastFrom.Y;
+                        if (Math.Abs(rawDx) >= Math.Abs(rawDy))
+                            dy = _lastFrom.Y;
+                        else
+                            dx = _lastFrom.X;
+                    }
                     int moveDx = dx - _lastFrom.X;
                     int moveDy = dy - _lastFrom.Y;
                     _lastFrom = new Point(dx, dy);
                     _lastTo = new Point(_lastTo.X + moveDx, _lastTo.Y + moveDy);
                     break;
                 case EditState.ResizingFrom:
-                    _lastFrom = e.Location;
+                    if ((ModifierKeys & Keys.Shift) != 0)
+                        _lastFrom = ConstrainPoint(e.Location, _lastTo);
+                    else
+                        _lastFrom = e.Location;
                     break;
                 case EditState.ResizingTo:
-                    _lastTo = GetRulerEnd(e.Location);
+                    if ((ModifierKeys & Keys.Shift) != 0)
+                        _lastTo = ConstrainPoint(e.Location, _lastFrom);
+                    else
+                        _lastTo = e.Location;
                     break;
             }
             var newBounds = RulerRenderer.GetPaintBounds(_lastFrom, _lastTo);
@@ -223,7 +238,7 @@ public sealed class StandaloneRulerForm : Form
             Cursor = hit switch
             {
                 EditState.Moving => Cursors.SizeAll,
-                EditState.ResizingFrom or EditState.ResizingTo => Cursors.Cross,
+                EditState.ResizingFrom or EditState.ResizingTo => Cursors.SizeNWSE,
                 _ => Cursors.Cross
             };
         }
@@ -280,11 +295,17 @@ public sealed class StandaloneRulerForm : Form
     {
         if ((ModifierKeys & Keys.Shift) == 0) return current;
 
-        int dx = current.X - _rulerStart.X;
-        int dy = current.Y - _rulerStart.Y;
+        return ConstrainPoint(current, _rulerStart);
+    }
+
+    /// <summary>Constrain a point to horizontal or vertical axis from an anchor.</summary>
+    private static Point ConstrainPoint(Point current, Point anchor)
+    {
+        int dx = current.X - anchor.X;
+        int dy = current.Y - anchor.Y;
         if (Math.Abs(dx) >= Math.Abs(dy))
-            return new Point(current.X, _rulerStart.Y);
-        return new Point(_rulerStart.X, current.Y);
+            return new Point(current.X, anchor.Y);
+        return new Point(anchor.X, current.Y);
     }
 
     /// <summary>Hit-test the committed ruler: returns which part the cursor is near.</summary>
@@ -342,8 +363,8 @@ public sealed class StandaloneRulerForm : Form
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            float x = 18;
-            float y = 18;
+            float x = SystemInformation.WorkingArea.Left + 18;
+            float y = SystemInformation.WorkingArea.Top + 18;
 
             using var font = new Font("Segoe UI Variable Display", 13f, FontStyle.Regular, GraphicsUnit.Point);
             var size = g.MeasureString(BannerText, font);
