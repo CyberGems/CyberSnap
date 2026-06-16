@@ -363,7 +363,7 @@ public sealed class StandaloneRulerForm : Form
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            float x = SystemInformation.WorkingArea.Left + 18;
+            // Center horizontally at the top, respecting the working area vertically
             float y = SystemInformation.WorkingArea.Top + 18;
 
             using var font = new Font("Segoe UI Variable Display", 13f, FontStyle.Regular, GraphicsUnit.Point);
@@ -373,6 +373,7 @@ public sealed class StandaloneRulerForm : Form
             int paddingV = 15;
             float width = size.Width + paddingH * 2;
             float height = size.Height + paddingV * 2;
+            float x = (ClientRectangle.Width - width) / 2f;
 
             _bannerRect = new RectangleF(x, y, width, height);
 
