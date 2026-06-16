@@ -235,12 +235,10 @@ public sealed class StandaloneColorPickerForm : Form
         EnsureMagnifierForm();
         if (_magnifierForm is null) return;
 
-        var (mx, my) = MagnifierPosition(_cursorPos);
-        _magnifierForm.Left = mx + Bounds.Left;
-        _magnifierForm.Top = my + Bounds.Top;
         if (!_magnifierForm.Visible)
             _magnifierForm.Show(this);
         _magnifierForm.UpdateMagnifier(_magBitmap!, _cursorPos, _pickedColor, _hexStr, _rgbStr);
+        PositionMagnifier(_cursorPos);
     }
 
     private void BuildMagnifierPixels(int cx, int cy)
@@ -327,12 +325,15 @@ public sealed class StandaloneColorPickerForm : Form
 
     /// <summary>
     /// Position the magnifier to the top-right of the cursor, flipping if near screen edges.
+    /// Uses actual form size after UpdateMagnifier may have resized it.
     /// </summary>
-    private (int x, int y) MagnifierPosition(Point cursor)
+    private void PositionMagnifier(Point cursor)
     {
+        if (_magnifierForm is null) return;
+
         const int offset = 20;
-        int formW = PickerMagnifierForm.TotalW;
-        int formH = PickerMagnifierForm.TotalW + 52; // lens + info
+        int formW = _magnifierForm.Width;
+        int formH = _magnifierForm.Height;
 
         int x = cursor.X + offset;
         int y = cursor.Y - formH - offset;
@@ -349,6 +350,7 @@ public sealed class StandaloneColorPickerForm : Form
         x = Math.Clamp(x, 4, _bmpW - formW - 4);
         y = Math.Clamp(y, 4, _bmpH - formH - 4);
 
-        return (x, y);
+        _magnifierForm.Left = x + Bounds.Left;
+        _magnifierForm.Top = y + Bounds.Top;
     }
 }
