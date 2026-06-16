@@ -2890,38 +2890,61 @@
                                                            Foreground="{DynamicResource ThemeMutedBrush}"/>
                                             </Border>
                                         </StackPanel>
-                                        <Border x:Name="EditorToastMockShell" Width="196" CornerRadius="12"
-                                                BorderThickness="1" HorizontalAlignment="Left">
-                                            <Grid Margin="14,11,14,11">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                    <TextBlock x:Name="EditorToastMockTitle"
-                                                               Services:LocalizationService.SourceText="Sent to the editor"
-                                                               FontSize="12.75" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
-                                                               TextWrapping="Wrap"
-                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                                    <TextBlock x:Name="EditorToastMockBody"
-                                                               Services:LocalizationService.SourceText="Your capture is open in the editor."
-                                                               FontSize="11.5" FontFamily="Segoe UI Variable Text"
-                                                               TextWrapping="Wrap" Opacity="0.72" Margin="0,2,0,0"
-                                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-                                                </StackPanel>
-                                                <Border Grid.Column="1" Width="22" Height="22" CornerRadius="6"
-                                                        Margin="10,-2,-4,0" VerticalAlignment="Top"
-                                                        Background="Transparent">
-                                                    <Image x:Name="EditorToastMockCloseIcon" Width="11" Height="11"
-                                                           Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <!-- Faithful mock of the real text toast: rounded shell (clip so the
+                                             progress bar follows the corners), centered title/body, and the
+                                             static "animated" gradient timeline along the bottom — matching
+                                             ToastWindow.xaml's ProgressBar exactly. Colours set in code. -->
+                                        <Border x:Name="EditorToastMockShell" CornerRadius="12"
+                                                MinWidth="196" MaxWidth="300" BorderThickness="1"
+                                                ClipToBounds="True" HorizontalAlignment="Left">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="4"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid Grid.Row="0" Margin="14,11,14,11">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                        <TextBlock x:Name="EditorToastMockTitle"
+                                                                   Services:LocalizationService.SourceText="Sent to the editor"
+                                                                   FontSize="12.75" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
+                                                                   TextWrapping="Wrap" TextAlignment="Center"
+                                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                                        <TextBlock x:Name="EditorToastMockBody"
+                                                                   Services:LocalizationService.SourceText="Your capture is open in the editor."
+                                                                   FontSize="11.5" FontFamily="Segoe UI Variable Text"
+                                                                   TextWrapping="Wrap" TextAlignment="Center" Opacity="0.72" Margin="0,2,0,0"
+                                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                                    </StackPanel>
+                                                    <Border Grid.Column="1" Width="22" Height="22" CornerRadius="6"
+                                                            Margin="10,-2,-4,0" VerticalAlignment="Top"
+                                                            Background="Transparent">
+                                                        <Image x:Name="EditorToastMockCloseIcon" Width="11" Height="11"
+                                                               Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </Grid>
+                                                <Border Grid.Row="1" HorizontalAlignment="Stretch" CornerRadius="0,0,12,12" Margin="4,0">
+                                                    <Border.Background>
+                                                        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                                            <GradientStop Color="#FF00F2FF" Offset="0.0"/>
+                                                            <GradientStop Color="#FF7A00FF" Offset="0.5"/>
+                                                            <GradientStop Color="#FFFF00D0" Offset="1.0"/>
+                                                        </LinearGradientBrush>
+                                                    </Border.Background>
+                                                    <Border.Effect>
+                                                        <DropShadowEffect Color="#FF7A00FF" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
+                                                    </Border.Effect>
                                                 </Border>
                                             </Grid>
                                         </Border>
                                         <TextBlock x:Name="EditorToastMockNote"
                                                    Services:LocalizationService.SourceText="Appears when the editor is enabled"
                                                    Style="{StaticResource InfoText}" Margin="2,8,0,0" TextWrapping="Wrap"
-                                                   MaxWidth="196" HorizontalAlignment="Left"/>
+                                                   MaxWidth="300" HorizontalAlignment="Left"/>
                                     </StackPanel>
 
                                     <!-- Divider separating the fixed informational view (left) from the
@@ -2946,8 +2969,8 @@
                                                            Foreground="{DynamicResource ThemeAccentBrush}"/>
                                             </Border>
                                         </StackPanel>
-                                    <StackPanel x:Name="ToastLayoutStack" Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <Border Width="300" Height="236" CornerRadius="18"
+                                    <StackPanel x:Name="ToastLayoutStack" Width="280" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border Width="280" Height="220" CornerRadius="18"
                                             Background="#FF000000"
                                             BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
                                             BorderThickness="1">
