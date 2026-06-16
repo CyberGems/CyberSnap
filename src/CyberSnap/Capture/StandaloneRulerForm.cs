@@ -56,7 +56,8 @@ public sealed class StandaloneRulerForm : Form
 
         // Capture which screen the cursor is on now (STA thread, right after menu click)
         var cursor = Cursor.Position;
-        _bannerWorkingArea = Screen.FromPoint(cursor).WorkingArea;
+        var detected = Screen.FromPoint(cursor);
+        _bannerWorkingArea = detected.WorkingArea;
 
         // DEBUG: log screen detection
         var sb = new System.Text.StringBuilder();
