@@ -68,12 +68,6 @@ public sealed partial class RegionOverlayForm
             {
                 g.Restore(state);
             }
-            // DIAG: fill interior with semi-transparent green to test ExcludeClip
-            if (activeSelectionRect.Width > 0)
-            {
-                using var diagBrush = new SolidBrush(Color.FromArgb(60, 40, 255, 40));
-                g.FillRectangle(diagBrush, activeSelectionRect);
-            }
         }
         else if (!_hasSelection && !_autoDetectActive)
         {
@@ -250,6 +244,17 @@ public sealed partial class RegionOverlayForm
         }
 
         g.SmoothingMode = SmoothingMode.Default;
+
+        // DIAG: green fill at very end to detect if anything paints over interior
+        if (_isSelecting || _isConfirmingSelection)
+        {
+            var r = _isConfirmingSelection ? _confirmRect : _selectionRect;
+            if (r.Width > 0)
+            {
+                using var diagBrush = new SolidBrush(Color.FromArgb(60, 40, 255, 40));
+                g.FillRectangle(diagBrush, r);
+            }
+        }
     }
 
     /// <summary>Clamp a rectangle so it stays 2px inside the client area (prevents dashes from being cut off at screen edges).</summary>
