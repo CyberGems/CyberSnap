@@ -329,11 +329,11 @@ public sealed class AppSettings
     // Tools with dedicated properties (rect, ocr, picker, etc.) are mapped to those properties instead.
     public Dictionary<string, uint[]>? ToolHotkeys { get; set; }
 
-    // Virtual key codes for in-capture annotation shortcuts: 1-9, 0, -, =, [, ]
+    // Virtual key codes for in-capture annotation shortcuts: 1-9, H, R, S, M, B, E
     private static readonly uint[] AnnotationKeyVks =
     {
         0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, // 1-9
-        0x30, 0xBD, 0xBB, 0xDB, 0xDD, 0xDC // 0, -, =, [, ], \
+        0x48, 0x52, 0x53, 0x4D, 0x42, 0x45 // H, R, S, M, B, E
     };
 
     private Dictionary<string, uint> GetAnnotationDefaults()
@@ -349,16 +349,13 @@ public sealed class AppSettings
             ["curvedArrow"] = 0x37, // 7 (Curved Arrow)
             ["circleShape"] = 0x38, // 8 (Circle)
             ["rectShape"] = 0x39,   // 9 (Rectangle)
-            ["ruler"] = 0x30,       // 0 (Ruler)
+            ["highlight"] = 0x48,   // H (Highlight)
+            ["ruler"] = 0x52,       // R (Ruler)
+            ["step"] = 0x53,        // S (Step Number)
+            ["magnifier"] = 0x4D,   // M (Magnifier)
+            ["blur"] = 0x42,        // B (Blur)
+            ["emoji"] = 0x45,       // E (Emoji)
         };
-
-        var remainingKeys = AnnotationKeyVks.Where(k => !result.Values.Contains(k)).ToList();
-        int keyIdx = 0;
-        foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
-        {
-            if (!result.ContainsKey(t.Id) && keyIdx < remainingKeys.Count)
-                result[t.Id] = remainingKeys[keyIdx++];
-        }
         return result;
     }
 
