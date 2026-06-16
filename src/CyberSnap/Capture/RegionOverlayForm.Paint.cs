@@ -47,7 +47,7 @@ public sealed partial class RegionOverlayForm
         // Subtle dimming overlay — always present to indicate overlay is active.
         // In selection mode, the selected region is excluded (kept clear).
         var accent = UiChrome.AccentColor;
-        var overlayColor = Color.FromArgb(3, accent.R, accent.G, accent.B);
+        var overlayColor = Color.FromArgb(2, accent.R, accent.G, accent.B);
 
         if (_isSelecting || _isConfirmingSelection)
         {
