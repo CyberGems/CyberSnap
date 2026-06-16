@@ -55,7 +55,17 @@ public sealed class StandaloneRulerForm : Form
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
 
         // Capture which screen the cursor is on now (STA thread, right after menu click)
-        _bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+        var cursor = Cursor.Position;
+        _bannerWorkingArea = Screen.FromPoint(cursor).WorkingArea;
+
+        // DEBUG: log screen detection
+        var sb = new System.Text.StringBuilder();
+        foreach (var s in Screen.AllScreens)
+            sb.Append($"Bounds=({s.Bounds.X},{s.Bounds.Y},{s.Bounds.Width}x{s.Bounds.Height}) WA=({s.WorkingArea.X},{s.WorkingArea.Y}) Primary={s.Primary} | ");
+        System.Diagnostics.Debug.WriteLine(
+            $"[StandaloneRuler] Cursor=({cursor.X},{cursor.Y}) VirtualScreen=({SystemInformation.VirtualScreen.X},{SystemInformation.VirtualScreen.Y},{SystemInformation.VirtualScreen.Width}x{SystemInformation.VirtualScreen.Height}) " +
+            $"Detected=Bounds({detected.Bounds.X},{detected.Bounds.Y}) Primary={detected.Primary} WA=({_bannerWorkingArea.X},{_bannerWorkingArea.Y},{_bannerWorkingArea.Width}x{_bannerWorkingArea.Height}) " +
+            $"AllScreens=[{sb}]");
 
         Theme.Refresh();
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
@@ -294,6 +304,9 @@ public sealed class StandaloneRulerForm : Form
 
         // Draw banner
         RenderBanner(g);
+
+        // DEBUG: overlay screen detection info
+        RenderDebugInfo(g);
     }
 
     // ── Helpers ──
@@ -414,6 +427,36 @@ public sealed class StandaloneRulerForm : Form
         finally
         {
             g.Restore(state);
+        }
+    }
+
+    private void RenderDebugInfo(Graphics g)
+    {
+        var cursor = Cursor.Position;
+        var detected = Screen.FromPoint(cursor);
+        var sb = new System.Text.StringBuilder();
+        foreach (var s in Screen.AllScreens)
+            sb.Append($"S{(s.Primary ? "*" : "")}:B({s.Bounds.X},{s.Bounds.Y}) WA({s.WorkingArea.X},{s.WorkingArea.Y}) | ");
+
+        var lines = new[]
+        {
+            $"Cursor: ({cursor.X},{cursor.Y})",
+            $"Detected: {(detected.Primary ? "PRIMARY" : "SECONDARY")} B({detected.Bounds.X},{detected.Bounds.Y})",
+            $"Banner WA: ({_bannerWorkingArea.X},{_bannerWorkingArea.Y},{_bannerWorkingArea.Width}x{_bannerWorkingArea.Height})",
+            $"Virtual: ({SystemInformation.VirtualScreen.X},{SystemInformation.VirtualScreen.Y},{SystemInformation.VirtualScreen.Width}x{SystemInformation.VirtualScreen.Height})",
+            sb.ToString()
+        };
+
+        using var font = new Font("Consolas", 10f, FontStyle.Regular, GraphicsUnit.Point);
+        float y = ClientRectangle.Bottom - 110;
+        foreach (var line in lines)
+        {
+            using var bg = new SolidBrush(Color.FromArgb(180, 0, 0, 0));
+            var sz = g.MeasureString(line, font);
+            g.FillRectangle(bg, 8, y, sz.Width + 12, sz.Height + 4);
+            using var fg = new SolidBrush(Color.Lime);
+            g.DrawString(line, font, fg, 12, y + 2);
+            y += sz.Height + 2;
         }
     }
 
