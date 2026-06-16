@@ -99,9 +99,9 @@
 
         <!-- Styled Combobox for language/engine selectors -->
         <Style x:Key="OcrComboStyle" TargetType="ComboBox">
-            <Setter Property="MinHeight" Value="32"/>
-            <Setter Property="Padding" Value="10,4"/>
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
@@ -151,7 +151,8 @@
                                                  Foreground="{TemplateBinding Foreground}"
                                                  CaretBrush="{TemplateBinding Foreground}"
                                                  FontSize="{TemplateBinding FontSize}"
-                                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                 VerticalAlignment="Center"
+                                                 VerticalContentAlignment="Center"
                                                  IsReadOnly="{TemplateBinding IsReadOnly}"/>
                                         <Path Grid.Column="1"
                                               Width="8" Height="4"
@@ -292,7 +293,7 @@
                                   ItemContainerStyle="{StaticResource OcrComboItemStyle}"
                                   PreviewTextInput="FilterCombo_PreviewTextInput" PreviewKeyDown="FilterCombo_PreviewKeyDown"
                                   SelectionChanged="FromLanguageCombo_Changed"/>
-                        <TextBlock Text="â†’" FontSize="14" Margin="0,0,6,6" VerticalAlignment="Center" Opacity="0.35"
+                        <TextBlock Text="&#x2192;" FontSize="15" Margin="0,0,6,6" VerticalAlignment="Center" Opacity="0.35"
                                    Foreground="{DynamicResource ThemeTextPrimaryBrush}" FontWeight="Bold"/>
                         <ComboBox x:Name="ToLanguageCombo" Style="{StaticResource OcrComboStyle}" MinWidth="120"
                                   Margin="0,0,8,6"
