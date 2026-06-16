@@ -169,12 +169,15 @@ public partial class App
         // Dismiss tray context menu so it doesn't appear frozen in the screenshot
         _trayIcon?.CloseContextMenu();
 
+        // Capture cursor position on this thread (reliable) for banner placement
+        var cursorPos = System.Windows.Forms.Cursor.Position;
+
         var thread = new Thread(() =>
         {
             try
             {
                 Theme.Refresh();
-                using var form = new StandaloneRulerForm();
+                using var form = new StandaloneRulerForm(cursorPos);
                 System.Windows.Forms.Application.Run(form);
             }
             catch (Exception ex)

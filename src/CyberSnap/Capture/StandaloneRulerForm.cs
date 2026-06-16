@@ -15,6 +15,7 @@ namespace CyberSnap.Capture;
 public sealed class StandaloneRulerForm : Form
 {
     private readonly Bitmap _screenshot;
+    private readonly Screen _targetScreen;
     private Point _rulerStart;
     private bool _isDragging;
     private Point _cursorPos;
@@ -39,8 +40,11 @@ public sealed class StandaloneRulerForm : Form
     private BannerState _bannerState = BannerState.FadeIn;
     private static readonly string BannerText = "Click & drag to measure  ·  Right-click or Esc to close  ·  Hold Shift to constrain";
 
-    public StandaloneRulerForm()
+    public StandaloneRulerForm(Point cursorScreenPos)
     {
+        // Give the tray context menu time to fully dismiss before screenshot
+        Thread.Sleep(80);
+
         var bounds = SystemInformation.VirtualScreen;
         Bounds = bounds;
         FormBorderStyle = FormBorderStyle.None;
@@ -49,6 +53,8 @@ public sealed class StandaloneRulerForm : Form
         StartPosition = FormStartPosition.Manual;
         DoubleBuffered = false;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+
+        _targetScreen = Screen.FromPoint(cursorScreenPos);
 
         Theme.Refresh();
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
@@ -363,9 +369,8 @@ public sealed class StandaloneRulerForm : Form
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // Center on the screen where the cursor currently is
-            var screen = Screen.FromPoint(Cursor.Position);
-            float y = screen.WorkingArea.Top + 18;
+            // Center on the screen where the cursor was when the ruler was activated
+            float y = _targetScreen.WorkingArea.Top + 18;
 
             using var font = new Font("Segoe UI Variable Display", 13f, FontStyle.Regular, GraphicsUnit.Point);
             var size = g.MeasureString(BannerText, font);
@@ -374,7 +379,7 @@ public sealed class StandaloneRulerForm : Form
             int paddingV = 15;
             float width = size.Width + paddingH * 2;
             float height = size.Height + paddingV * 2;
-            float x = screen.WorkingArea.Left + (screen.WorkingArea.Width - width) / 2f;
+            float x = _targetScreen.WorkingArea.Left + (_targetScreen.WorkingArea.Width - width) / 2f;
 
             _bannerRect = new RectangleF(x, y, width, height);
 
