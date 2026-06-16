@@ -160,7 +160,8 @@ public static class RulerRenderer
 
         int midX = (from.X + to.X) / 2;
         int midY = (from.Y + to.Y) / 2;
-        var labelRect = new Rectangle(midX - 310, midY - 190, 620, 380);
+        // Generous padding: label can be offset perpendicularly and is wider with the new format
+        var labelRect = new Rectangle(midX - 420, midY - 260, 840, 520);
 
         return Rectangle.Union(lineRect, labelRect);
     }

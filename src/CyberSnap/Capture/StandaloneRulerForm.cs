@@ -306,8 +306,8 @@ public sealed class StandaloneRulerForm : Form
         int maxX = Math.Max(Math.Max(a1.X, a2.X), Math.Max(b1.X, b2.X));
         int maxY = Math.Max(Math.Max(a1.Y, a2.Y), Math.Max(b1.Y, b2.Y));
 
-        // Inflate to cover line ticks and floating label (conservative: 320px each direction)
-        const int pad = 320;
+        // Inflate to cover line ticks and floating label (conservative: 430px each direction)
+        const int pad = 430;
         return Rectangle.FromLTRB(minX - pad, minY - pad, maxX + pad, maxY + pad);
     }
 
