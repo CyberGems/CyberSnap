@@ -150,7 +150,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Scan when _hasSelection && !_isSelecting:
             case CaptureMode.Sticker when _hasSelection && !_isSelecting:
             case CaptureMode.Upscale when _hasSelection && !_isSelecting:
-                SelectionFrameRenderer.DrawRectangle(g, _selectionRect);
+                SelectionFrameRenderer.DrawRectangle(g, _selectionRect, fill: false);
                 SelectionSizeReadout.Draw(
                     g,
                     GetReadoutCursorPoint(),
