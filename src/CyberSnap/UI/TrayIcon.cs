@@ -21,9 +21,9 @@ public sealed class TrayIcon : IDisposable
 
     public event Action? OnCapture;
     public event Action? OnOcr;
-    public event Action? OnColorPicker;
     public event Action? OnScrollCapture;
     public event Action? OnRuler;
+    public event Action? OnStandaloneColorPicker;
     public event Action? OnAnnotationEditor;
     public event Action? OnSettings;
     public event Action? OnHistory;
@@ -108,7 +108,6 @@ public sealed class TrayIcon : IDisposable
         var captureItem  = WindowsMenuRenderer.Item(T("Area capture"), HotkeyHint("rect"), "captureRect");
         var scrollItem   = WindowsMenuRenderer.Item(T("Scrolling capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
         var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("ocr"), "ocr");
-        var pickerItem   = WindowsMenuRenderer.Item(T("Color picker"), HotkeyHint("picker"), "picker");
         var rulerItem    = WindowsMenuRenderer.Item(T("Ruler"), HotkeyHint("_standaloneRuler"), "ruler");
 
         ToolStripMenuItem? recordItem = null;
@@ -141,8 +140,10 @@ public sealed class TrayIcon : IDisposable
 
         captureItem.Click += (_, _) => OnCapture?.Invoke();
         ocrItem.Click     += (_, _) => OnOcr?.Invoke();
-        pickerItem.Click  += (_, _) => OnColorPicker?.Invoke();
         rulerItem.Click   += (_, _) => OnRuler?.Invoke();
+        var standaloneColorPickerItem = WindowsMenuRenderer.Item(T("Color picker"), HotkeyHint("_standaloneColorPicker"), "picker");
+        standaloneColorPickerItem.Click += (_, _) => OnStandaloneColorPicker?.Invoke();
+
         scrollItem.Click   += (_, _) => OnScrollCapture?.Invoke();
         annotationEditorItem.Click += (_, _) => OnAnnotationEditor?.Invoke();
         historyItem.Click          += (_, _) => OnHistory?.Invoke();
@@ -169,7 +170,7 @@ public sealed class TrayIcon : IDisposable
         }
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(ocrItem);
-        menu.Items.Add(pickerItem);
+        menu.Items.Add(standaloneColorPickerItem);
         menu.Items.Add(rulerItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(annotationEditorItem);

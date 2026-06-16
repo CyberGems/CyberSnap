@@ -25,6 +25,7 @@ public partial class App
         _hotkeyService.ActiveWindowHotkeyPressed += OnActiveWindowHotkeyPressed;
         _hotkeyService.ScrollCaptureHotkeyPressed += OnScrollCaptureHotkeyPressed;
         _hotkeyService.StandaloneRulerHotkeyPressed += OnStandaloneRulerHotkeyPressed;
+        _hotkeyService.StandaloneColorPickerHotkeyPressed += OnStandaloneColorPickerHotkeyPressed;
 
         var s = _settingsService!.Settings;
         var failed = new List<string>();
@@ -45,6 +46,7 @@ public partial class App
         TryRegister(_hotkeyService.RegisterActiveWindow(s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey), "Active Window", s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey);
         TryRegister(_hotkeyService.RegisterScrollCapture(s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey), "Scroll Capture", s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneRuler(s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey), "Standalone Ruler", s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey);
+        TryRegister(_hotkeyService.RegisterStandaloneColorPicker(s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey), "Standalone Color Picker", s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey);
         if (failed.Count > 0)
             ToastWindow.ShowError("Hotkey conflict", $"{string.Join(", ", failed)} — already in use by another app");
         else if (showReadyNotification)
@@ -180,6 +182,28 @@ public partial class App
             catch (Exception ex)
             {
                 AppDiagnostics.LogError("standalone-ruler", ex);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+    }
+
+    private void OnStandaloneColorPickerHotkeyPressed()
+    {
+        _trayIcon?.CloseContextMenu();
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                Theme.Refresh();
+                using var form = new StandaloneColorPickerForm();
+                System.Windows.Forms.Application.Run(form);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("standalone-colorpicker", ex);
             }
         });
         thread.SetApartmentState(ApartmentState.STA);

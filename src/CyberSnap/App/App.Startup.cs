@@ -158,8 +158,8 @@ public partial class App
         _trayIcon = new TrayIcon(_settingsService?.Settings);
         _trayIcon.OnCapture += OnHotkeyPressed;
         _trayIcon.OnOcr += OnOcrHotkeyPressed;
-        _trayIcon.OnColorPicker += OnPickerHotkeyPressed;
         _trayIcon.OnRuler += OnStandaloneRulerHotkeyPressed;
+        _trayIcon.OnStandaloneColorPicker += OnStandaloneColorPickerHotkeyPressed;
         _trayIcon.OnRecordRequested += LaunchRecordingWithFormat;
         _trayIcon.OnScrollCapture += OnScrollCaptureHotkeyPressed;
         _trayIcon.OnAnnotationEditor += () => UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();

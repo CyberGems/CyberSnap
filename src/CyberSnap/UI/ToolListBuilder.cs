@@ -213,7 +213,9 @@ public static class ToolListBuilder
             ("recordGif", "Screen Recorder (GIF)", ToolDef.AllTools.First(t => t.Id == "recordGif").Icon),
             ("_fullscreen", "Fullscreen capture", ToolGlyphs.FullscreenGlyph),
             ("_activeWindow", "Active window", ToolGlyphs.ActiveWindowGlyph),
-            ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon)
+            ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon),
+            ("_standaloneColorPicker", "Color Picker (Standalone)", ToolDef.AllTools.First(t => t.Id == "picker").Icon)
+            // Future standalone tools follow the convention: ("_standalone{name}", "Label", icon)
         };
 
         foreach (var item in captureItems)
