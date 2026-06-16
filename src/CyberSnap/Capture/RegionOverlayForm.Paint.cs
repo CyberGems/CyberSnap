@@ -60,7 +60,6 @@ public sealed partial class RegionOverlayForm
                     {
                         g.ExcludeClip(activeSelectionRect);
                     }
-                    g.CompositingMode = CompositingMode.SourceCopy;
                     using (var dimBrush = new SolidBrush(overlayColor))
                     {
                         g.FillRectangle(dimBrush, ClientRectangle);
@@ -73,12 +72,10 @@ public sealed partial class RegionOverlayForm
             }
             else if (!_hasSelection && !_autoDetectActive)
             {
-                g.CompositingMode = CompositingMode.SourceCopy;
                 using (var dimBrush = new SolidBrush(overlayColor))
                 {
                     g.FillRectangle(dimBrush, ClientRectangle);
                 }
-                g.CompositingMode = CompositingMode.SourceOver;
             }
         }
 
