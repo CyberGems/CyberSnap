@@ -24,6 +24,7 @@ public partial class App
         _hotkeyService.FullscreenHotkeyPressed += OnFullscreenHotkeyPressed;
         _hotkeyService.ActiveWindowHotkeyPressed += OnActiveWindowHotkeyPressed;
         _hotkeyService.ScrollCaptureHotkeyPressed += OnScrollCaptureHotkeyPressed;
+        _hotkeyService.StandaloneRulerHotkeyPressed += OnStandaloneRulerHotkeyPressed;
 
         var s = _settingsService!.Settings;
         var failed = new List<string>();
@@ -43,6 +44,7 @@ public partial class App
         TryRegister(_hotkeyService.RegisterFullscreen(s.FullscreenHotkeyModifiers, s.FullscreenHotkeyKey), "Fullscreen", s.FullscreenHotkeyModifiers, s.FullscreenHotkeyKey);
         TryRegister(_hotkeyService.RegisterActiveWindow(s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey), "Active Window", s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey);
         TryRegister(_hotkeyService.RegisterScrollCapture(s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey), "Scroll Capture", s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey);
+        TryRegister(_hotkeyService.RegisterStandaloneRuler(s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey), "Standalone Ruler", s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey);
         if (failed.Count > 0)
             ToastWindow.ShowError("Hotkey conflict", $"{string.Join(", ", failed)} — already in use by another app");
         else if (showReadyNotification)
@@ -161,6 +163,26 @@ public partial class App
         RegionOverlayForm.TrySwitchCurrentOverlayMode(mode);
 
     public bool IsCapturingActive() => Volatile.Read(ref _isCapturing) != 0;
+
+    private void OnStandaloneRulerHotkeyPressed()
+    {
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                Theme.Refresh();
+                using var form = new StandaloneRulerForm();
+                System.Windows.Forms.Application.Run(form);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("standalone-ruler", ex);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+    }
 
     public void OnHotkeyPressedProxy() => OnHotkeyPressed();
     public void OnOcrHotkeyPressedProxy() => OnOcrHotkeyPressed();

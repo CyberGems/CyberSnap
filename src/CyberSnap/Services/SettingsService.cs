@@ -352,6 +352,8 @@ public sealed class SettingsService : IDisposable
             settings.ScrollCaptureHotkeyKey = 0;
         if (IsUnsafeModifierlessHotkey(settings.GifHotkeyModifiers, settings.GifHotkeyKey))
             settings.GifHotkeyKey = 0;
+        if (IsUnsafeModifierlessHotkey(settings.StandaloneRulerHotkeyModifiers, settings.StandaloneRulerHotkeyKey))
+            settings.StandaloneRulerHotkeyKey = 0;
     }
 
     private static bool IsUnsafeModifierlessHotkey(uint modifiers, uint key) =>

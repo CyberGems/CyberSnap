@@ -15,6 +15,7 @@ public sealed class HotkeyService : IDisposable
     private const int HOTKEY_ACTIVE_WINDOW = 9008;
     private const int HOTKEY_SCROLL_CAPTURE = 9009;
     private const int HOTKEY_CENTER = 9011;
+    private const int HOTKEY_STANDALONE_RULER = 9012;
 
     private bool _captureRegistered;
     private bool _ocrRegistered;
@@ -26,6 +27,7 @@ public sealed class HotkeyService : IDisposable
     private bool _activeWindowRegistered;
     private bool _scrollCaptureRegistered;
     private bool _centerRegistered;
+    private bool _standaloneRulerRegistered;
     private bool _registered;
 
     public event Action? HotkeyPressed;
@@ -38,6 +40,7 @@ public sealed class HotkeyService : IDisposable
     public event Action? ActiveWindowHotkeyPressed;
     public event Action? ScrollCaptureHotkeyPressed;
     public event Action? CenterHotkeyPressed;
+    public event Action? StandaloneRulerHotkeyPressed;
 
     private void EnsureMessageHook()
     {
@@ -81,6 +84,7 @@ public sealed class HotkeyService : IDisposable
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_ACTIVE_WINDOW);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_SCROLL_CAPTURE);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_CENTER);
+        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_RULER);
         _captureRegistered = false;
         _ocrRegistered = false;
         _pickerRegistered = false;
@@ -91,6 +95,7 @@ public sealed class HotkeyService : IDisposable
         _activeWindowRegistered = false;
         _scrollCaptureRegistered = false;
         _centerRegistered = false;
+        _standaloneRulerRegistered = false;
     }
 
     public bool Register(uint modifiers, uint key) => RegisterHotkey(ref _captureRegistered, HOTKEY_CAPTURE, modifiers, key);
@@ -103,6 +108,7 @@ public sealed class HotkeyService : IDisposable
     public bool RegisterActiveWindow(uint modifiers, uint key) => RegisterHotkey(ref _activeWindowRegistered, HOTKEY_ACTIVE_WINDOW, modifiers, key);
     public bool RegisterScrollCapture(uint modifiers, uint key) => RegisterHotkey(ref _scrollCaptureRegistered, HOTKEY_SCROLL_CAPTURE, modifiers, key);
     public bool RegisterCenter(uint modifiers, uint key) => RegisterHotkey(ref _centerRegistered, HOTKEY_CENTER, modifiers, key);
+    public bool RegisterStandaloneRuler(uint modifiers, uint key) => RegisterHotkey(ref _standaloneRulerRegistered, HOTKEY_STANDALONE_RULER, modifiers, key);
 
     public void Unregister()
     {
@@ -116,6 +122,7 @@ public sealed class HotkeyService : IDisposable
         if (_activeWindowRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_ACTIVE_WINDOW); _activeWindowRegistered = false; }
         if (_scrollCaptureRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_SCROLL_CAPTURE); _scrollCaptureRegistered = false; }
         if (_centerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_CENTER); _centerRegistered = false; }
+        if (_standaloneRulerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_RULER); _standaloneRulerRegistered = false; }
         if (_registered)
         {
             ComponentDispatcher.ThreadPreprocessMessage -= OnMsg;
@@ -137,6 +144,7 @@ public sealed class HotkeyService : IDisposable
         else if (id == HOTKEY_ACTIVE_WINDOW) { InvokeHandlersSafely(ActiveWindowHotkeyPressed, "hotkey.active-window"); handled = true; }
         else if (id == HOTKEY_SCROLL_CAPTURE) { InvokeHandlersSafely(ScrollCaptureHotkeyPressed, "hotkey.scroll-capture"); handled = true; }
         else if (id == HOTKEY_CENTER) { InvokeHandlersSafely(CenterHotkeyPressed, "hotkey.center"); handled = true; }
+        else if (id == HOTKEY_STANDALONE_RULER) { InvokeHandlersSafely(StandaloneRulerHotkeyPressed, "hotkey.standalone-ruler"); handled = true; }
     }
 
     private static void InvokeHandlersSafely(Action? handlers, string context)

@@ -174,27 +174,8 @@ public sealed partial class RegionOverlayForm
         _lastLivePreviewPaintExtent = ComputeCurrentLivePreviewExtent();
     }
 
-    /// <summary>Conservative bounding rect for the ruler's live paint (line + ticks + floating distance label).
-    /// Uses fixed worst-case label dimensions so the next-frame invalidate always covers the previous label position.</summary>
     internal static Rectangle GetRulerPaintBounds(Point from, Point to)
-    {
-        int minX = Math.Min(from.X, to.X);
-        int minY = Math.Min(from.Y, to.Y);
-        int maxX = Math.Max(from.X, to.X);
-        int maxY = Math.Max(from.Y, to.Y);
-
-        // Line + tick marks (tickHalf=6 perpendicular) + safety pad
-        var lineRect = Rectangle.FromLTRB(minX - 12, minY - 12, maxX + 12, maxY + 12);
-
-        // Distance label floats. Worst-case label is ~300x50 and can be offset
-        // perpendicular to the line by up to 160px.
-        // A box of 310x190 around the midpoint is conservative and covers all directions.
-        int midX = (from.X + to.X) / 2;
-        int midY = (from.Y + to.Y) / 2;
-        var labelRect = new Rectangle(midX - 310, midY - 190, 620, 380);
-
-        return Rectangle.Union(lineRect, labelRect);
-    }
+        => RulerRenderer.GetPaintBounds(from, to);
 
     /// <summary>Returns conservative bounds for whatever live preview is currently being painted.
     /// Used as a smear-prevention fallback so the next invalidate always clears the previous paint.</summary>
