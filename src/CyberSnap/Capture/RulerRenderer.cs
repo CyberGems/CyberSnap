@@ -19,6 +19,7 @@ public static class RulerRenderer
     private static SolidBrush? _fgBrush;
     private static SolidBrush? _accentBrush;
     private static Font? _font;
+    private static Font? _distFont;
     private static int _themeKey;
 
     public static void EnsureChrome(bool isDark)
@@ -52,6 +53,7 @@ public static class RulerRenderer
         _fgBrush = new SolidBrush(text);
         _accentBrush = new SolidBrush(accent);
         _font ??= Helpers.UiChrome.ChromeFont(9.5f);
+        _distFont ??= Helpers.UiChrome.ChromeFont(11.5f, System.Drawing.FontStyle.Bold);
         _themeKey = key;
     }
 
@@ -79,12 +81,13 @@ public static class RulerRenderer
         g.DrawLine(_tickPen!, to.X - nx * tickHalf, to.Y - ny * tickHalf,
                             to.X + nx * tickHalf, to.Y + ny * tickHalf);
 
-        // Build label text in two parts: distance (accent) + rest (normal)
+        // Build label text in two parts: distance (larger, accent) + rest (normal)
         string distText = $"{(int)dist}px";
         string restText = $"  \u2022  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  \u2022  {angle:0.0}\u00b0";
-        var distSz = g.MeasureString(distText, _font!);
+        var distSz = g.MeasureString(distText, _distFont!);
         var restSz = g.MeasureString(restText, _font!);
         float totalW = distSz.Width + restSz.Width;
+        float maxH = Math.Max(distSz.Height, restSz.Height);
         var mid = new PointF((from.X + to.X) / 2f, (from.Y + to.Y) / 2f);
 
         // Determine preferred label normal direction (pointing up, or left if horizontal)
@@ -100,8 +103,10 @@ public static class RulerRenderer
             }
         }
 
-        float w = totalW + 20;
-        float h = distSz.Height + 10;
+        float padH = 14;
+        float padV = 8;
+        float w = totalW + padH * 2;
+        float h = maxH + padV * 2;
         float ext = MathF.Abs(lnx * w / 2f) + MathF.Abs(lny * h / 2f);
         float d = ext + 14f;
 
@@ -130,9 +135,14 @@ public static class RulerRenderer
         using var path = RoundedRect(label, 8f);
         g.FillPath(_bgBrush!, path);
         g.DrawPath(_borderPen!, path);
-        // Distance in accent color, rest in normal
-        g.DrawString(distText, _font!, _accentBrush!, label.X + 10, label.Y + 5);
-        g.DrawString(restText, _font!, _fgBrush!, label.X + 10 + distSz.Width, label.Y + 5);
+        // Center the text block horizontally within the label
+        float textX = label.X + padH;
+        // Vertical center for each font
+        float distY = label.Y + padV + (maxH - distSz.Height) / 2f;
+        float restY = label.Y + padV + (maxH - restSz.Height) / 2f;
+
+        g.DrawString(distText, _distFont!, _accentBrush!, textX, distY);
+        g.DrawString(restText, _font!, _fgBrush!, textX + distSz.Width, restY);
 
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
         g.SmoothingMode = SmoothingMode.Default;
