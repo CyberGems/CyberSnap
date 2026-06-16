@@ -68,6 +68,12 @@ public sealed partial class RegionOverlayForm
             {
                 g.Restore(state);
             }
+            // DIAG: fill interior with semi-transparent green to test ExcludeClip
+            if (activeSelectionRect.Width > 0)
+            {
+                using var diagBrush = new SolidBrush(Color.FromArgb(60, 40, 255, 40));
+                g.FillRectangle(diagBrush, activeSelectionRect);
+            }
         }
         else if (!_hasSelection && !_autoDetectActive)
         {
