@@ -206,6 +206,10 @@ public sealed class AppSettings
     public uint GifHotkeyKey { get; set; }
     public int GifFps { get; set; } = 15;
 
+    // Standalone ruler hotkey: unbound by default
+    public uint StandaloneRulerHotkeyModifiers { get; set; }
+    public uint StandaloneRulerHotkeyKey { get; set; }
+
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
     public bool OpenEditorAfterCapture { get; set; }
     // Editor: when a capture loads, auto-fit it to the canvas (true) or show it at real 100% size (false).
@@ -373,6 +377,7 @@ public sealed class AppSettings
         "_activeWindow" => (ActiveWindowHotkeyModifiers, ActiveWindowHotkeyKey),
         "_scrollCapture" => (ScrollCaptureHotkeyModifiers, ScrollCaptureHotkeyKey),
         "_record" => (GifHotkeyModifiers, GifHotkeyKey),
+        "_standaloneRuler" => (StandaloneRulerHotkeyModifiers, StandaloneRulerHotkeyKey),
         _ => GetGenericToolHotkey(toolId),
     };
 
@@ -409,6 +414,7 @@ public sealed class AppSettings
             case "_activeWindow": ActiveWindowHotkeyModifiers = mod; ActiveWindowHotkeyKey = key; break;
             case "_scrollCapture": ScrollCaptureHotkeyModifiers = mod; ScrollCaptureHotkeyKey = key; break;
             case "_record": GifHotkeyModifiers = mod; GifHotkeyKey = key; break;
+            case "_standaloneRuler": StandaloneRulerHotkeyModifiers = mod; StandaloneRulerHotkeyKey = key; break;
             default:
                 ToolHotkeys ??= new();
                 ToolHotkeys[toolId] = new[] { mod, key };
@@ -464,6 +470,8 @@ public sealed class AppSettings
         ScrollCaptureHotkeyKey = 0;
         GifHotkeyModifiers = 0;
         GifHotkeyKey = 0;
+        StandaloneRulerHotkeyModifiers = 0;
+        StandaloneRulerHotkeyKey = 0;
         ToolHotkeys?.Clear();
     }
 }

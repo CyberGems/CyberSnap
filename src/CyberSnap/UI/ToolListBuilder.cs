@@ -212,7 +212,8 @@ public static class ToolListBuilder
             ("record", "Screen Recorder (MP4)", ToolDef.AllTools.First(t => t.Id == "record").Icon),
             ("recordGif", "Screen Recorder (GIF)", ToolDef.AllTools.First(t => t.Id == "recordGif").Icon),
             ("_fullscreen", "Fullscreen capture", ToolGlyphs.FullscreenGlyph),
-            ("_activeWindow", "Active window", ToolGlyphs.ActiveWindowGlyph)
+            ("_activeWindow", "Active window", ToolGlyphs.ActiveWindowGlyph),
+            ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon)
         };
 
         foreach (var item in captureItems)

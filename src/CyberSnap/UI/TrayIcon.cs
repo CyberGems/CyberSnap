@@ -104,7 +104,7 @@ public sealed class TrayIcon : IDisposable
         var scrollItem   = WindowsMenuRenderer.Item(T("Scrolling capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
         var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("ocr"), "ocr");
         var pickerItem   = WindowsMenuRenderer.Item(T("Color picker"), HotkeyHint("picker"), "picker");
-        var rulerItem    = WindowsMenuRenderer.Item(T("Ruler"), HotkeyHint("ruler"), "ruler");
+        var rulerItem    = WindowsMenuRenderer.Item(T("Ruler"), HotkeyHint("_standaloneRuler"), "ruler");
 
         ToolStripMenuItem? recordItem = null;
         ToolStripMenuItem? recordGifItem = null;
