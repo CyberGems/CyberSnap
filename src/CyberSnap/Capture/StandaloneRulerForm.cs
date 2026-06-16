@@ -20,6 +20,11 @@ public sealed class StandaloneRulerForm : Form
     private Point _cursorPos;
     private bool _closed;
 
+    // Last committed measurement persists on screen until next drag
+    private Point _lastFrom;
+    private Point _lastTo;
+    private bool _hasLastMeasurement;
+
     // ── Banner ──
     private float _bannerOpacity;
     private System.Windows.Forms.Timer? _bannerTimer;
@@ -125,6 +130,7 @@ public sealed class StandaloneRulerForm : Form
 
         if (e.Button == MouseButtons.Left)
         {
+            _hasLastMeasurement = false;
             _isDragging = true;
             _rulerStart = e.Location;
             _cursorPos = e.Location;
@@ -153,6 +159,9 @@ public sealed class StandaloneRulerForm : Form
         if (_isDragging && e.Button == MouseButtons.Left)
         {
             _isDragging = false;
+            _lastFrom = _rulerStart;
+            _lastTo = GetRulerEnd(_cursorPos);
+            _hasLastMeasurement = true;
             Invalidate();
         }
         base.OnMouseUp(e);
@@ -168,11 +177,15 @@ public sealed class StandaloneRulerForm : Form
         // Draw screenshot as background
         g.DrawImage(_screenshot, ClientRectangle);
 
-        // Draw ruler if dragging
+        // Draw ruler if dragging or last measurement persists
         if (_isDragging)
         {
             var end = GetRulerEnd(_cursorPos);
             RulerRenderer.Paint(g, _rulerStart, end, ClientRectangle, Theme.IsDark);
+        }
+        else if (_hasLastMeasurement)
+        {
+            RulerRenderer.Paint(g, _lastFrom, _lastTo, ClientRectangle, Theme.IsDark);
         }
 
         // Draw banner
@@ -201,8 +214,8 @@ public sealed class StandaloneRulerForm : Form
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            float x = (ClientRectangle.Width - 700) / 2f; // centered
-            float y = 60;
+            float x = 18;
+            float y = 18;
 
             using var font = new Font("Segoe UI Variable Display", 11f, FontStyle.Regular, GraphicsUnit.Point);
             var size = g.MeasureString(BannerText, font);
@@ -211,8 +224,6 @@ public sealed class StandaloneRulerForm : Form
             int paddingV = 12;
             float width = size.Width + paddingH * 2;
             float height = size.Height + paddingV * 2;
-
-            x = (ClientRectangle.Width - width) / 2f;
 
             int alphaBg = (int)(180 * _bannerOpacity);
             int alphaBorder = (int)(120 * _bannerOpacity);
