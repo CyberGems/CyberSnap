@@ -29,6 +29,7 @@ public sealed class StandaloneRulerForm : Form
     private float _bannerOpacity;
     private System.Windows.Forms.Timer? _bannerTimer;
     private int _bannerHoldTicks;
+    private RectangleF _bannerRect;
     private enum BannerState { FadeIn, Hold, FadeOut }
     private BannerState _bannerState = BannerState.FadeIn;
     private static readonly string BannerText = "Click & drag to measure  ·  Right-click or Esc to close  ·  Hold Shift to constrain";
@@ -88,6 +89,12 @@ public sealed class StandaloneRulerForm : Form
 
             case BannerState.Hold:
                 _bannerHoldTicks++;
+                // Keep banner visible while hovering over it
+                if (_bannerRect.Contains(_cursorPos))
+                {
+                    _bannerHoldTicks = 0;
+                    break;
+                }
                 if (_bannerHoldTicks >= 90) // ~1.5s hold
                 {
                     _bannerState = BannerState.FadeOut;
@@ -95,6 +102,12 @@ public sealed class StandaloneRulerForm : Form
                 break;
 
             case BannerState.FadeOut:
+                // Revive if cursor moves over banner during fade-out
+                if (_bannerRect.Contains(_cursorPos))
+                {
+                    _bannerState = BannerState.FadeIn;
+                    break;
+                }
                 _bannerOpacity -= 0.08f;
                 if (_bannerOpacity <= 0.0f)
                 {
@@ -217,13 +230,15 @@ public sealed class StandaloneRulerForm : Form
             float x = 18;
             float y = 18;
 
-            using var font = new Font("Segoe UI Variable Display", 11f, FontStyle.Regular, GraphicsUnit.Point);
+            using var font = new Font("Segoe UI Variable Display", 13f, FontStyle.Regular, GraphicsUnit.Point);
             var size = g.MeasureString(BannerText, font);
 
-            int paddingH = 22;
-            int paddingV = 12;
+            int paddingH = 26;
+            int paddingV = 15;
             float width = size.Width + paddingH * 2;
             float height = size.Height + paddingV * 2;
+
+            _bannerRect = new RectangleF(x, y, width, height);
 
             int alphaBg = (int)(180 * _bannerOpacity);
             int alphaBorder = (int)(120 * _bannerOpacity);
