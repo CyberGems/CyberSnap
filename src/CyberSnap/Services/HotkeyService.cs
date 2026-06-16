@@ -21,6 +21,7 @@ public sealed class HotkeyService : IDisposable
     private const int HOTKEY_CENTER = 9011;
     private const int HOTKEY_STANDALONE_RULER = 9012;
     private const int HOTKEY_STANDALONE_COLOR_PICKER = 9013;
+    private const int HOTKEY_STANDALONE_OCR = 9014;
 
     private bool _captureRegistered;
     private bool _ocrRegistered;
@@ -34,6 +35,7 @@ public sealed class HotkeyService : IDisposable
     private bool _centerRegistered;
     private bool _standaloneRulerRegistered;
     private bool _standaloneColorPickerRegistered;
+    private bool _standaloneOcrRegistered;
     private bool _registered;
 
     public event Action? HotkeyPressed;
@@ -48,6 +50,7 @@ public sealed class HotkeyService : IDisposable
     public event Action? CenterHotkeyPressed;
     public event Action? StandaloneRulerHotkeyPressed;
     public event Action? StandaloneColorPickerHotkeyPressed;
+    public event Action? StandaloneOcrHotkeyPressed;
 
     private void EnsureMessageHook()
     {
@@ -93,6 +96,7 @@ public sealed class HotkeyService : IDisposable
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_CENTER);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_RULER);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_COLOR_PICKER);
+        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_OCR);
         _captureRegistered = false;
         _ocrRegistered = false;
         _pickerRegistered = false;
@@ -105,6 +109,7 @@ public sealed class HotkeyService : IDisposable
         _centerRegistered = false;
         _standaloneRulerRegistered = false;
         _standaloneColorPickerRegistered = false;
+        _standaloneOcrRegistered = false;
     }
 
     public bool Register(uint modifiers, uint key) => RegisterHotkey(ref _captureRegistered, HOTKEY_CAPTURE, modifiers, key);
@@ -119,6 +124,7 @@ public sealed class HotkeyService : IDisposable
     public bool RegisterCenter(uint modifiers, uint key) => RegisterHotkey(ref _centerRegistered, HOTKEY_CENTER, modifiers, key);
     public bool RegisterStandaloneRuler(uint modifiers, uint key) => RegisterHotkey(ref _standaloneRulerRegistered, HOTKEY_STANDALONE_RULER, modifiers, key);
     public bool RegisterStandaloneColorPicker(uint modifiers, uint key) => RegisterHotkey(ref _standaloneColorPickerRegistered, HOTKEY_STANDALONE_COLOR_PICKER, modifiers, key);
+    public bool RegisterStandaloneOcr(uint modifiers, uint key) => RegisterHotkey(ref _standaloneOcrRegistered, HOTKEY_STANDALONE_OCR, modifiers, key);
 
     public void Unregister()
     {
@@ -134,6 +140,7 @@ public sealed class HotkeyService : IDisposable
         if (_centerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_CENTER); _centerRegistered = false; }
         if (_standaloneRulerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_RULER); _standaloneRulerRegistered = false; }
         if (_standaloneColorPickerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_COLOR_PICKER); _standaloneColorPickerRegistered = false; }
+        if (_standaloneOcrRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_OCR); _standaloneOcrRegistered = false; }
         if (_registered)
         {
             ComponentDispatcher.ThreadPreprocessMessage -= OnMsg;
@@ -157,6 +164,7 @@ public sealed class HotkeyService : IDisposable
         else if (id == HOTKEY_CENTER) { InvokeHandlersSafely(CenterHotkeyPressed, "hotkey.center"); handled = true; }
         else if (id == HOTKEY_STANDALONE_RULER) { InvokeHandlersSafely(StandaloneRulerHotkeyPressed, "hotkey.standalone-ruler"); handled = true; }
         else if (id == HOTKEY_STANDALONE_COLOR_PICKER) { InvokeHandlersSafely(StandaloneColorPickerHotkeyPressed, "hotkey.standalone-colorpicker"); handled = true; }
+        else if (id == HOTKEY_STANDALONE_OCR) { InvokeHandlersSafely(StandaloneOcrHotkeyPressed, "hotkey.standalone-ocr"); handled = true; }
     }
 
     private static void InvokeHandlersSafely(Action? handlers, string context)

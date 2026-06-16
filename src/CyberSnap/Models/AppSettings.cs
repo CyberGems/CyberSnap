@@ -162,7 +162,7 @@ public sealed class AppSettings
     public bool OcrAutoCopyToClipboard { get; set; }
     public string? GoogleTranslateApiKey { get; set; }
     public bool TranslationRuntimeInstalled { get; set; }
-    public int TranslationModel { get; set; } = 2; // 0 = Argos, 1 = Google, 2 = Open-source local
+    public int TranslationModel { get; set; } = 3; // 0 = Argos, 1 = Google, 2 = Open-source local, 3 = MyMemory (free web)
     public bool AnnotationStrokeShadow { get; set; } = true;
     public float StrokeWidth { get; set; } = 6f;
     public int ToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(255, 220, 0).ToArgb(); // Default yellow
@@ -216,6 +216,10 @@ public sealed class AppSettings
     // Standalone color picker hotkey: unbound by default
     public uint StandaloneColorPickerHotkeyModifiers { get; set; }
     public uint StandaloneColorPickerHotkeyKey { get; set; }
+
+    // Standalone OCR hotkey: unbound by default
+    public uint StandaloneOcrHotkeyModifiers { get; set; }
+    public uint StandaloneOcrHotkeyKey { get; set; }
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
     public bool OpenEditorAfterCapture { get; set; }
@@ -387,6 +391,7 @@ public sealed class AppSettings
         // Standalone tools use the convention: "_standalone{Name}" → Standalone{Name}HotkeyModifiers/Key
         "_standaloneRuler" => (StandaloneRulerHotkeyModifiers, StandaloneRulerHotkeyKey),
         "_standaloneColorPicker" => (StandaloneColorPickerHotkeyModifiers, StandaloneColorPickerHotkeyKey),
+        "_standaloneOcr" => (StandaloneOcrHotkeyModifiers, StandaloneOcrHotkeyKey),
         _ => GetGenericToolHotkey(toolId),
     };
 
@@ -426,6 +431,7 @@ public sealed class AppSettings
             // Standalone tools: "_standalone{Name}" → Standalone{Name}HotkeyModifiers/Key
             case "_standaloneRuler": StandaloneRulerHotkeyModifiers = mod; StandaloneRulerHotkeyKey = key; break;
             case "_standaloneColorPicker": StandaloneColorPickerHotkeyModifiers = mod; StandaloneColorPickerHotkeyKey = key; break;
+            case "_standaloneOcr": StandaloneOcrHotkeyModifiers = mod; StandaloneOcrHotkeyKey = key; break;
             default:
                 ToolHotkeys ??= new();
                 ToolHotkeys[toolId] = new[] { mod, key };
@@ -485,6 +491,8 @@ public sealed class AppSettings
         StandaloneRulerHotkeyKey = 0;
         StandaloneColorPickerHotkeyModifiers = 0;
         StandaloneColorPickerHotkeyKey = 0;
+        StandaloneOcrHotkeyModifiers = 0;
+        StandaloneOcrHotkeyKey = 0;
         ToolHotkeys?.Clear();
     }
 }

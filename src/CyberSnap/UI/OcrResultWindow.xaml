@@ -152,9 +152,10 @@
                         <ComboBox x:Name="ModelCombo" FontSize="10" Padding="5,4" MinWidth="115"
                                   Margin="0,0,8,6"
                                   SelectionChanged="ModelCombo_Changed">
-                            <ComboBoxItem Content="Local model" Tag="2"/>
-                            <ComboBoxItem Content="Argos (offline)" Tag="0"/>
+                            <ComboBoxItem Content="MyMemory (free web)" Tag="3"/>
                             <ComboBoxItem Content="Google Translate" Tag="1"/>
+                            <ComboBoxItem Content="Argos (offline)" Tag="0"/>
+                            <ComboBoxItem Content="Local model" Tag="2"/>
                         </ComboBox>
 
                         <Button x:Name="TranslateBtn" Content="Translate"

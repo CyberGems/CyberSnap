@@ -9,7 +9,8 @@ public enum TranslationModel
 {
     Argos = 0,
     Google = 1,
-    OpenSourceLocal = 2
+    OpenSourceLocal = 2,
+    MyMemory = 3
 }
 
 public static class TranslationService
@@ -19,6 +20,7 @@ public static class TranslationService
     private const string ArgosTranslatePackage = "argostranslate==" + ArgosTranslateVersion;
     private static readonly TimeSpan ArgosProbeCacheTtl = TimeSpan.FromMinutes(10);
     private static readonly HttpClient GoogleHttp = CreateGoogleHttpClient();
+    private static readonly HttpClient MyMemoryHttp = CreateMyMemoryHttpClient();
     private static readonly string ArgosStateDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "CyberSnap",
@@ -34,7 +36,8 @@ public static class TranslationService
         TranslationModel.Argos => "Argos Translate",
         TranslationModel.Google => "Google Translate",
         TranslationModel.OpenSourceLocal => "Open-source Local",
-        _ => "Argos Translate"
+        TranslationModel.MyMemory => "MyMemory (free web)",
+        _ => "MyMemory (free web)"
     };
 
     public static readonly IReadOnlyList<(string Code, string Name)> SupportedLanguages = new[]
@@ -248,6 +251,23 @@ public static class TranslationService
             }
         }
 
+        if (model == TranslationModel.MyMemory)
+        {
+            // MyMemory doesn't support auto-detect — default source to English
+            if (string.Equals(fromCode, "auto", StringComparison.OrdinalIgnoreCase))
+                fromCode = "en";
+
+            try
+            {
+                return await TranslateWithMyMemoryAsync(text, fromCode, toCode, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("translation.mymemory.translate", ex);
+                throw;
+            }
+        }
+
         if (model == TranslationModel.OpenSourceLocal)
         {
             try
@@ -307,6 +327,13 @@ public static class TranslationService
             return string.IsNullOrWhiteSpace(_googleApiKey)
                 ? "Google Translate API key not set. Add it in Config -> OCR."
                 : null;
+
+        if (model == TranslationModel.MyMemory)
+        {
+            if (string.Equals(fromCode, "auto", StringComparison.OrdinalIgnoreCase))
+                return LocalizationService.Translate("MyMemory doesn't support auto-detect. Pick a source language or switch to Google Translate.");
+            return null; // Free web API — always ready
+        }
 
         if (model == TranslationModel.OpenSourceLocal)
         {
@@ -397,6 +424,67 @@ public static class TranslationService
         };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("CyberSnap/1.0");
         return client;
+    }
+
+    private static HttpClient CreateMyMemoryHttpClient()
+    {
+        var client = new HttpClient
+        {
+            BaseAddress = new Uri("https://api.mymemory.translated.net/"),
+            Timeout = TimeSpan.FromSeconds(15)
+        };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("CyberSnap/1.0");
+        return client;
+    }
+
+    private static async Task<string> TranslateWithMyMemoryAsync(string text, string fromCode, string toCode, CancellationToken cancellationToken)
+    {
+        // Build language pair: MyMemory requires literal "|" (not URL-encoded).
+        // When source is "auto", send only the target — MyMemory auto-detects.
+        var isAuto = string.Equals(fromCode, "auto", StringComparison.OrdinalIgnoreCase);
+        var langPair = isAuto ? toCode : $"{fromCode}|{toCode}";
+
+        // Only escape the text; the | in langPair must stay literal
+        var url = $"get?q={Uri.EscapeDataString(text)}&langpair={langPair}";
+
+        using var response = await MyMemoryHttp.GetAsync(url, cancellationToken).ConfigureAwait(false);
+        var payload = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException(
+                $"MyMemory translation failed ({(int)response.StatusCode}).");
+
+        using var doc = JsonDocument.Parse(payload);
+        var root = doc.RootElement;
+
+        // Check response status (MyMemory may return it as number or string)
+        int statusCode = 0;
+        if (root.TryGetProperty("responseStatus", out var status))
+        {
+            if (status.ValueKind == JsonValueKind.Number)
+                statusCode = status.GetInt32();
+            else if (status.ValueKind == JsonValueKind.String && int.TryParse(status.GetString(), out var parsed))
+                statusCode = parsed;
+        }
+
+        if (statusCode != 200)
+        {
+            var msg = "MyMemory translation failed.";
+            if (root.TryGetProperty("responseDetails", out var details) && details.ValueKind == JsonValueKind.String)
+                msg = details.GetString() ?? msg;
+            throw new InvalidOperationException(msg);
+        }
+
+        // Extract translated text
+        if (root.TryGetProperty("responseData", out var data) &&
+            data.TryGetProperty("translatedText", out var translated) &&
+            translated.ValueKind == JsonValueKind.String)
+        {
+            var result = translated.GetString() ?? "";
+            return System.Net.WebUtility.HtmlDecode(result);
+        }
+
+        throw new InvalidOperationException("MyMemory returned an unexpected response.");
     }
 
     private static IEnumerable<KeyValuePair<string, string>> BuildGoogleForm(string text, string fromCode, string toCode)
