@@ -17,6 +17,7 @@ public static class RulerRenderer
     private static SolidBrush? _bgBrush;
     private static Pen? _borderPen;
     private static SolidBrush? _fgBrush;
+    private static SolidBrush? _accentBrush;
     private static Font? _font;
     private static int _themeKey;
 
@@ -39,12 +40,17 @@ public static class RulerRenderer
         _bgBrush?.Dispose();
         _borderPen?.Dispose();
         _fgBrush?.Dispose();
+        _accentBrush?.Dispose();
 
+        var accent = isDark
+            ? Color.FromArgb(0, 200, 215)
+            : Color.FromArgb(0, 110, 205);
         _linePen = new Pen(text, 1.8f) { StartCap = LineCap.Flat, EndCap = LineCap.Flat };
         _tickPen = new Pen(text, 1.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
         _bgBrush = new SolidBrush(pill);
         _borderPen = new Pen(border, 1.0f);
         _fgBrush = new SolidBrush(text);
+        _accentBrush = new SolidBrush(accent);
         _font ??= Helpers.UiChrome.ChromeFont(9.5f);
         _themeKey = key;
     }
@@ -73,8 +79,12 @@ public static class RulerRenderer
         g.DrawLine(_tickPen!, to.X - nx * tickHalf, to.Y - ny * tickHalf,
                             to.X + nx * tickHalf, to.Y + ny * tickHalf);
 
-        string text = $"{(int)dist}px  \u00b7  {Math.Abs(dx):0} \u00d7 {Math.Abs(dy):0}  \u00b7  {angle:0.0}\u00b0";
-        var sz = g.MeasureString(text, _font!);
+        // Build label text in two parts: distance (accent) + rest (normal)
+        string distText = $"{(int)dist}px";
+        string restText = $"  \u00b7  {Math.Abs(dx):0} \u00d7 {Math.Abs(dy):0}  \u00b7  {angle:0.0}\u00b0";
+        var distSz = g.MeasureString(distText, _font!);
+        var restSz = g.MeasureString(restText, _font!);
+        float totalW = distSz.Width + restSz.Width;
         var mid = new PointF((from.X + to.X) / 2f, (from.Y + to.Y) / 2f);
 
         // Determine preferred label normal direction (pointing up, or left if horizontal)
@@ -90,8 +100,8 @@ public static class RulerRenderer
             }
         }
 
-        float w = sz.Width + 20;
-        float h = sz.Height + 10;
+        float w = totalW + 20;
+        float h = distSz.Height + 10;
         float ext = MathF.Abs(lnx * w / 2f) + MathF.Abs(lny * h / 2f);
         float d = ext + 14f;
 
@@ -120,7 +130,9 @@ public static class RulerRenderer
         using var path = RoundedRect(label, 8f);
         g.FillPath(_bgBrush!, path);
         g.DrawPath(_borderPen!, path);
-        g.DrawString(text, _font!, _fgBrush!, label.X + 10, label.Y + 5);
+        // Distance in accent color, rest in normal
+        g.DrawString(distText, _font!, _accentBrush!, label.X + 10, label.Y + 5);
+        g.DrawString(restText, _font!, _fgBrush!, label.X + 10 + distSz.Width, label.Y + 5);
 
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
         g.SmoothingMode = SmoothingMode.Default;
