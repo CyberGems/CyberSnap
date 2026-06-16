@@ -105,13 +105,32 @@ public partial class OcrResultWindow : Window
         FromLanguageCombo.Items.Clear();
         ToLanguageCombo.Items.Clear();
 
-        foreach (var (code, name) in TranslationService.SupportedLanguages)
+        // Order: Auto-detect first, then English & Spanish, then rest alphabetically
+        var ordered = TranslationService.SupportedLanguages
+            .Select(lang => (lang.Code, Name: LocalizeLanguageName(lang.Code, lang.Name)))
+            .ToList();
+
+        // Extract and sort: auto, en, es first, then rest by name
+        var auto = ordered.First(l => l.Code == "auto");
+        var en = ordered.First(l => l.Code == "en");
+        var es = ordered.First(l => l.Code == "es");
+        var rest = ordered
+            .Where(l => l.Code != "auto" && l.Code != "en" && l.Code != "es")
+            .OrderBy(l => l.Name)
+            .ToList();
+
+        var sorted = new List<(string Code, string Name)> { auto, en, es };
+        sorted.AddRange(rest);
+
+        foreach (var (code, name) in sorted)
         {
             var fromItem = new ComboBoxItem { Content = name, Tag = code };
             _fromLanguageItems.Add(fromItem);
             FromLanguageCombo.Items.Add(fromItem);
 
-            var toName = code == "auto" ? "Auto (interface/system language)" : name;
+            var toName = code == "auto"
+                ? LocalizationService.Translate("Auto (interface/system language)")
+                : name;
             var toItem = new ComboBoxItem { Content = toName, Tag = code };
             _toLanguageItems.Add(toItem);
             ToLanguageCombo.Items.Add(toItem);
@@ -120,6 +139,13 @@ public partial class OcrResultWindow : Window
         var settings = _settingsService.Settings;
         SelectComboByTag(FromLanguageCombo, settings.OcrDefaultTranslateFrom);
         SelectComboByTag(ToLanguageCombo, settings.OcrDefaultTranslateTo);
+    }
+
+    /// <summary>Returns the localized name for a language code, falling back to the English name.</summary>
+    private static string LocalizeLanguageName(string code, string englishName)
+    {
+        // Use the English name as the localization key
+        return LocalizationService.Translate(englishName);
     }
 
     private static void SelectComboByTag(ComboBox combo, string tag)

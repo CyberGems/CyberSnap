@@ -141,7 +141,18 @@
                                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                                           ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                                           IsHitTestVisible="False"
-                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                          Margin="0,0,4,0"/>
+                                        <TextBox x:Name="PART_EditableTextBox"
+                                                 Visibility="Collapsed"
+                                                 Padding="0" Margin="0,0,4,0"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 Foreground="{TemplateBinding Foreground}"
+                                                 CaretBrush="{TemplateBinding Foreground}"
+                                                 FontSize="{TemplateBinding FontSize}"
+                                                 VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                 IsReadOnly="{TemplateBinding IsReadOnly}"/>
                                         <Path Grid.Column="1"
                                               Width="8" Height="4"
                                               HorizontalAlignment="Center"
@@ -186,6 +197,14 @@
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="ContentSite" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsEditable" Value="False">
+                                <Setter TargetName="ContentSite" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Collapsed"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
