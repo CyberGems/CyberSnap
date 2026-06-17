@@ -503,6 +503,8 @@
   "Image captures": "Capturas de imagen",
   "All captures": "Todas las capturas",
   "Video and GIF captures": "Capturas de vídeo y GIF",
+  "Enable editor": "Activar editor",
+  "Open the editor after each image capture. Toggle it to see how the notifications change.": "Abre el editor después de cada captura de imagen. Actívalo para ver cómo cambian las notificaciones.",
   "Appears when the editor is enabled": "Aparece cuando el editor está activado",
   "Move to": "Mover a",
   "Remove from notification": "Quitar de la notificación",

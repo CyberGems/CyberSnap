@@ -2880,9 +2880,30 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- LEFT card: faithful mock of the text-only toast shown when the editor
-                                         opens image captures directly (no preview, no overlay buttons). -->
-                                    <StackPanel x:Name="EditorToastMockCard" Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Top">
+                                    <!-- LEFT column: an "Enable editor" toggle on top (mirrors the widget/General
+                                         setting — flip it to watch both previews react live), and the fixed
+                                         text-toast mock bottom-aligned so the two toasts share a baseline,
+                                         like they do on screen. -->
+                                    <Grid Grid.Column="0" Margin="0,0,16,0">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Live editor toggle (same setting as the widget's). -->
+                                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,2,0,0" VerticalAlignment="Top">
+                                            <CheckBox x:Name="NotificationsEditorToggle" VerticalAlignment="Center"
+                                                      AutomationProperties.Name="Enable editor"
+                                                      Services:LocalizationService.SourceToolTip="Open the editor after each image capture. Toggle it to see how the notifications change."
+                                                      Checked="NotificationsEditorToggle_Changed" Unchecked="NotificationsEditorToggle_Changed"/>
+                                            <TextBlock Services:LocalizationService.SourceText="Enable editor" VerticalAlignment="Center" Margin="8,0,0,0"
+                                                       FontSize="13" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                       Services:LocalizationService.SourceToolTip="Open the editor after each image capture. Toggle it to see how the notifications change."/>
+                                        </StackPanel>
+
+                                        <!-- Fixed text-toast mock, bottom-aligned to the big preview. -->
+                                        <StackPanel x:Name="EditorToastMockCard" Grid.Row="2" VerticalAlignment="Bottom">
                                         <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
                                             <TextBlock x:Name="EditorPreviewImagesCaption"
                                                        Services:LocalizationService.SourceText="Image captures"
@@ -2944,16 +2965,13 @@
                                                         </LinearGradientBrush>
                                                     </Border.Background>
                                                     <Border.Effect>
-                                                        <DropShadowEffect Color="#FF7A00FF" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
+                                                        <DropShadowEffect Color="#FF7A00FF" BlurRadius="4" ShadowDepth="0" Opacity="0.45"/>
                                                     </Border.Effect>
                                                 </Border>
                                             </Grid>
                                         </Border>
-                                        <TextBlock x:Name="EditorToastMockNote"
-                                                   Services:LocalizationService.SourceText="Appears when the editor is enabled"
-                                                   Style="{StaticResource InfoText}" Margin="2,8,0,0" TextWrapping="Wrap"
-                                                   MaxWidth="300" HorizontalAlignment="Left"/>
-                                    </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
 
                                     <!-- Divider separating the fixed informational view (left) from the
                                          editable designer + its button palette (right). -->
@@ -2977,14 +2995,18 @@
                                                            Foreground="{DynamicResource ThemeAccentBrush}"/>
                                             </Border>
                                         </StackPanel>
-                                    <StackPanel x:Name="ToastLayoutStack" Width="280" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <StackPanel x:Name="ToastLayoutStack" Width="260" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <!-- Shell matches the real toast: 12px corners, Theme.ToastBg fill and
-                                         the cyan accent stroke (both set in RefreshEditorPreviewState). The
-                                         Border clips its child to the rounded corners, so the image sits flush
-                                         and the gradient bar follows the bottom corners — just like ToastWindow. -->
-                                    <Border x:Name="ToastLayoutShell" Width="280" Height="220" CornerRadius="12"
-                                            BorderThickness="1" ClipToBounds="True">
+                                         the cyan accent stroke (both set in RefreshEditorPreviewState). A rounded
+                                         Clip on the content (fixed size, so a static geometry is reliable) makes
+                                         the flush image and the bottom gradient bar follow the corners crisply —
+                                         ClipToBounds alone only clips to the rectangle. -->
+                                    <Border x:Name="ToastLayoutShell" Width="260" Height="220" CornerRadius="12"
+                                            BorderThickness="1">
                                         <Grid x:Name="ToastLayoutPreviewSurface" AllowDrop="True" PreviewMouseMove="ToastPreviewSurface_PreviewMouseMove">
+                                            <Grid.Clip>
+                                                <RectangleGeometry Rect="0,0,258,218" RadiusX="11" RadiusY="11"/>
+                                            </Grid.Clip>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
                                                 <RowDefinition Height="Auto"/>
@@ -2994,6 +3016,12 @@
                                             <Border Grid.Row="0" Margin="0" Background="#FF1A4F96"
                                                     Services:LocalizationService.SourceToolTip="Notification Preview">
                                                 <Grid>
+                                                    <!-- Faint "your capture goes here" image glyph, behind the slots/buttons.
+                                                         Not hit-testable so drops still reach the slots underneath. -->
+                                                    <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="54"
+                                                               Foreground="White" Opacity="0.15"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               IsHitTestVisible="False"/>
                                                     <!-- Slot placeholders — always visible, dashed when empty, hidden when occupied -->
                                                     <Border x:Name="ToastLayoutSlotTopLeft"
                                                             Width="28" Height="28" CornerRadius="7"
@@ -3179,7 +3207,7 @@
                                                     </LinearGradientBrush>
                                                 </Border.Background>
                                                 <Border.Effect>
-                                                    <DropShadowEffect Color="#FF7A00FF" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
+                                                    <DropShadowEffect Color="#FF7A00FF" BlurRadius="4" ShadowDepth="0" Opacity="0.45"/>
                                                 </Border.Effect>
                                             </Border>
                                         </Grid>
@@ -3199,7 +3227,7 @@
                                                   Fill="{DynamicResource ThemeTextPrimaryBrush}"
                                                   Data="M7,0 L0,6 L7,12 L7,8 L14,8 L14,4 L7,4 Z"/>
                                             <TextBlock Services:LocalizationService.SourceText="Drag onto the preview" VerticalAlignment="Center"
-                                                       FontSize="11.5"
+                                                       FontSize="11.5" TextWrapping="Wrap" MaxWidth="120"
                                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                         </StackPanel>
 

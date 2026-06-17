@@ -437,6 +437,8 @@
   "Image captures": "Image captures",
   "All captures": "All captures",
   "Video and GIF captures": "Video and GIF captures",
+  "Enable editor": "Enable editor",
+  "Open the editor after each image capture. Toggle it to see how the notifications change.": "Open the editor after each image capture. Toggle it to see how the notifications change.",
   "Appears when the editor is enabled": "Appears when the editor is enabled",
   "Move to": "Move to",
   "Remove from notification": "Remove from notification",
