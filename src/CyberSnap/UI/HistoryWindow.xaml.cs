@@ -344,6 +344,11 @@ public partial class HistoryWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
+        // Always open centered on the screen where the user triggered it (the monitor under
+        // the cursor), regardless of where it was when last closed. EnsureWindowFitsWorkArea
+        // then clamps it inside the work area as a safety net.
+        PopupWindowHelper.CenterOnCurrentScreen(this);
+        EnsureWindowFitsWorkArea();
         var source = PresentationSource.FromVisual(this) as HwndSource;
         source?.AddHook(WndProc);
     }
@@ -386,9 +391,10 @@ public partial class HistoryWindow : Window
 
     private void EnsureWindowFitsWorkArea()
     {
-        var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)Left, (int)Top));
-        var phys = screen.WorkingArea;
         var hwnd = new WindowInteropHelper(this).Handle;
+        var screen = hwnd != IntPtr.Zero
+            ? System.Windows.Forms.Screen.FromHandle(hwnd)
+            : System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position);
 
         if (hwnd == IntPtr.Zero)
         {
@@ -402,13 +408,8 @@ public partial class HistoryWindow : Window
             return;
         }
 
-        var topLeft = PointFromScreen(new WpfPoint(phys.Left, phys.Top));
-        var bottomRight = PointFromScreen(new WpfPoint(phys.Right, phys.Bottom));
-        var wa = new Rect(
-            this.Left + topLeft.X,
-            this.Top + topLeft.Y,
-            bottomRight.X - topLeft.X,
-            bottomRight.Y - topLeft.Y);
+        // Use same DIP conversion as CenterOnCurrentScreen for consistency.
+        var wa = PopupWindowHelper.ScreenWorkingAreaToDips(screen);
 
         const double screenMargin = 12d;
         var minLeft = wa.Left + screenMargin;

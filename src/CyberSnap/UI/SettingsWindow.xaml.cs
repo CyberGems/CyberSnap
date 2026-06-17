@@ -91,20 +91,20 @@ public partial class SettingsWindow : Window
         var settings = _settingsService.Settings;
         if (settings.SettingsWindowLeft != -1)
         {
-            // Set position/size first. 
-            // In WPF, setting these will ensure the window handle is created 
-            // on the correct monitor before we set Maximized.
-            this.Left = settings.SettingsWindowLeft;
-            this.Top = settings.SettingsWindowTop;
+            // Restore the last size only. The position is intentionally NOT restored:
+            // the window always opens centered on the screen where the user triggered it,
+            // even if they moved it before closing last time.
             this.Width = settings.SettingsWindowWidth;
             this.Height = settings.SettingsWindowHeight;
+        }
 
-            EnsureSettingsWindowFitsWorkArea();
+        // Always center on the monitor under the cursor before clamping into the work area.
+        PopupWindowHelper.CenterOnCurrentScreen(this);
+        EnsureSettingsWindowFitsWorkArea();
 
-            if (settings.SettingsWindowState == (int)WindowState.Maximized)
-            {
-                WindowState = WindowState.Maximized;
-            }
+        if (settings.SettingsWindowState == (int)WindowState.Maximized)
+        {
+            WindowState = WindowState.Maximized;
         }
     }
 
@@ -196,12 +196,11 @@ public partial class SettingsWindow : Window
 
     private void EnsureSettingsWindowFitsWorkArea()
     {
-        var screens = PopupWindowHelper.GetSortedScreens();
-        var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)Left, (int)Top));
-        
-        var phys = screen.WorkingArea;
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-        
+        var screen = hwnd != IntPtr.Zero
+            ? System.Windows.Forms.Screen.FromHandle(hwnd)
+            : System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position);
+
         if (hwnd == IntPtr.Zero)
         {
              var workArea = SystemParameters.WorkArea;
@@ -214,13 +213,8 @@ public partial class SettingsWindow : Window
              return;
         }
 
-        var topLeft = PointFromScreen(new System.Windows.Point(phys.Left, phys.Top));
-        var bottomRight = PointFromScreen(new System.Windows.Point(phys.Right, phys.Bottom));
-        var wa = new Rect(
-            this.Left + topLeft.X,
-            this.Top + topLeft.Y,
-            bottomRight.X - topLeft.X,
-            bottomRight.Y - topLeft.Y);
+        // Use same DIP conversion as CenterOnCurrentScreen for consistency.
+        var wa = PopupWindowHelper.ScreenWorkingAreaToDips(screen);
 
         const double screenMargin = 12d;
         var maxWidth = wa.Width - screenMargin * 2;
