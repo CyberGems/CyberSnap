@@ -174,12 +174,32 @@ public sealed partial class RegionOverlayForm
             var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
             using (var btnFont = UiChrome.ChromeFont(11f, FontStyle.Bold))
             {
-                var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                var sf = new StringFormat(StringFormatFlags.NoWrap)
+                {
+                    Alignment = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center,
+                    Trimming = StringTrimming.None
+                };
                 float corner = UiChrome.ScaledToolbarCornerRadius;
                 bool confirmHover = _hoveredConfirmButton == 0;
                 bool cancelHover = _hoveredConfirmButton == 1;
 
+                // Soft drop shadow under both buttons for depth
+                using (var shadowPath = WindowsDockRenderer.RoundedRect(
+                    new RectangleF(confirmBtn.X, confirmBtn.Y + 2.5f, confirmBtn.Width, confirmBtn.Height), corner))
+                using (var shadowBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 90 : 45, 0, 0, 0)))
+                    g.FillPath(shadowBrush, shadowPath);
+                using (var shadowPath2 = WindowsDockRenderer.RoundedRect(
+                    new RectangleF(cancelBtn.X, cancelBtn.Y + 2.5f, cancelBtn.Width, cancelBtn.Height), corner))
+                using (var shadowBrush2 = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 90 : 45, 0, 0, 0)))
+                    g.FillPath(shadowBrush2, shadowPath2);
+
                 // ── Confirm button (primary action) ──
+                var confirmAccent = UiChrome.AccentColor;
+                Color accentTop = Color.FromArgb(
+                    Math.Min(255, confirmAccent.R + 45), Math.Min(255, confirmAccent.G + 45), Math.Min(255, confirmAccent.B + 45));
+                Color accentBottom = Color.FromArgb(
+                    (int)(confirmAccent.R * 0.86f), (int)(confirmAccent.G * 0.86f), (int)(confirmAccent.B * 0.86f));
                 using (var confirmPath = WindowsDockRenderer.RoundedRect(confirmBtn, corner))
                 {
                     // Solid base to completely block background letters
@@ -187,9 +207,19 @@ public sealed partial class RegionOverlayForm
                     using var baseFill = new SolidBrush(Color.FromArgb(255, baseVal, baseVal, baseVal));
                     g.FillPath(baseFill, confirmPath);
 
-                    // Solid premium accent fill
-                    using var confirmFill = new SolidBrush(Color.FromArgb(confirmHover ? 255 : 215, UiChrome.AccentColor));
+                    // Premium vertical gradient accent fill (lighter top → deeper bottom)
+                    using var confirmFill = new System.Drawing.Drawing2D.LinearGradientBrush(
+                        new RectangleF(confirmBtn.X, confirmBtn.Y - 1, confirmBtn.Width, confirmBtn.Height + 2),
+                        Color.FromArgb(confirmHover ? 255 : 235, accentTop),
+                        Color.FromArgb(confirmHover ? 255 : 215, accentBottom),
+                        System.Drawing.Drawing2D.LinearGradientMode.Vertical);
                     g.FillPath(confirmFill, confirmPath);
+
+                    // Glossy top highlight
+                    var glossRect = new RectangleF(confirmBtn.X + 2, confirmBtn.Y + 1.5f, confirmBtn.Width - 4, confirmBtn.Height * 0.5f);
+                    using var glossPath = WindowsDockRenderer.RoundedRect(glossRect, corner - 1);
+                    using var glossBrush = new SolidBrush(Color.FromArgb(38, 255, 255, 255));
+                    g.FillPath(glossBrush, glossPath);
                 }
                 using (var confirmGlowPen = new Pen(
                     confirmHover ? Color.FromArgb(90, UiChrome.AccentColor) : Color.FromArgb(50, UiChrome.AccentColor),
@@ -238,9 +268,7 @@ public sealed partial class RegionOverlayForm
 
             // Draw selection frame and handles ON TOP of buttons
             SelectionFrameRenderer.DrawRectangle(g, _confirmRect, fill: false);
-            var handles = GetConfirmHandleRects();
-            foreach (var h in handles)
-                WindowsHandleRenderer.Paint(g, h);
+            SelectionFrameRenderer.DrawConfirmHandles(g, GetConfirmHandleRects());
         }
 
         g.SmoothingMode = SmoothingMode.Default;

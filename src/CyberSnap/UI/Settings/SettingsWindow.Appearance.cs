@@ -170,6 +170,7 @@ public partial class SettingsWindow
             OcrAutoCopyCheck.IsChecked = s.OcrAutoCopyToClipboard;
             CrosshairGuidesCheck.IsChecked = s.ShowCrosshairGuides;
             ShowCaptureMagnifierCheck.IsChecked = s.ShowCaptureMagnifier;
+            ShowSelectionSizeCheck.IsChecked = s.ShowSelectionSize;
             ConfirmRegionCheck.IsChecked = s.ConfirmRegionBeforeCapture;
             OverlayAllMonitorsCheck.IsChecked = s.OverlayCaptureAllMonitors;
             AutoCheckUpdateCheck.IsChecked = s.AutoCheckForUpdates;

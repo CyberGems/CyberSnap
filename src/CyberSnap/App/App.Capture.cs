@@ -86,6 +86,7 @@ public partial class App
 
                 bool recMic = fmt != RecordingFormat.GIF && s.RecordMicrophone;
                 bool recDesktop = fmt != RecordingFormat.GIF && s.RecordDesktopAudio;
+                Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
                 var form = new RecordingForm(selectionScreenshot, bounds, fps, savePath, fmt, maxH,
                     showCursor, recMic, s.MicrophoneDeviceId, recDesktop, s.DesktopAudioDeviceId,
                     _settingsService!.Settings.ShowCaptureMagnifier);
@@ -208,6 +209,7 @@ public partial class App
                 Theme.Refresh();
                 bool showCursor = false;
                 var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
+                Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
                 var form = new ScrollingCaptureForm(selectionScreenshot, bounds, showCursor,
                     _settingsService!.Settings.ShowCaptureMagnifier,
                     _settingsService!.Settings.ScrollingCaptureMode,
@@ -349,6 +351,7 @@ public partial class App
                     : ScreenCapture.CaptureCurrentScreen(showCursor);
                 screenshot = bmp;
 
+                Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
                 var overlay = new RegionOverlayForm(
                     screenshot,
                     bounds,

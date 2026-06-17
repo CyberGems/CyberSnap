@@ -258,6 +258,7 @@ public sealed class AppSettings
     public bool ShowCrosshairGuides { get; set; } // off by default
     public bool ShowCursor { get; set; }
     public bool ShowCaptureMagnifier { get; set; } = true;
+    public bool ShowSelectionSize { get; set; } = true;
     public bool OverlayCaptureAllMonitors { get; set; } = true;
     public bool DetectWindows { get; set; } = true;
     public bool ConfirmRegionBeforeCapture { get; set; } = true;

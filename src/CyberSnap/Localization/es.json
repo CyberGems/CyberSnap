@@ -95,6 +95,8 @@
   "Use one overlay over the full virtual desktop.": "Usa una sola superposición sobre todo el escritorio virtual.",
   "Show pixel magnifier while selecting": "Mostrar lupa de píxeles al seleccionar",
   "Zoom the cursor area during selection.": "Amplía el área del cursor durante la selección.",
+  "Show selection size": "Mostrar tamaño de la selección",
+  "Display width and height while selecting.": "Muestra el ancho y alto durante la selección.",
   "Confirm region before capture": "Confirmar región antes de capturar",
   "Show resize handles and Confirm/Cancel buttons after selecting a region.": "Muestra controles de redimensión y botones Confirmar/Cancelar tras seleccionar una región.",
   "Show cursor in captures and recordings": "Mostrar cursor en capturas y grabaciones",
