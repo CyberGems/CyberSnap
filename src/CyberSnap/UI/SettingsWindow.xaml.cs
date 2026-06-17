@@ -354,12 +354,12 @@ public partial class SettingsWindow : Window
     {
         string key = preference switch
         {
-            (0, true) => "After capture: open preview and copy to clipboard.",
-            (0, false) => "After capture: open preview only.",
-            (1, true) => "After capture: open editor and copy to clipboard.",
-            (1, false) => "After capture: open editor only.",
-            (2, true) => "After capture: copy to clipboard.",
-            _ => "After capture: save the file only."
+            (0, true) => "Current outcome: open preview and copy to clipboard.",
+            (0, false) => "Current outcome: open preview only.",
+            (1, true) => "Current outcome: open editor and copy to clipboard.",
+            (1, false) => "Current outcome: open editor only.",
+            (2, true) => "Current outcome: copy to clipboard.",
+            _ => "Current outcome: save the file only."
         };
         AfterCaptureSummaryText.Text = LocalizationService.Translate(key);
     }
