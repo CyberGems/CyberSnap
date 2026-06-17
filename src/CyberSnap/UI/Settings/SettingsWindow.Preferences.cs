@@ -379,6 +379,11 @@ public partial class SettingsWindow
             {
                 UiScale.Set(value);
                 ApplyThemeColors();
+                // Re-sync the floating widget: UiScale.Set only updates UiScale.Current, but the
+                // widget's content transform is applied in RefreshLayout. Without this, the next
+                // reposition sizes the window to the new scale while the content stays at the old
+                // one, clipping part of the surface until the app restarts.
+                ((App)Application.Current).RefreshWidgetWindowLayout();
             });
     }
 
