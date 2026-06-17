@@ -61,6 +61,7 @@ public partial class SettingsWindow : Window
         ApplyThemeColors();
         LoadFileNameTokenButtons();
         LoadSettings();
+        InitializeSearch();
         UpdateWindowTitle();
         Loaded += (_, _) => ApplyMicaBackdrop();
         Loaded += (_, _) => EnsureSettingsWindowFitsWorkArea();
