@@ -132,7 +132,10 @@ public partial class SettingsWindow
                 if (child is Border card && card.Child is Grid row && row.Children.Count > 2 &&
                     row.Children[2] is StackPanel controls && controls.Children.Count > 0 &&
                     controls.Children[^1] is CheckBox cb)
+                {
                     cb.IsChecked = enableAll;
+                    card.Opacity = enableAll ? 1.0 : 0.4;
+                }
             }
         }
         finally
@@ -183,7 +186,8 @@ public partial class SettingsWindow
 
         foreach (var (evt, label, iconId) in SoundEventDefs)
         {
-            var card = new Border { Style = (Style)FindResource("SoundItemCard") };
+            var isMuted = s.MutedSounds.TryGetValue(evt, out var m) && m;
+            var card = new Border { Style = (Style)FindResource("SoundItemCard"), Opacity = isMuted ? 0.4 : 1.0 };
 
             var row = new Grid { VerticalAlignment = VerticalAlignment.Center };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
@@ -284,13 +288,13 @@ public partial class SettingsWindow
             {
                 Width = 42, Height = 20, VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(8, 0, 0, 0),
-                IsChecked = !(s.MutedSounds.TryGetValue(evt, out var m) && m),
+                IsChecked = !isMuted,
                 Cursor = System.Windows.Input.Cursors.Hand,
                 ToolTip = $"Enable the {label} sound."
             };
             AutomationProperties.SetName(enableCheck, $"Enable {label} sound");
-            enableCheck.Checked += (_, _) => SetSoundMuted(evt, false);
-            enableCheck.Unchecked += (_, _) => SetSoundMuted(evt, true);
+            enableCheck.Checked += (_, _) => { SetSoundMuted(evt, false); card.Opacity = 1.0; };
+            enableCheck.Unchecked += (_, _) => { SetSoundMuted(evt, true); card.Opacity = 0.4; };
             controlsPanel.Children.Add(enableCheck);
 
             Grid.SetColumn(controlsPanel, 2);
@@ -336,6 +340,18 @@ public partial class SettingsWindow
         if (_suppressingSoundToggles) return;
         _settingsService.Settings.MutedSounds[evt] = muted;
         SoundService.SetSoundMuted(evt, muted);
+
+        // Sync master switch: if any sound is unmuted, master should be ON
+        var allMuted = SoundEventDefs.All(d => _settingsService.Settings.MutedSounds.TryGetValue(d.Event, out var m) && m);
+        var masterOn = !allMuted;
+        if ((MuteSoundsCheck.IsChecked == true) != masterOn)
+        {
+            _suppressGeneralPreferenceChange = true;
+            try { MuteSoundsCheck.IsChecked = masterOn; }
+            finally { _suppressGeneralPreferenceChange = false; }
+        }
+        _settingsService.Settings.MuteSounds = allMuted;
+        SoundService.Muted = allMuted;
         _settingsService.Save();
     }
 
