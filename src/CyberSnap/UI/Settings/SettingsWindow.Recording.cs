@@ -190,9 +190,11 @@ public partial class SettingsWindow
             var card = new Border { Style = (Style)FindResource("SoundItemCard"), Opacity = isMuted ? 0.4 : 1.0 };
 
             var row = new Grid { VerticalAlignment = VerticalAlignment.Center };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });                     // icon
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });    // label
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                         // centered action group
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });    // balancer keeps the group centered at any width
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });                         // enable toggle, pinned right
 
             // Col 0: Event icon
             var iconFrame = new Border { Style = (Style)FindResource("SoundItemIconFrame") };
@@ -223,12 +225,12 @@ public partial class SettingsWindow
             Grid.SetColumn(labelBlock, 1);
             row.Children.Add(labelBlock);
 
-            // Col 2: Controls (checkbox + preview + badge + browse + reset)
+            // Col 2: Centered action group (preview + source pill + browse + reset)
             var controlsPanel = new StackPanel
             {
                 Orientation = System.Windows.Controls.Orientation.Horizontal,
                 VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Right
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center
             };
 
             // Preview button
@@ -280,10 +282,10 @@ public partial class SettingsWindow
             resetBtn.Click += (_, _) => ResetCustomSound(evt, sourceLabel, sourcePill, resetBtn);
             controlsPanel.Children.Add(resetBtn);
 
-            // Spacer between controls and toggle
-            controlsPanel.Children.Add(new Border { Width = 120 });
+            Grid.SetColumn(controlsPanel, 2);
+            row.Children.Add(controlsPanel);
 
-            // Enable checkbox (checked = this sound plays) — rightmost, aligns with master switch
+            // Col 4: Enable checkbox (checked = this sound plays) — pinned right, aligns with master switch
             var enableCheck = new CheckBox
             {
                 Width = 42, Height = 20, VerticalAlignment = VerticalAlignment.Center,
@@ -295,10 +297,8 @@ public partial class SettingsWindow
             AutomationProperties.SetName(enableCheck, $"Enable {label} sound");
             enableCheck.Checked += (_, _) => { SetSoundMuted(evt, false); card.Opacity = 1.0; };
             enableCheck.Unchecked += (_, _) => { SetSoundMuted(evt, true); card.Opacity = 0.4; };
-            controlsPanel.Children.Add(enableCheck);
-
-            Grid.SetColumn(controlsPanel, 2);
-            row.Children.Add(controlsPanel);
+            Grid.SetColumn(enableCheck, 4);
+            row.Children.Add(enableCheck);
 
             // Wire browse now that resetBtn exists
             browseBtn.Click += (_, _) => BrowseCustomSound(evt, sourceLabel, sourcePill, resetBtn);
