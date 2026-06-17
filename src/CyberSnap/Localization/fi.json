@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Kenraali",
   "Tools": "Työkalut",
   "Capture": "Kaappaa",
@@ -173,9 +173,7 @@
   "Translating...": "Käännetään...",
   "Copy result": "Kopioi tulos",
   "Copy text": "Kopioi teksti",
-  "Local model": "Paikallinen malli",
-  "Argos (offline)": "Argos (offline)",
-  "Google Translate": "Google-kääntäjä",
+  "Local model": "Paikallinen malli",  "Google Translate": "Google-kääntäjä",
   "Warming local model...": "Lämpenevä paikallinen malli...",
   "Starting translation...": "Aloitetaan käännöstä...",
   "Detecting language...": "Havaitaan kieltä...",

@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "General",
   "Tools": "Eines",
   "Capture": "Captura",
@@ -173,9 +173,7 @@
   "Translating...": "S'està traduint...",
   "Copy result": "Copia el resultat",
   "Copy text": "Copia el text",
-  "Local model": "Model local",
-  "Argos (offline)": "Argos (fora de línia)",
-  "Google Translate": "Traductor de Google",
+  "Local model": "Model local",  "Google Translate": "Traductor de Google",
   "Warming local model...": "Escalfament del model local...",
   "Starting translation...": "S'està iniciant la traducció...",
   "Detecting language...": "S'està detectant el llenguatge...",

@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Général",
   "Tools": "Outils",
   "Capture": "Capturer",
@@ -173,9 +173,7 @@
   "Translating...": "Traduire...",
   "Copy result": "Copier le résultat",
   "Copy text": "Copier le texte",
-  "Local model": "Modèle local",
-  "Argos (offline)": "Argos (hors ligne)",
-  "Google Translate": "Google Traduction",
+  "Local model": "Modèle local",  "Google Translate": "Google Traduction",
   "Warming local model...": "Modèle local réchauffant...",
   "Starting translation...": "Début de la traduction...",
   "Detecting language...": "Détection de la langue...",

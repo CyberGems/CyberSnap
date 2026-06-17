@@ -16,7 +16,6 @@ public partial class SettingsWindow
     private readonly List<ComboBoxItem> _ocrLanguageItems = new();
     private readonly List<ComboBoxItem> _translateFromItems = new();
     private readonly List<ComboBoxItem> _translateToItems = new();
-    private bool _openSourceLocalInstalled;
 
     private void LoadOcrTab()
     {
@@ -36,77 +35,6 @@ public partial class SettingsWindow
         }
 
         UpdateTranslationModelUi();
-        PrimeTranslationRuntimeStatusUi();
-        _ = CheckModelStatusAsync();
-    }
-
-    private void PrimeTranslationRuntimeStatusUi()
-    {
-        var hasOpenSourceJob = BackgroundRuntimeJobService.TryGetSnapshot(OpenSourceLocalTranslationJobKey, out var openSourceJob);
-        if (hasOpenSourceJob && openSourceJob.IsRunning)
-        {
-            OpenSourceLocalStatusText.Text = openSourceJob.Status;
-            OpenSourceLocalProgressBar.Visibility = openSourceJob.IsRunning ? Visibility.Visible : Visibility.Collapsed;
-            OpenSourceLocalInstallBtn.IsEnabled = !openSourceJob.IsRunning;
-            SetLoadingTextShimmer(OpenSourceLocalStatusText, true, 0.7, 0.45);
-        }
-        else if (OpenSourceTranslationRuntimeService.TryGetCachedStatus(out var openSourceReady, out var openSourceStatus))
-        {
-            _openSourceLocalInstalled = openSourceReady;
-            OpenSourceLocalStatusText.Text = FormatRuntimeReadinessStatus(openSourceReady, openSourceStatus, openSourceJob, "Open-source local");
-            OpenSourceLocalProgressBar.Visibility = Visibility.Collapsed;
-            OpenSourceLocalInstallBtn.IsEnabled = true;
-            OpenSourceLocalInstallBtn.Content = openSourceReady ? "Uninstall" : "Install";
-            SetLoadingTextShimmer(OpenSourceLocalStatusText, false, 0.7, 0.45);
-        }
-        else if (hasOpenSourceJob && openSourceJob is { LastSucceeded: false })
-        {
-            OpenSourceLocalStatusText.Text = FormatRuntimeActionFailedStatus(openSourceJob.LastError, "Open-source local");
-            OpenSourceLocalProgressBar.Visibility = Visibility.Collapsed;
-            OpenSourceLocalInstallBtn.IsEnabled = true;
-            OpenSourceLocalInstallBtn.Content = "Install";
-            SetLoadingTextShimmer(OpenSourceLocalStatusText, false, 0.7, 0.45);
-        }
-        else
-        {
-            OpenSourceLocalStatusText.Text = "Checking install state...";
-            OpenSourceLocalProgressBar.Visibility = Visibility.Collapsed;
-            OpenSourceLocalInstallBtn.IsEnabled = false;
-            SetLoadingTextShimmer(OpenSourceLocalStatusText, true, 0.7, 0.45);
-        }
-
-        var hasArgosJob = BackgroundRuntimeJobService.TryGetSnapshot(ArgosTranslationJobKey, out var argosJob);
-        if (hasArgosJob && argosJob.IsRunning)
-        {
-            ArgosStatusText.Text = argosJob.Status;
-            ArgosProgressBar.Visibility = argosJob.IsRunning ? Visibility.Visible : Visibility.Collapsed;
-            ArgosInstallBtn.IsEnabled = !argosJob.IsRunning;
-            SetLoadingTextShimmer(ArgosStatusText, true, 0.7, 0.45);
-        }
-        else if (TranslationService.TryGetArgosCachedStatus(out var argosReady, out var argosStatus))
-        {
-            _argosInstalled = argosReady;
-            ArgosStatusText.Text = FormatRuntimeReadinessStatus(argosReady, argosStatus, argosJob, "Argos Translate");
-            ArgosProgressBar.Visibility = Visibility.Collapsed;
-            ArgosInstallBtn.IsEnabled = true;
-            ArgosInstallBtn.Content = argosReady ? "Uninstall" : "Install";
-            SetLoadingTextShimmer(ArgosStatusText, false, 0.7, 0.45);
-        }
-        else if (hasArgosJob && argosJob is { LastSucceeded: false })
-        {
-            ArgosStatusText.Text = FormatRuntimeActionFailedStatus(argosJob.LastError, "Argos Translate");
-            ArgosProgressBar.Visibility = Visibility.Collapsed;
-            ArgosInstallBtn.IsEnabled = true;
-            ArgosInstallBtn.Content = "Install";
-            SetLoadingTextShimmer(ArgosStatusText, false, 0.7, 0.45);
-        }
-        else
-        {
-            ArgosStatusText.Text = "Checking install state...";
-            ArgosProgressBar.Visibility = Visibility.Collapsed;
-            ArgosInstallBtn.IsEnabled = false;
-            SetLoadingTextShimmer(ArgosStatusText, true, 0.7, 0.45);
-        }
     }
 
     private void LoadOcrLanguageOptions()
@@ -297,290 +225,9 @@ public partial class SettingsWindow
             SetTranslationPreferenceStatus);
     }
 
-    private bool _argosInstalled;
-    private void OpenSourceLocalInstallBtn_Click(object sender, RoutedEventArgs e)
-    {
-        if (_openSourceTranslationRuntimeActionInProgress)
-            return;
-
-        var isUninstall = _openSourceLocalInstalled;
-        var startingStatus = isUninstall
-            ? "Uninstalling open-source local translation..."
-            : "Installing open-source local translation...";
-
-        if (isUninstall && !ThemedConfirmDialog.Confirm(
-                this,
-                "Uninstall open-source local translation",
-                "Uninstall the open-source local translation runtime?\n\nIt will need to be installed again before open-source local translation can run.",
-                "Uninstall",
-                "Cancel",
-                danger: true))
-        {
-            OpenSourceLocalStatusText.Text = "Open-source local uninstall canceled. Runtime was left installed.";
-            OpenSourceLocalProgressBar.Visibility = Visibility.Collapsed;
-            OpenSourceLocalInstallBtn.Content = "Uninstall";
-            OpenSourceLocalInstallBtn.IsEnabled = true;
-            SetLoadingTextShimmer(OpenSourceLocalStatusText, false, 0.7, 0.45);
-            return;
-        }
-
-        var started = BackgroundRuntimeJobService.Start(
-            new BackgroundRuntimeJobOptions(
-                OpenSourceLocalTranslationJobKey,
-                "Open-source local translation",
-                startingStatus,
-                isUninstall ? "Open-source local removed" : "Open-source local ready",
-                isUninstall ? "Removed the local translator." : "Installed the local translator.",
-                isUninstall ? "Open-source local uninstall failed" : "Open-source local install failed")
-            {
-                SuccessStatus = isUninstall ? "Not installed" : "Installed",
-                FormatError = ex => FormatRuntimeStatus(ex.Message)
-            },
-            async (progress, cancellationToken) =>
-            {
-                if (isUninstall)
-                {
-                    await OpenSourceTranslationRuntimeService.UninstallAsync(progress, cancellationToken);
-                    return;
-                }
-
-                await OpenSourceTranslationRuntimeService.EnsureInstalledAsync(progress, cancellationToken);
-            });
-
-        if (!started)
-            ToastWindow.Show("Open-source local", "That setup is already running in the background.");
-        else
-        {
-            _openSourceTranslationRuntimeActionInProgress = true;
-            SetOpenSourceTranslationRuntimeBusy(startingStatus, isUninstall);
-
-            if (!isUninstall)
-            {
-                _settingsService.Settings.TranslationModel = (int)TranslationModel.OpenSourceLocal;
-                _settingsService.Save();
-            }
-        }
-
-        _ = CheckModelStatusAsync();
-    }
-
-    private void ArgosInstallBtn_Click(object sender, RoutedEventArgs e)
-    {
-        if (_argosTranslationRuntimeActionInProgress)
-            return;
-
-        var isUninstall = _argosInstalled;
-        var startingStatus = isUninstall
-            ? "Uninstalling Argos Translate..."
-            : "Installing Argos Translate...";
-
-        if (isUninstall && !ThemedConfirmDialog.Confirm(
-                this,
-                "Uninstall Argos Translate",
-                "Uninstall the Argos Translate runtime?\n\nIt will need to be installed again before Argos local translation can run.",
-                "Uninstall",
-                "Cancel",
-                danger: true))
-        {
-            ArgosStatusText.Text = "Argos uninstall canceled. Runtime was left installed.";
-            ArgosProgressBar.Visibility = Visibility.Collapsed;
-            ArgosInstallBtn.Content = "Uninstall";
-            ArgosInstallBtn.IsEnabled = true;
-            SetLoadingTextShimmer(ArgosStatusText, false, 0.7, 0.45);
-            return;
-        }
-
-        var started = BackgroundRuntimeJobService.Start(
-            new BackgroundRuntimeJobOptions(
-                ArgosTranslationJobKey,
-                "Argos Translate",
-                startingStatus,
-                isUninstall ? "Argos removed" : "Argos ready",
-                isUninstall ? "Removed Argos Translate." : "Installed Argos Translate.",
-                isUninstall ? "Argos uninstall failed" : "Argos install failed")
-            {
-                SuccessStatus = isUninstall ? "Not installed" : "Installed",
-                FormatError = ex => FormatRuntimeStatus(ex.Message)
-            },
-            async (progress, cancellationToken) =>
-            {
-                if (isUninstall)
-                {
-                    await TranslationService.UninstallAsync(progress, cancellationToken);
-                    return;
-                }
-
-                await TranslationService.EnsureInstalledAsync(progress, cancellationToken);
-            });
-
-        if (!started)
-            ToastWindow.Show("Argos Translate", "That setup is already running in the background.");
-        else
-        {
-            _argosTranslationRuntimeActionInProgress = true;
-            SetArgosTranslationRuntimeBusy(startingStatus, isUninstall);
-
-            if (!isUninstall)
-            {
-                _settingsService.Settings.TranslationModel = (int)TranslationModel.Argos;
-                _settingsService.Save();
-            }
-        }
-
-        _ = CheckModelStatusAsync();
-    }
-
-    private void SetOpenSourceTranslationRuntimeBusy(string status, bool isUninstall)
-    {
-        OpenSourceLocalStatusText.Text = status;
-        OpenSourceLocalProgressBar.Visibility = Visibility.Visible;
-        OpenSourceLocalInstallBtn.Content = isUninstall ? "Uninstall" : "Install";
-        OpenSourceLocalInstallBtn.IsEnabled = false;
-        SetLoadingTextShimmer(OpenSourceLocalStatusText, true, 0.7, 0.45);
-    }
-
-    private void SetArgosTranslationRuntimeBusy(string status, bool isUninstall)
-    {
-        ArgosStatusText.Text = status;
-        ArgosProgressBar.Visibility = Visibility.Visible;
-        ArgosInstallBtn.Content = isUninstall ? "Uninstall" : "Install";
-        ArgosInstallBtn.IsEnabled = false;
-        SetLoadingTextShimmer(ArgosStatusText, true, 0.7, 0.45);
-    }
-
-    private async Task CheckModelStatusAsync()
-    {
-        await RefreshOpenSourceTranslationRuntimeStatusAsync();
-        await RefreshArgosTranslationRuntimeStatusAsync();
-        UpdateTranslationModelUi();
-    }
-
-    private async Task RefreshOpenSourceTranslationRuntimeStatusAsync()
-    {
-        try
-        {
-            if (BackgroundRuntimeJobService.TryGetSnapshot(OpenSourceLocalTranslationJobKey, out var openSourceJob) && openSourceJob.IsRunning)
-            {
-                _openSourceTranslationRuntimeActionInProgress = true;
-                OpenSourceLocalProgressBar.Visibility = Visibility.Visible;
-                OpenSourceLocalInstallBtn.IsEnabled = false;
-                OpenSourceLocalStatusText.Text = openSourceJob.Status;
-                OpenSourceLocalInstallBtn.Content = _openSourceLocalInstalled ? "Uninstall" : "Install";
-                SetLoadingTextShimmer(OpenSourceLocalStatusText, true, 0.7, 0.45);
-            }
-            else
-            {
-                _openSourceTranslationRuntimeActionInProgress = false;
-                _openSourceLocalInstalled = await OpenSourceTranslationRuntimeService.IsRuntimeReadyAsync();
-                OpenSourceLocalStatusText.Text = FormatRuntimeReadinessStatus(_openSourceLocalInstalled, "Installed", openSourceJob, "Open-source local");
-                OpenSourceLocalInstallBtn.Content = _openSourceLocalInstalled ? "Uninstall" : "Install";
-                OpenSourceLocalInstallBtn.IsEnabled = true;
-                OpenSourceLocalProgressBar.Visibility = Visibility.Collapsed;
-                SetLoadingTextShimmer(OpenSourceLocalStatusText, false, 0.7, 0.45);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.ocr.check-open-source-status", ex);
-            SetOpenSourceTranslationRuntimeStatusRefreshFailed(ex.Message);
-        }
-    }
-
-    private async Task RefreshArgosTranslationRuntimeStatusAsync()
-    {
-        try
-        {
-            if (BackgroundRuntimeJobService.TryGetSnapshot(ArgosTranslationJobKey, out var argosJob) && argosJob.IsRunning)
-            {
-                _argosTranslationRuntimeActionInProgress = true;
-                ArgosProgressBar.Visibility = Visibility.Visible;
-                ArgosInstallBtn.IsEnabled = false;
-                ArgosStatusText.Text = argosJob.Status;
-                ArgosInstallBtn.Content = _argosInstalled ? "Uninstall" : "Install";
-                SetLoadingTextShimmer(ArgosStatusText, true, 0.7, 0.45);
-            }
-            else
-            {
-                _argosTranslationRuntimeActionInProgress = false;
-                _argosInstalled = await TranslationService.IsArgosReadyAsync();
-                ArgosStatusText.Text = FormatRuntimeReadinessStatus(_argosInstalled, "Installed", argosJob, "Argos Translate");
-                ArgosInstallBtn.Content = _argosInstalled ? "Uninstall" : "Install";
-                ArgosInstallBtn.IsEnabled = true;
-                ArgosProgressBar.Visibility = Visibility.Collapsed;
-                SetLoadingTextShimmer(ArgosStatusText, false, 0.7, 0.45);
-            }
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.ocr.check-argos-status", ex);
-            SetArgosTranslationRuntimeStatusRefreshFailed(ex.Message);
-        }
-    }
-
-    private void SetTranslationRuntimeStatusRefreshFailed(string message)
-    {
-        SetOpenSourceTranslationRuntimeStatusRefreshFailed(message);
-        SetArgosTranslationRuntimeStatusRefreshFailed(message);
-    }
-
-    private void SetOpenSourceTranslationRuntimeStatusRefreshFailed(string message)
-    {
-        _openSourceTranslationRuntimeActionInProgress = false;
-        OpenSourceLocalStatusText.Text = FormatTranslationRuntimeRefreshFailureStatus(message);
-        OpenSourceLocalInstallBtn.IsEnabled = true;
-        OpenSourceLocalProgressBar.Visibility = Visibility.Collapsed;
-        SetLoadingTextShimmer(OpenSourceLocalStatusText, false, 0.7, 0.45);
-    }
-
-    private void SetArgosTranslationRuntimeStatusRefreshFailed(string message)
-    {
-        _argosTranslationRuntimeActionInProgress = false;
-        ArgosStatusText.Text = FormatTranslationRuntimeRefreshFailureStatus(message);
-        ArgosInstallBtn.IsEnabled = true;
-        ArgosProgressBar.Visibility = Visibility.Collapsed;
-        SetLoadingTextShimmer(ArgosStatusText, false, 0.7, 0.45);
-    }
-
-    private static string FormatTranslationRuntimeRefreshFailureStatus(string message)
-        => string.IsNullOrWhiteSpace(message)
-            ? "Status refresh failed. Check Config -> OCR and try again."
-            : "Status refresh failed. Check Config -> OCR and try again; details were logged.";
-
-    private static string FormatRuntimeReadinessStatus(bool isInstalled, string installedStatus, BackgroundRuntimeJobSnapshot? lastJob, string runtimeName)
-    {
-        if (isInstalled)
-            return installedStatus;
-
-        if (lastJob is { LastSucceeded: false })
-            return FormatRuntimeActionFailedStatus(lastJob.LastError, runtimeName);
-
-        return "Not installed";
-    }
-
-    private static string FormatRuntimeActionFailedStatus(string? message, string runtimeName)
-    {
-        var recovery = $"{runtimeName} action failed. Check Config -> OCR and try again.";
-        return string.IsNullOrWhiteSpace(message) ? recovery : $"{recovery} Details were logged.";
-    }
-
-    private static string FormatRuntimeStatus(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-            return "Unknown error";
-
-        var text = status.Replace("\r", " ", StringComparison.Ordinal)
-            .Replace("\n", " ", StringComparison.Ordinal)
-            .Trim();
-        while (text.Contains("  ", StringComparison.Ordinal))
-            text = text.Replace("  ", " ", StringComparison.Ordinal);
-        return text.Length <= 160 ? text : text[..157] + "...";
-    }
-
     private void UpdateTranslationModelUi()
     {
         var activeModel = _settingsService.Settings.TranslationModel;
-        OpenSourceLocalInstallBtn.Opacity = activeModel == (int)TranslationModel.OpenSourceLocal ? 1.0 : 0.6;
-        ArgosInstallBtn.Opacity = activeModel == (int)TranslationModel.Argos ? 1.0 : 0.6;
         GoogleApiKeyBox.Opacity = activeModel == (int)TranslationModel.Google ? 1.0 : 0.6;
     }
 
@@ -626,6 +273,21 @@ public partial class SettingsWindow
                 TranslationService.SetGoogleApiKey(value);
                 UpdateTranslationModelUi();
             });
+    }
+
+    private void OpenGoogleApiConsoleBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://console.cloud.google.com/apis/library/translate.googleapis.com",
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+        }
     }
 
     private void UpdateOcrPreference<T>(

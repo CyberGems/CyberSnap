@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Allmänt",
   "Tools": "Verktyg",
   "Capture": "Fånga",
@@ -173,9 +173,7 @@
   "Translating...": "Ã–versÃ¤tter...",
   "Copy result": "Kopiera resultatet",
   "Copy text": "Kopiera text",
-  "Local model": "Lokal modell",
-  "Argos (offline)": "Argos (offline)",
-  "Google Translate": "Google Ã–versÃ¤tt",
+  "Local model": "Lokal modell",  "Google Translate": "Google Ã–versÃ¤tt",
   "Warming local model...": "Värmande lokal modell...",
   "Starting translation...": "Startar översättning...",
   "Detecting language...": "Upptäcker språk...",

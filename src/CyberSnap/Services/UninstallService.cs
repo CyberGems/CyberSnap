@@ -186,7 +186,6 @@ public static class UninstallService
 
     public static void RemoveRuntimeCaches()
     {
-        TryDeleteDirectory(OpenSourceTranslationRuntimeService.RootDirectory);
     }
 
     public static void ScheduleInstallFolderRemoval()

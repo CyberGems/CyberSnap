@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Generelt",
   "Tools": "Værktøjer",
   "Capture": "Capture",
@@ -173,9 +173,7 @@
   "Translating...": "Oversætter...",
   "Copy result": "Kopiér resultatet",
   "Copy text": "Kopier tekst",
-  "Local model": "Lokal model",
-  "Argos (offline)": "Argos (offline)",
-  "Google Translate": "Google Oversæt",
+  "Local model": "Lokal model",  "Google Translate": "Google Oversæt",
   "Warming local model...": "Varmer lokal model...",
   "Starting translation...": "Starter oversættelse...",
   "Detecting language...": "Registrerer sprog...",

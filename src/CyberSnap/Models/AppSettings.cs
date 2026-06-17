@@ -163,7 +163,7 @@ public sealed class AppSettings
     public bool OcrTranslationPanelExpanded { get; set; }
     public string? GoogleTranslateApiKey { get; set; }
     public bool TranslationRuntimeInstalled { get; set; }
-    public int TranslationModel { get; set; } = 3; // 0 = Argos, 1 = Google, 2 = Open-source local, 3 = MyMemory (free web)
+    public int TranslationModel { get; set; } = 3; // 1 = Google, 3 = MyMemory (free web)
     public bool AnnotationStrokeShadow { get; set; } = true;
     public float StrokeWidth { get; set; } = 6f;
     public int ToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(255, 220, 0).ToArgb(); // Default yellow

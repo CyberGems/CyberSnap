@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "General",
   "Tools": "Tools",
   "Capture": "Capture",
@@ -232,9 +232,7 @@
   "Text capture": "Text capture",
   "Copy result": "Copy result",
   "Copy text": "Copy text",
-  "Local model": "Local model",
-  "Argos (offline)": "Argos (offline)",
-  "Google Translate": "Google Translate",
+  "Local model": "Local model",  "Google Translate": "Google Translate",
   "Warming local model...": "Warming local model...",
   "Starting translation...": "Starting translation...",
   "Detecting language...": "Detecting language...",
@@ -531,5 +529,14 @@
   "edit": "edit",
   "copy": "copy",
   "Copied": "Copied",
-  "notification": "notification"
+  "notification": "notification",
+  "MyMemory": "MyMemory",
+  "(translate.net)": "(translate.net)",
+  "Free web translation engine — always available, no API key or setup needed. Decent quality for common language pairs.": "Free web translation engine — always available, no API key or setup needed. Decent quality for common language pairs.",
+  "Google Translate": "Google Translate",
+  "(optional)": "(optional)",
+  "Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month.": "Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month.",
+  "Create free API key...": "Create free API key...",
+  "Services": "Services",
+  "API Key": "API Key"
 }

@@ -1795,8 +1795,12 @@
             </ScrollViewer>
 
             <!-- OCR & Translation -->
-            <ScrollViewer x:Name="OcrPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
-                <StackPanel>
+            <ScrollViewer x:Name="OcrPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,42,18,18">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
                     <TextBlock Text="Recognition" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -1936,96 +1940,85 @@
                                AutomationProperties.LiveSetting="Polite"
                                Margin="4,8,0,0"/>
 
-                    <TextBlock Text="Engines" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <TextBlock Text="Services" Style="{StaticResource SectionLabel}" Margin="4,16,0,9" Services:LocalizationService.SourceText="Services"/>
                     <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE950;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <Grid HorizontalAlignment="Stretch">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- MyMemory -->
+                            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,0,0">
+                                <TextBlock Text="&#xE774;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Row="0" Grid.Column="1">
+                                <StackPanel Orientation="Horizontal">
                                     <TextBlock Style="{StaticResource SettingTitle}">
-                                        <Run Text="Open-source Local"/>
-                                        <Run Text=" — fully local" FontSize="11" Foreground="{DynamicResource ThemeMutedBrush}"/>
+                                        <Run Text="MyMemory" Services:LocalizationService.SourceText="MyMemory"/>
+                                        <Run Text=" (translate.net)" FontSize="11" Foreground="{DynamicResource ThemeMutedBrush}" Services:LocalizationService.SourceText="(translate.net)"/>
                                     </TextBlock>
-                                    <TextBlock x:Name="OpenSourceLocalStatusText" Text="Checking install state..." Style="{StaticResource SettingDescription}"
-                                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                               AutomationProperties.Name="Open-source local translation status"
-                                               AutomationProperties.LiveSetting="Polite"/>
-                                    <ProgressBar x:Name="OpenSourceLocalProgressBar" Height="3" Margin="0,4,0,0"
-                                                 IsIndeterminate="True" Visibility="Collapsed"/>
+                                    <Border VerticalAlignment="Center" Margin="8,0,0,0"
+                                            Background="{DynamicResource ThemeAccentBrush}"
+                                            CornerRadius="4" Padding="8,3">
+                                        <TextBlock Text="DEFAULT" FontSize="9" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ThemeBackgroundBrush}"/>
+                                    </Border>
                                 </StackPanel>
-                                <Button x:Name="OpenSourceLocalInstallBtn" Grid.Column="2" Content="Install"
-                                         VerticalAlignment="Center"
-                                         AutomationProperties.Name="Install open-source local translator"
-                                         ToolTip="Install or remove the open-source local translation runtime"
-                                         Cursor="Hand"
-                                         Click="OpenSourceLocalInstallBtn_Click"/>
-                            </Grid>
+                                <TextBlock Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Text="Free web translation engine — always available, no API key or setup needed. Decent quality for common language pairs." Services:LocalizationService.SourceText="Free web translation engine — always available, no API key or setup needed. Decent quality for common language pairs."/>
+                            </StackPanel>
 
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Separator -->
+                            <Border Grid.Row="1" Grid.ColumnSpan="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
 
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE950;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource SettingTitle}">
-                                        <Run Text="Argos Translate" Foreground="{DynamicResource ThemeAccentBrush}" FontSize="13"/>
-                                        <Run Text=" — local fallback engine" FontSize="11" Foreground="{DynamicResource ThemeMutedBrush}"/>
+                            <!-- Google Translate -->
+                            <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,0,0">
+                                <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Row="2" Grid.Column="1">
+                                <TextBlock Style="{StaticResource SettingTitle}">
+                                    <Run Text="Google Translate" Services:LocalizationService.SourceText="Google Translate"/>
+                                    <Run Text=" (optional)" FontSize="11" Foreground="{DynamicResource ThemeMutedBrush}" Services:LocalizationService.SourceText="(optional)"/>
+                                </TextBlock>
+                                <TextBlock Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Text="Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month." Services:LocalizationService.SourceText="Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month."/>
+                                <Button x:Name="OpenGoogleApiConsoleBtn" Margin="0,6,0,0"
+                                        HorizontalAlignment="Left" Cursor="Hand"
+                                        Background="Transparent" BorderThickness="0" Padding="0"
+                                        Click="OpenGoogleApiConsoleBtn_Click"
+                                        AutomationProperties.Name="Create Google Translate API key">
+                                    <TextBlock Foreground="{DynamicResource ThemeAccentBrush}" FontSize="11.5">
+                                        <Run Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets"/>
+                                        <Run Text=" "/>
+                                        <Run Text="Create free API key..." Services:LocalizationService.SourceText="Create free API key..."/>
                                     </TextBlock>
-                                    <TextBlock x:Name="ArgosStatusText" Text="Checking install state..." Style="{StaticResource SettingDescription}"
-                                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                               AutomationProperties.Name="Argos translation status"
-                                               AutomationProperties.LiveSetting="Polite"/>
-                                    <ProgressBar x:Name="ArgosProgressBar" Height="3" Margin="0,4,0,0"
-                                                 IsIndeterminate="True" Visibility="Collapsed"/>
-                                </StackPanel>
-                                <Button x:Name="ArgosInstallBtn" Grid.Column="2" Content="Install"
-                                         VerticalAlignment="Center"
-                                         AutomationProperties.Name="Install Argos Translate"
-                                         ToolTip="Install or remove the Argos local translation runtime"
-                                         Cursor="Hand"
-                                         Click="ArgosInstallBtn_Click"/>
-                            </Grid>
+                                </Button>
+                            </StackPanel>
 
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Google Translate API key" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Optional cloud translation key." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <PasswordBox x:Name="GoogleApiKeyBox" Grid.Column="2" MinWidth="160"
-                                         VerticalAlignment="Center"
+                            <!-- API Key -->
+                            <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,4,0,0">
+                                <TextBlock Text="API Key" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="API Key"/>
+                                <PasswordBox x:Name="GoogleApiKeyBox" MinHeight="28" Margin="0,4,0,0" HorizontalAlignment="Stretch"
                                          AutomationProperties.Name="Google Translate API key"
                                          Background="{DynamicResource ThemeInputBackgroundBrush}"
                                          Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                          BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
                                          PasswordChanged="GoogleApiKeyBox_Changed"/>
-                            </Grid>
-                        </StackPanel>
+                            </StackPanel>
+
+                        </Grid>
                     </Border>
 
                 </StackPanel>
+                </Grid>
             </ScrollViewer>
 
             <!-- Toolbar -->
@@ -2970,10 +2963,12 @@
                                             </Border>
                                         </StackPanel>
                                     <StackPanel x:Name="ToastLayoutStack" Width="280" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <Border Width="280" Height="220" CornerRadius="18"
-                                            Background="#FF000000"
-                                            BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
-                                            BorderThickness="1">
+                                    <!-- Shell matches the real toast: 12px corners, Theme.ToastBg fill and
+                                         the cyan accent stroke (both set in RefreshEditorPreviewState). The
+                                         Border clips its child to the rounded corners, so the image sits flush
+                                         and the gradient bar follows the bottom corners — just like ToastWindow. -->
+                                    <Border x:Name="ToastLayoutShell" Width="280" Height="220" CornerRadius="12"
+                                            BorderThickness="1" ClipToBounds="True">
                                         <Grid x:Name="ToastLayoutPreviewSurface" AllowDrop="True" PreviewMouseMove="ToastPreviewSurface_PreviewMouseMove">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
@@ -2981,7 +2976,7 @@
                                                 <RowDefinition Height="4"/>
                                             </Grid.RowDefinitions>
 
-                                            <Border Grid.Row="0" Margin="12,12,12,12" CornerRadius="14,14,10,10" Background="#FF1A4F96"
+                                            <Border Grid.Row="0" Margin="0" Background="#FF1A4F96"
                                                     Services:LocalizationService.SourceToolTip="Notification Preview">
                                                 <Grid>
                                                     <!-- Slot placeholders — always visible, dashed when empty, hidden when occupied -->
@@ -3160,7 +3155,18 @@
                                                 </StackPanel>
                                             </StackPanel>
 
-                                            <Border Grid.Row="2" Margin="12,0,12,12" CornerRadius="2" Background="#65FFFFFF"/>
+                                            <Border Grid.Row="2" HorizontalAlignment="Stretch">
+                                                <Border.Background>
+                                                    <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                                        <GradientStop Color="#FF00F2FF" Offset="0.0"/>
+                                                        <GradientStop Color="#FF7A00FF" Offset="0.5"/>
+                                                        <GradientStop Color="#FFFF00D0" Offset="1.0"/>
+                                                    </LinearGradientBrush>
+                                                </Border.Background>
+                                                <Border.Effect>
+                                                    <DropShadowEffect Color="#FF7A00FF" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/>
+                                                </Border.Effect>
+                                            </Border>
                                         </Grid>
                                     </Border>
 

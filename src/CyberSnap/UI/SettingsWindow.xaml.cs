@@ -14,8 +14,6 @@ namespace CyberSnap.UI;
 
 public partial class SettingsWindow : Window
 {
-    private const string OpenSourceLocalTranslationJobKey = "runtime:translation-open-source-local";
-    private const string ArgosTranslationJobKey = "runtime:translation-argos";
     private const int UpdateActionCooldownMs = 900;
     private const int LocalEngineProjectOpenCooldownMs = 900;
     private static readonly (string Token, string Label)[] FileNameTokens =
@@ -46,8 +44,6 @@ public partial class SettingsWindow : Window
     private bool _suppressOcrPreferenceChange;
     private bool _suppressHistoryPreferenceChange;
     private bool ImageIndexResetInProgress { get; set; }
-    private bool _openSourceTranslationRuntimeActionInProgress;
-    private bool _argosTranslationRuntimeActionInProgress;
     private bool _suppressStartWithWindowsChange;
 
     public event Action? HotkeyChanged;
@@ -241,29 +237,8 @@ public partial class SettingsWindow : Window
         Top = Math.Min(Math.Max(Top, minTop), Math.Max(minTop, maxTop));
     }
 
-    private async void BackgroundRuntimeJobService_Changed(string key)
+    private void BackgroundRuntimeJobService_Changed(string key)
     {
-        if (!Dispatcher.CheckAccess())
-        {
-            _ = Dispatcher.BeginInvoke(() => BackgroundRuntimeJobService_Changed(key));
-            return;
-        }
-
-        if (!IsLoaded)
-            return;
-
-        try
-        {
-            if (_ocrTabLoaded)
-                await CheckModelStatusAsync();
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.background-runtime-ocr-changed", ex);
-            SetTranslationRuntimeStatusRefreshFailed(ex.Message);
-        }
-
-
     }
 
 

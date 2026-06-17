@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "ì¼ë°˜",
   "Tools": "ë„êµ¬",
   "Capture": "ìº¡ì²˜",
@@ -173,9 +173,7 @@
   "Translating...": "ë²ˆì—­ ì¤‘...",
   "Copy result": "ê²°ê³¼ ë³µì‚¬",
   "Copy text": "í…ìŠ¤íŠ¸ ë³µì‚¬",
-  "Local model": "ì§€ì—­ëª¨ë¸",
-  "Argos (offline)": "ì•„ë¥´ê³ ìŠ¤ (ì˜¤í”„ë¼ì¸)",
-  "Google Translate": "êµ¬ê¸€ ë²ˆì—­",
+  "Local model": "ì§€ì—­ëª¨ë¸",  "Google Translate": "êµ¬ê¸€ ë²ˆì—­",
   "Warming local model...": "ì˜¨ë‚œí™” ì§€ì—­ ëª¨ë¸â€¦",
   "Starting translation...": "ë²ˆì—­ ì‹œìž‘ ì¤‘...",
   "Detecting language...": "ì–¸ì–´ ê°ì§€ ì¤‘...",

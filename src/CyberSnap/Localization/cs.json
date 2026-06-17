@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Generál",
   "Tools": "Nástroje",
   "Capture": "Zachyťte",
@@ -173,9 +173,7 @@
   "Translating...": "PÅ™eklad...",
   "Copy result": "Zkopírujte výsledek",
   "Copy text": "Zkopírujte text",
-  "Local model": "Místní model",
-  "Argos (offline)": "Argos (offline)",
-  "Google Translate": "PÅ™ekladaÄ Google",
+  "Local model": "Místní model",  "Google Translate": "PÅ™ekladaÄ Google",
   "Warming local model...": "Oteplovací lokální model...",
   "Starting translation...": "SpouÅ¡tÄ›nÃ­ pÅ™ekladu...",
   "Detecting language...": "Detekce jazyka...",
