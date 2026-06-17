@@ -50,6 +50,20 @@ internal static class PopupWindowHelper
         }
     }
 
+    /// <summary>
+    /// Centers <paramref name="window"/> on the work area of the screen under the cursor
+    /// (the screen where the user triggered it). Uses the window's configured Width/Height,
+    /// so call this once the size is known (e.g. from OnSourceInitialized).
+    /// </summary>
+    public static void CenterOnCurrentScreen(Window window)
+    {
+        var wa = GetCurrentWorkArea();
+        var width = double.IsNaN(window.Width) ? window.ActualWidth : window.Width;
+        var height = double.IsNaN(window.Height) ? window.ActualHeight : window.Height;
+        window.Left = wa.Left + (wa.Width - width) / 2;
+        window.Top = wa.Top + (wa.Height - height) / 2;
+    }
+
     public static void ApplyNoActivateChrome(Window window)
     {
         var hwnd = new WindowInteropHelper(window).Handle;

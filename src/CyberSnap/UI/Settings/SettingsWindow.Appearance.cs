@@ -34,7 +34,9 @@ public partial class SettingsWindow
         OuterBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
         Icon = ThemedLogo.Square(32);
         Foreground = Theme.Brush(Theme.TextPrimary);
-        UiScale.ApplyToWindow(this, OuterBorder, scaleWindowBounds: true);
+        // SettingsWindow manages its own size via LoadWindowBounds/SaveWindowBounds,
+        // so don't let UiScale rescale window bounds — only apply the LayoutTransform.
+        UiScale.ApplyToWindow(this, OuterBorder, scaleWindowBounds: false);
 
         ApplyThemeToVisualTree(OuterBorder);
         UpdateSectionIcons();
