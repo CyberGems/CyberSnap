@@ -1801,37 +1801,180 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                    <TextBlock Text="Recognition" Style="{StaticResource SectionLabel}"/>
+
+                    <TextBlock Text="Translation" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Translation"/>
                     <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                        <Grid Style="{StaticResource SettingRow}">
+                        <Grid HorizontalAlignment="Stretch">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}">
-                                <Path Width="14" Height="14" Stretch="Uniform" 
-                                      Fill="{DynamicResource ThemeTextPrimaryBrush}"
-                                      Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="0.3"
-                                      Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2Zm-9-11a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Zm0 3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7ZM6 12.5c0-.28.22-.5.5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5Z"/>
+
+                            <!-- MyMemory -->
+                            <Border x:Name="EngineRow_MyMemory" Grid.Row="0" Grid.ColumnSpan="2"
+                                    CornerRadius="5" BorderThickness="1" BorderBrush="Transparent"
+                                    Cursor="Hand" MouseLeftButtonDown="EngineRow_MouseLeftButtonDown" Tag="3"
+                                    Padding="0,6">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,0,0">
+                                        <TextBlock Text="&#xE774;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource SettingTitle}">
+                                                <Run Text="MyMemory" Services:LocalizationService.SourceText="MyMemory"/>
+                                                <Run Text=" (translate.net)" FontSize="11" Foreground="{DynamicResource ThemeMutedBrush}" Services:LocalizationService.SourceText="(translate.net)"/>
+                                            </TextBlock>
+                                            <Border x:Name="MyMemoryDefaultBadge" VerticalAlignment="Center" Margin="8,0,0,0"
+                                                    Background="{DynamicResource ThemeAccentBrush}"
+                                                    CornerRadius="4" Padding="8,3">
+                                                <TextBlock Text="DEFAULT" FontSize="9" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ThemeBackgroundBrush}"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Text="Free web translation engine — always available, no API key or setup needed. Decent quality for common language pairs." Services:LocalizationService.SourceText="Free web translation engine — always available, no API key or setup needed. Decent quality for common language pairs."/>
+                                    </StackPanel>
+                                </Grid>
                             </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="OCR language" Style="{StaticResource SettingTitle}"/>
-                                <TextBlock x:Name="OcrLanguageStatusText" Style="{StaticResource SettingDescription}"
-                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.Name="OCR language availability"
-                                           AutomationProperties.LiveSetting="Polite"/>
-                            </StackPanel>
-                            <ComboBox x:Name="OcrLanguageCombo" Grid.Column="2" MinWidth="145"
-                                      VerticalAlignment="Center"
-                                      AutomationProperties.Name="OCR language"
-                                      ToolTip="Choose the language used for text recognition."
-                                      IsEditable="True" IsTextSearchEnabled="False"
-                                      PreviewTextInput="OcrCombo_PreviewTextInput" PreviewKeyDown="OcrCombo_PreviewKeyDown"
-                                      SelectionChanged="OcrLanguageCombo_SelectionChanged"/>
+
+                            <!-- Separator -->
+                            <Border Grid.Row="1" Grid.ColumnSpan="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+
+                            <!-- Google Translate -->
+                            <Border x:Name="EngineRow_Google" Grid.Row="2" Grid.ColumnSpan="2"
+                                    CornerRadius="5" BorderThickness="1" BorderBrush="Transparent"
+                                    Cursor="Hand" MouseLeftButtonDown="EngineRow_MouseLeftButtonDown" Tag="1"
+                                    Padding="0,6">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,0,0">
+                                        <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Style="{StaticResource SettingTitle}">
+                                            <Run Text="Google Translate" Services:LocalizationService.SourceText="Google Translate"/>
+                                            <Run Text=" (optional)" FontSize="11" Foreground="{DynamicResource ThemeMutedBrush}" Services:LocalizationService.SourceText="(optional)"/>
+                                        </TextBlock>
+                                        <TextBlock Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Text="Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month." Services:LocalizationService.SourceText="Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month."/>
+                                        <Button x:Name="OpenGoogleApiConsoleBtn" Margin="0,6,0,0"
+                                                HorizontalAlignment="Left" Cursor="Hand"
+                                                Background="Transparent" BorderThickness="0" Padding="0"
+                                                Click="OpenGoogleApiConsoleBtn_Click"
+                                                AutomationProperties.Name="Create Google Translate API key">
+                                            <TextBlock Foreground="{DynamicResource ThemeAccentBrush}" FontSize="11.5">
+                                                <Run Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets"/>
+                                                <Run Text=" "/>
+                                                <Run Text="Create free API key..." Services:LocalizationService.SourceText="Create free API key..."/>
+                                            </TextBlock>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- API Key -->
+                            <Border x:Name="ApiKeyRow" Grid.Row="3" Grid.ColumnSpan="2"
+                                    CornerRadius="5" BorderThickness="1" BorderBrush="Transparent"
+                                    Padding="0,6">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Center">
+                                        <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="0,4,0,0">
+                                        <TextBlock Text="API Key" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="API Key"/>
+                                        <PasswordBox x:Name="GoogleApiKeyBox" MinHeight="28" Margin="0,4,0,0" HorizontalAlignment="Stretch"
+                                                 AutomationProperties.Name="Google Translate API key"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 PasswordChanged="GoogleApiKeyBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Separator before language defaults -->
+                            <Border Grid.Row="4" Grid.ColumnSpan="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+
+                            <!-- Default source language -->
+                            <Grid Grid.Row="5" Grid.ColumnSpan="2" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8C1;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Default source language" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Language to translate from by default." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="TranslateFromCombo" Grid.Column="2" MinWidth="150"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Default source language"
+                                          ToolTip="Language to translate from by default."
+                                          IsEditable="False" IsTextSearchEnabled="True"
+                                          SelectionChanged="TranslateFromCombo_Changed"/>
+                            </Grid>
+
+                            <!-- Separator between source and target -->
+                            <Border Grid.Row="6" Grid.ColumnSpan="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+
+                            <!-- Default target language -->
+                            <Grid Grid.Row="7" Grid.ColumnSpan="2" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8C1;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Default target language" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Language to translate into by default." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="TranslateToCombo" Grid.Column="2" MinWidth="150"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Default target language"
+                                          ToolTip="Language to translate into by default."
+                                          IsEditable="False" IsTextSearchEnabled="True"
+                                          SelectionChanged="TranslateToCombo_Changed"/>
+                            </Grid>
+
                         </Grid>
-                        <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                    </Border>
+                    <TextBlock x:Name="TranslationPreferenceStatusText"
+                               Style="{StaticResource SettingsStatusText}"
+                               Visibility="Collapsed"
+                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                               AutomationProperties.Name="Translation preference status"
+                               AutomationProperties.LiveSetting="Polite"
+                               Margin="4,8,0,0"/>
+
+                    <TextBlock Text="Recognition" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
                         <Grid Style="{StaticResource SettingRow}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -1850,6 +1993,35 @@
                                       ToolTip="Copy recognized text without opening the result window."
                                       Checked="OcrAutoCopyCheck_Changed" Unchecked="OcrAutoCopyCheck_Changed"/>
                         </Grid>
+                        <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <Path Width="14" Height="14" Stretch="Uniform" 
+                                      Fill="{DynamicResource ThemeTextPrimaryBrush}"
+                                      Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="0.3"
+                                      Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2Zm-9-11a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Zm0 3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7ZM6 12.5c0-.28.22-.5.5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5Z"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="OCR language" Style="{StaticResource SettingTitle}"/>
+                                <TextBlock Style="{StaticResource SettingDescription}" TextWrapping="Wrap"
+                                           Text="Language used for text recognition. Auto detects from the image." Services:LocalizationService.SourceText="Language used for text recognition. Auto detects from the image."/>
+                                <TextBlock x:Name="OcrLanguageStatusText" Style="{StaticResource SettingDescription}"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.Name="OCR language availability"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                            </StackPanel>
+                            <ComboBox x:Name="OcrLanguageCombo" Grid.Column="2" MinWidth="145"
+                                      VerticalAlignment="Center"
+                                      AutomationProperties.Name="OCR language"
+                                      ToolTip="Choose the language used for text recognition."
+                                      IsEditable="False" IsTextSearchEnabled="True"
+                                      SelectionChanged="OcrLanguageCombo_SelectionChanged"/>
+                        </Grid>
                         </StackPanel>
                     </Border>
                     <TextBlock x:Name="OcrPreferenceStatusText"
@@ -1858,164 +2030,7 @@
                                ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                AutomationProperties.Name="OCR preference status"
                                AutomationProperties.LiveSetting="Polite"
-                               Margin="4,8,0,0"/>
-
-                    <TextBlock Text="Translation" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
-
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8C1;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Default source language" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Language to translate from by default." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="TranslateFromCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Default source language"
-                                          ToolTip="Language to translate from by default."
-                                          IsEditable="True" IsTextSearchEnabled="False"
-                                          PreviewTextInput="OcrCombo_PreviewTextInput" PreviewKeyDown="OcrCombo_PreviewKeyDown"
-                                          SelectionChanged="TranslateFromCombo_Changed"/>
-                            </Grid>
-
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8C1;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Default target language" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Language to translate into by default." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="TranslateToCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Default target language"
-                                          ToolTip="Language to translate into by default."
-                                          IsEditable="True" IsTextSearchEnabled="False"
-                                          PreviewTextInput="OcrCombo_PreviewTextInput" PreviewKeyDown="OcrCombo_PreviewKeyDown"
-                                          SelectionChanged="TranslateToCombo_Changed"/>
-                            </Grid>
-
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE950;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Translation engine" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose which translator handles OCR text." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="TranslateModelCombo" Grid.Column="2" MinWidth="145"
-                                          VerticalAlignment="Center"
-                                          Visibility="Collapsed">
-                                </ComboBox>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-                    <TextBlock x:Name="TranslationPreferenceStatusText"
-                               Style="{StaticResource SettingsStatusText}"
-                               Visibility="Collapsed"
-                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                               AutomationProperties.Name="Translation preference status"
-                               AutomationProperties.LiveSetting="Polite"
-                               Margin="4,8,0,0"/>
-
-                    <TextBlock Text="Services" Style="{StaticResource SectionLabel}" Margin="4,16,0,9" Services:LocalizationService.SourceText="Services"/>
-                    <Border Style="{StaticResource Card}">
-                        <Grid HorizontalAlignment="Stretch">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- MyMemory -->
-                            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,0,0">
-                                <TextBlock Text="&#xE774;" Style="{StaticResource SettingIconGlyph}"/>
-                            </Border>
-                            <StackPanel Grid.Row="0" Grid.Column="1">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Style="{StaticResource SettingTitle}">
-                                        <Run Text="MyMemory" Services:LocalizationService.SourceText="MyMemory"/>
-                                        <Run Text=" (translate.net)" FontSize="11" Foreground="{DynamicResource ThemeMutedBrush}" Services:LocalizationService.SourceText="(translate.net)"/>
-                                    </TextBlock>
-                                    <Border VerticalAlignment="Center" Margin="8,0,0,0"
-                                            Background="{DynamicResource ThemeAccentBrush}"
-                                            CornerRadius="4" Padding="8,3">
-                                        <TextBlock Text="DEFAULT" FontSize="9" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource ThemeBackgroundBrush}"/>
-                                    </Border>
-                                </StackPanel>
-                                <TextBlock Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Text="Free web translation engine — always available, no API key or setup needed. Decent quality for common language pairs." Services:LocalizationService.SourceText="Free web translation engine — always available, no API key or setup needed. Decent quality for common language pairs."/>
-                            </StackPanel>
-
-                            <!-- Separator -->
-                            <Border Grid.Row="1" Grid.ColumnSpan="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-
-                            <!-- Google Translate -->
-                            <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,0,0">
-                                <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
-                            </Border>
-                            <StackPanel Grid.Row="2" Grid.Column="1">
-                                <TextBlock Style="{StaticResource SettingTitle}">
-                                    <Run Text="Google Translate" Services:LocalizationService.SourceText="Google Translate"/>
-                                    <Run Text=" (optional)" FontSize="11" Foreground="{DynamicResource ThemeMutedBrush}" Services:LocalizationService.SourceText="(optional)"/>
-                                </TextBlock>
-                                <TextBlock Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Text="Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month." Services:LocalizationService.SourceText="Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month."/>
-                                <Button x:Name="OpenGoogleApiConsoleBtn" Margin="0,6,0,0"
-                                        HorizontalAlignment="Left" Cursor="Hand"
-                                        Background="Transparent" BorderThickness="0" Padding="0"
-                                        Click="OpenGoogleApiConsoleBtn_Click"
-                                        AutomationProperties.Name="Create Google Translate API key">
-                                    <TextBlock Foreground="{DynamicResource ThemeAccentBrush}" FontSize="11.5">
-                                        <Run Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets"/>
-                                        <Run Text=" "/>
-                                        <Run Text="Create free API key..." Services:LocalizationService.SourceText="Create free API key..."/>
-                                    </TextBlock>
-                                </Button>
-                            </StackPanel>
-
-                            <!-- API Key -->
-                            <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
-                            </Border>
-                            <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,4,0,0">
-                                <TextBlock Text="API Key" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="API Key"/>
-                                <PasswordBox x:Name="GoogleApiKeyBox" MinHeight="28" Margin="0,4,0,0" HorizontalAlignment="Stretch"
-                                         AutomationProperties.Name="Google Translate API key"
-                                         Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                         Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                         BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                                         PasswordChanged="GoogleApiKeyBox_Changed"/>
-                            </StackPanel>
-
-                        </Grid>
-                    </Border>
+                                Margin="4,8,0,0"/>
 
                 </StackPanel>
                 </Grid>

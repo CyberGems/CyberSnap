@@ -43,11 +43,13 @@ public partial class SettingsWindow
         OcrLanguageCombo.Items.Clear();
 
         // Auto at top â€” uses Windows system language
+        var autoHelp = LocalizationService.Translate(
+            "Automatically detect the text language from the image. Uses the Windows display language when available, falls back to English if not supported.");
         var autoItem = CreateOcrLanguageItem(
-            "Auto (system language)",
+            LocalizationService.Translate("Auto (system language)"),
             "auto",
-            "Auto OCR language",
-            "Use the Windows system language for text recognition when available.");
+            LocalizationService.Translate("Auto OCR language"),
+            autoHelp);
         _ocrLanguageItems.Add(autoItem);
         OcrLanguageCombo.Items.Add(autoItem);
 
@@ -59,21 +61,25 @@ public partial class SettingsWindow
             {
                 var lang = new Windows.Globalization.Language(tag);
                 var label = $"{lang.DisplayName} ({tag})";
+                var langHelp = LocalizationService.Translate(
+                    $"Always recognize text as {lang.DisplayName}. Choose this when you know the language of the text in advance for better accuracy.");
                 var item = CreateOcrLanguageItem(
                     label,
                     tag,
                     $"{label} OCR language",
-                    $"Use {label} for text recognition.");
+                    langHelp);
                 _ocrLanguageItems.Add(item);
                 OcrLanguageCombo.Items.Add(item);
             }
             catch
             {
+                var langHelp = LocalizationService.Translate(
+                    $"Always recognize text as {tag}. Choose this when you know the language of the text in advance for better accuracy.");
                 var item = CreateOcrLanguageItem(
                     tag,
                     tag,
                     $"{tag} OCR language",
-                    $"Use {tag} for text recognition.");
+                    langHelp);
                 _ocrLanguageItems.Add(item);
                 OcrLanguageCombo.Items.Add(item);
             }
@@ -86,13 +92,17 @@ public partial class SettingsWindow
             ?? OcrLanguageCombo.Items.OfType<ComboBoxItem>().First();
 
         OcrLanguageCombo.SelectedItem = selectedItem;
-        OcrLanguageStatusText.Text = $"{languages.Count} language{(languages.Count == 1 ? "" : "s")} available from Windows";
+        var langCount = languages.Count;
+        var langLabel = langCount == 1
+            ? LocalizationService.Translate("{0} language available from Windows")
+            : LocalizationService.Translate("{0} languages available from Windows");
+        OcrLanguageStatusText.Text = string.Format(langLabel, langCount);
     }
 
     private void OcrLanguageCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _suppressOcrPreferenceChange) return;
         if (OcrLanguageCombo.SelectedItem is not ComboBoxItem item) return;
+        if (!IsLoaded || _suppressOcrPreferenceChange) return;
 
         var previous = _settingsService.Settings.OcrLanguageTag;
         var code = item.Tag as string ?? "auto";
@@ -152,7 +162,7 @@ public partial class SettingsWindow
             _translateFromItems.Add(fromItem);
             TranslateFromCombo.Items.Add(fromItem);
 
-            var toName = code == "auto" ? "Auto (interface/system language)" : name;
+            var toName = name;
             var toItem = CreateTranslationLanguageItem(
                 toName,
                 code,
@@ -192,8 +202,8 @@ public partial class SettingsWindow
 
     private void TranslateFromCombo_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _suppressOcrPreferenceChange) return;
         if (TranslateFromCombo.SelectedItem is not ComboBoxItem item) return;
+        if (!IsLoaded || _suppressOcrPreferenceChange) return;
 
         var previous = _settingsService.Settings.OcrDefaultTranslateFrom;
         var selected = TranslationService.ResolveSourceLanguage(item.Tag as string);
@@ -210,8 +220,8 @@ public partial class SettingsWindow
 
     private void TranslateToCombo_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _suppressOcrPreferenceChange) return;
         if (TranslateToCombo.SelectedItem is not ComboBoxItem item) return;
+        if (!IsLoaded || _suppressOcrPreferenceChange) return;
 
         var previous = _settingsService.Settings.OcrDefaultTranslateTo;
         var selected = item.Tag as string ?? "auto";
@@ -229,6 +239,32 @@ public partial class SettingsWindow
     {
         var activeModel = _settingsService.Settings.TranslationModel;
         GoogleApiKeyBox.Opacity = activeModel == (int)TranslationModel.Google ? 1.0 : 0.6;
+        SelectTranslationEngineUi(activeModel);
+    }
+
+    private void SelectTranslationEngineUi(int modelValue)
+    {
+        var accentBrush = (System.Windows.Media.Brush)FindResource("ThemeAccentBrush");
+        var activeBg = Theme.Brush(Theme.AccentSubtle);
+        var transparentBrush = System.Windows.Media.Brushes.Transparent;
+
+        var myMemoryActive = modelValue == (int)TranslationModel.MyMemory;
+        var googleActive = modelValue == (int)TranslationModel.Google;
+
+        // MyMemory row
+        EngineRow_MyMemory.BorderBrush = myMemoryActive ? accentBrush : transparentBrush;
+        EngineRow_MyMemory.Background = myMemoryActive ? activeBg : transparentBrush;
+
+        // Google row
+        EngineRow_Google.BorderBrush = googleActive ? accentBrush : transparentBrush;
+        EngineRow_Google.Background = googleActive ? activeBg : transparentBrush;
+
+        // API Key row follows Google selection
+        ApiKeyRow.BorderBrush = googleActive ? accentBrush : transparentBrush;
+        ApiKeyRow.Background = googleActive ? activeBg : transparentBrush;
+
+        // DEFAULT badge: only visible when MyMemory is the active engine
+        MyMemoryDefaultBadge.Visibility = myMemoryActive ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void EngineRow_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
