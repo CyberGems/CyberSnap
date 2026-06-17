@@ -129,7 +129,9 @@ public partial class SettingsWindow
 
             foreach (var child in SoundCustomizationPanel.Children)
             {
-                if (child is Border card && card.Child is Grid row && row.Children.Count > 0 && row.Children[0] is CheckBox cb)
+                if (child is Border card && card.Child is Grid row && row.Children.Count > 2 &&
+                    row.Children[2] is StackPanel controls && controls.Children.Count > 0 &&
+                    controls.Children[^1] is CheckBox cb)
                     cb.IsChecked = enableAll;
             }
         }
@@ -167,7 +169,7 @@ public partial class SettingsWindow
         (SoundEvent.Startup, "Startup", "home"),
         (SoundEvent.Capture, "Capture", "captureRect"),
         (SoundEvent.Color, "Color picker", "picker"),
-        (SoundEvent.Text, "Text / OCR", "ocr"),
+        (SoundEvent.Text, "OCR Text", "ocr"),
         (SoundEvent.Scan, "QR / Barcode scan", "scan"),
         (SoundEvent.RecordStart, "Recording start", "record"),
         (SoundEvent.RecordStop, "Recording stop", "stop"),
@@ -184,30 +186,11 @@ public partial class SettingsWindow
             var card = new Border { Style = (Style)FindResource("SoundItemCard") };
 
             var row = new Grid { VerticalAlignment = VerticalAlignment.Center };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(32) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
 
-            // Col 0: Enable checkbox (checked = this sound plays)
-            var enableCheck = new CheckBox
-            {
-                Width = 42, Height = 20, VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 10, 0),
-                IsChecked = !(s.MutedSounds.TryGetValue(evt, out var m) && m),
-                Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = $"Enable the {label} sound."
-            };
-            AutomationProperties.SetName(enableCheck, $"Enable {label} sound");
-            enableCheck.Checked += (_, _) => SetSoundMuted(evt, false);
-            enableCheck.Unchecked += (_, _) => SetSoundMuted(evt, true);
-            Grid.SetColumn(enableCheck, 0);
-            row.Children.Add(enableCheck);
-
-            // Col 1: Event icon
+            // Col 0: Event icon
             var iconFrame = new Border { Style = (Style)FindResource("SoundItemIconFrame") };
             var iconColor = System.Drawing.Color.FromArgb(Theme.TextPrimary.A, Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B);
             var iconSource = Helpers.FluentIcons.RenderWpf(iconId, iconColor, 16);
@@ -222,10 +205,10 @@ public partial class SettingsWindow
                 Opacity = 0.9
             };
             iconFrame.Child = iconImage;
-            Grid.SetColumn(iconFrame, 1);
+            Grid.SetColumn(iconFrame, 0);
             row.Children.Add(iconFrame);
 
-            // Col 2: Label
+            // Col 1: Label
             var labelBlock = new TextBlock
             {
                 Text = label,
@@ -233,10 +216,18 @@ public partial class SettingsWindow
                 Margin = new Thickness(8, 0, 12, 0),
                 Style = (Style)FindResource("SettingTitle")
             };
-            Grid.SetColumn(labelBlock, 2);
+            Grid.SetColumn(labelBlock, 1);
             row.Children.Add(labelBlock);
 
-            // Col 3: Preview button
+            // Col 2: Controls (checkbox + preview + badge + browse + reset)
+            var controlsPanel = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Right
+            };
+
+            // Preview button
             var previewBtn = new Button
             {
                 Content = "\uE768",
@@ -248,17 +239,15 @@ public partial class SettingsWindow
             };
             AutomationProperties.SetName(previewBtn, $"Preview {label} sound");
             previewBtn.Click += (_, _) => SoundService.Play(evt);
-            Grid.SetColumn(previewBtn, 3);
-            row.Children.Add(previewBtn);
+            controlsPanel.Children.Add(previewBtn);
 
-            // Col 4: Source pill
+            // Source pill
             var sourcePill = new Border { Style = (Style)FindResource("SoundItemSourcePill"), Margin = new Thickness(12, 0, 10, 0) };
             var sourceLabel = new TextBlock { Style = (Style)FindResource("SoundItemSourceText") };
             sourcePill.Child = sourceLabel;
-            Grid.SetColumn(sourcePill, 4);
-            row.Children.Add(sourcePill);
+            controlsPanel.Children.Add(sourcePill);
 
-            // Col 5: Browse button
+            // Browse button
             var browseBtn = new Button
             {
                 Content = "\uE8B7",
@@ -270,24 +259,42 @@ public partial class SettingsWindow
                 Style = (Style)FindResource("SoundItemActionButton")
             };
             AutomationProperties.SetName(browseBtn, $"Choose custom sound for {label}");
-            Grid.SetColumn(browseBtn, 5);
-            row.Children.Add(browseBtn);
+            controlsPanel.Children.Add(browseBtn);
 
-            // Col 6: Reset button
+            // Reset button
             var resetBtn = new Button
             {
                 Content = "\uE711",
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,
-                Visibility = Visibility.Collapsed,
+                Visibility = Visibility.Hidden,
                 ToolTip = "Revert to default sound.",
                 Style = (Style)FindResource("SoundItemActionButton")
             };
             AutomationProperties.SetName(resetBtn, $"Reset {label} sound to default");
             resetBtn.Click += (_, _) => ResetCustomSound(evt, sourceLabel, sourcePill, resetBtn);
-            Grid.SetColumn(resetBtn, 6);
-            row.Children.Add(resetBtn);
+            controlsPanel.Children.Add(resetBtn);
+
+            // Spacer between controls and toggle
+            controlsPanel.Children.Add(new Border { Width = 120 });
+
+            // Enable checkbox (checked = this sound plays) — rightmost, aligns with master switch
+            var enableCheck = new CheckBox
+            {
+                Width = 42, Height = 20, VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(8, 0, 0, 0),
+                IsChecked = !(s.MutedSounds.TryGetValue(evt, out var m) && m),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = $"Enable the {label} sound."
+            };
+            AutomationProperties.SetName(enableCheck, $"Enable {label} sound");
+            enableCheck.Checked += (_, _) => SetSoundMuted(evt, false);
+            enableCheck.Unchecked += (_, _) => SetSoundMuted(evt, true);
+            controlsPanel.Children.Add(enableCheck);
+
+            Grid.SetColumn(controlsPanel, 2);
+            row.Children.Add(controlsPanel);
 
             // Wire browse now that resetBtn exists
             browseBtn.Click += (_, _) => BrowseCustomSound(evt, sourceLabel, sourcePill, resetBtn);
@@ -306,6 +313,7 @@ public partial class SettingsWindow
         var customPath = _settingsService.Settings.CustomSounds.TryGetValue(evt, out var p) ? p : null;
         if (!string.IsNullOrWhiteSpace(customPath))
         {
+            LocalizationService.SetSourceText(label, "");
             label.Text = System.IO.Path.GetFileName(customPath);
             label.Foreground = (System.Windows.Media.Brush)FindResource("ThemeTextPrimaryBrush");
             sourcePill.Background = (System.Windows.Media.Brush)FindResource("SoundItemCustomSourceBrush");
@@ -314,11 +322,12 @@ public partial class SettingsWindow
         }
         else
         {
+            LocalizationService.SetSourceText(label, "Default");
             label.Text = LocalizationService.Translate("Default");
             label.Foreground = (System.Windows.Media.Brush)FindResource("ThemeTextSecondaryBrush");
             sourcePill.Background = (System.Windows.Media.Brush)FindResource("ThemeTabActiveBrush");
             sourcePill.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush");
-            resetBtn.Visibility = Visibility.Collapsed;
+            resetBtn.Visibility = Visibility.Hidden;
         }
     }
 
