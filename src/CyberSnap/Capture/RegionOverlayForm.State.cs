@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Models.Commands;
+using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
 
@@ -662,6 +663,7 @@ public sealed partial class RegionOverlayForm
         _isConfirmingSelection = true;
         _confirmRect = rect;
         _confirmHandleDragIndex = -1;
+        RecomputeConfirmButtonWidth();
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
         _selectionEnd = Point.Empty;
@@ -705,28 +707,57 @@ public sealed partial class RegionOverlayForm
         else RegionSelected?.Invoke(rect);
     }
 
-    private static readonly int ConfirmHandleSize = 10;
-    private static readonly int ConfirmButtonWidth = 90;
-    private static readonly int ConfirmButtonHeight = 32;
+    private static readonly int ConfirmHandleSize = 16;
+    private static readonly int ConfirmButtonWidth = 96;
+    private static readonly int ConfirmButtonHeight = 34;
     private static readonly int ConfirmButtonGap = 8;
+
+    // Measured width for the confirm/cancel buttons; recomputed on entering confirm
+    // mode so the localized label (e.g. "Confirmar") always fits on a single line.
+    private int _confirmButtonWidth = UiChrome.ScaleInt(96);
 
     private Rectangle[] GetConfirmHandleRects()
     {
         int hs = UiChrome.ScaleInt(ConfirmHandleSize);
         int h2 = hs / 2;
         var r = _confirmRect;
+        int midX = r.Left + r.Width / 2;
+        int midY = r.Top + r.Height / 2;
         return new[]
         {
             new Rectangle(r.Left - h2, r.Top - h2, hs, hs),      // 0 TL
             new Rectangle(r.Right - h2, r.Top - h2, hs, hs),     // 1 TR
             new Rectangle(r.Left - h2, r.Bottom - h2, hs, hs),   // 2 BL
             new Rectangle(r.Right - h2, r.Bottom - h2, hs, hs),  // 3 BR
+            new Rectangle(midX - h2, r.Top - h2, hs, hs),        // 4 Top
+            new Rectangle(r.Left - h2, midY - h2, hs, hs),       // 5 Left
+            new Rectangle(r.Right - h2, midY - h2, hs, hs),      // 6 Right
+            new Rectangle(midX - h2, r.Bottom - h2, hs, hs),     // 7 Bottom
         };
+    }
+
+    private void RecomputeConfirmButtonWidth()
+    {
+        int min = UiChrome.ScaleInt(ConfirmButtonWidth);
+        int pad = UiChrome.ScaleInt(30);
+        try
+        {
+            using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
+            using var g = CreateGraphics();
+            float w = Math.Max(
+                g.MeasureString(LocalizationService.Translate("Confirm"), font).Width,
+                g.MeasureString(LocalizationService.Translate("Cancel"), font).Width);
+            _confirmButtonWidth = Math.Max(min, (int)Math.Ceiling(w) + pad);
+        }
+        catch
+        {
+            _confirmButtonWidth = min;
+        }
     }
 
     private (Rectangle confirm, Rectangle cancel) GetConfirmButtonRects()
     {
-        int bw = UiChrome.ScaleInt(ConfirmButtonWidth);
+        int bw = _confirmButtonWidth;
         int bh = UiChrome.ScaleInt(ConfirmButtonHeight);
         int gap = UiChrome.ScaleInt(ConfirmButtonGap);
         var r = _confirmRect;

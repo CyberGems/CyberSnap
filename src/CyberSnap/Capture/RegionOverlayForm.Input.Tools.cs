@@ -188,6 +188,10 @@ public sealed partial class RegionOverlayForm
                 1 => Rectangle.FromLTRB(ob.Left, ob.Top + dy, ob.Right + dx, ob.Bottom),  // TR
                 2 => Rectangle.FromLTRB(ob.Left + dx, ob.Top, ob.Right, ob.Bottom + dy),  // BL
                 3 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + dx, ob.Bottom + dy),  // BR
+                4 => Rectangle.FromLTRB(ob.Left, ob.Top + dy, ob.Right, ob.Bottom),       // Top
+                5 => Rectangle.FromLTRB(ob.Left + dx, ob.Top, ob.Right, ob.Bottom),       // Left
+                6 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + dx, ob.Bottom),       // Right
+                7 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right, ob.Bottom + dy),       // Bottom
                 _ => ob
             };
             if (nb.Width > 5 && nb.Height > 5)
@@ -325,7 +329,15 @@ public sealed partial class RegionOverlayForm
             _hoveredConfirmButton = -1;
 
             int ch = HitTestConfirmHandle(e.Location);
-            if (ch >= 0) target = ch is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
+            if (ch >= 0)
+                target = ch switch
+                {
+                    0 or 3 => Cursors.SizeNWSE,
+                    1 or 2 => Cursors.SizeNESW,
+                    4 or 7 => Cursors.SizeNS,
+                    5 or 6 => Cursors.SizeWE,
+                    _ => Cursors.Default
+                };
             else
             {
                 int btnHit = HitTestConfirmButton(e.Location);

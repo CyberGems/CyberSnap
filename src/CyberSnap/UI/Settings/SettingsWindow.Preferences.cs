@@ -213,6 +213,21 @@ public partial class SettingsWindow
             value => ShowCaptureMagnifierCheck.IsChecked = value);
     }
 
+    private void ShowSelectionSizeCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
+
+        var previous = _settingsService.Settings.ShowSelectionSize;
+        var selected = ShowSelectionSizeCheck.IsChecked == true;
+        UpdateCaptureSavePreference(
+            "settings.selection-size",
+            "Selection size",
+            previous,
+            selected,
+            value => _settingsService.Settings.ShowSelectionSize = value,
+            value => ShowSelectionSizeCheck.IsChecked = value);
+    }
+
     private void ConfirmRegionCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;

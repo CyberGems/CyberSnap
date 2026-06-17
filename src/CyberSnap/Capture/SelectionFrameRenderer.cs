@@ -125,6 +125,87 @@ internal static class SelectionFrameRenderer
         g.SmoothingMode = oldSmoothing;
     }
 
+    /// <summary>
+    /// Draws premium resize handles for the confirmation frame: bold accent L-brackets
+    /// at the four corners (indices 0-3) and rounded grab-bars at the four mid-edges
+    /// (4=top, 5=left, 6=right, 7=bottom). Each handle has a white core, accent ring,
+    /// and a soft glow so it reads as a tactile grab target over any background.
+    /// </summary>
+    public static void DrawConfirmHandles(Graphics g, Rectangle[] handles)
+    {
+        if (handles.Length < 8)
+            return;
+
+        var oldSmoothing = g.SmoothingMode;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        var accent = UiChrome.AccentColor;
+        float scale = (float)UiChrome.UiScale;
+        float thickness = 3f * scale;     // bracket / bar thickness
+        float armLen = 11f * scale;       // corner bracket arm length
+        float barLen = 18f * scale;       // mid-edge bar length
+        float radius = thickness / 2f;
+
+        using var glowBrush = new SolidBrush(Color.FromArgb(70, accent));
+        using var coreBrush = new SolidBrush(Color.White);
+        using var ringBrush = new SolidBrush(accent);
+
+        // ── Corner L-brackets (TL, TR, BL, BR) ──
+        float coreThick = Math.Max(1f, thickness - 2f * scale);
+        for (int i = 0; i < 4; i++)
+        {
+            var c = CenterOf(handles[i]);
+            // hx/hy point the two arms inward toward the selection center
+            float hx = i is 0 or 2 ? 1f : -1f;
+            float hy = i is 0 or 1 ? 1f : -1f;
+            // soft glow halo
+            DrawBar(g, glowBrush, c.X, c.Y, hx * armLen, thickness + 3f * scale, true, radius);
+            DrawBar(g, glowBrush, c.X, c.Y, hy * armLen, thickness + 3f * scale, false, radius);
+            // solid accent ring
+            DrawBar(g, ringBrush, c.X, c.Y, hx * armLen, thickness, true, radius);
+            DrawBar(g, ringBrush, c.X, c.Y, hy * armLen, thickness, false, radius);
+            // white core
+            DrawBar(g, coreBrush, c.X, c.Y, hx * armLen, coreThick, true, coreThick / 2f);
+            DrawBar(g, coreBrush, c.X, c.Y, hy * armLen, coreThick, false, coreThick / 2f);
+        }
+
+        // ── Mid-edge rounded bars (top, left, right, bottom) ──
+        for (int i = 4; i < 8; i++)
+        {
+            var c = CenterOf(handles[i]);
+            bool horizontal = i is 4 or 7; // top/bottom bars run horizontally
+            float len = barLen;
+            RectangleF core = horizontal
+                ? new RectangleF(c.X - len / 2f, c.Y - thickness / 2f, len, thickness)
+                : new RectangleF(c.X - thickness / 2f, c.Y - len / 2f, thickness, len);
+
+            RectangleF glow = RectangleF.Inflate(core, 2f * scale, 2f * scale);
+            using (var glowPath = WindowsDockRenderer.RoundedRect(glow, radius + 2f * scale))
+                g.FillPath(glowBrush, glowPath);
+            using (var corePath = WindowsDockRenderer.RoundedRect(core, radius))
+                g.FillPath(ringBrush, corePath);
+            var inner = RectangleF.Inflate(core, -1f * scale, -1f * scale);
+            if (inner.Width > 0 && inner.Height > 0)
+                using (var innerPath = WindowsDockRenderer.RoundedRect(inner, Math.Max(1f, radius - 1f * scale)))
+                    g.FillPath(coreBrush, innerPath);
+        }
+
+        g.SmoothingMode = oldSmoothing;
+    }
+
+    private static PointF CenterOf(Rectangle r) =>
+        new(r.X + r.Width / 2f, r.Y + r.Height / 2f);
+
+    // Draws one arm of a corner bracket as a rounded bar starting at (cx,cy).
+    private static void DrawBar(Graphics g, Brush brush, float cx, float cy, float length, float thickness, bool horizontal, float radius)
+    {
+        RectangleF rect = horizontal
+            ? new RectangleF(length < 0 ? cx + length : cx, cy - thickness / 2f, Math.Abs(length), thickness)
+            : new RectangleF(cx - thickness / 2f, length < 0 ? cy + length : cy, thickness, Math.Abs(length));
+        using var path = WindowsDockRenderer.RoundedRect(rect, radius);
+        g.FillPath(brush, path);
+    }
+
     public static void DrawPath(Graphics g, IReadOnlyList<Point> points, bool closed, bool fill = true)
     {
         if (points.Count < 2)
