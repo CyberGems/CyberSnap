@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Generales",
   "Tools": "Herramientas",
   "Capture": "Capturar",
@@ -273,9 +273,7 @@
   "Text capture": "Captura de texto",
   "Copy result": "Copiar resultado",
   "Copy text": "Copiar texto",
-  "Local model": "Modelo local",
-  "Argos (offline)": "Argos (sin conexión)",
-  "Google Translate": "Google Translate",
+  "Local model": "Modelo local",  "Google Translate": "Google Translate",
   "Warming local model...": "Preparando modelo local...",
   "Starting translation...": "Iniciando traducción...",
   "Detecting language...": "Detectando idioma...",
@@ -607,5 +605,14 @@
   "edit": "editar",
   "copy": "copiar",
   "Copied": "Copiado",
-  "notification": "notificación"
+  "notification": "notificación",
+  "MyMemory": "MyMemory",
+  "(translate.net)": "(translate.net)",
+  "Free web translation engine — always available, no API key or setup needed. Decent quality for common language pairs.": "Motor de traducción web gratuita — siempre disponible, sin clave API ni configuración. Calidad decente para pares de idiomas comunes.",
+  "Google Translate": "Google Translate",
+  "(optional)": "(opcional)",
+  "Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month.": "Traducción en la nube de mayor calidad con 133+ idiomas. Requiere una clave API gratuita de Google Cloud. Tier gratuito: 500K caracteres/mes.",
+  "Create free API key...": "Crear clave API gratuita...",
+  "Services": "Servicios",
+  "API Key": "Clave API"
 }

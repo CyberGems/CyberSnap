@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Genel",
   "Tools": "Araçlar",
   "Capture": "Yakala",
@@ -173,9 +173,7 @@
   "Translating...": "Ã‡eviri...",
   "Copy result": "Sonucu kopyala",
   "Copy text": "Metni kopyala",
-  "Local model": "Yerel model",
-  "Argos (offline)": "Argos (Ã§evrimdÄ±ÅŸÄ±)",
-  "Google Translate": "Google Ã‡eviri",
+  "Local model": "Yerel model",  "Google Translate": "Google Ã‡eviri",
   "Warming local model...": "Yerli model ısınıyor...",
   "Starting translation...": "Ã‡eviri baÅŸlatÄ±lÄ±yor...",
   "Detecting language...": "Dil algılanıyor...",

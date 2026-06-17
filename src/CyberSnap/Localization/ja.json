@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "ä¸€èˆ¬",
   "Tools": "ãƒ„ãƒ¼ãƒ«",
   "Capture": "ã‚­ãƒ£ãƒ—ãƒãƒ£",
@@ -173,9 +173,7 @@
   "Translating...": "翻訳中...",
   "Copy result": "ã‚³ãƒ”ãƒ¼çµæžœ",
   "Copy text": "ãƒ†ã‚­ã‚¹ãƒˆã‚’ã‚³ãƒ”ãƒ¼ã™ã‚‹",
-  "Local model": "ãƒ­ãƒ¼ã‚«ãƒ«ãƒ¢ãƒ‡ãƒ«",
-  "Argos (offline)": "ã‚¢ãƒ«ã‚´ã‚¹ (ã‚ªãƒ•ãƒ©ã‚¤ãƒ³)",
-  "Google Translate": "Google翻訳",
+  "Local model": "ãƒ­ãƒ¼ã‚«ãƒ«ãƒ¢ãƒ‡ãƒ«",  "Google Translate": "Google翻訳",
   "Warming local model...": "ãƒ­ãƒ¼ã‚«ãƒ« ãƒ¢ãƒ‡ãƒ«ã‚’æ¸©ã‚ã¦ã„ã¾ã™...",
   "Starting translation...": "ç¿»è¨³ã‚’é–‹å§‹ã—ã¦ã„ã¾ã™...",
   "Detecting language...": "è¨€èªžã‚’æ¤œå‡ºä¸­...",

@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "chung",
   "Tools": "Công cụ",
   "Capture": "Chụp",
@@ -173,9 +173,7 @@
   "Translating...": "Äang dá»‹ch...",
   "Copy result": "Sao chép kết quả",
   "Copy text": "Sao chÃ©p vÄƒn báº£n",
-  "Local model": "MÃ´ hÃ¬nh Ä‘á»‹a phÆ°Æ¡ng",
-  "Argos (offline)": "Argos (ngoại tuyến)",
-  "Google Translate": "Google Dá»‹ch",
+  "Local model": "MÃ´ hÃ¬nh Ä‘á»‹a phÆ°Æ¡ng",  "Google Translate": "Google Dá»‹ch",
   "Warming local model...": "HÃ¢m nÃ³ng mÃ´ hÃ¬nh Ä‘á»‹a phÆ°Æ¡ng...",
   "Starting translation...": "Báº¯t Ä‘áº§u dá»‹ch...",
   "Detecting language...": "Äang phÃ¡t hiá»‡n ngÃ´n ngá»¯...",

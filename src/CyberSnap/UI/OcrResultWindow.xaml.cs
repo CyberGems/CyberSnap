@@ -673,12 +673,12 @@ public partial class OcrResultWindow : Window
     private static string GetTranslationStatusLabel(TranslationModel model, int elapsedSeconds)
     {
         if (elapsedSeconds <= 1)
-            return model == TranslationModel.OpenSourceLocal ? "Warming local model..." : model == TranslationModel.MyMemory ? "Sending to MyMemory..." : "Starting translation...";
+            return model == TranslationModel.MyMemory ? "Sending to MyMemory..." : "Starting translation...";
         if (elapsedSeconds <= 3)
-            return model == TranslationModel.OpenSourceLocal ? "Detecting language..." : model == TranslationModel.MyMemory ? "Translating via web..." : "Sending text...";
+            return model == TranslationModel.MyMemory ? "Translating via web..." : "Sending text...";
         if (elapsedSeconds <= 6)
-            return model == TranslationModel.OpenSourceLocal ? "Generating translation..." : model == TranslationModel.MyMemory ? "Waiting for response..." : "Translating...";
-        return model == TranslationModel.OpenSourceLocal ? "Still working locally..." : model == TranslationModel.MyMemory ? "Finishing up..." : "Finishing translation...";
+            return model == TranslationModel.MyMemory ? "Waiting for response..." : "Translating...";
+        return model == TranslationModel.MyMemory ? "Finishing up..." : "Finishing translation...";
     }
 
     private async void TranslateBtn_Click(object sender, RoutedEventArgs e)

@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Algemeen",
   "Tools": "Gereedschap",
   "Capture": "Vastleggen",
@@ -173,9 +173,7 @@
   "Translating...": "Vertalen...",
   "Copy result": "Kopieer resultaat",
   "Copy text": "Kopieer tekst",
-  "Local model": "Lokaal model",
-  "Argos (offline)": "Argos (offline)",
-  "Google Translate": "Google Vertalen",
+  "Local model": "Lokaal model",  "Google Translate": "Google Vertalen",
   "Warming local model...": "Opwarmend lokaal model...",
   "Starting translation...": "Vertalen starten...",
   "Detecting language...": "Taal detecteren...",

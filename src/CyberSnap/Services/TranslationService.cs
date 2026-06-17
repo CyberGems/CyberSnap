@@ -1,5 +1,4 @@
-﻿using System.IO;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net.Http;
 using System.Text.Json;
 
@@ -7,35 +6,18 @@ namespace CyberSnap.Services;
 
 public enum TranslationModel
 {
-    Argos = 0,
     Google = 1,
-    OpenSourceLocal = 2,
     MyMemory = 3
 }
 
 public static class TranslationService
 {
-    private const string PythonLauncherArg = "-3";
-    private const string ArgosTranslateVersion = "1.11.0";
-    private const string ArgosTranslatePackage = "argostranslate==" + ArgosTranslateVersion;
-    private static readonly TimeSpan ArgosProbeCacheTtl = TimeSpan.FromMinutes(10);
     private static readonly HttpClient GoogleHttp = CreateGoogleHttpClient();
     private static readonly HttpClient MyMemoryHttp = CreateMyMemoryHttpClient();
-    private static readonly string ArgosStateDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "CyberSnap",
-        "argos");
-    private static readonly string ArgosMarkerPath = Path.Combine(ArgosStateDir, "runtime.marker");
-    private static readonly object ArgosProbeGate = new();
-    private static bool? _cachedArgosReady;
-    private static string _cachedArgosStatus = "Checking install state...";
-    private static DateTime _cachedArgosCheckedUtc;
 
     public static string GetModelLabel(TranslationModel model) => model switch
     {
-        TranslationModel.Argos => "Argos Translate",
         TranslationModel.Google => "Google Translate",
-        TranslationModel.OpenSourceLocal => "Open-source Local",
         TranslationModel.MyMemory => "MyMemory (free web)",
         _ => "MyMemory (free web)"
     };
@@ -128,105 +110,6 @@ public static class TranslationService
         return null;
     }
 
-    // --- Install (Argos only â€” Google needs no install) ---
-
-    public static async Task EnsureInstalledAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
-    {
-        if (await IsArgosReadyAsync(cancellationToken).ConfigureAwait(false))
-            return;
-
-        progress?.Report("Installing Argos Translate...");
-        var result = await RunPythonAsync(new[]
-        {
-            PythonLauncherArg, "-m", "pip", "install", "--user", "--disable-pip-version-check", ArgosTranslatePackage
-        }, cancellationToken).ConfigureAwait(false);
-
-        if (result.ExitCode != 0)
-        {
-            var message = !string.IsNullOrWhiteSpace(result.StdErr) ? result.StdErr.Trim() : result.StdOut.Trim();
-            throw new InvalidOperationException(string.IsNullOrWhiteSpace(message) ? "Couldn't install Argos Translate." : message);
-        }
-
-        TryWriteArgosMarker();
-        UpdateArgosProbeCache(true, "Installed");
-    }
-
-    public static async Task UninstallAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
-    {
-        progress?.Report("Uninstalling Argos Translate...");
-        var result = await RunPythonAsync(new[]
-        {
-            PythonLauncherArg, "-m", "pip", "uninstall", "-y", "argostranslate"
-        }, cancellationToken).ConfigureAwait(false);
-
-        if (result.ExitCode != 0)
-        {
-            var message = ProcessRunner.GetFailureMessage(result, "Couldn't uninstall Argos Translate.");
-            AppDiagnostics.LogWarning("translation.argos.uninstall", message);
-            throw new InvalidOperationException(message);
-        }
-
-        if (!TryDeleteArgosMarker())
-            throw new InvalidOperationException("Argos Translate was uninstalled, but CyberSnap couldn't clear its local install marker.");
-
-        UpdateArgosProbeCache(false, "Not installed");
-    }
-
-    public static async Task<bool> IsArgosReadyAsync(CancellationToken cancellationToken = default)
-    {
-        if (TryGetArgosCachedStatus(out var cachedReady, out _))
-            return cachedReady;
-
-        if (IsArgosMarkerCurrent())
-        {
-            UpdateArgosProbeCache(true, "Installed");
-            return true;
-        }
-
-        if (!await IsPythonLauncherAvailableAsync(cancellationToken).ConfigureAwait(false))
-        {
-            UpdateArgosProbeCache(false, "Python not found");
-            return false;
-        }
-
-        var result = await RunPythonAsync(new[]
-        {
-            PythonLauncherArg, "-c",
-            $"import argostranslate, importlib.metadata as m; raise SystemExit(0 if m.version('argostranslate') == '{ArgosTranslateVersion}' else 1)"
-        }, cancellationToken).ConfigureAwait(false);
-
-        var ready = result.ExitCode == 0;
-        if (ready)
-            TryWriteArgosMarker();
-        UpdateArgosProbeCache(ready, ready ? "Installed" : "Not installed");
-        return ready;
-    }
-
-    public static bool TryGetArgosCachedStatus(out bool isReady, out string status)
-    {
-        if (IsArgosMarkerCurrent())
-        {
-            UpdateArgosProbeCache(true, "Installed");
-            isReady = true;
-            status = "Installed";
-            return true;
-        }
-
-        lock (ArgosProbeGate)
-        {
-            if (_cachedArgosReady.HasValue && DateTime.UtcNow - _cachedArgosCheckedUtc <= ArgosProbeCacheTtl)
-            {
-                isReady = _cachedArgosReady.Value;
-                status = _cachedArgosStatus;
-                return true;
-            }
-        }
-
-        isReady = false;
-        status = "Checking install state...";
-        return false;
-    }
-
     // --- Translate ---
 
     public static async Task<string> TranslateAsync(string text, string fromCode, string toCode, TranslationModel model, CancellationToken cancellationToken = default)
@@ -238,7 +121,7 @@ public static class TranslationService
         {
             var apiKey = _googleApiKey;
             if (string.IsNullOrWhiteSpace(apiKey))
-                throw new InvalidOperationException("Google Translate API key not set. Add it in Settings â†’ OCR.");
+                throw new InvalidOperationException("Google Translate API key not set. Add it in Settings \u2192 OCR.");
 
             try
             {
@@ -251,60 +134,18 @@ public static class TranslationService
             }
         }
 
-        if (model == TranslationModel.MyMemory)
+        // MyMemory
+        // MyMemory supports auto-detect via the literal "Autodetect" source code
+        // (handled inside TranslateWithMyMemoryAsync).
+        try
         {
-            // MyMemory supports auto-detect via the literal "Autodetect" source code
-            // (handled inside TranslateWithMyMemoryAsync).
-            try
-            {
-                return await TranslateWithMyMemoryAsync(text, fromCode, toCode, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                AppDiagnostics.LogError("translation.mymemory.translate", ex);
-                throw;
-            }
+            return await TranslateWithMyMemoryAsync(text, fromCode, toCode, cancellationToken).ConfigureAwait(false);
         }
-
-        if (model == TranslationModel.OpenSourceLocal)
+        catch (Exception ex)
         {
-            try
-            {
-                return await OpenSourceTranslationRuntimeService.TranslateAsync(text, fromCode, toCode, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                AppDiagnostics.LogError("translation.local.translate", ex);
-                throw;
-            }
+            AppDiagnostics.LogError("translation.mymemory.translate", ex);
+            throw;
         }
-
-        // Argos Translate
-        var result = await RunPythonAsync(new[]
-        {
-            PythonLauncherArg, "-c", BuildArgosTranslateScript(), text, fromCode, toCode
-        }, cancellationToken).ConfigureAwait(false);
-
-        if (result.ExitCode != 0)
-        {
-            var message = !string.IsNullOrWhiteSpace(result.StdErr)
-                ? result.StdErr.Trim()
-                : result.StdOut.Trim();
-
-            if (message.Contains("No module named", StringComparison.OrdinalIgnoreCase))
-            {
-                TryDeleteArgosMarker();
-                UpdateArgosProbeCache(false, "Not installed");
-            }
-
-            AppDiagnostics.LogWarning("translation.argos.translate", string.IsNullOrWhiteSpace(message) ? "Argos translation failed." : message);
-
-            throw new InvalidOperationException(string.IsNullOrWhiteSpace(message)
-                ? "Translation failed."
-                : message);
-        }
-
-        return result.StdOut.TrimEnd();
     }
 
     private static string? _googleApiKey;
@@ -317,47 +158,20 @@ public static class TranslationService
     public static bool HasGoogleApiKey => !string.IsNullOrWhiteSpace(_googleApiKey);
 
     public static bool SupportsAutoDetect(TranslationModel model) =>
-        model is TranslationModel.Google or TranslationModel.OpenSourceLocal or TranslationModel.MyMemory;
+        model is TranslationModel.Google or TranslationModel.MyMemory;
 
-    public static async Task<string?> GetConfigurationErrorAsync(string fromCode, TranslationModel model, CancellationToken cancellationToken = default)
+    public static Task<string?> GetConfigurationErrorAsync(string fromCode, TranslationModel model, CancellationToken cancellationToken = default)
     {
         if (model == TranslationModel.Google)
-            return string.IsNullOrWhiteSpace(_googleApiKey)
-                ? "Google Translate API key not set. Add it in Config -> OCR."
-                : null;
-
-        if (model == TranslationModel.MyMemory)
-            return null; // Free web API — always ready; supports auto-detect via "Autodetect"
-
-        if (model == TranslationModel.OpenSourceLocal)
         {
-            if (OpenSourceTranslationRuntimeService.TryGetCachedStatus(out var localReady, out _))
-                return localReady ? null : "Open-source local translation is not installed. Install it in Config -> OCR.";
-
-            return await OpenSourceTranslationRuntimeService.IsRuntimeReadyAsync(cancellationToken).ConfigureAwait(false)
-                ? null
-                : "Open-source local translation is not installed. Install it in Config -> OCR.";
+            return Task.FromResult<string?>(
+                string.IsNullOrWhiteSpace(_googleApiKey)
+                    ? "Google Translate API key not set. Add it in Config -> OCR."
+                    : null);
         }
 
-        if (string.Equals(fromCode, "auto", StringComparison.OrdinalIgnoreCase))
-            return "Argos Translate does not support auto-detect. Pick a source language or use Google Translate.";
-
-        if (TryGetArgosCachedStatus(out var argosReady, out _))
-            return argosReady ? null : "Argos Translate is not installed. Install it in Config -> OCR.";
-
-        return await IsArgosReadyAsync(cancellationToken).ConfigureAwait(false)
-            ? null
-            : "Argos Translate is not installed. Install it in Config -> OCR.";
-    }
-
-    private static void UpdateArgosProbeCache(bool ready, string status)
-    {
-        lock (ArgosProbeGate)
-        {
-            _cachedArgosReady = ready;
-            _cachedArgosStatus = status;
-            _cachedArgosCheckedUtc = DateTime.UtcNow;
-        }
+        // MyMemory — free web API, always ready
+        return Task.FromResult<string?>(null);
     }
 
     public static async Task EnsureReadyAsync(string fromCode, TranslationModel model, CancellationToken cancellationToken = default)
@@ -389,26 +203,6 @@ public static class TranslationService
             .GetString() ?? "";
     }
 
-    private static async Task<bool> IsPythonLauncherAvailableAsync(CancellationToken cancellationToken)
-    {
-        var result = await RunPythonAsync(new[] { PythonLauncherArg, "--version" }, cancellationToken).ConfigureAwait(false);
-        return result.ExitCode == 0;
-    }
-
-    private static Task<ProcessRunResult> RunPythonAsync(IEnumerable<string> arguments, CancellationToken cancellationToken)
-        => ProcessRunner.RunAsync(
-            "py",
-            arguments,
-            cancellationToken,
-            configure: psi =>
-            {
-                psi.EnvironmentVariables["PYTHONUTF8"] = "1";
-                psi.StandardOutputEncoding = System.Text.Encoding.UTF8;
-                psi.StandardErrorEncoding = System.Text.Encoding.UTF8;
-            },
-            startFailureMessage: "Could not start Python launcher.",
-            onStartFailure: message => AppDiagnostics.LogWarning("translation.python.start", message));
-
     private static HttpClient CreateGoogleHttpClient()
     {
         var client = new HttpClient
@@ -433,13 +227,9 @@ public static class TranslationService
 
     private static async Task<string> TranslateWithMyMemoryAsync(string text, string fromCode, string toCode, CancellationToken cancellationToken)
     {
-        // Build language pair: MyMemory requires literal "|" (not URL-encoded).
-        // For auto-detect, MyMemory expects the literal source code "Autodetect"
-        // (a bare target, or "auto", returns INVALID LANGUAGE PAIR).
         var isAuto = string.Equals(fromCode, "auto", StringComparison.OrdinalIgnoreCase);
         var langPair = isAuto ? $"Autodetect|{toCode}" : $"{fromCode}|{toCode}";
 
-        // Only escape the text; the | in langPair must stay literal
         var url = $"get?q={Uri.EscapeDataString(text)}&langpair={langPair}";
 
         using var response = await MyMemoryHttp.GetAsync(url, cancellationToken).ConfigureAwait(false);
@@ -452,7 +242,6 @@ public static class TranslationService
         using var doc = JsonDocument.Parse(payload);
         var root = doc.RootElement;
 
-        // Check response status (MyMemory may return it as number or string)
         int statusCode = 0;
         if (root.TryGetProperty("responseStatus", out var status))
         {
@@ -470,7 +259,6 @@ public static class TranslationService
             throw new InvalidOperationException(msg);
         }
 
-        // Extract translated text
         if (root.TryGetProperty("responseData", out var data) &&
             data.TryGetProperty("translatedText", out var translated) &&
             translated.ValueKind == JsonValueKind.String)
@@ -508,78 +296,5 @@ public static class TranslationService
         }
 
         return string.IsNullOrWhiteSpace(payload) ? null : payload.Trim();
-    }
-
-    private static string BuildArgosTranslateScript() => """
-import sys
-import argostranslate.translate as tr
-
-text = sys.argv[1]
-from_code = sys.argv[2]
-to_code = sys.argv[3]
-
-# Check if language pack is installed, install if needed
-installed = tr.get_installed_languages()
-from_lang = next((l for l in installed if l.code == from_code), None)
-to_lang = next((l for l in installed if l.code == to_code), None)
-
-if not from_lang or not to_lang or not from_lang.get_translation(to_lang):
-    import argostranslate.package as pkg
-    pkg.update_package_index()
-    available = pkg.get_available_packages()
-    match = next((p for p in available if p.from_code == from_code and p.to_code == to_code), None)
-    if not match:
-        raise RuntimeError("No Argos language pack is available for this language pair.")
-    download_path = match.download()
-    pkg.install_from_path(download_path)
-    installed = tr.get_installed_languages()
-    from_lang = next((l for l in installed if l.code == from_code), None)
-    to_lang = next((l for l in installed if l.code == to_code), None)
-    if not from_lang or not to_lang or not from_lang.get_translation(to_lang):
-        raise RuntimeError("Argos language pack install completed, but the translation pair is still unavailable.")
-
-translated = tr.translate(text, from_code, to_code)
-print(translated)
-""";
-
-    private static void TryWriteArgosMarker()
-    {
-        try
-        {
-            Directory.CreateDirectory(ArgosStateDir);
-            File.WriteAllText(ArgosMarkerPath, ArgosTranslatePackage);
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("translation.argos.marker-write", ex.Message, ex);
-        }
-    }
-
-    private static bool IsArgosMarkerCurrent()
-    {
-        try
-        {
-            return File.Exists(ArgosMarkerPath) &&
-                   string.Equals(File.ReadAllText(ArgosMarkerPath).Trim(), ArgosTranslatePackage, StringComparison.Ordinal);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool TryDeleteArgosMarker()
-    {
-        try
-        {
-            if (File.Exists(ArgosMarkerPath))
-                File.Delete(ArgosMarkerPath);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("translation.argos.marker-delete", ex.Message, ex);
-            return false;
-        }
     }
 }

@@ -198,7 +198,6 @@ public sealed partial class MainPage : Page
     {
         var examples = new[]
         {
-            new AppJobSnapshot("runtime:translation-open-source-local", "Open-source translation runtime", AppJobArea.Runtime, false, "Ready", true, null),
             new AppJobSnapshot("runtime:sticker-rembg:Cpu", "Sticker runtime (CPU)", AppJobArea.Runtime, false, "Ready", true, null),
             new AppJobSnapshot("runtime:upscale-onnx:Gpu", "Upscale runtime (GPU)", AppJobArea.Runtime, false, "Ready", true, null),
         };

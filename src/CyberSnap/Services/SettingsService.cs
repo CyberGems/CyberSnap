@@ -324,6 +324,9 @@ public sealed class SettingsService : IDisposable
         settings.RecordingFormat = NormalizeEnum(settings.RecordingFormat, RecordingFormat.MP4);
         settings.RecordingQuality = NormalizeEnum(settings.RecordingQuality, RecordingQuality.Original);
         settings.CenterSelectionAspectRatio = NormalizeEnum(settings.CenterSelectionAspectRatio, CenterSelectionAspectRatio.Free);
+        settings.TranslationModel = Enum.IsDefined(typeof(TranslationModel), settings.TranslationModel)
+            ? settings.TranslationModel
+            : (int)TranslationModel.MyMemory;
     }
 
     private static TEnum NormalizeEnum<TEnum>(TEnum value, TEnum fallback)

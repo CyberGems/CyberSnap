@@ -1,4 +1,4 @@
-{
+﻿{
   "General": "Umum",
   "Tools": "Alat",
   "Capture": "Tangkap",
@@ -173,9 +173,7 @@
   "Translating...": "Menerjemahkan...",
   "Copy result": "Salin hasilnya",
   "Copy text": "Salin teks",
-  "Local model": "Model lokal",
-  "Argos (offline)": "Argos (luar talian)",
-  "Google Translate": "Google Terjemahan",
+  "Local model": "Model lokal",  "Google Translate": "Google Terjemahan",
   "Warming local model...": "Menghangatkan model lokal...",
   "Starting translation...": "Memulai terjemahan...",
   "Detecting language...": "Mendeteksi bahasa...",
