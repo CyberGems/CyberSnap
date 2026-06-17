@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Algemeen",
   "Tools": "Gereedschap",
   "Capture": "Vastleggen",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Toon draadkruishulplijnen",
   "Show pixel magnifier": "Toon pixelvergrootglas",
   "Span screenshot overlay across all monitors": "Verspreid een screenshot-overlay over alle monitoren",
-  "Annotation stroke and shadow": "Annotatieslag en schaduw",
+  "Annotation shadow": "Annotatieslag en schaduw",
   "Behavior": "Gedrag",
   "Window detection": "Raamdetectie",
   "Off": "Uit",

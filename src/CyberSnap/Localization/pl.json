@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "GeneraÅ‚",
   "Tools": "NarzÄ™dzia",
   "Capture": "Przechwytywanie",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Pokaż prowadnice celownika",
   "Show pixel magnifier": "PokaÅ¼ lupÄ™ pikselowÄ…",
   "Span screenshot overlay across all monitors": "RozciÄ…gnij nakÅ‚adkÄ™ zrzutu ekranu na wszystkie monitory",
-  "Annotation stroke and shadow": "Obrys i cieÅ„ adnotacji",
+  "Annotation shadow": "Obrys i cieÅ„ adnotacji",
   "Behavior": "Zachowanie",
   "Window detection": "Wykrywanie okna",
   "Off": "WyÅ‚Ä…czone",

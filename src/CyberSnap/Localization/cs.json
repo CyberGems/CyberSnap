@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Generál",
   "Tools": "Nástroje",
   "Capture": "Zachyťte",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Zobrazit vodÃ­tka zamÄ›Å™ovaÄe",
   "Show pixel magnifier": "Zobrazit pixelovou lupu",
   "Span screenshot overlay across all monitors": "RoztÃ¡hnÄ›te pÅ™ekryvnÃ½ snÃ­mek obrazovky na vÅ¡ech monitorech",
-  "Annotation stroke and shadow": "Tah a stín anotace",
+  "Annotation shadow": "Tah a stín anotace",
   "Behavior": "Chování",
   "Window detection": "Detekce oken",
   "Off": "Vypnuto",

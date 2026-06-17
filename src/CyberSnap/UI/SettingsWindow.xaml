@@ -1285,15 +1285,15 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE790;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE793;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Annotation stroke and shadow" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Keep annotations readable on mixed backgrounds." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Annotation shadow" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Adds a soft drop shadow to annotations for depth." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="AnnotationStrokeShadowCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Keep annotations readable on mixed backgrounds"
-                                          AutomationProperties.Name="Annotation stroke and shadow"
+                                          ToolTip="Adds a soft drop shadow to annotations for depth"
+                                          AutomationProperties.Name="Annotation shadow"
                                           Checked="AnnotationStrokeShadowCheck_Changed" Unchecked="AnnotationStrokeShadowCheck_Changed"/>
                             </Grid>
                         </StackPanel>
@@ -2254,12 +2254,12 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="User Interface Scale" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Increase the default size of windows, capture interface and notifications." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Increase the default size of windows, capture interface, widget and notifications." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="UiScaleCombo" Grid.Column="2" MinWidth="110"
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="User Interface Scale"
-                                          ToolTip="Increase the default size of windows, capture interface and notifications."
+                                          ToolTip="Increase the default size of windows, capture interface, widget and notifications."
                                           SelectionChanged="UiScaleCombo_SelectionChanged">
                                     <ComboBoxItem Content="100%" Tag="1.0"
                                                   ToolTip="Use normal CyberSnap UI scale."

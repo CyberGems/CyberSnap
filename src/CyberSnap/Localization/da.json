@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Generelt",
   "Tools": "Værktøjer",
   "Capture": "Capture",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Vis trådkorsguider",
   "Show pixel magnifier": "Vis pixelforstørrelsesglas",
   "Span screenshot overlay across all monitors": "Spænd skærmbillede overlejring på tværs af alle skærme",
-  "Annotation stroke and shadow": "Annotationsstrøg og skygge",
+  "Annotation shadow": "Annotationsstrøg og skygge",
   "Behavior": "Adfærd",
   "Window detection": "Vinduesdetektering",
   "Off": "Fra",

@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 
 namespace CyberSnap.Capture;
@@ -10,30 +10,6 @@ namespace CyberSnap.Capture;
 /// </summary>
 public static partial class SketchRenderer
 {
-    // Match text annotation shadow/stroke values exactly
-    private static readonly Color AnnotShadow1 = Color.FromArgb(50, 0, 0, 0);
-    private static readonly Color AnnotShadow2 = Color.FromArgb(25, 0, 0, 0);
-    private static readonly Color AnnotStroke = Color.FromArgb(60, 0, 0, 0);
-
-    // Cached GDI objects for stroke/shadow rendering â€” avoid per-frame allocations
-    private static readonly SolidBrush BrushShadow1 = new(AnnotShadow1);
-    private static readonly SolidBrush BrushShadow2 = new(AnnotShadow2);
-    private static readonly SolidBrush BrushStroke = new(AnnotStroke);
-    private static readonly Pen ShapeShadowPen1 = new(AnnotShadow1, 3f) { LineJoin = LineJoin.Round };
-    private static readonly Pen ShapeShadowPen2 = new(AnnotShadow2, 3f) { LineJoin = LineJoin.Round };
-    private static readonly Pen ShapeStrokePen = new(AnnotStroke, 3f) { LineJoin = LineJoin.Round };
-
-    // Pre-computed 8-direction offsets for stroke outline
-    private static readonly (int dx, int dy)[] StrokeOffsets =
-    {
-        (-1, -1), (-1, 0), (-1, 1),
-        (0, -1),           (0, 1),
-        (1, -1),  (1, 0),  (1, 1)
-    };
-
-    // Reusable point buffer for offset calculations (avoids LINQ .Select().ToArray() per frame)
-    [ThreadStatic] private static Point[]? _offsetBuffer;
-
     // Pen caches keyed on (argb, width-quantized). Tool colors come from a small palette,
     // so the cache is bounded and never grows unbounded over a session.
     private static readonly Dictionary<long, Pen> _roundCapPens = new();
@@ -97,32 +73,6 @@ public static partial class SketchRenderer
         return brush;
     }
 
-    /// <summary>Offset points into a reusable buffer â€” avoids allocating a new array per shadow/stroke pass.</summary>
-    private static Point[] OffsetPointsInPlace(Point[] src, int ox, int oy)
-    {
-        if (_offsetBuffer == null || _offsetBuffer.Length < src.Length)
-            _offsetBuffer = new Point[src.Length];
-        for (int i = 0; i < src.Length; i++)
-            _offsetBuffer[i] = new Point(src[i].X + ox, src[i].Y + oy);
-        return _offsetBuffer;
-    }
-
-    private static void DrawPenWithStrokeShadow(Graphics g, Pen mainPen, PointF from, PointF to)
-    {
-        // Shadow: two offset passes (matching text shadow)
-        using var s1 = new Pen(AnnotShadow1, mainPen.Width) { StartCap = mainPen.StartCap, EndCap = mainPen.EndCap };
-        using var s2 = new Pen(AnnotShadow2, mainPen.Width) { StartCap = mainPen.StartCap, EndCap = mainPen.EndCap };
-        g.DrawLine(s1, from.X + 2, from.Y + 2, to.X + 2, to.Y + 2);
-        g.DrawLine(s2, from.X + 3, from.Y + 3, to.X + 3, to.Y + 3);
-
-        // Stroke: 8-direction offset (matching text stroke)
-        using var strokePen = new Pen(AnnotStroke, mainPen.Width) { StartCap = mainPen.StartCap, EndCap = mainPen.EndCap };
-        for (int ox = -1; ox <= 1; ox++)
-            for (int oy = -1; oy <= 1; oy++)
-                if (ox != 0 || oy != 0)
-                    g.DrawLine(strokePen, from.X + ox, from.Y + oy, to.X + ox, to.Y + oy);
-    }
-
     /// <summary>Draw a straight line (no arrowhead).</summary>
     public static void DrawLine(Graphics g, PointF from, PointF to, Color color, int seed, bool strokeShadow = false, float strokeWidth = 4f)
     {
@@ -132,7 +82,7 @@ public static partial class SketchRenderer
 
         g.SmoothingMode = SmoothingMode.AntiAlias;
         if (strokeShadow)
-            DrawSoftLineShadow(g, from, to, strokeWidth * 0.5f);
+            DrawSoftLineShadow(g, from, to, strokeWidth);
         g.DrawLine(GetRoundCapPen(color, strokeWidth), from, to);
         g.SmoothingMode = SmoothingMode.Default;
     }
@@ -153,7 +103,7 @@ public static partial class SketchRenderer
         if (strokeShadow)
         {
             DrawSoftLineShadow(g, from, shaftEnd, strokeWidth);
-            DrawArrowhead(g, new PointF(to.X + 2, to.Y + 2), nx, ny, len, Color.FromArgb(42, 0, 0, 0), strokeWidth, seed + 3000);
+            DrawArrowhead(g, new PointF(to.X + 2, to.Y + 2), nx, ny, len, Color.FromArgb(62, 0, 0, 0), strokeWidth, seed + 3000);
         }
 
         g.DrawLine(GetRoundCapPen(color, strokeWidth), from, shaftEnd);
@@ -216,7 +166,7 @@ public static partial class SketchRenderer
         if (strokeShadow)
         {
             DrawSoftCurveShadow(g, curvePts, thickness, curvePts.Length >= 4);
-            DrawArrowhead(g, new PointF(tip.X + 2, tip.Y + 2), nx, ny, len, Color.FromArgb(42, 0, 0, 0), thickness + 0.5f, seed + 4000);
+            DrawArrowhead(g, new PointF(tip.X + 2, tip.Y + 2), nx, ny, len, Color.FromArgb(62, 0, 0, 0), thickness + 0.5f, seed + 4000);
         }
 
         var mainPen = GetFlatEndCapPen(color, thickness);

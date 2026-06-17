@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Allmänt",
   "Tools": "Verktyg",
   "Capture": "Fånga",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Visa hårkorsguider",
   "Show pixel magnifier": "Visa pixelförstoringsglas",
   "Span screenshot overlay across all monitors": "Spänn över skärmdump över alla bildskärmar",
-  "Annotation stroke and shadow": "Anteckning streck och skugga",
+  "Annotation shadow": "Anteckning streck och skugga",
   "Behavior": "Beteende",
   "Window detection": "Fönsterdetektering",
   "Off": "Av",

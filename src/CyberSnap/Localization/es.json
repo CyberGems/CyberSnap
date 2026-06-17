@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Generales",
   "Tools": "Herramientas",
   "Capture": "Capturar",
@@ -39,7 +39,7 @@
   "Delay in milliseconds.": "Retardo en milisegundos.",
   "Interface": "Interfaz",
   "User Interface Scale": "Escala de la interfaz",
-  "Increase the default size of windows, capture interface and notifications.": "Aumenta el tamaño predeterminado de ventanas, widget, interfaz de captura y notificaciones.",
+  "Increase the default size of windows, capture interface, widget and notifications.": "Aumenta el tamaño predeterminado de ventanas, widget, interfaz de captura y notificaciones.",
   "System": "Sistema",
   "Language": "Idioma",
   "Interface language": "Idioma de la interfaz",
@@ -107,8 +107,8 @@
   "Display alignment guides while selecting.": "Muestra guías de alineación mientras seleccionas.",
   "Show pixel magnifier": "Mostrar lupa de píxeles",
   "Span screenshot overlay across all monitors": "Superposición en todos los monitores",
-  "Annotation stroke and shadow": "Trazo y sombra de anotación",
-  "Keep annotations readable on mixed backgrounds.": "Mantiene las anotaciones legibles sobre fondos variados.",
+  "Annotation shadow": "Sombra en anotaciones",
+  "Adds a soft drop shadow to annotations for depth.": "Agrega una sombra suave a las anotaciones para darles profundidad.",
   "Behavior": "Comportamiento",
   "Capture behavior": "Comportamiento de captura",
   "Scrolling capture": "Captura con desplazamiento",

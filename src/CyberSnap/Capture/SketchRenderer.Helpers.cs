@@ -5,22 +5,24 @@ namespace CyberSnap.Capture;
 
 public static partial class SketchRenderer
 {
+    // Elegant soft drop shadow — 4-step diagonal fade (lower-right).
+    // Alphas tuned for visibility on both light and dark backgrounds.
     private static readonly (int dx, int dy, int alpha)[] SoftShadowSteps =
     {
-        (5, 5, 14),
-        (3, 3, 24),
-        (1, 1, 42),
-        (0, 0, 58),
+        (5, 5, 22),
+        (3, 3, 38),
+        (1, 1, 62),
+        (0, 0, 78),
     };
-    private static readonly Color ShadowColor = Color.FromArgb(60, 0, 0, 0);
+    private static readonly Color ShadowColor = Color.FromArgb(78, 0, 0, 0);
 
-    // Pre-cached brushes for the four fixed SoftShadowSteps alphas â€” avoids re-alloc per call.
+    // Pre-cached brushes for the four fixed SoftShadowSteps alphas — avoids re-alloc per call.
     private static readonly SolidBrush[] SoftShadowBrushes =
     {
-        new(Color.FromArgb(14, 0, 0, 0)),
-        new(Color.FromArgb(24, 0, 0, 0)),
-        new(Color.FromArgb(42, 0, 0, 0)),
-        new(Color.FromArgb(58, 0, 0, 0)),
+        new(Color.FromArgb(22, 0, 0, 0)),
+        new(Color.FromArgb(38, 0, 0, 0)),
+        new(Color.FromArgb(62, 0, 0, 0)),
+        new(Color.FromArgb(78, 0, 0, 0)),
     };
 
     // Shadow pens are black with one of 4 fixed alphas; thickness varies by caller's annotation width.

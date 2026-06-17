@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "General",
   "Tools": "Eines",
   "Capture": "Captura",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Mostra les guies de punt de mira",
   "Show pixel magnifier": "Mostra la lupa de píxels",
   "Span screenshot overlay across all monitors": "Amplieu la superposició de captures de pantalla a tots els monitors",
-  "Annotation stroke and shadow": "Traç i ombra d'anotació",
+  "Annotation shadow": "Traç i ombra d'anotació",
   "Behavior": "Comportament",
   "Window detection": "Detecció de finestres",
   "Off": "Apagat",

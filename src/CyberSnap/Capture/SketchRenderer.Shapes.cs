@@ -49,27 +49,22 @@ public static partial class SketchRenderer
 
         if (strokeShadow)
         {
-            // Translate the same path instead of rebuilding it 10 times.
+            // Elegant soft drop shadow — 4-step diagonal fade
             var state = g.Save();
             try
             {
-                g.TranslateTransform(2, 2);
-                g.DrawPath(ShapeShadowPen1, path);
-                g.TranslateTransform(1, 1); // now at +3,+3
-                g.DrawPath(ShapeShadowPen2, path);
+                int prevDx = 0, prevDy = 0;
+                foreach (var step in SoftShadowSteps)
+                {
+                    g.TranslateTransform(step.dx - prevDx, step.dy - prevDy);
+                    prevDx = step.dx; prevDy = step.dy;
+                    float w = strokeWidth + (step.dx > 0 ? 1.4f : 0.5f);
+                    using var shadowPen = new Pen(Color.FromArgb(step.alpha, 0, 0, 0), w)
+                        { LineJoin = LineJoin.Round };
+                    g.DrawPath(shadowPen, path);
+                }
             }
             finally { g.Restore(state); }
-
-            foreach (var (ox, oy) in StrokeOffsets)
-            {
-                var s = g.Save();
-                try
-                {
-                    g.TranslateTransform(ox, oy);
-                    g.DrawPath(ShapeStrokePen, path);
-                }
-                finally { g.Restore(s); }
-            }
         }
 
         g.DrawPath(GetRoundJoinPen(color, strokeWidth), path);
@@ -83,10 +78,14 @@ public static partial class SketchRenderer
 
         if (strokeShadow)
         {
-            g.DrawEllipse(ShapeShadowPen1, new Rectangle(rect.X + 2, rect.Y + 2, rect.Width, rect.Height));
-            g.DrawEllipse(ShapeShadowPen2, new Rectangle(rect.X + 3, rect.Y + 3, rect.Width, rect.Height));
-            foreach (var (ox, oy) in StrokeOffsets)
-                g.DrawEllipse(ShapeStrokePen, new Rectangle(rect.X + ox, rect.Y + oy, rect.Width, rect.Height));
+            // Elegant soft drop shadow — 4-step diagonal fade
+            foreach (var step in SoftShadowSteps)
+            {
+                float w = strokeWidth + (step.dx > 0 ? 1.4f : 0.5f);
+                using var shadowPen = new Pen(Color.FromArgb(step.alpha, 0, 0, 0), w)
+                    { LineJoin = LineJoin.Round };
+                g.DrawEllipse(shadowPen, new Rectangle(rect.X + step.dx, rect.Y + step.dy, rect.Width, rect.Height));
+            }
         }
 
         g.DrawEllipse(GetRoundJoinPen(color, strokeWidth), rect);
