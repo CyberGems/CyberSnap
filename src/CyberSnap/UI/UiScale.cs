@@ -8,7 +8,7 @@ namespace CyberSnap.UI;
 public static class UiScale
 {
     public const double Default = 1.0;
-    public const double Min = 0.8;
+    public const double Min = 1.0;
     public const double Max = 1.4;
 
     private static readonly ConditionalWeakTable<Window, WindowScaleState> WindowStates = new();

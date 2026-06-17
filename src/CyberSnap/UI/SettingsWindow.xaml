@@ -2234,22 +2234,14 @@
                                     <TextBlock Text="&#xE71E;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="UI scale" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Manually scale CyberSnap windows, toasts, and capture controls." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="User Interface Scale" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Increase the default size of windows, capture interface and notifications." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="UiScaleCombo" Grid.Column="2" MinWidth="110"
                                           VerticalAlignment="Center"
-                                          AutomationProperties.Name="UI scale"
-                                          ToolTip="Manually scale CyberSnap windows, notifications, and capture controls."
+                                          AutomationProperties.Name="User Interface Scale"
+                                          ToolTip="Increase the default size of windows, capture interface and notifications."
                                           SelectionChanged="UiScaleCombo_SelectionChanged">
-                                    <ComboBoxItem Content="80%" Tag="0.8"
-                                                  ToolTip="Scale CyberSnap UI to 80%."
-                                                  AutomationProperties.Name="80 percent UI scale"
-                                                  AutomationProperties.HelpText="Make CyberSnap windows, notifications, and capture controls smaller."/>
-                                    <ComboBoxItem Content="90%" Tag="0.9"
-                                                  ToolTip="Scale CyberSnap UI to 90%."
-                                                  AutomationProperties.Name="90 percent UI scale"
-                                                  AutomationProperties.HelpText="Make CyberSnap windows, notifications, and capture controls slightly smaller."/>
                                     <ComboBoxItem Content="100%" Tag="1.0"
                                                   ToolTip="Use normal CyberSnap UI scale."
                                                   AutomationProperties.Name="100 percent UI scale"
@@ -2281,7 +2273,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE7C1;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE768;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Disable animations" Style="{StaticResource SettingTitle}"/>
