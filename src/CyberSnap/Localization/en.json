@@ -538,5 +538,13 @@
   "Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month.": "Higher quality cloud translation with 133+ languages. Requires a free Google Cloud API key. Free tier: 500K chars/month.",
   "Create free API key...": "Create free API key...",
   "Services": "Services",
-  "API Key": "API Key"
+  "Translation Services": "Translation Services",
+  "API Key": "API Key",
+  "Auto (system language)": "Auto (system language)",
+  "Auto OCR language": "Auto OCR language",
+  "Automatically detect the text language from the image. Uses the Windows display language when available, falls back to English if not supported.": "Automatically detect the text language from the image. Uses the Windows display language when available, falls back to English if not supported.",
+  "Always recognize text as {0}. Choose this when you know the language of the text in advance for better accuracy.": "Always recognize text as {0}. Choose this when you know the language of the text in advance for better accuracy.",
+  "{0} language available from Windows": "{0} language available from Windows",
+  "{0} languages available from Windows": "{0} languages available from Windows",
+  "Language used for text recognition. Auto detects from the image.": "Language used for text recognition. Auto detects from the image."
 }
