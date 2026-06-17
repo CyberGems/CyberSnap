@@ -796,20 +796,30 @@ public partial class SettingsWindow
 
         bool editorOn = _settingsService.Settings.OpenEditorAfterCapture;
 
-        // Keep the text-toast mock faithful to the real one: Theme.ToastBg fill and the same
-        // cyan/blue accent stroke ConfigureShell() gives the real toast's OuterShell, plus the
-        // muted close glyph. (Theme.ToastBorder is the wrong, white-ish stroke.)
+        // Keep the in-panel editor toggle reflecting the setting. Setting IsChecked to the same
+        // value is a no-op; a real change makes the handler re-enter, but it early-outs once the
+        // setting already matches, so there's no loop.
+        if (NotificationsEditorToggle is not null && NotificationsEditorToggle.IsChecked != editorOn)
+            NotificationsEditorToggle.IsChecked = editorOn;
+
+        // Keep both previews faithful to the real toast: Theme.ToastBg fill and the same cyan/blue
+        // accent stroke ConfigureShell() gives the real toast's OuterShell. (Theme.ToastBorder is
+        // the wrong, white-ish stroke.)
         EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
-        EditorToastMockShell.BorderBrush = Theme.Brush(Theme.IsDark
-            ? Color.FromArgb(160, 0, 200, 215)
-            : Color.FromArgb(160, 0, 110, 205));
+        EditorToastMockShell.BorderBrush = ToastAccentStroke();
         if (EditorToastMockCloseIcon is not null)
             EditorToastMockCloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", GetToastLayoutIconColor(active: false), 16);
 
-        // Left (image-capture text toast) is the active path only when the editor is on.
+        // The big designer shell shares the same look so the two previews read as the same object.
+        if (ToastLayoutShell is not null)
+        {
+            ToastLayoutShell.Background = Theme.Brush(Theme.ToastBg);
+            ToastLayoutShell.BorderBrush = ToastAccentStroke();
+        }
+
+        // Left (image-capture text toast) is the active path only when the editor is on. The banner
+        // and the live toggle already explain the off state, so the card just dims — no extra note.
         ApplyEditorPreviewEmphasis(EditorToastMockCard, active: editorOn);
-        if (EditorToastMockNote is not null)
-            EditorToastMockNote.Visibility = editorOn ? Visibility.Collapsed : Visibility.Visible;
 
         // Right (button designer) always applies to something, so it's never fully dimmed; its
         // caption states exactly what it covers given the current editor state.
@@ -835,7 +845,33 @@ public partial class SettingsWindow
     }
 
     private static void ApplyEditorPreviewEmphasis(UIElement card, bool active)
-        => card.Opacity = active ? 1.0 : 0.55;
+        => card.Opacity = active ? 1.0 : 0.40;
+
+    // The cyan/blue accent stroke ConfigureShell() applies to the real toast's OuterShell, shared
+    // by both notification previews so they match the real thing (and each other).
+    private static SolidColorBrush ToastAccentStroke()
+        => Theme.Brush(Theme.IsDark
+            ? Color.FromArgb(160, 0, 200, 215)
+            : Color.FromArgb(160, 0, 110, 205));
+
+    // In-panel mirror of the widget's "Enable editor" toggle. Flipping it here updates the setting,
+    // keeps the General-tab checkbox and the widget toggle in lockstep, and re-renders both
+    // notification previews live so the user can see exactly how the editor state changes them.
+    private void NotificationsEditorToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+
+        bool enabled = NotificationsEditorToggle.IsChecked == true;
+        if (_settingsService.Settings.OpenEditorAfterCapture == enabled)
+            return; // already in sync (e.g. set programmatically by RefreshEditorPreviewState)
+
+        _settingsService.Settings.OpenEditorAfterCapture = enabled;
+        _settingsService.Save();
+        RefreshEnableEditorCheck();                                 // General-tab checkbox
+        ((App)Application.Current).SyncWidgetEnableEditorToggle();  // widget toggle
+        RefreshEditorPreviewState();                               // both previews + this toggle
+    }
 
     private static string? GetToastButtonDescription(ToastButtonKind button) => button switch
     {
