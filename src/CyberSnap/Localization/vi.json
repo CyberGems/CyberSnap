@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "chung",
   "Tools": "Công cụ",
   "Capture": "Chụp",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Hiá»ƒn thá»‹ hÆ°á»›ng dáº«n tÃ¢m ngáº¯m",
   "Show pixel magnifier": "Hiá»ƒn thá»‹ kÃ­nh lÃºp pixel",
   "Span screenshot overlay across all monitors": "Lá»›p phá»§ áº£nh chá»¥p mÃ n hÃ¬nh má»Ÿ rá»™ng trÃªn táº¥t cáº£ cÃ¡c mÃ n hÃ¬nh",
-  "Annotation stroke and shadow": "Chú thích nét và bóng",
+  "Annotation shadow": "Chú thích nét và bóng",
   "Behavior": "Hành vi",
   "Window detection": "PhÃ¡t hiá»‡n cá»­a sá»•",
   "Off": "Tắt",

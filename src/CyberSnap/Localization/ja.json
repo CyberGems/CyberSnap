@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "ä¸€èˆ¬",
   "Tools": "ãƒ„ãƒ¼ãƒ«",
   "Capture": "ã‚­ãƒ£ãƒ—ãƒãƒ£",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "åå­—ã‚¬ã‚¤ãƒ‰ã‚’è¡¨ç¤ºã™ã‚‹",
   "Show pixel magnifier": "ãƒ”ã‚¯ã‚»ãƒ«æ‹¡å¤§é¡ã‚’è¡¨ç¤º",
   "Span screenshot overlay across all monitors": "ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ã‚·ãƒ§ãƒƒãƒˆã®ã‚ªãƒ¼ãƒãƒ¼ãƒ¬ã‚¤ã‚’ã™ã¹ã¦ã®ãƒ¢ãƒ‹ã‚¿ãƒ¼ã«ã¾ãŸãŒã‚‹",
-  "Annotation stroke and shadow": "æ³¨é‡ˆã®ã‚¹ãƒˆãƒ­ãƒ¼ã‚¯ã¨å½±",
+  "Annotation shadow": "æ³¨é‡ˆã®ã‚¹ãƒˆãƒ­ãƒ¼ã‚¯ã¨å½±",
   "Behavior": "è¡Œå‹•",
   "Window detection": "ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦æ¤œå‡º",
   "Off": "ã‚ªãƒ•",

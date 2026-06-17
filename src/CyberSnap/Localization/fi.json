@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Kenraali",
   "Tools": "Työkalut",
   "Capture": "Kaappaa",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Näytä hiusristikkoohjaimet",
   "Show pixel magnifier": "Näytä pikselin suurennuslasi",
   "Span screenshot overlay across all monitors": "Kattaa kuvakaappauksen peittokuva kaikkien näyttöjen välillä",
-  "Annotation stroke and shadow": "Huomautuksen viiva ja varjo",
+  "Annotation shadow": "Huomautuksen viiva ja varjo",
   "Behavior": "Käyttäytyminen",
   "Window detection": "Ikkunan tunnistus",
   "Off": "Pois päältä",

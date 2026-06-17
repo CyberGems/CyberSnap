@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Umum",
   "Tools": "Alat",
   "Capture": "Tangkap",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Tampilkan panduan crosshair",
   "Show pixel magnifier": "Tampilkan kaca pembesar piksel",
   "Span screenshot overlay across all monitors": "Rentangkan hamparan tangkapan layar di semua monitor",
-  "Annotation stroke and shadow": "Goresan dan bayangan anotasi",
+  "Annotation shadow": "Goresan dan bayangan anotasi",
   "Behavior": "Perilaku",
   "Window detection": "Deteksi jendela",
   "Off": "Mati",

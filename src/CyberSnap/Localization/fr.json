@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Général",
   "Tools": "Outils",
   "Capture": "Capturer",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Afficher les guides de réticule",
   "Show pixel magnifier": "Afficher la loupe de pixels",
   "Span screenshot overlay across all monitors": "Superposition de capture d'écran sur tous les moniteurs",
-  "Annotation stroke and shadow": "Trait et ombre d'annotation",
+  "Annotation shadow": "Trait et ombre d'annotation",
   "Behavior": "Comportement",
   "Window detection": "Détection de fenêtre",
   "Off": "Désactivé",

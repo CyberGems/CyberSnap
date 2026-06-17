@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Generale",
   "Tools": "Strumenti",
   "Capture": "Cattura",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Mostra le guide del mirino",
   "Show pixel magnifier": "Mostra lente d'ingrandimento pixel",
   "Span screenshot overlay across all monitors": "Estendi la sovrapposizione degli screenshot su tutti i monitor",
-  "Annotation stroke and shadow": "Tratto e ombra dell'annotazione",
+  "Annotation shadow": "Tratto e ombra dell'annotazione",
   "Behavior": "Comportamento",
   "Window detection": "Rilevamento finestre",
   "Off": "Spento",

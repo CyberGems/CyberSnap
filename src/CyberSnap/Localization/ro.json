@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "general",
   "Tools": "Instrumente",
   "Capture": "CapturÄƒ",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "AfiÈ™aÈ›i ghidajele Ã®n cruce",
   "Show pixel magnifier": "AfiÈ™aÈ›i lupa de pixeli",
   "Span screenshot overlay across all monitors": "AcoperiÈ›i suprapunerea capturii de ecran pe toate monitoare",
-  "Annotation stroke and shadow": "Contur È™i umbrÄƒ de adnotare",
+  "Annotation shadow": "Contur È™i umbrÄƒ de adnotare",
   "Behavior": "Comportament",
   "Window detection": "Detectarea ferestrei",
   "Off": "Oprit",

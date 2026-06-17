@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Allgemein",
   "Tools": "Werkzeuge",
   "Capture": "Erfassen",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Fadenkreuz-Hilfslinien anzeigen",
   "Show pixel magnifier": "Pixellupe anzeigen",
   "Span screenshot overlay across all monitors": "Ãœberlagern Sie die Screenshot-Ãœberlagerung auf allen Monitoren",
-  "Annotation stroke and shadow": "Anmerkungsstrich und Schatten",
+  "Annotation shadow": "Anmerkungsstrich und Schatten",
   "Behavior": "Verhalten",
   "Window detection": "Fenstererkennung",
   "Off": "Aus",

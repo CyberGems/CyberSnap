@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Genel",
   "Tools": "Araçlar",
   "Capture": "Yakala",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "ArtÄ± iÅŸareti kÄ±lavuzlarÄ±nÄ± gÃ¶ster",
   "Show pixel magnifier": "Piksel büyütücüyü göster",
   "Span screenshot overlay across all monitors": "Ekran görüntüsü kaplamasını tüm monitörlere yay",
-  "Annotation stroke and shadow": "Ek açıklama konturu ve gölge",
+  "Annotation shadow": "Ek açıklama konturu ve gölge",
   "Behavior": "DavranÄ±ÅŸ",
   "Window detection": "Pencere algılama",
   "Off": "Kapalı",

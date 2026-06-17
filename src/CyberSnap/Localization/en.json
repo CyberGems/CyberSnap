@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "General",
   "Tools": "Tools",
   "Capture": "Capture",
@@ -73,7 +73,8 @@
   "Show crosshair guides": "Show crosshair guides",
   "Show pixel magnifier": "Show pixel magnifier",
   "Span screenshot overlay across all monitors": "Span screenshot overlay across all monitors",
-  "Annotation stroke and shadow": "Annotation stroke and shadow",
+  "Annotation shadow": "Annotation shadow",
+  "Adds a soft drop shadow to annotations for depth.": "Adds a soft drop shadow to annotations for depth.",
   "Behavior": "Behavior",
   "Capture behavior": "Capture behavior",
   "Scrolling capture": "Scrolling capture",

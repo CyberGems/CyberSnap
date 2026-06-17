@@ -1,4 +1,4 @@
-﻿{
+{
   "General": "Geral",
   "Tools": "Ferramentas",
   "Capture": "Capturar",
@@ -44,7 +44,7 @@
   "Show crosshair guides": "Mostrar guias de mira",
   "Show pixel magnifier": "Mostrar ampliador de pixels",
   "Span screenshot overlay across all monitors": "Sobreposição de captura de tela em todos os monitores",
-  "Annotation stroke and shadow": "Traço e sombra de anotação",
+  "Annotation shadow": "Traço e sombra de anotação",
   "Behavior": "Comportamento",
   "Window detection": "Detecção de janela",
   "Off": "Desligado",
