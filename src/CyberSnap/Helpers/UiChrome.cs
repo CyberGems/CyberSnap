@@ -38,7 +38,7 @@ public static class UiChrome
     public static double UiScale { get; private set; } = 1.0;
 
     public static void SetUiScale(double scale)
-        => UiScale = Math.Clamp(double.IsFinite(scale) ? scale : 1.0, 0.8, 1.4);
+        => UiScale = Math.Clamp(double.IsFinite(scale) ? scale : 1.0, 1.0, 1.4);
 
     public static int ScaleInt(int value)
         => Math.Max(1, (int)Math.Round(value * UiScale, MidpointRounding.AwayFromZero));
