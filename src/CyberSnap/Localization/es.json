@@ -689,5 +689,5 @@
   "Drag to Select MP4 Recording Area": "Arrastra para seleccionar área de grabación MP4",
   "Drag to Select GIF Recording Area": "Arrastra para seleccionar área de grabación GIF",
   "Show instruction banners": "Mostrar banners de instrucciones",
-  "Display animated hint banners at the top of the screen for ruler, color picker, OCR, and recording tools.": "Muestra banners animados con instrucciones en la parte superior de la pantalla para regla, selector de color, OCR y herramientas de grabación."
+  "Show animated instructions for ruler, color picker, OCR, and recording.": "Muestra instrucciones animadas para regla, selector de color, OCR y grabación."
 }
