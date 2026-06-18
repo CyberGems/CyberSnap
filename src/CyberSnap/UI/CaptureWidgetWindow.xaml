@@ -221,7 +221,7 @@
                                 <Image x:Name="GrabTextIcon" Width="22" Height="22"/>
                             </Button>
                             <Button Style="{StaticResource WidgetActionButton}" Click="ColorPicker_Click" ToolTip="Color picker">
-                                <Image x:Name="ColorPickerIcon" Width="18" Height="18"/>
+                                <Image x:Name="ColorPickerIcon" Width="22" Height="22"/>
                             </Button>
                             <Button Style="{StaticResource WidgetActionButton}" Click="QrScan_Click" ToolTip="Scan QR / Barcode">
                                 <Image x:Name="QrScanIcon" Width="22" Height="22"/>
