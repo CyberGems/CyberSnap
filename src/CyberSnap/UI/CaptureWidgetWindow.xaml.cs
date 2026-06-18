@@ -737,7 +737,93 @@ public partial class CaptureWidgetWindow : Window
         // (dark rounded surface, accent hover bar) instead of the default WPF look.
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: false, minWidth: 220);
 
-        // Dock edge submenu
+        menu.Items.Add(BuildDockEdgeSubmenu());
+
+        var screenMenu = BuildScreenSubmenu();
+        if (screenMenu != null)
+            menu.Items.Add(screenMenu);
+
+        menu.Items.Add(BuildActivationDelaySubmenu());
+
+        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+
+        menu.Items.Add(BuildDisableItem());
+
+        Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 220);
+
+        ShowThemedMenu(menu);
+    }
+
+    // Config button menu: capture toggles at the top, a "Widget" submenu mirroring the right-click
+    // options, and a shortcut into the full widget settings in the Config window.
+    private void ShowConfigMenu()
+    {
+        var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
+
+        // Capture toggles (top level, checkmark style)
+        menu.Items.Add(BuildCaptureToggle("Capture cursor", _settings.ShowCursor,
+            () => _settings.ShowCursor = !_settings.ShowCursor));
+        menu.Items.Add(BuildCaptureToggle("Show magnifier", _settings.ShowCaptureMagnifier,
+            () => _settings.ShowCaptureMagnifier = !_settings.ShowCaptureMagnifier));
+        menu.Items.Add(BuildCaptureToggle("Show selection size", _settings.ShowSelectionSize,
+            () => _settings.ShowSelectionSize = !_settings.ShowSelectionSize));
+        menu.Items.Add(BuildCaptureToggle("Detect windows", _settings.DetectWindows,
+            () => _settings.DetectWindows = !_settings.DetectWindows));
+
+        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+
+        // "Widget" submenu mirrors the right-click context menu options.
+        var widgetMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Widget"));
+        widgetMenu.DropDownItems.Add(BuildDockEdgeSubmenu());
+        var screenMenu = BuildScreenSubmenu();
+        if (screenMenu != null)
+            widgetMenu.DropDownItems.Add(screenMenu);
+        widgetMenu.DropDownItems.Add(BuildActivationDelaySubmenu());
+        widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
+        widgetMenu.DropDownItems.Add(BuildDisableItem());
+        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(widgetMenu, minWidth: 200);
+        menu.Items.Add(widgetMenu);
+
+        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+
+        // Jump straight to the widget's section in the Config window.
+        var settingsItem = Helpers.WindowsMenuRenderer.Item("Widget settings", iconId: "gear");
+        settingsItem.Click += (s, ev) =>
+        {
+            ((App)System.Windows.Application.Current).ShowSettings("widget");
+            CollapseWidget();
+        };
+        menu.Items.Add(settingsItem);
+
+        Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 240);
+
+        ShowThemedMenu(menu);
+    }
+
+    // A capture-setting toggle row: shows a checkmark when on (matching the editor's burger menu),
+    // flips the bound setting on click and persists it.
+    private System.Windows.Forms.ToolStripMenuItem BuildCaptureToggle(string label, bool isChecked, Action toggle)
+    {
+        var item = Helpers.WindowsMenuRenderer.Item(label);
+        if (isChecked)
+        {
+            var checkColor = System.Drawing.Color.FromArgb(255,
+                Helpers.UiChrome.SurfaceTextPrimary.R,
+                Helpers.UiChrome.SurfaceTextPrimary.G,
+                Helpers.UiChrome.SurfaceTextPrimary.B);
+            item.Image = Helpers.FluentIcons.RenderBitmap("check", checkColor, 20, true);
+            item.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
+        }
+        item.Click += (s, ev) =>
+        {
+            toggle();
+            _settingsService.Save();
+        };
+        return item;
+    }
+
+    private System.Windows.Forms.ToolStripMenuItem BuildDockEdgeSubmenu()
+    {
         var edgeMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Dock edge"));
         var edges = new[] { CaptureDockSide.Top, CaptureDockSide.Bottom, CaptureDockSide.Left, CaptureDockSide.Right };
         var edgeLabels = new[] { "Top", "Bottom", "Left", "Right" };
@@ -753,33 +839,38 @@ public partial class CaptureWidgetWindow : Window
             };
             edgeMenu.DropDownItems.Add(item);
         }
-        menu.Items.Add(edgeMenu);
+        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(edgeMenu, minWidth: 150);
+        return edgeMenu;
+    }
 
-        // Screen selection if multiple monitors
+    private System.Windows.Forms.ToolStripMenuItem? BuildScreenSubmenu()
+    {
         var screens = PopupWindowHelper.GetSortedScreens();
-        if (screens.Length > 1)
-        {
-            var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"));
-            for (int i = 0; i < screens.Length; i++)
-            {
-                var idx = i;
-                var s = screens[i];
-                var primarySecondary = s.Primary ? LocalizationService.Translate("Primary") : LocalizationService.Translate("Secondary");
-                var label = $"Monitor {i + 1} ({primarySecondary})";
-                var item = Helpers.WindowsMenuRenderer.Item(label, active: _settings.WidgetMonitorIndex == idx);
-                item.Click += (s, ev) =>
-                {
-                    _settings.WidgetMonitorIndex = idx;
-                    _settingsService.Save();
-                    PositionWindow();
-                };
-                monitorMenu.DropDownItems.Add(item);
-            }
-            menu.Items.Add(monitorMenu);
-            Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(monitorMenu, minWidth: 200);
-        }
+        if (screens.Length <= 1)
+            return null;
 
-        // Activation delay submenu
+        var monitorMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Screen"));
+        for (int i = 0; i < screens.Length; i++)
+        {
+            var idx = i;
+            var s = screens[i];
+            var primarySecondary = s.Primary ? LocalizationService.Translate("Primary") : LocalizationService.Translate("Secondary");
+            var label = $"Monitor {i + 1} ({primarySecondary})";
+            var item = Helpers.WindowsMenuRenderer.Item(label, active: _settings.WidgetMonitorIndex == idx);
+            item.Click += (s, ev) =>
+            {
+                _settings.WidgetMonitorIndex = idx;
+                _settingsService.Save();
+                PositionWindow();
+            };
+            monitorMenu.DropDownItems.Add(item);
+        }
+        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(monitorMenu, minWidth: 200);
+        return monitorMenu;
+    }
+
+    private System.Windows.Forms.ToolStripMenuItem BuildActivationDelaySubmenu()
+    {
         var delayMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Activation delay"));
         var delays = new[] { 0, 100, 250, 500, 1000 };
         foreach (var d in delays)
@@ -793,11 +884,12 @@ public partial class CaptureWidgetWindow : Window
             };
             delayMenu.DropDownItems.Add(item);
         }
-        menu.Items.Add(delayMenu);
+        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(delayMenu, minWidth: 150);
+        return delayMenu;
+    }
 
-        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
-
-        // Disable floating panel completely
+    private System.Windows.Forms.ToolStripMenuItem BuildDisableItem()
+    {
         var disableItem = Helpers.WindowsMenuRenderer.Item(
             LocalizationService.Translate("Disable quick panel"), iconId: "close", danger: true);
         disableItem.Click += (s, ev) =>
@@ -809,12 +901,13 @@ public partial class CaptureWidgetWindow : Window
                 LocalizationService.Translate("You can re-enable it anytime from Config -> General."));
             Close();
         };
-        menu.Items.Add(disableItem);
+        return disableItem;
+    }
 
-        Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 220);
-        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(edgeMenu, minWidth: 150);
-        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(delayMenu, minWidth: 150);
-
+    // Shared menu presentation: keep the widget expanded while open, clamp to the working area,
+    // flip submenus inward near a screen edge, and force foreground so click-away dismissal works.
+    private void ShowThemedMenu(System.Windows.Forms.ContextMenuStrip menu)
+    {
         // Keep the widget expanded/visible while the menu is open: showing the menu moves the
         // cursor off the widget, which would otherwise start the collapse timer and leave the
         // menu floating over an empty spot.
@@ -909,9 +1002,9 @@ public partial class CaptureWidgetWindow : Window
 
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
-        ((App)System.Windows.Application.Current).ShowSettings();
-        // Collapse the widget back to its peek state so it doesn't linger over the Configuration window.
-        CollapseWidget();
+        // The Config button now opens a quick menu (capture toggles + Widget options + a shortcut
+        // into the full settings) instead of jumping straight to the Config window.
+        ShowConfigMenu();
     }
 
     private void TriggerAppCapture(CyberSnap.Models.CaptureMode mode, bool forceMp4 = false, bool forceGif = false)

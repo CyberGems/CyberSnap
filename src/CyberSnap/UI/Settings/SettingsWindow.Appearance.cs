@@ -555,6 +555,7 @@ public partial class SettingsWindow
         ToastPanel.Visibility = ToastTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         HotkeysPanel.Visibility = HotkeysTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         CapturePanel.Visibility = CaptureTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        WidgetPanel.Visibility = WidgetTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         RecordingPanel.Visibility = RecordingTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
@@ -591,6 +592,7 @@ public partial class SettingsWindow
     {
         if (ToastTab.IsChecked == true) return "Notifications";
         if (CaptureTab.IsChecked == true) return "Capture";
+        if (WidgetTab.IsChecked == true) return "Widget";
         if (RecordingTab.IsChecked == true) return "Video";
         if (OcrTab.IsChecked == true) return "OCR";
         if (HotkeysTab.IsChecked == true) return "Hotkeys";

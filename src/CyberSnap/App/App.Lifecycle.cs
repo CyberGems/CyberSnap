@@ -21,11 +21,12 @@ public partial class App
         UninstallService.SetStartupEntry(enabled);
     }
 
-    public void ShowSettings()
+    public void ShowSettings(string? navigateTo = null)
     {
         if (_settingsWindow is { IsVisible: true })
         {
             _settingsWindow.Activate();
+            NavigateSettingsTo(_settingsWindow, navigateTo);
             return;
         }
 
@@ -45,10 +46,11 @@ public partial class App
                         if (_settingsWindow is { IsVisible: true })
                         {
                             _settingsWindow.Activate();
+                            NavigateSettingsTo(_settingsWindow, navigateTo);
                             return;
                         }
 
-                        ShowSettingsWindow(historyService, imageSearchIndexService);
+                        ShowSettingsWindow(historyService, imageSearchIndexService, navigateTo);
                     }
                     catch (Exception ex)
                     {
@@ -91,6 +93,14 @@ public partial class App
         }, DispatcherPriority.Background);
     }
 
+    private static void NavigateSettingsTo(SettingsWindow win, string? navigateTo)
+    {
+        if (string.IsNullOrEmpty(navigateTo))
+            return;
+        if (navigateTo == "widget")
+            win.NavigateToWidgetSettings();
+    }
+
     private static void ShowSettingsOpenFailed(Exception ex, string diagnosticKey, string toastDiagnosticKey)
     {
         AppDiagnostics.LogError(diagnosticKey, ex);
@@ -106,7 +116,7 @@ public partial class App
         }
     }
 
-    private void ShowSettingsWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService)
+    private void ShowSettingsWindow(HistoryService historyService, ImageSearchIndexService imageSearchIndexService, string? navigateTo = null)
     {
         var win = new SettingsWindow(_settingsService!, historyService, imageSearchIndexService);
 
@@ -144,6 +154,8 @@ public partial class App
         win.Topmost = true;
         win.Topmost = false;
         win.Focus();
+
+        NavigateSettingsTo(win, navigateTo);
     }
 
     public void ShowHistory(string? navigateToFilePath = null)
