@@ -101,6 +101,9 @@ public sealed partial class RegionOverlayForm : Form
     private CrosshairGuideForm? _horizontalCrosshairForm;
     private readonly System.Windows.Forms.Timer _animTimer;
     private readonly System.Windows.Forms.Timer _autoDetectTimer;
+    private readonly System.Windows.Forms.Timer _selectionPaintTimer;
+    private readonly System.Diagnostics.Stopwatch _selectionPaintStopwatch = System.Diagnostics.Stopwatch.StartNew();
+    private bool _selectionPaintQueued;
     private DateTime _showTime;
     private ToolbarForm? _toolbarForm;
     private bool _allowDeactivation;
@@ -389,6 +392,9 @@ public sealed partial class RegionOverlayForm : Form
 
             UpdateAutoDetectRect(_pendingAutoDetectPoint);
         };
+
+        _selectionPaintTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _selectionPaintTimer.Tick += (_, _) => FlushSelectionPaint();
 
         _currentOverlay = this;
     }

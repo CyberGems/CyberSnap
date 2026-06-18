@@ -285,6 +285,44 @@ public sealed partial class RegionOverlayForm
         return new Rectangle(x, y, Math.Max(0, right - x), Math.Max(0, bottom - y));
     }
 
+    private void InvalidateSelectionChromeThrottled(Rectangle oldSelection, Point oldCursor, Rectangle newSelection, Point newCursor)
+    {
+        // Always invalidate dirty areas — Invalidate is cheap (just marks regions).
+        // Throttle only the synchronous Update() to avoid flooding the message pump
+        // with forced repaints during fast drag.
+        InvalidateSelectionChrome(oldSelection, oldCursor, newSelection, newCursor);
+
+        if (_selectionPaintStopwatch.ElapsedMilliseconds < UiChrome.FrameIntervalMs)
+        {
+            _selectionPaintQueued = true;
+            if (!_selectionPaintTimer.Enabled)
+                _selectionPaintTimer.Start();
+            return;
+        }
+
+        _selectionPaintStopwatch.Restart();
+        _selectionPaintQueued = false;
+        _selectionPaintTimer.Stop();
+        Update();
+    }
+
+    private void FlushSelectionPaint()
+    {
+        if (!_selectionPaintQueued)
+        {
+            _selectionPaintTimer.Stop();
+            return;
+        }
+
+        if (_selectionPaintStopwatch.ElapsedMilliseconds < UiChrome.FrameIntervalMs)
+            return;
+
+        _selectionPaintQueued = false;
+        _selectionPaintTimer.Stop();
+        _selectionPaintStopwatch.Restart();
+        Update();
+    }
+
     private void InvalidateSelectionChrome(Rectangle oldSelection, Point oldCursor, Rectangle newSelection, Point newCursor)
     {
         InvalidateSelectionChromePart(oldSelection, oldCursor);
