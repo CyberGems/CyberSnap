@@ -396,15 +396,7 @@ public sealed partial class RegionOverlayForm
 
             int ia = active ? 255 : hover ? 240 : (i == CloseButtonIndex || i == PositionButtonIndex) ? 130 : 200;
             var iconColor = active ? tierAccent : UiChrome.SurfaceTextPrimary;
-            if (_toolbarIcons[i] == "picker")
-            {
-                var pickerRect = new RectangleF(btn.X, btn.Y - 1, btn.Width, btn.Height * 0.9f);
-                FluentIcons.DrawIcon(g, "picker", pickerRect, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), 7f, active);
-            }
-            else
-            {
-                DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
-            }
+            DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
         }
 
         g.SmoothingMode = SmoothingMode.Default;
