@@ -1,6 +1,5 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using CyberSnap.Helpers;
 using CyberSnap.UI;
 
 namespace CyberSnap.Capture;
@@ -74,17 +73,19 @@ public sealed class StandaloneToolBanner : IDisposable
 
             _bannerRect = new RectangleF(x, y, width, height);
 
-            int alphaBg = (int)(180 * _opacity);
-            int alphaBorder = (int)(120 * _opacity);
-            int alphaGlow = (int)(30 * _opacity);
+            int alphaBg = Math.Min((int)(255 * _opacity), 255);
+            int alphaBorder = (int)(140 * _opacity);
+            int alphaGlow = (int)(40 * _opacity);
             int alphaText = (int)(255 * _opacity);
 
-            var accent = UiChrome.AccentColor;
+            var accent = Theme.IsDark
+                ? Color.FromArgb(0, 255, 255)   // Neon cyan — dark mode
+                : Color.FromArgb(0, 170, 190);  // Muted cyan — light mode
 
             using var path = RoundedRect(_bannerRect, 10);
             using var bgBrush = new SolidBrush(Color.FromArgb(alphaBg, 13, 15, 23));
             using var glowPen = new Pen(Color.FromArgb(alphaGlow, accent), 3f);
-            using var borderPen = new Pen(Color.FromArgb(alphaBorder, accent), 1.2f);
+            using var borderPen = new Pen(Color.FromArgb(alphaBorder, accent), 1.5f);
             using var textBrush = new SolidBrush(Color.FromArgb(alphaText, accent));
 
             g.FillPath(bgBrush, path);
