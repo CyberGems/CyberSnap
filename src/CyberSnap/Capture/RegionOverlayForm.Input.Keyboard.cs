@@ -140,7 +140,7 @@ public sealed partial class RegionOverlayForm
         if (_isTyping) return;
         if (TryHandleAnnotationToolHotkey(e.KeyCode))
         {
-            DismissCaptureBanner();
+            HideCaptureBanner();
             e.SuppressKeyPress = true;
             e.Handled = true;
             RefreshToolbar();

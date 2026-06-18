@@ -516,7 +516,6 @@ public sealed partial class RegionOverlayForm
         if (_cancelRequested)
             return;
 
-        DismissCaptureBanner();
         _cancelRequested = true;
         _allowDeactivation = true;
         try { Hide(); } catch { }
@@ -538,6 +537,13 @@ public sealed partial class RegionOverlayForm
     {
         if (disposing)
         {
+            // Persist the first-run capture banner as "seen" only when the overlay
+            // closed via an actual capture — never on cancel (Esc/right-click). The
+            // overlay re-activates itself on focus loss (OnDeactivate), so the only
+            // terminal states are capture (_cancelRequested == false) or cancel.
+            if (_captureBannerShown && !_cancelRequested)
+                CaptureBannerDismissed?.Invoke();
+
             if (_currentOverlay == this)
                 _currentOverlay = null;
             _escapeHook?.Dispose();

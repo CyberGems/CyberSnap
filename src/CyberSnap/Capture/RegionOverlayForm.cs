@@ -98,6 +98,7 @@ public sealed partial class RegionOverlayForm : Form
     private LiveSelectionAdornerForm? _selectionAdorner;
     private CaptureEscapeKeyHook? _escapeHook;
     private StandaloneToolBanner? _banner;
+    private bool _captureBannerShown; // first-run banner displayed this session
     private CrosshairGuideForm? _verticalCrosshairForm;
     private CrosshairGuideForm? _horizontalCrosshairForm;
     private readonly System.Windows.Forms.Timer _animTimer;
@@ -409,22 +410,23 @@ public sealed partial class RegionOverlayForm : Form
                 Bounds,
                 onInvalidate: () => Invalidate(),
                 persistent: true);
+            _captureBannerShown = true;
         }
 
         _currentOverlay = this;
     }
 
-    /// <summary>Dismiss the one-time capture instruction banner and persist the flag.</summary>
-    private void DismissCaptureBanner()
+    /// <summary>
+    /// Hide the first-run instruction banner from view (e.g. on first interaction).
+    /// This is visual only — it does NOT mark the banner as seen. The "seen" flag is
+    /// persisted in <see cref="Dispose(bool)"/> only when the overlay closes via an
+    /// actual capture, so cancelling without capturing still shows the hint next time.
+    /// </summary>
+    private void HideCaptureBanner()
     {
         if (_banner == null) return;
         _banner.Dismiss();
         _banner = null;
-
-        // Persist through the app's shared SettingsService so the in-memory
-        // singleton learns about the flag too — otherwise its next Save() would
-        // overwrite settings.json with the stale HasSeenCaptureBanner = false.
-        CaptureBannerDismissed?.Invoke();
     }
 
     public static bool TrySwitchCurrentOverlayMode(CaptureMode mode)
