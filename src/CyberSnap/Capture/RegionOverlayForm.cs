@@ -311,6 +311,7 @@ public sealed partial class RegionOverlayForm : Form
     public event Action<Color>? ToolColorChanged;
     public event Action<CaptureDockSide>? DockSideChanged;
     public event Action<CaptureMode>? DefaultCaptureModeChanged;
+    public event Action? CaptureBannerDismissed;
     private const int ColorPickerColumns = 6;
     private const int ColorPickerRows = 1;
     private const int ColorPickerSwatchSize = 28;
@@ -406,7 +407,8 @@ public sealed partial class RegionOverlayForm : Form
                 LocalizationService.Translate("Click & drag to capture · Toolbar below · Right-click or Esc to cancel"),
                 bannerWorkingArea,
                 Bounds,
-                onInvalidate: () => Invalidate());
+                onInvalidate: () => Invalidate(),
+                persistent: true);
         }
 
         _currentOverlay = this;
@@ -419,22 +421,10 @@ public sealed partial class RegionOverlayForm : Form
         _banner.Dismiss();
         _banner = null;
 
-        try
-        {
-            // Load current settings, set the flag, and force an immediate save
-            var settings = SettingsService.LoadStatic();
-            if (settings == null) return;
-            settings.HasSeenCaptureBanner = true;
-
-            using var svc = new SettingsService();
-            svc.Settings = settings;
-            svc.Save();
-            svc.FlushPendingWrites();
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("capture-banner.save", ex.Message);
-        }
+        // Persist through the app's shared SettingsService so the in-memory
+        // singleton learns about the flag too — otherwise its next Save() would
+        // overwrite settings.json with the stale HasSeenCaptureBanner = false.
+        CaptureBannerDismissed?.Invoke();
     }
 
     public static bool TrySwitchCurrentOverlayMode(CaptureMode mode)
