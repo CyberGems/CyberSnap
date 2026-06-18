@@ -421,7 +421,7 @@ public sealed partial class RegionOverlayForm : Form
 
         try
         {
-            var svc = new SettingsService();
+            using var svc = new SettingsService();
             svc.Load();
             svc.Settings.HasSeenCaptureBanner = true;
             svc.Save();
