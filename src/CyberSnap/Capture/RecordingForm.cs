@@ -66,6 +66,7 @@ public sealed partial class RecordingForm : Form
     private readonly bool _showMagnifier;
     private readonly CaptureMagnifierHelper? _magHelper;
     private LiveSelectionAdornerForm? _selectionAdorner;
+    private StandaloneToolBanner? _banner;
     private CaptureEscapeKeyHook? _escapeHook;
     private System.Windows.Forms.Timer? _tickTimer;
     private readonly string _savePath;
@@ -91,8 +92,6 @@ public sealed partial class RecordingForm : Form
 
     // Cached GDI objects for paint
     private readonly Font _readoutFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
-    private readonly Font _hintFont = UiChrome.ChromeFont(UiChrome.ChromeHintSize);
-    private readonly SolidBrush _hintBrush = new(UiChrome.SurfaceTextMuted);
     private readonly Pen _borderPen = new(UiChrome.AccentColor, 2.0f) { DashStyle = DashStyle.Dash, DashPattern = new[] { 5f, 3f }, LineJoin = LineJoin.Miter };
     private readonly SolidBrush _cornerBrush = new(UiChrome.AccentColor);
     private readonly SolidBrush _dotBrush = new(Color.FromArgb(240, UiChrome.AccentColor.R, UiChrome.AccentColor.G, UiChrome.AccentColor.B));
@@ -151,6 +150,14 @@ public sealed partial class RecordingForm : Form
         _tooltip.AutoPopDelay = 3000;
         _tooltip.UseAnimation = true;
         _tooltip.UseFading = true;
+
+        // ── Banner (unified style with standalone tools) ──
+        var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+        _banner = new StandaloneToolBanner(
+            "Drag to Select Recording Area",
+            bannerWorkingArea,
+            Bounds,
+            onInvalidate: () => Invalidate());
     }
 
     protected override CreateParams CreateParams
@@ -235,6 +242,7 @@ public sealed partial class RecordingForm : Form
             _dragStart = e.Location;
             _selectionCursor = e.Location;
             _selection = Rectangle.Empty;
+            _banner?.Dismiss();
             UpdateLiveSelectionAdorner();
         }
         else if (_state == State.PreRecording && e.Button == MouseButtons.Left)
@@ -286,6 +294,9 @@ public sealed partial class RecordingForm : Form
 
         if (_state == State.Selecting)
         {
+            if (_banner != null && _banner.ContainsCursor(e.Location))
+                _banner.Revive();
+
             if (_isDragging)
             {
                 var oldSelection = _selection;
@@ -428,47 +439,9 @@ public sealed partial class RecordingForm : Form
         }
         else
         {
-            string hint = "Drag to Select Recording Area";
-            DrawHintPerMonitor(g, hint);
+            _banner?.Render(g);
         }
 
-    }
-
-    private void DrawHintPerMonitor(Graphics g, string hint)
-    {
-        const int padX = 18, padY = 10, bottomMargin = 100;
-        using var hintFont = UiChrome.ChromeFont(14f, FontStyle.Bold);
-        var hintSz = g.MeasureString(hint, hintFont);
-        float bgW = hintSz.Width + padX * 2, bgH = hintSz.Height + padY * 2;
-
-        using var bgBrush = new SolidBrush(UiChrome.SurfaceTier1);
-        using var borderPen = new Pen(Color.FromArgb(255, 0x07, 0x87, 0x88), 1.5f);
-        using var textBrush = new SolidBrush(Color.FromArgb(255, 0xA0, 0xB4, 0xD2));
-
-        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        foreach (var screen in Screen.AllScreens)
-        {
-            var sr = screen.Bounds;
-            int cx = sr.Left + sr.Width / 2 - _virtualBounds.X;
-            int by = sr.Bottom - _virtualBounds.Y - bottomMargin;
-            float x = cx - bgW / 2f, y = by - bgH;
-            using var bgPath = GetRoundedRectPath(x, y, bgW, bgH, 8f);
-            g.FillPath(bgBrush, bgPath);
-            g.DrawPath(borderPen, bgPath);
-            g.DrawString(hint, hintFont, textBrush, x + padX, y + padY);
-        }
-    }
-
-    private static GraphicsPath GetRoundedRectPath(float x, float y, float w, float h, float r)
-    {
-        var path = new GraphicsPath();
-        float d = r * 2;
-        path.AddArc(x, y, d, d, 180, 90);
-        path.AddArc(x + w - d, y, d, d, 270, 90);
-        path.AddArc(x + w - d, y + h - d, d, d, 0, 90);
-        path.AddArc(x, y + h - d, d, d, 90, 90);
-        path.CloseFigure();
-        return path;
     }
 
     private void UpdateLiveSelectionAdorner()
@@ -913,7 +886,6 @@ public sealed partial class RecordingForm : Form
             _screenshot?.Dispose();
             _screenshot = null;
             _readoutFont.Dispose();
-            _hintFont.Dispose(); _hintBrush.Dispose();
             _borderPen.Dispose(); _cornerBrush.Dispose();
             _dotBrush.Dispose(); _ringPen.Dispose(); _timeFont.Dispose();
             _timeBrush.Dispose(); _encFont.Dispose();
