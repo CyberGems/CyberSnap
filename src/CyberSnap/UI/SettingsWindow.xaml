@@ -1209,7 +1209,11 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE94C;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Path Data="M12,2 L12,9 M12,15 L12,22 M2,12 L9,12 M15,12 L22,12 M9,12 A3,3 0 1 0 15,12 A3,3 0 1 0 9,12"
+                                              Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="1.6"
+                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0.92"/>
+                                    </Viewbox>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Show crosshair guides" Style="{StaticResource SettingTitle}"/>

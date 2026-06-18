@@ -563,6 +563,7 @@ public sealed partial class RegionOverlayForm
             _animTimer.Dispose();
             _pickerTimer.Dispose();
             _autoDetectTimer.Dispose();
+            _selectionPaintTimer.Dispose();
             _hoverHoldTimer?.Stop();
             _hoverHoldTimer?.Dispose();
             _magGfx.Dispose();

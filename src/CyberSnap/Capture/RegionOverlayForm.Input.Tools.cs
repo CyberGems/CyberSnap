@@ -516,7 +516,7 @@ public sealed partial class RegionOverlayForm
                 _selectionRect = nextSelectionRect;
                 if (_selectionRect.Width > 3 || _selectionRect.Height > 3) _hasDragged = true;
                 _hasSelection = _selectionRect.Width > 2 && _selectionRect.Height > 2;
-                InvalidateSelectionChrome(oldSelectionRect, oldSelectionCursor, _selectionRect, _selectionEnd);
+                InvalidateSelectionChromeThrottled(oldSelectionRect, oldSelectionCursor, _selectionRect, _selectionEnd);
                 if (ShowCaptureMagnifier && ShouldShowCaptureMagnifierAt(e.Location))
                     UpdateCaptureMagnifier(e.Location);
                 break;
