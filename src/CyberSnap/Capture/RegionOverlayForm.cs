@@ -97,6 +97,7 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _lastAutoDetectRect;
     private LiveSelectionAdornerForm? _selectionAdorner;
     private CaptureEscapeKeyHook? _escapeHook;
+    private StandaloneToolBanner? _banner;
     private CrosshairGuideForm? _verticalCrosshairForm;
     private CrosshairGuideForm? _horizontalCrosshairForm;
     private readonly System.Windows.Forms.Timer _animTimer;
@@ -396,7 +397,36 @@ public sealed partial class RegionOverlayForm : Form
         _selectionPaintTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
         _selectionPaintTimer.Tick += (_, _) => FlushSelectionPaint();
 
+        // ── First-time capture banner ──
+        var settings = SettingsService.LoadStatic();
+        if (settings != null && !settings.HasSeenCaptureBanner)
+        {
+            var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+            _banner = new StandaloneToolBanner(
+                LocalizationService.Translate("Click & drag to capture · Toolbar below · Right-click or Esc to cancel"),
+                bannerWorkingArea,
+                Bounds,
+                onInvalidate: () => Invalidate());
+        }
+
         _currentOverlay = this;
+    }
+
+    /// <summary>Dismiss the one-time capture instruction banner and persist the flag.</summary>
+    private void DismissCaptureBanner()
+    {
+        if (_banner == null) return;
+        _banner.Dismiss();
+        _banner = null;
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.HasSeenCaptureBanner = true;
+            svc.Save();
+        }
+        catch { /* best-effort */ }
     }
 
     public static bool TrySwitchCurrentOverlayMode(CaptureMode mode)

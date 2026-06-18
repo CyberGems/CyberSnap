@@ -272,6 +272,9 @@ public sealed partial class RegionOverlayForm
         }
 
         g.SmoothingMode = SmoothingMode.Default;
+
+        // First-time capture instruction banner (renders on top of everything)
+        _banner?.Render(g);
     }
 
     /// <summary>Clamp a rectangle so it stays 2px inside the client area (prevents dashes from being cut off at screen edges).</summary>

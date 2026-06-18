@@ -541,6 +541,7 @@ public sealed partial class RegionOverlayForm
                 _currentOverlay = null;
             _escapeHook?.Dispose();
             _escapeHook = null;
+            _banner?.Dispose();
             ClearCrosshairGuides();
             if (_verticalCrosshairForm != null)
                 WindowDetector.UnregisterIgnoredWindow(_verticalCrosshairForm.Handle);

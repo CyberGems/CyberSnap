@@ -259,6 +259,7 @@ public sealed class AppSettings
     public string InterfaceLanguage { get; set; } = "en";
     public bool ShowCrosshairGuides { get; set; } // off by default
     public bool ShowToolBanners { get; set; } = true;
+    public bool HasSeenCaptureBanner { get; set; }
     public bool ShowCursor { get; set; }
     public bool ShowCaptureMagnifier { get; set; } = true;
     public bool ShowSelectionSize { get; set; } = true;
