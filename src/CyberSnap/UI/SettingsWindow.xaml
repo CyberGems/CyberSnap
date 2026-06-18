@@ -1113,8 +1113,8 @@
                                                    AutomationProperties.HelpText="Start captures with a center-based selection tool."/>
                                  </ComboBox>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
+                            <Border x:Name="CenterAspectRatioSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="CenterAspectRatioRow" Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
