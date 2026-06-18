@@ -377,8 +377,13 @@ public partial class SettingsWindow : Window
 
         var selectedIndex = DefaultCaptureModeCombo.SelectedIndex;
         var isCenter = selectedIndex == 1;
+        var wasVisible = CenterAspectRatioRow.Visibility == Visibility.Visible;
         CenterAspectRatioRow.Visibility = isCenter ? Visibility.Visible : Visibility.Collapsed;
         CenterAspectRatioSeparator.Visibility = isCenter ? Visibility.Visible : Visibility.Collapsed;
+
+        // Flash the row when it appears so new users notice the change
+        if (isCenter && !wasVisible)
+            AnimateHighlight(CenterAspectRatioRow);
 
         var previous = _settingsService.Settings.DefaultCaptureMode;
         var selected = selectedIndex switch
@@ -436,7 +441,10 @@ public partial class SettingsWindow : Window
             value =>
             {
                 SaveToFileCheck.IsChecked = value;
+                var wasVisible = SaveDirPanel.Visibility == Visibility.Visible;
                 SaveDirPanel.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+                if (value && !wasVisible)
+                    AnimateHighlight(SaveDirPanel);
             },
             () => SaveDirPanel.Visibility = selected ? Visibility.Visible : Visibility.Collapsed);
     }
