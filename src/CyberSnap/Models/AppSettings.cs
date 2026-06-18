@@ -258,6 +258,7 @@ public sealed class AppSettings
     public double UiScale { get; set; } = 1.0;
     public string InterfaceLanguage { get; set; } = "en";
     public bool ShowCrosshairGuides { get; set; } // off by default
+    public bool ShowToolBanners { get; set; } = true;
     public bool ShowCursor { get; set; }
     public bool ShowCaptureMagnifier { get; set; } = true;
     public bool ShowSelectionSize { get; set; } = true;

@@ -20,6 +20,9 @@ public sealed class StandaloneToolBanner : IDisposable
     private readonly Rectangle _workingArea;
     private readonly Rectangle _bounds;
     private readonly Action? _onInvalidate;
+
+    /// <summary>Master switch — when false, no banner renders anywhere.</summary>
+    public static bool Enabled { get; set; } = true;
     private float _opacity;
     private System.Windows.Forms.Timer? _timer;
     private int _holdTicks;
@@ -53,7 +56,7 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <summary>Call on every OnPaint to render the banner on top of the form.</summary>
     public void Render(Graphics g)
     {
-        if (_opacity <= 0f) return;
+        if (!Enabled || _opacity <= 0f) return;
 
         var state = g.Save();
         try
