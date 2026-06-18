@@ -50,7 +50,7 @@ public sealed class StandaloneScanForm : Form
 
         // ── Banner ──
         _banner = new StandaloneToolBanner(
-            LocalizationService.Translate("Click & drag to select barcode region  ·  Right-click or Esc to close"),
+            LocalizationService.Translate("Click & drag to scan QR & barcodes  ·  Right-click or Esc to close"),
             _bannerWorkingArea,
             Bounds,
             onInvalidate: () => Invalidate());
