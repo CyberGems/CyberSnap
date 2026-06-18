@@ -687,5 +687,7 @@
   "Click to pick color & copy HEX  ·  Right-click or Esc to close": "Haz clic para elegir color y copiar HEX  ·  Clic derecho o Esc para cerrar",
   "Click & drag to select text region  ·  Right-click or Esc to close": "Haz clic y arrastra para seleccionar región de texto  ·  Clic derecho o Esc para cerrar",
   "Drag to Select MP4 Recording Area": "Arrastra para seleccionar área de grabación MP4",
-  "Drag to Select GIF Recording Area": "Arrastra para seleccionar área de grabación GIF"
+  "Drag to Select GIF Recording Area": "Arrastra para seleccionar área de grabación GIF",
+  "Show instruction banners": "Mostrar banners de instrucciones",
+  "Display animated hint banners at the top of the screen for ruler, color picker, OCR, and recording tools.": "Muestra banners animados con instrucciones en la parte superior de la pantalla para regla, selector de color, OCR y herramientas de grabación."
 }

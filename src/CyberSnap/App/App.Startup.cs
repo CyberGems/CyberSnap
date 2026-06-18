@@ -76,6 +76,7 @@ public partial class App
         SoundService.Muted = _settingsService.Settings.MuteSounds;
         SoundService.Initialize(_settingsService.Settings.CustomSounds, _settingsService.Settings.MutedSounds);
         UI.Motion.Disabled = _settingsService.Settings.DisableAnimations;
+        Capture.StandaloneToolBanner.Enabled = _settingsService.Settings.ShowToolBanners;
         UiScale.Set(_settingsService.Settings.UiScale);
         Theme.SetMode(_settingsService.Settings.ThemeMode);
         Theme.Refresh();

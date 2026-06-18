@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using CyberSnap.Capture;
 using CyberSnap.Models;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
@@ -142,6 +143,22 @@ public partial class SettingsWindow
         {
             _suppressingSoundToggles = false;
         }
+    }
+
+    private void ShowToolBannersCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.ShowToolBanners;
+        var selected = ShowToolBannersCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.show-tool-banners",
+            "Show instruction banners",
+            previous,
+            selected,
+            value => _settingsService.Settings.ShowToolBanners = value,
+            value => ShowToolBannersCheck.IsChecked = value,
+            value => StandaloneToolBanner.Enabled = value);
     }
 
     private void DisableAnimationsCheck_Changed(object sender, RoutedEventArgs e)
