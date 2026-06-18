@@ -45,7 +45,7 @@ public sealed partial class RegionOverlayForm
     public bool ShowCaptureMagnifier { get; set; }
 
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
-    public CaptureDockSide CaptureDockSide { get; set; } = CaptureDockSide.Top;
+    public CaptureDockSide CaptureDockSide { get; set; } = CaptureDockSide.Bottom;
 
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public double UiScale

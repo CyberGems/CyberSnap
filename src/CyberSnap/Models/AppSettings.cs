@@ -248,7 +248,7 @@ public sealed class AppSettings
     public bool AutoCheckForUpdates { get; set; } = true;
     public CaptureMode LastCaptureMode { get; set; } = CaptureMode.Rectangle;
     public WindowDetectionMode WindowDetection { get; set; } = WindowDetectionMode.WindowOnly;
-    public CaptureDockSide CaptureDockSide { get; set; } = CaptureDockSide.Top;
+    public CaptureDockSide CaptureDockSide { get; set; } = CaptureDockSide.Bottom;
     public ScrollingCaptureMode ScrollingCaptureMode { get; set; } = ScrollingCaptureMode.AssistAutoscroll;
     public int CaptureDelaySeconds { get; set; }
     public bool SaveHistory { get; set; } = true;
