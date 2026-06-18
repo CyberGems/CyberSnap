@@ -1079,10 +1079,9 @@
             <!-- Capture + Saving -->
             <ScrollViewer x:Name="CapturePanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,42,18,18">
                 <StackPanel>
-                    <TextBlock Text="Capture Tool" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
+                    <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
@@ -1158,12 +1157,7 @@
                                                   AutomationProperties.HelpText="Keep center selection in a 9 to 16 portrait ratio."/>
                                 </ComboBox>
                             </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="Selection overlay" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
