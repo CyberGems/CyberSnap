@@ -1209,7 +1209,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE1D1;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE94C;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Show crosshair guides" Style="{StaticResource SettingTitle}"/>
