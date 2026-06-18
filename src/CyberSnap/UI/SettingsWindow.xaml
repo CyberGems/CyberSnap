@@ -2319,11 +2319,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Show instruction banners" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Show animated instructions for ruler, color picker, OCR, and recording." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Show instruction banners for ruler, color picker, OCR, and recording." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="ShowToolBannersCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Show instruction banners"
-                                          ToolTip="Show animated instructions for ruler, color picker, OCR, and recording."
+                                          ToolTip="Show instruction banners for ruler, color picker, OCR, and recording."
                                           Checked="ShowToolBannersCheck_Changed" Unchecked="ShowToolBannersCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
