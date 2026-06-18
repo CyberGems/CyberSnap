@@ -207,6 +207,7 @@ public partial class SettingsWindow
             WidgetEnableEditorCheck.IsChecked = s.OpenEditorAfterCapture;
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
+            PopulateWidgetMonitors();
             UpdateWidgetOptionsVisibility(s.ShowCaptureWidget);
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
             SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
