@@ -583,5 +583,7 @@
   "Drag to Select GIF Recording Area": "Drag to Select GIF Recording Area",
   "Show instruction banners": "Show instruction banners",
   "Show instruction banners for ruler, color picker, OCR, and recording.": "Show instruction banners for ruler, color picker, OCR, and recording.",
-  "Click & drag to capture · Toolbar below · Right-click or Esc to cancel": "Click & drag to capture · Toolbar below · Right-click or Esc to cancel"
+  "Click & drag to capture · Toolbar below · Right-click or Esc to cancel": "Click & drag to capture · Toolbar below · Right-click or Esc to cancel",
+  "Click & drag to select barcode region  ·  Right-click or Esc to close": "Click & drag to select barcode region  ·  Right-click or Esc to close",
+  "QR & Barcodes": "QR & Barcodes"
 }

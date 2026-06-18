@@ -24,6 +24,7 @@ public sealed class TrayIcon : IDisposable
     public event Action? OnRuler;
     public event Action? OnStandaloneColorPicker;
     public event Action? OnStandaloneOcr;
+    public event Action? OnStandaloneScan;
     public event Action? OnAnnotationEditor;
     public event Action? OnSettings;
     public event Action? OnHistory;
@@ -108,6 +109,7 @@ public sealed class TrayIcon : IDisposable
         var captureItem  = WindowsMenuRenderer.Item(T("Area capture"), HotkeyHint("rect"), "captureRect");
         var scrollItem   = WindowsMenuRenderer.Item(T("Scrolling capture"), HotkeyHint("_scrollCapture"), "scrollCapture");
         var ocrItem      = WindowsMenuRenderer.Item(T("Text extraction (OCR)"), HotkeyHint("_standaloneOcr"), "ocr");
+        var scanItem     = WindowsMenuRenderer.Item(T("QR & Barcodes"), HotkeyHint("_standaloneScan"), "scan");
         var rulerItem    = WindowsMenuRenderer.Item(T("Ruler"), HotkeyHint("_standaloneRuler"), "ruler");
 
         ToolStripMenuItem? recordItem = null;
@@ -140,6 +142,7 @@ public sealed class TrayIcon : IDisposable
 
         captureItem.Click += (_, _) => OnCapture?.Invoke();
         ocrItem.Click     += (_, _) => OnStandaloneOcr?.Invoke();
+        scanItem.Click    += (_, _) => OnStandaloneScan?.Invoke();
         rulerItem.Click   += (_, _) => OnRuler?.Invoke();
         var standaloneColorPickerItem = WindowsMenuRenderer.Item(T("Color picker"), HotkeyHint("_standaloneColorPicker"), "picker");
         standaloneColorPickerItem.Click += (_, _) => OnStandaloneColorPicker?.Invoke();
@@ -170,6 +173,7 @@ public sealed class TrayIcon : IDisposable
         }
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(ocrItem);
+        menu.Items.Add(scanItem);
         menu.Items.Add(standaloneColorPickerItem);
         menu.Items.Add(rulerItem);
         menu.Items.Add(new ToolStripSeparator());

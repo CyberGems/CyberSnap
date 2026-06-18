@@ -224,6 +224,10 @@ public sealed class AppSettings
     public uint StandaloneOcrHotkeyModifiers { get; set; }
     public uint StandaloneOcrHotkeyKey { get; set; }
 
+    // Standalone QR/Barcode scan hotkey: unbound by default
+    public uint StandaloneScanHotkeyModifiers { get; set; }
+    public uint StandaloneScanHotkeyKey { get; set; }
+
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
     public bool OpenEditorAfterCapture { get; set; }
     // Editor: when a capture loads, auto-fit it to the canvas (true) or show it at real 100% size (false).
@@ -398,6 +402,7 @@ public sealed class AppSettings
         "_standaloneRuler" => (StandaloneRulerHotkeyModifiers, StandaloneRulerHotkeyKey),
         "_standaloneColorPicker" => (StandaloneColorPickerHotkeyModifiers, StandaloneColorPickerHotkeyKey),
         "_standaloneOcr" => (StandaloneOcrHotkeyModifiers, StandaloneOcrHotkeyKey),
+        "_standaloneScan" => (StandaloneScanHotkeyModifiers, StandaloneScanHotkeyKey),
         _ => GetGenericToolHotkey(toolId),
     };
 
@@ -438,6 +443,7 @@ public sealed class AppSettings
             case "_standaloneRuler": StandaloneRulerHotkeyModifiers = mod; StandaloneRulerHotkeyKey = key; break;
             case "_standaloneColorPicker": StandaloneColorPickerHotkeyModifiers = mod; StandaloneColorPickerHotkeyKey = key; break;
             case "_standaloneOcr": StandaloneOcrHotkeyModifiers = mod; StandaloneOcrHotkeyKey = key; break;
+            case "_standaloneScan": StandaloneScanHotkeyModifiers = mod; StandaloneScanHotkeyKey = key; break;
             default:
                 ToolHotkeys ??= new();
                 ToolHotkeys[toolId] = new[] { mod, key };
