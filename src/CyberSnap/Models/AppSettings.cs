@@ -149,6 +149,8 @@ public sealed class AppSettings
         public ToastButtonSlot EditSlot { get; set; } = ToastButtonSlot.BottomInnerLeft;
     }
 
+    public bool AllowHotkeyOverride { get; set; }
+
     public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
     public uint HotkeyKey { get; set; } = 0x41; // Alt+Shift+A
 
