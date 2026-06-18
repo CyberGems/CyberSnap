@@ -1058,7 +1058,8 @@
                                     Grid.Column="2" MinWidth="160" Height="28" VerticalAlignment="Center" Click="ResetHotkeysBtn_Click"/>
                         </Grid>
                     </Border>
-                    <Grid Style="{StaticResource SettingRow}" Margin="0,0,0,8">
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                        <Grid Style="{StaticResource SettingRow}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
@@ -1075,7 +1076,8 @@
                                   ToolTip="Let CyberSnap reassign hotkeys already in use by another tool"
                                   AutomationProperties.Name="Allow hotkey override"
                                   Checked="AllowHotkeyOverrideCheck_Changed" Unchecked="AllowHotkeyOverrideCheck_Changed"/>
-                    </Grid>
+                        </Grid>
+                    </Border>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
