@@ -1050,6 +1050,78 @@ public partial class SettingsWindow
         };
     }
 
+    // Builds the widget-monitor dropdown from the live monitor list. With a single monitor the
+    // setting stays visible but inert (disabled with a clear placeholder) so users know it exists.
+    private void PopulateWidgetMonitors()
+    {
+        WidgetMonitorCombo.Items.Clear();
+        var screens = PopupWindowHelper.GetSortedScreens();
+
+        if (screens.Length <= 1)
+        {
+            WidgetMonitorCombo.Items.Add(new ComboBoxItem
+            {
+                Content = LocalizationService.Translate("Only one monitor detected"),
+                Tag = -1
+            });
+            WidgetMonitorCombo.SelectedIndex = 0;
+            WidgetMonitorCombo.IsEnabled = false;
+            return;
+        }
+
+        WidgetMonitorCombo.IsEnabled = true;
+        WidgetMonitorCombo.Items.Add(new ComboBoxItem
+        {
+            Content = LocalizationService.Translate("Follow active monitor"),
+            Tag = -1
+        });
+        for (int i = 0; i < screens.Length; i++)
+        {
+            var primarySecondary = screens[i].Primary
+                ? LocalizationService.Translate("Primary")
+                : LocalizationService.Translate("Secondary");
+            WidgetMonitorCombo.Items.Add(new ComboBoxItem
+            {
+                Content = $"Monitor {i + 1} ({primarySecondary})",
+                Tag = i
+            });
+        }
+        SelectWidgetMonitor(_settingsService.Settings.WidgetMonitorIndex);
+    }
+
+    private void SelectWidgetMonitor(int monitorIndex)
+    {
+        for (int i = 0; i < WidgetMonitorCombo.Items.Count; i++)
+        {
+            if (WidgetMonitorCombo.Items[i] is ComboBoxItem ci && ci.Tag is int tag && tag == monitorIndex)
+            {
+                WidgetMonitorCombo.SelectedIndex = i;
+                return;
+            }
+        }
+        WidgetMonitorCombo.SelectedIndex = 0; // fall back to "Follow active monitor"
+    }
+
+    private void WidgetMonitorCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        if (WidgetMonitorCombo.SelectedItem is not ComboBoxItem item || item.Tag is not int idx)
+            return;
+
+        var previous = _settingsService.Settings.WidgetMonitorIndex;
+        UpdateGeneralPreference(
+            "settings.widget-monitor",
+            "Widget monitor",
+            previous,
+            idx,
+            value => _settingsService.Settings.WidgetMonitorIndex = value,
+            SelectWidgetMonitor,
+            value =>
+            {
+                ((App)Application.Current).RefreshWidgetWindowLayout();
+            });
+    }
+
     private void UpdateWidgetOptionsVisibility(bool visible)
     {
         var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
@@ -1059,6 +1131,8 @@ public partial class SettingsWindow
         WidgetDockEdgeRow.Visibility = visibility;
         WidgetHoverDelaySeparator.Visibility = visibility;
         WidgetHoverDelayRow.Visibility = visibility;
+        WidgetMonitorSeparator.Visibility = visibility;
+        WidgetMonitorRow.Visibility = visibility;
     }
 
     private void UpdateImageIndexVisibility(bool visible)

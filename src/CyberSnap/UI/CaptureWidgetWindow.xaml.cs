@@ -767,8 +767,18 @@ public partial class CaptureWidgetWindow : Window
             () => _settings.ShowCaptureMagnifier = !_settings.ShowCaptureMagnifier));
         menu.Items.Add(BuildCaptureToggle("Show selection size", _settings.ShowSelectionSize,
             () => _settings.ShowSelectionSize = !_settings.ShowSelectionSize));
-        menu.Items.Add(BuildCaptureToggle("Detect windows", _settings.DetectWindows,
-            () => _settings.DetectWindows = !_settings.DetectWindows));
+        menu.Items.Add(BuildCaptureToggle("Show crosshair guides", _settings.ShowCrosshairGuides,
+            () => _settings.ShowCrosshairGuides = !_settings.ShowCrosshairGuides));
+        // Window auto-detection is driven by the WindowDetection enum; the DetectWindows bool is
+        // vestigial (assigned but never read by the overlay). Flip the enum or this has no effect.
+        menu.Items.Add(BuildCaptureToggle("Detect windows",
+            _settings.WindowDetection != Models.WindowDetectionMode.Off,
+            () =>
+            {
+                bool turningOn = _settings.WindowDetection == Models.WindowDetectionMode.Off;
+                _settings.WindowDetection = turningOn ? Models.WindowDetectionMode.WindowOnly : Models.WindowDetectionMode.Off;
+                _settings.DetectWindows = turningOn;
+            }));
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
