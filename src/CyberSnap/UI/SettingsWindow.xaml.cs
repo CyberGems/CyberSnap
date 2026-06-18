@@ -375,8 +375,13 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
+        var selectedIndex = DefaultCaptureModeCombo.SelectedIndex;
+        var isCenter = selectedIndex == 1;
+        CenterAspectRatioRow.Visibility = isCenter ? Visibility.Visible : Visibility.Collapsed;
+        CenterAspectRatioSeparator.Visibility = isCenter ? Visibility.Visible : Visibility.Collapsed;
+
         var previous = _settingsService.Settings.DefaultCaptureMode;
-        var selected = DefaultCaptureModeCombo.SelectedIndex switch
+        var selected = selectedIndex switch
         {
             1 => CaptureMode.Center,
             2 => CaptureMode.Freeform,

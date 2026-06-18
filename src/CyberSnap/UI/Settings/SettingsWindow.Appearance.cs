@@ -125,6 +125,9 @@ public partial class SettingsWindow
                 CaptureMode.Freeform => 2,
                 _ => 0
             };
+            var isCenterDefault = DefaultCaptureModeCombo.SelectedIndex == 1;
+            CenterAspectRatioRow.Visibility = isCenterDefault ? Visibility.Visible : Visibility.Collapsed;
+            CenterAspectRatioSeparator.Visibility = isCenterDefault ? Visibility.Visible : Visibility.Collapsed;
             CenterAspectRatioCombo.SelectedIndex = Enum.IsDefined(typeof(CenterSelectionAspectRatio), s.CenterSelectionAspectRatio)
                 ? (int)s.CenterSelectionAspectRatio
                 : 0;

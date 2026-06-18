@@ -33,7 +33,7 @@ public partial class App
 
         void TryRegister(bool ok, string label, uint mod, uint key)
         {
-            if (!ok) failed.Add($"{label} ({HotkeyFormatter.Format(mod, key)})");
+            if (!ok) failed.Add($"{LocalizationService.Translate(label)} ({HotkeyFormatter.Format(mod, key)})");
         }
 
         TryRegister(_hotkeyService.Register(s.HotkeyModifiers, s.HotkeyKey), "Capture", s.HotkeyModifiers, s.HotkeyKey);
