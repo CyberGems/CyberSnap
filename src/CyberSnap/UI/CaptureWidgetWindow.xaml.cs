@@ -971,7 +971,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void GrabText_Click(object sender, RoutedEventArgs e)
     {
-        TriggerAppCapture(Models.CaptureMode.Ocr);
+        TriggerStandaloneTool(app => app.OnStandaloneOcrProxy());
     }
 
     private void QrScan_Click(object sender, RoutedEventArgs e)
@@ -981,7 +981,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void ColorPicker_Click(object sender, RoutedEventArgs e)
     {
-        TriggerAppCapture(Models.CaptureMode.ColorPicker);
+        TriggerStandaloneTool(app => app.OnStandaloneColorPickerProxy());
     }
 
     private void ScreenRecord_Click(object sender, RoutedEventArgs e)
@@ -996,7 +996,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void Ruler_Click(object sender, RoutedEventArgs e)
     {
-        TriggerAppCapture(Models.CaptureMode.Ruler);
+        TriggerStandaloneTool(app => app.OnStandaloneRulerProxy());
     }
 
     private void EnableEditorToggle_Changed(object sender, RoutedEventArgs e)
@@ -1072,6 +1072,27 @@ public partial class CaptureWidgetWindow : Window
             }
 
             // Wait until capturing ends to show again.
+            CheckCaptureFinishedAndRestore();
+        };
+        timer.Start();
+    }
+
+    /// <summary>
+    /// Launches a standalone tool (Color Picker, OCR, Ruler) that runs as its own form
+    /// and bypasses the capture overlay entirely.
+    /// </summary>
+    private void TriggerStandaloneTool(Action<App> launch)
+    {
+        Hide();
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        timer.Tick += (s, ev) =>
+        {
+            timer.Stop();
+
+            var app = (App)System.Windows.Application.Current;
+            launch(app);
+
             CheckCaptureFinishedAndRestore();
         };
         timer.Start();

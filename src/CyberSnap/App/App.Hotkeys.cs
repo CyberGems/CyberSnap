@@ -243,4 +243,9 @@ public partial class App
     public void OnCenterHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Center);
     public void OnPickerHotkeyPressedProxy() => OnPickerHotkeyPressed();
     public void OnRulerHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Ruler);
+
+    // Standalone tool proxies for the Widget (bypass the capture overlay)
+    public void OnStandaloneColorPickerProxy() => OnStandaloneColorPickerHotkeyPressed();
+    public void OnStandaloneOcrProxy() => OnStandaloneOcrHotkeyPressed();
+    public void OnStandaloneRulerProxy() => OnStandaloneRulerHotkeyPressed();
 }
