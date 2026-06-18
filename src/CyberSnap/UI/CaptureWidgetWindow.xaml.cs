@@ -976,7 +976,7 @@ public partial class CaptureWidgetWindow : Window
 
     private void QrScan_Click(object sender, RoutedEventArgs e)
     {
-        TriggerAppCapture(Models.CaptureMode.Scan);
+        TriggerStandaloneTool(app => app.OnStandaloneScanProxy());
     }
 
     private void ColorPicker_Click(object sender, RoutedEventArgs e)

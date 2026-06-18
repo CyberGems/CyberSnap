@@ -27,6 +27,7 @@ public partial class App
         _hotkeyService.StandaloneRulerHotkeyPressed += OnStandaloneRulerHotkeyPressed;
         _hotkeyService.StandaloneColorPickerHotkeyPressed += OnStandaloneColorPickerHotkeyPressed;
         _hotkeyService.StandaloneOcrHotkeyPressed += OnStandaloneOcrHotkeyPressed;
+        _hotkeyService.StandaloneScanHotkeyPressed += OnStandaloneScanHotkeyPressed;
 
         var s = _settingsService!.Settings;
         var failed = new List<string>();
@@ -49,6 +50,7 @@ public partial class App
         TryRegister(_hotkeyService.RegisterStandaloneRuler(s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey), "Standalone Ruler", s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneColorPicker(s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey), "Standalone Color Picker", s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneOcr(s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey), "Standalone OCR", s.StandaloneOcrHotkeyModifiers, s.StandaloneOcrHotkeyKey);
+        TryRegister(_hotkeyService.RegisterStandaloneScan(s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey), "Standalone Scanner", s.StandaloneScanHotkeyModifiers, s.StandaloneScanHotkeyKey);
         if (failed.Count > 0)
             ToastWindow.ShowError("Hotkey conflict", string.Format(LocalizationService.Translate("{0} — already in use by another app"), string.Join(", ", failed)));
         else if (showReadyNotification)
@@ -235,6 +237,28 @@ public partial class App
         thread.Start();
     }
 
+    private void OnStandaloneScanHotkeyPressed()
+    {
+        _trayIcon?.CloseContextMenu();
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                Theme.Refresh();
+                using var form = new StandaloneScanForm();
+                System.Windows.Forms.Application.Run(form);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("standalone-scan", ex);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+    }
+
     public void OnHotkeyPressedProxy() => OnHotkeyPressed();
     public void OnOcrHotkeyPressedProxy() => OnOcrHotkeyPressed();
     public void OnGifHotkeyPressedProxy() => OnGifHotkeyPressed();
@@ -248,4 +272,5 @@ public partial class App
     public void OnStandaloneColorPickerProxy() => OnStandaloneColorPickerHotkeyPressed();
     public void OnStandaloneOcrProxy() => OnStandaloneOcrHotkeyPressed();
     public void OnStandaloneRulerProxy() => OnStandaloneRulerHotkeyPressed();
+    public void OnStandaloneScanProxy() => OnStandaloneScanHotkeyPressed();
 }

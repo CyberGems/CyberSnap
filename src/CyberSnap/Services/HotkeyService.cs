@@ -22,6 +22,7 @@ public sealed class HotkeyService : IDisposable
     private const int HOTKEY_STANDALONE_RULER = 9012;
     private const int HOTKEY_STANDALONE_COLOR_PICKER = 9013;
     private const int HOTKEY_STANDALONE_OCR = 9014;
+    private const int HOTKEY_STANDALONE_SCAN = 9015;
 
     private bool _captureRegistered;
     private bool _ocrRegistered;
@@ -36,6 +37,7 @@ public sealed class HotkeyService : IDisposable
     private bool _standaloneRulerRegistered;
     private bool _standaloneColorPickerRegistered;
     private bool _standaloneOcrRegistered;
+    private bool _standaloneScanRegistered;
     private bool _registered;
 
     public event Action? HotkeyPressed;
@@ -51,6 +53,7 @@ public sealed class HotkeyService : IDisposable
     public event Action? StandaloneRulerHotkeyPressed;
     public event Action? StandaloneColorPickerHotkeyPressed;
     public event Action? StandaloneOcrHotkeyPressed;
+    public event Action? StandaloneScanHotkeyPressed;
 
     private void EnsureMessageHook()
     {
@@ -97,6 +100,7 @@ public sealed class HotkeyService : IDisposable
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_RULER);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_COLOR_PICKER);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_OCR);
+        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_SCAN);
         _captureRegistered = false;
         _ocrRegistered = false;
         _pickerRegistered = false;
@@ -110,6 +114,7 @@ public sealed class HotkeyService : IDisposable
         _standaloneRulerRegistered = false;
         _standaloneColorPickerRegistered = false;
         _standaloneOcrRegistered = false;
+        _standaloneScanRegistered = false;
     }
 
     public bool Register(uint modifiers, uint key) => RegisterHotkey(ref _captureRegistered, HOTKEY_CAPTURE, modifiers, key);
@@ -125,6 +130,7 @@ public sealed class HotkeyService : IDisposable
     public bool RegisterStandaloneRuler(uint modifiers, uint key) => RegisterHotkey(ref _standaloneRulerRegistered, HOTKEY_STANDALONE_RULER, modifiers, key);
     public bool RegisterStandaloneColorPicker(uint modifiers, uint key) => RegisterHotkey(ref _standaloneColorPickerRegistered, HOTKEY_STANDALONE_COLOR_PICKER, modifiers, key);
     public bool RegisterStandaloneOcr(uint modifiers, uint key) => RegisterHotkey(ref _standaloneOcrRegistered, HOTKEY_STANDALONE_OCR, modifiers, key);
+    public bool RegisterStandaloneScan(uint modifiers, uint key) => RegisterHotkey(ref _standaloneScanRegistered, HOTKEY_STANDALONE_SCAN, modifiers, key);
 
     public void Unregister()
     {
@@ -141,6 +147,7 @@ public sealed class HotkeyService : IDisposable
         if (_standaloneRulerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_RULER); _standaloneRulerRegistered = false; }
         if (_standaloneColorPickerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_COLOR_PICKER); _standaloneColorPickerRegistered = false; }
         if (_standaloneOcrRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_OCR); _standaloneOcrRegistered = false; }
+        if (_standaloneScanRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_SCAN); _standaloneScanRegistered = false; }
         if (_registered)
         {
             ComponentDispatcher.ThreadPreprocessMessage -= OnMsg;
@@ -165,6 +172,7 @@ public sealed class HotkeyService : IDisposable
         else if (id == HOTKEY_STANDALONE_RULER) { InvokeHandlersSafely(StandaloneRulerHotkeyPressed, "hotkey.standalone-ruler"); handled = true; }
         else if (id == HOTKEY_STANDALONE_COLOR_PICKER) { InvokeHandlersSafely(StandaloneColorPickerHotkeyPressed, "hotkey.standalone-colorpicker"); handled = true; }
         else if (id == HOTKEY_STANDALONE_OCR) { InvokeHandlersSafely(StandaloneOcrHotkeyPressed, "hotkey.standalone-ocr"); handled = true; }
+        else if (id == HOTKEY_STANDALONE_SCAN) { InvokeHandlersSafely(StandaloneScanHotkeyPressed, "hotkey.standalone-scan"); handled = true; }
     }
 
     private static void InvokeHandlersSafely(Action? handlers, string context)
