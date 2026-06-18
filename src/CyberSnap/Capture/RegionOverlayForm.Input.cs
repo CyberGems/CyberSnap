@@ -23,7 +23,8 @@ public sealed partial class RegionOverlayForm
         }
         if (e.Button != MouseButtons.Left) return;
 
-        // Prioritize open pickers if click is inside them, to avoid overlapping toolbar buttons
+        // Dismiss the first-time capture banner on any user interaction
+        DismissCaptureBanner();
         if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
         {
             if (HandleColorPickerClick(e.Location))
