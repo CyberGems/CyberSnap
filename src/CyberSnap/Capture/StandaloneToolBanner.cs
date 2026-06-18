@@ -25,6 +25,7 @@ public sealed class StandaloneToolBanner : IDisposable
     private int _holdTicks;
     private RectangleF _bannerRect;
     private State _state = State.FadeIn;
+    private bool _fastFade; // true → use aggressive fade-out step (user-initiated dismiss)
 
     private enum State { FadeIn, Hold, FadeOut }
 
@@ -128,7 +129,7 @@ public sealed class StandaloneToolBanner : IDisposable
                 break;
 
             case State.FadeOut:
-                _opacity -= 0.08f;
+                _opacity -= _fastFade ? 0.28f : 0.08f;
                 if (_opacity <= 0.0f)
                 {
                     _opacity = 0.0f;
@@ -158,6 +159,8 @@ public sealed class StandaloneToolBanner : IDisposable
         if (_state == State.FadeIn || _state == State.Hold)
         {
             _state = State.FadeOut;
+            _fastFade = true;
+            _opacity = Math.Min(_opacity, 0.7f); // instant visual jump
             _onInvalidate?.Invoke();
         }
     }
