@@ -148,6 +148,7 @@ public partial class SettingsWindow
         var panelDefs = new (ScrollViewer Panel, string PageKey, string PageTitle)[]
         {
             (SettingsPanel,   "general",       "General"),
+            (WidgetPanel,     "widget",        "Widget"),
             (ToastPanel,      "notifications", "Notifications"),
             (CapturePanel,    "capture",       "Capture"),
             (RecordingPanel,  "recording",     "Video"),
@@ -579,11 +580,26 @@ public partial class SettingsWindow
         }
     }
 
+    /// <summary>Open the dedicated Widget tab. Used by the capture widget's Config menu
+    /// to jump straight to all of its settings.</summary>
+    public void NavigateToWidgetSettings()
+    {
+        try
+        {
+            SelectSettingsTab("widget");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.widget-navigate", $"Navigation failed: {ex.Message}");
+        }
+    }
+
     private void SelectSettingsTab(string pageKey)
     {
         var tabMap = new Dictionary<string, System.Windows.Controls.RadioButton>
         {
             ["general"]       = SettingsTab,
+            ["widget"]        = WidgetTab,
             ["notifications"] = ToastTab,
             ["capture"]       = CaptureTab,
             ["recording"]     = RecordingTab,
