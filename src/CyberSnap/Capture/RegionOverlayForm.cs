@@ -421,12 +421,20 @@ public sealed partial class RegionOverlayForm : Form
 
         try
         {
+            // Load current settings, set the flag, and force an immediate save
+            var settings = SettingsService.LoadStatic();
+            if (settings == null) return;
+            settings.HasSeenCaptureBanner = true;
+
             using var svc = new SettingsService();
-            svc.Load();
-            svc.Settings.HasSeenCaptureBanner = true;
+            svc.Settings = settings;
             svc.Save();
+            svc.FlushPendingWrites();
         }
-        catch { /* best-effort */ }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("capture-banner.save", ex.Message);
+        }
     }
 
     public static bool TrySwitchCurrentOverlayMode(CaptureMode mode)
