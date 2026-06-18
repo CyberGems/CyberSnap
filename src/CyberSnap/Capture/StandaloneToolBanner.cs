@@ -60,15 +60,15 @@ public sealed class StandaloneToolBanner : IDisposable
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            using var font = new Font("Segoe UI Variable Display", 13f, FontStyle.Regular, GraphicsUnit.Point);
+            using var font = new Font("Segoe UI Variable Display", 15f, FontStyle.Regular, GraphicsUnit.Point);
             var size = g.MeasureString(_text, font);
 
-            const int paddingH = 26;
-            const int paddingV = 15;
+            const int paddingH = 28;
+            const int paddingV = 17;
             float width = size.Width + paddingH * 2;
             float height = size.Height + paddingV * 2;
 
-            float y = _workingArea.Top - _bounds.Top + 18;
+            float y = _workingArea.Top - _bounds.Top + 28;
             float x = _workingArea.Left - _bounds.Left + (_workingArea.Width - width) / 2f;
 
             _bannerRect = new RectangleF(x, y, width, height);
