@@ -20,6 +20,7 @@ public sealed class StandaloneToolBanner : IDisposable
     private readonly Rectangle _workingArea;
     private readonly Rectangle _bounds;
     private readonly Action? _onInvalidate;
+    private readonly bool _persistent;
 
     /// <summary>Master switch — when false, no banner renders anywhere.</summary>
     public static bool Enabled { get; set; } = true;
@@ -38,12 +39,15 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <param name="workingArea">Screen working area the banner should center on (in screen coordinates).</param>
     /// <param name="bounds">Form bounds used to convert screen → client coordinates.</param>
     /// <param name="onInvalidate">Optional callback to trigger form repaint on animation ticks.</param>
-    public StandaloneToolBanner(string text, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null)
+    /// <param name="persistent">When true, the banner holds at full opacity indefinitely and only
+    /// disappears when <see cref="Dismiss"/> is called (e.g. on first user interaction).</param>
+    public StandaloneToolBanner(string text, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false)
     {
         _text = text;
         _workingArea = workingArea;
         _bounds = bounds;
         _onInvalidate = onInvalidate;
+        _persistent = persistent;
 
         _timer = new System.Windows.Forms.Timer { Interval = 16 }; // ~60 fps
         _timer.Tick += OnTick;
@@ -125,6 +129,11 @@ public sealed class StandaloneToolBanner : IDisposable
                 break;
 
             case State.Hold:
+                if (_persistent)
+                {
+                    _timer?.Stop(); // fully visible; no more animation until Dismiss()
+                    break;
+                }
                 _holdTicks++;
                 if (_holdTicks >= 90) // ~1.5 s
                     _state = State.FadeOut;

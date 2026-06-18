@@ -516,6 +516,7 @@ public sealed partial class RegionOverlayForm
         if (_cancelRequested)
             return;
 
+        DismissCaptureBanner();
         _cancelRequested = true;
         _allowDeactivation = true;
         try { Hide(); } catch { }
