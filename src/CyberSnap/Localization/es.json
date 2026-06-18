@@ -691,6 +691,6 @@
   "Show instruction banners": "Mostrar banners de instrucciones",
   "Show instruction banners for ruler, color picker, OCR, and recording.": "Muestra banners de instrucciones para regla, selector de color, OCR y grabación.",
   "Click & drag to capture · Toolbar below · Right-click or Esc to cancel": "Haz clic y arrastra para capturar · Barra de herramientas abajo · Clic derecho o Esc para cancelar",
-  "Click & drag to scan QR & barcodes  ·  Right-click or Esc to close": "Haz clic y arrastra para escanear QR y códigos  ·  Clic derecho o Esc para cerrar",
+  "Click & drag to scan QR or barcodes  ·  Right-click or Esc to close": "Haz clic y arrastra para escanear QR o códigos de barra  ·  Clic derecho o Esc para cerrar",
   "QR & Barcodes": "QR y Códigos"
 }
