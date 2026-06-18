@@ -152,9 +152,12 @@ public sealed partial class RecordingForm : Form
         _tooltip.UseFading = true;
 
         // ── Banner (unified style with standalone tools) ──
+        var bannerText = _format == Models.RecordingFormat.MP4
+            ? LocalizationService.Translate("Drag to Select MP4 Recording Area")
+            : LocalizationService.Translate("Drag to Select GIF Recording Area");
         var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
         _banner = new StandaloneToolBanner(
-            "Drag to Select Recording Area",
+            bannerText,
             bannerWorkingArea,
             Bounds,
             onInvalidate: () => Invalidate());

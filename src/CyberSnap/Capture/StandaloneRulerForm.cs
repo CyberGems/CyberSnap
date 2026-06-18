@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
+using CyberSnap.Services;
 using CyberSnap.UI;
 
 namespace CyberSnap.Capture;
@@ -61,7 +62,7 @@ public sealed class StandaloneRulerForm : Form
 
         // ── Banner ──
         _banner = new StandaloneToolBanner(
-            "Click & drag to measure  ·  Right-click or Esc to close  ·  Hold Shift to constrain",
+            LocalizationService.Translate("Click & drag to measure  ·  Right-click or Esc to close  ·  Hold Shift to constrain"),
             _bannerWorkingArea,
             Bounds,
             onInvalidate: () => Invalidate());

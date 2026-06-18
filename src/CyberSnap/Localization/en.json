@@ -575,5 +575,10 @@
   "Always recognize text as {0}. Choose this when you know the language of the text in advance for better accuracy.": "Always recognize text as {0}. Choose this when you know the language of the text in advance for better accuracy.",
   "{0} language available from Windows": "{0} language available from Windows",
   "{0} languages available from Windows": "{0} languages available from Windows",
-  "Language used for text recognition. Auto detects from the image.": "Language used for text recognition. Auto detects from the image."
+  "Language used for text recognition. Auto detects from the image.": "Language used for text recognition. Auto detects from the image.",
+  "Click & drag to measure  ·  Right-click or Esc to close  ·  Hold Shift to constrain": "Click & drag to measure  ·  Right-click or Esc to close  ·  Hold Shift to constrain",
+  "Click to pick color & copy HEX  ·  Right-click or Esc to close": "Click to pick color & copy HEX  ·  Right-click or Esc to close",
+  "Click & drag to select text region  ·  Right-click or Esc to close": "Click & drag to select text region  ·  Right-click or Esc to close",
+  "Drag to Select MP4 Recording Area": "Drag to Select MP4 Recording Area",
+  "Drag to Select GIF Recording Area": "Drag to Select GIF Recording Area"
 }

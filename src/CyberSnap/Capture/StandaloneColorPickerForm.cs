@@ -82,7 +82,7 @@ public sealed class StandaloneColorPickerForm : Form
 
         // ── Banner ──
         _banner = new StandaloneToolBanner(
-            "Click to pick color & copy HEX  ·  Right-click or Esc to close",
+            LocalizationService.Translate("Click to pick color & copy HEX  ·  Right-click or Esc to close"),
             _bannerWorkingArea,
             Bounds,
             onInvalidate: () => Invalidate());
