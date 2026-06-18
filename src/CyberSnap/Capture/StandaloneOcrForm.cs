@@ -51,7 +51,7 @@ public sealed class StandaloneOcrForm : Form
 
         // ── Banner ──
         _banner = new StandaloneToolBanner(
-            "Click & drag to select text region  ·  Right-click or Esc to close",
+            LocalizationService.Translate("Click & drag to select text region  ·  Right-click or Esc to close"),
             _bannerWorkingArea,
             Bounds,
             onInvalidate: () => Invalidate());
