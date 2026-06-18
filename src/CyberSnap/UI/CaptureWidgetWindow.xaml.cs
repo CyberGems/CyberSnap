@@ -796,6 +796,16 @@ public partial class CaptureWidgetWindow : Window
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
+        // Open the annotation editor directly from the widget
+        var editorItem = Helpers.WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Annotations Editor..."), iconId: "draw");
+        editorItem.Click += (s, ev) =>
+        {
+            CollapseWidget();
+            UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();
+        };
+        menu.Items.Add(editorItem);
+
         // Jump straight to the widget's section in the Config window.
         var settingsItem = Helpers.WindowsMenuRenderer.Item("Widget settings", iconId: "gear");
         settingsItem.Click += (s, ev) =>
