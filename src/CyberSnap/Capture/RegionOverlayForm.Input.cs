@@ -23,8 +23,8 @@ public sealed partial class RegionOverlayForm
         }
         if (e.Button != MouseButtons.Left) return;
 
-        // Dismiss the first-time capture banner on any user interaction
-        DismissCaptureBanner();
+        // Hide the first-time capture banner on any user interaction
+        HideCaptureBanner();
         if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
         {
             if (HandleColorPickerClick(e.Location))
