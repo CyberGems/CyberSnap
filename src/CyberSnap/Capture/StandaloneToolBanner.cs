@@ -152,6 +152,16 @@ public sealed class StandaloneToolBanner : IDisposable
         }
     }
 
+    /// <summary>Immediately begin fading out the banner (e.g. when the user starts interacting).</summary>
+    public void Dismiss()
+    {
+        if (_state == State.FadeIn || _state == State.Hold)
+        {
+            _state = State.FadeOut;
+            _onInvalidate?.Invoke();
+        }
+    }
+
     private static GraphicsPath RoundedRect(RectangleF r, float rad)
     {
         var path = new GraphicsPath();
