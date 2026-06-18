@@ -95,6 +95,7 @@ public sealed class StandaloneOcrForm : Form
             _dragStart = e.Location;
             _hasSelection = false;
             _selectionRect = Rectangle.Empty;
+            _banner.Dismiss();
             Invalidate();
         }
 
