@@ -138,6 +138,17 @@ public static class ToolListBuilder
                     var conflict = FindHotkeyConflict(settingsService.Settings, capturedId, mod, vk);
                     var (prevMod, prevKey) = settingsService.Settings.GetToolHotkey(capturedId);
 
+                    if (conflict is not null && !settingsService.Settings.AllowHotkeyOverride)
+                    {
+                        // Safety: don't auto-override other hotkey assignments
+                        var conflictLabel = LocalizationService.Translate(conflict.Label);
+                        var msg = string.Format(
+                            LocalizationService.Translate("\"{0}\" is already assigned to {1}. Enable \"Allow hotkey override\" to reassign."),
+                            HotkeyFormatter.Format(mod, vk), conflictLabel);
+                        ToastWindow.Show(LocalizationService.Translate("Hotkey conflict"), msg);
+                        return;
+                    }
+
                     try
                     {
                         if (conflict is not null)
