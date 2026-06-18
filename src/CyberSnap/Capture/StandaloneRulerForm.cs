@@ -133,6 +133,7 @@ public sealed class StandaloneRulerForm : Form
             _isDragging = true;
             _rulerStart = e.Location;
             _cursorPos = e.Location;
+            _banner.Dismiss();
             Invalidate();
         }
 

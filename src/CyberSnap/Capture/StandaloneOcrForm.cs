@@ -110,14 +110,11 @@ public sealed class StandaloneOcrForm : Form
 
         if (_isDragging)
         {
-            var oldRect = _selectionRect;
             _selectionRect = NormRect(_dragStart, e.Location);
             _hasSelection = _selectionRect.Width > 2 && _selectionRect.Height > 2;
 
-            // Invalidate both old and new rects for clean redraw
-            var combined = oldRect.IsEmpty ? _selectionRect : Rectangle.Union(oldRect, _selectionRect);
-            combined.Inflate(4, 4);
-            Invalidate(combined);
+            // Full invalidate to avoid ghost trails when shrinking the selection
+            Invalidate();
         }
 
         base.OnMouseMove(e);
