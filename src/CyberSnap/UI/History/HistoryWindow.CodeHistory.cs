@@ -134,7 +134,7 @@ public partial class HistoryWindow
             BorderThickness = new Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand,
             Focusable = true,
-            ToolTip = "Copy this QR & Barcode text",
+            ToolTip = LocalizationService.Translate("Copy this QR & Barcode text"),
             DataContext = entry
         };
 
@@ -249,7 +249,7 @@ public partial class HistoryWindow
                 Margin = new Thickness(0, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = "Open this code URL"
+                ToolTip = LocalizationService.Translate("Open this code URL")
             };
             AutomationProperties.SetName(openBtn, "Open code URL");
             AutomationProperties.SetHelpText(openBtn, "Open this QR & Barcode URL in your default browser.");

@@ -227,7 +227,7 @@ public partial class HistoryWindow
             BorderThickness = new Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand,
             Focusable = true,
-            ToolTip = "Copy this text history item",
+            ToolTip = LocalizationService.Translate("Copy this text history item"),
             DataContext = entry
         };
         AutomationProperties.SetName(card, "Text history item");
@@ -312,7 +312,7 @@ public partial class HistoryWindow
                 Margin = new Thickness(0, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = "Expand this text history item"
+                ToolTip = LocalizationService.Translate("Expand this text history item")
             };
             UpdateShowMoreTextButtonLabel(showMoreBtn, expanded);
             showMoreBtn.Click += (_, _) =>
@@ -460,7 +460,7 @@ public partial class HistoryWindow
             BorderThickness = new Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand,
             Focusable = true,
-            ToolTip = "Copy this color value",
+            ToolTip = LocalizationService.Translate("Copy this color value"),
             DataContext = entry
         };
         AutomationProperties.SetName(card, $"Color history item {displayHex}");
