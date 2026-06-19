@@ -890,13 +890,13 @@
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="CaptureTab" Content="Capture" Tag="Capture" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="WidgetTab" Content="Widget" Tag="Widget" GroupName="Main"
-                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="RecordingTab" Content="Video" Tag="Video" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="OcrTab" Content="OCR" Tag="OCR" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="HotkeysTab" Content="Hotkeys" Tag="Hotkeys" GroupName="Main"
+                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
+                    <RadioButton x:Name="WidgetTab" Content="Widget" Tag="Widget" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
 
                     <RadioButton x:Name="HistoryTab" Content="Gallery" Tag="Gallery" GroupName="Main"
