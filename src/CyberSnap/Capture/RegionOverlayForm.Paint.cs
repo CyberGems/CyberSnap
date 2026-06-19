@@ -276,6 +276,11 @@ public sealed partial class RegionOverlayForm
 
         // First-time capture instruction banner (renders on top of everything)
         _banner?.Render(g);
+
+        if (ShowCrosshairGuides && _isSelecting && _lastCursorPos != Point.Empty)
+        {
+            UpdateCrosshairGuides(_lastCursorPos);
+        }
     }
 
     /// <summary>Clamp a rectangle so it stays 2px inside the client area (prevents dashes from being cut off at screen edges).</summary>
