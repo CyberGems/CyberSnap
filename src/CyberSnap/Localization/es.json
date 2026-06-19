@@ -849,5 +849,7 @@
   "Black": "Negro",
   "Width: {0}px": "Grosor: {0}px",
   "Text Tool": "Texto",
-  "Step": "Pasos"
+  "Step": "Pasos",
+  "{0} objects selected": "{0} objetos seleccionados",
+  "{0} objects deleted": "{0} objetos eliminados"
 }

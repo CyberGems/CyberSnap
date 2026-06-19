@@ -21,6 +21,10 @@ public sealed partial class AnnotationCanvas
     private Point _dragLastImg;
     private List<Point>? _currentStroke;
 
+    private bool _isMarqueeSelecting;
+    private Point _marqueeStartImg;
+    private Point _marqueeEndImg;
+
     // Last cursor position in image space (for the Emoji placement ghost).
     private Point _hoverImg;
     private bool _hoverImgValid;
@@ -130,6 +134,9 @@ public sealed partial class AnnotationCanvas
         _isSelectResizing = false;
         _selectResizeHandle = -1;
         _selectResizeOriginalAnnotation = null;
+        _isMarqueeSelecting = false;
+        ClearMultiSelection();
+        _multiDragOriginals = null;
         if (_eraserHoverIndex >= 0)
         {
             _eraserHoverIndex = -1;
@@ -278,6 +285,14 @@ public sealed partial class AnnotationCanvas
             if (clickedIdx >= 0)
             {
                 ActiveTool = CanvasTool.Move;
+                // Ctrl+Click: toggle multi-selection
+                if (ModifierKeys.HasFlag(Keys.Control))
+                {
+                    ToggleMultiSelect(clickedIdx);
+                    Invalidate();
+                    return;
+                }
+                ClearMultiSelection();
                 _selectedAnnotationIndex = clickedIdx;
                 // Handle 8 = center move knob: treat as a body drag, not a resize.
                 if (handle >= 0 && handle != 8)
@@ -353,9 +368,19 @@ public sealed partial class AnnotationCanvas
                     }
                 }
 
+                // Ctrl+Click: toggle multi-selection
+                if (ModifierKeys.HasFlag(Keys.Control) && targetIdx >= 0)
+                {
+                    ToggleMultiSelect(targetIdx);
+                    Invalidate();
+                    break;
+                }
+
                 // A real resize handle (anything but the center knob, handle 8) → resize.
+                // Resize always operates on a single annotation, so clear multi-selection.
                 if (handle >= 0 && handle != 8 && targetIdx >= 0)
                 {
+                    ClearMultiSelection();
                     _selectedAnnotationIndex = targetIdx;
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
@@ -367,15 +392,37 @@ public sealed partial class AnnotationCanvas
                 else if (targetIdx >= 0)
                 {
                     // Body or center-knob (handle 8) → move/select.
-                    _selectedAnnotationIndex = targetIdx;
-                    _selectOriginalAnnotation = _annotations[targetIdx];
-                    _selectDragStartImg = img;
-                    _isDragging = true;
+                    // If clicked item is part of a multi-selection, initiate multi-drag.
+                    if (_multiSelectedIndices.Count > 1 && _multiSelectedIndices.Contains(targetIdx))
+                    {
+                        _multiDragStartImg = img;
+                        _multiDragOriginals = _multiSelectedIndices
+                            .Where(i => i >= 0 && i < _annotations.Count)
+                            .Select(i => (i, _annotations[i]))
+                            .ToList();
+                        _selectedAnnotationIndex = targetIdx;
+                        _isDragging = true;
+                    }
+                    else
+                    {
+                        ClearMultiSelection();
+                        _selectedAnnotationIndex = targetIdx;
+                        _selectOriginalAnnotation = _annotations[targetIdx];
+                        _selectDragStartImg = img;
+                        _isDragging = true;
+                    }
                 }
                 else
                 {
+                    // Click on empty space: clear everything.
+                    ClearMultiSelection();
                     _selectedAnnotationIndex = -1;
                     _selectOriginalAnnotation = null;
+
+                    _isMarqueeSelecting = true;
+                    _marqueeStartImg = img;
+                    _marqueeEndImg = img;
+                    Capture = true;
                 }
                 Invalidate();
                 break;
@@ -483,6 +530,51 @@ public sealed partial class AnnotationCanvas
         if (_activeDraggedVerticalGuideIndex >= 0)
         {
             _verticalGuides[_activeDraggedVerticalGuideIndex] = ScreenToImage(e.Location).X;
+            Invalidate();
+            return;
+        }
+
+        if (_isMarqueeSelecting)
+        {
+            _marqueeEndImg = ScreenToImage(e.Location);
+
+            var marqueeRect = NormRect(_marqueeStartImg, _marqueeEndImg);
+            _multiSelectedIndices.Clear();
+            _selectedAnnotationIndex = -1;
+
+            if (marqueeRect.Width >= 2 && marqueeRect.Height >= 2)
+            {
+                for (int i = 0; i < _annotations.Count; i++)
+                {
+                    var bounds = GetAnnotationVisualBounds(_annotations[i]);
+                    if (bounds != Rectangle.Empty && marqueeRect.IntersectsWith(bounds))
+                    {
+                        _multiSelectedIndices.Add(i);
+                    }
+                }
+
+                if (_multiSelectedIndices.Count == 1)
+                {
+                    _selectedAnnotationIndex = _multiSelectedIndices.First();
+                    _multiSelectedIndices.Clear();
+                    HideToolBanner();
+                }
+                else if (_multiSelectedIndices.Count > 1)
+                {
+                    _selectedAnnotationIndex = _multiSelectedIndices.Max();
+                    var msg = string.Format(LocalizationService.Translate("{0} objects selected"), _multiSelectedIndices.Count);
+                    ShowToolBanner(msg, sticky: true);
+                }
+                else
+                {
+                    HideToolBanner();
+                }
+            }
+            else
+            {
+                HideToolBanner();
+            }
+
             Invalidate();
             return;
         }
@@ -758,6 +850,16 @@ public sealed partial class AnnotationCanvas
                 }
                 Invalidate();
                 break;
+            case CanvasTool.Move when _multiDragOriginals is not null && _multiSelectedIndices.Count > 1:
+                int mdx = img.X - _multiDragStartImg.X;
+                int mdy = img.Y - _multiDragStartImg.Y;
+                foreach (var (mi, orig) in _multiDragOriginals)
+                {
+                    if (mi >= 0 && mi < _annotations.Count)
+                        _annotations[mi] = AnnotationTransforms.Translate(orig, mdx, mdy);
+                }
+                Invalidate();
+                break;
             case CanvasTool.Move when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
                 int dx = img.X - _selectDragStartImg.X;
                 int dy = img.Y - _selectDragStartImg.Y;
@@ -787,6 +889,15 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
+
+        if (_isMarqueeSelecting)
+        {
+            _isMarqueeSelecting = false;
+            Capture = false;
+            Invalidate();
+            OnStateChanged();
+            return;
+        }
 
         if (e.Button == MouseButtons.Left)
         {
@@ -891,6 +1002,21 @@ public sealed partial class AnnotationCanvas
                 _selectResizeHandle = -1;
                 _selectResizeOriginalAnnotation = null;
                 Invalidate();
+                break;
+            case CanvasTool.Move when _multiDragOriginals is not null && _multiSelectedIndices.Count > 1:
+                int mtdx = 0, mtdy = 0;
+                // Compute delta from any of the originals.
+                if (_multiDragOriginals.Count > 0)
+                {
+                    var (firstIdx, firstOrig) = _multiDragOriginals[0];
+                    if (firstIdx >= 0 && firstIdx < _annotations.Count)
+                        (mtdx, mtdy) = ComputeTranslationDelta(firstOrig, _annotations[firstIdx]);
+                }
+                if (mtdx != 0 || mtdy != 0)
+                {
+                    Push(new TransformMultipleAnnotationsCommand(_multiDragOriginals, mtdx, mtdy));
+                }
+                _multiDragOriginals = null;
                 break;
             case CanvasTool.Move when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
                 var moved = _annotations[_selectedAnnotationIndex];
@@ -1137,9 +1263,22 @@ public sealed partial class AnnotationCanvas
             e.Handled = true;
             return;
         }
-        if (e.KeyCode == Keys.Delete && _selectedAnnotationIndex >= 0)
+        if (e.KeyCode == Keys.Delete && (_selectedAnnotationIndex >= 0 || _multiSelectedIndices.Count > 0))
         {
-            DeleteAnnotationAt(_selectedAnnotationIndex);
+            if (_multiSelectedIndices.Count > 1)
+            {
+                DeleteMultiSelectedAnnotations();
+            }
+            else if (_selectedAnnotationIndex >= 0)
+            {
+                DeleteAnnotationAt(_selectedAnnotationIndex);
+            }
+            e.Handled = true;
+            return;
+        }
+        if (e.KeyCode == Keys.A && e.Control)
+        {
+            SelectAll();
             e.Handled = true;
             return;
         }
@@ -1177,6 +1316,21 @@ public sealed partial class AnnotationCanvas
 
     private void RenderToolPreview(Graphics g)
     {
+        if (_isMarqueeSelecting)
+        {
+            var marqueeRect = NormRect(_marqueeStartImg, _marqueeEndImg);
+            if (marqueeRect.Width > 0 && marqueeRect.Height > 0)
+            {
+                using (var fillBrush = new SolidBrush(Color.FromArgb(30, 0, 120, 215)))
+                using (var borderPen = new Pen(Color.FromArgb(180, 0, 120, 215), 1.5f))
+                {
+                    borderPen.DashStyle = DashStyle.Dash;
+                    g.FillRectangle(fillBrush, marqueeRect);
+                    g.DrawRectangle(borderPen, marqueeRect);
+                }
+            }
+        }
+
         // Emoji ghost follows the cursor (click-to-place, so there is no drag).
         if (_activeTool == CanvasTool.Emoji && !string.IsNullOrEmpty(_selectedEmoji) && _hoverImgValid)
         {
@@ -1639,6 +1793,66 @@ public sealed partial class AnnotationCanvas
         var toDelete = _annotations[index];
         Push(new DeleteAnnotationCommand(index, toDelete));
         _selectedAnnotationIndex = -1;
+    }
+
+    /// <summary>Deletes all multi-selected annotations as a single undo-able operation.</summary>
+    private void DeleteMultiSelectedAnnotations()
+    {
+        var items = _multiSelectedIndices
+            .Where(i => i >= 0 && i < _annotations.Count)
+            .Select(i => (i, _annotations[i]))
+            .ToList();
+        if (items.Count == 0) return;
+
+        int count = items.Count;
+        Push(new DeleteMultipleAnnotationsCommand(items));
+        _selectedAnnotationIndex = -1;
+        _multiSelectedIndices.Clear();
+        _multiDragOriginals = null;
+        var msg = string.Format(LocalizationService.Translate("{0} objects deleted"), count);
+        ShowToolBanner(msg);
+        OnStateChanged();
+    }
+
+    /// <summary>Toggles an annotation index in/out of the multi-selection set.
+    /// If only a single item was selected before, it's promoted into the multi-set first.</summary>
+    private void ToggleMultiSelect(int index)
+    {
+        // Promote the existing single selection into the multi-set so it's not lost.
+        if (_multiSelectedIndices.Count == 0 && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex != index)
+        {
+            _multiSelectedIndices.Add(_selectedAnnotationIndex);
+        }
+
+        if (_multiSelectedIndices.Contains(index))
+        {
+            _multiSelectedIndices.Remove(index);
+            if (_multiSelectedIndices.Count == 0)
+            {
+                _selectedAnnotationIndex = -1;
+                HideToolBanner();
+            }
+            else if (_multiSelectedIndices.Count == 1)
+            {
+                _selectedAnnotationIndex = _multiSelectedIndices.First();
+                _multiSelectedIndices.Clear();
+                HideToolBanner();
+            }
+            else
+            {
+                _selectedAnnotationIndex = _multiSelectedIndices.Max();
+                var msg = string.Format(LocalizationService.Translate("{0} objects selected"), _multiSelectedIndices.Count);
+                ShowToolBanner(msg, sticky: true);
+            }
+        }
+        else
+        {
+            _multiSelectedIndices.Add(index);
+            _selectedAnnotationIndex = index;
+            var msg = string.Format(LocalizationService.Translate("{0} objects selected"), _multiSelectedIndices.Count);
+            ShowToolBanner(msg, sticky: true);
+        }
+        OnStateChanged();
     }
 
     private static bool HitTestSingle(Annotation a, Point pt, int tol)

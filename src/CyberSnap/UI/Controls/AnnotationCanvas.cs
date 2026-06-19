@@ -69,6 +69,11 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private int _selectedAnnotationIndex = -1;
     private int _moveHoverIndex = -1;
 
+    // Multi-selection state
+    private readonly HashSet<int> _multiSelectedIndices = new();
+    private List<(int Index, Annotation Original)>? _multiDragOriginals;
+    private Point _multiDragStartImg;
+
     // After a click-to-place annotation (step/emoji/magnifier) the cursor sits on top of the
     // fresh item; suppress its hover/control box until the cursor leaves it once, so the box
     // only appears on a deliberate re-hover. -1 = nothing suppressed.
@@ -496,6 +501,37 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool IsDefaultBlank { get; set; } = false;
 
+    /// <summary>Number of annotations currently selected (multi or single).</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int SelectedCount => _multiSelectedIndices.Count > 0
+        ? _multiSelectedIndices.Count
+        : (_selectedAnnotationIndex >= 0 ? 1 : 0);
+
+    /// <summary>Selects all annotations on the canvas. Shows a sticky banner with the count.</summary>
+    public void SelectAll()
+    {
+        if (_annotations.Count == 0) return;
+        ActiveTool = CanvasTool.Move;
+        _multiSelectedIndices.Clear();
+        for (int i = 0; i < _annotations.Count; i++)
+            _multiSelectedIndices.Add(i);
+        _selectedAnnotationIndex = _annotations.Count - 1;
+        var msg = string.Format(LocalizationService.Translate("{0} objects selected"), _multiSelectedIndices.Count);
+        ShowToolBanner(msg, sticky: true);
+        Invalidate();
+        OnStateChanged();
+    }
+
+    /// <summary>Clears all multi-selection state and hides the sticky banner.</summary>
+    private void ClearMultiSelection()
+    {
+        if (_multiSelectedIndices.Count == 0) return;
+        _multiSelectedIndices.Clear();
+        _multiDragOriginals = null;
+        HideToolBanner();
+        Invalidate();
+    }
+
     /// <summary>Raised after any modification (push/undo/redo, tool change, base bitmap change).</summary>
     private void OnStateChanged() => StateChanged?.Invoke(this, EventArgs.Empty);
 
@@ -518,6 +554,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _selectedAnnotationIndex = -1;
         _selectOriginalAnnotation = null;
         _selectDragStartImg = Point.Empty;
+        _multiSelectedIndices.Clear();
+        _multiDragOriginals = null;
         _eraserHoverIndex = -1;
         IsDefaultBlank = false;
         CancelInProgressTool();

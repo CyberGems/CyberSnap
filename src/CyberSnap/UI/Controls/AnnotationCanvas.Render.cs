@@ -175,16 +175,30 @@ public sealed partial class AnnotationCanvas
             }
         }
 
-        // Move hover highlight
-        if (_preSpaceTool == null && IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count && _moveHoverIndex != _selectedAnnotationIndex)
+        // Move hover highlight (skip if item is part of multi-selection — it already has handles)
+        if (_preSpaceTool == null && IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count
+            && _moveHoverIndex != _selectedAnnotationIndex && !_multiSelectedIndices.Contains(_moveHoverIndex))
         {
             var hovered = _annotations[_moveHoverIndex];
             var bounds = GetAnnotationVisualBounds(hovered);
             DrawMoveHandles(g, bounds, isSelected: false, moveOnly: !IsResizable(hovered));
         }
 
-        // Selection highlight
-        if (_preSpaceTool == null && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _annotations.Count)
+        // Multi-selection highlights
+        if (_preSpaceTool == null && _multiSelectedIndices.Count > 1)
+        {
+            foreach (int idx in _multiSelectedIndices)
+            {
+                if (idx >= 0 && idx < _annotations.Count)
+                {
+                    var ann = _annotations[idx];
+                    var bounds = GetAnnotationVisualBounds(ann);
+                    DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann));
+                }
+            }
+        }
+        // Single selection highlight (only when NOT part of an active multi-selection)
+        else if (_preSpaceTool == null && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _annotations.Count)
         {
             var selected = _annotations[_selectedAnnotationIndex];
             var bounds = GetAnnotationVisualBounds(selected);
