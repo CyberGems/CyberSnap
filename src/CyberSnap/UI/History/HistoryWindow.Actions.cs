@@ -76,7 +76,6 @@ public partial class HistoryWindow
             return;
 
         string placeholder;
-        string automationName;
         string helpText;
 
         if (HistoryCategoryCombo.SelectedIndex == 3)
