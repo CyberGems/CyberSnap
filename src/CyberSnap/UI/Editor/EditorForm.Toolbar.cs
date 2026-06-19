@@ -19,7 +19,6 @@ public sealed partial class EditorForm
     private Label _dimensionsLabel = null!;
     private Label _fileNameLabel = null!;
     private Label _zoomLabel = null!;
-    private Label _hintLabel = null!;
     private EditorZoomSlider _zoomSlider = null!;
     private bool _suppressZoomSliderChange;
     private EditorCommandButton _undoButton = null!;
@@ -105,10 +104,10 @@ public sealed partial class EditorForm
         // Create the flow layout for the left side status items (matching the mockup)
         var leftStatusFlow = new FlowLayoutPanel
         {
-            Dock = DockStyle.Left,
+            Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            AutoSize = true,
+            AutoSize = false,
             BackColor = Color.Transparent,
             Margin = new Padding(0),
             Padding = new Padding(0),
@@ -143,6 +142,7 @@ public sealed partial class EditorForm
         _coordsLabel = new DoubleBufferedLabel
         {
             AutoSize = true,
+            MinimumSize = new Size(85, 0),
             Text = "0, 0",
             ForeColor = EditorColors.TextPrimary,
             Font = new Font("Consolas", 10.5f, FontStyle.Bold),
@@ -218,6 +218,7 @@ public sealed partial class EditorForm
         _fileNameLabel = new DoubleBufferedLabel
         {
             AutoSize = true,
+            MaximumSize = new Size(200, 0),
             Text = "Unsaved capture",
             ForeColor = EditorColors.TextSecondary,
             Font = new Font("Consolas", 10.5f, FontStyle.Bold),
@@ -227,52 +228,25 @@ public sealed partial class EditorForm
         filePanel.Controls.Add(_fileNameLabel);
         leftStatusFlow.Controls.Add(filePanel);
 
-        // Rest of the controls (zoom and helper labels) on the right side
-        _hintLabel = new DoubleBufferedLabel
-        {
-            Dock = DockStyle.Right,
-            Width = 170,
-            BackColor = EditorColors.TitleBar,
-            Text = "Ready",
-            ForeColor = EditorColors.TextMuted,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular, GraphicsUnit.Point),
-            TextAlign = ContentAlignment.MiddleRight,
-        };
-
-        var hintSpacer = new Label
-        {
-            Dock = DockStyle.Right,
-            Width = 10,
-            BackColor = Color.Transparent,
-        };
-
+        // Right-side zoom controls
         _resetZoomBtn = new EditorZoomBarButton
         {
-            Dock = DockStyle.Right,
             IconId = "fullscreen",
-            Text = "100%",
-            Width = 100,
+            Text = "",
+            Width = 42,
             Height = 42,
-            Margin = new Padding(0),
+            Margin = new Padding(8, 0, 0, 0),
         };
         _resetZoomBtn.Click += (_, _) => _canvas.ZoomReset();
-
-        var zoomSpacer1 = new Label
-        {
-            Dock = DockStyle.Right,
-            Width = 10,
-            BackColor = Color.Transparent,
-        };
 
         // AUTO-FIT switch: fit the image to the canvas on load, or show it at real 100% size.
         _toggleFitSwitch = new EditorToggleSwitch
         {
-            Dock = DockStyle.Right,
             LabelText = LocalizationService.Translate("Auto-fit"),
             Checked = _canvas.FitToWindowOnLoad,
             Height = 42,
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-            Margin = new Padding(0),
+            Margin = new Padding(12, 0, 0, 0),
         };
         _toggleFitSwitch.CheckedChanged += (_, _) =>
         {
@@ -282,40 +256,25 @@ public sealed partial class EditorForm
                 app.PersistEditorFitPreference(_toggleFitSwitch.Checked);
         };
 
-        var zoomSpacerFit = new Label
-        {
-            Dock = DockStyle.Right,
-            Width = 10,
-            BackColor = Color.Transparent,
-        };
-
         _fitZoomBtn = new EditorZoomBarButton
         {
-            Dock = DockStyle.Right,
             IconId = "zoomFit",
-            Text = LocalizationService.Translate("Fit"),
-            Width = 90,
+            Text = "",
+            Width = 42,
             Height = 42,
-            Margin = new Padding(0),
+            Margin = new Padding(8, 0, 0, 0),
         };
         _fitZoomBtn.Click += (_, _) => _canvas.ZoomFit();
 
-        var zoomSpacer2 = new Label
-        {
-            Dock = DockStyle.Right,
-            Width = 10,
-            BackColor = Color.Transparent,
-        };
-
         var zoomHost = new EditorZoomHostPanel
         {
-            Dock = DockStyle.Right,
             Width = 325,
             Height = 42,
             BackColor = EditorColors.TitleBar,
             ColumnCount = 3,
             RowCount = 1,
             Padding = new Padding(8, 3, 8, 3),
+            Margin = new Padding(0),
         };
         zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 65));
         zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -362,18 +321,40 @@ public sealed partial class EditorForm
         zoomHost.Controls.Add(_zoomSlider, 1, 0);
         zoomHost.Controls.Add(_zoomLabel, 2, 0);
 
-        _statusBarPanel.Controls.Add(zoomHost);
-        _statusBarPanel.Controls.Add(zoomSpacer2);
-        _statusBarPanel.Controls.Add(_resetZoomBtn);
-        _statusBarPanel.Controls.Add(zoomSpacer1);
-        _statusBarPanel.Controls.Add(_fitZoomBtn);
-        _statusBarPanel.Controls.Add(zoomSpacerFit);
-        _statusBarPanel.Controls.Add(_toggleFitSwitch);
-        _statusBarPanel.Controls.Add(hintSpacer);
-        _statusBarPanel.Controls.Add(_hintLabel);
+        // Right-side controls grouped in a single FlowLayoutPanel
+        var rightControlsFlow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0),
+            Padding = new Padding(0),
+        };
+        rightControlsFlow.Controls.Add(zoomHost);
+        rightControlsFlow.Controls.Add(_resetZoomBtn);
+        rightControlsFlow.Controls.Add(_fitZoomBtn);
+        rightControlsFlow.Controls.Add(_toggleFitSwitch);
 
-        // Add our premium left-side status flow layout
-        _statusBarPanel.Controls.Add(leftStatusFlow);
+        // Two-column layout: left info | right zoom controls
+        var statusLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = new Padding(0),
+            Padding = new Padding(0),
+        };
+        EnableDoubleBuffering(statusLayout);
+        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        statusLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        statusLayout.Controls.Add(leftStatusFlow, 0, 0);
+        statusLayout.Controls.Add(rightControlsFlow, 1, 0);
+        _statusBarPanel.Controls.Add(statusLayout);
 
         // CyberSnap-styled hover hints for the bottom bar, matching the capture toolbar.
         // The bar sits at the bottom of the window, so the bubbles open upward (above: true).
@@ -2293,20 +2274,27 @@ internal sealed class EditorZoomBarButton : Button
         }
 
         var iconSize = 22;
-        var iconRect = new RectangleF(rect.Left + 12, rect.Top + (rect.Height - iconSize) / 2f, iconSize, iconSize);
+        bool iconOnly = string.IsNullOrEmpty(Text);
+        float iconX = iconOnly
+            ? rect.Left + (rect.Width - iconSize) / 2f
+            : rect.Left + 12;
+        var iconRect = new RectangleF(iconX, rect.Top + (rect.Height - iconSize) / 2f, iconSize, iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed));
 
-        var textRect = new Rectangle(rect.Left + 40, rect.Top, rect.Width - 46, rect.Height);
-        TextRenderer.DrawText(
-            g,
-            Text,
-            Font,
-            textRect,
-            contentColor,
-            TextFormatFlags.Left |
-            TextFormatFlags.VerticalCenter |
-            TextFormatFlags.EndEllipsis |
-            TextFormatFlags.NoPrefix);
+        if (!iconOnly)
+        {
+            var textRect = new Rectangle(rect.Left + 40, rect.Top, rect.Width - 46, rect.Height);
+            TextRenderer.DrawText(
+                g,
+                Text,
+                Font,
+                textRect,
+                contentColor,
+                TextFormatFlags.Left |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.EndEllipsis |
+                TextFormatFlags.NoPrefix);
+        }
     }
 
     protected override void OnMouseEnter(EventArgs e)
