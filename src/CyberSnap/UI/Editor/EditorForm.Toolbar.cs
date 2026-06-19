@@ -18,6 +18,7 @@ public sealed partial class EditorForm
     private Label _coordsLabel = null!;
     private Label _dimensionsLabel = null!;
     private Label _fileNameLabel = null!;
+    private Label _titleFileNameLabel = null!;
     private Label _zoomLabel = null!;
     private EditorZoomSlider _zoomSlider = null!;
     private bool _suppressZoomSliderChange;
@@ -370,19 +371,29 @@ public sealed partial class EditorForm
 
     private Panel BuildTopBar()
     {
-        var panel = new Panel
+        // Main container panel
+        _topBarPanel = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 80,
+            Height = 108,
             BackColor = EditorColors.TitleBar,
-            Padding = new Padding(22, 9, 18, 8),
         };
-        panel.Paint += (_, e) =>
+        _topBarPanel.Paint += (_, e) =>
         {
             using var pen = new Pen(EditorColors.BorderSubtle);
-            e.Graphics.DrawLine(pen, 0, panel.Height - 1, panel.Width, panel.Height - 1);
+            e.Graphics.DrawLine(pen, 0, _topBarPanel.Height - 1, _topBarPanel.Width, _topBarPanel.Height - 1);
         };
-        panel.MouseDown += BeginWindowDrag;
+        _topBarPanel.MouseDown += BeginWindowDrag;
+
+        // Row 1: Title Bar Panel
+        var titleBarPanel = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 44,
+            BackColor = Color.Transparent,
+            Padding = new Padding(22, 0, 18, 0),
+        };
+        titleBarPanel.MouseDown += BeginWindowDrag;
 
         // Brand area: logo + "CyberSnap" + "Annotations Editor"
         var brandPanel = new Panel
@@ -434,27 +445,30 @@ public sealed partial class EditorForm
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         };
 
-        var topActions = new FlowLayoutPanel
+        // Window controls FlowLayoutPanel (Dock Right)
+        var windowActions = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            BackColor = EditorColors.TitleBar,
+            Dock = DockStyle.Right,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
+            AutoSize = true,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0),
             Padding = new Padding(0),
         };
-        topActions.MouseDown += BeginWindowDrag;
+        windowActions.MouseDown += BeginWindowDrag;
 
         var closeButton = MakeChromeButton("close", LocalizationService.Translate("Close"));
         closeButton.Click += (_, _) => Close();
-        topActions.Controls.Add(closeButton);
+        windowActions.Controls.Add(closeButton);
 
         _windowStateButton = MakeChromeButton("maximize", LocalizationService.Translate("Maximize"));
         _windowStateButton.Click += (_, _) => ToggleWindowState();
-        topActions.Controls.Add(_windowStateButton);
+        windowActions.Controls.Add(_windowStateButton);
 
         var minimizeButton = MakeChromeButton("minimize", LocalizationService.Translate("Minimize"));
         minimizeButton.Click += (_, _) => WindowState = FormWindowState.Minimized;
-        topActions.Controls.Add(minimizeButton);
+        windowActions.Controls.Add(minimizeButton);
 
         var menuButton = MakeChromeButton("menu", LocalizationService.Translate("Menu"));
         menuButton.Click += (s, _) =>
@@ -462,69 +476,107 @@ public sealed partial class EditorForm
             _burgerMenu ??= BuildBurgerMenu();
             _burgerMenu.Show(menuButton, new Point(0, menuButton.Height));
         };
-        topActions.Controls.Add(menuButton);
+        windowActions.Controls.Add(menuButton);
 
-        // Spacer between settings and saveAs
-        topActions.Controls.Add(MakeSeparator());
+        // Filename Label in the middle
+        _titleFileNameLabel = new Label
+        {
+            Dock = DockStyle.Fill,
+            ForeColor = EditorColors.TextSecondary,
+            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Text = "Unsaved capture",
+        };
+        _titleFileNameLabel.MouseDown += BeginWindowDrag;
 
-        var exportButton = MakeCommandButton("export", LocalizationService.Translate("Export"), false);
-        exportButton.Click += (_, _) => DoSaveAs();
-        RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Export the image"), "Ctrl+Shift+S"), above: false);
-        topActions.Controls.Add(exportButton);
+        titleBarPanel.Controls.Add(_titleFileNameLabel);
+        titleBarPanel.Controls.Add(brandPanel);
+        titleBarPanel.Controls.Add(windowActions);
 
-        _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
-        _saveButton.Click += (_, _) => DoSave();
-        RegisterHoverTooltip(_saveButton, () => WithShortcut("Save the image", "Ctrl+S"), above: false);
-        topActions.Controls.Add(_saveButton);
+        // Row 2: Command Bar Panel
+        var commandBarPanel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            Padding = new Padding(22, 0, 18, 0),
+        };
+        commandBarPanel.MouseDown += BeginWindowDrag;
 
-        _copyButton = MakeCommandButton("copy", LocalizationService.Translate("Copy"), false);
-        _copyButton.Click += (_, _) => DoCopy();
-        RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
-        topActions.Controls.Add(_copyButton);
+        var commandActions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Padding = new Padding(0),
+            Margin = new Padding(0),
+        };
+        commandActions.MouseDown += BeginWindowDrag;
 
-        _pasteButton = MakeCommandButton("paste", LocalizationService.Translate("Paste"), false);
-        _pasteButton.Click += (_, _) => DoPaste();
-        RegisterHoverTooltip(_pasteButton, () => WithShortcut("Paste image from clipboard", "Ctrl+V"), above: false);
-        topActions.Controls.Add(_pasteButton);
-
-        var openButton = MakeCommandButton("folder", LocalizationService.Translate("Open"), false);
-        openButton.Click += (_, _) => DoOpen();
-        RegisterHoverTooltip(openButton, () => WithShortcut("Open an image file", "Ctrl+O"), above: false);
-        topActions.Controls.Add(openButton);
-
-        var newButton = MakeCommandButton("document", LocalizationService.Translate("New"), false);
-        newButton.Click += (_, _) => DoNew();
-        RegisterHoverTooltip(newButton, () => WithShortcut("Create a blank canvas", "Ctrl+N"), above: false);
-        topActions.Controls.Add(newButton);
-
-        // Spacer between New/Open and Gallery
-        topActions.Controls.Add(MakeSeparator());
-
-        var galleryButton = MakeCommandButton("history", LocalizationService.Translate("Gallery"), false);
-        galleryButton.Click += (_, _) => OpenHistoryWindow();
-        RegisterHoverTooltip(galleryButton, "Open Capture Gallery", above: false);
-        topActions.Controls.Add(galleryButton);
-
-
-        // Spacer between undo/redo and the rest
-        topActions.Controls.Add(MakeSeparator());
+        // Undo & Redo
+        _undoButton = MakeCommandButton("undo", LocalizationService.Translate("Undo"), false);
+        _undoButton.Click += (_, _) => _canvas.Undo();
+        RegisterHoverTooltip(_undoButton, () => WithShortcut("Undo the last change", "Ctrl+Z"), above: false);
+        commandActions.Controls.Add(_undoButton);
 
         _redoButton = MakeCommandButton("redo", LocalizationService.Translate("Redo"), false);
         _redoButton.Click += (_, _) => _canvas.Redo();
         RegisterHoverTooltip(_redoButton, () => WithShortcut("Redo the last undone change", "Ctrl+Y"), above: false);
-        topActions.Controls.Add(_redoButton);
+        commandActions.Controls.Add(_redoButton);
 
-        _undoButton = MakeCommandButton("undo", LocalizationService.Translate("Undo"), false);
-        _undoButton.Click += (_, _) => _canvas.Undo();
-        RegisterHoverTooltip(_undoButton, () => WithShortcut("Undo the last change", "Ctrl+Z"), above: false);
-        topActions.Controls.Add(_undoButton);
+        // Spacer between undo/redo and gallery
+        commandActions.Controls.Add(MakeSeparator());
+
+        // Gallery
+        var galleryButton = MakeCommandButton("history", LocalizationService.Translate("Gallery"), false);
+        galleryButton.Click += (_, _) => OpenHistoryWindow();
+        RegisterHoverTooltip(galleryButton, "Open Capture Gallery", above: false);
+        commandActions.Controls.Add(galleryButton);
+
+        // Spacer between gallery and file actions
+        commandActions.Controls.Add(MakeSeparator());
+
+        // New & Open
+        var newButton = MakeCommandButton("document", LocalizationService.Translate("New"), false);
+        newButton.Click += (_, _) => DoNew();
+        RegisterHoverTooltip(newButton, () => WithShortcut("Create a blank canvas", "Ctrl+N"), above: false);
+        commandActions.Controls.Add(newButton);
+
+        var openButton = MakeCommandButton("folder", LocalizationService.Translate("Open"), false);
+        openButton.Click += (_, _) => DoOpen();
+        RegisterHoverTooltip(openButton, () => WithShortcut("Open an image file", "Ctrl+O"), above: false);
+        commandActions.Controls.Add(openButton);
+
+        // Clipboard actions: Paste & Copy
+        _pasteButton = MakeCommandButton("paste", LocalizationService.Translate("Paste"), false);
+        _pasteButton.Click += (_, _) => DoPaste();
+        RegisterHoverTooltip(_pasteButton, () => WithShortcut("Paste image from clipboard", "Ctrl+V"), above: false);
+        commandActions.Controls.Add(_pasteButton);
+
+        _copyButton = MakeCommandButton("copy", LocalizationService.Translate("Copy"), false);
+        _copyButton.Click += (_, _) => DoCopy();
+        RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
+        commandActions.Controls.Add(_copyButton);
+
+        // Save actions: Save & Export
+        _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
+        _saveButton.Click += (_, _) => DoSave();
+        RegisterHoverTooltip(_saveButton, () => WithShortcut("Save the image", "Ctrl+S"), above: false);
+        commandActions.Controls.Add(_saveButton);
+
+        var exportButton = MakeCommandButton("export", LocalizationService.Translate("Export"), false);
+        exportButton.Click += (_, _) => DoSaveAs();
+        RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Export the image"), "Ctrl+Shift+S"), above: false);
+        commandActions.Controls.Add(exportButton);
+
+        commandBarPanel.Controls.Add(commandActions);
+
+        _topBarPanel.Controls.Add(commandBarPanel);
+        _topBarPanel.Controls.Add(titleBarPanel);
 
         UpdateWindowStateButton();
 
-        panel.Controls.Add(brandPanel);
-        panel.Controls.Add(topActions);
-
-        return panel;
+        return _topBarPanel;
     }
 
     private Control BuildToolSection()
@@ -1051,6 +1103,9 @@ public sealed partial class EditorForm
             
         if (_fileNameLabel.Text != fileName)
             _fileNameLabel.Text = fileName;
+
+        if (_titleFileNameLabel != null && _titleFileNameLabel.Text != fileName)
+            _titleFileNameLabel.Text = fileName;
     }
 
     private string GetCurrentHint()
