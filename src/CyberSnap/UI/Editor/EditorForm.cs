@@ -383,9 +383,22 @@ public sealed partial class EditorForm : Form
             return;
         }
 
-        if (ctrl is EditorZoomHostPanel || ctrl.Parent is EditorZoomHostPanel)
+        if (ctrl is EditorZoomHostPanel)
         {
             ctrl.BackColor = EditorColors.TitleBar;
+            return;
+        }
+
+        if (ctrl.Parent is EditorZoomHostPanel)
+        {
+            ctrl.BackColor = Color.Transparent;
+            if (ctrl is Label lbl)
+            {
+                if (lbl == _zoomLabel)
+                    lbl.ForeColor = EditorColors.Accent;
+                else
+                    lbl.ForeColor = EditorColors.TextSecondary;
+            }
             return;
         }
 

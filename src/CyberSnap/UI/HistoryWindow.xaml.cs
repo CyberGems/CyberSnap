@@ -277,7 +277,7 @@ public partial class HistoryWindow : Window
         ApplyThemeColors();
     }
 
-    private void ApplyThemeColors()
+    internal void ApplyThemeColors()
     {
         Theme.Refresh();
         Theme.ApplyTo(Application.Current.Resources);
