@@ -300,6 +300,7 @@ public partial class HistoryWindow : Window
         UiScale.ApplyToWindow(this, OuterBorder, scaleWindowBounds: true);
 
         ApplyThemeToVisualTree(OuterBorder);
+        ClearHistoryCardCaches();
         UpdateImageSearchUi();
     }
 
@@ -757,8 +758,8 @@ public partial class HistoryWindow : Window
                 else
                     _ = LoadHistoryAsync();
                 break;
-            case 2: TextPanel.Visibility = Visibility.Visible; LoadOcrHistory(); break;
-            case 3: GifsPanel.Visibility = Visibility.Visible; LoadMediaHistory(); break;
+            case 2: GifsPanel.Visibility = Visibility.Visible; LoadMediaHistory(); break;
+            case 3: TextPanel.Visibility = Visibility.Visible; LoadOcrHistory(); break;
             case 4: ColorsPanel.Visibility = Visibility.Visible; LoadColorHistory(); break;
             case 5: CodesPanel.Visibility = Visibility.Visible; LoadCodeHistory(); break;
         }
@@ -797,9 +798,9 @@ public partial class HistoryWindow : Window
         if (HistoryCategoryCombo.Items[1] is ComboBoxItem item1)
             item1.Content = $"{imagesBase} ({imagesCount})";
         if (HistoryCategoryCombo.Items[2] is ComboBoxItem item2)
-            item2.Content = $"{textBase} ({textCount})";
+            item2.Content = $"{mediaBase} ({mediaCount})";
         if (HistoryCategoryCombo.Items[3] is ComboBoxItem item3)
-            item3.Content = $"{mediaBase} ({mediaCount})";
+            item3.Content = $"{textBase} ({textCount})";
         if (HistoryCategoryCombo.Items[4] is ComboBoxItem item4)
             item4.Content = $"{colorsBase} ({colorsCount})";
         if (HistoryCategoryCombo.Items[5] is ComboBoxItem item5)

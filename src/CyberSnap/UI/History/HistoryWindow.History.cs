@@ -1034,7 +1034,7 @@ public partial class HistoryWindow
 
     private void ClearSelectableCardSelection(Border card)
     {
-        if (HistoryCategoryCombo.SelectedIndex == 2)
+        if (HistoryCategoryCombo.SelectedIndex == 3)
             card.Tag = false;
         else if (HistoryCategoryCombo.SelectedIndex == 4)
             card.Tag = null;
@@ -1085,7 +1085,7 @@ public partial class HistoryWindow
             CancelImageSearchWork();
             if (HistoryCategoryCombo.SelectedIndex == 0) _historyService.ClearImages();
             else if (HistoryCategoryCombo.SelectedIndex == 2) DeleteMediaItems(_allGifItems);
-            else if (HistoryCategoryCombo.SelectedIndex == 2) _historyService.ClearOcr();
+            else if (HistoryCategoryCombo.SelectedIndex == 3) _historyService.ClearOcr();
             else if (HistoryCategoryCombo.SelectedIndex == 4) _historyService.ClearColors();
             else if (HistoryCategoryCombo.SelectedIndex == 5) _historyService.ClearCodes();
 
@@ -1154,7 +1154,7 @@ public partial class HistoryWindow
             {
                 DeleteMediaItems(_filteredGifItems.Where(i => i.IsSelected).ToList());
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 2)
+            else if (HistoryCategoryCombo.SelectedIndex == 3)
             {
                 var entriesToDelete = OcrStack.Children.OfType<Border>()
                     .Where(b => b.Tag is true)
