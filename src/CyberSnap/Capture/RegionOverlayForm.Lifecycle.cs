@@ -453,10 +453,14 @@ public sealed partial class RegionOverlayForm
             && !IsPointInOverlayUi(point);
         if (!shouldShow)
         {
+            _crosshairHideDebounce++;
+            if (_crosshairHideDebounce < 3)
+                return;
             ClearCrosshairGuides();
             return;
         }
 
+        _crosshairHideDebounce = 0;
         EnsureCrosshairForms();
         if (_verticalCrosshairForm is null || _horizontalCrosshairForm is null)
             return;
@@ -469,6 +473,7 @@ public sealed partial class RegionOverlayForm
 
     private void ClearCrosshairGuides()
     {
+        _crosshairHideDebounce = 0;
         _verticalCrosshairForm?.Hide();
         _horizontalCrosshairForm?.Hide();
     }
