@@ -1012,10 +1012,10 @@ public sealed partial class EditorForm : Form
     private ContextMenuStrip BuildImageContextMenu()
     {
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
-        var copyItem = WindowsMenuRenderer.Item("Copy", iconId: null);
+        var copyItem = WindowsMenuRenderer.Item("Copy", iconId: "copy");
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "arrow");
         var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
-        var saveAsItem = WindowsMenuRenderer.Item("Export...", iconId: null);
+        var saveAsItem = WindowsMenuRenderer.Item("Export...", iconId: "export");
         var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");
         var propsItem = WindowsMenuRenderer.Item("Properties", iconId: null);
         var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "close", danger: true);
@@ -1024,6 +1024,7 @@ public sealed partial class EditorForm : Form
         pasteItem.Click += (_, _) => DoPaste();
         pasteItem.Enabled = Clipboard.ContainsImage();
         saveItem.Click += (_, _) => DoSave();
+        saveItem.Enabled = _canvas.IsDirty && !_canvas.IsDefaultBlank;
         saveAsItem.Click += (_, _) => DoSaveAs();
         openLocItem.Click += (_, _) => DoOpenLocation();
         propsItem.Click += (_, _) => DoShowProperties();
