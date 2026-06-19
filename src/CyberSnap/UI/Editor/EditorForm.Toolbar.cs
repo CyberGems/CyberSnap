@@ -1254,7 +1254,7 @@ internal static class EditorColors
 
     public static Color BgPrimary => IsDark ? Color.FromArgb(13, 15, 23) : Color.FromArgb(223, 226, 234);
     public static Color BgSecondary => IsDark ? Color.FromArgb(18, 20, 31) : Color.FromArgb(230, 233, 241);
-    public static Color BgCard => IsDark ? Color.FromArgb(23, 26, 40) : Color.FromArgb(236, 239, 246);
+    public static Color BgCard => IsDark ? Color.FromArgb(23, 26, 40) : Color.FromArgb(245, 241, 233);
     public static Color BgHover => IsDark ? Color.FromArgb(33, 38, 58) : Color.FromArgb(214, 218, 229);
     public static Color CanvasBg => IsDark ? Color.FromArgb(8, 10, 16) : Color.FromArgb(240, 242, 248);
     public static Color TitleBar => IsDark ? Color.FromArgb(6, 12, 20) : Color.FromArgb(220, 223, 232);
@@ -1480,7 +1480,7 @@ internal sealed class EditorToolButton : EditorButtonBase
 {
     // Slightly-elevated graphite resting fill so the tool buttons lift off the darker
     // panel instead of blending into it, and read well against their cyan borders.
-    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(0xE8, 0xEC, 0xF4);
+    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(242, 238, 230);
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Checked
@@ -1492,10 +1492,10 @@ internal sealed class EditorToolButton : EditorButtonBase
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
     {
         bool isSmall = rect.Width < 100;
-        var iconSize = isSmall ? 22f : 28f;
-        var iconTop = isSmall ? 6f : 8f;
-        var textHeight = isSmall ? 16 : 18;
-        var textTop = rect.Bottom - (isSmall ? 18 : 22);
+        var iconSize = isSmall ? 38f : 44f;
+        var iconTop = isSmall ? 4f : 8f;
+        var textHeight = isSmall ? 18 : 22;
+        var textTop = rect.Bottom - (isSmall ? 22 : 26);
 
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
