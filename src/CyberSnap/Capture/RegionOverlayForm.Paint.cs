@@ -203,8 +203,8 @@ public sealed partial class RegionOverlayForm
                 using (var confirmPath = WindowsDockRenderer.RoundedRect(confirmBtn, corner))
                 {
                     // Solid base to completely block background letters
-                    int baseVal = UiChrome.IsDark ? 16 : 240;
-                    using var baseFill = new SolidBrush(Color.FromArgb(255, baseVal, baseVal, baseVal));
+                    var tier1 = UiChrome.SurfaceTier1;
+                    using var baseFill = new SolidBrush(Color.FromArgb(255, tier1.R, tier1.G, tier1.B));
                     g.FillPath(baseFill, confirmPath);
 
                     // Premium vertical gradient accent fill (lighter top → deeper bottom)

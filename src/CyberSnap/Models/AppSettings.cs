@@ -168,7 +168,7 @@ public sealed class AppSettings
     public int TranslationModel { get; set; } = 3; // 1 = Google, 3 = MyMemory (free web)
     public bool AnnotationStrokeShadow { get; set; } = true;
     public float StrokeWidth { get; set; } = 6f;
-    public int ToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(255, 220, 0).ToArgb(); // Default yellow
+    public int ToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(0, 136, 255).ToArgb(); // Default blue
     // Color picked for shapes/annotations in the post-capture Editor. Kept separate from the
     // in-capture overlay's ToolColorArgb so each remembers its own choice. Default = editor accent (cyan).
     public int EditorToolColorArgb { get; set; } = System.Drawing.Color.FromArgb(0, 255, 255).ToArgb();
