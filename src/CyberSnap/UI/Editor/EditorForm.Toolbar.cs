@@ -285,7 +285,7 @@ public sealed partial class EditorForm
         {
             Dock = DockStyle.Right,
             Width = 65,
-            BackColor = EditorColors.TitleBar,
+            BackColor = Color.Transparent,
             Text = "100%",
             ForeColor = EditorColors.Accent,
             Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
@@ -296,7 +296,7 @@ public sealed partial class EditorForm
         {
             Dock = DockStyle.Left,
             Width = 65,
-            BackColor = EditorColors.TitleBar,
+            BackColor = Color.Transparent,
             Text = "Zoom",
             ForeColor = EditorColors.TextSecondary,
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
@@ -306,7 +306,7 @@ public sealed partial class EditorForm
         _zoomSlider = new EditorZoomSlider
         {
             Dock = DockStyle.Fill,
-            BackColor = EditorColors.TitleBar,
+            BackColor = Color.Transparent,
             Minimum = AnnotationCanvas.MinZoomPercent,
             Maximum = AnnotationCanvas.MaxZoomPercent,
             Value = 100,
