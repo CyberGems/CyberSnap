@@ -590,7 +590,7 @@ public sealed partial class EditorForm
 
     private Control BuildToolSection()
     {
-        var section = MakeSectionPanel("Tools", 530);
+        var section = MakeSectionPanel(null, 530);
 
         // The Tools section keeps two visually distinct groups at the SAME total height
         // (so the editor window layout stays pixel-identical after a capture):
@@ -715,7 +715,7 @@ public sealed partial class EditorForm
 
     private Control BuildColorSection()
     {
-        var section = MakeSectionPanel("Color & Width", 240);
+        var section = MakeSectionPanel(null, 240);
 
         int swatchSize = (int)Math.Round(28 * 1.35);
         int strokeSize = (int)Math.Round(32 * 1.35);
@@ -748,6 +748,22 @@ public sealed partial class EditorForm
         palette.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
         palette.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
+        string[] colorNames =
+        {
+            "Cyan",
+            "Blue",
+            "Purple",
+            "Red",
+            "Orange",
+            "Yellow",
+            "Green",
+            "White",
+            "Dark Slate",
+            "Pink",
+            "Gray",
+            "Black"
+        };
+
         int index = 0;
         foreach (var color in PaletteColors)
         {
@@ -767,6 +783,7 @@ public sealed partial class EditorForm
                     app.PersistEditorToolColor(color.ToArgb());
             };
             _colorButtons[color] = swatch;
+            RegisterHoverTooltip(swatch, colorNames[index]);
             palette.Controls.Add(swatch, index % paletteColumns, index / paletteColumns);
             index++;
         }
@@ -802,6 +819,8 @@ public sealed partial class EditorForm
                     app.PersistEditorStrokeWidth(w);
             };
             _strokeWidthButtons.Add(btn);
+            float currentWidth = w;
+            RegisterHoverTooltip(btn, () => string.Format(LocalizationService.Translate("Width: {0}px"), currentWidth));
             widthRow.Controls.Add(btn, wIndex, 0);
             wIndex++;
         }
@@ -812,30 +831,34 @@ public sealed partial class EditorForm
         return section;
     }
 
-    private TableLayoutPanel MakeSectionPanel(string title, int height)
+    private TableLayoutPanel MakeSectionPanel(string? title, int height)
     {
+        bool showTitle = !string.IsNullOrEmpty(title);
         var panel = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = height,
+            Height = showTitle ? height : height - 24,
             BackColor = Color.Transparent,
             Padding = new Padding(0, 0, 0, 12),
             ColumnCount = 1,
             RowCount = 2,
         };
-        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, showTitle ? 24 : 0));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var label = new DoubleBufferedLabel
+        if (showTitle)
         {
-            Dock = DockStyle.Top,
-            Height = 24,
-            Text = title,
-            ForeColor = EditorColors.Accent,
-            Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
-            TextAlign = ContentAlignment.MiddleLeft,
-        };
-        panel.Controls.Add(label, 0, 0);
+            var label = new DoubleBufferedLabel
+            {
+                Dock = DockStyle.Top,
+                Height = 24,
+                Text = title!,
+                ForeColor = EditorColors.Accent,
+                Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
+                TextAlign = ContentAlignment.MiddleLeft,
+            };
+            panel.Controls.Add(label, 0, 0);
+        }
         return panel;
     }
 
