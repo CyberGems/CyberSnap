@@ -30,7 +30,7 @@ public static class RulerRenderer
             : Color.FromArgb(24, 24, 24);
         var pill = isDark
             ? Color.FromArgb(26, 27, 31)
-            : Color.FromArgb(252, 252, 252);
+            : Helpers.UiChrome.SurfaceElevated;
         var border = isDark
             ? Color.FromArgb(160, 0, 200, 215)
             : Color.FromArgb(160, 0, 110, 205);
