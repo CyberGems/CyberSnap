@@ -468,8 +468,8 @@ public partial class HistoryWindow
             visibleBytes += GetHistoryItemFileSize(item);
 
         var loadedPrefix = totalCount > loadedCount
-            ? $"{loadedCount} of {totalCount} captures loaded"
-            : $"{loadedCount} capture{(loadedCount == 1 ? "" : "s")}";
+            ? $"{loadedCount} {LocalizationService.Translate("of")} {totalCount} {LocalizationService.Translate("captures loaded")}"
+            : $"{loadedCount} {LocalizationService.Translate(loadedCount == 1 ? "capture" : "captures")}";
         HistoryCountText.Text = $"{loadedPrefix} · {FormatStorageSize(visibleBytes)}";
     }
 
@@ -717,7 +717,7 @@ public partial class HistoryWindow
 
         if (vm.Card != null)
         {
-            vm.Card.ToolTip = $"Open this {GetHistoryKindLabel(vm.Entry.Kind)} history item";
+            vm.Card.ToolTip = LocalizationService.Translate("Open in Editor");
         }
     }
 
@@ -795,7 +795,7 @@ public partial class HistoryWindow
 
     private void UpdateSelectModeControls()
     {
-        SelectBtn.Content = _selectMode ? "Done" : "Select";
+        SelectBtn.Content = LocalizationService.Translate(_selectMode ? "Done" : "Select");
         UpdateHistoryActionButtons();
     }
 
@@ -847,7 +847,7 @@ public partial class HistoryWindow
     }
 
     private string GetCurrentHistoryCategoryLabel(int count)
-        => HistoryCategoryCombo.SelectedIndex switch
+        => LocalizationService.Translate(HistoryCategoryCombo.SelectedIndex switch
         {
             0 => count == 1 ? "screenshot" : "screenshots",
             1 => count == 1 ? "text capture" : "text captures",
@@ -855,7 +855,7 @@ public partial class HistoryWindow
             3 => count == 1 ? "color" : "colors",
             4 => count == 1 ? "QR & Barcode scan" : "QR & Barcode scans",
             _ => count == 1 ? "history item" : "history items"
-        };
+        });
 
     private int GetCurrentVisibleHistoryItemCount()
     {
@@ -1345,10 +1345,13 @@ public partial class HistoryWindow
             132d);
     }
 
-    private static string FormatHistoryGroupLabel(DateTime date) =>
-        date == DateTime.Today ? "Today"
-        : date == DateTime.Today.AddDays(-1) ? "Yesterday"
-        : date.ToString("MMMM d, yyyy");
+    private static string FormatHistoryGroupLabel(DateTime date)
+    {
+        var lang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        if (date == DateTime.Today) return lang == "es" ? "Hoy" : "Today";
+        if (date == DateTime.Today.AddDays(-1)) return lang == "es" ? "Ayer" : "Yesterday";
+        return date.ToString("MMMM d, yyyy");
+    }
 
     private static void ShowHistoryFileMissingError(string? filePath = null)
     {

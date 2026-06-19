@@ -71,9 +71,9 @@ public partial class HistoryWindow
         }
 
         if (string.IsNullOrWhiteSpace(query))
-            HistoryCountText.Text = $"{entries.Count} text capture{(entries.Count == 1 ? "" : "s")}";
+            HistoryCountText.Text = $"{entries.Count} {LocalizationService.Translate(entries.Count == 1 ? "text capture" : "text captures")}";
         else
-            HistoryCountText.Text = $"{entries.Count} of {allEntries.Count} text capture{(allEntries.Count == 1 ? "" : "s")}";
+            HistoryCountText.Text = $"{entries.Count} {LocalizationService.Translate("of")} {allEntries.Count} {LocalizationService.Translate(allEntries.Count == 1 ? "text capture" : "text captures")}";
 
         _filteredOcrEntries = entries;
         _ocrRenderCount = Math.Min(HistoryInitialPageSize, _filteredOcrEntries.Count);
@@ -111,8 +111,8 @@ public partial class HistoryWindow
             HideHistoryEmptyState();
         }
         HistoryCountText.Text = string.IsNullOrWhiteSpace(query)
-            ? $"{entries.Count} color{(entries.Count == 1 ? "" : "s")}"
-            : $"{entries.Count} of {allEntries.Count} color{(allEntries.Count == 1 ? "" : "s")}";
+            ? $"{entries.Count} {LocalizationService.Translate(entries.Count == 1 ? "color" : "colors")}"
+            : $"{entries.Count} {LocalizationService.Translate("of")} {allEntries.Count} {LocalizationService.Translate(allEntries.Count == 1 ? "color" : "colors")}";
         _filteredColorEntries = entries;
         _colorRenderCount = Math.Min(HistoryInitialPageSize, _filteredColorEntries.Count);
         _colorLastRenderedDate = null;
@@ -283,7 +283,7 @@ public partial class HistoryWindow
             FontSize = 10,
             Opacity = 0.3,
             VerticalAlignment = VerticalAlignment.Center,
-            ToolTip = $"Captured {capturedTimeText}"
+            ToolTip = $"{LocalizationService.Translate("Captured")} {capturedTimeText}"
         };
         AutomationProperties.SetName(capturedBlock, "Text capture time");
         AutomationProperties.SetHelpText(capturedBlock, capturedTimeText);
@@ -330,12 +330,12 @@ public partial class HistoryWindow
 
         var copyBtn = new Button
         {
-            Content = "Copy all",
+            Content = LocalizationService.Translate("Copy all"),
             FontSize = 10,
             Padding = new Thickness(6, 2, 6, 2),
             VerticalAlignment = VerticalAlignment.Center,
             Cursor = System.Windows.Input.Cursors.Hand,
-            ToolTip = "Copy all text"
+            ToolTip = LocalizationService.Translate("Copy all text")
         };
         AutomationProperties.SetName(copyBtn, "Copy text history item");
         AutomationProperties.SetHelpText(copyBtn, "Copy all text from this history item.");
@@ -544,12 +544,12 @@ public partial class HistoryWindow
 
         var copyBtn = new Button
         {
-            Content = "Copy",
+            Content = LocalizationService.Translate("Copy"),
             FontSize = 10,
             Padding = new Thickness(8, 3, 8, 3),
             VerticalAlignment = VerticalAlignment.Center,
             Cursor = System.Windows.Input.Cursors.Hand,
-            ToolTip = "Copy this color value"
+            ToolTip = LocalizationService.Translate("Copy this color value")
         };
         AutomationProperties.SetName(copyBtn, "Copy color value");
         AutomationProperties.SetHelpText(copyBtn, "Copy this color value to the clipboard.");

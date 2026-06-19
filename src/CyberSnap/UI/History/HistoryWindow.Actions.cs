@@ -81,44 +81,37 @@ public partial class HistoryWindow
 
         if (HistoryCategoryCombo.SelectedIndex == 2)
         {
-            placeholder = "Search text captures";
-            automationName = "Text history search";
-            helpText = "Search saved OCR text captures.";
+            placeholder = LocalizationService.Translate("Search text captures");
+            helpText = LocalizationService.Translate("Search saved OCR text captures.");
         }
         else if (HistoryCategoryCombo.SelectedIndex == 3)
         {
-            placeholder = "Search videos and GIFs...";
-            automationName = "Media history search";
-            helpText = "Search saved video recordings and GIF captures.";
+            placeholder = LocalizationService.Translate("Search videos and GIFs...");
+            helpText = LocalizationService.Translate("Search saved video recordings and GIF captures.");
         }
         else if (HistoryCategoryCombo.SelectedIndex == 4)
         {
-            placeholder = "Search hex, RGB, or color names";
-            automationName = "Color history search";
-            helpText = "Search saved colors by hex value, RGB values, or color names.";
+            placeholder = LocalizationService.Translate("Search hex, RGB, or color names");
+            helpText = LocalizationService.Translate("Search saved colors by hex value, RGB values, or color names.");
         }
         else if (HistoryCategoryCombo.SelectedIndex == 5)
         {
-            placeholder = "Search QR & Barcode text, links, or formats";
-            automationName = "Code history search";
-            helpText = "Search saved QR and barcode text, links, or code formats.";
+            placeholder = LocalizationService.Translate("Search QR & Barcode text, links, or formats");
+            helpText = LocalizationService.Translate("Search saved QR and barcode text, links, or code formats.");
         }
         else
         {
             var isIndexing = _imageSearchIndexService.StatusText.StartsWith("Indexing screenshots", StringComparison.OrdinalIgnoreCase);
             placeholder = isIndexing
-                ? "Search... (indexing)"
-                : "Search...";
-            automationName = "History search";
+                ? LocalizationService.Translate("Search... (indexing)")
+                : LocalizationService.Translate("Search...");
             helpText = isIndexing
-                ? "Search your capture gallery while the index continues updating."
-                : "Search your capture gallery by file name, OCR text, color hex, or code content.";
+                ? LocalizationService.Translate("Search your capture gallery while the index continues updating.")
+                : LocalizationService.Translate("Search your capture gallery by file name, OCR text, color hex, or code content.");
         }
 
         ImageSearchPlaceholder.Text = placeholder;
         ImageSearchBox.ToolTip = helpText;
-        AutomationProperties.SetName(ImageSearchBox, automationName);
-        AutomationProperties.SetHelpText(ImageSearchBox, helpText);
     }
 
     private void UpdateImageSearchSourceSummary()

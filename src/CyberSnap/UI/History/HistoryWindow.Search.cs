@@ -99,8 +99,8 @@ public partial class HistoryWindow
         {
             var loadedCount = _filteredHistoryItems.Count;
             var loadedPrefix = totalCount > loadedCount
-                ? $"{loadedCount} of {totalCount} captures loaded"
-                : $"{loadedCount} capture{(loadedCount == 1 ? "" : "s")}";
+                ? $"{loadedCount} {LocalizationService.Translate("of")} {totalCount} {LocalizationService.Translate("captures loaded")}"
+                : $"{loadedCount} {LocalizationService.Translate(loadedCount == 1 ? "capture" : "captures")}";
             HistoryCountText.Text = $"{loadedPrefix} · {sizeStr}";
         }
 

@@ -53,8 +53,8 @@ public partial class HistoryWindow
             HideHistoryEmptyState();
         }
         HistoryCountText.Text = string.IsNullOrWhiteSpace(query)
-            ? $"{entries.Count} code{(entries.Count == 1 ? "" : "s")}"
-            : $"{entries.Count} of {allEntries.Count} code{(allEntries.Count == 1 ? "" : "s")}";
+            ? $"{entries.Count} {LocalizationService.Translate(entries.Count == 1 ? "code" : "codes")}"
+            : $"{entries.Count} {LocalizationService.Translate("of")} {allEntries.Count} {LocalizationService.Translate(allEntries.Count == 1 ? "code" : "codes")}";
         _filteredCodeEntries = entries;
         _codeRenderCount = Math.Min(HistoryInitialPageSize, _filteredCodeEntries.Count);
         _codeLastRenderedDate = null;
@@ -259,12 +259,12 @@ public partial class HistoryWindow
 
         var copyBtn = new Button
         {
-            Content = "Copy",
+            Content = LocalizationService.Translate("Copy"),
             FontSize = 10,
             Padding = new Thickness(8, 3, 8, 3),
             VerticalAlignment = VerticalAlignment.Center,
             Cursor = System.Windows.Input.Cursors.Hand,
-            ToolTip = "Copy this QR & Barcode text"
+            ToolTip = LocalizationService.Translate("Copy this QR & Barcode text")
         };
         AutomationProperties.SetName(copyBtn, "Copy code text");
         AutomationProperties.SetHelpText(copyBtn, "Copy this QR & Barcode text to the clipboard.");

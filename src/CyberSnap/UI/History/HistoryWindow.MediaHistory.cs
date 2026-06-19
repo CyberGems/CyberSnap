@@ -420,7 +420,7 @@ public partial class HistoryWindow
             FontSize = 10,
             FontFamily = new FontFamily(UiChrome.PreferredFamilyName),
             Opacity = 0.3,
-            ToolTip = $"Captured {timeAgo}"
+            ToolTip = $"{LocalizationService.Translate("Captured")} {timeAgo}"
         });
         if (panel.Children[^1] is TextBlock capturedBlock)
         {

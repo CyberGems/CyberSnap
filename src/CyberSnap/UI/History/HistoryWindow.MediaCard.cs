@@ -116,7 +116,7 @@ public partial class HistoryWindow
             BorderThickness = new Thickness(1),
             Cursor = Cursors.Hand,
             Focusable = true,
-            ToolTip = $"Open this {kindLabel} history item",
+            ToolTip = LocalizationService.Translate("Open in Editor"),
             Child = root,
             Tag = vm,
         };
@@ -231,7 +231,7 @@ public partial class HistoryWindow
 
         var actionMenuBtn = new System.Windows.Controls.Button
         {
-            ToolTip = "Open history item actions",
+            ToolTip = LocalizationService.Translate("Actions"),
             Focusable = true,
             BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(210, 255, 255, 255)),
             BorderThickness = new Thickness(1),

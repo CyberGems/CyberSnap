@@ -73,6 +73,8 @@ public partial class HistoryWindow : Window
 
         InitializeComponent();
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
+        Title = LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "CyberSnap - Capture Gallery");
+        SettingsTitleBar.Title = Title;
         CyberSnapWindowChrome.Apply(this);
         Theme.Refresh();
         Theme.ApplyTo(Application.Current.Resources);
