@@ -1254,14 +1254,14 @@ public partial class HistoryWindow
                     {
                         Height = 1,
                         Background = Theme.Brush(Theme.BorderSubtle),
-                        Margin = new Thickness(6, 20, 6, 0)
+                        Margin = new Thickness(6, 26, 6, 0)
                     });
                 }
 
                 var dateLabelText = new TextBlock
                 {
                     Text = FormatHistoryGroupLabel(itemDate).ToUpperInvariant(),
-                    FontSize = 10.5,
+                    FontSize = 12,
                     FontWeight = FontWeights.Bold,
                     FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
                     Foreground = Theme.Brush(Theme.Accent),
@@ -1271,9 +1271,9 @@ public partial class HistoryWindow
                 var dateLabelPill = new Border
                 {
                     Background = Theme.Brush(Theme.AccentSubtle),
-                    CornerRadius = new CornerRadius(6),
-                    Padding = new Thickness(12, 5, 12, 5),
-                    Margin = new Thickness(6, 14, 0, 10),
+                    CornerRadius = new CornerRadius(7),
+                    Padding = new Thickness(14, 6, 14, 6),
+                    Margin = new Thickness(6, 18, 0, 12),
                     HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
                     Child = dateLabelText
                 };

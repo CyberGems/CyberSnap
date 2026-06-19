@@ -164,6 +164,9 @@ public sealed class StandaloneColorPickerForm : Form
             AppDiagnostics.LogWarning("standalone-colorpicker.clipboard", ex.Message);
         }
 
+        // Save to history
+        HistoryService.QuickSaveColor(hex);
+
         // Close the picker first so the screenshot is released
         Close();
 

@@ -163,6 +163,7 @@ public partial class SettingsWindow
             StartWithWindowsCheck.IsChecked = s.StartWithWindows;
 
             SaveHistoryCheck.IsChecked = s.SaveHistory;
+            SaveStandaloneToHistoryCheck.IsChecked = s.SaveStandaloneToHistory;
             HistoryRetentionCombo.SelectedIndex = (int)s.HistoryRetention;
             ShowImageSearchBarCheck.IsChecked = s.ShowImageSearchBar;
             AutoIndexImagesCheck.IsChecked = s.AutoIndexImages;

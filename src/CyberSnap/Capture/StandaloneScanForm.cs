@@ -153,6 +153,9 @@ public sealed class StandaloneScanForm : Form
             {
                 SoundService.PlayScanSound();
 
+                // Save to history
+                HistoryService.QuickSaveCode(decoded.Text, decoded.Format.ToString());
+
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     try

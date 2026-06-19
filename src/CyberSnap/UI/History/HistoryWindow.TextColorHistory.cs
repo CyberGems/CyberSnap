@@ -4,6 +4,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using Brushes = System.Windows.Media.Brushes;
@@ -626,19 +627,28 @@ public partial class HistoryWindow
             {
                 Height = 1,
                 Background = Theme.Brush(Theme.BorderSubtle),
-                Margin = new Thickness(6, 14, 6, 0)
+                Margin = new Thickness(6, 26, 6, 0)
             });
         }
 
-        target.Children.Add(new TextBlock
+        var dateLabel = new TextBlock
         {
-            Text = FormatHistoryGroupLabel(date),
+            Text = FormatHistoryGroupLabel(date).ToUpperInvariant(),
             FontSize = 12,
-            FontWeight = FontWeights.SemiBold,
-            FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text"),
-            Foreground = Theme.Brush(Theme.TextPrimary),
-            Opacity = 0.45,
-            Margin = new Thickness(6, 12, 0, 6)
+            FontWeight = FontWeights.Bold,
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            Foreground = Theme.Brush(Theme.Accent),
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Opacity = 0.9,
+        };
+        target.Children.Add(new Border
+        {
+            Background = Theme.Brush(Theme.AccentSubtle),
+            CornerRadius = new CornerRadius(7),
+            Padding = new Thickness(14, 6, 14, 6),
+            Margin = new Thickness(6, 18, 0, 12),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+            Child = dateLabel
         });
 
         lastRenderedDate = date;

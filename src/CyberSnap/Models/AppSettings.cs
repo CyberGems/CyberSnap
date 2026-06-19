@@ -256,6 +256,7 @@ public sealed class AppSettings
     public ScrollingCaptureMode ScrollingCaptureMode { get; set; } = ScrollingCaptureMode.AssistAutoscroll;
     public int CaptureDelaySeconds { get; set; }
     public bool SaveHistory { get; set; } = true;
+    public bool SaveStandaloneToHistory { get; set; } = true;
     public bool MuteSounds { get; set; }
     public bool DisableAnimations { get; set; }
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.Dark;
