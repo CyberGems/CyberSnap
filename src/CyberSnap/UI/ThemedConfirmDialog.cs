@@ -234,7 +234,7 @@ internal sealed class ThemedConfirmDialog : Window
         };
         close.MouseEnter += (_, _) => close.Background = Theme.Brush(Theme.TabHoverBg);
         close.MouseLeave += (_, _) => close.Background = WpfBrushes.Transparent;
-        close.MouseLeftButtonUp += (_, e) =>
+        close.MouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
             Close();
