@@ -1357,7 +1357,8 @@ internal sealed class DoubleBufferedLabel : Label
         SetStyle(ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer |
-                 ControlStyles.ResizeRedraw, true);
+                 ControlStyles.ResizeRedraw |
+                 ControlStyles.SupportsTransparentBackColor, true);
     }
 
     public override Size GetPreferredSize(Size proposedSize)
@@ -2083,6 +2084,7 @@ internal sealed class EditorZoomSlider : Control
                  ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer |
                  ControlStyles.ResizeRedraw |
+                 ControlStyles.SupportsTransparentBackColor |
                  ControlStyles.Selectable, true);
         Cursor = Cursors.Hand;
         TabStop = true;
