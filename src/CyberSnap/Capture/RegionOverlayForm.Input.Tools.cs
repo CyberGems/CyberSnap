@@ -735,12 +735,12 @@ public sealed partial class RegionOverlayForm
         }
 
         // End select drag/resize
-        if (_isSelectResizing) { CommitSelectTransform(); _isSelectResizing = false; _selectResizeHandle = -1; _selectResizeOriginalAnnotation = null; Invalidate(); return; }
-        if (_isSelectDragging) { CommitSelectTransform(); _isSelectDragging = false; Invalidate(); return; }
+        if (_isSelectResizing) { CommitSelectTransform(); _isSelectResizing = false; _selectResizeHandle = -1; _selectResizeOriginalAnnotation = null; UpdateCrosshairGuides(_lastCursorPos); Invalidate(); return; }
+        if (_isSelectDragging) { CommitSelectTransform(); _isSelectDragging = false; UpdateCrosshairGuides(_lastCursorPos); Invalidate(); return; }
         // End text move/resize
-        if (_textSelecting) { _textSelecting = false; return; }
-        if (_textDragging) { _textDragging = false; RefreshOverlayUiChrome(); return; }
-        if (_textResizing) { _textResizing = false; _textResizeHandle = -1; RefreshOverlayUiChrome(); return; }
+        if (_textSelecting) { _textSelecting = false; UpdateCrosshairGuides(_lastCursorPos); return; }
+        if (_textDragging) { _textDragging = false; UpdateCrosshairGuides(_lastCursorPos); RefreshOverlayUiChrome(); return; }
+        if (_textResizing) { _textResizing = false; _textResizeHandle = -1; UpdateCrosshairGuides(_lastCursorPos); RefreshOverlayUiChrome(); return; }
         switch (_mode)
         {
             case CaptureMode.Highlight when _isHighlighting:
