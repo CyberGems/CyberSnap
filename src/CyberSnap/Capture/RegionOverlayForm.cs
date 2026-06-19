@@ -487,7 +487,7 @@ public sealed partial class RegionOverlayForm : Form
         MinimumSize = Size.Empty;
         MinimizeBox = false;
         MaximizeBox = false;
-        Cursor = Cursors.Cross;
+        Cursor = CursorFactory.PrecisionCursor;
         BackColor = Color.Black;
         SetStyle(ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.UserPaint |

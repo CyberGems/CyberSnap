@@ -316,6 +316,15 @@ public sealed partial class RegionOverlayForm
         return new Rectangle(x - 8, y - 8, size + 16, size + 16);
     }
 
+    /// <summary>Conservative bounds for the step-number placement ghost centered at the cursor
+    /// (wide enough for multi-digit badges plus the drop shadow).</summary>
+    private static Rectangle GetStepPreviewRect(Point cursor)
+    {
+        if (cursor == Point.Empty)
+            return Rectangle.Empty;
+        return new Rectangle(cursor.X - 24, cursor.Y - 18, 48, 38);
+    }
+
     private Rectangle GetGlobalSnapGuideBounds()
     {
         if (!_snapGuideXVisible && !_snapGuideYVisible)
