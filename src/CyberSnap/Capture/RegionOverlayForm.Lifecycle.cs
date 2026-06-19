@@ -429,7 +429,7 @@ public sealed partial class RegionOverlayForm
         if (_verticalCrosshairForm != null && _horizontalCrosshairForm != null)
             return;
 
-        var color = Color.FromArgb(72, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
+        var color = Color.FromArgb(150, UiChrome.AccentColor.R, UiChrome.AccentColor.G, UiChrome.AccentColor.B);
         if (_verticalCrosshairForm == null)
         {
             _verticalCrosshairForm = new CrosshairGuideForm(color);
