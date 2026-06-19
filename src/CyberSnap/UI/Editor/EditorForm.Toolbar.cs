@@ -645,7 +645,7 @@ public sealed partial class EditorForm
         AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line");
         AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle");
         AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle");
-        AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text");
+        AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text Tool");
         AddToolButton(draw, 1, 2, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight");
         AddToolButton(draw, 2, 2, AnnotationCanvas.CanvasTool.Blur, "blur", "Blur");
         AddToolButton(draw, 0, 3, AnnotationCanvas.CanvasTool.StepNumber, "step", "Step");
@@ -895,7 +895,8 @@ public sealed partial class EditorForm
         // label on hover for those so nothing is lost.
         if (tool is AnnotationCanvas.CanvasTool.Magnifier
                 or AnnotationCanvas.CanvasTool.Rect
-                or AnnotationCanvas.CanvasTool.Highlight)
+                or AnnotationCanvas.CanvasTool.Highlight
+                or AnnotationCanvas.CanvasTool.Blur)
             RegisterHoverTooltip(button, labelKey);
         else if (tool is AnnotationCanvas.CanvasTool.Move)
             RegisterHoverTooltip(button, "Move & Resize");
@@ -1254,7 +1255,7 @@ internal static class EditorColors
 
     public static Color BgPrimary => IsDark ? Color.FromArgb(13, 15, 23) : Color.FromArgb(223, 226, 234);
     public static Color BgSecondary => IsDark ? Color.FromArgb(18, 20, 31) : Color.FromArgb(230, 233, 241);
-    public static Color BgCard => IsDark ? Color.FromArgb(23, 26, 40) : Color.FromArgb(245, 241, 233);
+    public static Color BgCard => IsDark ? Color.FromArgb(23, 26, 40) : Color.FromArgb(232, 238, 247);
     public static Color BgHover => IsDark ? Color.FromArgb(33, 38, 58) : Color.FromArgb(214, 218, 229);
     public static Color CanvasBg => IsDark ? Color.FromArgb(8, 10, 16) : Color.FromArgb(240, 242, 248);
     public static Color TitleBar => IsDark ? Color.FromArgb(6, 12, 20) : Color.FromArgb(220, 223, 232);
@@ -1480,7 +1481,7 @@ internal sealed class EditorToolButton : EditorButtonBase
 {
     // Slightly-elevated graphite resting fill so the tool buttons lift off the darker
     // panel instead of blending into it, and read well against their cyan borders.
-    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(242, 238, 230);
+    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(226, 233, 244);
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Checked

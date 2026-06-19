@@ -602,5 +602,7 @@
   "Pink": "Pink",
   "Gray": "Gray",
   "Black": "Black",
-  "Width: {0}px": "Width: {0}px"
+  "Width: {0}px": "Width: {0}px",
+  "Text Tool": "Text",
+  "Step": "Step"
 }
