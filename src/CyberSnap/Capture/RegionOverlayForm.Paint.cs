@@ -86,8 +86,9 @@ public sealed partial class RegionOverlayForm
         // Move tool: hover highlight
         if (IsDrawingOrMoveMode(_mode) && !IsDraggingAnyAnnotation() && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex)
         {
-            var hoverBounds = GetAnnotationBounds(_undoStack[_moveHoverIndex]);
-            DrawMoveHandles(g, hoverBounds, isSelected: false);
+            var hovered = _undoStack[_moveHoverIndex];
+            var hoverBounds = GetAnnotationBounds(hovered);
+            DrawMoveHandles(g, hoverBounds, isSelected: false, moveOnly: !IsResizable(hovered));
         }
 
         // Move tool: draw selection highlight and handles
@@ -95,7 +96,7 @@ public sealed partial class RegionOverlayForm
         {
             var selected = _selectPreviewAnnotation ?? _undoStack[_selectedAnnotationIndex];
             var bounds = GetAnnotationBounds(selected);
-            DrawMoveHandles(g, bounds, isSelected: true);
+            DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected));
         }
 
         // Eraser hover highlight
@@ -436,7 +437,7 @@ public sealed partial class RegionOverlayForm
     /// Draws premium crop-style L-corner handles and mid-edge bars for the Move tool.
     /// Mirrors <c>AnnotationCanvas.DrawMoveHandles</c> but operates in screen-space (no zoom).
     /// </summary>
-    private static void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected)
+    private static void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected, bool moveOnly = false)
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
@@ -472,6 +473,10 @@ public sealed partial class RegionOverlayForm
             dashPen.DashPattern = new[] { 4f, 3f };
             g.DrawRectangle(dashPen, rect.X, rect.Y, rect.Width, rect.Height);
         }
+
+        // Move-only items (fixed-size badges) show just the dashed box — no resize handles,
+        // which would otherwise imply a resize the annotation can't actually do.
+        if (moveOnly) return;
 
         using var thickPen  = new Pen(accentColor, penWidthThick)  { StartCap = LineCap.Round, EndCap = LineCap.Round };
         using var shadowPen = new Pen(shadowColor, penWidthShadow) { StartCap = LineCap.Round, EndCap = LineCap.Round };

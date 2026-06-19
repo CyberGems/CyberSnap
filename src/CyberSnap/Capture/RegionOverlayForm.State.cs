@@ -498,9 +498,16 @@ public sealed partial class RegionOverlayForm
         return GetSelectHandle(p, _selectedAnnotationIndex);
     }
 
+    /// <summary>Whether an annotation supports resizing. Fixed-size badges (step numbers) can
+    /// only be repositioned, so they expose a move-only control box (no resize handles).</summary>
+    private static bool IsResizable(Annotation a) => a is not StepNumberAnnotation;
+
     private int GetSelectHandle(Point p, int annotationIndex)
     {
         if (annotationIndex < 0 || annotationIndex >= _undoStack.Count)
+            return -1;
+        // Non-resizable items never report a resize handle, so a drag on them is always a move.
+        if (!IsResizable(_undoStack[annotationIndex]))
             return -1;
         var bounds = GetAnnotationBounds(_undoStack[annotationIndex]);
         var selRect = Rectangle.Inflate(bounds, 4, 4);

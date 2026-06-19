@@ -392,6 +392,11 @@ public sealed partial class RegionOverlayForm
                 else
                 {
                     int h = HitTestAnnotation(e.Location);
+                    if (_suppressHoverBoxIndex >= 0)
+                    {
+                        if (h == _suppressHoverBoxIndex) h = -1;   // still on the just-placed item: stay inert
+                        else _suppressHoverBoxIndex = -1;          // cursor left it: re-enable normal hover
+                    }
                     if (h != _moveHoverIndex)
                     {
                         if (_moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)

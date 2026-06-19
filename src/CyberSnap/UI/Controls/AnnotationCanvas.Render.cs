@@ -178,19 +178,21 @@ public sealed partial class AnnotationCanvas
         // Move hover highlight
         if (_preSpaceTool == null && IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count && _moveHoverIndex != _selectedAnnotationIndex)
         {
-            var bounds = GetAnnotationVisualBounds(_annotations[_moveHoverIndex]);
-            DrawMoveHandles(g, bounds, isSelected: false);
+            var hovered = _annotations[_moveHoverIndex];
+            var bounds = GetAnnotationVisualBounds(hovered);
+            DrawMoveHandles(g, bounds, isSelected: false, moveOnly: !IsResizable(hovered));
         }
 
         // Selection highlight
         if (_preSpaceTool == null && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _annotations.Count)
         {
-            var bounds = GetAnnotationVisualBounds(_annotations[_selectedAnnotationIndex]);
-            DrawMoveHandles(g, bounds, isSelected: true);
+            var selected = _annotations[_selectedAnnotationIndex];
+            var bounds = GetAnnotationVisualBounds(selected);
+            DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected));
         }
     }
 
-    private void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected)
+    private void DrawMoveHandles(Graphics g, Rectangle bounds, bool isSelected, bool moveOnly = false)
     {
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
@@ -232,45 +234,49 @@ public sealed partial class AnnotationCanvas
             g.DrawRectangle(dashPen, rect.X, rect.Y, rect.Width, rect.Height);
         }
 
-        using var thickPen = new Pen(accentColor, penWidthThick) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-        using var shadowPen = new Pen(shadowColor, penWidthShadow) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-
-        // 1. Draw Corners (L-shapes)
-        // Top-Left
-        DrawL(g, shadowPen, rect.Left, rect.Top, len, len);
-        DrawL(g, thickPen, rect.Left, rect.Top, len, len);
-
-        // Top-Right
-        DrawL(g, shadowPen, rect.Right, rect.Top, -len, len);
-        DrawL(g, thickPen, rect.Right, rect.Top, -len, len);
-
-        // Bottom-Left
-        DrawL(g, shadowPen, rect.Left, rect.Bottom, len, -len);
-        DrawL(g, thickPen, rect.Left, rect.Bottom, len, -len);
-
-        // Bottom-Right
-        DrawL(g, shadowPen, rect.Right, rect.Bottom, -len, -len);
-        DrawL(g, thickPen, rect.Right, rect.Bottom, -len, -len);
-
-        // 2. Draw Mid-edges (Pills/bars)
+        // Resize handles (L-corners + mid-edge bars). Skipped for move-only items (fixed-size
+        // badges like step numbers), which keep just the dashed box and the center move knob.
         float midX = rect.Left + rect.Width / 2f;
         float midY = rect.Top + rect.Height / 2f;
+        if (!moveOnly)
+        {
+            using var thickPen = new Pen(accentColor, penWidthThick) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            using var shadowPen = new Pen(shadowColor, penWidthShadow) { StartCap = LineCap.Round, EndCap = LineCap.Round };
 
-        // Top edge
-        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
-        g.DrawLine(thickPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
+            // 1. Draw Corners (L-shapes)
+            // Top-Left
+            DrawL(g, shadowPen, rect.Left, rect.Top, len, len);
+            DrawL(g, thickPen, rect.Left, rect.Top, len, len);
 
-        // Bottom edge
-        g.DrawLine(shadowPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
-        g.DrawLine(thickPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
+            // Top-Right
+            DrawL(g, shadowPen, rect.Right, rect.Top, -len, len);
+            DrawL(g, thickPen, rect.Right, rect.Top, -len, len);
 
-        // Left edge
-        g.DrawLine(shadowPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
-        g.DrawLine(thickPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
+            // Bottom-Left
+            DrawL(g, shadowPen, rect.Left, rect.Bottom, len, -len);
+            DrawL(g, thickPen, rect.Left, rect.Bottom, len, -len);
 
-        // Right edge
-        g.DrawLine(shadowPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
-        g.DrawLine(thickPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+            // Bottom-Right
+            DrawL(g, shadowPen, rect.Right, rect.Bottom, -len, -len);
+            DrawL(g, thickPen, rect.Right, rect.Bottom, -len, -len);
+
+            // 2. Draw Mid-edges (Pills/bars)
+            // Top edge
+            g.DrawLine(shadowPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
+            g.DrawLine(thickPen, midX - barLen / 2f, rect.Top, midX + barLen / 2f, rect.Top);
+
+            // Bottom edge
+            g.DrawLine(shadowPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
+            g.DrawLine(thickPen, midX - barLen / 2f, rect.Bottom, midX + barLen / 2f, rect.Bottom);
+
+            // Left edge
+            g.DrawLine(shadowPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
+            g.DrawLine(thickPen, rect.Left, midY - barLen / 2f, rect.Left, midY + barLen / 2f);
+
+            // Right edge
+            g.DrawLine(shadowPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+            g.DrawLine(thickPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
+        }
 
         // 3. Center move knob — only rendered when the annotation is actively selected.
         // A cyan circle with a crosshair gives an unambiguous "grab here to move" affordance.
