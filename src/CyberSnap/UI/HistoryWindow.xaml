@@ -361,10 +361,9 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Category dropdown + actions -->
+                    <!-- Top bar: category dropdown + count + actions -->
                     <Border Grid.Row="0" Padding="0,0,0,6">
                         <StackPanel>
                             <DockPanel>
@@ -386,40 +385,41 @@
                                              AutomationProperties.HelpText="Delete selected history items"
                                              Cursor="Hand" Click="DeleteSelectedClick"/>
                                 </StackPanel>
-                                <ComboBox x:Name="HistoryCategoryCombo"
-                                          MinWidth="130" Margin="0,0,8,0" VerticalAlignment="Center"
-                                          ToolTip="Choose the history category"
-                                          AutomationProperties.Name="History category"
-                                          SelectionChanged="HistoryCategoryCombo_Changed"
-                                          PreviewMouseLeftButtonDown="HistoryCategoryCombo_PreviewMouseLeftButtonDown">
-                                    <ComboBoxItem Content="All" IsSelected="True"
-                                                  ToolTip="Show all capture history"
-                                                  AutomationProperties.Name="All history"
-                                                  AutomationProperties.HelpText="Show all saved captures."/>
-                                    <ComboBoxItem Content="Images"
-                                                  ToolTip="Show screenshot history"
-                                                  AutomationProperties.Name="Image history"
-                                                  AutomationProperties.HelpText="Show saved screenshot captures."/>
-                                    <ComboBoxItem Content="Videos &amp; GIFs"
-                                                  ToolTip="Show video and GIF history"
-                                                  AutomationProperties.Name="Video &amp; GIF history"
-                                                  AutomationProperties.HelpText="Show saved video recordings and GIF captures."/>
-                                    <ComboBoxItem Content="Text"
-                                                  ToolTip="Show OCR text history"
-                                                  AutomationProperties.Name="Text history"
-                                                  AutomationProperties.HelpText="Show saved OCR text captures."/>
-                                    <ComboBoxItem Content="Colors"
-                                                  ToolTip="Show color history"
-                                                  AutomationProperties.Name="Color history"
-                                                  AutomationProperties.HelpText="Show saved color picks."/>
-                                    <ComboBoxItem Content="QR &amp; Barcodes"
-                                                  ToolTip="Show QR and barcode history"
-                                                  AutomationProperties.Name="QR &amp; Barcode history"
-                                                  AutomationProperties.HelpText="Show saved QR and barcode scans."/>
-                                </ComboBox>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ComboBox x:Name="HistoryCategoryCombo"
+                                              MinWidth="130" Margin="0,0,8,0" VerticalAlignment="Center"
+                                              ToolTip="Choose the history category"
+                                              AutomationProperties.Name="History category"
+                                              SelectionChanged="HistoryCategoryCombo_Changed"
+                                              PreviewMouseLeftButtonDown="HistoryCategoryCombo_PreviewMouseLeftButtonDown">
+                                        <ComboBoxItem Content="All" IsSelected="True"
+                                                      ToolTip="Show all capture history"
+                                                      AutomationProperties.Name="All history"
+                                                      AutomationProperties.HelpText="Show all saved captures."/>
+                                        <ComboBoxItem Content="Images"
+                                                      ToolTip="Show screenshot history"
+                                                      AutomationProperties.Name="Image history"
+                                                      AutomationProperties.HelpText="Show saved screenshot captures."/>
+                                        <ComboBoxItem Content="Videos &amp; GIFs"
+                                                      ToolTip="Show video and GIF history"
+                                                      AutomationProperties.Name="Video &amp; GIF history"
+                                                      AutomationProperties.HelpText="Show saved video recordings and GIF captures."/>
+                                        <ComboBoxItem Content="Text"
+                                                      ToolTip="Show OCR text history"
+                                                      AutomationProperties.Name="Text history"
+                                                      AutomationProperties.HelpText="Show saved OCR text captures."/>
+                                        <ComboBoxItem Content="Colors"
+                                                      ToolTip="Show color history"
+                                                      AutomationProperties.Name="Color history"
+                                                      AutomationProperties.HelpText="Show saved color picks."/>
+                                        <ComboBoxItem Content="QR &amp; Barcodes"
+                                                      ToolTip="Show QR and barcode history"
+                                                      AutomationProperties.Name="QR &amp; Barcode history"
+                                                      AutomationProperties.HelpText="Show saved QR and barcode scans."/>
+                                    </ComboBox>
 
-                                <!-- Inline search bar -->
-                                <Grid x:Name="ImageSearchRow" VerticalAlignment="Center" Margin="8,0,8,0">
+                                    <!-- Inline search bar -->
+                                    <Grid x:Name="ImageSearchRow" VerticalAlignment="Center" Margin="8,0,8,0">
                                     <Border x:Name="ImageSearchBorder" Background="Transparent"
                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                             BorderThickness="1" CornerRadius="7" Padding="8,5"
@@ -499,7 +499,23 @@
                                         </Grid>
                                     </Border>
                                 </Grid>
+                                </StackPanel>
                             </DockPanel>
+
+                            <!-- Item count + status (centered, moved from old bottom bar) -->
+                            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock x:Name="HistoryCountText" FontSize="11" Opacity="0.4" VerticalAlignment="Center"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.Name="History item count"
+                                           AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                                <TextBlock x:Name="HistorySearchStatusText" FontSize="11" Opacity="0.35" VerticalAlignment="Center"
+                                           Margin="12,0,0,0"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.Name="History status"
+                                           AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                            </StackPanel>
 
                             <!-- Search status line -->
                             <TextBlock x:Name="ImageSearchFiltersSummaryText" Visibility="Collapsed" Margin="0,4,0,0"/>
@@ -654,24 +670,6 @@
                             </StackPanel>
                         </Border>
                     </StackPanel>
-
-                    <!-- Bottom bar -->
-                    <Border Grid.Row="2" Padding="14,4,14,8">
-                        <DockPanel LastChildFill="False">
-                            <TextBlock x:Name="HistoryCountText" FontSize="11" Opacity="0.4" VerticalAlignment="Center"
-                                       DockPanel.Dock="Left"
-                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                       AutomationProperties.Name="History item count"
-                                       AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                       AutomationProperties.LiveSetting="Polite"/>
-                            <TextBlock x:Name="HistorySearchStatusText" FontSize="11" Opacity="0.35" VerticalAlignment="Center"
-                                       HorizontalAlignment="Right" Margin="12,0,0,0"
-                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                       AutomationProperties.Name="History status"
-                                       AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                       AutomationProperties.LiveSetting="Polite"/>
-                        </DockPanel>
-                    </Border>
                 </Grid>
             </Grid>
         </Border>
