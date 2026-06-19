@@ -982,7 +982,7 @@ public sealed partial class EditorForm : Form
         var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
         var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
         var redoItem = WindowsMenuRenderer.Item("Redo", iconId: null);
-        var exitItem = WindowsMenuRenderer.Item("Quit", iconId: "close", danger: true);
+        var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "close", danger: true);
 
         openItem.Click += (_, _) => DoOpen();
         pasteItem.Click += (_, _) => DoPaste();
@@ -1015,10 +1015,10 @@ public sealed partial class EditorForm : Form
         var copyItem = WindowsMenuRenderer.Item("Copy", iconId: null);
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "arrow");
         var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
-        var saveAsItem = WindowsMenuRenderer.Item("Save as...", iconId: null);
+        var saveAsItem = WindowsMenuRenderer.Item("Export...", iconId: null);
         var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");
         var propsItem = WindowsMenuRenderer.Item("Properties", iconId: null);
-        var exitItem = WindowsMenuRenderer.Item("Quit", iconId: "close", danger: true);
+        var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "close", danger: true);
 
         copyItem.Click += (_, _) => DoCopy();
         pasteItem.Click += (_, _) => DoPaste();
