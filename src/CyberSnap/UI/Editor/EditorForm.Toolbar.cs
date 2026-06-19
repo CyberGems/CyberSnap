@@ -1250,20 +1250,22 @@ public sealed partial class EditorForm
 
 internal static class EditorColors
 {
-    public static readonly Color BgPrimary = Color.FromArgb(13, 15, 23);
-    public static readonly Color BgSecondary = Color.FromArgb(18, 20, 31);
-    public static readonly Color BgCard = Color.FromArgb(23, 26, 40);
-    public static readonly Color BgHover = Color.FromArgb(33, 38, 58);
-    public static readonly Color CanvasBg = Color.FromArgb(8, 10, 16);
-    public static readonly Color TitleBar = Color.FromArgb(6, 12, 20);
-    public static readonly Color TextPrimary = Color.FromArgb(230, 240, 255);
-    public static readonly Color TextSecondary = Color.FromArgb(160, 180, 210);
-    public static readonly Color TextMuted = Color.FromArgb(110, 130, 160);
-    public static readonly Color Accent = Color.FromArgb(0, 255, 255);
-    public static readonly Color AccentPressed = Color.FromArgb(0, 210, 230);
-    public static readonly Color Border = Color.FromArgb(76, 0, 255, 255);
-    public static readonly Color BorderSubtle = Color.FromArgb(34, 0, 255, 255);
-    public static readonly Color WindowBorder = Color.FromArgb(75, 0, 255, 255);
+    public static bool IsDark => CyberSnap.UI.Theme.IsDark;
+
+    public static Color BgPrimary => IsDark ? Color.FromArgb(13, 15, 23) : Color.FromArgb(223, 226, 234);
+    public static Color BgSecondary => IsDark ? Color.FromArgb(18, 20, 31) : Color.FromArgb(230, 233, 241);
+    public static Color BgCard => IsDark ? Color.FromArgb(23, 26, 40) : Color.FromArgb(236, 239, 246);
+    public static Color BgHover => IsDark ? Color.FromArgb(33, 38, 58) : Color.FromArgb(214, 218, 229);
+    public static Color CanvasBg => IsDark ? Color.FromArgb(8, 10, 16) : Color.FromArgb(240, 242, 248);
+    public static Color TitleBar => IsDark ? Color.FromArgb(6, 12, 20) : Color.FromArgb(220, 223, 232);
+    public static Color TextPrimary => IsDark ? Color.FromArgb(230, 240, 255) : Color.FromArgb(26, 26, 26);
+    public static Color TextSecondary => IsDark ? Color.FromArgb(160, 180, 210) : Color.FromArgb(96, 96, 96);
+    public static Color TextMuted => IsDark ? Color.FromArgb(110, 130, 160) : Color.FromArgb(128, 128, 128);
+    public static Color Accent => IsDark ? Color.FromArgb(0, 255, 255) : Color.FromArgb(0, 120, 215);
+    public static Color AccentPressed => IsDark ? Color.FromArgb(0, 210, 230) : Color.FromArgb(0, 100, 190);
+    public static Color Border => IsDark ? Color.FromArgb(76, 0, 255, 255) : Color.FromArgb(22, 0, 0, 0);
+    public static Color BorderSubtle => IsDark ? Color.FromArgb(34, 0, 255, 255) : Color.FromArgb(14, 0, 0, 0);
+    public static Color WindowBorder => IsDark ? Color.FromArgb(75, 0, 255, 255) : Color.FromArgb(20, 0, 0, 0);
 }
 
 internal sealed class EditorWindowFrame : DoubleBufferedPanel
@@ -1478,7 +1480,7 @@ internal sealed class EditorToolButton : EditorButtonBase
 {
     // Slightly-elevated graphite resting fill so the tool buttons lift off the darker
     // panel instead of blending into it, and read well against their cyan borders.
-    protected override Color IdleFill => Color.FromArgb(0x1C, 0x20, 0x30);
+    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(0xE8, 0xEC, 0xF4);
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Checked
@@ -1489,15 +1491,20 @@ internal sealed class EditorToolButton : EditorButtonBase
 
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
     {
-        var iconSize = Math.Min(52, Math.Max(42, rect.Height - 42));
+        bool isSmall = rect.Width < 100;
+        var iconSize = isSmall ? 22f : 28f;
+        var iconTop = isSmall ? 6f : 8f;
+        var textHeight = isSmall ? 16 : 18;
+        var textTop = rect.Bottom - (isSmall ? 18 : 22);
+
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
-            rect.Top + 10,
+            rect.Top + iconTop,
             iconSize,
             iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, active);
 
-        var textRect = new Rectangle(rect.Left + 8, rect.Bottom - 28, rect.Width - 16, 24);
+        var textRect = new Rectangle(rect.Left + 4, textTop, rect.Width - 8, textHeight);
         TextRenderer.DrawText(
             g,
             Text,
@@ -1835,15 +1842,15 @@ internal abstract class EditorButtonBase : Button
     private Color ResolveFill(bool active)
     {
         if (!Enabled)
-            return Color.FromArgb(16, 18, 28);
+            return EditorColors.IsDark ? Color.FromArgb(16, 18, 28) : Color.FromArgb(235, 237, 244);
         if (UsePrimaryFill)
             return _pressed ? EditorColors.AccentPressed : EditorColors.Accent;
         if (IsSelected)
             return _pressed
-                ? Color.FromArgb(42, 0, 255, 255)
-                : Color.FromArgb(30, 0, 255, 255);
+                ? Color.FromArgb(42, EditorColors.Accent.R, EditorColors.Accent.G, EditorColors.Accent.B)
+                : Color.FromArgb(30, EditorColors.Accent.R, EditorColors.Accent.G, EditorColors.Accent.B);
         if (_pressed)
-            return Color.FromArgb(44, 50, 74);
+            return EditorColors.IsDark ? Color.FromArgb(44, 50, 74) : Color.FromArgb(200, 206, 218);
         if (_hover)
             return EditorColors.BgHover;
         return IdleFill;
@@ -1853,7 +1860,7 @@ internal abstract class EditorButtonBase : Button
     // Exposed as virtual so individual button kinds can override just their idle look.
     protected virtual Color IdleFill =>
         ResolveEffectiveParentBackColor() == EditorColors.TitleBar
-            ? Color.FromArgb(18, 0, 255, 255)
+            ? Color.FromArgb(18, EditorColors.Accent.R, EditorColors.Accent.G, EditorColors.Accent.B)
             : EditorColors.BgCard;
 
     private Color ResolveEffectiveParentBackColor()
@@ -1865,18 +1872,18 @@ internal abstract class EditorButtonBase : Button
     protected virtual Color ResolveBorder(bool active)
     {
         if (!Enabled)
-            return Color.FromArgb(26, 255, 255, 255);
+            return EditorColors.IsDark ? Color.FromArgb(26, 255, 255, 255) : Color.FromArgb(20, 0, 0, 0);
         if (active || _hover)
-            return Color.FromArgb(150, EditorColors.Accent);
+            return Color.FromArgb(150, EditorColors.Accent.R, EditorColors.Accent.G, EditorColors.Accent.B);
         return EditorColors.BorderSubtle;
     }
 
     private Color ResolveContent(bool active)
     {
         if (!Enabled)
-            return Color.FromArgb(88, 105, 128);
+            return EditorColors.IsDark ? Color.FromArgb(88, 105, 128) : Color.FromArgb(160, 168, 180);
         if (UsePrimaryFill)
-            return Color.FromArgb(4, 20, 26);
+            return EditorColors.IsDark ? Color.FromArgb(4, 20, 26) : Color.FromArgb(250, 250, 250);
         if (active || _hover)
             return EditorColors.Accent;
         return EditorColors.TextPrimary;

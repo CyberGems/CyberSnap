@@ -49,7 +49,6 @@ public sealed partial class AnnotationCanvas
     private static readonly Font TbFont = new("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
     private static readonly Font TbFontBold = new("Segoe UI", 9.5f, FontStyle.Bold, GraphicsUnit.Point);
     private static readonly Font TbFontItalic = new("Segoe UI", 9.5f, FontStyle.Italic, GraphicsUnit.Point);
-    private static readonly Pen TbSepPen = new(EditorColors.BorderSubtle, 1f);
     private static readonly StringFormat TbCenter = new(StringFormat.GenericTypographic)
     {
         Alignment = StringAlignment.Center,
@@ -119,7 +118,10 @@ public sealed partial class AnnotationCanvas
         float Sep(float x)
         {
             float sx = x + TbSepW / 2f;
-            g.DrawLine(TbSepPen, sx, cy + 4, sx, cy + TbBtnH - 4);
+            using (var sepPen = new Pen(EditorColors.BorderSubtle, 1f))
+            {
+                g.DrawLine(sepPen, sx, cy + 4, sx, cy + TbBtnH - 4);
+            }
             return x + TbSepW;
         }
 

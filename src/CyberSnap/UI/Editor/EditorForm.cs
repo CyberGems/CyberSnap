@@ -93,11 +93,23 @@ public sealed partial class EditorForm : Form
             return;
         }
 
+        var blank = CreateBlankCheckerboard(Theme.IsDark);
+        ShowEditor(blank);
+        if (_instance is not null)
+        {
+            _instance._canvas.IsDefaultBlank = true;
+            _instance.RefreshUi();
+            _instance._canvas.Invalidate();
+        }
+    }
+
+    private static Bitmap CreateBlankCheckerboard(bool isDark)
+    {
         var blank = new Bitmap(1024, 768);
         using (var g = Graphics.FromImage(blank))
         {
-            var color1 = Color.FromArgb(20, 22, 33);
-            var color2 = Color.FromArgb(28, 30, 43);
+            var color1 = isDark ? Color.FromArgb(20, 22, 33) : Color.FromArgb(245, 246, 250);
+            var color2 = isDark ? Color.FromArgb(28, 30, 43) : Color.FromArgb(233, 235, 243);
             g.Clear(color1);
             using (var brush = new SolidBrush(color2))
             {
@@ -114,13 +126,7 @@ public sealed partial class EditorForm : Form
                 }
             }
         }
-        ShowEditor(blank);
-        if (_instance is not null)
-        {
-            _instance._canvas.IsDefaultBlank = true;
-            _instance.RefreshUi();
-            _instance._canvas.Invalidate();
-        }
+        return blank;
     }
 
 
@@ -346,6 +352,76 @@ public sealed partial class EditorForm : Form
         Update();
     }
 
+    public void ApplyTheme()
+    {
+        if (InvokeRequired)
+        {
+            Invoke(new Action(ApplyTheme));
+            return;
+        }
+
+        if (_canvas != null && _canvas.IsDefaultBlank)
+        {
+            var newBlank = CreateBlankCheckerboard(EditorColors.IsDark);
+            _canvas.BaseBitmap = newBlank;
+        }
+
+        UpdateControlTheme(this);
+        RefreshLayoutAndRedraw();
+    }
+
+    private void UpdateControlTheme(Control ctrl)
+    {
+        foreach (Control child in ctrl.Controls)
+        {
+            UpdateControlTheme(child);
+        }
+
+        if (ctrl is AnnotationCanvas canvas)
+        {
+            canvas.BackColor = EditorColors.CanvasBg;
+            return;
+        }
+
+        if (ctrl == _toolbarPanel)
+        {
+            ctrl.BackColor = EditorColors.BgSecondary;
+            return;
+        }
+
+        if (ctrl == _statusBarPanel || ctrl == _topBarPanel)
+        {
+            ctrl.BackColor = EditorColors.TitleBar;
+            return;
+        }
+
+        if (ctrl is HorizontalRuler or VerticalRuler or RulerCornerBlock or EditorCanvasFrame or EditorWindowFrame)
+        {
+            ctrl.BackColor = EditorColors.BgPrimary;
+            return;
+        }
+
+        if (ctrl is Panel && ctrl.Parent is EditorCanvasFrame)
+        {
+            ctrl.BackColor = EditorColors.CanvasBg;
+            return;
+        }
+
+        if (ctrl is Panel panel)
+        {
+            panel.BackColor = EditorColors.BgPrimary;
+        }
+        else if (ctrl is Label label)
+        {
+            if (label == _dimensionsLabel)
+                label.ForeColor = EditorColors.TextMuted;
+            else if (label == _coordsLabel || label == _zoomLabel || label == _fileNameLabel || label == _titleFileNameLabel)
+                label.ForeColor = EditorColors.TextSecondary;
+            else
+                label.ForeColor = EditorColors.TextPrimary;
+        }
+    }
+
     private void LoadCapture(Bitmap captured, string? savedFilePath, bool autoMaximize = true)
     {
         _savedFilePath = savedFilePath;
@@ -512,27 +588,7 @@ public sealed partial class EditorForm : Form
                 return;
         }
 
-        var blank = new Bitmap(1024, 768);
-        using (var g = Graphics.FromImage(blank))
-        {
-            var color1 = Color.FromArgb(20, 22, 33);
-            var color2 = Color.FromArgb(28, 30, 43);
-            g.Clear(color1);
-            using (var brush = new SolidBrush(color2))
-            {
-                int size = 16;
-                for (int y = 0; y < blank.Height; y += size)
-                {
-                    for (int x = 0; x < blank.Width; x += size)
-                    {
-                        if (((x / size) + (y / size)) % 2 == 1)
-                        {
-                            g.FillRectangle(brush, x, y, size, size);
-                        }
-                    }
-                }
-            }
-        }
+        var blank = CreateBlankCheckerboard(EditorColors.IsDark);
 
         LoadCapture(blank, null, autoMaximize: false);
         _canvas.IsDefaultBlank = true;

@@ -544,6 +544,19 @@ public partial class SettingsWindow
                         Services.AppDiagnostics.LogWarning("settings.theme-refresh-window", $"Failed to refresh {w.GetType().Name}", ex);
                     }
                 }
+
+                // Refresh Windows Forms editor if active
+                if (CyberSnap.UI.Editor.EditorForm.ActiveInstance is { } editor)
+                {
+                    try
+                    {
+                        editor.ApplyTheme();
+                    }
+                    catch (Exception ex)
+                    {
+                        Services.AppDiagnostics.LogWarning("settings.theme-refresh-editor", "Failed to refresh EditorForm theme", ex);
+                    }
+                }
             });
     }
 
