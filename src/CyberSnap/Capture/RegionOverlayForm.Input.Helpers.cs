@@ -138,6 +138,7 @@ public sealed partial class RegionOverlayForm
             Invalidate(Rectangle.Inflate(bounds, 16, 16));
             _selectedAnnotationIndex = -1;
         }
+        _multiSelectedIndices.Clear();
         if (_moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)
         {
             var bounds = GetAnnotationBounds(_undoStack[_moveHoverIndex]);

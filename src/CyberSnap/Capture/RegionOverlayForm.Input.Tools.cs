@@ -2,6 +2,8 @@ using System.Drawing;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
+using CyberSnap.Models.Commands;
+using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
 
@@ -37,6 +39,49 @@ public sealed partial class RegionOverlayForm
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
+        if (_isMarqueeSelecting)
+        {
+            _marqueeEnd = e.Location;
+            var marqueeRect = NormRect(_marqueeStart, _marqueeEnd);
+            _multiSelectedIndices.Clear();
+            _selectedAnnotationIndex = -1;
+
+            if (marqueeRect.Width >= 2 && marqueeRect.Height >= 2)
+            {
+                for (int i = 0; i < _undoStack.Count; i++)
+                {
+                    var bounds = GetAnnotationBounds(_undoStack[i]);
+                    if (bounds != Rectangle.Empty && marqueeRect.IntersectsWith(bounds))
+                    {
+                        _multiSelectedIndices.Add(i);
+                    }
+                }
+
+                if (_multiSelectedIndices.Count == 1)
+                {
+                    _selectedAnnotationIndex = _multiSelectedIndices.First();
+                    _multiSelectedIndices.Clear();
+                    HideToolBanner();
+                }
+                else if (_multiSelectedIndices.Count > 1)
+                {
+                    _selectedAnnotationIndex = _multiSelectedIndices.Max();
+                    var msg = string.Format(LocalizationService.Translate("{0} objects selected"), _multiSelectedIndices.Count);
+                    ShowToolBanner(msg, persistent: true);
+                }
+                else
+                {
+                    HideToolBanner();
+                }
+            }
+            else
+            {
+                HideToolBanner();
+            }
+
+            Invalidate();
+            return;
+        }
 
         bool needsRepaint = false;
         bool toolbarDirty = false;
@@ -262,6 +307,26 @@ public sealed partial class RegionOverlayForm
         }
 
         // Select tool move drag
+        if (_isSelectDragging && _multiDragOriginals is not null && _multiSelectedIndices.Count > 1)
+        {
+            ClearCrosshairGuides();
+            int dx = e.Location.X - _multiDragStart.X;
+            int dy = e.Location.Y - _multiDragStart.Y;
+            if (Math.Abs(dx) > 0 || Math.Abs(dy) > 0)
+            {
+                foreach (var (mi, orig) in _multiDragOriginals)
+                {
+                    if (mi >= 0 && mi < _undoStack.Count)
+                    {
+                        _undoStack[mi] = MoveAnnotation(orig, dx, dy);
+                    }
+                }
+                MarkCommittedAnnotationsDirty();
+                Invalidate();
+            }
+            return;
+        }
+
         if (_isSelectDragging && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
         {
             ClearCrosshairGuides();
@@ -698,6 +763,14 @@ public sealed partial class RegionOverlayForm
     protected override void OnMouseUp(MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Left) return;
+
+        if (_isMarqueeSelecting)
+        {
+            _isMarqueeSelecting = false;
+            Invalidate();
+            return;
+        }
+
         SetSnapGuides(false, false);
 
         if (_isMouseDownOnCaptureBtn)
@@ -740,6 +813,20 @@ public sealed partial class RegionOverlayForm
 
         // End select drag/resize
         if (_isSelectResizing) { CommitSelectTransform(); _isSelectResizing = false; _selectResizeHandle = -1; _selectResizeOriginalAnnotation = null; UpdateCrosshairGuides(_lastCursorPos); Invalidate(); return; }
+        if (_isSelectDragging && _multiDragOriginals is not null && _multiSelectedIndices.Count > 1)
+        {
+            int dx = e.Location.X - _multiDragStart.X;
+            int dy = e.Location.Y - _multiDragStart.Y;
+            if (dx != 0 || dy != 0)
+            {
+                PushEditCommand(new TransformMultipleAnnotationsCommand(_multiDragOriginals, dx, dy));
+            }
+            _isSelectDragging = false;
+            _multiDragOriginals = null;
+            UpdateCrosshairGuides(_lastCursorPos);
+            Invalidate();
+            return;
+        }
         if (_isSelectDragging) { CommitSelectTransform(); _isSelectDragging = false; UpdateCrosshairGuides(_lastCursorPos); Invalidate(); return; }
         // End text move/resize
         if (_textSelecting) { _textSelecting = false; UpdateCrosshairGuides(_lastCursorPos); return; }

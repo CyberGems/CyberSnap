@@ -18,6 +18,7 @@ public sealed partial class EditorForm
     private Label _coordsLabel = null!;
     private Label _dimensionsLabel = null!;
     private Label _fileNameLabel = null!;
+    private Label _liveStatusLabel = null!;
     private Label _titleFileNameLabel = null!;
     private Label _zoomLabel = null!;
     private EditorZoomSlider _zoomSlider = null!;
@@ -195,39 +196,7 @@ public sealed partial class EditorForm
         dimsPanel.Controls.Add(pxLabel);
         leftStatusFlow.Controls.Add(dimsPanel);
 
-        // Separator 3
-        var sep3 = new Panel { Width = 24, Height = 42, BackColor = Color.Transparent, Margin = new Padding(0) };
-        sep3.Paint += (s, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(40, 255, 255, 255));
-            int y1 = (sep3.Height - 16) / 2;
-            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
-        };
-        leftStatusFlow.Controls.Add(sep3);
 
-        // Filename: Icon + Label
-        var filePanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoSize = true,
-            BackColor = Color.Transparent,
-            Margin = new Padding(0),
-        };
-        var fileIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
-        fileIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "camera", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
-        _fileNameLabel = new DoubleBufferedLabel
-        {
-            AutoSize = true,
-            MaximumSize = new Size(200, 0),
-            Text = "Unsaved capture",
-            ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
-            Margin = new Padding(0, 12, 0, 12),
-        };
-        filePanel.Controls.Add(fileIcon);
-        filePanel.Controls.Add(_fileNameLabel);
-        leftStatusFlow.Controls.Add(filePanel);
 
         // Right-side zoom controls
         _resetZoomBtn = new EditorZoomBarButton
@@ -338,23 +307,35 @@ public sealed partial class EditorForm
         rightControlsFlow.Controls.Add(_fitZoomBtn);
         rightControlsFlow.Controls.Add(_toggleFitSwitch);
 
-        // Two-column layout: left info | right zoom controls
+        _liveStatusLabel = new DoubleBufferedLabel
+        {
+            AutoSize = true,
+            ForeColor = EditorColors.TextSecondary,
+            Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Anchor = AnchorStyles.None,
+            Text = "",
+        };
+
+        // Three-column layout: left info | centered dynamic hint | right zoom controls
         var statusLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            ColumnCount = 2,
+            ColumnCount = 3,
             RowCount = 1,
             Margin = new Padding(0),
             Padding = new Padding(0),
         };
         EnableDoubleBuffering(statusLayout);
-        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
+        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
+        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
         statusLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         statusLayout.Controls.Add(leftStatusFlow, 0, 0);
-        statusLayout.Controls.Add(rightControlsFlow, 1, 0);
+        statusLayout.Controls.Add(_liveStatusLabel, 1, 0);
+        statusLayout.Controls.Add(rightControlsFlow, 2, 0);
         _statusBarPanel.Controls.Add(statusLayout);
 
         // CyberSnap-styled hover hints for the bottom bar, matching the capture toolbar.
@@ -363,7 +344,7 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(_toggleFitSwitch, "Fit the image to the window when the editor opens");
         RegisterHoverTooltip(coordsPanel, "Cursor position over the image (X, Y)");
         RegisterHoverTooltip(dimsPanel, "Image size in pixels");
-        RegisterHoverTooltip(filePanel, "Current file name");
+
         RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", LocalizationService.Translate("key 0")));
         RegisterHoverTooltip(_fitZoomBtn, () => WithShortcut("Zoom to fit the image in the window", "F2"));
         RegisterHoverTooltip(_zoomSlider, () => WithShortcut("Drag to zoom in or out", "+ / -"));
@@ -1123,7 +1104,7 @@ public sealed partial class EditorForm
 
     private void UpdateCaptureCaption()
     {
-        if (_dimensionsLabel is null || _fileNameLabel is null) return;
+        if (_dimensionsLabel is null) return;
 
         var bitmap = _canvas.BaseBitmap;
         var fileName = string.IsNullOrWhiteSpace(_savedFilePath)
@@ -1133,12 +1114,72 @@ public sealed partial class EditorForm
         var dimsText = $"{bitmap.Width} x {bitmap.Height}";
         if (_dimensionsLabel.Text != dimsText)
             _dimensionsLabel.Text = dimsText;
-            
-        if (_fileNameLabel.Text != fileName)
-            _fileNameLabel.Text = fileName;
 
         if (_titleFileNameLabel != null && _titleFileNameLabel.Text != fileName)
             _titleFileNameLabel.Text = fileName;
+    }
+
+    private void UpdateLiveStatusText()
+    {
+        if (_liveStatusLabel is null) return;
+
+        var isSpanish = string.Equals(Services.SettingsService.LoadStatic()?.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
+
+        string hint = _canvas.ActiveTool switch
+        {
+            AnnotationCanvas.CanvasTool.Pan => isSpanish
+                ? "Desplazar: Click izquierdo y arrastrar para moverse, Rueda para zoom"
+                : "Pan: Left click & drag to scroll, Scroll wheel to zoom",
+            AnnotationCanvas.CanvasTool.Move => isSpanish
+                ? "Seleccionar: Click para seleccionar/mover/redimensionar, Del para borrar, Ctrl+A seleccionar todo"
+                : "Select: Click to select/move/resize, Del to delete, Ctrl+A to select all",
+            AnnotationCanvas.CanvasTool.Crop => isSpanish
+                ? "Recortar: Click y arrastrar para recortar, Doble click o Enter para confirmar"
+                : "Crop: Click & drag to crop, Double click or Enter to confirm",
+            AnnotationCanvas.CanvasTool.Text => isSpanish
+                ? "Texto: Click para colocar caja de texto, escribe para añadir texto"
+                : "Text: Click to place text box, type to add text",
+            AnnotationCanvas.CanvasTool.Draw => isSpanish
+                ? "Dibujo libre: Click y arrastrar para dibujar"
+                : "Freehand: Click & drag to draw",
+            AnnotationCanvas.CanvasTool.Arrow => isSpanish
+                ? "Flecha: Click y arrastrar para dibujar una flecha"
+                : "Arrow: Click & drag to draw an arrow",
+            AnnotationCanvas.CanvasTool.CurvedArrow => isSpanish
+                ? "Flecha curva: Click y arrastrar para definir la curva"
+                : "Curved Arrow: Click & drag to define the curve",
+            AnnotationCanvas.CanvasTool.Line => isSpanish
+                ? "Línea: Click y arrastrar para dibujar línea (Shift para restringir)"
+                : "Line: Click & drag to draw a line (Shift to constrain)",
+            AnnotationCanvas.CanvasTool.Rect => isSpanish
+                ? "Rectángulo: Click y arrastrar para dibujar rectángulo (Shift para cuadrado)"
+                : "Rectangle: Click & drag to draw rectangle (Shift for square)",
+            AnnotationCanvas.CanvasTool.Circle => isSpanish
+                ? "Círculo: Click y arrastrar para dibujar círculo (Shift para círculo perfecto)"
+                : "Circle: Click & drag to draw circle (Shift for perfect circle)",
+            AnnotationCanvas.CanvasTool.Eraser => isSpanish
+                ? "Borrador: Click en los objetos para eliminarlos"
+                : "Eraser: Click on annotations to delete them",
+            AnnotationCanvas.CanvasTool.Highlight => isSpanish
+                ? "Resaltador: Click y arrastrar para resaltar un área"
+                : "Highlight: Click & drag to highlight area",
+            AnnotationCanvas.CanvasTool.Blur => isSpanish
+                ? "Difuminar: Click y arrastrar para difuminar región"
+                : "Blur: Click & drag to blur region",
+            AnnotationCanvas.CanvasTool.StepNumber => isSpanish
+                ? "Paso: Click para estampar insignias de número secuenciales"
+                : "Step: Click to stamp sequential step badges",
+            AnnotationCanvas.CanvasTool.Magnifier => isSpanish
+                ? "Lupa: Click para estampar lente de aumento"
+                : "Magnifier: Click to stamp magnifying lens",
+            AnnotationCanvas.CanvasTool.Emoji => isSpanish
+                ? "Emoji: Click para estampar el emoji seleccionado"
+                : "Emoji: Click to stamp selected emoji",
+            _ => isSpanish ? "Listo" : "Ready"
+        };
+
+        if (_liveStatusLabel.Text != hint)
+            _liveStatusLabel.Text = hint;
     }
 
     private string GetCurrentHint()

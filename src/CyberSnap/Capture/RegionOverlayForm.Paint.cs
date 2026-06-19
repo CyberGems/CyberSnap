@@ -84,7 +84,7 @@ public sealed partial class RegionOverlayForm
         PaintAnnotations(g);
 
         // Move tool: hover highlight
-        if (IsDrawingOrMoveMode(_mode) && !IsDraggingAnyAnnotation() && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex)
+        if (IsDrawingOrMoveMode(_mode) && !IsDraggingAnyAnnotation() && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex && !_multiSelectedIndices.Contains(_moveHoverIndex))
         {
             var hovered = _undoStack[_moveHoverIndex];
             var hoverBounds = GetAnnotationBounds(hovered);
@@ -92,11 +92,39 @@ public sealed partial class RegionOverlayForm
         }
 
         // Move tool: draw selection highlight and handles
-        if (IsDrawingOrMoveMode(_mode) && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
+        if (IsDrawingOrMoveMode(_mode) && _multiSelectedIndices.Count > 1)
+        {
+            foreach (int idx in _multiSelectedIndices)
+            {
+                if (idx >= 0 && idx < _undoStack.Count)
+                {
+                    var ann = _undoStack[idx];
+                    var bounds = GetAnnotationBounds(ann);
+                    DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann));
+                }
+            }
+        }
+        else if (IsDrawingOrMoveMode(_mode) && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
         {
             var selected = _selectPreviewAnnotation ?? _undoStack[_selectedAnnotationIndex];
             var bounds = GetAnnotationBounds(selected);
             DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected));
+        }
+
+        // Marquee selection box
+        if (_isMarqueeSelecting)
+        {
+            var marqueeRect = NormRect(_marqueeStart, _marqueeEnd);
+            if (marqueeRect.Width > 0 && marqueeRect.Height > 0)
+            {
+                using (var fillBrush = new SolidBrush(Color.FromArgb(30, 0, 120, 215)))
+                using (var borderPen = new Pen(Color.FromArgb(180, 0, 120, 215), 1.5f))
+                {
+                    borderPen.DashStyle = DashStyle.Dash;
+                    g.FillRectangle(fillBrush, marqueeRect);
+                    g.DrawRectangle(borderPen, marqueeRect);
+                }
+            }
         }
 
         // Eraser hover highlight

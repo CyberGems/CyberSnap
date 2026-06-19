@@ -199,6 +199,12 @@ public sealed partial class RegionOverlayForm : Form
 
     // Select tool state
     private int _selectedAnnotationIndex = -1;
+    private readonly HashSet<int> _multiSelectedIndices = new();
+    private List<(int Index, Annotation Original)>? _multiDragOriginals;
+    private Point _multiDragStart;
+    private bool _isMarqueeSelecting;
+    private Point _marqueeStart;
+    private Point _marqueeEnd;
     private bool _isSelectDragging;
     private bool _isSelectResizing;
     private int _selectResizeHandle = -1; // 0=TL,1=TR,2=BL,3=BR
@@ -964,5 +970,68 @@ public sealed partial class RegionOverlayForm : Form
         int dx = Math.Max(0, Math.Max(r.X - p.X, p.X - r.Right));
         int dy = Math.Max(0, Math.Max(r.Y - p.Y, p.Y - r.Bottom));
         return (int)Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    private void ShowAnnotationContextMenu(Point clickLocation)
+    {
+        var settings = Services.SettingsService.LoadStatic();
+        var isSpanish = string.Equals(settings?.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
+
+        var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: 150);
+        
+        string deleteText;
+        if (_multiSelectedIndices.Count > 1)
+        {
+            deleteText = isSpanish ? "Eliminar selección" : "Delete selection";
+        }
+        else
+        {
+            deleteText = isSpanish ? "Eliminar" : "Delete";
+        }
+
+        var deleteItem = new ToolStripMenuItem(deleteText);
+        deleteItem.Click += (s, e) => {
+            if (_multiSelectedIndices.Count > 1)
+            {
+                DeleteMultiSelectedAnnotations();
+            }
+            else if (_selectedAnnotationIndex >= 0)
+            {
+                DeleteAnnotationAt(_selectedAnnotationIndex);
+            }
+        };
+
+        menu.Items.Add(deleteItem);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 150);
+
+        var screenPoint = PointToScreen(clickLocation);
+        menu.Show(screenPoint);
+    }
+
+    private void ShowToolBanner(string text, bool persistent = false)
+    {
+        if (_banner != null)
+        {
+            _banner.Dispose();
+            _banner = null;
+        }
+        var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+        _banner = new StandaloneToolBanner(
+            text,
+            bannerWorkingArea,
+            Bounds,
+            onInvalidate: () => Invalidate(),
+            persistent: persistent);
+        Invalidate();
+    }
+
+    private void HideToolBanner()
+    {
+        if (_banner != null)
+        {
+            _banner.Dispose();
+            _banner = null;
+            Invalidate();
+        }
     }
 }
