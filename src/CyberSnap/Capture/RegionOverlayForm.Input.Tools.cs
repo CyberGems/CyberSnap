@@ -520,7 +520,11 @@ public sealed partial class RegionOverlayForm
                     ? GetSquareSelectionRect(_selectionStart, nextSelectionEnd)
                     : NormRect(_selectionStart, nextSelectionEnd);
                 if (nextSelectionEnd == oldSelectionCursor && nextSelectionRect == oldSelectionRect)
+                {
+                    if (ShowCrosshairGuides)
+                        UpdateCrosshairGuides(nextSelectionEnd);
                     return;
+                }
                 _selectionEnd = nextSelectionEnd;
                 _selectionRect = nextSelectionRect;
                 if (_selectionRect.Width > 3 || _selectionRect.Height > 3) _hasDragged = true;
