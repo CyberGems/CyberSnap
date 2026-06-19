@@ -661,11 +661,14 @@ public sealed partial class AnnotationCanvas
             int alphaGlow = (int)(40 * _bannerOpacity);
             int alphaText = (int)(255 * _bannerOpacity);
 
+            var bgCol = EditorColors.BgCard;
+            var accentCol = EditorColors.Accent;
+
             using var path = EditorPaint.RoundedRect(new Rectangle((int)x, (int)y, (int)width, (int)height), 8);
-            using var bgBrush = new SolidBrush(Color.FromArgb(alphaBg, 13, 15, 23));
-            using var glowPen = new Pen(Color.FromArgb(alphaGlow, 0, 255, 255), 3f);
-            using var borderPen = new Pen(Color.FromArgb(alphaBorder, 0, 255, 255), 1.2f);
-            using var textBrush = new SolidBrush(Color.FromArgb(alphaText, 0, 255, 255));
+            using var bgBrush = new SolidBrush(Color.FromArgb(alphaBg, bgCol.R, bgCol.G, bgCol.B));
+            using var glowPen = new Pen(Color.FromArgb(alphaGlow, accentCol.R, accentCol.G, accentCol.B), 3f);
+            using var borderPen = new Pen(Color.FromArgb(alphaBorder, accentCol.R, accentCol.G, accentCol.B), 1.2f);
+            using var textBrush = new SolidBrush(Color.FromArgb(alphaText, accentCol.R, accentCol.G, accentCol.B));
 
             g.FillPath(bgBrush, path);
             g.DrawPath(glowPen, path);

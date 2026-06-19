@@ -1481,7 +1481,7 @@ internal sealed class EditorToolButton : EditorButtonBase
 {
     // Slightly-elevated graphite resting fill so the tool buttons lift off the darker
     // panel instead of blending into it, and read well against their cyan borders.
-    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(226, 233, 244);
+    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(255, 255, 255);
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Checked
@@ -1876,7 +1876,7 @@ internal abstract class EditorButtonBase : Button
             return EditorColors.IsDark ? Color.FromArgb(26, 255, 255, 255) : Color.FromArgb(20, 0, 0, 0);
         if (active || _hover)
             return Color.FromArgb(150, EditorColors.Accent.R, EditorColors.Accent.G, EditorColors.Accent.B);
-        return EditorColors.BorderSubtle;
+        return EditorColors.IsDark ? EditorColors.BorderSubtle : Color.FromArgb(180, 204, 214, 226);
     }
 
     private Color ResolveContent(bool active)
