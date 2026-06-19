@@ -467,11 +467,10 @@ public sealed partial class EditorForm
         // Spacer between settings and saveAs
         topActions.Controls.Add(MakeSeparator());
 
-        var saveAsButton = MakeCommandButton("download", LocalizationService.Translate("Save As"), false);
-        saveAsButton.Width = 82;
-        saveAsButton.Click += (_, _) => DoSaveAs();
-        RegisterHoverTooltip(saveAsButton, () => WithShortcut("Save the image as a new file", "Ctrl+Shift+S"), above: false);
-        topActions.Controls.Add(saveAsButton);
+        var exportButton = MakeCommandButton("export", LocalizationService.Translate("Export"), false);
+        exportButton.Click += (_, _) => DoSaveAs();
+        RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Export the image"), "Ctrl+Shift+S"), above: false);
+        topActions.Controls.Add(exportButton);
 
         _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
         _saveButton.Click += (_, _) => DoSave();
@@ -826,12 +825,19 @@ public sealed partial class EditorForm
 
     private EditorCommandButton MakeCommandButton(string iconId, string text, bool primary)
     {
+        int width = 74;
+        using (var g = CreateGraphics())
+        using (var font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold, GraphicsUnit.Point))
+        {
+            var size = TextRenderer.MeasureText(g, text, font);
+            width = Math.Max(74, size.Width + 16);
+        }
         return new EditorCommandButton
         {
             IconId = iconId,
             Text = text,
             Primary = primary,
-            Width = 74,
+            Width = width,
             Height = 62,
             Margin = new Padding(2, 0, 2, 0),
         };
@@ -960,7 +966,8 @@ public sealed partial class EditorForm
         _undoButton.Primary = _canvas.CanUndo;
         _redoButton.Enabled = _canvas.CanRedo;
         _redoButton.Primary = _canvas.CanRedo;
-        _saveButton.Primary = _canvas.IsDirty;
+        _saveButton.Enabled = _canvas.IsDirty && !_canvas.IsDefaultBlank;
+        _saveButton.Primary = _saveButton.Enabled;
         _pasteButton.Enabled = Clipboard.ContainsImage();
         UpdateColorSwatch();
         UpdateStrokeWidthButtons();
