@@ -847,6 +847,24 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         return output;
     }
 
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal int SelectedAnnotationIndexInternal
+    {
+        get => _selectedAnnotationIndex;
+        set => _selectedAnnotationIndex = value;
+    }
+
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    internal HashSet<int> MultiSelectedIndicesInternal => _multiSelectedIndices;
+
+    internal int HitTestAnnotationInternal(Point pt) => HitTestAnnotation(pt);
+
+    internal void DeleteAnnotationAtInternal(int index) => DeleteAnnotationAt(index);
+
+    internal void DeleteMultiSelectedAnnotationsInternal() => DeleteMultiSelectedAnnotations();
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)

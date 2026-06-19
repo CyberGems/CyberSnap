@@ -149,10 +149,18 @@ public sealed partial class RegionOverlayForm
         }
 
         // Delete selected annotation
-        if (e.KeyCode == Keys.Delete && _mode == CaptureMode.Move && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
+        if (e.KeyCode == Keys.Delete && _mode == CaptureMode.Move)
         {
-            DeleteAnnotationAt(_selectedAnnotationIndex);
-            return;
+            if (_multiSelectedIndices.Count > 1)
+            {
+                DeleteMultiSelectedAnnotations();
+                return;
+            }
+            else if (_selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
+            {
+                DeleteAnnotationAt(_selectedAnnotationIndex);
+                return;
+            }
         }
     }
 

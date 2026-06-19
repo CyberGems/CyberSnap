@@ -18,6 +18,18 @@ public sealed partial class RegionOverlayForm
                 ShowToolbarContextMenu(rightClickBtn, e.Location);
                 return;
             }
+            int hit = HitTestAnnotation(e.Location);
+            if (hit >= 0)
+            {
+                if (!_multiSelectedIndices.Contains(hit))
+                {
+                    _selectedAnnotationIndex = hit;
+                    _multiSelectedIndices.Clear();
+                    Invalidate();
+                }
+                ShowAnnotationContextMenu(e.Location);
+                return;
+            }
             Cancel();
             return;
         }
@@ -368,20 +380,42 @@ public sealed partial class RegionOverlayForm
             int hit = HitTestAnnotation(e.Location);
             if (hit >= 0)
             {
-                _selectedAnnotationIndex = hit;
-                _isSelectDragging = true;
-                var bounds = GetAnnotationBounds(_undoStack[hit]);
-                _selectPreviewAnnotation = _undoStack[hit];
-                _selectDragStart = e.Location;
-                _selectDragOffset = new Point(e.Location.X - bounds.X, e.Location.Y - bounds.Y);
-                _renderSkipIndex = hit;
-                MarkCommittedAnnotationsDirty();
-                ClearCrosshairGuides();
-                Invalidate();
+                if (_multiSelectedIndices.Count > 1 && _multiSelectedIndices.Contains(hit))
+                {
+                    _isSelectDragging = true;
+                    _multiDragStart = e.Location;
+                    _multiDragOriginals = _multiSelectedIndices
+                        .Where(i => i >= 0 && i < _undoStack.Count)
+                        .Select(i => (i, _undoStack[i]))
+                        .ToList();
+                    _selectedAnnotationIndex = hit;
+                    ClearCrosshairGuides();
+                    Invalidate();
+                }
+                else
+                {
+                    _multiSelectedIndices.Clear();
+                    _multiDragOriginals = null;
+                    _selectedAnnotationIndex = hit;
+                    _isSelectDragging = true;
+                    var bounds = GetAnnotationBounds(_undoStack[hit]);
+                    _selectPreviewAnnotation = _undoStack[hit];
+                    _selectDragStart = e.Location;
+                    _selectDragOffset = new Point(e.Location.X - bounds.X, e.Location.Y - bounds.Y);
+                    _renderSkipIndex = hit;
+                    MarkCommittedAnnotationsDirty();
+                    ClearCrosshairGuides();
+                    Invalidate();
+                }
             }
             else
             {
                 _selectedAnnotationIndex = -1;
+                _multiSelectedIndices.Clear();
+                _isMarqueeSelecting = true;
+                _marqueeStart = e.Location;
+                _marqueeEnd = e.Location;
+                HideToolBanner();
                 Invalidate();
             }
             return;

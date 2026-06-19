@@ -481,6 +481,7 @@ public sealed partial class EditorForm : Form
         UpdateZoomStatus();
         UpdateToolButtonState();
         UpdateCaptureCaption();
+        UpdateLiveStatusText();
     }
 
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
@@ -1056,6 +1057,25 @@ public sealed partial class EditorForm : Form
     {
         if (e.Button != MouseButtons.Right) return;
 
+        var imgPt = _canvas.PointFromScreenToImage(e.Location);
+        int hit = _canvas.HitTestAnnotationInternal(imgPt);
+        if (hit >= 0)
+        {
+            if (_canvas.ActiveTool != AnnotationCanvas.CanvasTool.Move)
+            {
+                _canvas.ActiveTool = AnnotationCanvas.CanvasTool.Move;
+            }
+
+            if (!_canvas.MultiSelectedIndicesInternal.Contains(hit))
+            {
+                _canvas.SelectedAnnotationIndexInternal = hit;
+                _canvas.MultiSelectedIndicesInternal.Clear();
+                _canvas.Invalidate();
+            }
+            ShowEditorAnnotationContextMenu(e.Location);
+            return;
+        }
+
         // Right-click escapes the active tool: it cancels any in-progress action and
         // deselects the tool instead of opening a context menu. Only when no tool is
         // active (neutral Pan state) does the canvas/image context menu appear.
@@ -1090,7 +1110,7 @@ public sealed partial class EditorForm : Form
             return;
         }
 
-        var imgPt = _canvas.PointFromScreenToImage(e.Location);
+        imgPt = _canvas.PointFromScreenToImage(e.Location);
         bool onImage = imgPt.X >= 0 && imgPt.Y >= 0
             && imgPt.X < _canvas.BaseBitmap.Width
             && imgPt.Y < _canvas.BaseBitmap.Height;
@@ -1106,6 +1126,38 @@ public sealed partial class EditorForm : Form
             _canvasMenu ??= BuildCanvasContextMenu();
             _canvasMenu.Show(_canvas, e.Location);
         }
+    }
+
+    private void ShowEditorAnnotationContextMenu(Point clickLocation)
+    {
+        var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: 150);
+        
+        string deleteText;
+        if (_canvas.MultiSelectedIndicesInternal.Count > 1)
+        {
+            deleteText = LocalizationService.Translate("Delete selection");
+        }
+        else
+        {
+            deleteText = LocalizationService.Translate("Delete");
+        }
+
+        var deleteItem = new ToolStripMenuItem(deleteText);
+        deleteItem.Click += (s, e) => {
+            if (_canvas.MultiSelectedIndicesInternal.Count > 1)
+            {
+                _canvas.DeleteMultiSelectedAnnotationsInternal();
+            }
+            else if (_canvas.SelectedAnnotationIndexInternal >= 0)
+            {
+                _canvas.DeleteAnnotationAtInternal(_canvas.SelectedAnnotationIndexInternal);
+            }
+        };
+
+        menu.Items.Add(deleteItem);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 150);
+
+        menu.Show(_canvas, clickLocation);
     }
 
     private void DoOpenLocation()

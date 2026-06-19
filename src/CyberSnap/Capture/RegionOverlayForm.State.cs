@@ -612,9 +612,27 @@ public sealed partial class RegionOverlayForm
         return true;
     }
 
+    private void DeleteMultiSelectedAnnotations()
+    {
+        var items = _multiSelectedIndices
+            .Where(i => i >= 0 && i < _undoStack.Count)
+            .Select(i => (i, _undoStack[i]))
+            .ToList();
+        if (items.Count == 0) return;
+
+        int count = items.Count;
+        PushEditCommand(new DeleteMultipleAnnotationsCommand(items));
+        _selectedAnnotationIndex = -1;
+        _multiSelectedIndices.Clear();
+        var msg = string.Format(LocalizationService.Translate("{0} objects deleted"), count);
+        ShowToolBanner(msg);
+        Invalidate();
+    }
+
     private void ResetSelectedAnnotationState()
     {
         _selectedAnnotationIndex = -1;
+        _multiSelectedIndices.Clear();
         _selectPreviewAnnotation = null;
         _selectResizeOriginalAnnotation = null;
         _renderSkipIndex = -1;
