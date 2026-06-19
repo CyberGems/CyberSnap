@@ -8,6 +8,7 @@ using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Models.Commands;
 using CyberSnap.Services;
+using CyberSnap.UI.Editor;
 
 namespace CyberSnap.UI.Controls;
 
@@ -23,6 +24,11 @@ public sealed partial class AnnotationCanvas
     // Last cursor position in image space (for the Emoji placement ghost).
     private Point _hoverImg;
     private bool _hoverImgValid;
+
+    // Last cursor position in client/screen space and whether the pointer is over the
+    // canvas — drives the floating tool-color/stroke chip that follows the cursor.
+    private Point _cursorClient;
+    private bool _cursorOnCanvas;
 
     /// <summary>Raised when the Emoji tool is clicked with no emoji chosen yet, so the
     /// host can open its picker.</summary>
@@ -449,6 +455,15 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
+
+        // Track the pointer so the floating tool chip can follow it. Repaint on plain
+        // hover (the draw/shape tools otherwise only update the cursor here) so the chip
+        // keeps up; redundant Invalidate calls within one message coalesce into one paint.
+        _cursorClient = e.Location;
+        _cursorOnCanvas = true;
+        if (!_isDragging && !_isPanning && !_cropDragging && _preSpaceTool == null
+            && ToolShowsCursorChip(_activeTool))
+            Invalidate();
 
         if (_activeDraggedHorizontalGuideIndex >= 0)
         {
@@ -935,6 +950,12 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseLeave(EventArgs e)
     {
         base.OnMouseLeave(e);
+        if (_cursorOnCanvas)
+        {
+            _cursorOnCanvas = false;
+            if (ToolShowsCursorChip(_activeTool))
+                Invalidate();
+        }
         if (_eraserHoverIndex >= 0)
         {
             _eraserHoverIndex = -1;
@@ -1184,6 +1205,107 @@ public sealed partial class AnnotationCanvas
                 if (blurPrev.Width > 2 && blurPrev.Height > 2)
                     PaintBlurRect(g, blurPrev);
                 break;
+        }
+    }
+
+    // ── Cursor tool chip (color + stroke, drawn in screen space) ───────────
+
+    /// <summary>Tools whose color (and possibly stroke) the cursor chip should preview.</summary>
+    private static bool ToolShowsCursorChip(CanvasTool t) => t is
+        CanvasTool.Draw or CanvasTool.Arrow or CanvasTool.CurvedArrow or
+        CanvasTool.Line or CanvasTool.Rect or CanvasTool.Circle or CanvasTool.Highlight;
+
+    /// <summary>Of the chip tools, the ones that actually carry a stroke width to show.</summary>
+    private static bool ToolChipHasStroke(CanvasTool t) => t is
+        CanvasTool.Draw or CanvasTool.Arrow or CanvasTool.CurvedArrow or
+        CanvasTool.Line or CanvasTool.Rect or CanvasTool.Circle;
+
+    /// <summary>
+    /// Small chip that floats just off the cursor showing the active drawing tool's color
+    /// (and stroke width where it applies), so the user can confirm what they're about to
+    /// draw without looking back at the toolbar. Drawn in screen space; suppressed while
+    /// dragging (the live stroke preview already conveys this), while editing text, and
+    /// while hovering an existing annotation to move/resize it.
+    /// </summary>
+    private void RenderCursorToolPreview(Graphics g)
+    {
+        if (!_cursorOnCanvas || _isDragging || _isPanning || _cropDragging) return;
+        if (_preSpaceTool != null || _inlineTextBox is not null) return;
+        if (!ToolShowsCursorChip(_activeTool)) return;
+        // Don't compete with the move/resize affordance when over an annotation.
+        if (_moveHoverIndex >= 0 || _selectedAnnotationIndex >= 0) return;
+
+        bool hasStroke = ToolChipHasStroke(_activeTool);
+        var color = ToolColor;
+
+        var oldSmoothing = g.SmoothingMode;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        try
+        {
+            // Color dot diameter tracks the actual stroke width (clamped so the chip stays small).
+            float dotD = hasStroke ? Math.Clamp(StrokeWidth, 6f, 20f) : 14f;
+            string label = hasStroke ? $"{(int)Math.Round(StrokeWidth)} px" : string.Empty;
+
+            using var font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Regular, GraphicsUnit.Point);
+            SizeF textSize = label.Length > 0 ? g.MeasureString(label, font) : SizeF.Empty;
+
+            const int padX = 7, padY = 5, gap = 6;
+            float contentH = Math.Max(dotD, textSize.Height);
+            int chipW = padX + (int)Math.Ceiling(dotD)
+                + (label.Length > 0 ? gap + (int)Math.Ceiling(textSize.Width) : 0) + padX;
+            int chipH = padY + (int)Math.Ceiling(contentH) + padY;
+
+            // Float down-right of the pointer, flipping near the right/bottom edges so the
+            // chip never spills off-canvas or sits under the cursor hotspot.
+            const int off = 18;
+            int x = _cursorClient.X + off;
+            int y = _cursorClient.Y + off;
+            if (x + chipW > ClientSize.Width) x = _cursorClient.X - off - chipW;
+            if (y + chipH > ClientSize.Height) y = _cursorClient.Y - off - chipH;
+            x = Math.Max(0, x);
+            y = Math.Max(0, y);
+            var chipRect = new Rectangle(x, y, chipW, chipH);
+
+            using (var shadowPath = EditorPaint.RoundedRect(new Rectangle(chipRect.X + 1, chipRect.Y + 2, chipRect.Width, chipRect.Height), 6))
+            using (var shadow = new SolidBrush(Color.FromArgb(60, 0, 0, 0)))
+                g.FillPath(shadow, shadowPath);
+
+            using (var path = EditorPaint.RoundedRect(chipRect, 6))
+            using (var bg = new SolidBrush(Color.FromArgb(235, EditorColors.BgCard)))
+            using (var border = new Pen(Color.FromArgb(120, EditorColors.Accent), 1f))
+            {
+                g.FillPath(bg, path);
+                g.DrawPath(border, path);
+            }
+
+            float dotX = chipRect.X + padX;
+            float dotY = chipRect.Y + (chipRect.Height - dotD) / 2f;
+            if (_activeTool == CanvasTool.Highlight)
+            {
+                // Translucent swatch mirrors how the highlighter actually paints.
+                using var hl = new SolidBrush(Color.FromArgb(150, color.R, color.G, color.B));
+                g.FillEllipse(hl, dotX, dotY, dotD, dotD);
+            }
+            else
+            {
+                using var dot = new SolidBrush(color);
+                g.FillEllipse(dot, dotX, dotY, dotD, dotD);
+            }
+            // Contrasting ring so pale/white tool colors stay visible against the card.
+            using (var ring = new Pen(Color.FromArgb(110, 0, 0, 0), 1f))
+                g.DrawEllipse(ring, dotX, dotY, dotD, dotD);
+
+            if (label.Length > 0)
+            {
+                float tx = dotX + dotD + gap;
+                float ty = chipRect.Y + (chipRect.Height - textSize.Height) / 2f;
+                using var tb = new SolidBrush(EditorColors.TextSecondary);
+                g.DrawString(label, font, tb, tx, ty);
+            }
+        }
+        finally
+        {
+            g.SmoothingMode = oldSmoothing;
         }
     }
 

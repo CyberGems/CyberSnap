@@ -849,11 +849,12 @@ public partial class HistoryWindow
     private string GetCurrentHistoryCategoryLabel(int count)
         => LocalizationService.Translate(HistoryCategoryCombo.SelectedIndex switch
         {
-            0 => count == 1 ? "screenshot" : "screenshots",
-            1 => count == 1 ? "text capture" : "text captures",
+            0 => count == 1 ? "history item" : "history items",
+            1 => count == 1 ? "screenshot" : "screenshots",
             2 => count == 1 ? "video/GIF" : "videos & GIFs",
-            3 => count == 1 ? "color" : "colors",
-            4 => count == 1 ? "QR & Barcode scan" : "QR & Barcode scans",
+            3 => count == 1 ? "text capture" : "text captures",
+            4 => count == 1 ? "color" : "colors",
+            5 => count == 1 ? "QR & Barcode scan" : "QR & Barcode scans",
             _ => count == 1 ? "history item" : "history items"
         });
 
@@ -1225,16 +1226,22 @@ public partial class HistoryWindow
 
     private static string BuildDeleteAllConfirmationTitle(int step, int totalCount, string categoryLabel)
     {
-        return $"Delete {totalCount} {categoryLabel} ({step}/3)";
+        var del = LocalizationService.Translate("Delete");
+        return $"{del} {totalCount} {categoryLabel} ({step}/3)";
     }
 
     private static string BuildDeleteAllConfirmationMessage(int step, int totalCount, string categoryLabel)
     {
+        var del = LocalizationService.Translate("Delete");
+        var all = LocalizationService.Translate("all");
+        var tab = LocalizationService.Translate("in this history tab");
+        var really = LocalizationService.Translate("Really delete all");
+        var undone = LocalizationService.Translate("This cannot be undone. Delete all");
         return step switch
         {
-            1 => $"Delete all {totalCount} {categoryLabel} in this history tab?",
-            2 => $"Really delete all {totalCount} {categoryLabel}?",
-            3 => $"This cannot be undone. Delete all {totalCount} {categoryLabel}?",
+            1 => $"{del} {all} {totalCount} {categoryLabel} {tab}?",
+            2 => $"{really} {totalCount} {categoryLabel}?",
+            3 => $"{undone} {totalCount} {categoryLabel}?",
             _ => ""
         };
     }

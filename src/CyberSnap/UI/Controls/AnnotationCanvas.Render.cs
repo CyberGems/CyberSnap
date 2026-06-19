@@ -54,6 +54,7 @@ public sealed partial class AnnotationCanvas
         RenderCheckerboardFrame(g);
         RenderGuides(g);
         RenderToolBanner(g);
+        RenderCursorToolPreview(g);
 
         if (IsDefaultBlank && !_userPanned)
             RenderWelcomeText(g);
