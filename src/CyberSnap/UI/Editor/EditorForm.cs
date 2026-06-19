@@ -382,15 +382,6 @@ public sealed partial class EditorForm : Form
     private void RefreshUi()
     {
         UpdateZoomStatus();
-        if (!_saveStatusTimer.Enabled)
-        {
-            _hintLabel.Text = "";
-            _hintLabel.Visible = false;
-        }
-        else
-        {
-            _hintLabel.Visible = true;
-        }
         UpdateToolButtonState();
         UpdateCaptureCaption();
     }
@@ -501,11 +492,6 @@ public sealed partial class EditorForm : Form
 
     private void ShowSaveStatus(string filePath)
     {
-        var fileName = Path.GetFileName(filePath);
-        var text = string.IsNullOrWhiteSpace(fileName) ? "Saved" : $"Saved: {fileName}";
-        if (_hintLabel.Text != text)
-            _hintLabel.Text = text;
-        _hintLabel.Visible = true;
         _saveStatusTimer.Stop();
         _saveStatusTimer.Start();
     }
