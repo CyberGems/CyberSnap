@@ -383,6 +383,12 @@ public sealed partial class EditorForm : Form
             return;
         }
 
+        if (ctrl is EditorZoomHostPanel || ctrl.Parent is EditorZoomHostPanel)
+        {
+            ctrl.BackColor = EditorColors.TitleBar;
+            return;
+        }
+
         if (ctrl == _toolbarPanel)
         {
             ctrl.BackColor = EditorColors.BgSecondary;
@@ -415,7 +421,9 @@ public sealed partial class EditorForm : Form
         {
             if (label == _dimensionsLabel)
                 label.ForeColor = EditorColors.TextMuted;
-            else if (label == _coordsLabel || label == _zoomLabel || label == _fileNameLabel || label == _titleFileNameLabel)
+            else if (label == _zoomLabel)
+                label.ForeColor = EditorColors.Accent;
+            else if (label == _coordsLabel || label == _fileNameLabel || label == _titleFileNameLabel)
                 label.ForeColor = EditorColors.TextSecondary;
             else
                 label.ForeColor = EditorColors.TextPrimary;
