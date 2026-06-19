@@ -587,5 +587,18 @@
   "Show instruction banners for ruler, color picker, OCR, and recording.": "Show instruction banners for ruler, color picker, OCR, and recording.",
   "Click & drag to capture · Toolbar below · Right-click or Esc to cancel": "Click & drag to capture · Toolbar below · Right-click or Esc to cancel",
   "Click & drag to scan QR or barcodes  ·  Right-click or Esc to close": "Click & drag to scan QR or barcodes  ·  Right-click or Esc to close",
-  "QR & Barcodes": "QR & Barcodes"
+  "QR & Barcodes": "QR & Barcodes",
+  "Cyan": "Cyan",
+  "Blue": "Blue",
+  "Purple": "Purple",
+  "Red": "Red",
+  "Orange": "Orange",
+  "Yellow": "Yellow",
+  "Green": "Green",
+  "White": "White",
+  "Dark Slate": "Dark Slate",
+  "Pink": "Pink",
+  "Gray": "Gray",
+  "Black": "Black",
+  "Width: {0}px": "Width: {0}px"
 }
