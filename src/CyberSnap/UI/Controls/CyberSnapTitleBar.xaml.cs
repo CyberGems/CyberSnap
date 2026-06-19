@@ -127,7 +127,7 @@ public partial class CyberSnapTitleBar : UserControl
             {
                 Header = LocalizationService.Translate("Search bar"),
                 IsCheckable = true,
-                ToolTip = "Show or hide the search bar"
+                ToolTip = LocalizationService.Translate("Show or hide the search bar")
             };
             searchToggle.Checked += (_, _) => ToggleSetting("ShowImageSearchBar", true);
             searchToggle.Unchecked += (_, _) => ToggleSetting("ShowImageSearchBar", false);
@@ -137,7 +137,7 @@ public partial class CyberSnapTitleBar : UserControl
             {
                 Header = LocalizationService.Translate("Auto-Pruning"),
                 IsCheckable = true,
-                ToolTip = "Show or hide the auto-pruning controls"
+                ToolTip = LocalizationService.Translate("Show or hide the auto-pruning controls")
             };
             pruneToggle.Checked += (_, _) => ToggleSetting("ShowAutoPrune", true);
             pruneToggle.Unchecked += (_, _) => ToggleSetting("ShowAutoPrune", false);
@@ -154,9 +154,9 @@ public partial class CyberSnapTitleBar : UserControl
 
             var configItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Configuration"),
+                Header = LocalizationService.Translate("Configuration..."),
                 Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 16), Width = 16, Height = 16 },
-                ToolTip = "Open the full Settings window"
+                ToolTip = LocalizationService.Translate("Open the full Configuration window")
             };
             configItem.Click += (_, _) =>
             {
