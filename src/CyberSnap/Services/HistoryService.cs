@@ -675,7 +675,7 @@ public sealed partial class HistoryService : IDisposable
         try
         {
             var settings = SettingsService.LoadStatic();
-            if (!settings.SaveHistory || !settings.SaveStandaloneToHistory) return;
+            if (settings is null || !settings.SaveHistory || !settings.SaveStandaloneToHistory) return;
 
             var primary = PrimaryInstance;
             if (primary != null)
@@ -698,7 +698,7 @@ public sealed partial class HistoryService : IDisposable
         try
         {
             var settings = SettingsService.LoadStatic();
-            if (!settings.SaveHistory || !settings.SaveStandaloneToHistory) return;
+            if (settings is null || !settings.SaveHistory || !settings.SaveStandaloneToHistory) return;
 
             var primary = PrimaryInstance;
             if (primary != null)
@@ -721,7 +721,7 @@ public sealed partial class HistoryService : IDisposable
         try
         {
             var settings = SettingsService.LoadStatic();
-            if (!settings.SaveHistory || !settings.SaveStandaloneToHistory) return;
+            if (settings is null || !settings.SaveHistory || !settings.SaveStandaloneToHistory) return;
 
             var primary = PrimaryInstance;
             if (primary != null)
