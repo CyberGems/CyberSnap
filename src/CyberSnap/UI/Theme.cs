@@ -9,11 +9,11 @@ public static class Theme
     public static bool IsDark { get; private set; } = true;
 
     // Backgrounds - Cyberpunk deep blues
-    public static Color BgPrimary => IsDark ? C(13, 15, 23) : C(243, 243, 243);
-    public static Color BgSecondary => IsDark ? C(18, 20, 31) : C(249, 249, 249);
-    public static Color BgElevated => IsDark ? C(23, 26, 40) : C(255, 255, 255);
-    public static Color BgHover => IsDark ? C(33, 38, 58) : C(229, 229, 229);
-    public static Color BgCard => IsDark ? C(23, 26, 40) : C(255, 255, 255);
+    public static Color BgPrimary => IsDark ? C(13, 15, 23) : C(223, 226, 234);
+    public static Color BgSecondary => IsDark ? C(18, 20, 31) : C(230, 233, 241);
+    public static Color BgElevated => IsDark ? C(23, 26, 40) : C(236, 239, 246);
+    public static Color BgHover => IsDark ? C(33, 38, 58) : C(214, 218, 229);
+    public static Color BgCard => IsDark ? C(23, 26, 40) : C(236, 239, 246);
     public static Color BgOverlay => IsDark ? CA(0, 0, 0, 160) : CA(0, 0, 0, 100);
 
     // Text
@@ -40,9 +40,9 @@ public static class Theme
     public static Color SelectionBg => IsDark ? CA(0, 255, 255, 25) : CA(0, 120, 215, 10);
 
     // Window chrome
-    public static Color TitleBar => IsDark ? C(10, 12, 18) : C(240, 240, 240);
+    public static Color TitleBar => IsDark ? C(10, 12, 18) : C(220, 223, 232);
     public static Color WindowBorder => IsDark ? CA(0, 255, 255, 75) : CA(0, 0, 0, 20);
-    public static Color CardBg => IsDark ? C(23, 26, 40) : C(255, 255, 255);
+    public static Color CardBg => IsDark ? C(23, 26, 40) : C(236, 239, 246);
     public static Color TabActiveBg => IsDark ? CA(0, 255, 255, 25) : CA(0, 0, 0, 16);
     public static Color TabHoverBg => IsDark ? CA(0, 255, 255, 12) : CA(0, 0, 0, 10);
     public static Color PreviewStroke => IsDark ? CA(0, 255, 255, 64) : CA(0, 0, 0, 25);
@@ -55,7 +55,7 @@ public static class Theme
     public static Color Separator => IsDark ? CA(255, 255, 255, 16) : CA(0, 0, 0, 10);
 
     // Toast background (needs to be opaque enough to read)
-    public static Color ToastBg => IsDark ? C(26, 27, 31) : C(252, 252, 252);
+    public static Color ToastBg => IsDark ? C(26, 27, 31) : C(234, 237, 244);
     public static Color ToastBorder => IsDark ? CA(255, 255, 255, 30) : CA(0, 0, 0, 18);
 
     public static SolidColorBrush Brush(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
@@ -80,7 +80,7 @@ public static class Theme
         resources["ThemeWindowBorderBrush"] = Brush(WindowBorder);
         resources["ThemeSeparatorBrush"] = Brush(Separator);
         resources["ThemeAccentBrush"] = Brush(Accent);
-        resources["ThemeTooltipBackgroundBrush"] = Brush(IsDark ? C(20, 20, 20) : C(250, 250, 250));
+        resources["ThemeTooltipBackgroundBrush"] = Brush(IsDark ? C(20, 20, 20) : C(233, 236, 243));
         resources["ThemeTooltipBorderBrush"] = Brush(IsDark ? CA(255, 255, 255, 26) : CA(0, 0, 0, 16));
         resources["SoundItemCustomSourceBrush"] = Brush(AccentHover);
     }
