@@ -494,22 +494,31 @@ public sealed partial class EditorForm
         titleBarPanel.Controls.Add(windowActions);
 
         // Row 2: Command Bar Panel
-        var commandBarPanel = new Panel
+        var commandBarPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            Padding = new Padding(22, 0, 18, 0),
+            ColumnCount = 3,
+            RowCount = 1,
+            Margin = new Padding(0),
+            Padding = new Padding(0),
         };
+        EnableDoubleBuffering(commandBarPanel);
+        commandBarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        commandBarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        commandBarPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        commandBarPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         commandBarPanel.MouseDown += BeginWindowDrag;
 
         var commandActions = new FlowLayoutPanel
         {
-            Dock = DockStyle.Fill,
-            BackColor = Color.Transparent,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
+            AutoSize = true,
+            BackColor = Color.Transparent,
             Padding = new Padding(0),
             Margin = new Padding(0),
+            Anchor = AnchorStyles.None, // centers horizontally and vertically in the middle column
         };
         commandActions.MouseDown += BeginWindowDrag;
 
@@ -569,7 +578,7 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Export the image"), "Ctrl+Shift+S"), above: false);
         commandActions.Controls.Add(exportButton);
 
-        commandBarPanel.Controls.Add(commandActions);
+        commandBarPanel.Controls.Add(commandActions, 1, 0);
 
         _topBarPanel.Controls.Add(commandBarPanel);
         _topBarPanel.Controls.Add(titleBarPanel);
