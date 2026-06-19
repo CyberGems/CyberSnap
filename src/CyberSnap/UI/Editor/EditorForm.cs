@@ -721,6 +721,7 @@ public sealed partial class EditorForm : Form
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
         if (keyData == (Keys.Control | Keys.V)) { DoPaste(); return true; }
+        if (keyData == (Keys.Control | Keys.A)) { _canvas.SelectAll(); return true; }
         return base.ProcessCmdKey(ref msg, keyData);
     }
 
