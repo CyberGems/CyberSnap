@@ -539,7 +539,7 @@ public partial class SettingsWindow
                         Theme.ApplyTo(Application.Current.Resources);
                         w.InvalidateVisual();
 
-                        if (w is HistoryWindow hw)
+                        if (w is HistoryWindow hw && hw.IsLoaded)
                             hw.ApplyThemeColors();
                     }
                     catch (Exception ex)
