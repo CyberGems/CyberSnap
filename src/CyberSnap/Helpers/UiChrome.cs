@@ -80,9 +80,9 @@ public static class UiChrome
     public static FontFamily FontFamily =>
         TryCreateFontFamily(PreferredFamilyName) ?? TryCreateFontFamily(FallbackFamilyName) ?? SystemFonts.DefaultFont.FontFamily;
 
-    public static System.Drawing.Color SurfaceWindowBackground => IsDark ? System.Drawing.Color.FromArgb(28, 28, 28) : System.Drawing.Color.FromArgb(245, 245, 245);
-    public static System.Drawing.Color SurfaceBackground => IsDark ? System.Drawing.Color.FromArgb(40, 43, 44) : System.Drawing.Color.FromArgb(252, 252, 252);
-    public static System.Drawing.Color SurfaceElevated => IsDark ? System.Drawing.Color.FromArgb(255, 46, 49, 50) : System.Drawing.Color.FromArgb(255, 255, 255);
+    public static System.Drawing.Color SurfaceWindowBackground => IsDark ? System.Drawing.Color.FromArgb(28, 28, 28) : System.Drawing.Color.FromArgb(223, 226, 234);
+    public static System.Drawing.Color SurfaceBackground => IsDark ? System.Drawing.Color.FromArgb(40, 43, 44) : System.Drawing.Color.FromArgb(230, 233, 241);
+    public static System.Drawing.Color SurfaceElevated => IsDark ? System.Drawing.Color.FromArgb(255, 46, 49, 50) : System.Drawing.Color.FromArgb(236, 239, 246);
     public static System.Drawing.Color SurfaceBorder => IsDark ? System.Drawing.Color.FromArgb(26, 255, 255, 255) : System.Drawing.Color.FromArgb(24, 0, 0, 0);
     public static System.Drawing.Color SurfaceBorderStrong => IsDark ? System.Drawing.Color.FromArgb(38, 255, 255, 255) : System.Drawing.Color.FromArgb(36, 0, 0, 0);
     public static System.Drawing.Color SurfaceBorderSubtle => IsDark ? System.Drawing.Color.FromArgb(22, 255, 255, 255) : System.Drawing.Color.FromArgb(14, 0, 0, 0);
@@ -90,10 +90,10 @@ public static class UiChrome
     public static System.Drawing.Color SurfaceTextSecondary => IsDark ? System.Drawing.Color.FromArgb(192, 197, 204) : System.Drawing.Color.FromArgb(120, 0, 0, 0);
     public static System.Drawing.Color SurfaceTextMuted => IsDark ? System.Drawing.Color.FromArgb(120, 130, 146) : System.Drawing.Color.FromArgb(90, 0, 0, 0);
     public static System.Drawing.Color SurfaceHover => IsDark ? System.Drawing.Color.FromArgb(22, 75, 130, 246) : System.Drawing.Color.FromArgb(14, 0, 120, 215);
-    public static System.Drawing.Color SurfacePill => IsDark ? System.Drawing.Color.FromArgb(255, 46, 49, 50) : System.Drawing.Color.FromArgb(255, 255, 255, 255);
-    public static System.Drawing.Color SurfaceTier1 => IsDark ? System.Drawing.Color.FromArgb(255, 26, 27, 31) : System.Drawing.Color.FromArgb(255, 242, 242, 245);
-    public static System.Drawing.Color SurfaceTier2 => IsDark ? System.Drawing.Color.FromArgb(255, 36, 38, 42) : System.Drawing.Color.FromArgb(255, 250, 250, 252);
-    public static System.Drawing.Color SurfaceTooltip => IsDark ? System.Drawing.Color.FromArgb(255, 30, 33, 34) : System.Drawing.Color.FromArgb(255, 230, 230, 230);
+    public static System.Drawing.Color SurfacePill => IsDark ? System.Drawing.Color.FromArgb(255, 46, 49, 50) : System.Drawing.Color.FromArgb(255, 236, 239, 246);
+    public static System.Drawing.Color SurfaceTier1 => IsDark ? System.Drawing.Color.FromArgb(255, 26, 27, 31) : System.Drawing.Color.FromArgb(255, 228, 231, 238);
+    public static System.Drawing.Color SurfaceTier2 => IsDark ? System.Drawing.Color.FromArgb(255, 36, 38, 42) : System.Drawing.Color.FromArgb(255, 233, 236, 243);
+    public static System.Drawing.Color SurfaceTooltip => IsDark ? System.Drawing.Color.FromArgb(255, 30, 33, 34) : System.Drawing.Color.FromArgb(255, 237, 240, 246);
     public static System.Drawing.Color AccentColor => IsDark ? System.Drawing.Color.FromArgb(255, 75, 130, 246) : System.Drawing.Color.FromArgb(255, 0, 120, 215);
     public static System.Drawing.Color AccentTier2 => IsDark ? System.Drawing.Color.FromArgb(255, 61, 109, 245) : System.Drawing.Color.FromArgb(255, 0, 100, 200);
     public static System.Drawing.Color SurfaceShadow => System.Drawing.Color.FromArgb(IsDark ? 60 : 34, 0, 0, 0);
