@@ -876,10 +876,11 @@ public partial class HistoryWindow
         return HistoryCategoryCombo.SelectedIndex switch
         {
             0 => _allImageHistoryEntries.Count > 0 ? _allImageHistoryEntries.Count : _historyService.ImageEntries.Count,
-            1 => _historyService.OcrEntries.Count,
+            1 => _allImageHistoryEntries.Count > 0 ? _allImageHistoryEntries.Count : _historyService.ImageEntries.Count,
             2 => _allGifItems.Count > 0 ? _allGifItems.Count : _historyService.MediaEntries.Count,
-            3 => _historyService.ColorEntries.Count,
-            4 => _historyService.CodeEntries.Count,
+            3 => _historyService.OcrEntries.Count,
+            4 => _historyService.ColorEntries.Count,
+            5 => _historyService.CodeEntries.Count,
             _ => 0
         };
     }
@@ -889,8 +890,9 @@ public partial class HistoryWindow
         return HistoryCategoryCombo.SelectedIndex switch
         {
             0 => CountAllSelectedCardsInVisualTree(HistoryStack),
-            2 => OcrStack.Children.OfType<Border>().Count(card => card.Tag is true),
-            3 => CountSelectedCardsInVisualTree(GifsPanel),
+            1 => CountAllSelectedCardsInVisualTree(HistoryStack),
+            2 => CountSelectedCardsInVisualTree(GifsPanel),
+            3 => OcrStack.Children.OfType<Border>().Count(card => card.Tag is true),
             4 => ColorStack.Children.OfType<Border>().Count(card => card.Tag is ColorHistoryEntry),
             5 => CodeStack.Children.OfType<Border>().Count(card => card.Tag is CodeHistoryEntry),
             _ => 0
@@ -1219,7 +1221,9 @@ public partial class HistoryWindow
         if (ThemedConfirmDialog.Confirm(this, BuildDeleteAllConfirmationTitle(step, totalCount, categoryLabel), BuildDeleteAllConfirmationMessage(step, totalCount, categoryLabel), "Delete", "Cancel"))
             return true;
 
-        SetHistoryDeleteStatus($"Delete canceled. Kept {totalCount} {categoryLabel}.");
+        var cancelMsg = LocalizationService.Translate("Delete canceled");
+        var kept = LocalizationService.Translate("Kept");
+        SetHistoryDeleteStatus($"{cancelMsg}. {kept} {totalCount} {categoryLabel}.");
         UpdateHistoryActionButtons();
         return false;
     }
