@@ -1198,15 +1198,17 @@ public partial class HistoryWindow
 
     private bool ConfirmDeleteSelected(int selectedCount, string categoryLabel)
     {
+        var del = LocalizationService.Translate("Delete");
+        var sel = LocalizationService.Translate("selected");
         if (ThemedConfirmDialog.Confirm(
                 this,
-                $"Delete {selectedCount} selected {categoryLabel}",
-                $"Delete {selectedCount} selected {categoryLabel}? This cannot be undone.",
-                "Delete",
-                "Cancel"))
+                $"{del} {selectedCount} {sel} {categoryLabel}",
+                $"{del} {selectedCount} {sel} {categoryLabel}? {LocalizationService.Translate("This cannot be undone.")}",
+                del,
+                LocalizationService.Translate("Cancel")))
             return true;
 
-        SetHistoryDeleteStatus($"Delete canceled. Kept {selectedCount} selected {categoryLabel}.");
+        SetHistoryDeleteStatus($"{LocalizationService.Translate("Delete canceled")}. {LocalizationService.Translate("Kept")} {selectedCount} {sel} {categoryLabel}.");
         UpdateHistoryActionButtons();
         return false;
     }
