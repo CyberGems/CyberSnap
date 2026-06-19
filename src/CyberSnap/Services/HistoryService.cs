@@ -664,4 +664,78 @@ public sealed partial class HistoryService : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    // ── Static quick-save helpers for standalone tools (ColorPicker, OCR, Scan) ──
+
+    /// <summary>Primary HistoryService instance owned by the WPF App (set during startup).</summary>
+    public static HistoryService? PrimaryInstance { get; set; }
+
+    public static void QuickSaveColor(string hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex)) return;
+        try
+        {
+            var settings = SettingsService.LoadStatic();
+            if (!settings.SaveHistory || !settings.SaveStandaloneToHistory) return;
+
+            var primary = PrimaryInstance;
+            if (primary != null)
+            {
+                primary.SaveColorEntry(hex);
+            }
+            else
+            {
+                using var svc = new HistoryService();
+                svc.Load();
+                svc.SaveColorEntry(hex);
+            }
+        }
+        catch (Exception ex) { AppDiagnostics.LogError("history.quicksave-color", ex); }
+    }
+
+    public static void QuickSaveOcr(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        try
+        {
+            var settings = SettingsService.LoadStatic();
+            if (!settings.SaveHistory || !settings.SaveStandaloneToHistory) return;
+
+            var primary = PrimaryInstance;
+            if (primary != null)
+            {
+                primary.SaveOcrEntry(text);
+            }
+            else
+            {
+                using var svc = new HistoryService();
+                svc.Load();
+                svc.SaveOcrEntry(text);
+            }
+        }
+        catch (Exception ex) { AppDiagnostics.LogError("history.quicksave-ocr", ex); }
+    }
+
+    public static void QuickSaveCode(string text, string format)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        try
+        {
+            var settings = SettingsService.LoadStatic();
+            if (!settings.SaveHistory || !settings.SaveStandaloneToHistory) return;
+
+            var primary = PrimaryInstance;
+            if (primary != null)
+            {
+                primary.SaveCodeEntry(text, format);
+            }
+            else
+            {
+                using var svc = new HistoryService();
+                svc.Load();
+                svc.SaveCodeEntry(text, format);
+            }
+        }
+        catch (Exception ex) { AppDiagnostics.LogError("history.quicksave-code", ex); }
+    }
+
 }

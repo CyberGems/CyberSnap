@@ -278,6 +278,7 @@ public partial class App
             {
                 _historyService = new HistoryService();
                 _historyService.Load();
+                HistoryService.PrimaryInstance = _historyService;
                 if (!_historyChangedHooked)
                 {
                     _historyService.Changed += HistoryService_Changed;

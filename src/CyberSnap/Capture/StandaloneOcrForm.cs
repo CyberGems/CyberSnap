@@ -160,6 +160,9 @@ public sealed class StandaloneOcrForm : Form
             {
                 SoundService.PlayTextSound();
 
+                // Save to history
+                HistoryService.QuickSaveOcr(text);
+
                 // Show result on the WPF dispatcher thread
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(() =>
                 {

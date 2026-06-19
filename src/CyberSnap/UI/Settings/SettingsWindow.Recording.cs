@@ -33,6 +33,21 @@ public partial class SettingsWindow
             value => SaveHistoryCheck.IsChecked = value);
     }
 
+    private void SaveStandaloneToHistoryCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressHistoryPreferenceChange) return;
+
+        var previous = _settingsService.Settings.SaveStandaloneToHistory;
+        var selected = SaveStandaloneToHistoryCheck.IsChecked == true;
+        UpdateHistoryPreference(
+            "settings.save-standalone-history",
+            "Save standalone tools to Gallery",
+            previous,
+            selected,
+            value => _settingsService.Settings.SaveStandaloneToHistory = value,
+            value => SaveStandaloneToHistoryCheck.IsChecked = value);
+    }
+
     private void HistoryRetentionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded || _suppressHistoryPreferenceChange) return;

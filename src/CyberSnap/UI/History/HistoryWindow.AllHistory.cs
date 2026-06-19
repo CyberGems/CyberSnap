@@ -136,7 +136,7 @@ public partial class HistoryWindow
                     {
                         Height = 1,
                         Background = Theme.Brush(Theme.BorderSubtle),
-                        Margin = new Thickness(6, 20, 6, 0)
+                        Margin = new Thickness(6, 26, 6, 0)
                     });
                 }
 
@@ -144,7 +144,7 @@ public partial class HistoryWindow
                 var dateLabel = new TextBlock
                 {
                     Text = FormatHistoryGroupLabel(itemDate).ToUpperInvariant(),
-                    FontSize = 10.5,
+                    FontSize = 12,
                     FontWeight = FontWeights.Bold,
                     FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
                     Foreground = Theme.Brush(Theme.Accent),
@@ -154,9 +154,9 @@ public partial class HistoryWindow
                 target.Children.Add(new Border
                 {
                     Background = Theme.Brush(Theme.AccentSubtle),
-                    CornerRadius = new CornerRadius(6),
-                    Padding = new Thickness(12, 5, 12, 5),
-                    Margin = new Thickness(6, 14, 0, 10),
+                    CornerRadius = new CornerRadius(7),
+                    Padding = new Thickness(14, 6, 14, 6),
+                    Margin = new Thickness(6, 18, 0, 12),
                     HorizontalAlignment = HorizontalAlignment.Left,
                     Child = dateLabel
                 });
@@ -218,7 +218,7 @@ public partial class HistoryWindow
         var badgeLabel = entry.Kind == HistoryKind.Video ? "VID"
             : entry.Kind == HistoryKind.Gif ? "GIF" : "IMG";
         var badgeColor = entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(255, 100, 100)
-            : entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60) : System.Windows.Media.Color.FromRgb(140, 160, 255);
+            : entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60) : System.Windows.Media.Color.FromRgb(80, 190, 180);
         AddTypeBadge(shell.ImageContainer, badgeLabel, badgeColor);
 
         // Add play icon overlay for videos (same as CreateVideoCard)
@@ -293,7 +293,7 @@ public partial class HistoryWindow
 
         // Top: the actual text content (replaces the image thumbnail area)
         var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true, MaxWidth = HistoryCardPreferredWidth };
-        AddTypeBadge(textArea, "TXT", System.Windows.Media.Color.FromRgb(100, 180, 255));
+        AddTypeBadge(textArea, "OCR", System.Windows.Media.Color.FromRgb(100, 180, 255));
         var selBadge = CreateUnifiedSelectionBadge();
         textArea.Children.Add(selBadge);
         var displayText = text.Length > 80 ? text[..80] + "…" : text;
