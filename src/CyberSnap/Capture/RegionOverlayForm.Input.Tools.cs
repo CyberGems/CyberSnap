@@ -347,7 +347,7 @@ public sealed partial class RegionOverlayForm
                     _hoveredConfirmButton = btnHit;
                 }
                 else if (_confirmRect.Contains(e.Location)) target = Cursors.SizeAll;
-                else target = Cursors.Cross;
+                else target = CursorFactory.PrecisionCursor;
             }
 
             if (_hoveredConfirmButton != prevHoveredConfirm)
@@ -421,8 +421,12 @@ public sealed partial class RegionOverlayForm
                     target = Cursors.IBeam;
                 else if (_mode == CaptureMode.Move)
                     target = Cursors.Default;
+                else if (_mode == CaptureMode.StepNumber && !IsPointInOverlayUi(e.Location))
+                    // The step badge ghost is centered on the cursor and acts as the pointer,
+                    // so hide the crosshair (it would sit on top of the number).
+                    target = _blankCursor;
                 else
-                    target = Cursors.Cross;
+                    target = CursorFactory.PrecisionCursor;
             }
         }
         else if (_mode == CaptureMode.Eraser)
@@ -439,7 +443,7 @@ public sealed partial class RegionOverlayForm
             target = CursorFactory.EraserCursor;
         }
         else
-            target = Cursors.Cross;
+            target = CursorFactory.PrecisionCursor;
 
         if (!Cursor.Equals(target)) Cursor = target;
 
@@ -546,6 +550,9 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Magnifier when _isPlacingMagnifier:
                 InvalidateLivePreview(GetMagnifierPreviewRect(oldCursor), GetMagnifierPreviewRect(e.Location), 10);
+                break;
+            case CaptureMode.StepNumber:
+                InvalidateLivePreview(GetStepPreviewRect(oldCursor), GetStepPreviewRect(e.Location), 10);
                 break;
             case CaptureMode.Draw when _isSelecting:
                 if (_currentStroke is { Count: > 0 })

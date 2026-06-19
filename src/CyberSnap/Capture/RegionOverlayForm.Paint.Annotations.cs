@@ -162,6 +162,13 @@ public sealed partial class RegionOverlayForm
             PaintMagnifierAt(g, cursorPoint, new Rectangle(sx2, sy2, srcSz, srcSz), 0.65f);
         }
 
+        // Step number placing preview (follow cursor): shows the next badge and number
+        // exactly where a click will drop it. Suppressed over the overlay toolbar/UI.
+        if (_mode == CaptureMode.StepNumber && !IsPointInOverlayUi(cursorPoint))
+        {
+            PaintStepNumber(g, cursorPoint, _nextStepNumber, _toolColor, 0.6f);
+        }
+
         PaintGlobalSnapGuides(g);
 
         if (_selectPreviewAnnotation is not null)
@@ -213,6 +220,8 @@ public sealed partial class RegionOverlayForm
             r = U(r, GetEmojiPreviewRect(cursorPoint));
         if (_mode == CaptureMode.Magnifier && _isPlacingMagnifier)
             r = U(r, GetMagnifierPreviewRect(cursorPoint));
+        if (_mode == CaptureMode.StepNumber)
+            r = U(r, GetStepPreviewRect(cursorPoint));
         if (_isTyping)
             r = U(r, InflateForRepaint(Rectangle.Round(GetActiveTextRect()), 16));
         if (_selectPreviewAnnotation is not null)
@@ -364,7 +373,7 @@ public sealed partial class RegionOverlayForm
     private static readonly SolidBrush StepNumberDarkText = new(Color.FromArgb(20, 20, 20));
     private static readonly SolidBrush StepNumberLightText = new(Color.FromArgb(255, 255, 255));
 
-    private static void PaintStepNumber(Graphics g, Point pos, int num, Color color)
+    private static void PaintStepNumber(Graphics g, Point pos, int num, Color color, float opacity = 1f)
     {
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
@@ -382,15 +391,31 @@ public sealed partial class RegionOverlayForm
 
         using var shadowPath = SketchRenderer.RoundedRect(
             new RectangleF(rect.X + 1, rect.Y + 2, rect.Width, rect.Height), r);
-        g.FillPath(StepNumberShadowBrush, shadowPath);
-
         using var bgPath = SketchRenderer.RoundedRect(rect, r);
-        g.FillPath(SketchRenderer.GetToolColorBrush(color), bgPath);
-        g.DrawPath(StepNumberInnerEdgePen, bgPath);
-
         int luma = (color.R * 299 + color.G * 587 + color.B * 114) / 1000;
-        var textBrush = luma > 140 ? StepNumberDarkText : StepNumberLightText;
-        g.DrawString(text, font, textBrush, rect.X + (rect.Width - sz.Width) / 2f, rect.Y + (rect.Height - sz.Height) / 2f);
+
+        if (opacity >= 1f)
+        {
+            g.FillPath(StepNumberShadowBrush, shadowPath);
+            g.FillPath(SketchRenderer.GetToolColorBrush(color), bgPath);
+            g.DrawPath(StepNumberInnerEdgePen, bgPath);
+            var textBrush = luma > 140 ? StepNumberDarkText : StepNumberLightText;
+            g.DrawString(text, font, textBrush, rect.X + (rect.Width - sz.Width) / 2f, rect.Y + (rect.Height - sz.Height) / 2f);
+        }
+        else
+        {
+            // Translucent ghost preview that follows the cursor before the click commits it.
+            int a = (int)Math.Clamp(255 * opacity, 0, 255);
+            using var shadow = new SolidBrush(Color.FromArgb((int)(50 * opacity), 0, 0, 0));
+            using var bg = new SolidBrush(Color.FromArgb(a, color.R, color.G, color.B));
+            using var edge = new Pen(Color.FromArgb((int)(40 * opacity), 255, 255, 255), 1f);
+            g.FillPath(shadow, shadowPath);
+            g.FillPath(bg, bgPath);
+            g.DrawPath(edge, bgPath);
+            var tc = luma > 140 ? Color.FromArgb(a, 20, 20, 20) : Color.FromArgb(a, 255, 255, 255);
+            using var textBrush = new SolidBrush(tc);
+            g.DrawString(text, font, textBrush, rect.X + (rect.Width - sz.Width) / 2f, rect.Y + (rect.Height - sz.Height) / 2f);
+        }
 
         g.TextRenderingHint = TextRenderingHint.SystemDefault;
         g.SmoothingMode = SmoothingMode.Default;

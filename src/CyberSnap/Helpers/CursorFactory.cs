@@ -9,6 +9,23 @@ internal static class CursorFactory
 {
     private static Cursor? _eraserCursor;
     private static Cursor? _panCursor;
+    private static Cursor? _precisionCursor;
+    private static Cursor? _hiddenCursor;
+
+    /// <summary>A fully transparent 1×1 cursor — hides the pointer over a control while keeping
+    /// hover/move events flowing (used where an on-canvas ghost is the pointer itself).</summary>
+    public static Cursor HiddenCursor
+    {
+        get
+        {
+            if (_hiddenCursor is null)
+            {
+                using var bmp = new Bitmap(1, 1, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                _hiddenCursor = new Cursor(bmp.GetHicon());
+            }
+            return _hiddenCursor;
+        }
+    }
 
     [DllImport("user32.dll")]
     private static extern IntPtr CreateIconIndirect(ref IconInfo iconInfo);
@@ -170,6 +187,85 @@ internal static class CursorFactory
         }
 
         return Cursors.Default;
+    }
+
+    /// <summary>
+    /// A fine precision crosshair for the drawing/crop tools: four short arms around a
+    /// central gap (so the exact target pixel stays visible), each white arm wrapped in a
+    /// soft dark halo so it reads on any background. Replaces the heavy stock
+    /// <see cref="Cursors.Cross"/>.
+    /// </summary>
+    public static Cursor PrecisionCursor
+    {
+        get
+        {
+            if (_precisionCursor is null)
+                _precisionCursor = CreatePrecisionCursor();
+            return _precisionCursor;
+        }
+    }
+
+    private static Cursor CreatePrecisionCursor()
+    {
+        const int size = 32;
+        const int c = size / 2;
+
+        using var bmp = new Bitmap(size, size);
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(Color.Transparent);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+        const float gap = 3.5f;   // clear space around the exact center
+        const float arm = 7f;     // length of each crosshair arm
+
+        void Arms(Graphics gr, Pen p)
+        {
+            gr.DrawLine(p, c, c - gap - arm, c, c - gap); // top
+            gr.DrawLine(p, c, c + gap, c, c + gap + arm); // bottom
+            gr.DrawLine(p, c - gap - arm, c, c - gap, c); // left
+            gr.DrawLine(p, c + gap, c, c + gap + arm, c); // right
+        }
+
+        using (var halo = new Pen(Color.FromArgb(150, 0, 0, 0), 3f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            Arms(g, halo);
+        using (var line = new Pen(Color.FromArgb(245, 255, 255, 255), 1.4f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+            Arms(g, line);
+
+        // A 1px center pip marks the precise hotspot without filling the gap.
+        using (var pip = new SolidBrush(Color.FromArgb(235, 255, 255, 255)))
+            g.FillEllipse(pip, c - 0.7f, c - 0.7f, 1.4f, 1.4f);
+
+        IntPtr hIcon = bmp.GetHicon();
+        try
+        {
+            var iconInfo = new IconInfo();
+            if (GetIconInfo(hIcon, ref iconInfo))
+            {
+                iconInfo.fIcon = false;
+                iconInfo.xHotspot = c;
+                iconInfo.yHotspot = c;
+
+                IntPtr hCursor = CreateIconIndirect(ref iconInfo);
+
+                if (iconInfo.hbmMask != IntPtr.Zero)
+                    DeleteObject(iconInfo.hbmMask);
+                if (iconInfo.hbmColor != IntPtr.Zero)
+                    DeleteObject(iconInfo.hbmColor);
+
+                if (hCursor != IntPtr.Zero)
+                {
+                    DestroyIcon(hIcon);
+                    return new Cursor(hCursor);
+                }
+            }
+        }
+        catch
+        {
+            DestroyIcon(hIcon);
+        }
+
+        return Cursors.Cross;
     }
 
     [DllImport("gdi32.dll")]

@@ -155,10 +155,13 @@ public sealed partial class AnnotationCanvas
         {
             CanvasTool.Pan => CursorFactory.PanCursor,
             CanvasTool.Move => Cursors.Default,
-            CanvasTool.Crop => Cursors.Cross,
+            CanvasTool.Crop => CursorFactory.PrecisionCursor,
             CanvasTool.Text => Cursors.IBeam,
             CanvasTool.Eraser => CursorFactory.EraserCursor,
-            _ => Cursors.Cross,
+            // The step badge ghost is centered on the cursor and acts as the pointer itself,
+            // so hide the OS crosshair (it would otherwise sit on top of the number).
+            CanvasTool.StepNumber => CursorFactory.HiddenCursor,
+            _ => CursorFactory.PrecisionCursor,
         };
     }
 
@@ -430,9 +433,7 @@ public sealed partial class AnnotationCanvas
                 BeginInlineText(img);
                 break;
             case CanvasTool.StepNumber:
-                int next = _annotations.OfType<StepNumberAnnotation>()
-                    .Select(s => s.Number).DefaultIfEmpty(0).Max() + 1;
-                Push(new AddAnnotationCommand(new StepNumberAnnotation(img, next, ToolColor)));
+                Push(new AddAnnotationCommand(new StepNumberAnnotation(img, NextStepNumber(), ToolColor)));
                 break;
             case CanvasTool.Magnifier:
                 Push(new AddAnnotationCommand(new MagnifierAnnotation(img, GetMagnifierSrcRect(img))));
@@ -559,6 +560,7 @@ public sealed partial class AnnotationCanvas
         // track the cursor and repaint so the translucent preview follows it.
         if (!_isDragging &&
             (_activeTool == CanvasTool.Magnifier ||
+             _activeTool == CanvasTool.StepNumber ||
              (_activeTool == CanvasTool.Emoji && !string.IsNullOrEmpty(_selectedEmoji))))
         {
             _hoverImg = ScreenToImage(e.Location);
@@ -578,7 +580,7 @@ public sealed partial class AnnotationCanvas
                     4 or 6 => Cursors.SizeNS,
                     5 or 7 => Cursors.SizeWE,
                     8 => Cursors.SizeAll,
-                    _ => Cursors.Cross
+                    _ => CursorFactory.PrecisionCursor
                 };
             }
             else
@@ -1149,6 +1151,10 @@ public sealed partial class AnnotationCanvas
 
     // ── Tool preview (live, drawn inside the zoom transform) ───────────────
 
+    /// <summary>Next step badge number = one past the highest already placed (1 when none).</summary>
+    private int NextStepNumber() =>
+        _annotations.OfType<StepNumberAnnotation>().Select(s => s.Number).DefaultIfEmpty(0).Max() + 1;
+
     private void RenderToolPreview(Graphics g)
     {
         // Emoji ghost follows the cursor (click-to-place, so there is no drag).
@@ -1162,6 +1168,11 @@ public sealed partial class AnnotationCanvas
         // Magnifier lens preview follows the cursor before the click places it.
         if (_activeTool == CanvasTool.Magnifier && _hoverImgValid)
             PaintMagnifier(g, _hoverImg, GetMagnifierSrcRect(_hoverImg), 0.65f);
+
+        // Step number ghost shows the next badge (and its number) exactly where a click lands.
+        // Hidden while hovering an existing badge, where a click moves it instead of placing a new one.
+        if (_activeTool == CanvasTool.StepNumber && _hoverImgValid && _moveHoverIndex < 0)
+            PaintStepNumber(g, _hoverImg, NextStepNumber(), ToolColor, 0.6f);
 
         if (!_isDragging) return;
 
@@ -1242,16 +1253,19 @@ public sealed partial class AnnotationCanvas
         g.SmoothingMode = SmoothingMode.AntiAlias;
         try
         {
-            // Color dot diameter tracks the actual stroke width (clamped so the chip stays small).
-            float dotD = hasStroke ? Math.Clamp(StrokeWidth, 6f, 20f) : 14f;
+            // A little figure of the active tool (circle, arrow, …) drawn in the tool color,
+            // with its outline thickness scaled from — but not equal to — the real stroke so
+            // it stays legible at any width. The exact width is spelled out by the label.
+            const int glyphSize = 22;
+            float glyphStroke = Math.Clamp(StrokeWidth * 0.5f, 1.8f, 4.5f);
             string label = hasStroke ? $"{(int)Math.Round(StrokeWidth)} px" : string.Empty;
 
             using var font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Regular, GraphicsUnit.Point);
             SizeF textSize = label.Length > 0 ? g.MeasureString(label, font) : SizeF.Empty;
 
             const int padX = 7, padY = 5, gap = 6;
-            float contentH = Math.Max(dotD, textSize.Height);
-            int chipW = padX + (int)Math.Ceiling(dotD)
+            float contentH = Math.Max(glyphSize, textSize.Height);
+            int chipW = padX + glyphSize
                 + (label.Length > 0 ? gap + (int)Math.Ceiling(textSize.Width) : 0) + padX;
             int chipH = padY + (int)Math.Ceiling(contentH) + padY;
 
@@ -1278,26 +1292,12 @@ public sealed partial class AnnotationCanvas
                 g.DrawPath(border, path);
             }
 
-            float dotX = chipRect.X + padX;
-            float dotY = chipRect.Y + (chipRect.Height - dotD) / 2f;
-            if (_activeTool == CanvasTool.Highlight)
-            {
-                // Translucent swatch mirrors how the highlighter actually paints.
-                using var hl = new SolidBrush(Color.FromArgb(150, color.R, color.G, color.B));
-                g.FillEllipse(hl, dotX, dotY, dotD, dotD);
-            }
-            else
-            {
-                using var dot = new SolidBrush(color);
-                g.FillEllipse(dot, dotX, dotY, dotD, dotD);
-            }
-            // Contrasting ring so pale/white tool colors stay visible against the card.
-            using (var ring = new Pen(Color.FromArgb(110, 0, 0, 0), 1f))
-                g.DrawEllipse(ring, dotX, dotY, dotD, dotD);
+            var glyphBox = new RectangleF(chipRect.X + padX, chipRect.Y + (chipRect.Height - glyphSize) / 2f, glyphSize, glyphSize);
+            DrawToolGlyph(g, _activeTool, glyphBox, color, glyphStroke);
 
             if (label.Length > 0)
             {
-                float tx = dotX + dotD + gap;
+                float tx = glyphBox.Right + gap;
                 float ty = chipRect.Y + (chipRect.Height - textSize.Height) / 2f;
                 using var tb = new SolidBrush(EditorColors.TextSecondary);
                 g.DrawString(label, font, tb, tx, ty);
@@ -1307,6 +1307,104 @@ public sealed partial class AnnotationCanvas
         {
             g.SmoothingMode = oldSmoothing;
         }
+    }
+
+    /// <summary>Draws a compact figure of <paramref name="tool"/> inside <paramref name="box"/>,
+    /// in the tool color — the same shape the tool produces, miniaturized for the cursor chip.</summary>
+    private static void DrawToolGlyph(Graphics g, CanvasTool tool, RectangleF box, Color color, float stroke)
+    {
+        const float m = 3.5f;
+        float l = box.Left + m, t = box.Top + m, r = box.Right - m, b = box.Bottom - m;
+
+        using var pen = new Pen(color, stroke)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round
+        };
+
+        switch (tool)
+        {
+            case CanvasTool.Line:
+                g.DrawLine(pen, l, b, r, t);
+                break;
+
+            case CanvasTool.Arrow:
+                g.DrawLine(pen, l, b, r, t);
+                DrawGlyphArrowhead(g, pen, new PointF(l, b), new PointF(r, t));
+                break;
+
+            case CanvasTool.CurvedArrow:
+            {
+                var p0 = new PointF(l, b);
+                var p1 = new PointF(l + (r - l) * 0.1f, t + (b - t) * 0.35f);
+                var p2 = new PointF(r, t);
+                g.DrawCurve(pen, new[] { p0, p1, p2 }, 0.6f);
+                DrawGlyphArrowhead(g, pen, p1, p2);
+                break;
+            }
+
+            case CanvasTool.Rect:
+                using (var path = EditorPaint.RoundedRect(Rectangle.Round(new RectangleF(l, t, r - l, b - t)), 3))
+                    g.DrawPath(pen, path);
+                break;
+
+            case CanvasTool.Circle:
+                g.DrawEllipse(pen, l, t, r - l, b - t);
+                break;
+
+            case CanvasTool.Draw:
+            {
+                // A small freehand squiggle conveys the pencil/brush.
+                var pts = new[]
+                {
+                    new PointF(l, b - (b - t) * 0.15f),
+                    new PointF(l + (r - l) * 0.34f, t),
+                    new PointF(l + (r - l) * 0.66f, b),
+                    new PointF(r, t + (b - t) * 0.15f),
+                };
+                g.DrawCurve(pen, pts, 0.6f);
+                break;
+            }
+
+            case CanvasTool.Highlight:
+            {
+                // Translucent bar mirrors how the highlighter actually paints.
+                using var fill = new SolidBrush(Color.FromArgb(150, color.R, color.G, color.B));
+                float barTop = t + (b - t) * 0.18f;
+                using var path = EditorPaint.RoundedRect(
+                    Rectangle.Round(new RectangleF(l, barTop, r - l, (b - t) * 0.64f)), 2);
+                g.FillPath(fill, path);
+                break;
+            }
+        }
+    }
+
+    /// <summary>Draws a small arrowhead at <paramref name="to"/>, pointing along from→to.</summary>
+    private static void DrawGlyphArrowhead(Graphics g, Pen pen, PointF from, PointF to)
+    {
+        float dx = to.X - from.X, dy = to.Y - from.Y;
+        float len = MathF.Sqrt(dx * dx + dy * dy);
+        if (len < 0.1f) return;
+
+        float nx = dx / len, ny = dy / len;
+        float head = Math.Max(5f, len * 0.4f);
+        const float ang = 26f * MathF.PI / 180f;
+
+        var basePt = new PointF(to.X - nx * head, to.Y - ny * head);
+        var left = RotateAround(basePt, to, -ang);
+        var right = RotateAround(basePt, to, ang);
+        g.DrawLine(pen, left, to);
+        g.DrawLine(pen, right, to);
+    }
+
+    private static PointF RotateAround(PointF p, PointF pivot, float radians)
+    {
+        float s = MathF.Sin(radians), c = MathF.Cos(radians);
+        float dx = p.X - pivot.X, dy = p.Y - pivot.Y;
+        return new PointF(
+            pivot.X + dx * c - dy * s,
+            pivot.Y + dx * s + dy * c);
     }
 
     // ── Crop overlay (drawn outside the zoom transform) ────────────────────
@@ -1615,7 +1713,7 @@ public sealed partial class AnnotationCanvas
 
     private Cursor GetCropCursor(Point screenPt)
     {
-        if (!_cropHasRect) return Cursors.Cross;
+        if (!_cropHasRect) return CursorFactory.PrecisionCursor;
 
         var cropScreen = ImageToScreenRect(_cropRect);
         var handles = GetCropHandlePositionsScreen(cropScreen);
@@ -1632,7 +1730,7 @@ public sealed partial class AnnotationCanvas
                     1 or 2 => Cursors.SizeNESW,
                     4 or 6 => Cursors.SizeNS,
                     5 or 7 => Cursors.SizeWE,
-                    _ => Cursors.Cross
+                    _ => CursorFactory.PrecisionCursor
                 };
             }
         }
@@ -1640,7 +1738,7 @@ public sealed partial class AnnotationCanvas
         if (cropScreen.Contains(screenPt))
             return Cursors.SizeAll;
 
-        return Cursors.Cross;
+        return CursorFactory.PrecisionCursor;
     }
 
     private bool IsDrawingOrMoveTool(CanvasTool tool)
