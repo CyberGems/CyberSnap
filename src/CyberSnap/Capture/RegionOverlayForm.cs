@@ -101,6 +101,7 @@ public sealed partial class RegionOverlayForm : Form
     private bool _captureBannerShown; // first-run banner displayed this session
     private CrosshairGuideForm? _verticalCrosshairForm;
     private CrosshairGuideForm? _horizontalCrosshairForm;
+    private int _crosshairHideDebounce;
     private readonly System.Windows.Forms.Timer _animTimer;
     private readonly System.Windows.Forms.Timer _autoDetectTimer;
     private readonly System.Windows.Forms.Timer _selectionPaintTimer;
