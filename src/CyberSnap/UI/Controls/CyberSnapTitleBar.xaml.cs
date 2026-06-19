@@ -73,7 +73,7 @@ public partial class CyberSnapTitleBar : UserControl
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
         string maxIconId = isMaximized ? "restore" : "maximize";
         MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, titleIcon, 18);
-        MaximizeBtn.ToolTip = isMaximized ? "Restore" : "Maximize";
+        MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
 
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", titleIcon, 18);
         // Use E771 (Personalize) icon from Segoe MDL2 Assets

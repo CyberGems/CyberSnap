@@ -71,12 +71,12 @@ public partial class HistoryWindow
         if (unified.Count == 0)
         {
             ShowHistoryEmptyState("No captures yet", "Screenshots, OCR text, colors, and codes will appear here.");
-            HistoryCountText.Text = "0 items";
+            HistoryCountText.Text = LocalizationService.Translate("0 items");
             UpdateHistoryActionButtons();
             return;
         }
 
-        HistoryCountText.Text = $"{unified.Count} item{(unified.Count == 1 ? "" : "s")}";
+        HistoryCountText.Text = $"{unified.Count} {LocalizationService.Translate(unified.Count == 1 ? "item" : "items")}";
         var pageSize = Math.Min(HistoryInitialPageSize, unified.Count);
         var page = unified.GetRange(0, pageSize);
         AppendGroupedUnifiedItems(HistoryStack, page, CreateUnifiedCard);
@@ -283,7 +283,7 @@ public partial class HistoryWindow
     private Border CreateUnifiedOcrCard(OcrHistoryEntry entry)
     {
         var text = entry.Text ?? "";
-        var card = CreateBaseUnifiedCard("Text history item", "Copy this text");
+        var card = CreateBaseUnifiedCard("Text history item", "Copy this OCR text");
         _unifiedCardEntries[card] = entry;
 
         var root = new Grid();
@@ -315,7 +315,7 @@ public partial class HistoryWindow
 
         // Bottom: just the capture time
         var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
-        info.Children.Add(new TextBlock { Text = "Text", FontSize = 11, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), TextTrimming = TextTrimming.CharacterEllipsis });
+        info.Children.Add(new TextBlock { Text = LocalizationService.Translate("OCR Text"), FontSize = 11, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), TextTrimming = TextTrimming.CharacterEllipsis });
         info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), Opacity = 0.3, TextTrimming = TextTrimming.CharacterEllipsis });
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
@@ -417,7 +417,7 @@ public partial class HistoryWindow
     {
         var text = entry.Text ?? "";
         var format = entry.Format ?? "";
-        var card = CreateBaseUnifiedCard($"{HumanizeBarcodeFormat(format)} history item", "Copy this code text");
+        var card = CreateBaseUnifiedCard($"{HumanizeBarcodeFormat(format)} history item", "Copy this QR & Barcode text");
         _unifiedCardEntries[card] = entry;
 
         var root = new Grid();
@@ -580,9 +580,10 @@ public partial class HistoryWindow
 
     private Border CreateBaseUnifiedCard(string automationName, string tooltip)
     {
+        var translatedTooltip = string.IsNullOrEmpty(tooltip) ? "" : LocalizationService.Translate(tooltip);
         var card = new Border
         {
-            Width = HistoryCardPreferredWidth,  // initial width; UpdateHistoryWrapPanelCardWidths overrides
+            Width = HistoryCardPreferredWidth,
             MinWidth = HistoryCardMinWidth,
             MaxWidth = HistoryCardMaxWidth,
             Margin = new Thickness(HistoryCardMargin),
@@ -592,10 +593,10 @@ public partial class HistoryWindow
             BorderThickness = new Thickness(1),
             Cursor = Cursors.Hand,
             Focusable = true,
-            ToolTip = tooltip
+            ToolTip = translatedTooltip
         };
         AutomationProperties.SetName(card, automationName);
-        AutomationProperties.SetHelpText(card, tooltip);
+        AutomationProperties.SetHelpText(card, translatedTooltip);
 
         card.Tag = false;  // selection state: false=unselected, true=selected; also marks for UpdateHistoryWrapPanelCardWidths
 
@@ -684,7 +685,7 @@ public partial class HistoryWindow
         // Hover button also opens the same menu
         var btn = new System.Windows.Controls.Button
         {
-            ToolTip = "Actions",
+            ToolTip = LocalizationService.Translate("Actions"),
             Focusable = false,
             BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(210, 255, 255, 255)),
             BorderThickness = new Thickness(1),
