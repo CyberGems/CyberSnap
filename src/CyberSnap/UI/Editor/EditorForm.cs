@@ -977,7 +977,7 @@ public sealed partial class EditorForm : Form
         menu.Items.Add(new ToolStripSeparator());
 
         var openItem = WindowsMenuRenderer.Item("Open image...", iconId: null);
-        var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "arrow");
+        var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
         var fitItem = WindowsMenuRenderer.Item("Fit to window", iconId: null);
         var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
         var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
@@ -1013,7 +1013,7 @@ public sealed partial class EditorForm : Form
     {
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
         var copyItem = WindowsMenuRenderer.Item("Copy", iconId: "copy");
-        var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "arrow");
+        var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
         var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
         var saveAsItem = WindowsMenuRenderer.Item("Export...", iconId: "export");
         var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");

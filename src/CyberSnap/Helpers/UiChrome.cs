@@ -88,7 +88,7 @@ public static class UiChrome
     public static System.Drawing.Color SurfaceBorderSubtle => IsDark ? System.Drawing.Color.FromArgb(22, 255, 255, 255) : System.Drawing.Color.FromArgb(14, 0, 0, 0);
     public static System.Drawing.Color SurfaceTextPrimary => IsDark ? System.Drawing.Color.FromArgb(240, 240, 245) : System.Drawing.Color.FromArgb(24, 24, 24);
     public static System.Drawing.Color SurfaceTextSecondary => IsDark ? System.Drawing.Color.FromArgb(192, 197, 204) : System.Drawing.Color.FromArgb(120, 0, 0, 0);
-    public static System.Drawing.Color SurfaceTextMuted => IsDark ? System.Drawing.Color.FromArgb(120, 130, 146) : System.Drawing.Color.FromArgb(90, 0, 0, 0);
+    public static System.Drawing.Color SurfaceTextMuted => IsDark ? System.Drawing.Color.FromArgb(120, 130, 146) : System.Drawing.Color.FromArgb(150, 150, 150);
     public static System.Drawing.Color SurfaceHover => IsDark ? System.Drawing.Color.FromArgb(22, 75, 130, 246) : System.Drawing.Color.FromArgb(14, 0, 120, 215);
     public static System.Drawing.Color SurfacePill => IsDark ? System.Drawing.Color.FromArgb(255, 46, 49, 50) : System.Drawing.Color.FromArgb(255, 236, 239, 246);
     public static System.Drawing.Color SurfaceTier1 => IsDark ? System.Drawing.Color.FromArgb(255, 26, 27, 31) : System.Drawing.Color.FromArgb(255, 228, 231, 238);
