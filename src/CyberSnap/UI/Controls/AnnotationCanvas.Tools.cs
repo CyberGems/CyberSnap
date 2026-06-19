@@ -260,6 +260,10 @@ public sealed partial class AnnotationCanvas
             {
                 activeHoverIdx = HitTestAnnotation(img);
             }
+            // Don't let a click grab the annotation we just placed (cursor is still on it);
+            // that would turn a second placement into an accidental move.
+            if (activeHoverIdx == _suppressHoverIndex)
+                activeHoverIdx = -1;
 
             if (handle < 0 && activeHoverIdx >= 0)
             {
@@ -434,9 +438,11 @@ public sealed partial class AnnotationCanvas
                 break;
             case CanvasTool.StepNumber:
                 Push(new AddAnnotationCommand(new StepNumberAnnotation(img, NextStepNumber(), ToolColor)));
+                SuppressHoverForLastPlaced();
                 break;
             case CanvasTool.Magnifier:
                 Push(new AddAnnotationCommand(new MagnifierAnnotation(img, GetMagnifierSrcRect(img))));
+                SuppressHoverForLastPlaced();
                 break;
             case CanvasTool.Emoji:
                 if (!string.IsNullOrEmpty(_selectedEmoji))
@@ -444,6 +450,7 @@ public sealed partial class AnnotationCanvas
                     int bitmapSize = (int)(_emojiPlaceSize * 1.4f) + 4;
                     var emojiPos = new Point(img.X - bitmapSize / 2, img.Y - bitmapSize / 2);
                     Push(new AddAnnotationCommand(new EmojiAnnotation(emojiPos, _selectedEmoji, _emojiPlaceSize)));
+                    SuppressHoverForLastPlaced();
                 }
                 else
                 {
@@ -975,9 +982,22 @@ public sealed partial class AnnotationCanvas
         }
     }
 
+    /// <summary>Suppresses the hover/control box for the annotation just placed, until the
+    /// cursor leaves it (so the box appears only on a deliberate re-hover).</summary>
+    private void SuppressHoverForLastPlaced()
+    {
+        _suppressHoverIndex = _annotations.Count - 1;
+        _moveHoverIndex = -1;
+    }
+
     private void UpdateMoveHover(Point img)
     {
         int hitIdx = HitTestAnnotation(img);
+        if (_suppressHoverIndex >= 0)
+        {
+            if (hitIdx == _suppressHoverIndex) hitIdx = -1;   // still on the just-placed item: stay inert
+            else _suppressHoverIndex = -1;                    // cursor left it: re-enable normal hover
+        }
         if (hitIdx == _moveHoverIndex) return;
 
         var oldIdx = _moveHoverIndex;
@@ -1751,6 +1771,10 @@ public sealed partial class AnnotationCanvas
         return GetSelectHandle(screenPt, _selectedAnnotationIndex);
     }
 
+    /// <summary>Whether an annotation supports resizing. Fixed-size badges (step numbers) can
+    /// only be repositioned, so they expose a move-only control box (no resize handles).</summary>
+    private static bool IsResizable(Annotation a) => a is not StepNumberAnnotation;
+
     private int GetSelectHandle(Point screenPt, int annotationIndex)
     {
         if (annotationIndex < 0 || annotationIndex >= _annotations.Count)
@@ -1759,20 +1783,24 @@ public sealed partial class AnnotationCanvas
         var bounds = GetAnnotationVisualBounds(selected);
         var screenRect = Rectangle.Round(ImageToScreenRect(bounds));
         var selRect = Rectangle.Inflate(screenRect, 4, 4);
-        var handles = new[] {
-            new Point(selRect.X, selRect.Y),                           // 0: TL
-            new Point(selRect.Right - 1, selRect.Y),                   // 1: TR
-            new Point(selRect.X, selRect.Bottom - 1),                  // 2: BL
-            new Point(selRect.Right - 1, selRect.Bottom - 1),          // 3: BR
-            new Point(selRect.X + selRect.Width / 2, selRect.Y),       // 4: Top
-            new Point(selRect.X, selRect.Y + selRect.Height / 2),      // 5: Left
-            new Point(selRect.Right - 1, selRect.Y + selRect.Height / 2),// 6: Right
-            new Point(selRect.X + selRect.Width / 2, selRect.Bottom - 1)// 7: Bottom
-        };
-        for (int i = 0; i < 8; i++)
+        // Non-resizable items expose only the center move knob (handle 8), never a resize handle.
+        if (IsResizable(selected))
         {
-            var hr = WindowsHandleRenderer.HitRect(handles[i]);
-            if (hr.Contains(screenPt)) return i;
+            var handles = new[] {
+                new Point(selRect.X, selRect.Y),                           // 0: TL
+                new Point(selRect.Right - 1, selRect.Y),                   // 1: TR
+                new Point(selRect.X, selRect.Bottom - 1),                  // 2: BL
+                new Point(selRect.Right - 1, selRect.Bottom - 1),          // 3: BR
+                new Point(selRect.X + selRect.Width / 2, selRect.Y),       // 4: Top
+                new Point(selRect.X, selRect.Y + selRect.Height / 2),      // 5: Left
+                new Point(selRect.Right - 1, selRect.Y + selRect.Height / 2),// 6: Right
+                new Point(selRect.X + selRect.Width / 2, selRect.Bottom - 1)// 7: Bottom
+            };
+            for (int i = 0; i < 8; i++)
+            {
+                var hr = WindowsHandleRenderer.HitRect(handles[i]);
+                if (hr.Contains(screenPt)) return i;
+            }
         }
 
         // Handle 8: center move knob — circular hit area, slightly larger than the edge handles.

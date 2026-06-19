@@ -68,6 +68,11 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     // Selection state (Move tool)
     private int _selectedAnnotationIndex = -1;
     private int _moveHoverIndex = -1;
+
+    // After a click-to-place annotation (step/emoji/magnifier) the cursor sits on top of the
+    // fresh item; suppress its hover/control box until the cursor leaves it once, so the box
+    // only appears on a deliberate re-hover. -1 = nothing suppressed.
+    private int _suppressHoverIndex = -1;
     private Annotation? _selectOriginalAnnotation;
     private Point _selectDragStartImg;
     private bool _isSelectResizing;

@@ -219,6 +219,20 @@ public sealed partial class RegionOverlayForm : Form
     // Move tool hover highlight (mirrors Editor's _moveHoverIndex)
     private int _moveHoverIndex = -1;
 
+    // After a click-to-place annotation (step/emoji/magnifier) the cursor sits on top of the
+    // freshly placed item, which would pop its move/control box immediately. We suppress hover
+    // for that one annotation until the cursor leaves it once, so the box only appears on a
+    // deliberate re-hover. -1 = nothing suppressed.
+    private int _suppressHoverBoxIndex = -1;
+
+    /// <summary>Suppresses the hover/control box for the annotation just appended to the stack,
+    /// until the cursor moves off it.</summary>
+    private void SuppressHoverBoxForLastPlaced()
+    {
+        _suppressHoverBoxIndex = _undoStack.Count - 1;
+        _moveHoverIndex = -1;
+    }
+
     private bool _isTyping;
     private Point _textPos;
     private string _textBuffer = "";

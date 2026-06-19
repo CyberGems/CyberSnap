@@ -135,6 +135,7 @@ public sealed partial class RegionOverlayForm
         {
             var pos = new Point(e.Location.X - (int)(_emojiPlaceSize / 2), e.Location.Y - (int)(_emojiPlaceSize / 2));
             AddAnnotation(new EmojiAnnotation(pos, _selectedEmoji, _emojiPlaceSize));
+            SuppressHoverBoxForLastPlaced();
             Invalidate(InflateForRepaint(GetEmojiPreviewRect(e.Location)));
             return;
         }
@@ -289,6 +290,10 @@ public sealed partial class RegionOverlayForm
             {
                 activeHoverIdx = HitTestAnnotation(e.Location);
             }
+            // Don't let a click grab the annotation we just placed (cursor is still on it);
+            // that would turn a second placement into an accidental move.
+            if (activeHoverIdx == _suppressHoverBoxIndex)
+                activeHoverIdx = -1;
 
             if (handle < 0 && activeHoverIdx >= 0)
             {
@@ -489,8 +494,10 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.StepNumber:
                 HideToolbarForCaptureTool();
+                // AddAnnotation → PushEditCommand → RefreshNextStepNumber already advances
+                // _nextStepNumber to max+1. A manual ++ here double-counts (1, 3, 5, …).
                 AddAnnotation(new StepNumberAnnotation(e.Location, _nextStepNumber, _toolColor));
-                _nextStepNumber++;
+                SuppressHoverBoxForLastPlaced();
                 Invalidate(InflateForRepaint(new Rectangle(e.Location.X - 16, e.Location.Y - 16, 32, 32)));
                 break;
             case CaptureMode.Magnifier:
@@ -500,6 +507,7 @@ public sealed partial class RegionOverlayForm
                 int sx2 = Math.Clamp(e.Location.X - srcSz / 2, 0, _bmpW - srcSz);
                 int sy2 = Math.Clamp(e.Location.Y - srcSz / 2, 0, _bmpH - srcSz);
                 AddAnnotation(new MagnifierAnnotation(e.Location, new Rectangle(sx2, sy2, srcSz, srcSz)));
+                SuppressHoverBoxForLastPlaced();
                 Invalidate(InflateForRepaint(GetMagnifierPreviewRect(e.Location)));
                 break;
             case CaptureMode.Draw:
