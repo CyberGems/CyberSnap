@@ -832,5 +832,7 @@
   "Pink": "Rosa",
   "Gray": "Gris",
   "Black": "Negro",
-  "Width: {0}px": "Grosor: {0}px"
+  "Width: {0}px": "Grosor: {0}px",
+  "Text Tool": "Texto",
+  "Step": "Pasos"
 }
