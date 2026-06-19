@@ -406,6 +406,7 @@ public sealed partial class EditorForm : Form
 
     private void DoSave()
     {
+        if (!_canvas.IsDirty || _canvas.IsDefaultBlank) return;
         try
         {
             using var output = _canvas.RenderFinal();
