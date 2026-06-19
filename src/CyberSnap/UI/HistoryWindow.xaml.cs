@@ -301,6 +301,7 @@ public partial class HistoryWindow : Window
 
         ApplyThemeToVisualTree(OuterBorder);
         ClearHistoryCardCaches();
+        LoadCurrentHistoryTab(preserveTransientState: true);
         UpdateImageSearchUi();
     }
 
