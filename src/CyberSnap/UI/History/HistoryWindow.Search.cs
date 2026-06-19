@@ -434,8 +434,8 @@ public partial class HistoryWindow
     private void UpdateImageSearchUi()
     {
         var isImages = HistoryCategoryCombo.SelectedIndex <= 1;  // All (0) or Images (1)
-        var isMedia = HistoryCategoryCombo.SelectedIndex == 3;   // Videos & GIFs
-        var isText = HistoryCategoryCombo.SelectedIndex == 2;
+        var isMedia = HistoryCategoryCombo.SelectedIndex == 2;   // Videos & GIFs
+        var isText = HistoryCategoryCombo.SelectedIndex == 3;
         var isColors = HistoryCategoryCombo.SelectedIndex == 4;
         var isCodes = HistoryCategoryCombo.SelectedIndex == 5;
         var showSearch = (isImages && _settingsService.Settings.ShowImageSearchBar && !_imageSearchRowAutoHidden) ||

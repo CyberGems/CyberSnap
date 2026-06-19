@@ -15,15 +15,21 @@ namespace CyberSnap.UI;
 
 public partial class HistoryWindow
 {
-    private static readonly System.Windows.Media.Brush HistoryCardIdleBrush = CreateFrozenHistoryBrush(System.Windows.Media.Color.FromArgb(12, 255, 255, 255));
-    private static readonly System.Windows.Media.Brush HistoryCardHoverBrush = CreateFrozenHistoryBrush(System.Windows.Media.Color.FromArgb(24, 255, 255, 255));
-    private static readonly System.Windows.Media.Brush HistoryCardFocusBrush = CreateFrozenHistoryBrush(System.Windows.Media.Color.FromArgb(150, 255, 255, 255));
+    private static System.Windows.Media.Brush HistoryCardIdleBrush => Theme.Brush(Theme.IsDark
+        ? System.Windows.Media.Color.FromArgb(14, 255, 255, 255)
+        : System.Windows.Media.Color.FromArgb(10, 0, 0, 0));
+    private static System.Windows.Media.Brush HistoryCardHoverBrush => Theme.Brush(Theme.IsDark
+        ? System.Windows.Media.Color.FromArgb(26, 255, 255, 255)
+        : System.Windows.Media.Color.FromArgb(18, 0, 0, 0));
+    private static System.Windows.Media.Brush HistoryCardFocusBrush => Theme.Brush(Theme.IsDark
+        ? System.Windows.Media.Color.FromArgb(150, 255, 255, 255)
+        : System.Windows.Media.Color.FromArgb(80, 0, 0, 0));
 
-    private static System.Windows.Media.Brush CreateFrozenHistoryBrush(System.Windows.Media.Color color)
+    private void ClearHistoryCardCaches()
     {
-        var brush = new SolidColorBrush(color);
-        brush.Freeze();
-        return brush;
+        _ocrHistoryCardCache.Clear();
+        _colorHistoryCardCache.Clear();
+        _codeHistoryCardCache.Clear();
     }
 
     private string _ocrSearchQuery = "";
@@ -147,7 +153,7 @@ public partial class HistoryWindow
         AppendOcrHistoryEntries(_filteredOcrEntries, previousCount, _ocrRenderCount - previousCount);
         _ = Dispatcher.BeginInvoke(() =>
         {
-                if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 2)
+                if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 3)
                 TextPanel.ScrollToVerticalOffset(previousOffset);
         }, System.Windows.Threading.DispatcherPriority.Background);
     }
@@ -171,7 +177,7 @@ public partial class HistoryWindow
     private void FlushOcrSearchDebounce(object? sender, EventArgs e)
     {
         _ocrSearchDebounceTimer.Stop();
-        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 2)
+        if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 3)
             LoadOcrHistory();
     }
 
@@ -499,7 +505,7 @@ public partial class HistoryWindow
             CornerRadius = new CornerRadius(18),
             Background = new SolidColorBrush(swatchColor),
             BorderThickness = new Thickness(1),
-            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(30, 255, 255, 255)),
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 12, 0),
             ToolTip = hasValidColor ? $"Color preview {displayHex}" : "Invalid color preview"

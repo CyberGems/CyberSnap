@@ -79,12 +79,12 @@ public partial class HistoryWindow
         string automationName;
         string helpText;
 
-        if (HistoryCategoryCombo.SelectedIndex == 2)
+        if (HistoryCategoryCombo.SelectedIndex == 3)
         {
             placeholder = LocalizationService.Translate("Search text captures");
             helpText = LocalizationService.Translate("Search saved OCR text captures.");
         }
-        else if (HistoryCategoryCombo.SelectedIndex == 3)
+        else if (HistoryCategoryCombo.SelectedIndex == 2)
         {
             placeholder = LocalizationService.Translate("Search videos and GIFs...");
             helpText = LocalizationService.Translate("Search saved video recordings and GIF captures.");
@@ -273,7 +273,7 @@ public partial class HistoryWindow
                 SetImageSearchLoading(true);
                 QueueImageSearchRefresh();
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 2)
+            else if (HistoryCategoryCombo.SelectedIndex == 3)
             {
                 _ocrSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_ocrSearchQuery) && !ImageSearchBox.IsKeyboardFocused

@@ -436,7 +436,7 @@ public partial class HistoryWindow
 
     private static string HumanizeBarcodeFormat(string? format)
     {
-        return format?.ToUpperInvariant() switch
+        return LocalizationService.Translate(format?.ToUpperInvariant() switch
         {
             "QR_CODE" => "QR Code",
             "AZTEC" => "Aztec",
@@ -452,7 +452,7 @@ public partial class HistoryWindow
             "UPC_A" => "UPC-A",
             "UPC_E" => "UPC-E",
             _ => string.IsNullOrWhiteSpace(format) ? "Code" : format
-        };
+        });
     }
 
     private static BarcodeFormat ParseBarcodeFormat(string? format)
