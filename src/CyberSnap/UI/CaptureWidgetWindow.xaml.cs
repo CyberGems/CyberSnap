@@ -911,14 +911,14 @@ public partial class CaptureWidgetWindow : Window
     private System.Windows.Forms.ToolStripMenuItem BuildDisableItem()
     {
         var disableItem = Helpers.WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Disable quick panel"), iconId: "close", danger: true);
+            LocalizationService.Translate("Disable Widget"), iconId: "close", danger: true);
         disableItem.Click += (s, ev) =>
         {
             _settings.ShowCaptureWidget = false;
             _settingsService.Save();
             ToastWindow.Show(
-                LocalizationService.Translate("Quick panel disabled"),
-                LocalizationService.Translate("You can re-enable it anytime from Config -> General."));
+                LocalizationService.Translate("Widget disabled"),
+                LocalizationService.Translate("You can re-enable it from Configuration -> Widget."));
             Close();
         };
         return disableItem;
