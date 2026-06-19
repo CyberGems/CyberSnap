@@ -2247,20 +2247,20 @@
                                     <TextBlock Text="Choose dark, light, or follow your Windows theme." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <RadioButton x:Name="ThemeSystemRadio" Content="System" GroupName="AppTheme"
-                                                 Margin="0,0,10,0" VerticalAlignment="Center" Cursor="Hand"
-                                                 AutomationProperties.Name="System theme"
-                                                 ToolTip="Follow the Windows system theme."
-                                                 Checked="AppThemeRadio_Changed"/>
                                     <RadioButton x:Name="ThemeDarkRadio" Content="Dark" GroupName="AppTheme"
-                                                 Margin="0,0,10,0" VerticalAlignment="Center" Cursor="Hand"
+                                                 Margin="0,0,6,0" VerticalAlignment="Center" Cursor="Hand"
                                                  AutomationProperties.Name="Dark theme"
                                                  ToolTip="Always use the dark theme."
                                                  Checked="AppThemeRadio_Changed"/>
                                     <RadioButton x:Name="ThemeLightRadio" Content="Light" GroupName="AppTheme"
-                                                 VerticalAlignment="Center" Cursor="Hand"
+                                                 Margin="0,0,6,0" VerticalAlignment="Center" Cursor="Hand"
                                                  AutomationProperties.Name="Light theme"
                                                  ToolTip="Always use the light theme."
+                                                 Checked="AppThemeRadio_Changed"/>
+                                    <RadioButton x:Name="ThemeSystemRadio" Content="Auto" GroupName="AppTheme"
+                                                 VerticalAlignment="Center" Cursor="Hand"
+                                                 AutomationProperties.Name="Auto theme"
+                                                 ToolTip="Follow the Windows system theme."
                                                  Checked="AppThemeRadio_Changed"/>
                                 </StackPanel>
                             </Grid>

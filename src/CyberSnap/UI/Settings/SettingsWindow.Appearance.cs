@@ -89,9 +89,9 @@ public partial class SettingsWindow
                     textBox.CaretBrush = (MediaBrush)Resources["ThemeTextPrimaryBrush"];
                     break;
                 case System.Windows.Controls.ComboBox comboBox:
-                    comboBox.Background = (MediaBrush)Resources["ThemeInputBackgroundBrush"];
-                    comboBox.Foreground = (MediaBrush)Resources["ThemeTextPrimaryBrush"];
-                    comboBox.BorderBrush = (MediaBrush)Resources["ThemeInputBorderBrush"];
+                    comboBox.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "ThemeInputBackgroundBrush");
+                    comboBox.SetResourceReference(System.Windows.Controls.Control.ForegroundProperty, "ThemeTextPrimaryBrush");
+                    comboBox.SetResourceReference(System.Windows.Controls.Control.BorderBrushProperty, "ThemeInputBorderBrush");
                     break;
                 case Button button when button.Style == null:
                     button.Background = Theme.Brush(Theme.AccentSubtle);
