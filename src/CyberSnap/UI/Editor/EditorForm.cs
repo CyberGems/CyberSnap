@@ -52,6 +52,7 @@ public sealed partial class EditorForm : Form
     private FormWindowState _lastWindowState = FormWindowState.Normal;
     private bool _enableComposited = true;
     private readonly System.Windows.Forms.Timer _saveStatusTimer = new() { Interval = 2200 };
+    private readonly System.Windows.Forms.Timer _clipboardMonitorTimer = new() { Interval = 1000 };
 
     /// <summary>Opens or reuses the single editor instance.</summary>
     public static void ShowEditor(Bitmap captured, string? savedFilePath = null)
@@ -240,6 +241,18 @@ public sealed partial class EditorForm : Form
             _saveStatusTimer.Stop();
             RefreshUi();
         };
+        _clipboardMonitorTimer.Tick += (_, _) =>
+        {
+            if (_pasteButton != null)
+            {
+                bool hasImage = Clipboard.ContainsImage();
+                if (_pasteButton.Enabled != hasImage)
+                {
+                    _pasteButton.Enabled = hasImage;
+                }
+            }
+        };
+        _clipboardMonitorTimer.Start();
 
         BuildToolbar();
         BuildStatusBar();
@@ -331,6 +344,8 @@ public sealed partial class EditorForm : Form
         {
             _saveStatusTimer.Stop();
             _saveStatusTimer.Dispose();
+            _clipboardMonitorTimer.Stop();
+            _clipboardMonitorTimer.Dispose();
             _tooltipTimer?.Stop();
             _tooltipTimer?.Dispose();
             _brandBitmap?.Dispose();
