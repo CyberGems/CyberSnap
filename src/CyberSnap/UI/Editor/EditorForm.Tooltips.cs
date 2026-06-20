@@ -25,6 +25,12 @@ public sealed partial class EditorForm
     private System.Windows.Forms.Timer? _tooltipTimer;
     private readonly System.Collections.Generic.List<(Control Control, Func<string?> TextProvider, bool Above)> _tooltipControls = new();
 
+    // The cursor must dwell on a control for this many timer ticks (~100ms each) before its
+    // tooltip appears, so brushing the pointer across tools no longer triggers them instantly.
+    private const int TooltipDwellTicks = 5;
+    private Control? _pendingHover;
+    private int _pendingHoverTicks;
+
     private void RegisterHoverTooltip(Control anchor, Func<string?> textProvider, bool above = true)
     {
         _tooltipControls.Add((anchor, textProvider, above));
@@ -85,9 +91,33 @@ public sealed partial class EditorForm
 
         if (hovered is not null)
         {
-            if (!ReferenceEquals(_hoverAnchor, hovered))
+            if (ReferenceEquals(_hoverAnchor, hovered))
             {
-                ShowHoverTooltip(hovered, provider!(), above);
+                // Already showing for this control — nothing left to dwell on.
+                _pendingHover = null;
+                _pendingHoverTicks = 0;
+            }
+            else
+            {
+                // Moved onto a different control: drop any stale tooltip right away, then wait for
+                // the cursor to dwell here a few ticks before surfacing the new one.
+                if (_hoverAnchor is not null)
+                    HideHoverTooltip(_hoverAnchor);
+
+                if (ReferenceEquals(_pendingHover, hovered))
+                {
+                    if (++_pendingHoverTicks >= TooltipDwellTicks)
+                    {
+                        ShowHoverTooltip(hovered, provider!(), above);
+                        _pendingHover = null;
+                        _pendingHoverTicks = 0;
+                    }
+                }
+                else
+                {
+                    _pendingHover = hovered;
+                    _pendingHoverTicks = 0;
+                }
             }
         }
         else
@@ -96,6 +126,8 @@ public sealed partial class EditorForm
             {
                 HideHoverTooltip(_hoverAnchor);
             }
+            _pendingHover = null;
+            _pendingHoverTicks = 0;
         }
     }
 

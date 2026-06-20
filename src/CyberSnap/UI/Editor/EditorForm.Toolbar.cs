@@ -18,6 +18,7 @@ public sealed partial class EditorForm
     private Label _coordsLabel = null!;
     private Label _fileNameLabel = null!;
     private Label _liveStatusLabel = null!;
+    private Control _hintArea = null!;
     private Label _titleFileNameLabel = null!;
     private Label _zoomLabel = null!;
     private EditorZoomSlider _zoomSlider = null!;
@@ -102,18 +103,6 @@ public sealed partial class EditorForm
             e.Graphics.DrawLine(pen, 0, 0, _statusBarPanel.Width, 0);
         };
 
-        // Create the flow layout for the left side status items (matching the mockup)
-        var leftStatusFlow = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoSize = true,
-            BackColor = Color.Transparent,
-            Margin = new Padding(0),
-            Padding = new Padding(0),
-        };
-
         // BORDER switch (off-screen, instantiated for burger menu synchronization)
         _toggleFrameSwitch = new EditorToggleSwitch
         {
@@ -129,29 +118,33 @@ public sealed partial class EditorForm
             _canvas.Invalidate();
         };
 
-        // Coords: Icon + Label
+        // Coords: Icon + Label (now sits just left of the zoom controls). Fixed-width label so
+        // the adjacent zoom slider doesn't shift horizontally as the coordinate digits change.
         var coordsPanel = new FlowLayoutPanel
         {
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
             AutoSize = true,
             BackColor = Color.Transparent,
-            Margin = new Padding(0),
+            Margin = new Padding(0, 0, 12, 0),
         };
         var coordsIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
         coordsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "select", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
         _coordsLabel = new DoubleBufferedLabel
         {
-            AutoSize = true,
-            MinimumSize = new Size(85, 0),
+            AutoSize = false,
+            SingleLine = true,
+            Width = 104,
+            Height = 18,
+            MinimumSize = new Size(104, 0),
             Text = "0, 0",
             ForeColor = EditorColors.TextPrimary,
             Font = new Font("Consolas", 10.5f, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleLeft,
             Margin = new Padding(0, 12, 0, 12),
         };
         coordsPanel.Controls.Add(coordsIcon);
         coordsPanel.Controls.Add(_coordsLabel);
-        leftStatusFlow.Controls.Add(coordsPanel);
 
         // Dimensions info has been moved to the top bar title (filename layout) to maximize space for hints.
 
@@ -263,6 +256,8 @@ public sealed partial class EditorForm
             Margin = new Padding(0),
             Padding = new Padding(0),
         };
+        // Coords lead the right-side group, sitting just to the left of the zoom slider.
+        rightControlsFlow.Controls.Add(coordsPanel);
         rightControlsFlow.Controls.Add(zoomHost);
         rightControlsFlow.Controls.Add(_resetZoomBtn);
         rightControlsFlow.Controls.Add(_fitZoomBtn);
@@ -270,33 +265,62 @@ public sealed partial class EditorForm
 
         _liveStatusLabel = new DoubleBufferedLabel
         {
-            AutoSize = true,
+            Dock = DockStyle.Fill,
+            AutoSize = false,
+            SingleLine = true, // one line + ellipsis instead of wrapping to a second row
             ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleCenter,
-            Anchor = AnchorStyles.None,
+            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleLeft,
             Text = "",
         };
 
-        // Three-column layout: left info | centered dynamic hint | right zoom controls
+        // Hint area: a lightbulb glyph leads the live hint text. Two-column table keeps the icon
+        // pinned left while the label fills (and ellipsizes within) the remaining width.
+        var hintIcon = new Panel
+        {
+            Width = 22,
+            Height = 22,
+            Margin = new Padding(0, 0, 7, 0),
+            Anchor = AnchorStyles.None,
+            BackColor = Color.Transparent,
+        };
+        hintIcon.Paint += (s, e) =>
+            StreamlineIcons.DrawIcon(e.Graphics, "lightbulb", new RectangleF(0, 0, 22, 22), EditorColors.Accent, 0f, false);
+
+        var hintLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.Transparent,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = new Padding(0),
+            Padding = new Padding(0),
+        };
+        EnableDoubleBuffering(hintLayout);
+        hintLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        hintLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        hintLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        hintLayout.Controls.Add(hintIcon, 0, 0);
+        hintLayout.Controls.Add(_liveStatusLabel, 1, 0);
+        _hintArea = hintLayout;
+
+        // Two-column layout: left-aligned dynamic hint | right zoom controls (coords + slider)
         var statusLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            ColumnCount = 3,
+            ColumnCount = 2,
             RowCount = 1,
             Margin = new Padding(0),
             Padding = new Padding(0),
         };
         EnableDoubleBuffering(statusLayout);
-        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
         statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         statusLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        statusLayout.Controls.Add(leftStatusFlow, 0, 0);
-        statusLayout.Controls.Add(_liveStatusLabel, 1, 0);
-        statusLayout.Controls.Add(rightControlsFlow, 2, 0);
+        statusLayout.Controls.Add(_hintArea, 0, 0);
+        statusLayout.Controls.Add(rightControlsFlow, 1, 0);
         _statusBarPanel.Controls.Add(statusLayout);
 
         // CyberSnap-styled hover hints for the bottom bar, matching the capture toolbar.
@@ -584,7 +608,7 @@ public sealed partial class EditorForm
         AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow");
         AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", LocalizationService.Translate("Curved"));
         AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line");
-        AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle");
+        AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box");
         AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle");
         AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text Tool");
         AddToolButton(draw, 1, 2, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight");
@@ -809,9 +833,12 @@ public sealed partial class EditorForm
         int row,
         AnnotationCanvas.CanvasTool tool,
         string iconId,
-        string labelKey)
+        string labelKey,
+        string? displayKey = null)
     {
-        var label = LocalizationService.Translate(labelKey);
+        // The visible button text can be a shorter label (displayKey) to avoid truncation in the
+        // narrow grid; the hover tooltip below still uses the full labelKey.
+        var label = LocalizationService.Translate(displayKey ?? labelKey);
         // Even gutters between buttons; outer edges flush so the grid fills the column.
         int cols = parent.ColumnCount;
         int left = column == 0 ? 0 : 4;
@@ -1232,8 +1259,8 @@ public sealed partial class EditorForm
                 app.PersistEditorShowHints(_canvas.ShowHints);
             }
             // Update the status bar hint label visibility
-            if (_liveStatusLabel != null)
-                _liveStatusLabel.Visible = _canvas.ShowHints && ClientSize.Width >= 950;
+            if (_hintArea != null)
+                _hintArea.Visible = _canvas.ShowHints && ClientSize.Width >= 950;
         };
 
         settingsItem.Click += (_, _) =>
@@ -1384,10 +1411,18 @@ internal sealed class DoubleBufferedLabel : Label
                  ControlStyles.SupportsTransparentBackColor, true);
     }
 
+    /// <summary>
+    /// When true, the text is laid out on a single line (ellipsized if it overflows) instead of
+    /// word-wrapping. Lets a non-AutoSize label keep a stable one-line height in the status bar.
+    /// </summary>
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool SingleLine { get; set; }
+
     public override Size GetPreferredSize(Size proposedSize)
     {
         var flags = TextFormatFlags.NoPrefix;
-        if (AutoSize)
+        if (AutoSize || SingleLine)
         {
             flags |= TextFormatFlags.SingleLine;
         }
@@ -1449,7 +1484,7 @@ internal sealed class DoubleBufferedLabel : Label
             case ContentAlignment.BottomRight: flags |= TextFormatFlags.Bottom | TextFormatFlags.Right; break;
         }
 
-        if (AutoSize)
+        if (AutoSize || SingleLine)
         {
             flags |= TextFormatFlags.SingleLine;
         }
@@ -1505,7 +1540,7 @@ internal sealed class EditorToolButton : EditorButtonBase
 {
     // Slightly-elevated graphite resting fill so the tool buttons lift off the darker
     // panel instead of blending into it, and read well against their cyan borders.
-    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(255, 255, 255);
+    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(250, 251, 255);
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Checked

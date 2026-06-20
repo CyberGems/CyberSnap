@@ -135,7 +135,7 @@ public sealed class TrayIcon : IDisposable
             recordGifItem.Click += (_, _) => OnRecordRequested?.Invoke(RecordingFormat.GIF);
         }
 
-        var annotationEditorItem = WindowsMenuRenderer.Item(T("Annotations Editor..."), iconId: "draw");
+        var annotationEditorItem = WindowsMenuRenderer.Item(T("Annotations Editor..."), iconId: "compose");
         var historyItem        = WindowsMenuRenderer.Item(T("Capture Gallery..."), iconId: "history");
         var settingsItem       = WindowsMenuRenderer.Item(T("Configuration..."), iconId: "gear");
         var quitItem           = WindowsMenuRenderer.Item(T("Exit"), iconId: "close", danger: true);

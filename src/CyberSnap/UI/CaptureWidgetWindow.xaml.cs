@@ -798,7 +798,7 @@ public partial class CaptureWidgetWindow : Window
 
         // Open the annotation editor directly from the widget
         var editorItem = Helpers.WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Annotations Editor..."), iconId: "draw");
+            LocalizationService.Translate("Annotations Editor..."), iconId: "compose");
         editorItem.Click += (s, ev) =>
         {
             CollapseWidget();

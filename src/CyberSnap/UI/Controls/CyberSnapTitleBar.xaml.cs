@@ -76,24 +76,8 @@ public partial class CyberSnapTitleBar : UserControl
         MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
 
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", titleIcon, 18);
-        // Use E771 (Personalize) icon from Segoe MDL2 Assets
-        var wpfColor = System.Windows.Media.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
-        var brush = new System.Windows.Media.SolidColorBrush(wpfColor);
-        var personalizeIcon = new System.Windows.Media.FormattedText("\uE771",
-            System.Globalization.CultureInfo.InvariantCulture,
-            System.Windows.FlowDirection.LeftToRight,
-            new System.Windows.Media.Typeface("Segoe MDL2 Assets"),
-            14,
-            brush,
-            1.0);
-        var dv = new System.Windows.Media.DrawingVisual();
-        using (var dc = dv.RenderOpen())
-        {
-            dc.DrawText(personalizeIcon, new System.Windows.Point(2, 1));
-        }
-        var renderTarget = new System.Windows.Media.Imaging.RenderTargetBitmap(18, 18, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-        renderTarget.Render(dv);
-        AnnotationIcon.Source = renderTarget;
+        // "Open editor" shortcut \u2014 the Fluent "Compose" icon (shared with the tray/widget menus)
+        AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 18);
         AnnotationIcon.Opacity = 1.0;
 
         InitializeActionBtn(titleIcon);
