@@ -60,7 +60,12 @@ public sealed partial class EditorForm
 
         var fg = GetForegroundWindow();
         bool isWindowActive = fg == Handle || (_hoverToolTip != null && fg == _hoverToolTip.Handle);
-        if (IsDisposed || !Visible || !isWindowActive)
+        bool isAnyMenuOpen = (_burgerMenu != null && _burgerMenu.Visible)
+            || (_canvasMenu != null && _canvasMenu.Visible)
+            || (_imageMenu != null && _imageMenu.Visible)
+            || (_emojiPicker != null && _emojiPicker.Visible);
+
+        if (IsDisposed || !Visible || !isWindowActive || isAnyMenuOpen)
         {
             if (_hoverAnchor is not null)
             {

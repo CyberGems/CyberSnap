@@ -16,6 +16,7 @@ SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64
+ChangesAssociations=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -34,6 +35,13 @@ Name: "{group}\CyberSnap Annotations Editor"; Filename: "{app}\CyberSnap.exe"; P
 Name: "{autodesktop}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: desktopicon
 Name: "{autodesktop}\CyberSnap Annotations Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; Tasks: desktopicon
 Name: "{userstartup}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: startup
+
+[Registry]
+Root: HKA; Subkey: "Software\Classes\.csnp"; ValueType: string; ValueName: ""; ValueData: "CyberSnap.Project"; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\.csnp\OpenWithProgids"; ValueType: string; ValueName: "CyberSnap.Project"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\CyberSnap.Project"; ValueType: string; ValueName: ""; ValueData: "CyberSnap Project"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\CyberSnap.Project\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\CyberSnap.exe,0"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\CyberSnap.Project\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\CyberSnap.exe"" ""%1"""; Flags: uninsdeletekey
 
 [Run]
 Filename: "{app}\CyberSnap.exe"; Description: "{cm:LaunchProgram,CyberSnap}"; Flags: nowait postinstall skipifsilent

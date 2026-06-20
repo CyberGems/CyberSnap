@@ -72,6 +72,21 @@ public sealed partial class EditorForm : Form
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
                 return;
 
+            if (filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
+            {
+                var (baseBitmap, projectData) = CanvasProjectService.LoadProject(filePath);
+                if (_instance is not null && !_instance.IsDisposed)
+                {
+                    _instance.LoadCaptureProject(baseBitmap, projectData, filePath);
+                    _instance.RestoreAndActivate();
+                    return;
+                }
+                _instance = new EditorForm(baseBitmap, filePath);
+                _instance.LoadCaptureProject(baseBitmap, projectData, filePath);
+                _instance.Show();
+                return;
+            }
+
             using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
             using (var tempBmp = new Bitmap(stream))
             {
@@ -83,6 +98,16 @@ public sealed partial class EditorForm : Form
         {
             System.Windows.Forms.MessageBox.Show($"Failed to load image: {ex.Message}", "Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
         }
+    }
+
+    private void LoadCaptureProject(Bitmap baseBitmap, ProjectData data, string filePath)
+    {
+        _savedFilePath = filePath;
+        _canvas.LoadProjectState(baseBitmap, data.Annotations, data.HorizontalGuides, data.VerticalGuides);
+        _suppressCloseConfirm = false;
+        MaybeAutoMaximizeForCapture();
+        UpdateCaptureCaption();
+        RefreshUi();
     }
 
     public static void ShowEditorEmptyOrPrompt()
@@ -520,18 +545,13 @@ public sealed partial class EditorForm : Form
         if (!_canvas.IsDirty || _canvas.IsDefaultBlank) return;
         try
         {
-            using var output = _canvas.RenderFinal();
-            if (!string.IsNullOrWhiteSpace(_savedFilePath))
+            if (!string.IsNullOrWhiteSpace(_savedFilePath) && _savedFilePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
             {
-                SaveRenderedBitmap(output, _savedFilePath!);
-            }
-            else
-            {
-                DoSaveAs(output);
+                DoSaveProject(_savedFilePath);
                 return;
             }
 
-            FinishSuccessfulSave(output, _savedFilePath!);
+            DoSaveProjectAs();
         }
         catch (Exception ex)
         {
@@ -539,33 +559,109 @@ public sealed partial class EditorForm : Form
         }
     }
 
+    private void DoSaveProject(string filePath)
+    {
+        try
+        {
+            CanvasProjectService.SaveProject(
+                filePath,
+                _canvas.BaseBitmap,
+                _canvas.Annotations,
+                _canvas.HorizontalGuides,
+                _canvas.VerticalGuides);
+
+            _savedFilePath = filePath;
+            _canvas.AcceptSavedProjectState();
+            NotifyHistoryEditedCaptureSaved(filePath, _canvas.BaseBitmap.Width, _canvas.BaseBitmap.Height);
+            UpdateCaptureCaption();
+            RefreshUi();
+            ShowSaveStatus(filePath);
+
+            var fileName = Path.GetFileName(filePath);
+            var toastTitle = LocalizationService.Translate("System Message");
+            var toastBody = string.Format(LocalizationService.Translate("Saved: {0}"), fileName);
+            ToastWindow.Show(toastTitle, toastBody, filePath);
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
+        }
+    }
+
+    private void DoSaveProjectAs()
+    {
+        using var dlg = new SaveFileDialog
+        {
+            Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp",
+            FileName = string.IsNullOrWhiteSpace(_savedFilePath)
+                ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.csnp"
+                : Path.ChangeExtension(Path.GetFileName(_savedFilePath), ".csnp"),
+            DefaultExt = ".csnp",
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        DoSaveProject(dlg.FileName);
+    }
+
     private void DoSaveAs()
     {
-        using var output = _canvas.RenderFinal();
-        DoSaveAs(output);
+        using var dlg = new SaveFileDialog
+        {
+            Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|PNG|*.png|JPEG|*.jpg",
+            FileName = string.IsNullOrWhiteSpace(_savedFilePath)
+                ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.png"
+                : Path.GetFileNameWithoutExtension(_savedFilePath) + "_edited.png",
+            DefaultExt = ".png",
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        if (dlg.FileName.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
+        {
+            DoSaveProject(dlg.FileName);
+        }
+        else
+        {
+            try
+            {
+                using var output = _canvas.RenderFinal();
+                SaveRenderedBitmap(output, dlg.FileName);
+                _savedFilePath = dlg.FileName;
+                FinishSuccessfulSave(output, dlg.FileName);
+            }
+            catch (Exception ex)
+            {
+                ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
+            }
+        }
     }
 
     private void DoSaveAs(Bitmap output)
     {
         using var dlg = new SaveFileDialog
         {
-            Filter = "PNG|*.png|JPEG|*.jpg",
+            Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|PNG|*.png|JPEG|*.jpg",
             FileName = string.IsNullOrWhiteSpace(_savedFilePath)
-                ? $"CyberSnap_{DateTime.Now:yyyyMMdd_HHmmss}.png"
+                ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.png"
                 : Path.GetFileNameWithoutExtension(_savedFilePath) + "_edited.png",
             DefaultExt = ".png",
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-        try
+        if (dlg.FileName.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
         {
-            SaveRenderedBitmap(output, dlg.FileName);
-            _savedFilePath = dlg.FileName;
-            FinishSuccessfulSave(output, dlg.FileName);
+            DoSaveProject(dlg.FileName);
         }
-        catch (Exception ex)
+        else
         {
-            ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
+            try
+            {
+                SaveRenderedBitmap(output, dlg.FileName);
+                _savedFilePath = dlg.FileName;
+                FinishSuccessfulSave(output, dlg.FileName);
+            }
+            catch (Exception ex)
+            {
+                ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
+            }
         }
     }
 
@@ -651,8 +747,56 @@ public sealed partial class EditorForm : Form
 
         using (var dlg = new OpenFileDialog
         {
-            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tiff|All Files|*.*",
+            Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tiff|All Files|*.*",
             Title = LocalizationService.Translate("Open Image")
+        })
+        {
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                try
+                {
+                    if (dlg.FileName.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var (baseBitmap, projectData) = CanvasProjectService.LoadProject(dlg.FileName);
+                        LoadCaptureProject(baseBitmap, projectData, dlg.FileName);
+                    }
+                    else
+                    {
+                        using (var stream = new FileStream(dlg.FileName, FileMode.Open, FileAccess.Read))
+                        using (var tempBmp = new Bitmap(stream))
+                        {
+                            var captured = new Bitmap(tempBmp);
+                            LoadCapture(captured, dlg.FileName);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ThemedConfirmDialog.Alert(Handle, "Error loading image", ex.Message, error: true);
+                }
+            }
+        }
+    }
+
+    private void DoImport()
+    {
+        if (_canvas.IsDirty)
+        {
+            var discard = ThemedConfirmDialog.Confirm(
+                Handle,
+                "Unsaved changes",
+                "Discard changes?",
+                "Discard",
+                "Keep editing",
+                danger: false);
+            if (!discard)
+                return;
+        }
+
+        using (var dlg = new OpenFileDialog
+        {
+            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tiff|All Files|*.*",
+            Title = LocalizationService.Translate("Import Image")
         })
         {
             if (dlg.ShowDialog(this) == DialogResult.OK)
@@ -668,7 +812,7 @@ public sealed partial class EditorForm : Form
                 }
                 catch (Exception ex)
                 {
-                    ThemedConfirmDialog.Alert(Handle, "Error loading image", ex.Message, error: true);
+                    ThemedConfirmDialog.Alert(Handle, "Error importing image", ex.Message, error: true);
                 }
             }
         }
@@ -731,6 +875,7 @@ public sealed partial class EditorForm : Form
     {
         if (keyData == (Keys.Control | Keys.N)) { DoNew(); return true; }
         if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
+        if (keyData == (Keys.Control | Keys.I)) { DoImport(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
@@ -971,6 +1116,7 @@ public sealed partial class EditorForm : Form
     private ContextMenuStrip? _canvasMenu;
     private ContextMenuStrip? _imageMenu;
     private ContextMenuStrip? _burgerMenu;
+    private DateTime _burgerMenuLastClosed = DateTime.MinValue;
 
     private void BuildContextMenus()
     {
@@ -993,6 +1139,7 @@ public sealed partial class EditorForm : Form
 
         var openItem = WindowsMenuRenderer.Item("Open image...", iconId: null);
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
+        var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project..."), iconId: "save");
         var fitItem = WindowsMenuRenderer.Item("Fit to window", iconId: null);
         var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
         var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
@@ -1002,6 +1149,7 @@ public sealed partial class EditorForm : Form
         openItem.Click += (_, _) => DoOpen();
         pasteItem.Click += (_, _) => DoPaste();
         pasteItem.Enabled = Clipboard.ContainsImage();
+        saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
         fitItem.Click += (_, _) => _canvas.ZoomFit();
         resetItem.Click += (_, _) => _canvas.ZoomReset();
         undoItem.Click += (_, _) => _canvas.Undo();
@@ -1010,6 +1158,7 @@ public sealed partial class EditorForm : Form
 
         menu.Items.Add(openItem);
         menu.Items.Add(pasteItem);
+        menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(fitItem);
         menu.Items.Add(resetItem);
@@ -1030,6 +1179,7 @@ public sealed partial class EditorForm : Form
         var copyItem = WindowsMenuRenderer.Item("Copy", iconId: "copy");
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
         var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
+        var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project..."), iconId: "save");
         var saveAsItem = WindowsMenuRenderer.Item("Export...", iconId: "export");
         var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");
         var propsItem = WindowsMenuRenderer.Item("Properties", iconId: null);
@@ -1040,6 +1190,7 @@ public sealed partial class EditorForm : Form
         pasteItem.Enabled = Clipboard.ContainsImage();
         saveItem.Click += (_, _) => DoSave();
         saveItem.Enabled = _canvas.IsDirty && !_canvas.IsDefaultBlank;
+        saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
         saveAsItem.Click += (_, _) => DoSaveAs();
         openLocItem.Click += (_, _) => DoOpenLocation();
         propsItem.Click += (_, _) => DoShowProperties();
@@ -1048,6 +1199,7 @@ public sealed partial class EditorForm : Form
         menu.Items.Add(copyItem);
         menu.Items.Add(pasteItem);
         menu.Items.Add(saveItem);
+        menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(saveAsItem);
         menu.Items.Add(new ToolStripSeparator());
 
