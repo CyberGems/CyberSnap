@@ -692,5 +692,8 @@
   "Resolution": "Resolution",
   "Aspect ratio": "Aspect ratio",
   "Apply": "Apply",
-  "Cancel": "Cancel"
+  "Cancel": "Cancel",
+  "Save changes to {0}?": "Save changes to {0}?",
+  "Confirm Paste": "Confirm Paste",
+  "Pasting this image will replace your current document. Do you want to proceed?": "Pasting this image will replace your current document. Do you want to proceed?"
 }

@@ -17,20 +17,23 @@ using WpfOrientation = System.Windows.Controls.Orientation;
 
 namespace CyberSnap.UI;
 
+public enum SavePromptResult { Save, DontSave, Cancel }
+
 // CyberGems-styled confirmation / alert dialog: dark slate panel, neon glow
 // border, glowing icon badge and uppercase neon buttons. Theme-aware (cyan in
 // dark mode, blue in light mode) to stay consistent with the rest of CyberSnap.
 internal sealed class ThemedConfirmDialog : Window
 {
-    private enum Kind { Confirm, Danger, Info, Error }
+    private enum Kind { Confirm, Danger, Info, Error, SavePrompt }
 
     // Outer transparent margin so the neon glow has room to render.
-    private const double GlowMargin = 22;
-    private const double PanelWidth = 360;
+    private const double GlowMargin = 16;
+    private const double PanelWidth = 390;
 
     private bool _confirmed;
+    private SavePromptResult _saveResult = SavePromptResult.Cancel;
 
-    private ThemedConfirmDialog(string title, string message, string primaryText, string? secondaryText, Kind kind)
+    private ThemedConfirmDialog(string title, string message, string primaryText, string? secondaryText, Kind kind, string? iconId = null)
     {
         Theme.Refresh();
         title = Services.LocalizationService.Translate(title);
@@ -50,9 +53,9 @@ internal sealed class ThemedConfirmDialog : Window
         FontFamily = new WpfFontFamily(UiChrome.PreferredFamilyName);
         Foreground = Theme.Brush(Theme.TextPrimary);
 
-        var content = BuildContent(title, message, primaryText, secondaryText, kind);
+        var content = BuildContent(title, message, primaryText, secondaryText, kind, iconId);
         Content = content;
-        UiScale.ApplyToWindow(this, content, scaleWindowBounds: false);
+        UiScale.ApplyToWindow(this, content, scaleWindowBounds: true);
 
         PreviewKeyDown += (_, e) =>
         {
@@ -72,8 +75,9 @@ internal sealed class ThemedConfirmDialog : Window
         string message,
         string primaryText = "Yes",
         string secondaryText = "No",
-        bool danger = true)
-        => Show(owner, IntPtr.Zero, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm);
+        bool danger = true,
+        string? iconId = null)
+        => Show(owner, IntPtr.Zero, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm, iconId);
 
     // Overload for WinForms callers (e.g. the annotation EditorForm), which own
     // an HWND rather than a WPF Window.
@@ -83,8 +87,9 @@ internal sealed class ThemedConfirmDialog : Window
         string message,
         string primaryText = "Yes",
         string secondaryText = "No",
-        bool danger = true)
-        => Show(null, ownerHandle, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm);
+        bool danger = true,
+        string? iconId = null)
+        => Show(null, ownerHandle, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm, iconId);
 
     // Single-button informational / error dialog (replacement for MessageBox.Show with one OK button).
     public static void Alert(Window? owner, string title, string message, bool error = false, string okText = "OK")
@@ -93,6 +98,35 @@ internal sealed class ThemedConfirmDialog : Window
     public static void Alert(IntPtr ownerHandle, string title, string message, bool error = false, string okText = "OK")
         => Show(null, ownerHandle, title, message, okText, null, error ? Kind.Error : Kind.Info);
 
+    // 3-button Save Prompt: Save / Don't Save / Cancel
+    public static SavePromptResult SavePrompt(Window? owner, string title, string message)
+        => ShowSavePrompt(owner, IntPtr.Zero, title, message);
+
+    public static SavePromptResult SavePrompt(IntPtr ownerHandle, string title, string message)
+        => ShowSavePrompt(null, ownerHandle, title, message);
+
+    private static SavePromptResult ShowSavePrompt(
+        Window? owner,
+        IntPtr ownerHandle,
+        string title,
+        string message)
+    {
+        var dialog = new ThemedConfirmDialog(title, message, "Yes", null, Kind.SavePrompt);
+        if (owner is { IsVisible: true })
+        {
+            dialog.Owner = owner;
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+        else if (ownerHandle != IntPtr.Zero)
+        {
+            new WindowInteropHelper(dialog).Owner = ownerHandle;
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        dialog.ShowDialog();
+        return dialog._saveResult;
+    }
+
     private static bool Show(
         Window? owner,
         IntPtr ownerHandle,
@@ -100,9 +134,10 @@ internal sealed class ThemedConfirmDialog : Window
         string message,
         string primaryText,
         string? secondaryText,
-        Kind kind)
+        Kind kind,
+        string? iconId = null)
     {
-        var dialog = new ThemedConfirmDialog(title, message, primaryText, secondaryText, kind);
+        var dialog = new ThemedConfirmDialog(title, message, primaryText, secondaryText, kind, iconId);
         if (owner is { IsVisible: true })
         {
             dialog.Owner = owner;
@@ -119,45 +154,57 @@ internal sealed class ThemedConfirmDialog : Window
 
     // ── Content ────────────────────────────────────────────────────────────
 
-    private FrameworkElement BuildContent(string title, string message, string primaryText, string? secondaryText, Kind kind)
+    private FrameworkElement BuildContent(string title, string message, string primaryText, string? secondaryText, Kind kind, string? iconId)
     {
         var accent = AccentFor(kind);
 
         var shell = new Border
         {
             Margin = new Thickness(GlowMargin),
-            CornerRadius = new CornerRadius(12),
+            CornerRadius = new CornerRadius(10),
             Background = Theme.Brush(PanelBackground),
-            BorderBrush = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)150 : (byte)110)),
-            BorderThickness = new Thickness(1.4),
-            Effect = Glow(accent, Theme.IsDark ? 26 : 18, Theme.IsDark ? 0.55 : 0.30)
+            BorderBrush = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)70 : (byte)50)),
+            BorderThickness = new Thickness(1),
+            Effect = Glow(accent, Theme.IsDark ? 10 : 7, Theme.IsDark ? 0.18 : 0.11)
         };
 
-        var root = new Grid { Margin = new Thickness(22) };
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var root = new Grid();
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(4) });      // accent strip
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });        // icon (centered)
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });        // title + message
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1) });      // separator
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });        // buttons footer
 
-        // Row 0: glowing icon badge + title/message column.
-        var body = new Grid();
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // Row 0: thin accent strip — CornerRadius matches the shell outer radius so corners blend cleanly.
+        var accentBar = new Border
+        {
+            CornerRadius = new CornerRadius(topLeft: 10, topRight: 10, bottomRight: 0, bottomLeft: 0),
+            Background = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)155 : (byte)115))
+        };
+        Grid.SetRow(accentBar, 0);
+        root.Children.Add(accentBar);
 
-        var icon = BuildIcon(kind, accent);
-        Grid.SetColumn(icon, 0);
-        body.Children.Add(icon);
+        // Row 1: icon centered.
+        var icon = BuildIcon(kind, accent, iconId);
+        icon.HorizontalAlignment = WpfHorizontalAlignment.Center;
+        icon.Margin = new Thickness(0, 20, 0, 0);
+        Grid.SetRow(icon, 1);
+        root.Children.Add(icon);
 
+        // Row 2: title + message, both center-aligned.
         var textPanel = new StackPanel
         {
-            Margin = new Thickness(16, 1, 22, 0),
-            VerticalAlignment = VerticalAlignment.Center
+            HorizontalAlignment = WpfHorizontalAlignment.Center,
+            Margin = new Thickness(28, 10, 28, 18)
         };
         textPanel.Children.Add(new TextBlock
         {
-            Text = title.ToUpper(CultureInfo.CurrentCulture),
-            FontSize = 13,
-            FontWeight = FontWeights.Bold,
+            Text = title,
+            FontSize = 13.5,
+            FontWeight = FontWeights.SemiBold,
             Foreground = Theme.Brush(Theme.TextPrimary),
-            TextWrapping = TextWrapping.Wrap
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center
         });
         textPanel.Children.Add(new TextBlock
         {
@@ -166,35 +213,66 @@ internal sealed class ThemedConfirmDialog : Window
             Foreground = Theme.Brush(Theme.TextSecondary),
             TextWrapping = TextWrapping.Wrap,
             LineHeight = 17,
-            Margin = new Thickness(0, 7, 0, 0)
+            TextAlignment = TextAlignment.Center,
+            Margin = new Thickness(0, 5, 0, 0)
         });
-        Grid.SetColumn(textPanel, 1);
-        body.Children.Add(textPanel);
+        Grid.SetRow(textPanel, 2);
+        root.Children.Add(textPanel);
 
-        Grid.SetRow(body, 0);
-        root.Children.Add(body);
+        // Row 3: hairline separator.
+        var separator = new Border
+        {
+            Background = Theme.Brush(
+                Theme.IsDark ? WpfColor.FromArgb(28, 255, 255, 255) : WpfColor.FromArgb(18, 0, 0, 0))
+        };
+        Grid.SetRow(separator, 3);
+        root.Children.Add(separator);
 
-        // Row 1: right-aligned buttons.
+        // Row 4: centered buttons.
         var buttons = new StackPanel
         {
             Orientation = WpfOrientation.Horizontal,
-            HorizontalAlignment = WpfHorizontalAlignment.Right,
-            Margin = new Thickness(0, 22, 0, 0)
+            HorizontalAlignment = WpfHorizontalAlignment.Center,
+            Margin = new Thickness(10, 14, 10, 14)
         };
-        if (secondaryText is not null)
-            buttons.Children.Add(BuildButton(secondaryText, isPrimary: false, kind, () => Close()));
-        buttons.Children.Add(BuildButton(primaryText, isPrimary: true, kind, () =>
+        if (kind == Kind.SavePrompt)
         {
-            _confirmed = true;
-            DialogResult = true;
-            Close();
-        }));
-        Grid.SetRow(buttons, 1);
+            // 3-button layout: Cancel (secondary) | No (secondary) | Yes (primary)
+            buttons.Children.Add(BuildButton(Services.LocalizationService.Translate("Cancel"), isPrimary: false, kind, () =>
+            {
+                _saveResult = SavePromptResult.Cancel;
+                Close();
+            }));
+            buttons.Children.Add(BuildButton(Services.LocalizationService.Translate("No"), isPrimary: false, kind, () =>
+            {
+                _saveResult = SavePromptResult.DontSave;
+                Close();
+            }));
+            buttons.Children.Add(BuildButton(Services.LocalizationService.Translate("Yes"), isPrimary: true, kind, () =>
+            {
+                _saveResult = SavePromptResult.Save;
+                DialogResult = true;
+                Close();
+            }));
+        }
+        else
+        {
+            if (secondaryText is not null)
+                buttons.Children.Add(BuildButton(secondaryText, isPrimary: false, kind, () => Close()));
+            buttons.Children.Add(BuildButton(primaryText, isPrimary: true, kind, () =>
+            {
+                _confirmed = true;
+                DialogResult = true;
+                Close();
+            }));
+        }
+        Grid.SetRow(buttons, 4);
         root.Children.Add(buttons);
 
-        // Close affordance (top-right corner) layered above the body.
+        // Close affordance overlaid at the top-right, spanning the accent + icon rows.
         var close = BuildClose();
-        Grid.SetRow(close, 0);
+        close.Margin = new Thickness(0, 8, 8, 0);
+        Grid.SetRow(close, 1);
         root.Children.Add(close);
 
         shell.Child = root;
@@ -242,34 +320,69 @@ internal sealed class ThemedConfirmDialog : Window
         return close;
     }
 
-    private static FrameworkElement BuildIcon(Kind kind, WpfColor accent)
+    private static FrameworkElement BuildIcon(Kind kind, WpfColor accent, string? iconId)
     {
-        var iconId = kind switch
+        iconId ??= kind switch
         {
             Kind.Danger => "trash",
             Kind.Error => "warning",
-            _ => "info"
+            _ => "question_plain"
         };
 
-        return new Border
+        // Question/SavePrompt: draw the icon inside a neon-glow ring for a bigger, cleaner look.
+        if (kind is Kind.Confirm or Kind.SavePrompt or Kind.Info)
         {
-            Width = 46,
-            Height = 46,
-            CornerRadius = new CornerRadius(12),
-            VerticalAlignment = VerticalAlignment.Top,
-            Background = Theme.Brush(WithAlpha(accent, 28)),
-            BorderBrush = Theme.Brush(WithAlpha(accent, 110)),
-            BorderThickness = new Thickness(1),
-            Effect = Glow(accent, 12, Theme.IsDark ? 0.5 : 0.25),
-            Child = new System.Windows.Controls.Image
+            const double ringSize = 54;
+
+            UIElement child;
+            if (iconId == "question_plain")
             {
-                Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(accent, 235), 24),
-                Width = 24,
-                Height = 24,
-                Stretch = Stretch.Uniform,
-                HorizontalAlignment = WpfHorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
+                child = new TextBlock
+                {
+                    Text = kind == Kind.Info ? "i" : "?",
+                    FontSize = kind == Kind.Info ? 30 : 32,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Theme.Brush(WithAlpha(accent, 235)),
+                    HorizontalAlignment = WpfHorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = kind == Kind.Info ? new Thickness(0, -2, 0, 0) : new Thickness(0, -3, 0, 0)
+                };
             }
+            else
+            {
+                const double iconSize = 30;
+                child = new System.Windows.Controls.Image
+                {
+                    Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(accent, 235), (int)iconSize),
+                    Width = iconSize,
+                    Height = iconSize,
+                    Stretch = Stretch.Uniform,
+                    HorizontalAlignment = WpfHorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+            }
+
+            var ring = new Border
+            {
+                Width = ringSize,
+                Height = ringSize,
+                CornerRadius = new CornerRadius(ringSize / 2),
+                BorderBrush = Theme.Brush(accent),
+                BorderThickness = new Thickness(2.4),
+                Background = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)18 : (byte)12)),
+                Effect = Glow(accent, 12, 0.35),
+                Child = child
+            };
+            return ring;
+        }
+
+        // Danger / Error: plain icon, no ring.
+        return new System.Windows.Controls.Image
+        {
+            Source = FluentIcons.RenderWpf(iconId, ToDrawingColor(accent, 235), 48),
+            Width = 48,
+            Height = 48,
+            Stretch = Stretch.Uniform
         };
     }
 
@@ -278,11 +391,11 @@ internal sealed class ThemedConfirmDialog : Window
         var accent = AccentFor(kind);
         var button = new Button
         {
-            Content = text.ToUpper(CultureInfo.CurrentCulture),
+            Content = text,
             MinWidth = 94,
             Height = 34,
-            Margin = new Thickness(isPrimary ? 10 : 0, 0, 0, 0),
-            Padding = new Thickness(14, 0, 14, 0),
+            Margin = new Thickness(6, 0, 6, 0),
+            Padding = new Thickness(22, 0, 22, 0),
             FontSize = 12,
             FontWeight = FontWeights.SemiBold,
             Cursor = WpfCursors.Hand,
@@ -305,7 +418,7 @@ internal sealed class ThemedConfirmDialog : Window
             {
                 button.Background = Theme.Brush(accent);
                 button.Foreground = hoverText;
-                button.Effect = Glow(accent, 14, 0.85);
+                button.Effect = Glow(accent, 7, 0.40);
             };
             button.MouseLeave += (_, _) =>
             {
@@ -344,6 +457,7 @@ internal sealed class ThemedConfirmDialog : Window
         border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(Button.Background)) { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
         border.SetBinding(Border.BorderBrushProperty, new System.Windows.Data.Binding(nameof(Button.BorderBrush)) { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
         border.SetBinding(Border.BorderThicknessProperty, new System.Windows.Data.Binding(nameof(Button.BorderThickness)) { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
+        border.SetBinding(Border.PaddingProperty, new System.Windows.Data.Binding(nameof(Button.Padding)) { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
 
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, WpfHorizontalAlignment.Center);
@@ -366,6 +480,7 @@ internal sealed class ThemedConfirmDialog : Window
     private static WpfColor AccentFor(Kind kind) => kind switch
     {
         Kind.Danger or Kind.Error => Theme.IsDark ? WpfColor.FromRgb(255, 70, 100) : WpfColor.FromRgb(196, 43, 28),
+        Kind.SavePrompt => Theme.Accent,
         _ => Theme.Accent
     };
 

@@ -935,5 +935,8 @@
   "Resolution": "Resolución",
   "Aspect ratio": "Relación de aspecto",
   "Apply": "Aplicar",
-  "Cancel": "Cancelar"
+  "Cancel": "Cancelar",
+  "Save changes to {0}?": "¿Guardar cambios en {0}?",
+  "Confirm Paste": "Confirmar pegado",
+  "Pasting this image will replace your current document. Do you want to proceed?": "Al pegar esta imagen se reemplazará el documento actual. ¿Deseas continuar?"
 }
