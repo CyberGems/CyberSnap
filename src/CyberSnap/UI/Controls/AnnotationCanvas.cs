@@ -781,6 +781,14 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool FitToWindowOnLoad { get; set; } = true;
 
+    private bool _showHints = true;
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool ShowHints
+    {
+        get => _showHints;
+        set { _showHints = value; }
+    }
+
     private bool _editorAutoCropControls = true;
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool EditorAutoCropControls

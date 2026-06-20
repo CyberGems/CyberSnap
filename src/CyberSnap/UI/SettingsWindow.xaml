@@ -143,6 +143,9 @@
                             <Trigger Property="Tag" Value="Widget">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE700;"/>
                             </Trigger>
+                            <Trigger Property="Tag" Value="Editor">
+                                <Setter TargetName="Icon" Property="Text" Value="&#xE70F;"/>
+                            </Trigger>
                             <Trigger Property="Tag" Value="Tools">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xEE6F;"/>
                             </Trigger>
@@ -897,6 +900,8 @@
                     <RadioButton x:Name="HotkeysTab" Content="Hotkeys" Tag="Hotkeys" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="WidgetTab" Content="Widget" Tag="Widget" GroupName="Main"
+                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
+                    <RadioButton x:Name="EditorTab" Content="Editor" Tag="Editor" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
 
                     <RadioButton x:Name="HistoryTab" Content="Gallery" Tag="Gallery" GroupName="Main"
@@ -3453,6 +3458,136 @@
                                 </StackPanel>
                             </Border>
                         </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Editor -->
+            <ScrollViewer x:Name="EditorPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
+                <StackPanel>
+                    <TextBlock Text="Appearance" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <!-- Auto-fit on open -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE7C1;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Auto-fit to window" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Fit the image to the window when the editor opens." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="EditorFitCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Fit the image to the window when the editor opens."
+                                          AutomationProperties.Name="Auto-fit to window"
+                                          Checked="EditorFitCheck_Changed" Unchecked="EditorFitCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Show frame border -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE91B;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show frame border" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Show a frame around the capture in the editor." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="EditorShowFrameCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Show a frame around the capture in the editor."
+                                          AutomationProperties.Name="Show frame border"
+                                          Checked="EditorShowFrameCheck_Changed" Unchecked="EditorShowFrameCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Show banners -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8F1;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show instruction banners" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Display tool instruction banners in the editor." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="EditorShowBannersCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Display tool instruction banners in the editor."
+                                          AutomationProperties.Name="Show instruction banners"
+                                          Checked="EditorShowBannersCheck_Changed" Unchecked="EditorShowBannersCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Show hints -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show hints in status bar" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Display tool hints and shortcuts in the editor status bar." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="EditorShowHintsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Display tool hints and shortcuts in the editor status bar."
+                                          AutomationProperties.Name="Show hints in status bar"
+                                          Checked="EditorShowHintsCheck_Changed" Unchecked="EditorShowHintsCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Show rulers -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE765;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show rulers" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Display measurement rulers in the editor canvas." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="EditorShowRulersCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Display measurement rulers in the editor canvas."
+                                          AutomationProperties.Name="Show rulers"
+                                          Checked="EditorShowRulersCheck_Changed" Unchecked="EditorShowRulersCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Auto crop controls -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE7C2;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Auto crop controls" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Automatically show crop handles when the crop tool is active." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="EditorAutoCropCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Automatically show crop handles when the crop tool is active."
+                                          AutomationProperties.Name="Auto crop controls"
+                                          Checked="EditorAutoCropCheck_Changed" Unchecked="EditorAutoCropCheck_Changed"/>
+                            </Grid>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
