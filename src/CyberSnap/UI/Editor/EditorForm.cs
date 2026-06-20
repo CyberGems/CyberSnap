@@ -348,8 +348,8 @@ public sealed partial class EditorForm : Form
 
     private void UpdateStatusBarResponsiveLayout()
     {
-        if (_liveStatusLabel == null) return;
-        _liveStatusLabel.Visible = ClientSize.Width >= 950;
+        if (_hintArea == null) return;
+        _hintArea.Visible = _canvas is { ShowHints: true } && ClientSize.Width >= 950;
     }
 
     private void RefreshLayoutAndRedraw()
