@@ -326,6 +326,7 @@ public sealed partial class EditorForm : Form
                 }
             }
             _lastWindowState = WindowState;
+            UpdateStatusBarResponsiveLayout();
         };
         Shown += (_, _) =>
         {
@@ -335,12 +336,19 @@ public sealed partial class EditorForm : Form
             BringToFront();
             _canvas.Focus();
             RefreshUi();
+            UpdateStatusBarResponsiveLayout();
 
             // Disable compositing after initial render to avoid layout corruption bugs when losing focus
             _enableComposited = false;
             UpdateStyles();
             RefreshLayoutAndRedraw();
         };
+    }
+
+    private void UpdateStatusBarResponsiveLayout()
+    {
+        if (_liveStatusLabel == null) return;
+        _liveStatusLabel.Visible = ClientSize.Width >= 950;
     }
 
     private void RefreshLayoutAndRedraw()
@@ -426,15 +434,19 @@ public sealed partial class EditorForm : Form
             return;
         }
 
+        if (ctrl is FlowLayoutPanel)
+        {
+            ctrl.BackColor = Color.Transparent;
+            return;
+        }
+
         if (ctrl is Panel panel)
         {
             panel.BackColor = EditorColors.BgPrimary;
         }
         else if (ctrl is Label label)
         {
-            if (label == _dimensionsLabel)
-                label.ForeColor = EditorColors.TextMuted;
-            else if (label == _zoomLabel)
+            if (label == _zoomLabel)
                 label.ForeColor = EditorColors.Accent;
             else if (label == _coordsLabel || label == _fileNameLabel || label == _titleFileNameLabel)
                 label.ForeColor = EditorColors.TextSecondary;

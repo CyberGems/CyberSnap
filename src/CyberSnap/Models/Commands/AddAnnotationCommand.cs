@@ -11,6 +11,8 @@ public sealed class AddAnnotationCommand : IEditCommand
         _annotation = annotation;
     }
 
+    public Annotation Annotation => _annotation;
+
     public string Description => $"Add {_annotation.GetType().Name}";
 
     public void Apply(IEditorContext ctx)

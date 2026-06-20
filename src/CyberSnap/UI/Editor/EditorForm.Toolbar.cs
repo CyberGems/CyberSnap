@@ -16,7 +16,6 @@ public sealed partial class EditorForm
     private Panel _toolbarPanel = null!;
     private Bitmap? _brandBitmap;
     private Label _coordsLabel = null!;
-    private Label _dimensionsLabel = null!;
     private Label _fileNameLabel = null!;
     private Label _liveStatusLabel = null!;
     private Label _titleFileNameLabel = null!;
@@ -109,7 +108,7 @@ public sealed partial class EditorForm
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            AutoSize = false,
+            AutoSize = true,
             BackColor = Color.Transparent,
             Margin = new Padding(0),
             Padding = new Padding(0),
@@ -154,47 +153,7 @@ public sealed partial class EditorForm
         coordsPanel.Controls.Add(_coordsLabel);
         leftStatusFlow.Controls.Add(coordsPanel);
 
-        // Separator 2
-        var sep2 = new Panel { Width = 24, Height = 42, BackColor = Color.Transparent, Margin = new Padding(0) };
-        sep2.Paint += (s, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(40, 255, 255, 255));
-            int y1 = (sep2.Height - 16) / 2;
-            e.Graphics.DrawLine(pen, 11, y1, 11, y1 + 16);
-        };
-        leftStatusFlow.Controls.Add(sep2);
-
-        // Dimensions: Icon + Label + px
-        var dimsPanel = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoSize = true,
-            BackColor = Color.Transparent,
-            Margin = new Padding(0),
-        };
-        var dimsIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
-        dimsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "rect", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
-        _dimensionsLabel = new DoubleBufferedLabel
-        {
-            AutoSize = true,
-            Text = "0 x 0",
-            ForeColor = EditorColors.TextPrimary,
-            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
-            Margin = new Padding(0, 12, 2, 12),
-        };
-        var pxLabel = new DoubleBufferedLabel
-        {
-            AutoSize = true,
-            Text = "px",
-            ForeColor = EditorColors.Accent,
-            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
-            Margin = new Padding(0, 12, 0, 12),
-        };
-        dimsPanel.Controls.Add(dimsIcon);
-        dimsPanel.Controls.Add(_dimensionsLabel);
-        dimsPanel.Controls.Add(pxLabel);
-        leftStatusFlow.Controls.Add(dimsPanel);
+        // Dimensions info has been moved to the top bar title (filename layout) to maximize space for hints.
 
 
 
@@ -212,7 +171,7 @@ public sealed partial class EditorForm
         // AUTO-FIT switch: fit the image to the canvas on load, or show it at real 100% size.
         _toggleFitSwitch = new EditorToggleSwitch
         {
-            LabelText = LocalizationService.Translate("Auto-fit"),
+            LabelText = "",
             Checked = _canvas.FitToWindowOnLoad,
             Height = 42,
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
@@ -238,7 +197,7 @@ public sealed partial class EditorForm
 
         var zoomHost = new EditorZoomHostPanel
         {
-            Width = 325,
+            Width = 220,
             Height = 42,
             BackColor = EditorColors.TitleBar,
             ColumnCount = 3,
@@ -246,13 +205,14 @@ public sealed partial class EditorForm
             Padding = new Padding(8, 3, 8, 3),
             Margin = new Padding(0),
         };
-        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 65));
+        zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 28));
         zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         zoomHost.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 65));
+        zoomHost.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         _zoomLabel = new DoubleBufferedLabel
         {
-            Dock = DockStyle.Right,
+            Dock = DockStyle.Fill,
             Width = 65,
             BackColor = Color.Transparent,
             Text = "100%",
@@ -261,15 +221,16 @@ public sealed partial class EditorForm
             TextAlign = ContentAlignment.MiddleRight,
         };
 
-        var zoomText = new DoubleBufferedLabel
+        var zoomIcon = new Panel
         {
-            Dock = DockStyle.Left,
-            Width = 65,
+            Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
-            Text = "Zoom",
-            ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(0),
+        };
+        zoomIcon.Paint += (s, e) =>
+        {
+            var rect = new RectangleF((zoomIcon.Width - 18) / 2f, (zoomIcon.Height - 18) / 2f, 18, 18);
+            StreamlineIcons.DrawIcon(e.Graphics, "magnifier", rect, EditorColors.TextSecondary, 0f, false);
         };
 
         _zoomSlider = new EditorZoomSlider
@@ -279,7 +240,7 @@ public sealed partial class EditorForm
             Minimum = AnnotationCanvas.MinZoomPercent,
             Maximum = AnnotationCanvas.MaxZoomPercent,
             Value = 100,
-            Margin = new Padding(8, 0, 8, 0),
+            Margin = new Padding(4, 0, 4, 0),
         };
         _zoomSlider.ValueChanged += (_, _) =>
         {
@@ -287,7 +248,7 @@ public sealed partial class EditorForm
             _canvas.ZoomToPercent(_zoomSlider.Value);
         };
 
-        zoomHost.Controls.Add(zoomText, 0, 0);
+        zoomHost.Controls.Add(zoomIcon, 0, 0);
         zoomHost.Controls.Add(_zoomSlider, 1, 0);
         zoomHost.Controls.Add(_zoomLabel, 2, 0);
 
@@ -328,9 +289,9 @@ public sealed partial class EditorForm
             Padding = new Padding(0),
         };
         EnableDoubleBuffering(statusLayout);
-        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
-        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34f));
-        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f));
+        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        statusLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         statusLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         statusLayout.Controls.Add(leftStatusFlow, 0, 0);
@@ -343,7 +304,6 @@ public sealed partial class EditorForm
         // RegisterHoverTooltip(_toggleFrameSwitch, "Show a frame around the capture");
         RegisterHoverTooltip(_toggleFitSwitch, "Fit the image to the window when the editor opens");
         RegisterHoverTooltip(coordsPanel, "Cursor position over the image (X, Y)");
-        RegisterHoverTooltip(dimsPanel, "Image size in pixels");
 
         RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", LocalizationService.Translate("key 0")));
         RegisterHoverTooltip(_fitZoomBtn, () => WithShortcut("Zoom to fit the image in the window", "F2"));
@@ -1104,19 +1064,17 @@ public sealed partial class EditorForm
 
     private void UpdateCaptureCaption()
     {
-        if (_dimensionsLabel is null) return;
-
         var bitmap = _canvas.BaseBitmap;
+        if (bitmap is null) return;
+
         var fileName = string.IsNullOrWhiteSpace(_savedFilePath)
             ? "Unsaved capture"
             : Path.GetFileName(_savedFilePath);
         
-        var dimsText = $"{bitmap.Width} x {bitmap.Height}";
-        if (_dimensionsLabel.Text != dimsText)
-            _dimensionsLabel.Text = dimsText;
+        var titleText = $"{fileName} ({bitmap.Width} x {bitmap.Height} px)";
 
-        if (_titleFileNameLabel != null && _titleFileNameLabel.Text != fileName)
-            _titleFileNameLabel.Text = fileName;
+        if (_titleFileNameLabel != null && _titleFileNameLabel.Text != titleText)
+            _titleFileNameLabel.Text = titleText;
     }
 
     private void UpdateLiveStatusText()
@@ -2212,6 +2170,7 @@ internal sealed class EditorZoomSlider : Control
     protected override void OnMouseEnter(EventArgs e)
     {
         _hover = true;
+        Focus();
         Invalidate();
         base.OnMouseEnter(e);
     }
@@ -2222,6 +2181,20 @@ internal sealed class EditorZoomSlider : Control
         if (!_dragging)
             Invalidate();
         base.OnMouseLeave(e);
+    }
+
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        base.OnMouseWheel(e);
+        int step = 10;
+        if (e.Delta > 0)
+        {
+            Value += step;
+        }
+        else if (e.Delta < 0)
+        {
+            Value -= step;
+        }
     }
 
     protected override void OnMouseDown(MouseEventArgs e)
