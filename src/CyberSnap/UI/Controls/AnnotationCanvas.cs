@@ -64,6 +64,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private Point _panStart;
     private PointF _panStartOffset;
     private CanvasTool? _preSpaceTool;
+    private bool _isTempMoveFromPan;
 
     // Selection state (Move tool)
     private int _selectedAnnotationIndex = -1;
@@ -855,6 +856,20 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     /// <summary>How a freshly loaded capture is framed: auto-fit to the canvas, or shown at real 100% size.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool FitToWindowOnLoad { get; set; } = true;
+
+    private bool _panModeLockObjects = true;
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool PanModeLockObjects
+    {
+        get => _panModeLockObjects;
+        set
+        {
+            if (_panModeLockObjects == value) return;
+            _panModeLockObjects = value;
+            Invalidate();
+            OnStateChanged();
+        }
+    }
 
     private bool _showHints = true;
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]

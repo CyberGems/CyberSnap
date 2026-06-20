@@ -223,6 +223,7 @@ public sealed partial class EditorForm : Form
             ShowHints = settings?.EditorShowHints ?? true,
             EditorAutoCropControls = settings?.EditorAutoCropControls ?? true,
             EditorShowResizeHandles = settings?.EditorShowResizeHandles ?? true,
+            PanModeLockObjects = settings?.EditorPanModeLockObjects ?? true,
         };
         _canvas.StateChanged += OnCanvasStateChanged;
         _canvas.TextFontSizeChanged += size =>

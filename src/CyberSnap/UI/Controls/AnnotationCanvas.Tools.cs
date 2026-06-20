@@ -160,6 +160,11 @@ public sealed partial class AnnotationCanvas
             Invalidate();
         }
         CommitOrCancelInlineText(commit: false);
+        if (_isTempMoveFromPan)
+        {
+            _isTempMoveFromPan = false;
+            _activeTool = CanvasTool.Pan;
+        }
     }
 
     private void UpdateCursor()
@@ -258,8 +263,26 @@ public sealed partial class AnnotationCanvas
             }
         }
 
+        bool hitAnnotationOrHandle = false;
+        if (_activeTool == CanvasTool.Pan && !PanModeLockObjects && e.Button == MouseButtons.Left)
+        {
+            var imgPt = ScreenToImage(e.Location);
+            int hoverIdx = (_moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count)
+                ? _moveHoverIndex
+                : HitTestAnnotation(imgPt);
+            
+            if (hoverIdx >= 0 && hoverIdx != _suppressHoverIndex)
+            {
+                hitAnnotationOrHandle = true;
+            }
+            else if (_selectedAnnotationIndex >= 0 && GetSelectHandle(e.Location, _selectedAnnotationIndex) >= 0)
+            {
+                hitAnnotationOrHandle = true;
+            }
+        }
+
         if (e.Button == MouseButtons.Middle ||
-            (e.Button == MouseButtons.Left && _activeTool == CanvasTool.Pan))
+            (e.Button == MouseButtons.Left && _activeTool == CanvasTool.Pan && (PanModeLockObjects || !hitAnnotationOrHandle)))
         {
             _isPanning = true;
             _userPanned = true;
@@ -315,6 +338,10 @@ public sealed partial class AnnotationCanvas
 
             if (clickedIdx >= 0)
             {
+                if (_activeTool == CanvasTool.Pan)
+                {
+                    _isTempMoveFromPan = true;
+                }
                 ActiveTool = CanvasTool.Move;
                 // Ctrl+Click: toggle multi-selection
                 if (ModifierKeys.HasFlag(Keys.Control))
@@ -1151,6 +1178,12 @@ public sealed partial class AnnotationCanvas
             default:
                 Invalidate();
                 break;
+        }
+
+        if (_isTempMoveFromPan)
+        {
+            _isTempMoveFromPan = false;
+            ActiveTool = CanvasTool.Pan;
         }
     }
 
@@ -2194,7 +2227,7 @@ public sealed partial class AnnotationCanvas
 
     private bool IsDrawingOrMoveTool(CanvasTool tool)
     {
-        return tool != CanvasTool.Crop && tool != CanvasTool.Eraser;
+        return tool != CanvasTool.Crop && tool != CanvasTool.Eraser && (tool != CanvasTool.Pan || !PanModeLockObjects);
     }
 
     private int GetSelectHandle(Point screenPt)

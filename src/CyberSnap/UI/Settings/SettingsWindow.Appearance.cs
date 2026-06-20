@@ -218,6 +218,7 @@ public partial class SettingsWindow
             EditorShowRulersCheck.IsChecked = s.EditorShowRulers;
             EditorAutoCropCheck.IsChecked = s.EditorAutoCropControls;
             EditorShowResizeHandlesCheck.IsChecked = s.EditorShowResizeHandles;
+            EditorPanModeLockCheck.IsChecked = s.EditorPanModeLockObjects;
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
             SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
             RecordShowCursorCheck.IsChecked = s.ShowCursor;
@@ -757,5 +758,19 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.EditorShowResizeHandles = value,
             value => EditorShowResizeHandlesCheck.IsChecked = value);
+    }
+
+    private void EditorPanModeLockCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorPanModeLockObjects;
+        var selected = EditorPanModeLockCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-pan-lock-objects",
+            "Editor pan lock objects",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorPanModeLockObjects = value,
+            value => EditorPanModeLockCheck.IsChecked = value);
     }
 }

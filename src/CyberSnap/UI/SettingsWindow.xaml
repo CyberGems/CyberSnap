@@ -3613,6 +3613,26 @@
                                           AutomationProperties.Name="Show resize handles"
                                           Checked="EditorShowResizeHandlesCheck_Changed" Unchecked="EditorShowResizeHandlesCheck_Changed"/>
                             </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Lock objects in Pan tool -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Lock objects in Pan tool" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Prevent moving or resizing annotations while the Pan tool is active." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="EditorPanModeLockCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Prevent moving or resizing annotations while the Pan tool is active."
+                                          AutomationProperties.Name="Lock objects in Pan tool"
+                                          Checked="EditorPanModeLockCheck_Changed" Unchecked="EditorPanModeLockCheck_Changed"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
                 </StackPanel>
