@@ -619,6 +619,17 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     public void Push(IEditCommand command)
     {
+        if (command is AddAnnotationCommand addCmd)
+        {
+            var bounds = GetAnnotationVisualBounds(addCmd.Annotation);
+            var canvasBounds = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+            if (!bounds.IsEmpty && !bounds.IntersectsWith(canvasBounds))
+            {
+                ShowToolBanner(LocalizationService.Translate("Draw objects inside the canvas"));
+                return;
+            }
+        }
+
         if (IsDefaultBlank)
         {
             IsDefaultBlank = false;
