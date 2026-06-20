@@ -4,6 +4,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Windows.Media.Imaging;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 using CyberSnap.UI.Controls;
@@ -820,7 +821,7 @@ public sealed partial class EditorForm : Form
 
         using (var dlg = new OpenFileDialog
         {
-            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tiff|All Files|*.*",
+            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.webp|All Files|*.*",
             Title = LocalizationService.Translate("Import Image")
         })
         {
@@ -828,12 +829,48 @@ public sealed partial class EditorForm : Form
             {
                 try
                 {
-                    using (var stream = new FileStream(dlg.FileName, FileMode.Open, FileAccess.Read))
-                    using (var tempBmp = new Bitmap(stream))
+                    // ── File size check: max 10 MB ──
+                    var fileInfo = new FileInfo(dlg.FileName);
+                    const long maxFileSize = 10 * 1024 * 1024; // 10 MB
+                    if (fileInfo.Length > maxFileSize)
                     {
-                        var captured = new Bitmap(tempBmp);
-                        LoadCapture(captured, dlg.FileName);
+                        ThemedConfirmDialog.Alert(Handle,
+                            "Error importing image",
+                            $"The file is too large ({fileInfo.Length / 1024.0 / 1024.0:F1} MB). Maximum allowed is 10 MB.",
+                            error: true);
+                        return;
                     }
+
+                    Bitmap captured;
+                    var ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
+
+                    if (ext == ".webp")
+                    {
+                        // Decode WebP via WIC (available on Windows 10 19041+)
+                        captured = DecodeWebP(dlg.FileName);
+                    }
+                    else
+                    {
+                        using (var stream = new FileStream(dlg.FileName, FileMode.Open, FileAccess.Read))
+                        using (var tempBmp = new Bitmap(stream))
+                        {
+                            captured = new Bitmap(tempBmp);
+                        }
+                    }
+
+                    // ── Max dimension check: 4K (4096 px on longest side) ──
+                    const int maxDimension = 4096;
+                    if (captured.Width > maxDimension || captured.Height > maxDimension)
+                    {
+                        captured.Dispose();
+                        ThemedConfirmDialog.Alert(Handle,
+                            "Error importing image",
+                            $"The image is too large ({captured.Width}x{captured.Height}). Maximum allowed is {maxDimension} pixels on the longest side (4K).",
+                            error: true);
+                        return;
+                    }
+
+                    LoadCapture(captured, dlg.FileName);
                 }
                 catch (Exception ex)
                 {
@@ -841,6 +878,34 @@ public sealed partial class EditorForm : Form
                 }
             }
         }
+    }
+
+    /// <summary>Decodes a WebP image using Windows Imaging Component (WIC).</summary>
+    private static Bitmap DecodeWebP(string filePath)
+    {
+        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        var decoder = BitmapDecoder.Create(
+            stream,
+            BitmapCreateOptions.PreservePixelFormat,
+            BitmapCacheOption.OnLoad);
+
+        var frame = decoder.Frames[0];
+        var writableBitmap = new WriteableBitmap(frame);
+        var width = writableBitmap.PixelWidth;
+        var height = writableBitmap.PixelHeight;
+        var stride = width * 4;
+        var pixels = new byte[stride * height];
+        writableBitmap.CopyPixels(pixels, stride, 0);
+
+        var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+        var data = bitmap.LockBits(
+            new Rectangle(0, 0, width, height),
+            ImageLockMode.WriteOnly,
+            PixelFormat.Format32bppArgb);
+
+        Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
+        bitmap.UnlockBits(data);
+        return bitmap;
     }
 
     private void DoCopy()
