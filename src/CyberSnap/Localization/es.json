@@ -941,5 +941,13 @@
   "Cancel": "Cancelar",
   "Save changes to {0}?": "¿Guardar cambios en {0}?",
   "Confirm Paste": "Confirmar pegado",
-  "Pasting this image will replace your current document. Do you want to proceed?": "Al pegar esta imagen se reemplazará el documento actual. ¿Deseas continuar?"
+  "Pasting this image will replace your current document. Do you want to proceed?": "Al pegar esta imagen se reemplazará el documento actual. ¿Deseas continuar?",
+  "Keep width and height in proportion": "Mantener la proporción entre el ancho y el alto.",
+  "Resize existing annotations along with the canvas": "Redimensionar las anotaciones existentes junto con el lienzo.",
+  "Quick Presets": "Ajustes rápidos",
+  "Original Size": "Tamaño original",
+  "Target Size": "Dimensiones de destino",
+  "Alteration:": "Alteración:",
+  "Result:": "Resultado:",
+  "Scale": "Escala"
 }
