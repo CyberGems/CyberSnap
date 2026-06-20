@@ -438,6 +438,10 @@ public sealed partial class EditorForm
         var menuButton = MakeChromeButton("menu", LocalizationService.Translate("Menu"));
         menuButton.Click += (s, _) =>
         {
+            if (DateTime.UtcNow - _burgerMenuLastClosed < TimeSpan.FromMilliseconds(200))
+            {
+                return;
+            }
             _burgerMenu ??= BuildBurgerMenu();
             _burgerMenu.Show(menuButton, new Point(0, menuButton.Height));
         };
@@ -510,7 +514,7 @@ public sealed partial class EditorForm
         // Spacer between gallery and file actions
         commandActions.Controls.Add(MakeSeparator());
 
-        // New & Open
+        // New, Open & Save (Project operations)
         var newButton = MakeCommandButton("document", LocalizationService.Translate("New"), false);
         newButton.Click += (_, _) => DoNew();
         RegisterHoverTooltip(newButton, () => WithShortcut("Create a blank canvas", "Ctrl+N"), above: false);
@@ -518,8 +522,13 @@ public sealed partial class EditorForm
 
         var openButton = MakeCommandButton("folder", LocalizationService.Translate("Open"), false);
         openButton.Click += (_, _) => DoOpen();
-        RegisterHoverTooltip(openButton, () => WithShortcut("Open an image file", "Ctrl+O"), above: false);
+        RegisterHoverTooltip(openButton, () => WithShortcut(LocalizationService.Translate("Open a CyberSnap project file"), "Ctrl+O"), above: false);
         commandActions.Controls.Add(openButton);
+
+        _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
+        _saveButton.Click += (_, _) => DoSave();
+        RegisterHoverTooltip(_saveButton, () => WithShortcut(LocalizationService.Translate("Save as CyberSnap project file"), "Ctrl+S"), above: false);
+        commandActions.Controls.Add(_saveButton);
 
         // Clipboard actions: Paste & Copy
         _pasteButton = MakeCommandButton("paste", LocalizationService.Translate("Paste"), false);
@@ -532,15 +541,15 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
         commandActions.Controls.Add(_copyButton);
 
-        // Save actions: Save & Export
-        _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
-        _saveButton.Click += (_, _) => DoSave();
-        RegisterHoverTooltip(_saveButton, () => WithShortcut("Save the image", "Ctrl+S"), above: false);
-        commandActions.Controls.Add(_saveButton);
+        // Import & Export (Flat image I/O)
+        var importButton = MakeCommandButton("import", LocalizationService.Translate("Import"), false);
+        importButton.Click += (_, _) => DoImport();
+        RegisterHoverTooltip(importButton, () => WithShortcut(LocalizationService.Translate("Import an image file"), "Ctrl+I"), above: false);
+        commandActions.Controls.Add(importButton);
 
         var exportButton = MakeCommandButton("export", LocalizationService.Translate("Export"), false);
         exportButton.Click += (_, _) => DoSaveAs();
-        RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Export the image"), "Ctrl+Shift+S"), above: false);
+        RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Export as PNG image"), "Ctrl+Shift+S"), above: false);
         commandActions.Controls.Add(exportButton);
 
         commandBarPanel.Controls.Add(commandActions, 1, 0);
@@ -1199,6 +1208,13 @@ public sealed partial class EditorForm
     private ContextMenuStrip BuildBurgerMenu()
     {
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
+        menu.Closed += (s, e) =>
+        {
+            _burgerMenuLastClosed = DateTime.UtcNow;
+        };
+
+        var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project as..."), iconId: "save");
+        saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
 
         var borderItem = WindowsMenuRenderer.Item("Border", iconId: null);
         var fitItem = WindowsMenuRenderer.Item("Auto-fit", iconId: null);
@@ -1269,6 +1285,8 @@ public sealed partial class EditorForm
                 app.ShowSettings("editor");
         };
 
+        menu.Items.Add(saveProjectAsItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(borderItem);
         menu.Items.Add(fitItem);
         menu.Items.Add(cropHandlesItem);

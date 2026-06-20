@@ -493,8 +493,14 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool CanRedo => _redoStack.Count > 0;
 
+    private bool _isDirty = false;
+
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public bool IsDirty => _undoStack.Count > 0;
+    public bool IsDirty
+    {
+        get => _isDirty;
+        set => _isDirty = value;
+    }
 
     public event EventHandler? StateChanged;
 
@@ -574,6 +580,64 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
         ApplyInitialView();
         Invalidate();
+        _isDirty = false;
+        OnStateChanged();
+    }
+
+    /// <summary>Loads the complete project state (base image, annotations, guides) and resets the edit history.</summary>
+    public void LoadProjectState(Bitmap newBaseBitmap, List<Annotation> annotations, List<float> horizontalGuides, List<float> verticalGuides)
+    {
+        if (newBaseBitmap is null) throw new ArgumentNullException(nameof(newBaseBitmap));
+
+        var oldBaseBitmap = _baseBitmap;
+        _baseBitmap = newBaseBitmap;
+        InvalidateScaledCache();
+        _annotations.Clear();
+        if (annotations != null)
+        {
+            _annotations.AddRange(annotations);
+        }
+
+        ClearAllGuides();
+        if (horizontalGuides != null)
+        {
+            _horizontalGuides.AddRange(horizontalGuides);
+        }
+        if (verticalGuides != null)
+        {
+            _verticalGuides.AddRange(verticalGuides);
+        }
+
+        ClearEditHistory();
+        _zoom = 1.0;
+        _pan = PointF.Empty;
+        _viewFitsWindow = true;
+        _userPanned = false;
+        _isPanning = false;
+        _selectedAnnotationIndex = -1;
+        _selectOriginalAnnotation = null;
+        _selectDragStartImg = Point.Empty;
+        _multiSelectedIndices.Clear();
+        _multiDragOriginals = null;
+        _eraserHoverIndex = -1;
+        IsDefaultBlank = false;
+        CancelInProgressTool();
+        ActiveTool = CanvasTool.Pan;
+        oldBaseBitmap?.Dispose();
+
+        if (EditorAutoCropControls)
+        {
+            _cropRect = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+            _cropHasRect = true;
+        }
+        else
+        {
+            ClearCropPending();
+        }
+
+        ApplyInitialView();
+        Invalidate();
+        _isDirty = false;
         OnStateChanged();
     }
 
@@ -606,6 +670,14 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         }
 
         Invalidate();
+        _isDirty = false;
+        OnStateChanged();
+    }
+
+    /// <summary>Marks the current project state as saved/clean without baking or clearing vector elements.</summary>
+    public void AcceptSavedProjectState()
+    {
+        _isDirty = false;
         OnStateChanged();
     }
 
@@ -643,6 +715,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             dropped.Dispose();
         }
         ClearRedo();
+        _isDirty = true;
         OnStateChanged();
     }
 
@@ -653,6 +726,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _undoStack.RemoveAt(_undoStack.Count - 1);
         cmd.Revert(this);
         _redoStack.Add(cmd);
+        _isDirty = true;
         OnStateChanged();
     }
 
@@ -663,6 +737,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _redoStack.RemoveAt(_redoStack.Count - 1);
         cmd.Apply(this);
         _undoStack.Add(cmd);
+        _isDirty = true;
         OnStateChanged();
     }
 

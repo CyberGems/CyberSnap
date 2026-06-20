@@ -698,7 +698,9 @@
   "Copy the image to the clipboard": "Copiar la imagen al portapapeles",
   "Save the image": "Guardar la imagen",
   "Save the image as a new file": "Guardar la imagen como un archivo nuevo",
+  "Save as CyberSnap project file": "Guardar como proyecto de CyberSnap",
   "Export the image": "Exportar la imagen",
+  "Export as PNG image": "Exportar como imagen .PNG",
   "key 0": "tecla 0",
   "Sent to the editor": "Enviado al editor",
   "Your capture is open in the editor.": "Tu captura está abierta en el editor.",
@@ -869,8 +871,14 @@
   "About CyberSnap": "Acerca de CyberSnap",
   "Open the Capture Gallery": "Abrir la Galería de capturas",
   "Open the About section in Configuration": "Abrir la sección Acerca de en Configuración",
-  "Editor...": "Editor...",
-  "Gallery...": "Galería...",
   "Open the post-capture editor for annotations.": "Abrir el editor de anotaciones después de la captura.",
-  "Untitled": "Sin título"
+  "Untitled": "Sin título",
+  "Save project...": "Guardar proyecto...",
+  "Save project as...": "Guardar proyecto como...",
+  "CyberSnap Project": "Proyecto CyberSnap",
+  "CyberSnap Project (*.csnp)|*.csnp": "Proyecto CyberSnap (*.csnp)|*.csnp",
+  "Import": "Importar",
+  "Import Image": "Importar imagen",
+  "Import an image file": "Importar un archivo de imagen",
+  "Open a CyberSnap project file": "Abrir un archivo de proyecto de CyberSnap"
 }
