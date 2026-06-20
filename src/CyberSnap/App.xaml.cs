@@ -97,6 +97,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-resize-handles", ex); }
     }
 
+    /// <summary>Persists whether dragging the resize handles scales content or extends the canvas.</summary>
+    public void PersistEditorResizeHandlesScaleContent(bool scaleContent)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorResizeHandlesScaleContent == scaleContent) return;
+        _settingsService.Settings.EditorResizeHandlesScaleContent = scaleContent;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-resize-scale", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "show rulers" preference.</summary>
     public void PersistEditorShowRulers(bool showRulers)
     {

@@ -236,6 +236,9 @@ public sealed class AppSettings
     public bool EditorShowBanners { get; set; } = true;
     public bool EditorAutoCropControls { get; set; } = true;
     public bool EditorShowResizeHandles { get; set; } = true;
+    // When dragging the canvas resize handles: false = extend/trim the canvas area only
+    // (default), true = scale (resample) the image and annotations to the new size.
+    public bool EditorResizeHandlesScaleContent { get; set; }
     public bool EditorShowRulers { get; set; } = true;
     public bool EditorShowFrame { get; set; } = true;
     public bool EditorShowHints { get; set; } = true;

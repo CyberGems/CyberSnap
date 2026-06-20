@@ -125,6 +125,7 @@ public sealed partial class EditorForm : Form
         if (_instance is not null)
         {
             _instance._canvas.IsDefaultBlank = true;
+            _instance._canvas.IsBlankCanvas = true;
             _instance.RefreshUi();
             _instance._canvas.Invalidate();
         }
@@ -224,9 +225,11 @@ public sealed partial class EditorForm : Form
             ShowHints = settings?.EditorShowHints ?? true,
             EditorAutoCropControls = settings?.EditorAutoCropControls ?? true,
             EditorShowResizeHandles = settings?.EditorShowResizeHandles ?? true,
+            ResizeHandlesScaleContent = settings?.EditorResizeHandlesScaleContent ?? false,
             PanModeLockObjects = settings?.EditorPanModeLockObjects ?? true,
         };
         _canvas.StateChanged += OnCanvasStateChanged;
+        _canvas.BlankBitmapFactory = (w, h) => CreateBlankCheckerboard(EditorColors.IsDark, w, h);
         _canvas.TextFontSizeChanged += size =>
         {
             if (System.Windows.Application.Current is CyberSnap.App app)
@@ -771,6 +774,7 @@ public sealed partial class EditorForm : Form
 
         LoadCapture(blank, null, autoMaximize: false);
         _canvas.IsDefaultBlank = true;
+        _canvas.IsBlankCanvas = true;
         // The blank document has no real pixels worth inspecting at 100%, so always frame it
         // to fit the window regardless of the user's auto-fit preference. Without this, the
         // crop handles would sit off-screen when auto-fit is disabled (we no longer maximize).
@@ -785,18 +789,8 @@ public sealed partial class EditorForm : Form
         var result = ThemedResizeDialog.Show(Handle, curW, curH);
         if (result is null) return;
 
-        // A blank document has no real pixels to resample; just swap in a fresh
-        // checkerboard at the requested size so it stays a clean blank canvas.
-        if (_canvas.IsDefaultBlank)
-        {
-            var blank = CreateBlankCheckerboard(EditorColors.IsDark, result.Width, result.Height);
-            LoadCapture(blank, null, autoMaximize: false);
-            _canvas.IsDefaultBlank = true;
-            _canvas.ZoomFit();
-            _canvas.Invalidate();
-            return;
-        }
-
+        // ResizeCanvas handles the blank-document case itself (regenerates the checkerboard
+        // via BlankBitmapFactory), so a single call covers both blank and real images.
         _canvas.ResizeCanvas(result.Width, result.Height, result.ScaleContent, result.Anchor);
     }
 

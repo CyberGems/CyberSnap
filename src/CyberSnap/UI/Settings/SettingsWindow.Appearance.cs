@@ -218,6 +218,7 @@ public partial class SettingsWindow
             EditorShowRulersCheck.IsChecked = s.EditorShowRulers;
             EditorAutoCropCheck.IsChecked = s.EditorAutoCropControls;
             EditorShowResizeHandlesCheck.IsChecked = s.EditorShowResizeHandles;
+            EditorResizeScaleContentCheck.IsChecked = s.EditorResizeHandlesScaleContent;
             EditorPanModeLockCheck.IsChecked = s.EditorPanModeLockObjects;
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
             SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
@@ -758,6 +759,20 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.EditorShowResizeHandles = value,
             value => EditorShowResizeHandlesCheck.IsChecked = value);
+    }
+
+    private void EditorResizeScaleContentCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorResizeHandlesScaleContent;
+        var selected = EditorResizeScaleContentCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-resize-scale",
+            "Editor resize scales content",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorResizeHandlesScaleContent = value,
+            value => EditorResizeScaleContentCheck.IsChecked = value);
     }
 
     private void EditorPanModeLockCheck_Changed(object sender, RoutedEventArgs e)

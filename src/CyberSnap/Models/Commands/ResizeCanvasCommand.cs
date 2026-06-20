@@ -60,7 +60,14 @@ public sealed class ResizeCanvasCommand : IEditCommand
         {
             _beforeBitmap = new Bitmap(source);
             _beforeAnnotations = new List<Annotation>(ctx.Annotations);
-            _afterBitmap = new Bitmap(_newWidth, _newHeight, PixelFormat.Format32bppPArgb);
+            if (ctx is CyberSnap.UI.Controls.AnnotationCanvas canvas && canvas.IsBlankCanvas && canvas.BlankBitmapFactory is not null)
+            {
+                _afterBitmap = canvas.BlankBitmapFactory(_newWidth, _newHeight);
+            }
+            else
+            {
+                _afterBitmap = new Bitmap(_newWidth, _newHeight, PixelFormat.Format32bppPArgb);
+            }
             _afterAnnotations = new List<Annotation>();
 
             using (var g = Graphics.FromImage(_afterBitmap))
