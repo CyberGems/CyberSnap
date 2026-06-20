@@ -544,7 +544,7 @@ public sealed partial class EditorForm
         // Import & Export (Flat image I/O)
         var importButton = MakeCommandButton("import", LocalizationService.Translate("Import"), false);
         importButton.Click += (_, _) => DoImport();
-        RegisterHoverTooltip(importButton, () => WithShortcut(LocalizationService.Translate("Import an image file"), "Ctrl+I"), above: false);
+        RegisterHoverTooltip(importButton, () => WithShortcut(LocalizationService.Translate("Import an image"), "Ctrl+I"), above: false);
         commandActions.Controls.Add(importButton);
 
         var exportButton = MakeCommandButton("export", LocalizationService.Translate("Export"), false);
@@ -1279,7 +1279,7 @@ public sealed partial class EditorForm
         };
 
         // Show hints item
-        var hintsItem = WindowsMenuRenderer.Item("Show hints", iconId: null);
+        var hintsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show hints"), iconId: null);
         hintsItem.Click += (_, _) =>
         {
             _canvas.ShowHints = !_canvas.ShowHints;
