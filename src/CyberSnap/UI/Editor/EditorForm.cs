@@ -192,6 +192,7 @@ public sealed partial class EditorForm : Form
             TextFontSize = settings?.EditorTextFontSize ?? 24f,
             FitToWindowOnLoad = settings?.EditorFitToWindowOnOpen ?? true,
             ShowBanners = settings?.EditorShowBanners ?? true,
+            ShowHints = settings?.EditorShowHints ?? true,
             EditorAutoCropControls = settings?.EditorAutoCropControls ?? true,
         };
         _canvas.StateChanged += OnCanvasStateChanged;

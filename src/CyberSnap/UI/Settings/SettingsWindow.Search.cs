@@ -594,6 +594,20 @@ public partial class SettingsWindow
         }
     }
 
+    /// <summary>Open the dedicated Editor tab. Used by the editor's burger menu
+    /// to jump straight to editor settings.</summary>
+    public void NavigateToEditorSettings()
+    {
+        try
+        {
+            SelectSettingsTab("editor");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.editor-navigate", $"Navigation failed: {ex.Message}");
+        }
+    }
+
     private void SelectSettingsTab(string pageKey)
     {
         var tabMap = new Dictionary<string, System.Windows.Controls.RadioButton>
@@ -608,6 +622,7 @@ public partial class SettingsWindow
             ["history"]       = HistoryTab,
             ["runtimes"]      = AboutTab,
             ["about"]         = AboutTab,
+            ["editor"]        = EditorTab,
         };
 
         if (tabMap.TryGetValue(pageKey, out var tab))

@@ -1178,11 +1178,15 @@ public sealed partial class EditorForm
         var cropHandlesItem = WindowsMenuRenderer.Item("Crop handles", iconId: null);
         var bannersItem = WindowsMenuRenderer.Item("Show banners", iconId: null);
         var rulersItem = WindowsMenuRenderer.Item("Show rulers", iconId: null);
-        var settingsItem = WindowsMenuRenderer.Item("Configuration", iconId: "gear");
+        var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
 
         borderItem.Click += (_, _) =>
         {
             _toggleFrameSwitch.Checked = !_toggleFrameSwitch.Checked;
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorShowFrame(_toggleFrameSwitch.Checked);
+            }
         };
 
         fitItem.Click += (_, _) =>
@@ -1218,26 +1222,45 @@ public sealed partial class EditorForm
             }
         };
 
-        settingsItem.Click += (_, _) => OpenSettingsWindow();
+        // Show hints item
+        var hintsItem = WindowsMenuRenderer.Item("Show hints", iconId: null);
+        hintsItem.Click += (_, _) =>
+        {
+            _canvas.ShowHints = !_canvas.ShowHints;
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorShowHints(_canvas.ShowHints);
+            }
+            // Update the status bar hint label visibility
+            if (_liveStatusLabel != null)
+                _liveStatusLabel.Visible = _canvas.ShowHints && ClientSize.Width >= 950;
+        };
+
+        settingsItem.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.ShowSettings("editor");
+        };
 
         menu.Items.Add(borderItem);
         menu.Items.Add(fitItem);
         menu.Items.Add(cropHandlesItem);
         menu.Items.Add(bannersItem);
         menu.Items.Add(rulersItem);
+        menu.Items.Add(hintsItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
 
         menu.Opened += (_, _) =>
         {
-            UpdateBurgerCheckmarks(borderItem, fitItem, cropHandlesItem, bannersItem, rulersItem);
+            UpdateBurgerCheckmarks(borderItem, fitItem, cropHandlesItem, bannersItem, rulersItem, hintsItem);
         };
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
     }
 
-    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem)
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
     {
         var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
         borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
@@ -1245,6 +1268,7 @@ public sealed partial class EditorForm
         cropHandlesItem.Image = _canvas.EditorAutoCropControls ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         rulersItem.Image = (_topRulerContainer != null && _topRulerContainer.Visible) ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        hintsItem.Image = _canvas.ShowHints ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
     }
 }
 

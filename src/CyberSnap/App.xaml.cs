@@ -87,6 +87,26 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-rulers-pref", ex); }
     }
 
+    /// <summary>Persists the annotation editor's "show frame/border" preference.</summary>
+    public void PersistEditorShowFrame(bool showFrame)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorShowFrame == showFrame) return;
+        _settingsService.Settings.EditorShowFrame = showFrame;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-frame-pref", ex); }
+    }
+
+    /// <summary>Persists the annotation editor's "show hints" preference.</summary>
+    public void PersistEditorShowHints(bool showHints)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorShowHints == showHints) return;
+        _settingsService.Settings.EditorShowHints = showHints;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-hints-pref", ex); }
+    }
+
     /// <summary>Persists the color last chosen for shapes/annotations in the editor.</summary>
     public void PersistEditorToolColor(int argb)
     {

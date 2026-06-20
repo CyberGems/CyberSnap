@@ -620,5 +620,16 @@
   "Black": "Black",
   "Width: {0}px": "Width: {0}px",
   "Text Tool": "Text",
-  "Step": "Step"
+  "Step": "Step",
+  "Auto-fit to window": "Auto-fit to window",
+  "Fit the image to the window when the editor opens.": "Fit the image to the window when the editor opens.",
+  "Show frame border": "Show frame border",
+  "Show a frame around the capture in the editor.": "Show a frame around the capture in the editor.",
+  "Display tool instruction banners in the editor.": "Display tool instruction banners in the editor.",
+  "Show hints in status bar": "Show hints in status bar",
+  "Display tool hints and shortcuts in the editor status bar.": "Display tool hints and shortcuts in the editor status bar.",
+  "Display measurement rulers in the editor canvas.": "Display measurement rulers in the editor canvas.",
+  "Auto crop controls": "Auto crop controls",
+  "Automatically show crop handles when the crop tool is active.": "Automatically show crop handles when the crop tool is active.",
+  "Configuration...": "Configuration..."
 }

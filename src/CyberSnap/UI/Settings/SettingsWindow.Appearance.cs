@@ -211,6 +211,12 @@ public partial class SettingsWindow
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
             PopulateWidgetMonitors();
             UpdateWidgetOptionsVisibility(s.ShowCaptureWidget);
+            EditorFitCheck.IsChecked = s.EditorFitToWindowOnOpen;
+            EditorShowFrameCheck.IsChecked = s.EditorShowFrame;
+            EditorShowBannersCheck.IsChecked = s.EditorShowBanners;
+            EditorShowHintsCheck.IsChecked = s.EditorShowHints;
+            EditorShowRulersCheck.IsChecked = s.EditorShowRulers;
+            EditorAutoCropCheck.IsChecked = s.EditorAutoCropControls;
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
             SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
             RecordShowCursorCheck.IsChecked = s.ShowCursor;
@@ -575,6 +581,7 @@ public partial class SettingsWindow
         HotkeysPanel.Visibility = HotkeysTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         CapturePanel.Visibility = CaptureTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         WidgetPanel.Visibility = WidgetTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        EditorPanel.Visibility = EditorTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         RecordingPanel.Visibility = RecordingTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
@@ -612,11 +619,96 @@ public partial class SettingsWindow
         if (ToastTab.IsChecked == true) return "Notifications";
         if (CaptureTab.IsChecked == true) return "Capture";
         if (WidgetTab.IsChecked == true) return "Widget";
+        if (EditorTab.IsChecked == true) return "Editor";
         if (RecordingTab.IsChecked == true) return "Video";
         if (OcrTab.IsChecked == true) return "OCR";
         if (HotkeysTab.IsChecked == true) return "Hotkeys";
         if (HistoryTab.IsChecked == true) return "Gallery";
         if (AboutTab.IsChecked == true) return "About";
         return "General";
+    }
+
+    private void EditorFitCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorFitToWindowOnOpen;
+        var selected = EditorFitCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-fit",
+            "Editor fit to window on open",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorFitToWindowOnOpen = value,
+            value => EditorFitCheck.IsChecked = value);
+    }
+
+    private void EditorShowFrameCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorShowFrame;
+        var selected = EditorShowFrameCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-show-frame",
+            "Editor show frame",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorShowFrame = value,
+            value => EditorShowFrameCheck.IsChecked = value);
+    }
+
+    private void EditorShowBannersCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorShowBanners;
+        var selected = EditorShowBannersCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-show-banners",
+            "Editor show banners",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorShowBanners = value,
+            value => EditorShowBannersCheck.IsChecked = value);
+    }
+
+    private void EditorShowHintsCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorShowHints;
+        var selected = EditorShowHintsCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-show-hints",
+            "Editor show hints",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorShowHints = value,
+            value => EditorShowHintsCheck.IsChecked = value);
+    }
+
+    private void EditorShowRulersCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorShowRulers;
+        var selected = EditorShowRulersCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-show-rulers",
+            "Editor show rulers",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorShowRulers = value,
+            value => EditorShowRulersCheck.IsChecked = value);
+    }
+
+    private void EditorAutoCropCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorAutoCropControls;
+        var selected = EditorAutoCropCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-auto-crop",
+            "Editor auto-crop controls",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorAutoCropControls = value,
+            value => EditorAutoCropCheck.IsChecked = value);
     }
 }
