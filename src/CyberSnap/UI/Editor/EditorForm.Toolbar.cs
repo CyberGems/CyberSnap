@@ -206,7 +206,7 @@ public sealed partial class EditorForm
 
         var zoomHost = new EditorZoomHostPanel
         {
-            Width = 220,
+            Width = 230,
             Height = 42,
             BackColor = EditorColors.TitleBar,
             ColumnCount = 3,
@@ -2382,7 +2382,7 @@ internal sealed class EditorZoomSlider : Control
     }
 
     private Rectangle GetTrackRect()
-        => new(10, (Height - 6) / 2, Math.Max(1, Width - 20), 6);
+        => new(14, (Height - 6) / 2, Math.Max(1, Width - 28), 6);
 
     // Zoom is perceived multiplicatively (the wheel steps by a constant factor), so the
     // thumb is positioned on a logarithmic scale. A linear mapping crammed the whole
