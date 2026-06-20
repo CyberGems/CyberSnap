@@ -199,10 +199,10 @@ public partial class App
                 {
                     var spec = new ToastSpec
                     {
-                        Title = "Update available",
-                        Body = $"CyberSnap {result.LatestVersionLabel} is out!\nYou're on {UpdateService.GetCurrentVersionLabel()}",
+                        Title = LocalizationService.Translate("Update available"),
+                        Body = string.Format(LocalizationService.Translate("CyberSnap {0} is out!\nYou're on {1}"), result.LatestVersionLabel, UpdateService.GetCurrentVersionLabel()),
                         ClickActionUrl = "cybersnap://update",
-                        ClickActionLabel = "Download",
+                        ClickActionLabel = LocalizationService.Translate("Download"),
                         DurationSeconds = 12,
                         SuppressSound = true
                     };
