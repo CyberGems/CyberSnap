@@ -77,6 +77,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-autocrop-pref", ex); }
     }
 
+    /// <summary>Persists the annotation editor's "show resize handles" preference.</summary>
+    public void PersistEditorShowResizeHandles(bool show)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorShowResizeHandles == show) return;
+        _settingsService.Settings.EditorShowResizeHandles = show;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-resize-handles", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "show rulers" preference.</summary>
     public void PersistEditorShowRulers(bool showRulers)
     {

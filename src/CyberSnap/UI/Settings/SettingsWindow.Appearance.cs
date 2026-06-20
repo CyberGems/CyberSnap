@@ -217,6 +217,7 @@ public partial class SettingsWindow
             EditorShowHintsCheck.IsChecked = s.EditorShowHints;
             EditorShowRulersCheck.IsChecked = s.EditorShowRulers;
             EditorAutoCropCheck.IsChecked = s.EditorAutoCropControls;
+            EditorShowResizeHandlesCheck.IsChecked = s.EditorShowResizeHandles;
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
             SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
             RecordShowCursorCheck.IsChecked = s.ShowCursor;
@@ -710,5 +711,19 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.EditorAutoCropControls = value,
             value => EditorAutoCropCheck.IsChecked = value);
+    }
+
+    private void EditorShowResizeHandlesCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorShowResizeHandles;
+        var selected = EditorShowResizeHandlesCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-resize-handles",
+            "Editor resize handles",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorShowResizeHandles = value,
+            value => EditorShowResizeHandlesCheck.IsChecked = value);
     }
 }

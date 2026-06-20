@@ -128,9 +128,11 @@ public sealed partial class EditorForm : Form
         }
     }
 
-    private static Bitmap CreateBlankCheckerboard(bool isDark)
+    private static Bitmap CreateBlankCheckerboard(bool isDark, int width = 1024, int height = 768)
     {
-        var blank = new Bitmap(1024, 768);
+        width = Math.Clamp(width, AnnotationCanvas.MinCanvasSize, AnnotationCanvas.MaxCanvasSize);
+        height = Math.Clamp(height, AnnotationCanvas.MinCanvasSize, AnnotationCanvas.MaxCanvasSize);
+        var blank = new Bitmap(width, height);
         using (var g = Graphics.FromImage(blank))
         {
             var color1 = isDark ? Color.FromArgb(20, 22, 33) : Color.FromArgb(245, 246, 250);
@@ -219,6 +221,7 @@ public sealed partial class EditorForm : Form
             ShowBanners = settings?.EditorShowBanners ?? true,
             ShowHints = settings?.EditorShowHints ?? true,
             EditorAutoCropControls = settings?.EditorAutoCropControls ?? true,
+            EditorShowResizeHandles = settings?.EditorShowResizeHandles ?? true,
         };
         _canvas.StateChanged += OnCanvasStateChanged;
         _canvas.TextFontSizeChanged += size =>
@@ -730,6 +733,28 @@ public sealed partial class EditorForm : Form
         _canvas.Invalidate();
     }
 
+    private void DoResizeCanvas()
+    {
+        int curW = _canvas.BaseBitmap.Width;
+        int curH = _canvas.BaseBitmap.Height;
+        var result = ThemedResizeDialog.Show(Handle, curW, curH);
+        if (result is null) return;
+
+        // A blank document has no real pixels to resample; just swap in a fresh
+        // checkerboard at the requested size so it stays a clean blank canvas.
+        if (_canvas.IsDefaultBlank)
+        {
+            var blank = CreateBlankCheckerboard(EditorColors.IsDark, result.Width, result.Height);
+            LoadCapture(blank, null, autoMaximize: false);
+            _canvas.IsDefaultBlank = true;
+            _canvas.ZoomFit();
+            _canvas.Invalidate();
+            return;
+        }
+
+        _canvas.ResizeCanvas(result.Width, result.Height, result.ScaleContent, result.Anchor);
+    }
+
     private void DoOpen()
     {
         if (_canvas.IsDirty)
@@ -1140,6 +1165,7 @@ public sealed partial class EditorForm : Form
         var openItem = WindowsMenuRenderer.Item("Open image...", iconId: null);
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project..."), iconId: "save");
+        var resizeItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         var fitItem = WindowsMenuRenderer.Item("Fit to window", iconId: null);
         var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
         var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
@@ -1150,6 +1176,7 @@ public sealed partial class EditorForm : Form
         pasteItem.Click += (_, _) => DoPaste();
         pasteItem.Enabled = Clipboard.ContainsImage();
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
+        resizeItem.Click += (_, _) => DoResizeCanvas();
         fitItem.Click += (_, _) => _canvas.ZoomFit();
         resetItem.Click += (_, _) => _canvas.ZoomReset();
         undoItem.Click += (_, _) => _canvas.Undo();
@@ -1160,6 +1187,7 @@ public sealed partial class EditorForm : Form
         menu.Items.Add(pasteItem);
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(resizeItem);
         menu.Items.Add(fitItem);
         menu.Items.Add(resetItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -1181,6 +1209,7 @@ public sealed partial class EditorForm : Form
         var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project..."), iconId: "save");
         var saveAsItem = WindowsMenuRenderer.Item("Export...", iconId: "export");
+        var resizeItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");
         var propsItem = WindowsMenuRenderer.Item("Properties", iconId: null);
         var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "close", danger: true);
@@ -1192,6 +1221,7 @@ public sealed partial class EditorForm : Form
         saveItem.Enabled = _canvas.IsDirty && !_canvas.IsDefaultBlank;
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
         saveAsItem.Click += (_, _) => DoSaveAs();
+        resizeItem.Click += (_, _) => DoResizeCanvas();
         openLocItem.Click += (_, _) => DoOpenLocation();
         propsItem.Click += (_, _) => DoShowProperties();
         exitItem.Click += (_, _) => Close();
@@ -1201,6 +1231,8 @@ public sealed partial class EditorForm : Form
         menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(saveAsItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(resizeItem);
         menu.Items.Add(new ToolStripSeparator());
 
         bool hasPath = !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);

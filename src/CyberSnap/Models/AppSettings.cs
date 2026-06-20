@@ -234,6 +234,7 @@ public sealed class AppSettings
     public bool EditorFitToWindowOnOpen { get; set; } = true;
     public bool EditorShowBanners { get; set; } = true;
     public bool EditorAutoCropControls { get; set; } = true;
+    public bool EditorShowResizeHandles { get; set; } = true;
     public bool EditorShowRulers { get; set; } = true;
     public bool EditorShowFrame { get; set; } = true;
     public bool EditorShowHints { get; set; } = true;
