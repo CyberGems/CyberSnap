@@ -2312,7 +2312,7 @@ internal sealed class EditorZoomSlider : Control
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         base.OnMouseWheel(e);
-        int step = 10;
+        int step = (int)Math.Max(5, Math.Round(Value * 0.1));
         if (e.Delta > 0)
         {
             Value += step;
