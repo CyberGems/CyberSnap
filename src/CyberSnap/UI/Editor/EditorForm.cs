@@ -326,6 +326,7 @@ public sealed partial class EditorForm : Form
         PerformLayout();
 
         FormClosing += OnFormClosing;
+        Activated += (s, e) => RefreshUi();
         FormClosed += (_, _) =>
         {
             _saveStatusTimer.Stop();
