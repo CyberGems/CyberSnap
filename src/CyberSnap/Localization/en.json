@@ -632,5 +632,12 @@
   "Display measurement rulers in the editor canvas.": "Display measurement rulers in the editor canvas.",
   "Auto crop controls": "Auto crop controls",
   "Automatically show crop handles when the crop tool is active.": "Automatically show crop handles when the crop tool is active.",
-  "Configuration...": "Configuration..."
+  "Configuration...": "Configuration...",
+  "Search settings": "Search settings",
+  "About CyberSnap": "About CyberSnap",
+  "Open the Capture Gallery": "Open the Capture Gallery",
+  "Open the About section in Configuration": "Open the About section in Configuration",
+  "Editor...": "Editor...",
+  "Gallery...": "Gallery...",
+  "Open the post-capture editor for annotations.": "Open the post-capture editor for annotations."
 }

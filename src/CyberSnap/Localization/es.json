@@ -864,5 +864,12 @@
   "Display measurement rulers in the editor canvas.": "Muestra reglas de medición en el lienzo del editor.",
   "Auto crop controls": "Controles de recorte automático",
   "Automatically show crop handles when the crop tool is active.": "Muestra automáticamente los controles de recorte cuando la herramienta de recortar está activa.",
-  "Configuration...": "Configuración..."
+  "Configuration...": "Configuración...",
+  "Search settings": "Buscar ajustes",
+  "About CyberSnap": "Acerca de CyberSnap",
+  "Open the Capture Gallery": "Abrir la Galería de capturas",
+  "Open the About section in Configuration": "Abrir la sección Acerca de en Configuración",
+  "Editor...": "Editor...",
+  "Gallery...": "Galería...",
+  "Open the post-capture editor for annotations.": "Abrir el editor de anotaciones después de la captura."
 }

@@ -608,6 +608,20 @@ public partial class SettingsWindow
         }
     }
 
+    /// <summary>Open the dedicated About tab. Used by the burger menu
+    /// to jump straight to the About section.</summary>
+    public void NavigateToAboutSettings()
+    {
+        try
+        {
+            SelectSettingsTab("about");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.about-navigate", $"Navigation failed: {ex.Message}");
+        }
+    }
+
     private void SelectSettingsTab(string pageKey)
     {
         var tabMap = new Dictionary<string, System.Windows.Controls.RadioButton>
@@ -816,6 +830,18 @@ public partial class SettingsWindow
     }
 
     // ── Show / Hide ──
+    /// <summary>Public toggle for the search bar, called from the burger menu.</summary>
+    public void ToggleSearchBar()
+    {
+        if (SettingsSearchBar.Visibility == Visibility.Visible)
+            HideSearchBar();
+        else
+            ShowSearchBar();
+    }
+
+    /// <summary>Returns whether the search bar is currently visible.</summary>
+    public bool IsSearchBarVisible() => SettingsSearchBar.Visibility == Visibility.Visible;
+
     private void SettingsSearchToggle_Click(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;

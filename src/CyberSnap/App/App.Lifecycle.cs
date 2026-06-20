@@ -101,6 +101,8 @@ public partial class App
             win.NavigateToWidgetSettings();
         else if (navigateTo == "editor")
             win.NavigateToEditorSettings();
+        else if (navigateTo == "about")
+            win.NavigateToAboutSettings();
     }
 
     private static void ShowSettingsOpenFailed(Exception ex, string diagnosticKey, string toastDiagnosticKey)
