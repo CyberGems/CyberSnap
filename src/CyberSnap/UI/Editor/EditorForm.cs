@@ -835,8 +835,8 @@ public sealed partial class EditorForm : Form
                     if (fileInfo.Length > maxFileSize)
                     {
                         ThemedConfirmDialog.Alert(Handle,
-                            "Error importing image",
-                            $"The file is too large ({fileInfo.Length / 1024.0 / 1024.0:F1} MB). Maximum allowed is 10 MB.",
+                            LocalizationService.Translate("Error importing image"),
+                            string.Format(LocalizationService.Translate("The file is too large ({0:F1} MB). Maximum allowed is 10 MB."), fileInfo.Length / 1024.0 / 1024.0),
                             error: true);
                         return;
                     }
@@ -864,8 +864,8 @@ public sealed partial class EditorForm : Form
                     {
                         captured.Dispose();
                         ThemedConfirmDialog.Alert(Handle,
-                            "Error importing image",
-                            $"The image is too large ({captured.Width}x{captured.Height}). Maximum allowed is {maxDimension} pixels on the longest side (4K).",
+                            LocalizationService.Translate("Error importing image"),
+                            string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), captured.Width, captured.Height, maxDimension),
                             error: true);
                         return;
                     }
@@ -874,13 +874,15 @@ public sealed partial class EditorForm : Form
                 }
                 catch (Exception ex)
                 {
-                    ThemedConfirmDialog.Alert(Handle, "Error importing image", ex.Message, error: true);
+                    ThemedConfirmDialog.Alert(Handle, LocalizationService.Translate("Error importing image"), ex.Message, error: true);
                 }
             }
         }
     }
 
-    /// <summary>Decodes a WebP image using Windows Imaging Component (WIC).</summary>
+    /// <summary>Decodes a WebP image using Windows Imaging Component (WIC),
+    /// re-encodes to PNG in memory, then loads as a GDI+ Bitmap to avoid
+    /// pixel-format mismatch issues.</summary>
     private static Bitmap DecodeWebP(string filePath)
     {
         using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
@@ -890,22 +892,14 @@ public sealed partial class EditorForm : Form
             BitmapCacheOption.OnLoad);
 
         var frame = decoder.Frames[0];
-        var writableBitmap = new WriteableBitmap(frame);
-        var width = writableBitmap.PixelWidth;
-        var height = writableBitmap.PixelHeight;
-        var stride = width * 4;
-        var pixels = new byte[stride * height];
-        writableBitmap.CopyPixels(pixels, stride, 0);
 
-        var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-        var data = bitmap.LockBits(
-            new Rectangle(0, 0, width, height),
-            ImageLockMode.WriteOnly,
-            PixelFormat.Format32bppArgb);
-
-        Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
-        bitmap.UnlockBits(data);
-        return bitmap;
+        // Re-encode to PNG via WPF to normalize the pixel format, then load with GDI+
+        var pngEncoder = new PngBitmapEncoder();
+        pngEncoder.Frames.Add(BitmapFrame.Create(frame));
+        using var pngStream = new MemoryStream();
+        pngEncoder.Save(pngStream);
+        pngStream.Position = 0;
+        return new Bitmap(pngStream);
     }
 
     private void DoCopy()
