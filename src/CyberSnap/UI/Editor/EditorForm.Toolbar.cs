@@ -33,6 +33,7 @@ public sealed partial class EditorForm
     private EditorZoomBarButton _resetZoomBtn = null!;
     private EditorToggleSwitch _toggleFrameSwitch = null!;
     private EditorToggleSwitch _toggleFitSwitch = null!;
+    private EditorToggleSwitch _togglePanLockSwitch = null!;
     private readonly Dictionary<AnnotationCanvas.CanvasTool, EditorToolButton> _toolButtons = new();
     private EmojiPickerPopup? _emojiPicker;
     private readonly Dictionary<Color, EditorColorButton> _colorButtons = new();
@@ -178,6 +179,21 @@ public sealed partial class EditorForm
                 app.PersistEditorFitPreference(_toggleFitSwitch.Checked);
         };
 
+        _togglePanLockSwitch = new EditorToggleSwitch
+        {
+            LabelText = "",
+            Checked = _canvas.PanModeLockObjects,
+            Height = 42,
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            Margin = new Padding(12, 0, 0, 0),
+        };
+        _togglePanLockSwitch.CheckedChanged += (_, _) =>
+        {
+            _canvas.PanModeLockObjects = _togglePanLockSwitch.Checked;
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.PersistEditorPanModeLockObjects(_togglePanLockSwitch.Checked);
+        };
+
         _fitZoomBtn = new EditorZoomBarButton
         {
             IconId = "zoomFit",
@@ -262,6 +278,7 @@ public sealed partial class EditorForm
         rightControlsFlow.Controls.Add(_resetZoomBtn);
         rightControlsFlow.Controls.Add(_fitZoomBtn);
         rightControlsFlow.Controls.Add(_toggleFitSwitch);
+        rightControlsFlow.Controls.Add(_togglePanLockSwitch);
 
         _liveStatusLabel = new DoubleBufferedLabel
         {
@@ -327,6 +344,7 @@ public sealed partial class EditorForm
         // The bar sits at the bottom of the window, so the bubbles open upward (above: true).
         // RegisterHoverTooltip(_toggleFrameSwitch, "Show a frame around the capture");
         RegisterHoverTooltip(_toggleFitSwitch, "Fit the image to the window when the editor opens");
+        RegisterHoverTooltip(_togglePanLockSwitch, "Lock objects in Pan tool");
         RegisterHoverTooltip(coordsPanel, "Cursor position over the image (X, Y)");
 
         RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", LocalizationService.Translate("key 0")));
@@ -1228,6 +1246,7 @@ public sealed partial class EditorForm
 
         var borderItem = WindowsMenuRenderer.Item("Border", iconId: null);
         var fitItem = WindowsMenuRenderer.Item("Auto-fit", iconId: null);
+        var lockObjectsItem = WindowsMenuRenderer.Item("Lock Objects", iconId: null);
         var cropHandlesItem = WindowsMenuRenderer.Item("Crop handles", iconId: null);
         var resizeHandlesItem = WindowsMenuRenderer.Item("Resize handles", iconId: null);
         var bannersItem = WindowsMenuRenderer.Item("Show banners", iconId: null);
@@ -1246,6 +1265,11 @@ public sealed partial class EditorForm
         fitItem.Click += (_, _) =>
         {
             _toggleFitSwitch.Checked = !_toggleFitSwitch.Checked;
+        };
+
+        lockObjectsItem.Click += (_, _) =>
+        {
+            _togglePanLockSwitch.Checked = !_togglePanLockSwitch.Checked;
         };
 
         cropHandlesItem.Click += (_, _) =>
@@ -1310,6 +1334,7 @@ public sealed partial class EditorForm
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(borderItem);
         menu.Items.Add(fitItem);
+        menu.Items.Add(lockObjectsItem);
         menu.Items.Add(cropHandlesItem);
         menu.Items.Add(resizeHandlesItem);
         menu.Items.Add(bannersItem);
@@ -1320,18 +1345,19 @@ public sealed partial class EditorForm
 
         menu.Opened += (_, _) =>
         {
-            UpdateBurgerCheckmarks(borderItem, fitItem, cropHandlesItem, resizeHandlesItem, bannersItem, rulersItem, hintsItem);
+            UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, bannersItem, rulersItem, hintsItem);
         };
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
     }
 
-    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
     {
         var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
         borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         fitItem.Image = _toggleFitSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        lockObjectsItem.Image = _togglePanLockSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         cropHandlesItem.Image = _canvas.EditorAutoCropControls ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         resizeHandlesItem.Image = _canvas.EditorShowResizeHandles ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;

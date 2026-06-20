@@ -57,6 +57,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-fit-pref", ex); }
     }
 
+    /// <summary>Persists the annotation editor's "lock objects in pan mode" preference.</summary>
+    public void PersistEditorPanModeLockObjects(bool lockObjects)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorPanModeLockObjects == lockObjects) return;
+        _settingsService.Settings.EditorPanModeLockObjects = lockObjects;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-pan-lock-pref", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "show banners" preference.</summary>
     public void PersistEditorShowBanners(bool showBanners)
     {
