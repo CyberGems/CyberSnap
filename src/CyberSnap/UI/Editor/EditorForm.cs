@@ -532,39 +532,71 @@ public sealed partial class EditorForm : Form
         if (_emojiPicker is { IsDisposed: false })
             _emojiPicker.Close();
         if (_suppressCloseConfirm || !_canvas.IsDirty) return;
-        var discard = ThemedConfirmDialog.Confirm(
-            Handle,
-            "Unsaved changes",
-            "Discard changes?",
-            "Discard",
-            "Keep editing",
-            danger: false);
-        if (!discard)
+        if (!PromptSaveChanges())
             e.Cancel = true;
+    }
+
+    /// <summary>
+    /// Shows a 3-button "Save changes to {document}?" dialog.
+    /// Returns true when the caller should proceed (user saved or chose Don't Save),
+    /// false when the user cancelled.
+    /// </summary>
+    private bool PromptSaveChanges()
+    {
+        var docName = string.IsNullOrWhiteSpace(_savedFilePath)
+            ? LocalizationService.Translate("Untitled")
+            : TruncateDocName(Path.GetFileName(_savedFilePath), 36);
+        var message = string.Format(
+            LocalizationService.Translate("Save changes to {0}?"), docName);
+
+        var result = ThemedConfirmDialog.SavePrompt(
+            Handle,
+            LocalizationService.Translate("Unsaved changes"),
+            message);
+
+        switch (result)
+        {
+            case SavePromptResult.Save:
+                return DoSave();
+            case SavePromptResult.DontSave:
+                return true;
+            default: // Cancel
+                return false;
+        }
+    }
+
+    private static string TruncateDocName(string name, int maxLength)
+    {
+        if (name.Length <= maxLength) return name;
+        var ext = Path.GetExtension(name);
+        var stem = Path.GetFileNameWithoutExtension(name);
+        int keepLen = maxLength - ext.Length - 1; // 1 for the ellipsis char
+        if (keepLen < 4) keepLen = 4;
+        return stem[..keepLen] + "\u2026" + ext;
     }
 
     // ── Actions invoked by the toolbar ─────────────────────────────────────
 
-    private void DoSave()
+    private bool DoSave()
     {
-        if (!_canvas.IsDirty || _canvas.IsDefaultBlank) return;
+        if (!_canvas.IsDirty || _canvas.IsDefaultBlank) return true;
         try
         {
             if (!string.IsNullOrWhiteSpace(_savedFilePath) && _savedFilePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
             {
-                DoSaveProject(_savedFilePath);
-                return;
+                return DoSaveProject(_savedFilePath);
             }
 
-            DoSaveProjectAs();
+            return DoSaveProjectAs();
         }
         catch (Exception ex)
         {
             ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
+            return false;
         }
     }
 
-    private void DoSaveProject(string filePath)
+    private bool DoSaveProject(string filePath)
     {
         try
         {
@@ -586,14 +618,16 @@ public sealed partial class EditorForm : Form
             var toastTitle = LocalizationService.Translate("System Message");
             var toastBody = string.Format(LocalizationService.Translate("Saved: {0}"), fileName);
             ToastWindow.Show(toastTitle, toastBody, filePath);
+            return true;
         }
         catch (Exception ex)
         {
             ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
+            return false;
         }
     }
 
-    private void DoSaveProjectAs()
+    private bool DoSaveProjectAs()
     {
         using var dlg = new SaveFileDialog
         {
@@ -603,8 +637,8 @@ public sealed partial class EditorForm : Form
                 : Path.ChangeExtension(Path.GetFileName(_savedFilePath), ".csnp"),
             DefaultExt = ".csnp",
         };
-        if (dlg.ShowDialog(this) != DialogResult.OK) return;
-        DoSaveProject(dlg.FileName);
+        if (dlg.ShowDialog(this) != DialogResult.OK) return false;
+        return DoSaveProject(dlg.FileName);
     }
 
     private void DoSaveAs()
@@ -713,14 +747,7 @@ public sealed partial class EditorForm : Form
     {
         if (_canvas.IsDirty)
         {
-            var discard = ThemedConfirmDialog.Confirm(
-                Handle,
-                "Unsaved changes",
-                "Discard changes?",
-                "Discard",
-                "Keep editing",
-                danger: false);
-            if (!discard)
+            if (!PromptSaveChanges())
                 return;
         }
 
@@ -761,14 +788,7 @@ public sealed partial class EditorForm : Form
     {
         if (_canvas.IsDirty)
         {
-            var discard = ThemedConfirmDialog.Confirm(
-                Handle,
-                "Unsaved changes",
-                "Discard changes?",
-                "Discard",
-                "Keep editing",
-                danger: false);
-            if (!discard)
+            if (!PromptSaveChanges())
                 return;
         }
 
@@ -809,14 +829,7 @@ public sealed partial class EditorForm : Form
     {
         if (_canvas.IsDirty)
         {
-            var discard = ThemedConfirmDialog.Confirm(
-                Handle,
-                "Unsaved changes",
-                "Discard changes?",
-                "Discard",
-                "Keep editing",
-                danger: false);
-            if (!discard)
+            if (!PromptSaveChanges())
                 return;
         }
 
@@ -928,6 +941,20 @@ public sealed partial class EditorForm : Form
         {
             if (Clipboard.ContainsImage())
             {
+                if (!_canvas.IsDefaultBlank)
+                {
+                    var confirmTitle = LocalizationService.Translate("Confirm Paste");
+                    var confirmMsg = LocalizationService.Translate("Pasting this image will replace your current document. Do you want to proceed?");
+                    if (!ThemedConfirmDialog.Confirm(Handle, confirmTitle, confirmMsg, danger: false, iconId: "paste"))
+                        return;
+                }
+
+                if (_canvas.IsDirty)
+                {
+                    if (!PromptSaveChanges())
+                        return;
+                }
+
                 using (var img = Clipboard.GetImage())
                 {
                     if (img != null)
