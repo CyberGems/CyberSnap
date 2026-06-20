@@ -172,6 +172,12 @@ public partial class CyberSnapTitleBar : UserControl
             menu.Opened += (_, _) =>
             {
                 searchItem.IsChecked = settingsWin.IsSearchBarVisible();
+                BurgerBtn.ToolTip = null; // Suppress tooltip while menu is open
+            };
+
+            menu.Closed += (_, _) =>
+            {
+                BurgerBtn.ToolTip = LocalizationService.Translate("Menu");
             };
 
             BurgerBtn.ContextMenu = menu;
