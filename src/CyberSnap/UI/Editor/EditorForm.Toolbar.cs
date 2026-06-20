@@ -1118,6 +1118,9 @@ public sealed partial class EditorForm
         if (_liveStatusLabel is null) return;
 
         var isSpanish = string.Equals(Services.SettingsService.LoadStatic()?.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
+        var spacePanSuffix = isSpanish
+            ? "  ·  Mantén Espacio para desplazar"
+            : "  ·  Hold Space to pan";
 
         string hint = _canvas.ActiveTool switch
         {
@@ -1171,6 +1174,10 @@ public sealed partial class EditorForm
                 : "Emoji: Click to stamp selected emoji",
             _ => isSpanish ? "Listo" : "Ready"
         };
+
+        // Append Space-to-pan hint to all tools except Pan itself
+        if (_canvas.ActiveTool != AnnotationCanvas.CanvasTool.Pan)
+            hint += spacePanSuffix;
 
         if (_liveStatusLabel.Text != hint)
             _liveStatusLabel.Text = hint;
