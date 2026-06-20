@@ -889,7 +889,12 @@ public partial class SettingsWindow : Window
         if (result.IsUpdateAvailable)
         {
             var msg = $"{result.StatusMessage}\n\nCurrent: {result.CurrentVersion}\nLatest: {result.LatestVersionLabel}\n\nDownload and install now?";
-            var choice = ThemedConfirmDialog.Confirm(this, "Update available", msg, "Download", "Later", danger: false);
+            var choice = ThemedConfirmDialog.Confirm(this,
+                LocalizationService.Translate("Update available"),
+                msg,
+                LocalizationService.Translate("Download"),
+                LocalizationService.Translate("Later"),
+                danger: false);
             if (choice)
             {
                 await StartUpdateDownloadAsync(result);
@@ -897,7 +902,10 @@ public partial class SettingsWindow : Window
         }
         else
         {
-            ThemedConfirmDialog.Alert(this, "Check for Updates", result.StatusMessage, error: false);
+            ThemedConfirmDialog.Alert(this,
+                LocalizationService.Translate("Check for Updates"),
+                result.StatusMessage,
+                error: false);
         }
     }
 
@@ -918,13 +926,13 @@ public partial class SettingsWindow : Window
         var progress = new Progress<double>(val =>
         {
             UpdateProgressBar.Value = val;
-            UpdateProgressText.Text = $"Downloading update ({val:F1}%)...";
+            UpdateProgressText.Text = string.Format(LocalizationService.Translate("Downloading update ({0:F1}%)..."), val);
         });
 
         try
         {
             UpdateProgressBar.Value = 0;
-            UpdateProgressText.Text = "Downloading update (0.0%)...";
+            UpdateProgressText.Text = LocalizationService.Translate("Downloading update (0.0%)...");
 
             if (string.IsNullOrEmpty(result.DownloadUrl))
             {
@@ -933,9 +941,12 @@ public partial class SettingsWindow : Window
 
             await UpdateService.DownloadUpdateAsync(result.DownloadUrl, installerPath, progress);
 
-            UpdateProgressText.Text = "Download completed. Launching installer...";
+            UpdateProgressText.Text = LocalizationService.Translate("Download completed. Launching installer...");
 
-            ThemedConfirmDialog.Alert(this, "Download Complete", "The update has been successfully downloaded. CyberSnap will now close to continue the installation.", error: false);
+            ThemedConfirmDialog.Alert(this,
+                LocalizationService.Translate("Download Complete"),
+                LocalizationService.Translate("The update has been successfully downloaded. CyberSnap will now close to continue the installation."),
+                error: false);
 
             UpdateService.LaunchInstallerAndExit(installerPath);
         }
@@ -945,7 +956,12 @@ public partial class SettingsWindow : Window
             UpdateBtn.IsEnabled = true;
             GithubBtn.IsEnabled = true;
 
-            var errorChoice = ThemedConfirmDialog.Confirm(this, "Download Failed", $"Failed to download update automatically:\n{ex.Message}\n\nWould you like to open the GitHub release page instead?", "Open Browser", "Cancel", danger: false);
+            var errorChoice = ThemedConfirmDialog.Confirm(this,
+                LocalizationService.Translate("Download Failed"),
+                string.Format(LocalizationService.Translate("Failed to download update automatically:\n{0}\n\nWould you like to open the GitHub release page instead?"), ex.Message),
+                LocalizationService.Translate("Open Browser"),
+                LocalizationService.Translate("Cancel"),
+                danger: false);
             if (errorChoice)
             {
                 try

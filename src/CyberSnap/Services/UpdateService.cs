@@ -102,8 +102,8 @@ public static class UpdateService
 
             var isAvailable = latestVersion is not null && latestVersion > currentVersion;
             var status = isAvailable
-                ? $"Update {tagName} available"
-                : $"You're up to date on {currentLabel}";
+                ? string.Format(LocalizationService.Translate("Update {0} available"), tagName)
+                : string.Format(LocalizationService.Translate("You're up to date on {0}"), currentLabel);
 
             return new UpdateCheckResult(
                 currentVersion,
@@ -121,19 +121,19 @@ public static class UpdateService
         {
             return new UpdateCheckResult(
                 currentVersion, null, currentLabel, string.Empty, null, null, null, null, false,
-                "Could not check for updates. Check your internet connection.");
+                LocalizationService.Translate("Could not check for updates. Check your internet connection."));
         }
         catch (TaskCanceledException)
         {
             return new UpdateCheckResult(
                 currentVersion, null, currentLabel, string.Empty, null, null, null, null, false,
-                "Update check timed out. Try again later.");
+                LocalizationService.Translate("Update check timed out. Try again later."));
         }
         catch (JsonException)
         {
             return new UpdateCheckResult(
                 currentVersion, null, currentLabel, string.Empty, null, null, null, null, false,
-                "Unexpected response from update server.");
+                LocalizationService.Translate("Unexpected response from update server."));
         }
     }
 

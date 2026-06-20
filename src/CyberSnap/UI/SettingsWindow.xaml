@@ -3803,16 +3803,17 @@
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="About CyberSnap" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="About CyberSnap" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="About CyberSnap"/>
                     <Border Style="{StaticResource Card}">
-                        <TextBlock Style="{StaticResource InfoText}" LineHeight="20">
+                        <TextBlock Style="{StaticResource InfoText}" LineHeight="20"
+                                   Services:LocalizationService.SourceText="CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. Built with performance in mind, it combines rapid image capture with advanced features like local OCR, instant translation, and comprehensive gallery management.">
                             CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. 
                             Built with performance in mind, it combines rapid image capture with advanced features like 
                             local OCR, instant translation, and comprehensive gallery management.
                         </TextBlock>
                     </Border>
 
-                    <TextBlock Text="Updates &amp; Maintenance" Style="{StaticResource SectionLabel}" Margin="0,16,0,6"/>
+                    <TextBlock Text="Updates &amp; Maintenance" Style="{StaticResource SectionLabel}" Margin="0,16,0,6" Services:LocalizationService.SourceText="Updates &amp; Maintenance"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">
@@ -3825,12 +3826,13 @@
                                     <TextBlock Text="&#xE777;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Text="Check for updates on startup" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Automatically check for new versions when CyberSnap starts." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Check for updates on startup" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Check for updates on startup"/>
+                                    <TextBlock Text="Automatically check for new versions when CyberSnap starts." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Automatically check for new versions when CyberSnap starts."/>
                                 </StackPanel>
                                 <CheckBox x:Name="AutoCheckUpdateCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Check for updates on startup"
                                           ToolTip="Automatically check for new versions when CyberSnap starts."
+                                          Services:LocalizationService.SourceToolTip="Automatically check for new versions when CyberSnap starts."
                                           Checked="AutoCheckUpdateCheck_Changed" Unchecked="AutoCheckUpdateCheck_Changed"/>
                             </Grid>
                             
@@ -3846,22 +3848,25 @@
                                     <TextBlock Text="&#xE896;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Text="Check for updates" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Check for the latest version and download updates directly." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Check for updates" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Check for updates"/>
+                                    <TextBlock Text="Check for the latest version and download updates directly." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Check for the latest version and download updates directly."/>
                                 </StackPanel>
                                 <Button x:Name="UpdateBtn" Content="Check Now" Grid.Column="2" MinWidth="108"
+                                        Services:LocalizationService.SourceContent="Check Now"
                                         VerticalAlignment="Center" Click="UpdateCheckButton_Click" Cursor="Hand"
-                                        ToolTip="Check for the latest version" AutomationProperties.Name="Check for Updates"/>
+                                        ToolTip="Check for the latest version"
+                                        Services:LocalizationService.SourceToolTip="Check for the latest version"
+                                        AutomationProperties.Name="Check for Updates"/>
                             </Grid>
 
                             <StackPanel x:Name="UpdateProgressPanel" Visibility="Collapsed" Margin="38,8,0,8">
-                                <TextBlock x:Name="UpdateProgressText" Text="Downloading update..." Style="{StaticResource SettingsProgressText}" Margin="0,0,0,6"/>
+                                <TextBlock x:Name="UpdateProgressText" Text="Downloading update..." Style="{StaticResource SettingsProgressText}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Downloading update..."/>
                                 <ProgressBar x:Name="UpdateProgressBar" Height="4" Minimum="0" Maximum="100" Value="0" Foreground="{DynamicResource ThemeAccentBrush}"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Resources" Style="{StaticResource SectionLabel}" Margin="0,16,0,6"/>
+                    <TextBlock Text="Resources" Style="{StaticResource SectionLabel}" Margin="0,16,0,6" Services:LocalizationService.SourceText="Resources"/>
                     <Border Style="{StaticResource Card}">
                         <Grid Style="{StaticResource SettingRow}">
                             <Grid.ColumnDefinitions>
@@ -3873,12 +3878,15 @@
                                 <TextBlock Text="&#xE71B;" Style="{StaticResource SettingIconGlyph}"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <TextBlock Text="Project Repository" Style="{StaticResource SettingTitle}"/>
-                                <TextBlock Text="View the source code on GitHub, report issues, and contribute." Style="{StaticResource SettingDescription}"/>
+                                <TextBlock Text="Project Repository" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Project Repository"/>
+                                <TextBlock Text="View the source code on GitHub, report issues, and contribute." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="View the source code on GitHub, report issues, and contribute."/>
                             </StackPanel>
                             <Button x:Name="GithubBtn" Content="View GitHub" Grid.Column="2" MinWidth="108"
+                                    Services:LocalizationService.SourceContent="View GitHub"
                                     VerticalAlignment="Center" Click="GithubButton_Click" Cursor="Hand"
-                                    ToolTip="View the source code on GitHub" AutomationProperties.Name="Project Repository"/>
+                                    ToolTip="View the source code on GitHub"
+                                    Services:LocalizationService.SourceToolTip="View the source code on GitHub"
+                                    AutomationProperties.Name="Project Repository"/>
                         </Grid>
                     </Border>
                 </StackPanel>
