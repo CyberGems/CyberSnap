@@ -471,6 +471,28 @@ public partial class SettingsWindow
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
         RefreshLanguageComboDisplay();
         UpdateWindowTitle();
+        RefreshAboutLocalization();
+    }
+
+    /// <summary>Explicitly translates all About tab texts, tooltips, and button labels.</summary>
+    private void RefreshAboutLocalization()
+    {
+        AboutSectionLabel.Text = LocalizationService.Translate("About CyberSnap");
+        AboutDescriptionText.Text = LocalizationService.Translate("CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. Built with performance in mind, it combines rapid image capture with advanced features like local OCR, instant translation, and comprehensive gallery management.");
+        AboutUpdatesSectionLabel.Text = LocalizationService.Translate("Updates & Maintenance");
+        AboutAutoUpdateTitle.Text = LocalizationService.Translate("Check for updates on startup");
+        AboutAutoUpdateDesc.Text = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
+        AutoCheckUpdateCheck.ToolTip = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
+        AboutUpdateTitle.Text = LocalizationService.Translate("Check for updates");
+        AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
+        UpdateBtn.Content = LocalizationService.Translate("Check Now");
+        UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
+        UpdateProgressText.Text = LocalizationService.Translate("Downloading update...");
+        AboutResourcesSectionLabel.Text = LocalizationService.Translate("Resources");
+        AboutRepoTitle.Text = LocalizationService.Translate("Project Repository");
+        AboutRepoDesc.Text = LocalizationService.Translate("View the source code on GitHub, report issues, and contribute.");
+        GithubBtn.Content = LocalizationService.Translate("View GitHub");
+        GithubBtn.ToolTip = LocalizationService.Translate("View the source code on GitHub");
     }
 
     private void UpdateWindowTitle()
