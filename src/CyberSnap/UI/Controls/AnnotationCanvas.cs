@@ -892,6 +892,40 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         }
     }
 
+    /// <summary>Smallest / largest canvas dimension accepted by the resize feature.</summary>
+    public const int MinCanvasSize = 16;
+    public const int MaxCanvasSize = 10000;
+
+    private bool _editorShowResizeHandles = true;
+    /// <summary>Whether the square resize handles float around the canvas in the gray margin.
+    /// Permanent like <see cref="EditorAutoCropControls"/>; toggled from the burger menu.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool EditorShowResizeHandles
+    {
+        get => _editorShowResizeHandles;
+        set
+        {
+            if (_editorShowResizeHandles == value) return;
+            _editorShowResizeHandles = value;
+            Invalidate();
+        }
+    }
+
+    /// <summary>Resizes the canvas to a new pixel size and pushes an undoable command.
+    /// <paramref name="scaleContent"/> true = resample (stretch image + annotations);
+    /// false = re-canvas at the new size with <paramref name="anchor"/> (extend/trim).</summary>
+    public void ResizeCanvas(int width, int height, bool scaleContent, Models.Commands.AnchorPosition anchor)
+    {
+        width = Math.Clamp(width, MinCanvasSize, MaxCanvasSize);
+        height = Math.Clamp(height, MinCanvasSize, MaxCanvasSize);
+        if (width == _baseBitmap.Width && height == _baseBitmap.Height) return;
+
+        Push(new Models.Commands.ResizeCanvasCommand(width, height, scaleContent, anchor));
+        ZoomFit();
+        HideToolBanner();
+        Invalidate();
+    }
+
     /// <summary>Applies the configured initial view (fit-to-window or 100%) for the current image.</summary>
     public void ApplyInitialView()
     {

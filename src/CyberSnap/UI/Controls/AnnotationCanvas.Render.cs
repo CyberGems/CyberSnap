@@ -50,6 +50,7 @@ public sealed partial class AnnotationCanvas
             g.Restore(state);
         }
 
+        RenderResizeHandles(g);
         RenderCropOverlay(g);
         RenderCheckerboardFrame(g);
         RenderGuides(g);

@@ -66,14 +66,21 @@ public partial class SettingsWindow
         LocalizationChanged += () =>
         {
             if (IsLoaded)
+            {
                 BuildSearchIndex();
+                RefreshSearchTooltips();
+            }
         };
+
+        // Apply translated tooltips immediately (before ApplyTo may run)
+        RefreshSearchTooltips();
 
         // Build on first load, then again after a short delay to capture
         // any late-applied localization (e.g., TextBlock.Text set after Loaded)
         Loaded += (_, _) =>
         {
             BuildSearchIndex();
+            RefreshSearchTooltips();
             // Second pass: catch localized TextBlocks that were set after Loaded
             var deferredTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
             deferredTimer.Tick += (s, args) =>
@@ -849,6 +856,15 @@ public partial class SettingsWindow
             HideSearchBar();
         else
             ShowSearchBar();
+    }
+
+    /// <summary>Re-applies translated tooltips for all search bar elements.</summary>
+    private void RefreshSearchTooltips()
+    {
+        SettingsSearchToggleBtn.ToolTip = LocalizationService.Translate("Search settings (Ctrl+F)");
+        SettingsSearchBox.ToolTip = LocalizationService.Translate("Search settings — type a setting name, section, or keyword (Ctrl+F)");
+        SettingsSearchClearBtn.ToolTip = LocalizationService.Translate("Clear search");
+        SettingsSearchPlaceholder.Text = LocalizationService.Translate("Search settings...");
     }
 
     private void ShowSearchBar()

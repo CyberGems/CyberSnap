@@ -1216,9 +1216,13 @@ public sealed partial class EditorForm
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project as..."), iconId: "save");
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
 
+        var resizeCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
+        resizeCanvasItem.Click += (_, _) => DoResizeCanvas();
+
         var borderItem = WindowsMenuRenderer.Item("Border", iconId: null);
         var fitItem = WindowsMenuRenderer.Item("Auto-fit", iconId: null);
         var cropHandlesItem = WindowsMenuRenderer.Item("Crop handles", iconId: null);
+        var resizeHandlesItem = WindowsMenuRenderer.Item("Resize handles", iconId: null);
         var bannersItem = WindowsMenuRenderer.Item("Show banners", iconId: null);
         var rulersItem = WindowsMenuRenderer.Item("Show rulers", iconId: null);
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
@@ -1243,6 +1247,15 @@ public sealed partial class EditorForm
             if (System.Windows.Application.Current is CyberSnap.App app)
             {
                 app.PersistEditorAutoCropControls(_canvas.EditorAutoCropControls);
+            }
+        };
+
+        resizeHandlesItem.Click += (_, _) =>
+        {
+            _canvas.EditorShowResizeHandles = !_canvas.EditorShowResizeHandles;
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorShowResizeHandles(_canvas.EditorShowResizeHandles);
             }
         };
 
@@ -1286,10 +1299,12 @@ public sealed partial class EditorForm
         };
 
         menu.Items.Add(saveProjectAsItem);
+        menu.Items.Add(resizeCanvasItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(borderItem);
         menu.Items.Add(fitItem);
         menu.Items.Add(cropHandlesItem);
+        menu.Items.Add(resizeHandlesItem);
         menu.Items.Add(bannersItem);
         menu.Items.Add(rulersItem);
         menu.Items.Add(hintsItem);
@@ -1298,19 +1313,20 @@ public sealed partial class EditorForm
 
         menu.Opened += (_, _) =>
         {
-            UpdateBurgerCheckmarks(borderItem, fitItem, cropHandlesItem, bannersItem, rulersItem, hintsItem);
+            UpdateBurgerCheckmarks(borderItem, fitItem, cropHandlesItem, resizeHandlesItem, bannersItem, rulersItem, hintsItem);
         };
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
     }
 
-    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
     {
         var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
         borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         fitItem.Image = _toggleFitSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         cropHandlesItem.Image = _canvas.EditorAutoCropControls ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        resizeHandlesItem.Image = _canvas.EditorShowResizeHandles ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         rulersItem.Image = (_topRulerContainer != null && _topRulerContainer.Visible) ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         hintsItem.Image = _canvas.ShowHints ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;

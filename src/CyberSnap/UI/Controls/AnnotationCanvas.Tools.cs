@@ -46,6 +46,18 @@ public sealed partial class AnnotationCanvas
     private Point _cropDragStartImg;
     private Rectangle _cropDragStartRect;
 
+    // Canvas resize via the square handles floating outside the image (screen-space).
+    // How far outside the image edge the square handles float, in screen pixels.
+    private const float ResizeHandleOffset = 16f;
+    private const float ResizeHandleSize = 11f;   // side length of each square handle (screen px)
+    private const float ResizeHitRadius = 9f;
+    private bool _resizeDragging;
+    private int _activeResizeHandle = -1;          // 0..7, same indexing as crop handles
+    private Point _resizeStartImg;                 // image-space mouse at drag start
+    private Size _resizeStartSize;                 // bitmap size at drag start
+    private Size _resizePreviewSize;               // pending new size while dragging
+    private RectangleF _resizePreviewRect;         // screen-space outline shown while dragging
+
     // Inline text editor
     private TextBox? _inlineTextBox;
     private Point _inlineTextOrigin;
@@ -187,6 +199,25 @@ public sealed partial class AnnotationCanvas
         }
 
         Focus();
+
+        // Square resize handles float outside the image; they take priority over the crop
+        // handles (which sit on the image edge) and over starting a stroke in the margin.
+        if (e.Button == MouseButtons.Left && EditorShowResizeHandles && _baseBitmap != null &&
+            _activeTool != CanvasTool.Crop && _preSpaceTool == null)
+        {
+            int hit = HitTestResizeHandle(e.Location);
+            if (hit >= 0)
+            {
+                _resizeDragging = true;
+                _activeResizeHandle = hit;
+                _resizeStartImg = ScreenToImage(e.Location);
+                _resizeStartSize = new Size(_baseBitmap.Width, _baseBitmap.Height);
+                _resizePreviewSize = _resizeStartSize;
+                _resizePreviewRect = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+                Capture = true;
+                return;
+            }
+        }
 
         if (e.Button == MouseButtons.Left && EditorAutoCropControls && _cropHasRect && _activeTool != CanvasTool.Crop)
         {
@@ -516,9 +547,15 @@ public sealed partial class AnnotationCanvas
         // keeps up; redundant Invalidate calls within one message coalesce into one paint.
         _cursorClient = e.Location;
         _cursorOnCanvas = true;
-        if (!_isDragging && !_isPanning && !_cropDragging && _preSpaceTool == null
+        if (!_isDragging && !_isPanning && !_cropDragging && !_resizeDragging && _preSpaceTool == null
             && ToolShowsCursorChip(_activeTool))
             Invalidate();
+
+        if (_resizeDragging)
+        {
+            UpdateResizeDrag(e.Location);
+            return;
+        }
 
         if (_activeDraggedHorizontalGuideIndex >= 0)
         {
@@ -687,8 +724,24 @@ public sealed partial class AnnotationCanvas
                 Cursor = GetCropCursor(e.Location);
             }
         }
-        else if (!_isDragging && !_cropDragging)
+        else if (!_isDragging && !_cropDragging && !_resizeDragging)
         {
+            if (EditorShowResizeHandles && _baseBitmap != null && _preSpaceTool == null)
+            {
+                int rh = HitTestResizeHandle(e.Location);
+                if (rh >= 0)
+                {
+                    Cursor = rh switch
+                    {
+                        0 or 3 => Cursors.SizeNWSE,
+                        1 or 2 => Cursors.SizeNESW,
+                        4 or 6 => Cursors.SizeNS,
+                        5 or 7 => Cursors.SizeWE,
+                        _ => Cursors.Default
+                    };
+                    return;
+                }
+            }
             if (EditorAutoCropControls && _cropHasRect && _preSpaceTool == null)
             {
                 var screenPt = e.Location;
@@ -950,6 +1003,25 @@ public sealed partial class AnnotationCanvas
         }
 
         if (e.Button != MouseButtons.Left) return;
+
+        if (_resizeDragging)
+        {
+            _resizeDragging = false;
+            Capture = false;
+            int handle = _activeResizeHandle;
+            _activeResizeHandle = -1;
+            var size = _resizePreviewSize;
+            if (size.Width != _resizeStartSize.Width || size.Height != _resizeStartSize.Height)
+            {
+                // Dragging a handle resamples (stretches) the content to the new size.
+                ResizeCanvas(size.Width, size.Height, scaleContent: true, Models.Commands.AnchorPosition.TopLeft);
+            }
+            else
+            {
+                Invalidate();
+            }
+            return;
+        }
 
         if (_cropDragging)
         {
@@ -1674,6 +1746,151 @@ public sealed partial class AnnotationCanvas
     {
         g.DrawLine(pen, x, y, x + dx, y);
         g.DrawLine(pen, x, y, x, y + dy);
+    }
+
+    // ── Canvas resize handles (square, float outside the image) ─────────────
+
+    /// <summary>The 8 resize handle centers in screen space, laid out on a rectangle inflated
+    /// outward from the image edge. Indexing matches the crop handles: 0=TL,1=TR,2=BL,3=BR,
+    /// 4=Top,5=Right,6=Bottom,7=Left.</summary>
+    private PointF[] GetResizeHandlePositionsScreen()
+    {
+        var img = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+        var r = RectangleF.Inflate(img, ResizeHandleOffset, ResizeHandleOffset);
+        return new PointF[]
+        {
+            new(r.Left, r.Top),
+            new(r.Right, r.Top),
+            new(r.Left, r.Bottom),
+            new(r.Right, r.Bottom),
+            new(r.Left + r.Width / 2f, r.Top),
+            new(r.Right, r.Top + r.Height / 2f),
+            new(r.Left + r.Width / 2f, r.Bottom),
+            new(r.Left, r.Top + r.Height / 2f),
+        };
+    }
+
+    private int HitTestResizeHandle(Point screenPt)
+    {
+        var handles = GetResizeHandlePositionsScreen();
+        for (int i = 0; i < handles.Length; i++)
+        {
+            var h = handles[i];
+            if (Math.Abs(screenPt.X - h.X) <= ResizeHitRadius && Math.Abs(screenPt.Y - h.Y) <= ResizeHitRadius)
+                return i;
+        }
+        return -1;
+    }
+
+    private void UpdateResizeDrag(Point screenPt)
+    {
+        var img = ScreenToImage(screenPt);
+        int dx = img.X - _resizeStartImg.X;
+        int dy = img.Y - _resizeStartImg.Y;
+        int startW = _resizeStartSize.Width;
+        int startH = _resizeStartSize.Height;
+
+        bool affectsW = _activeResizeHandle is 0 or 1 or 2 or 3 or 5 or 7;
+        bool affectsH = _activeResizeHandle is 0 or 1 or 2 or 3 or 4 or 6;
+        bool growLeft = _activeResizeHandle is 0 or 2 or 7;   // left edge handles invert X
+        bool growTop = _activeResizeHandle is 0 or 1 or 4;     // top edge handles invert Y
+
+        int newW = startW + (affectsW ? (growLeft ? -dx : dx) : 0);
+        int newH = startH + (affectsH ? (growTop ? -dy : dy) : 0);
+
+        bool isCorner = _activeResizeHandle is 0 or 1 or 2 or 3;
+        // Corners keep aspect ratio unless Shift is held; the axis with the larger drag wins.
+        if (isCorner && !ModifierKeys.HasFlag(Keys.Shift) && startW > 0 && startH > 0)
+        {
+            double s = Math.Abs(dx) >= Math.Abs(dy)
+                ? (double)newW / startW
+                : (double)newH / startH;
+            newW = (int)Math.Round(startW * s);
+            newH = (int)Math.Round(startH * s);
+        }
+
+        newW = Math.Clamp(newW, MinCanvasSize, MaxCanvasSize);
+        newH = Math.Clamp(newH, MinCanvasSize, MaxCanvasSize);
+        _resizePreviewSize = new Size(newW, newH);
+
+        // Build the preview outline anchored at the fixed corner/edge (opposite the dragged one).
+        var imgScreen = ImageToScreenRect(new RectangleF(0, 0, startW, startH));
+        float sw = (float)(newW * _zoom);
+        float sh = (float)(newH * _zoom);
+        float left = growLeft ? imgScreen.Right - sw : imgScreen.Left;
+        float top = growTop ? imgScreen.Bottom - sh : imgScreen.Top;
+        if (!affectsW) { left = imgScreen.Left; sw = imgScreen.Width; }
+        if (!affectsH) { top = imgScreen.Top; sh = imgScreen.Height; }
+        if (isCorner)
+        {
+            left = growLeft ? imgScreen.Right - sw : imgScreen.Left;
+            top = growTop ? imgScreen.Bottom - sh : imgScreen.Top;
+        }
+        _resizePreviewRect = new RectangleF(left, top, sw, sh);
+
+        Invalidate();
+    }
+
+    private void RenderResizeHandles(Graphics g)
+    {
+        if (!EditorShowResizeHandles || _baseBitmap == null) return;
+        if (_activeTool == CanvasTool.Crop || _preSpaceTool != null) return;
+
+        // While dragging, draw the pending-size outline plus a size badge.
+        if (_resizeDragging)
+        {
+            using var previewShadow = new Pen(Color.FromArgb(120, 0, 0, 0), 2.5f) { DashStyle = DashStyle.Dash };
+            using var previewPen = new Pen(Color.FromArgb(255, 0, 255, 255), 1.6f) { DashStyle = DashStyle.Dash };
+            g.DrawRectangle(previewShadow, _resizePreviewRect.X + 1f, _resizePreviewRect.Y + 1f, _resizePreviewRect.Width, _resizePreviewRect.Height);
+            g.DrawRectangle(previewPen, _resizePreviewRect.X, _resizePreviewRect.Y, _resizePreviewRect.Width, _resizePreviewRect.Height);
+            DrawResizeSizeBadge(g, _resizePreviewRect, $"{_resizePreviewSize.Width} × {_resizePreviewSize.Height}");
+        }
+
+        var handles = GetResizeHandlePositionsScreen();
+        var fill = Color.FromArgb(255, 0, 255, 255);
+        var shadow = Color.FromArgb(110, 0, 0, 0);
+        float half = ResizeHandleSize / 2f;
+
+        using var fillBrush = new SolidBrush(fill);
+        using var shadowBrush = new SolidBrush(shadow);
+        foreach (var h in handles)
+        {
+            var rect = new RectangleF(h.X - half, h.Y - half, ResizeHandleSize, ResizeHandleSize);
+            using (var sp = RoundedRect(new RectangleF(rect.X + 1f, rect.Y + 1f, rect.Width, rect.Height), 2.5f))
+                g.FillPath(shadowBrush, sp);
+            using (var fp = RoundedRect(rect, 2.5f))
+                g.FillPath(fillBrush, fp);
+        }
+    }
+
+    private static void DrawResizeSizeBadge(Graphics g, RectangleF previewRect, string text)
+    {
+        using var font = new Font("Segoe UI", 8.25f, FontStyle.Bold);
+        var size = g.MeasureString(text, font);
+        float pad = 6f;
+        float bw = size.Width + pad * 2;
+        float bh = size.Height + pad;
+        float bx = previewRect.X + previewRect.Width / 2f - bw / 2f;
+        float by = previewRect.Y - bh - 4f;
+        if (by < 2f) by = previewRect.Y + 4f;
+        var badge = new RectangleF(bx, by, bw, bh);
+        using (var bg = new SolidBrush(Color.FromArgb(220, 10, 14, 22)))
+        using (var path = RoundedRect(badge, 5f))
+            g.FillPath(bg, path);
+        using var textBrush = new SolidBrush(Color.FromArgb(255, 0, 255, 255));
+        g.DrawString(text, font, textBrush, bx + pad, by + pad / 2f);
+    }
+
+    private static GraphicsPath RoundedRect(RectangleF r, float radius)
+    {
+        float d = radius * 2f;
+        var path = new GraphicsPath();
+        path.AddArc(r.X, r.Y, d, d, 180, 90);
+        path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+        path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+        path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     private static Rectangle NormRect(Point a, Point b) =>
