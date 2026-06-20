@@ -341,8 +341,8 @@ public partial class SettingsWindow
         SettingsSearchPopup.IsOpen = _filteredResults.Count > 0;
         UpdateResultSelectionVisual();
         SettingsSearchCount.Text = _filteredResults.Count > 0
-            ? $"{_filteredResults.Count} result{(_filteredResults.Count == 1 ? "" : "s")}"
-            : "No results";
+            ? $"{_filteredResults.Count} {LocalizationService.Translate(_filteredResults.Count == 1 ? "result" : "results")}"
+            : LocalizationService.Translate("No results");
     }
 
     private static double ScoreEntry(SettingsSearchEntry entry, string normalized, string[] tokens)
@@ -856,7 +856,7 @@ public partial class SettingsWindow
         SettingsSearchBar.Visibility = Visibility.Visible;
         SettingsSearchToggleBtn.Text = "\uE711";         // ✕ cancel icon
         SettingsSearchToggleBtn.Opacity = 0.85;
-        SettingsSearchToggleBtn.ToolTip = "Close search (Esc)";
+        SettingsSearchToggleBtn.ToolTip = LocalizationService.Translate("Close search (Esc)");
         PageTitleText.Margin = new Thickness(18, 50, 18, 0);
         AdjustPanelTopPadding(42 + 44);
         SettingsSearchBox.Focus();
@@ -872,7 +872,7 @@ public partial class SettingsWindow
         SettingsSearchBar.Visibility = Visibility.Collapsed;
         SettingsSearchToggleBtn.Text = "\uE721";         // 🔍 search icon
         SettingsSearchToggleBtn.Opacity = 0.55;
-        SettingsSearchToggleBtn.ToolTip = "Search settings (Ctrl+F)";
+        SettingsSearchToggleBtn.ToolTip = LocalizationService.Translate("Search settings (Ctrl+F)");
         SettingsSearchPopup.IsOpen = false;
         _filteredResults.Clear();
         SettingsSearchCount.Text = "";

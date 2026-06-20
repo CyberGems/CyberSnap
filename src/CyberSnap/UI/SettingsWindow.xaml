@@ -943,6 +943,7 @@
                                  Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                  CaretBrush="{DynamicResource ThemeTextPrimaryBrush}"
                                  ToolTip="Search settings — type a setting name, section, or keyword (Ctrl+F)"
+                                 Services:LocalizationService.SourceToolTip="Search settings — type a setting name, section, or keyword (Ctrl+F)"
                                  AutomationProperties.Name="Search settings"
                                  TextChanged="SettingsSearchBox_TextChanged"
                                  PreviewKeyDown="SettingsSearchBox_PreviewKeyDown"
@@ -956,6 +957,7 @@
                         <!-- Placeholder -->
                         <TextBlock x:Name="SettingsSearchPlaceholder" Grid.Column="1"
                                    Text="Search settings..."
+                                   Services:LocalizationService.SourceText="Search settings..."
                                    FontSize="12" Opacity="0.28"
                                    VerticalAlignment="Center"
                                    IsHitTestVisible="False"/>
@@ -966,6 +968,7 @@
                                    VerticalAlignment="Center" Margin="4,0,0,0"
                                    Cursor="Hand" Visibility="Collapsed"
                                    ToolTip="Clear search"
+                                   Services:LocalizationService.SourceToolTip="Clear search"
                                    MouseLeftButtonDown="SettingsSearchClear_Click"/>
                         <!-- Result count -->
                         <TextBlock x:Name="SettingsSearchCount" Grid.Column="3"
@@ -1044,6 +1047,7 @@
                            Cursor="Hand"
                            Panel.ZIndex="101"
                            ToolTip="Search settings (Ctrl+F)"
+                           Services:LocalizationService.SourceToolTip="Search settings (Ctrl+F)"
                            MouseLeftButtonDown="SettingsSearchToggle_Click"/>
 
 
@@ -3588,6 +3592,26 @@
                                           ToolTip="Automatically show crop handles when the crop tool is active."
                                           AutomationProperties.Name="Auto crop controls"
                                           Checked="EditorAutoCropCheck_Changed" Unchecked="EditorAutoCropCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Resize handles -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE744;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show resize handles" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Show the square resize handles around the canvas to resize it." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="EditorShowResizeHandlesCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="Show the square resize handles around the canvas to resize it."
+                                          AutomationProperties.Name="Show resize handles"
+                                          Checked="EditorShowResizeHandlesCheck_Changed" Unchecked="EditorShowResizeHandlesCheck_Changed"/>
                             </Grid>
                         </StackPanel>
                     </Border>
