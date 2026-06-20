@@ -807,7 +807,7 @@ public partial class CaptureWidgetWindow : Window
         menu.Items.Add(editorItem);
 
         // Jump straight to the widget's section in the Config window.
-        var settingsItem = Helpers.WindowsMenuRenderer.Item("Widget settings", iconId: "gear");
+        var settingsItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
         settingsItem.Click += (s, ev) =>
         {
             ((App)System.Windows.Application.Current).ShowSettings("widget");

@@ -76,6 +76,8 @@ public partial class CyberSnapTitleBar : UserControl
         MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
 
         CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", titleIcon, 18);
+        // Hamburger burger menu icon
+        BurgerIcon.Source = RenderHamburgerIcon(titleIcon, 18);
         // "Open editor" shortcut \u2014 the Fluent "Compose" icon (shared with the tray/widget menus)
         AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 18);
         AnnotationIcon.Opacity = 1.0;
@@ -85,14 +87,94 @@ public partial class CyberSnapTitleBar : UserControl
 
     private void InitializeActionBtn(System.Drawing.Color titleIcon)
     {
-        if (OwnerWindow is SettingsWindow)
+        if (OwnerWindow is SettingsWindow settingsWin)
         {
-            AnnotationBtn.Visibility = Visibility.Visible;
-            AnnotationBtn.ToolTip = LocalizationService.Translate("Annotations Editor");
+            // Hide old shortcuts — replaced by the burger menu
+            AnnotationBtn.Visibility = Visibility.Collapsed;
+            ActionBtn.Visibility = Visibility.Collapsed;
 
-            ActionBtn.Visibility = Visibility.Visible;
-            ActionBtn.ToolTip = LocalizationService.Translate("Capture Gallery");
-            ActionIcon.Source = Helpers.FluentIcons.RenderWpf("history", titleIcon, 18);
+            // Burger menu with toggles + shortcuts
+            BurgerBtn.Visibility = Visibility.Visible;
+            BurgerBtn.ToolTip = LocalizationService.Translate("Menu");
+
+            var menu = new ContextMenu();
+            menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+
+            // Search settings toggle
+            var searchItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Search settings"),
+                IsCheckable = true,
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("search", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Show or hide the search bar")
+            };
+            searchItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => settingsWin.ToggleSearchBar());
+            };
+            menu.Items.Add(searchItem);
+
+            menu.Items.Add(new Separator());
+
+            // Editor shortcut
+            var editorItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Editor..."),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Open the post-capture editor for annotations.")
+            };
+            editorItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => Editor.EditorForm.ShowEditorEmptyOrPrompt());
+            };
+            menu.Items.Add(editorItem);
+
+            // Gallery shortcut
+            var galleryItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Gallery..."),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("history", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Open the Capture Gallery")
+            };
+            galleryItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowHistory());
+            };
+            menu.Items.Add(galleryItem);
+
+            menu.Items.Add(new Separator());
+
+            // About CyberSnap
+            var aboutItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("About CyberSnap"),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("info", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Open the About section in Configuration")
+            };
+            aboutItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowSettings("about"));
+            };
+            menu.Items.Add(aboutItem);
+
+            menu.Opened += (_, _) =>
+            {
+                searchItem.IsChecked = settingsWin.IsSearchBarVisible();
+            };
+
+            BurgerBtn.ContextMenu = menu;
         }
         else if (OwnerWindow is HistoryWindow)
         {
@@ -220,6 +302,16 @@ public partial class CyberSnapTitleBar : UserControl
     {
         if (sender is Border border)
             border.Background = System.Windows.Media.Brushes.Transparent;
+    }
+
+    private void BurgerBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (BurgerBtn.ContextMenu is { } menu)
+        {
+            menu.PlacementTarget = BurgerBtn;
+            menu.IsOpen = true;
+        }
     }
 
     private void AnnotationBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
