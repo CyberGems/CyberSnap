@@ -450,7 +450,7 @@ public sealed partial class EditorForm
             ForeColor = EditorColors.TextSecondary,
             Font = new Font("Consolas", 10.5f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleCenter,
-            Text = "Unsaved capture",
+            Text = LocalizationService.Translate("Untitled"),
         };
         _titleFileNameLabel.MouseDown += BeginWindowDrag;
 
@@ -1095,7 +1095,7 @@ public sealed partial class EditorForm
         if (bitmap is null) return;
 
         var fileName = string.IsNullOrWhiteSpace(_savedFilePath)
-            ? "Unsaved capture"
+            ? LocalizationService.Translate("Untitled")
             : Path.GetFileName(_savedFilePath);
         
         var titleText = $"{fileName} ({bitmap.Width} x {bitmap.Height} px)";
