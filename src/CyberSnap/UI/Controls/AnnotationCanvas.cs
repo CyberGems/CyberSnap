@@ -289,6 +289,49 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private BannerState _bannerState = BannerState.FadeIn;
     private bool _bannerIsSticky;
 
+    private float _resizeHandlesOpacity = 0f;
+    private System.Windows.Forms.Timer? _resizeHandlesTimer;
+
+    private void ResizeHandlesTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_baseBitmap == null) return;
+        var imgRect = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
+        bool isHoveringExterior = _cursorOnCanvas && !imgRect.Contains(_cursorClient);
+        bool targetVisible = _resizeDragging || isHoveringExterior;
+
+        float targetOpacity = targetVisible ? 1.0f : 0.0f;
+        if (Math.Abs(_resizeHandlesOpacity - targetOpacity) < 0.01f)
+        {
+            _resizeHandlesOpacity = targetOpacity;
+            _resizeHandlesTimer?.Stop();
+        }
+        else
+        {
+            if (_resizeHandlesOpacity < targetOpacity)
+                _resizeHandlesOpacity = Math.Min(targetOpacity, _resizeHandlesOpacity + 0.15f);
+            else
+                _resizeHandlesOpacity = Math.Max(targetOpacity, _resizeHandlesOpacity - 0.15f);
+        }
+        Invalidate();
+    }
+
+    private void UpdateResizeHandlesHover()
+    {
+        if (!EditorShowResizeHandles || _baseBitmap == null) return;
+        if (_activeTool == CanvasTool.Crop || _preSpaceTool != null) return;
+
+        if (_resizeHandlesTimer == null)
+        {
+            _resizeHandlesTimer = new System.Windows.Forms.Timer { Interval = 16 };
+            _resizeHandlesTimer.Tick += ResizeHandlesTimer_Tick;
+        }
+        if (!_resizeHandlesTimer.Enabled)
+        {
+            _resizeHandlesTimer.Start();
+        }
+    }
+
+
     public void ShowToolBanner(string text, bool sticky = false)
     {
         if (!_showBanners) return;
@@ -433,6 +476,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
                 }
             }
             UpdateCursor();
+            UpdateResizeHandlesHover();
             ShowToolBanner(cropApplied
                 ? LocalizationService.Translate("Crop applied")
                 : GetToolName(value));
@@ -508,6 +552,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool IsDefaultBlank { get; set; } = false;
 
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool IsBlankCanvas { get; set; } = false;
+
     /// <summary>Number of annotations currently selected (multi or single).</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public int SelectedCount => _multiSelectedIndices.Count > 0
@@ -565,6 +612,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _multiDragOriginals = null;
         _eraserHoverIndex = -1;
         IsDefaultBlank = false;
+        IsBlankCanvas = false;
         CancelInProgressTool();
         ActiveTool = CanvasTool.Pan;
         oldBaseBitmap?.Dispose();
@@ -622,6 +670,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _multiDragOriginals = null;
         _eraserHoverIndex = -1;
         IsDefaultBlank = false;
+        IsBlankCanvas = false;
         CancelInProgressTool();
         ActiveTool = CanvasTool.Pan;
         oldBaseBitmap?.Dispose();
@@ -658,6 +707,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _selectOriginalAnnotation = null;
         _selectDragStartImg = Point.Empty;
         _eraserHoverIndex = -1;
+        IsBlankCanvas = false;
         CancelInProgressTool();
 
         if (EditorAutoCropControls)
@@ -926,6 +976,42 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         }
     }
 
+    /// <summary>How dragging the square handles behaves: false (default) = extend/trim the
+    /// canvas area only; true = scale (resample) the image + annotations. Toggled from the
+    /// burger menu / Config. Does not affect the modal, which has its own per-use toggle.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool ResizeHandlesScaleContent { get; set; }
+
+    /// <summary>True while the user is dragging a canvas resize handle.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool IsResizingCanvas => _resizeDragging;
+
+    /// <summary>Live pending size while dragging a resize handle (for the status-bar hint).</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Size ResizePreviewSize => _resizePreviewSize;
+
+    /// <summary>Hit-tests a client point against the resize handles (or -1). Public for the
+    /// editor's hover tooltip. Returns -1 unless the handles are currently interactive.</summary>
+    public int HitTestResizeHandlePublic(Point client)
+        => (EditorShowResizeHandles && _baseBitmap != null && _preSpaceTool == null && _activeTool != CanvasTool.Crop)
+            ? HitTestResizeHandle(client) : -1;
+
+    /// <summary>Client-space bounding box of a resize handle, for tooltip placement.</summary>
+    public Rectangle GetResizeHandleClientRect(int index)
+    {
+        var pts = GetResizeHandlePositionsScreen();
+        if (index < 0 || index >= pts.Length) return Rectangle.Empty;
+        var h = pts[index];
+        int s = (int)(ResizeHandleSize + 4);
+        return new Rectangle((int)(h.X - s / 2f), (int)(h.Y - s / 2f), s, s);
+    }
+
+    /// <summary>Factory the host (editor) supplies to rebuild the blank checkerboard at a new
+    /// size. When set and the document is still the default blank, resizing regenerates the
+    /// checkerboard to fill the new canvas instead of resampling/padding a fixed-size pattern.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Func<int, int, Bitmap>? BlankBitmapFactory { get; set; }
+
     /// <summary>Resizes the canvas to a new pixel size and pushes an undoable command.
     /// <paramref name="scaleContent"/> true = resample (stretch image + annotations);
     /// false = re-canvas at the new size with <paramref name="anchor"/> (extend/trim).</summary>
@@ -934,6 +1020,18 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         width = Math.Clamp(width, MinCanvasSize, MaxCanvasSize);
         height = Math.Clamp(height, MinCanvasSize, MaxCanvasSize);
         if (width == _baseBitmap.Width && height == _baseBitmap.Height) return;
+
+        // A blank document has no real pixels to resample; regenerate a fresh checkerboard at
+        // the new size so it actually looks resized, and keep it a clean (undo-free) blank.
+        if (IsDefaultBlank && BlankBitmapFactory is not null)
+        {
+            BaseBitmap = BlankBitmapFactory(width, height); // setter disposes the old bitmap + resets crop
+            ZoomFit();
+            HideToolBanner();
+            Invalidate();
+            OnStateChanged();
+            return;
+        }
 
         Push(new Models.Commands.ResizeCanvasCommand(width, height, scaleContent, anchor));
         ZoomFit();
@@ -1016,6 +1114,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             _bannerTimer?.Dispose();
             _zoomSettleTimer?.Stop();
             _zoomSettleTimer?.Dispose();
+            _resizeHandlesTimer?.Stop();
+            _resizeHandlesTimer?.Dispose();
             _scaledCache?.Dispose();
             ClearEditHistory();
             _emojiRenderer.Dispose();

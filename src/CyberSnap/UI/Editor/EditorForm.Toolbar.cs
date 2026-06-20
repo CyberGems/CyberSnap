@@ -129,7 +129,7 @@ public sealed partial class EditorForm
             BackColor = Color.Transparent,
             Margin = new Padding(0, 0, 12, 0),
         };
-        var coordsIcon = new Panel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
+        var coordsIcon = new DoubleBufferedPanel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
         coordsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "select", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
         _coordsLabel = new DoubleBufferedLabel
         {
@@ -293,7 +293,7 @@ public sealed partial class EditorForm
 
         // Hint area: a lightbulb glyph leads the live hint text. Two-column table keeps the icon
         // pinned left while the label fills (and ellipsizes within) the remaining width.
-        var hintIcon = new Panel
+        var hintIcon = new DoubleBufferedPanel
         {
             Width = 22,
             Height = 22,
@@ -1140,6 +1140,21 @@ public sealed partial class EditorForm
             ? "  ·  Mantén Espacio para desplazar"
             : "  ·  Hold Space to pan";
 
+        // While dragging a canvas resize handle, take over the hint with the live size + mode.
+        if (_canvas.IsResizingCanvas)
+        {
+            var sz = _canvas.ResizePreviewSize;
+            string mode = _canvas.ResizeHandlesScaleContent
+                ? (isSpanish ? "escalando contenido" : "scaling content")
+                : (isSpanish ? "extendiendo área" : "extending area");
+            string resizeHint = isSpanish
+                ? $"Redimensionando lienzo: {sz.Width} × {sz.Height} px  ·  {mode}"
+                : $"Resizing canvas: {sz.Width} × {sz.Height} px  ·  {mode}";
+            if (_liveStatusLabel.Text != resizeHint)
+                _liveStatusLabel.Text = resizeHint;
+            return;
+        }
+
         string hint = _canvas.ActiveTool switch
         {
             AnnotationCanvas.CanvasTool.Pan => isSpanish
@@ -1249,6 +1264,7 @@ public sealed partial class EditorForm
         var lockObjectsItem = WindowsMenuRenderer.Item("Lock Objects", iconId: null);
         var cropHandlesItem = WindowsMenuRenderer.Item("Crop handles", iconId: null);
         var resizeHandlesItem = WindowsMenuRenderer.Item("Resize handles", iconId: null);
+        var resizeScaleItem = WindowsMenuRenderer.Item("Resize scales content", iconId: null);
         var bannersItem = WindowsMenuRenderer.Item("Show banners", iconId: null);
         var rulersItem = WindowsMenuRenderer.Item("Show rulers", iconId: null);
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
@@ -1287,6 +1303,15 @@ public sealed partial class EditorForm
             if (System.Windows.Application.Current is CyberSnap.App app)
             {
                 app.PersistEditorShowResizeHandles(_canvas.EditorShowResizeHandles);
+            }
+        };
+
+        resizeScaleItem.Click += (_, _) =>
+        {
+            _canvas.ResizeHandlesScaleContent = !_canvas.ResizeHandlesScaleContent;
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorResizeHandlesScaleContent(_canvas.ResizeHandlesScaleContent);
             }
         };
 
@@ -1337,6 +1362,7 @@ public sealed partial class EditorForm
         menu.Items.Add(lockObjectsItem);
         menu.Items.Add(cropHandlesItem);
         menu.Items.Add(resizeHandlesItem);
+        menu.Items.Add(resizeScaleItem);
         menu.Items.Add(bannersItem);
         menu.Items.Add(rulersItem);
         menu.Items.Add(hintsItem);
@@ -1345,20 +1371,21 @@ public sealed partial class EditorForm
 
         menu.Opened += (_, _) =>
         {
-            UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, bannersItem, rulersItem, hintsItem);
+            UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, rulersItem, hintsItem);
         };
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
     }
 
-    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
     {
         var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
         borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         fitItem.Image = _toggleFitSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         lockObjectsItem.Image = _togglePanLockSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         cropHandlesItem.Image = _canvas.EditorAutoCropControls ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        resizeScaleItem.Image = _canvas.ResizeHandlesScaleContent ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         resizeHandlesItem.Image = _canvas.EditorShowResizeHandles ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         rulersItem.Image = (_topRulerContainer != null && _topRulerContainer.Visible) ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;

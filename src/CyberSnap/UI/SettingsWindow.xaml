@@ -3614,6 +3614,26 @@
                                           Checked="EditorShowResizeHandlesCheck_Changed" Unchecked="EditorShowResizeHandlesCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Resize handles: scale content vs extend canvas -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8B3;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Resize handles scale content" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="When on, dragging the handles stretches the image. When off, it extends or trims the canvas area only." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="EditorResizeScaleContentCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          ToolTip="When on, dragging the handles stretches the image. When off, it extends or trims the canvas area only."
+                                          AutomationProperties.Name="Resize handles scale content"
+                                          Checked="EditorResizeScaleContentCheck_Changed" Unchecked="EditorResizeScaleContentCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <!-- Lock objects in Pan tool -->
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>

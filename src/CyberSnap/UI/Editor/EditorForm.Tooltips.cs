@@ -31,6 +31,12 @@ public sealed partial class EditorForm
     private Control? _pendingHover;
     private int _pendingHoverTicks;
 
+    // Canvas resize handles aren't Controls, so they get their own (slower) dwell tracking.
+    private const int ResizeTooltipDwellTicks = 9; // ~900ms — deliberately lazier than tools
+    private int _resizeTipHandle = -1;
+    private int _resizeTipDwell;
+    private bool _resizeTipShown;
+
     private void RegisterHoverTooltip(Control anchor, Func<string?> textProvider, bool above = true)
     {
         _tooltipControls.Add((anchor, textProvider, above));
@@ -56,7 +62,10 @@ public sealed partial class EditorForm
         // steals the pressed button's mouse capture, so the click never completes and the
         // user needs a second click to actually switch tools.
         if (Control.MouseButtons != MouseButtons.None)
+        {
+            HideResizeTip();
             return;
+        }
 
         var fg = GetForegroundWindow();
         bool isWindowActive = fg == Handle || (_hoverToolTip != null && fg == _hoverToolTip.Handle);
@@ -67,6 +76,7 @@ public sealed partial class EditorForm
 
         if (IsDisposed || !Visible || !isWindowActive || isAnyMenuOpen)
         {
+            HideResizeTip();
             if (_hoverAnchor is not null)
             {
                 HideHoverTooltip(_hoverAnchor);
@@ -96,6 +106,7 @@ public sealed partial class EditorForm
 
         if (hovered is not null)
         {
+            HideResizeTip();
             if (ReferenceEquals(_hoverAnchor, hovered))
             {
                 // Already showing for this control — nothing left to dwell on.
@@ -133,6 +144,57 @@ public sealed partial class EditorForm
             }
             _pendingHover = null;
             _pendingHoverTicks = 0;
+            UpdateResizeTip(screenPos);
+        }
+    }
+
+    // Slow, dwell-gated tooltip for the canvas resize handles (which are painted, not Controls).
+    private void UpdateResizeTip(Point screenPos)
+    {
+        if (_canvas is null || _canvas.IsResizingCanvas)
+        {
+            HideResizeTip();
+            return;
+        }
+
+        var client = _canvas.PointToClient(screenPos);
+        int handle = _canvas.HitTestResizeHandlePublic(client);
+        if (handle < 0)
+        {
+            HideResizeTip();
+            return;
+        }
+
+        if (handle != _resizeTipHandle)
+        {
+            // Moved onto a different handle: reset dwell and drop any visible bubble.
+            HideResizeTip();
+            _resizeTipHandle = handle;
+            _resizeTipDwell = 0;
+            return;
+        }
+
+        if (_resizeTipShown) return;
+        if (++_resizeTipDwell < ResizeTooltipDwellTicks) return;
+
+        var rect = _canvas.GetResizeHandleClientRect(handle);
+        if (rect.IsEmpty) return;
+        var screenRect = _canvas.RectangleToScreen(rect);
+        string text = LocalizationService.Translate(
+            _canvas.ResizeHandlesScaleContent ? "Drag to scale the image" : "Drag to resize the canvas");
+        _hoverToolTip ??= new WindowsToolTip();
+        _hoverToolTip.ShowNear(this, text, screenRect, above: true);
+        _resizeTipShown = true;
+    }
+
+    private void HideResizeTip()
+    {
+        _resizeTipHandle = -1;
+        _resizeTipDwell = 0;
+        if (_resizeTipShown)
+        {
+            _resizeTipShown = false;
+            try { _hoverToolTip?.Hide(); } catch { }
         }
     }
 

@@ -34,8 +34,8 @@ internal sealed class ResizeResult
 // a 3×3 anchor grid (canvas-size mode), and resolution/ratio preset chips.
 internal sealed class ThemedResizeDialog : Window
 {
-    private const double GlowMargin = 22;
-    private const double PanelWidth = 380;
+    private const double GlowMargin = 16;
+    private const double PanelWidth = 460;
 
     private static readonly (string Label, int W, int H)[] ResolutionPresets =
     {
@@ -130,11 +130,11 @@ internal sealed class ThemedResizeDialog : Window
         var shell = new Border
         {
             Margin = new Thickness(GlowMargin),
-            CornerRadius = new CornerRadius(12),
+            CornerRadius = new CornerRadius(10),
             Background = Theme.Brush(PanelBackground),
-            BorderBrush = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)150 : (byte)110)),
-            BorderThickness = new Thickness(1.4),
-            Effect = Glow(accent, Theme.IsDark ? 26 : 18, Theme.IsDark ? 0.55 : 0.30)
+            BorderBrush = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)70 : (byte)50)),
+            BorderThickness = new Thickness(1),
+            Effect = Glow(accent, Theme.IsDark ? 10 : 7, Theme.IsDark ? 0.18 : 0.11)
         };
 
         var root = new StackPanel { Margin = new Thickness(22) };
@@ -162,10 +162,27 @@ internal sealed class ThemedResizeDialog : Window
         titleGrid.Children.Add(close);
         root.Children.Add(titleGrid);
 
+        // Canvas Settings Card (logical grouping)
+        var settingsCard = new Border
+        {
+            Margin = new Thickness(0, 20, 0, 0),
+            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(8),
+            Background = Theme.Brush(FieldBackground),
+            BorderBrush = Theme.Brush(Theme.IsDark ? WpfColor.FromArgb(20, 255, 255, 255) : WpfColor.FromArgb(12, 0, 0, 0)),
+            BorderThickness = new Thickness(1)
+        };
+
+        var settingsGrid = new Grid();
+        settingsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        settingsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var leftStack = new StackPanel();
+
         // Width / Height inputs.
-        var inputs = new Grid { Margin = new Thickness(0, 20, 0, 0) };
+        var inputs = new Grid();
         inputs.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        inputs.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(14) });
+        inputs.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
         inputs.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _widthBox = BuildNumberField("Width", _width, v => OnWidthChanged(v));
         _heightBox = BuildNumberField("Height", _height, v => OnHeightChanged(v));
@@ -175,33 +192,44 @@ internal sealed class ThemedResizeDialog : Window
         Grid.SetColumn(hCol, 2);
         inputs.Children.Add(wCol);
         inputs.Children.Add(hCol);
-        root.Children.Add(inputs);
+        leftStack.Children.Add(inputs);
 
         // Toggles.
-        root.Children.Add(BuildToggle("Lock aspect ratio", _lockAspect, v => _lockAspect = v, topMargin: 14));
-        root.Children.Add(BuildToggle("Scale content", _scaleContent, v =>
+        leftStack.Children.Add(BuildToggle("Lock aspect ratio", _lockAspect, v => _lockAspect = v, topMargin: 12));
+        leftStack.Children.Add(BuildToggle("Scale content", _scaleContent, v =>
         {
             _scaleContent = v;
             _anchorSection.Visibility = v ? Visibility.Collapsed : Visibility.Visible;
-        }, topMargin: 10));
+        }, topMargin: 8));
 
-        // Anchor grid (canvas-size mode only).
+        Grid.SetColumn(leftStack, 0);
+        settingsGrid.Children.Add(leftStack);
+
+        // Anchor section.
         _anchorSection = BuildAnchorSection();
+        _anchorSection.Margin = new Thickness(20, 0, 0, 0);
+        _anchorSection.VerticalAlignment = VerticalAlignment.Center;
         _anchorSection.Visibility = _scaleContent ? Visibility.Collapsed : Visibility.Visible;
-        root.Children.Add(_anchorSection);
+        Grid.SetColumn(_anchorSection, 1);
+        settingsGrid.Children.Add(_anchorSection);
 
-        // Presets.
-        root.Children.Add(SectionLabel("Resolution", 16));
-        root.Children.Add(BuildResolutionChips());
-        root.Children.Add(SectionLabel("Aspect ratio", 12));
-        root.Children.Add(BuildAspectChips());
+        settingsCard.Child = settingsGrid;
+        root.Children.Add(settingsCard);
+
+        // Presets container.
+        var presetsContainer = new StackPanel { Margin = new Thickness(0, 16, 0, 0) };
+        presetsContainer.Children.Add(SectionLabel("Resolution", 0));
+        presetsContainer.Children.Add(BuildResolutionChips());
+        presetsContainer.Children.Add(SectionLabel("Aspect ratio", 10));
+        presetsContainer.Children.Add(BuildAspectChips());
+        root.Children.Add(presetsContainer);
 
         // Buttons.
         var buttons = new StackPanel
         {
             Orientation = WpfOrientation.Horizontal,
             HorizontalAlignment = WpfHorizontalAlignment.Right,
-            Margin = new Thickness(0, 22, 0, 0)
+            Margin = new Thickness(0, 20, 0, 0)
         };
         buttons.Children.Add(BuildButton("Cancel", isPrimary: false, () => Close()));
         buttons.Children.Add(BuildButton("Apply", isPrimary: true, Commit));
@@ -385,19 +413,19 @@ internal sealed class ThemedResizeDialog : Window
 
     private Border BuildAnchorSection()
     {
-        var wrap = new Border { Margin = new Thickness(0, 14, 0, 0) };
-        var outer = new StackPanel { Orientation = WpfOrientation.Horizontal };
+        var wrap = new Border();
+        var outer = new StackPanel { Orientation = WpfOrientation.Vertical, HorizontalAlignment = WpfHorizontalAlignment.Center };
         outer.Children.Add(new TextBlock
         {
             Text = Services.LocalizationService.Translate("Anchor"),
             FontSize = 11,
             FontWeight = FontWeights.SemiBold,
             Foreground = Theme.Brush(Theme.TextMuted),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 14, 0),
+            HorizontalAlignment = WpfHorizontalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 6),
         });
 
-        var grid = new UniformGrid { Rows = 3, Columns = 3, Width = 84, Height = 84 };
+        var grid = new UniformGrid { Rows = 3, Columns = 3, Width = 72, Height = 72 };
         for (int i = 0; i < 9; i++)
         {
             int idx = i;
@@ -472,9 +500,9 @@ internal sealed class ThemedResizeDialog : Window
         CornerRadius = new CornerRadius(11),
         VerticalAlignment = VerticalAlignment.Center,
         Background = Theme.Brush(WithAlpha(accent, 28)),
-        BorderBrush = Theme.Brush(WithAlpha(accent, 110)),
+        BorderBrush = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)70 : (byte)50)),
         BorderThickness = new Thickness(1),
-        Effect = Glow(accent, 12, Theme.IsDark ? 0.5 : 0.25),
+        Effect = Glow(accent, Theme.IsDark ? 10 : 7, Theme.IsDark ? 0.18 : 0.11),
         Child = new System.Windows.Controls.Image
         {
             Source = FluentIcons.RenderWpf("maximize", ToDrawingColor(accent, 235), 22),
@@ -538,7 +566,7 @@ internal sealed class ThemedResizeDialog : Window
             button.Background = Theme.Brush(baseBg);
             button.BorderBrush = Theme.Brush(WithAlpha(accent, 170));
             button.Foreground = restText;
-            button.MouseEnter += (_, _) => { button.Background = Theme.Brush(accent); button.Foreground = hoverText; button.Effect = Glow(accent, 14, 0.85); };
+            button.MouseEnter += (_, _) => { button.Background = Theme.Brush(accent); button.Foreground = hoverText; button.Effect = Glow(accent, 7, 0.40); };
             button.MouseLeave += (_, _) => { button.Background = Theme.Brush(baseBg); button.Foreground = restText; button.Effect = null; };
         }
         else

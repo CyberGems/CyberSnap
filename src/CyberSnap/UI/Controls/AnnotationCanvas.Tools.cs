@@ -47,10 +47,14 @@ public sealed partial class AnnotationCanvas
     private Rectangle _cropDragStartRect;
 
     // Canvas resize via the square handles floating outside the image (screen-space).
-    // How far outside the image edge the square handles float, in screen pixels.
-    private const float ResizeHandleOffset = 16f;
+    // How far outside the image edge the square handles float, in screen pixels. Kept well
+    // clear of the crop L-handles (which sit on the image edge) so the two don't get confused.
+    private const float ResizeHandleOffset = 28f;
     private const float ResizeHandleSize = 11f;   // side length of each square handle (screen px)
     private const float ResizeHitRadius = 9f;
+    // Amber/gold — a warm hue that can't be confused with the bright cyan crop handles, and
+    // reads clearly against the dark canvas. Distinguishes the canvas-resize squares at a glance.
+    private static readonly Color ResizeAccent = Color.FromArgb(255, 255, 176, 32);
     private bool _resizeDragging;
     private int _activeResizeHandle = -1;          // 0..7, same indexing as crop handles
     private Point _resizeStartImg;                 // image-space mouse at drag start
@@ -574,6 +578,9 @@ public sealed partial class AnnotationCanvas
         // keeps up; redundant Invalidate calls within one message coalesce into one paint.
         _cursorClient = e.Location;
         _cursorOnCanvas = true;
+
+        UpdateResizeHandlesHover();
+
         if (!_isDragging && !_isPanning && !_cropDragging && !_resizeDragging && _preSpaceTool == null
             && ToolShowsCursorChip(_activeTool))
             Invalidate();
@@ -1040,11 +1047,14 @@ public sealed partial class AnnotationCanvas
             var size = _resizePreviewSize;
             if (size.Width != _resizeStartSize.Width || size.Height != _resizeStartSize.Height)
             {
-                // Dragging a handle resamples (stretches) the content to the new size.
-                ResizeCanvas(size.Width, size.Height, scaleContent: true, Models.Commands.AnchorPosition.TopLeft);
+                // Default: drag extends/trims the canvas area, anchoring the content at the
+                // edge opposite the dragged handle. With ResizeHandlesScaleContent on, the
+                // content is resampled instead.
+                ResizeCanvas(size.Width, size.Height, ResizeHandlesScaleContent, AnchorForHandle(handle));
             }
             else
             {
+                OnStateChanged();
                 Invalidate();
             }
             return;
@@ -1211,6 +1221,7 @@ public sealed partial class AnnotationCanvas
             _hoverImgValid = false;
             Invalidate();
         }
+        UpdateResizeHandlesHover();
     }
 
     /// <summary>Suppresses the hover/control box for the annotation just placed, until the
@@ -1832,8 +1843,11 @@ public sealed partial class AnnotationCanvas
         int newH = startH + (affectsH ? (growTop ? -dy : dy) : 0);
 
         bool isCorner = _activeResizeHandle is 0 or 1 or 2 or 3;
-        // Corners keep aspect ratio unless Shift is held; the axis with the larger drag wins.
-        if (isCorner && !ModifierKeys.HasFlag(Keys.Shift) && startW > 0 && startH > 0)
+        // In scale mode, corners keep aspect ratio unless Shift is held (the axis with the
+        // larger drag wins). In canvas-extend mode, corners resize each axis freely, since
+        // you're adding/removing margin rather than scaling the picture. Shift inverts either.
+        bool keepAspect = ResizeHandlesScaleContent ^ ModifierKeys.HasFlag(Keys.Shift);
+        if (isCorner && keepAspect && startW > 0 && startH > 0)
         {
             double s = Math.Abs(dx) >= Math.Abs(dy)
                 ? (double)newW / startW
@@ -1861,27 +1875,48 @@ public sealed partial class AnnotationCanvas
         }
         _resizePreviewRect = new RectangleF(left, top, sw, sh);
 
+        OnStateChanged(); // refresh the live status-bar hint with the pending size
         Invalidate();
     }
+
+    /// <summary>The content anchor for a canvas-extend drag: the edge/corner opposite the
+    /// dragged handle stays put while the canvas grows or shrinks toward the handle.</summary>
+    private static Models.Commands.AnchorPosition AnchorForHandle(int handle) => handle switch
+    {
+        0 => Models.Commands.AnchorPosition.BottomRight, // dragged TL → anchor BR
+        1 => Models.Commands.AnchorPosition.BottomLeft,  // dragged TR → anchor BL
+        2 => Models.Commands.AnchorPosition.TopRight,    // dragged BL → anchor TR
+        3 => Models.Commands.AnchorPosition.TopLeft,     // dragged BR → anchor TL
+        4 => Models.Commands.AnchorPosition.Bottom,      // dragged Top → anchor Bottom
+        5 => Models.Commands.AnchorPosition.Left,        // dragged Right → anchor Left
+        6 => Models.Commands.AnchorPosition.Top,         // dragged Bottom → anchor Top
+        7 => Models.Commands.AnchorPosition.Right,       // dragged Left → anchor Right
+        _ => Models.Commands.AnchorPosition.Center,
+    };
 
     private void RenderResizeHandles(Graphics g)
     {
         if (!EditorShowResizeHandles || _baseBitmap == null) return;
         if (_activeTool == CanvasTool.Crop || _preSpaceTool != null) return;
+        if (_resizeHandlesOpacity <= 0f && !_resizeDragging) return;
 
         // While dragging, draw the pending-size outline plus a size badge.
         if (_resizeDragging)
         {
             using var previewShadow = new Pen(Color.FromArgb(120, 0, 0, 0), 2.5f) { DashStyle = DashStyle.Dash };
-            using var previewPen = new Pen(Color.FromArgb(255, 0, 255, 255), 1.6f) { DashStyle = DashStyle.Dash };
+            using var previewPen = new Pen(Color.FromArgb(128, ResizeAccent.R, ResizeAccent.G, ResizeAccent.B), 1.6f) { DashStyle = DashStyle.Dash };
             g.DrawRectangle(previewShadow, _resizePreviewRect.X + 1f, _resizePreviewRect.Y + 1f, _resizePreviewRect.Width, _resizePreviewRect.Height);
             g.DrawRectangle(previewPen, _resizePreviewRect.X, _resizePreviewRect.Y, _resizePreviewRect.Width, _resizePreviewRect.Height);
             DrawResizeSizeBadge(g, _resizePreviewRect, $"{_resizePreviewSize.Width} × {_resizePreviewSize.Height}");
         }
 
         var handles = GetResizeHandlePositionsScreen();
-        var fill = Color.FromArgb(255, 0, 255, 255);
-        var shadow = Color.FromArgb(110, 0, 0, 0);
+        int alphaFill = (int)(128 * _resizeHandlesOpacity);
+        int alphaShadow = (int)(110 * _resizeHandlesOpacity);
+        if (alphaFill <= 0) return;
+
+        var fill = Color.FromArgb(alphaFill, ResizeAccent.R, ResizeAccent.G, ResizeAccent.B);
+        var shadow = Color.FromArgb(alphaShadow, 0, 0, 0);
         float half = ResizeHandleSize / 2f;
 
         using var fillBrush = new SolidBrush(fill);
@@ -1910,7 +1945,7 @@ public sealed partial class AnnotationCanvas
         using (var bg = new SolidBrush(Color.FromArgb(220, 10, 14, 22)))
         using (var path = RoundedRect(badge, 5f))
             g.FillPath(bg, path);
-        using var textBrush = new SolidBrush(Color.FromArgb(255, 0, 255, 255));
+        using var textBrush = new SolidBrush(ResizeAccent);
         g.DrawString(text, font, textBrush, bx + pad, by + pad / 2f);
     }
 
