@@ -3656,6 +3656,40 @@
                         </StackPanel>
                     </Border>
 
+                    <TextBlock Text="Performance" Style="{StaticResource SectionLabel}" Margin="0,24,0,0"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <!-- Undo limit -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE7A7;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Undo history limit" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Maximum number of undo steps. Lower values use less memory." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="EditorUndoLimitCombo" Grid.Column="2" MinWidth="90"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Undo history limit"
+                                          ToolTip="Maximum number of undo steps."
+                                          SelectionChanged="EditorUndoLimitCombo_SelectionChanged">
+                                    <ComboBoxItem Content="1" Tag="1"/>
+                                    <ComboBoxItem Content="10" Tag="10"/>
+                                    <ComboBoxItem Content="25" Tag="25"/>
+                                    <ComboBoxItem Content="50" Tag="50"/>
+                                    <ComboBoxItem Content="100" Tag="100"/>
+                                    <ComboBoxItem Content="150" Tag="150"/>
+                                    <ComboBoxItem Content="200" Tag="200"/>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Dialogs" Style="{StaticResource SectionLabel}" Margin="0,24,0,0"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
