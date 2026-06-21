@@ -617,6 +617,18 @@ public partial class SettingsWindow
 
     /// <summary>Open the dedicated About tab. Used by the burger menu
     /// to jump straight to the About section.</summary>
+    public void NavigateToGallerySettings()
+    {
+        try
+        {
+            SelectSettingsTab("Gallery");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.gallery-navigate", $"Navigation failed: {ex.Message}");
+        }
+    }
+
     public void NavigateToAboutSettings()
     {
         try

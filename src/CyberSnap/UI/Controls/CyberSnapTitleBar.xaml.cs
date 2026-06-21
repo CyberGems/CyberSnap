@@ -236,7 +236,7 @@ public partial class CyberSnapTitleBar : UserControl
                 // Defer to avoid layout jump when context menu closes
                 _ = ((App)Application.Current).Dispatcher.BeginInvoke(
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowSettings());
+                    () => ((App)Application.Current).ShowSettings("gallery"));
             };
             menu.Items.Add(configItem);
 
