@@ -34,6 +34,7 @@ public partial class HistoryWindow
     }
 
     private List<UnifiedHistoryItem> _allUnifiedEntries = new();
+    private List<UnifiedHistoryItem> _filteredUnifiedEntries = new();
     private readonly Dictionary<Border, object> _unifiedCardEntries = new();  // card → raw entry (OcrHistoryEntry, etc.)
 
     private void LoadAllHistory()
@@ -68,21 +69,6 @@ public partial class HistoryWindow
         unified.Sort((a, b) => b.CapturedAt.CompareTo(a.CapturedAt));
         _allUnifiedEntries = unified;
 
-        if (unified.Count == 0)
-        {
-            ShowHistoryEmptyState("No captures yet", "Screenshots, OCR text, colors, and codes will appear here.");
-            HistoryCountText.Text = LocalizationService.Translate("0 items");
-            UpdateHistoryActionButtons();
-            return;
-        }
-
-        HistoryCountText.Text = $"{unified.Count} {LocalizationService.Translate(unified.Count == 1 ? "item" : "items")}";
-        var pageSize = Math.Min(HistoryInitialPageSize, unified.Count);
-        var page = unified.GetRange(0, pageSize);
-        AppendGroupedUnifiedItems(HistoryStack, page, CreateUnifiedCard);
-        _allLastAppendIndex = pageSize;
-        UpdateHistoryActionButtons();
-
         // Mark image cache ready so Images tab is instant
         _allImageHistoryEntries = unified
             .Where(i => i.IsImageOrMedia)
@@ -91,8 +77,106 @@ public partial class HistoryWindow
         _historyImageCacheReady = true;
         PrimeHistoryFingerprint();
 
+        if (string.IsNullOrWhiteSpace(_imageSearchQuery))
+        {
+            _filteredUnifiedEntries = _allUnifiedEntries;
+            RenderUnifiedHistoryItems();
+        }
+        else
+        {
+            ApplyImageSearchFilter();
+        }
+
         sw.Stop();
-        AppDiagnostics.LogInfo("history.load-all", $"items={unified.Count} rendered={pageSize} elapsedMs={sw.ElapsedMilliseconds}");
+        AppDiagnostics.LogInfo("history.load-all", $"items={unified.Count} elapsedMs={sw.ElapsedMilliseconds}");
+    }
+
+    private void ApplyUnifiedFilter(string query, HashSet<string> matchingImagePaths)
+    {
+        var terms = SplitHistorySearchTerms(query);
+        var filtered = new List<UnifiedHistoryItem>();
+
+        foreach (var item in _allUnifiedEntries)
+        {
+            if (item.IsImageOrMedia)
+            {
+                var img = (HistoryEntry)item.RawEntry;
+                if (matchingImagePaths.Contains(img.FilePath))
+                    filtered.Add(item);
+            }
+            else if (item.IsOcr)
+            {
+                var ocr = (OcrHistoryEntry)item.RawEntry;
+                if (GetOcrSearchText(ocr).Contains(query, StringComparison.OrdinalIgnoreCase))
+                    filtered.Add(item);
+            }
+            else if (item.IsColor)
+            {
+                var color = (ColorHistoryEntry)item.RawEntry;
+                if (ColorMatchesCachedTerms(color, terms))
+                    filtered.Add(item);
+            }
+            else if (item.IsCode)
+            {
+                var code = (CodeHistoryEntry)item.RawEntry;
+                if (CodeMatchesCachedTerms(code, terms))
+                    filtered.Add(item);
+            }
+        }
+
+        _filteredUnifiedEntries = filtered;
+        RenderUnifiedHistoryItems();
+    }
+
+    private void RenderUnifiedHistoryItems()
+    {
+        HistoryStack.Children.Clear();
+        _unifiedCardEntries.Clear();
+
+        long visibleBytes = 0;
+        foreach (var item in _filteredUnifiedEntries)
+        {
+            if (item.IsImageOrMedia)
+            {
+                var img = (HistoryEntry)item.RawEntry;
+                visibleBytes += img.FileSizeBytes;
+            }
+        }
+
+        var sizeStr = FormatStorageSize(visibleBytes);
+        var totalCount = _allUnifiedEntries.Count;
+        var usingSearch = !string.IsNullOrWhiteSpace(_imageSearchQuery);
+
+        if (usingSearch)
+        {
+            HistoryCountText.Text = $"{_filteredUnifiedEntries.Count} {LocalizationService.Translate("search matches")} · {sizeStr}";
+        }
+        else
+        {
+            var loadedCount = _filteredUnifiedEntries.Count;
+            var loadedPrefix = totalCount > loadedCount
+                ? $"{loadedCount} {LocalizationService.Translate("of")} {totalCount} {LocalizationService.Translate("items loaded")}"
+                : $"{loadedCount} {LocalizationService.Translate(loadedCount == 1 ? "item" : "items")}";
+            HistoryCountText.Text = $"{loadedPrefix} · {sizeStr}";
+        }
+
+        if (_filteredUnifiedEntries.Count == 0)
+        {
+            if (usingSearch)
+                ShowHistoryEmptyState("No items match your search", "Search matched 0 history items.");
+            else
+                ShowHistoryEmptyState("No captures yet", "Screenshots, OCR text, colors, and codes will appear here.");
+        }
+        else
+        {
+            HideHistoryEmptyState();
+        }
+
+        var pageSize = Math.Min(HistoryInitialPageSize, _filteredUnifiedEntries.Count);
+        var page = _filteredUnifiedEntries.GetRange(0, pageSize);
+        AppendGroupedUnifiedItems(HistoryStack, page, CreateUnifiedCard);
+        _allLastAppendIndex = pageSize;
+        UpdateHistoryActionButtons();
     }
 
     // ── Infinite scroll ──
@@ -101,11 +185,11 @@ public partial class HistoryWindow
 
     private void AppendNextAllPage()
     {
-        if (_allLastAppendIndex >= _allUnifiedEntries.Count) return;
+        if (_allLastAppendIndex >= _filteredUnifiedEntries.Count) return;
         var prevOffset = ImagesPanel.VerticalOffset;
         var prevCount = _allLastAppendIndex;
-        _allLastAppendIndex = Math.Min(_allLastAppendIndex + HistoryAppendPageSize, _allUnifiedEntries.Count);
-        var added = _allUnifiedEntries.GetRange(prevCount, _allLastAppendIndex - prevCount);
+        _allLastAppendIndex = Math.Min(_allLastAppendIndex + HistoryAppendPageSize, _filteredUnifiedEntries.Count);
+        var added = _filteredUnifiedEntries.GetRange(prevCount, _allLastAppendIndex - prevCount);
         AppendGroupedUnifiedItems(HistoryStack, added, CreateUnifiedCard);
         // Update fingerprint after appending more items
         PrimeHistoryFingerprint();

@@ -59,6 +59,17 @@ public partial class HistoryWindow
     private void ApplyImmediateImageFilter(string query, ImageSearchSourceOptions sources, bool exactMatch)
     {
         var rankedItems = RankLocalImageItems(query, sources, exactMatch).ToList();
+
+        if (HistoryCategoryCombo.SelectedIndex == 0)
+        {
+            var matchingImagePaths = rankedItems.Select(x => x.Entry.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            ApplyUnifiedFilter(query, matchingImagePaths);
+            UpdateImageSearchStatus();
+            UpdateImageSearchActionButtons();
+            UpdateHistoryActionButtons();
+            return;
+        }
+
         var filteredItems = FilterSearchResultsForLoadedThumbnails(rankedItems, query);
         var shouldVirtualize = ShouldUseVirtualizedImageHistory(filteredItems);
         var renderModeChanged = _useVirtualizedImageHistory != shouldVirtualize;
@@ -216,6 +227,16 @@ public partial class HistoryWindow
 
             if (!IsLoaded || version != _searchFilterVersion || cancellationToken.IsCancellationRequested)
                 return;
+
+            if (HistoryCategoryCombo.SelectedIndex == 0)
+            {
+                var matchingImagePaths = rankedEntries.Select(x => x.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                ApplyUnifiedFilter(query, matchingImagePaths);
+                SetImageSearchLoading(false, forceIndexed: true);
+                UpdateImageSearchActionButtons();
+                UpdateHistoryActionButtons();
+                return;
+            }
 
             EnsureAllImageHistoryItemsMaterialized();
             var filtered = new List<HistoryItemVM>(rankedEntries.Count);
