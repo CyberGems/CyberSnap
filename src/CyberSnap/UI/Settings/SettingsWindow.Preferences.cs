@@ -961,6 +961,33 @@ public partial class SettingsWindow
             });
     }
 
+    private void WidgetAlwaysOnTopCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.WidgetAlwaysOnTop;
+        var selected = WidgetAlwaysOnTopCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.widget-always-on-top",
+            "Always on top",
+            previous,
+            selected,
+            value => _settingsService.Settings.WidgetAlwaysOnTop = value,
+            value => WidgetAlwaysOnTopCheck.IsChecked = value,
+            value => ((App)Application.Current).SyncWidgetAlwaysOnTop(value));
+    }
+
+    // Pulls the "Always on top" checkbox back into sync after the change originated on the widget's
+    // own toggle. Suppressed so reflecting the value doesn't echo back into a save/sync round-trip.
+    public void RefreshAlwaysOnTopCheck()
+    {
+        if (WidgetAlwaysOnTopCheck is null) return;
+
+        _suppressGeneralPreferenceChange = true;
+        try { WidgetAlwaysOnTopCheck.IsChecked = _settingsService.Settings.WidgetAlwaysOnTop; }
+        finally { _suppressGeneralPreferenceChange = false; }
+    }
+
     private void WidgetEnableEditorCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressGeneralPreferenceChange) return;
@@ -1126,6 +1153,8 @@ public partial class SettingsWindow
     {
         var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         WidgetOptionsSeparator.Visibility = visibility;
+        WidgetAlwaysOnTopRow.Visibility = visibility;
+        WidgetAlwaysOnTopSeparator.Visibility = visibility;
         WidgetEnableEditorRow.Visibility = visibility;
         WidgetEnableEditorSeparator.Visibility = visibility;
         WidgetDockEdgeRow.Visibility = visibility;

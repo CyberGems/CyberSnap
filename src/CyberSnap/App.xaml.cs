@@ -256,8 +256,34 @@ public partial class App : Application
         _widgetWindow?.RefreshEnableEditorToggle();
     }
 
-    // Widget → Settings: when the widget's toggle flips, pull the open Settings window's checkbox
-    // back into sync. No-op if Settings isn't open.
+    // Settings → widget: push the AlwaysOnTop value onto the widget window.
+    public void SyncWidgetAlwaysOnTop(bool alwaysOnTop)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(() => SyncWidgetAlwaysOnTop(alwaysOnTop));
+            return;
+        }
+
+        if (_widgetWindow != null)
+        {
+            _widgetWindow.Topmost = alwaysOnTop;
+        }
+    }
+
+    // Widget → Settings: when the widget's always on top changes, pull the Settings window's checkbox back into sync.
+    public void SyncSettingsAlwaysOnTopCheck()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(SyncSettingsAlwaysOnTopCheck);
+            return;
+        }
+
+        _settingsWindow?.RefreshAlwaysOnTopCheck();
+    }
+
+    // Widget → Settings: when the widget's enable editor changes, pull the Settings window's checkbox back into sync.
     public void SyncSettingsEnableEditorCheck()
     {
         if (!Dispatcher.CheckAccess())

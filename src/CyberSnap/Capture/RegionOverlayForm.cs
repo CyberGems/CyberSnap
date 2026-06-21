@@ -570,7 +570,7 @@ public sealed partial class RegionOverlayForm : Form
         int brandWidth = 0;
         if (IsVerticalDock)
         {
-            w = pad * 2 + buttonSize * 2 + buttonSpacing;
+            w = _flyoutTools.Length > 0 ? (pad * 2 + buttonSize * 2 + buttonSpacing) : (pad * 2 + buttonSize);
             h = maxPrimarySpan;
         }
         else
@@ -594,7 +594,7 @@ public sealed partial class RegionOverlayForm : Form
             }
             
             w = maxPrimarySpan + brandWidth;
-            h = pad * 2 + buttonSize * 2 + buttonSpacing;
+            h = _flyoutTools.Length > 0 ? (pad * 2 + buttonSize * 2 + buttonSpacing) : (pad * 2 + buttonSize);
         }
 
         _toolbarButtons = new Rectangle[BtnCount];

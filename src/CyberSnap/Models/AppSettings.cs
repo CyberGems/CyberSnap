@@ -342,6 +342,7 @@ public sealed class AppSettings
 
     // Floating Quick-Capture Widget Settings
     public bool ShowCaptureWidget { get; set; } = true;
+    public bool WidgetAlwaysOnTop { get; set; } = true;
     public CaptureDockSide WidgetDockEdge { get; set; } = CaptureDockSide.Top;
     public int WidgetMonitorIndex { get; set; } = -1;
     public double WidgetDockPositionOffset { get; set; } = 0.5;
@@ -536,11 +537,12 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("rect",        "Area Capture", '\uE257', CaptureMode.Rectangle, 0), // scan-line
         new("center",      "From Center",    '\uE257', CaptureMode.Center,    0),
         new("scroll",      "Scroll Capture",   '\uE7F0', CaptureMode.ScrollCapture, 0),
-        new("ocr",         "OCR",          '\uE53C', CaptureMode.Ocr,         0), // scan-text
-        new("picker",      "Color Picker", '\uE2B1', CaptureMode.ColorPicker, 0), // eyedropper
-        new("scan",        "QR & Barcodes",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
         new("record",      "Screen Recorder (MP4)", '\uE7C8', CaptureMode.Record,      0), // video
         new("recordGif",   "Screen Recorder (GIF)", '\uE790', CaptureMode.RecordGif,   0), // gif
+        new("ocr",         "OCR",          '\uE53C', CaptureMode.Ocr,         0), // scan-text
+        new("scan",        "QR & Barcodes",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
+        new("picker",      "Color Picker", '\uE2B1', CaptureMode.ColorPicker, 0), // eyedropper
+        new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       0), // ruler          → 0x30
         new("select",      "Move & Resize",        '\uE1E3', CaptureMode.Move,        1), // cursor-click   → 0x31
         new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser         → 0x33
         new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type           → 0x37
@@ -551,7 +553,6 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("circleShape", "Circle",       '\uE07A', CaptureMode.CircleShape, 1), // circle         → 0x38
         new("rectShape",   "Rectangle",    '\uE16A', CaptureMode.RectShape,   1), // square         → 0x39
         new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1), // highlighter
-        new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       1), // ruler          → 0x30
         new("step",        "Step Number",  '\uE1D0', CaptureMode.StepNumber,  1), // list-ordered   → 0x3A
         new("magnifier",   "Magnifier",    '\uE721', CaptureMode.Magnifier,   1),
         new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1), // blend
