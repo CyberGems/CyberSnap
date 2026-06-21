@@ -725,7 +725,9 @@ public sealed partial class EditorForm : Form
         var s = Services.SettingsService.LoadStatic();
         bool prefJpg = s?.EditorExportFormat == 1;
         string ext = prefJpg ? ".jpg" : ".png";
-        string filter = prefJpg ? "JPEG|*.jpg|PNG|*.png" : "PNG|*.png|JPEG|*.jpg";
+        string filter = prefJpg
+            ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
+            : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf";
 
         using var dlg = new SaveFileDialog
         {
@@ -740,9 +742,16 @@ public sealed partial class EditorForm : Form
         try
         {
             using var output = _canvas.RenderFinal();
-            SaveRenderedBitmap(output, dlg.FileName);
-            _savedFilePath = dlg.FileName;
-            FinishSuccessfulSave(output, dlg.FileName);
+            if (dlg.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                SaveAsPdf(output, dlg.FileName);
+            }
+            else
+            {
+                SaveRenderedBitmap(output, dlg.FileName);
+                _savedFilePath = dlg.FileName;
+                FinishSuccessfulSave(output, dlg.FileName);
+            }
         }
         catch (Exception ex)
         {
@@ -755,7 +764,9 @@ public sealed partial class EditorForm : Form
         var s = Services.SettingsService.LoadStatic();
         bool prefJpg = s?.EditorExportFormat == 1;
         string ext = prefJpg ? ".jpg" : ".png";
-        string filter = prefJpg ? "JPEG|*.jpg|PNG|*.png" : "PNG|*.png|JPEG|*.jpg";
+        string filter = prefJpg
+            ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
+            : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf";
 
         using var dlg = new SaveFileDialog
         {
@@ -769,13 +780,148 @@ public sealed partial class EditorForm : Form
 
         try
         {
-            SaveRenderedBitmap(output, dlg.FileName);
-            _savedFilePath = dlg.FileName;
-            FinishSuccessfulSave(output, dlg.FileName);
+            if (dlg.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                SaveAsPdf(output, dlg.FileName);
+            }
+            else
+            {
+                SaveRenderedBitmap(output, dlg.FileName);
+                _savedFilePath = dlg.FileName;
+                FinishSuccessfulSave(output, dlg.FileName);
+            }
         }
         catch (Exception ex)
         {
             ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
+        }
+    }
+
+    private void SaveAsPdf(Bitmap bitmap, string filePath)
+    {
+        var options = ThemedPdfExportDialog.Show(Handle);
+        if (options == null) return; // Cancelled by user
+
+        try
+        {
+            using (var document = new PdfSharp.Pdf.PdfDocument())
+            {
+                document.Info.Title = options.Title;
+                document.Info.Author = options.Author;
+                document.Info.Keywords = options.Tags;
+
+                var page = document.AddPage();
+
+                // Determine size & orientation
+                if (options.PageSize == "Fit")
+                {
+                    double imgWPoints = bitmap.Width * 0.75;
+                    double imgHPoints = bitmap.Height * 0.75;
+                    page.Width = PdfSharp.Drawing.XUnit.FromPoint(imgWPoints);
+                    page.Height = PdfSharp.Drawing.XUnit.FromPoint(imgHPoints);
+                }
+                else
+                {
+                    if (options.PageSize == "A4")
+                        page.Size = PdfSharp.PageSize.A4;
+                    else if (options.PageSize == "Legal")
+                        page.Size = PdfSharp.PageSize.Legal;
+                    else if (options.PageSize == "A3")
+                        page.Size = PdfSharp.PageSize.A3;
+                    else
+                        page.Size = PdfSharp.PageSize.Letter;
+
+                    page.Orientation = options.Orientation == "Landscape"
+                        ? PdfSharp.PageOrientation.Landscape
+                        : PdfSharp.PageOrientation.Portrait;
+                }
+
+                // Margins in points (1 cm = 28.346 pt)
+                double leftMargin = options.PageSize == "Fit" ? 0 : options.MarginLeft * 28.346;
+                double rightMargin = options.PageSize == "Fit" ? 0 : options.MarginRight * 28.346;
+                double topMargin = options.PageSize == "Fit" ? 0 : options.MarginTop * 28.346;
+                double bottomMargin = options.PageSize == "Fit" ? 0 : options.MarginBottom * 28.346;
+
+                double printableW = page.Width.Point - leftMargin - rightMargin;
+                double printableH = page.Height.Point - topMargin - bottomMargin;
+
+                if (printableW <= 0) printableW = 10;
+                if (printableH <= 0) printableH = 10;
+
+                using (var ms = new MemoryStream())
+                {
+                    bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                    ms.Position = 0;
+                    using (var xImage = PdfSharp.Drawing.XImage.FromStream(ms))
+                    {
+                        double imgWPoints = bitmap.Width * 0.75;
+                        double imgHPoints = bitmap.Height * 0.75;
+
+                        if (options.PageSize != "Fit" && options.ImageLayout == "Span" && imgHPoints * (printableW / imgWPoints) > printableH)
+                        {
+                            // Slice vertically across pages
+                            double scale = printableW / imgWPoints;
+                            double yOffset = 0;
+                            bool firstPage = true;
+
+                            while (yOffset < imgHPoints)
+                            {
+                                if (!firstPage)
+                                {
+                                    page = document.AddPage();
+                                    page.Size = document.Pages[0].Size;
+                                    page.Orientation = document.Pages[0].Orientation;
+                                }
+                                firstPage = false;
+
+                                var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);
+                                double maxSliceHImage = printableH / scale;
+                                double currentSliceHImage = Math.Min(imgHPoints - yOffset, maxSliceHImage);
+
+                                double destW = printableW;
+                                double destH = currentSliceHImage * scale;
+
+                                gfx.DrawImage(xImage,
+                                    new PdfSharp.Drawing.XRect(leftMargin, topMargin, destW, destH),
+                                    new PdfSharp.Drawing.XRect(0, yOffset / 0.75, bitmap.Width, currentSliceHImage / 0.75),
+                                    PdfSharp.Drawing.XGraphicsUnit.Point);
+
+                                yOffset += currentSliceHImage;
+                            }
+                        }
+                        else
+                        {
+                            // Fit to page
+                            var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);
+                            double drawW = imgWPoints;
+                            double drawH = imgHPoints;
+
+                            if (options.PageSize != "Fit")
+                            {
+                                double scale = Math.Min(printableW / imgWPoints, printableH / imgHPoints);
+                                if (scale < 1.0)
+                                {
+                                    drawW *= scale;
+                                    drawH *= scale;
+                                }
+                            }
+
+                            double destX = leftMargin + (printableW - drawW) / 2;
+                            double destY = topMargin + (printableH - drawH) / 2;
+
+                            gfx.DrawImage(xImage, destX, destY, drawW, drawH);
+                        }
+                    }
+                }
+
+                document.Save(filePath);
+            }
+
+            FinishSuccessfulSave(bitmap, filePath);
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "PDF Export failed", ex.Message, error: true);
         }
     }
 
@@ -795,7 +941,13 @@ public sealed partial class EditorForm : Form
     {
         _savedFilePath = filePath;
         _canvas.AcceptSavedBaseline(output);
-        NotifyHistoryEditedCaptureSaved(filePath, output.Width, output.Height);
+        
+        bool isPdf = filePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+        if (!isPdf)
+        {
+            NotifyHistoryEditedCaptureSaved(filePath, output.Width, output.Height);
+        }
+
         UpdateCaptureCaption();
         RefreshUi();
         ShowSaveStatus(filePath);
@@ -803,7 +955,9 @@ public sealed partial class EditorForm : Form
         var fileName = Path.GetFileName(filePath);
         var toastTitle = filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase)
             ? LocalizationService.Translate("Project saved")
-            : LocalizationService.Translate("Image saved");
+            : isPdf
+                ? LocalizationService.Translate("PDF saved")
+                : LocalizationService.Translate("Image saved");
         var toastBody = string.Format(LocalizationService.Translate("Saved: {0}"), fileName);
         ToastWindow.Show(toastTitle, toastBody, filePath);
     }
