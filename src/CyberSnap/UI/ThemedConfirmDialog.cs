@@ -268,7 +268,7 @@ internal sealed class ThemedConfirmDialog : Window
         {
             Orientation = WpfOrientation.Horizontal,
             HorizontalAlignment = WpfHorizontalAlignment.Center,
-            Margin = new Thickness(10, 14, 10, 14)
+            Margin = new Thickness(10, 18, 10, 14)
         };
         if (kind == Kind.SavePrompt)
         {
