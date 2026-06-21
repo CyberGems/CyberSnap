@@ -732,12 +732,11 @@ public sealed partial class EditorForm : Form
                 ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
                 : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf");
 
+        string prefix = prefPdf ? "PDF" : (prefJpg ? "JPG" : "PNG");
         string defaultName;
         if (string.IsNullOrWhiteSpace(_savedFilePath))
         {
-            defaultName = prefPdf
-                ? $"CyberSnap_PDF_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
-                : $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}{ext}";
+            defaultName = $"CyberSnap_{prefix}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}";
         }
         else
         {
@@ -786,12 +785,11 @@ public sealed partial class EditorForm : Form
                 ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
                 : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf");
 
+        string prefix = prefPdf ? "PDF" : (prefJpg ? "JPG" : "PNG");
         string defaultName;
         if (string.IsNullOrWhiteSpace(_savedFilePath))
         {
-            defaultName = prefPdf
-                ? $"CyberSnap_PDF_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
-                : $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}{ext}";
+            defaultName = $"CyberSnap_{prefix}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}";
         }
         else
         {
