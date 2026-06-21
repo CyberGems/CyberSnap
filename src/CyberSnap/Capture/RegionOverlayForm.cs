@@ -39,6 +39,13 @@ public sealed partial class RegionOverlayForm : Form
     private Point _confirmDragOffset;
     private Rectangle _confirmDragStartRect;
     private int _hoveredConfirmButton = -1; // 0 = Confirm, 1 = Cancel
+    private int _pressedConfirmButton = -1; // button currently playing the click squash
+    private int _pendingConfirmAction = -1; // action to run when the squash finishes
+    private float _confirmPressAmt;          // 0→1→0 squash progress for the pressed button
+    private DateTime _pressAnimStart;
+    private readonly float[] _shinePhase = { 0f, 0.5f }; // per-button glint position (0=confirm,1=cancel)
+    private readonly float[] _shineMain = { 1f, 1f }; // primary comet intensity per button (0=confirm,1=cancel)
+    private readonly float[] _shineDup = { 0f, 0f };  // duplicate comet intensity (fades in on hover)
 
     private CaptureDockSide ActiveDockSide => _isEvading ? GetOppositeDockSide(CaptureDockSide) : CaptureDockSide;
 
@@ -104,6 +111,8 @@ public sealed partial class RegionOverlayForm : Form
     private readonly System.Windows.Forms.Timer _animTimer;
     private readonly System.Windows.Forms.Timer _autoDetectTimer;
     private readonly System.Windows.Forms.Timer _selectionPaintTimer;
+    private readonly System.Windows.Forms.Timer _confirmPressTimer;
+    private readonly System.Windows.Forms.Timer _confirmShineTimer;
     private readonly System.Diagnostics.Stopwatch _selectionPaintStopwatch = System.Diagnostics.Stopwatch.StartNew();
     private bool _selectionPaintQueued;
     private DateTime _showTime;
@@ -418,6 +427,12 @@ public sealed partial class RegionOverlayForm : Form
 
         _selectionPaintTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
         _selectionPaintTimer.Tick += (_, _) => FlushSelectionPaint();
+
+        _confirmPressTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _confirmPressTimer.Tick += (_, _) => ConfirmPressTick();
+
+        _confirmShineTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _confirmShineTimer.Tick += (_, _) => ConfirmShineTick();
 
         // ── First-time capture banner ──
         var settings = SettingsService.LoadStatic();
@@ -970,6 +985,24 @@ public sealed partial class RegionOverlayForm : Form
         int dx = Math.Max(0, Math.Max(r.X - p.X, p.X - r.Right));
         int dy = Math.Max(0, Math.Max(r.Y - p.Y, p.Y - r.Bottom));
         return (int)Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    /// <summary>
+    /// Right-click menu shown while confirming a selection: a single large, red "Close"
+    /// item with an X icon, so exiting is a deliberate choice rather than the abrupt
+    /// instant-cancel. The selection is kept if the menu is dismissed without choosing.
+    /// </summary>
+    private void ShowConfirmContextMenu(Point clickLocation)
+    {
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 210);
+
+        var closeItem = WindowsMenuRenderer.Item("Close", iconId: "close", danger: true);
+        closeItem.Height = 46; // larger than a standard row for a prominent exit
+        closeItem.Click += (_, _) => Cancel();
+        menu.Items.Add(closeItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 210);
+        menu.Show(PointToScreen(clickLocation));
     }
 
     private void ShowAnnotationContextMenu(Point clickLocation)

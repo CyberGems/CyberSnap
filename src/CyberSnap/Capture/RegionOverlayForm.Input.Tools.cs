@@ -373,6 +373,44 @@ public sealed partial class RegionOverlayForm
             target = IsPointInColorPickerSwatch(e.Location) ? Cursors.Hand : Cursors.Default;
         else if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location))
             target = _hoveredAltCaptureBtn ? Cursors.Hand : Cursors.Default;
+        else if (_isConfirmingSelection)
+        {
+            // Confirm-mode hover takes priority over the toolbar rect: near screen edges the
+            // confirm buttons can overlap _toolbarRect, and letting the toolbar branch win
+            // there swallowed the button hover (buttons worked on click but never lit up).
+            int prevHoveredConfirm = _hoveredConfirmButton;
+            _hoveredConfirmButton = -1;
+
+            int ch = HitTestConfirmHandle(e.Location);
+            int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
+            if (ch >= 0)
+                target = ch switch
+                {
+                    0 or 3 => Cursors.SizeNWSE,
+                    1 or 2 => Cursors.SizeNESW,
+                    4 or 7 => Cursors.SizeNS,
+                    5 or 6 => Cursors.SizeWE,
+                    _ => Cursors.Default
+                };
+            else if (btnHit >= 0)
+            {
+                target = Cursors.Hand;
+                _hoveredConfirmButton = btnHit;
+            }
+            else if (_toolbarRect.Contains(e.Location))
+                target = btn >= 0 ? Cursors.Hand : Cursors.Default; // toolbar fallback
+            else if (_confirmRect.Contains(e.Location))
+                target = Cursors.SizeAll;
+            else
+                target = CursorFactory.PrecisionCursor;
+
+            if (_hoveredConfirmButton != prevHoveredConfirm)
+            {
+                var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+                Invalidate(InflateForRepaint(confirmBtn, 20));
+                Invalidate(InflateForRepaint(cancelBtn, 20));
+            }
+        }
         else if (_toolbarRect.Contains(e.Location))
             target = btn >= 0 ? Cursors.Hand : Cursors.Default;
         else if (_isTyping && _hoveredTextBtn == 8)
@@ -387,40 +425,6 @@ public sealed partial class RegionOverlayForm
             if (h >= 0) target = h is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
             else if (GetActiveTextRect().Contains(e.Location)) target = Cursors.SizeAll;
             else target = Cursors.Default;
-        }
-        else if (_isConfirmingSelection)
-        {
-            int prevHoveredConfirm = _hoveredConfirmButton;
-            _hoveredConfirmButton = -1;
-
-            int ch = HitTestConfirmHandle(e.Location);
-            if (ch >= 0)
-                target = ch switch
-                {
-                    0 or 3 => Cursors.SizeNWSE,
-                    1 or 2 => Cursors.SizeNESW,
-                    4 or 7 => Cursors.SizeNS,
-                    5 or 6 => Cursors.SizeWE,
-                    _ => Cursors.Default
-                };
-            else
-            {
-                int btnHit = HitTestConfirmButton(e.Location);
-                if (btnHit >= 0)
-                {
-                    target = Cursors.Hand;
-                    _hoveredConfirmButton = btnHit;
-                }
-                else if (_confirmRect.Contains(e.Location)) target = Cursors.SizeAll;
-                else target = CursorFactory.PrecisionCursor;
-            }
-
-            if (_hoveredConfirmButton != prevHoveredConfirm)
-            {
-                var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
-                Invalidate(InflateForRepaint(confirmBtn, 20));
-                Invalidate(InflateForRepaint(cancelBtn, 20));
-            }
         }
         else if (IsDrawingOrMoveMode(_mode))
         {

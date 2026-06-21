@@ -30,6 +30,12 @@ public sealed partial class RegionOverlayForm
                 ShowAnnotationContextMenu(e.Location);
                 return;
             }
+            if (_isConfirmingSelection)
+            {
+                // Gentle exit while confirming: show a contextual Close instead of an abrupt cancel.
+                ShowConfirmContextMenu(e.Location);
+                return;
+            }
             Cancel();
             return;
         }
@@ -442,12 +448,12 @@ public sealed partial class RegionOverlayForm
             int confirmBtnHit = HitTestConfirmButton(e.Location);
             if (confirmBtnHit == 0)
             {
-                CommitConfirmedSelection();
+                StartConfirmPress(0); // squash animation, then CommitConfirmedSelection
                 return;
             }
             if (confirmBtnHit == 1)
             {
-                ExitConfirmMode();
+                StartConfirmPress(1); // squash animation, then ExitConfirmMode
                 return;
             }
             if (_confirmRect.Contains(e.Location))
@@ -460,8 +466,9 @@ public sealed partial class RegionOverlayForm
                 _confirmDragStartRect = _confirmRect;
                 return;
             }
-            // Click outside: start a new selection (abandon confirmation)
-            ExitConfirmMode();
+            // Left-click outside the confirm UI: ignore it, so a stray click never captures
+            // and the pending selection is kept. Esc and right-click still cancel/exit.
+            return;
         }
 
         _hasDragged = false;
