@@ -107,6 +107,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-resize-scale", ex); }
     }
 
+    /// <summary>Persists whether the handle-drag resize confirmation dialog was suppressed.</summary>
+    public void PersistEditorSuppressResizeConfirm(bool suppress)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorSuppressResizeConfirm == suppress) return;
+        _settingsService.Settings.EditorSuppressResizeConfirm = suppress;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-suppress-resize-confirm", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "show rulers" preference.</summary>
     public void PersistEditorShowRulers(bool showRulers)
     {

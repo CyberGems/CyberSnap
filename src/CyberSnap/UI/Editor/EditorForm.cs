@@ -232,11 +232,19 @@ public sealed partial class EditorForm : Form
         _canvas.BlankBitmapFactory = (w, h) => CreateBlankCheckerboard(EditorColors.IsDark, w, h);
         _canvas.ConfirmResizeByHandle = (w, h) =>
         {
+            // Skip the dialog if the user previously checked "Don't show again".
+            if (settings?.EditorSuppressResizeConfirm == true)
+                return true;
+
             var title = LocalizationService.Translate("Resize canvas");
             var message = string.Format(
                 LocalizationService.Translate("The canvas will be resized to {0} × {1} px. Continue?"),
                 w, h);
-            return ThemedConfirmDialog.Confirm(Handle, title, message, danger: false, iconId: "maximize");
+            bool confirmed = ThemedConfirmDialog.Confirm(Handle, title, message, out bool dontShowAgain,
+                danger: false, iconId: "maximize");
+            if (confirmed && dontShowAgain && System.Windows.Application.Current is CyberSnap.App app)
+                app.PersistEditorSuppressResizeConfirm(true);
+            return confirmed;
         };
         _canvas.TextFontSizeChanged += size =>
         {
