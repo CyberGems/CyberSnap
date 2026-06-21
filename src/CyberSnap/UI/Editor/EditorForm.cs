@@ -523,7 +523,7 @@ public sealed partial class EditorForm : Form
         {
             if (label == _zoomLabel)
                 label.ForeColor = EditorColors.Accent;
-            else if (label == _coordsLabel || label == _fileNameLabel || label == _titleFileNameLabel)
+            else if (label == _coordsLabel || label == _fileNameLabel)
                 label.ForeColor = EditorColors.TextSecondary;
             else
                 label.ForeColor = EditorColors.TextPrimary;
