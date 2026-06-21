@@ -12,6 +12,7 @@ namespace CyberSnap.UI.Editor;
 public sealed partial class EditorForm
 {
     private Panel _topBarPanel = null!;
+    private Panel _titleBarPanel = null!;
     private Panel _statusBarPanel = null!;
     private Panel _toolbarPanel = null!;
     private Bitmap? _brandBitmap;
@@ -370,14 +371,14 @@ public sealed partial class EditorForm
         _topBarPanel.MouseDown += BeginWindowDrag;
 
         // Row 1: Title Bar Panel
-        var titleBarPanel = new Panel
+        _titleBarPanel = new Panel
         {
             Dock = DockStyle.Top,
             Height = 44,
             BackColor = Color.Transparent,
             Padding = new Padding(22, 0, 18, 0),
         };
-        titleBarPanel.MouseDown += BeginWindowDrag;
+        _titleBarPanel.MouseDown += BeginWindowDrag;
 
         // Brand area: logo + "CyberSnap" + "Annotations Editor"
         var brandPanel = new Panel
@@ -491,16 +492,16 @@ public sealed partial class EditorForm
             int iconX = (_titleFileNameLabel.Width - TextRenderer.MeasureText(_titleFileNameText, titleFont).Width - iconSize - 6) / 2;
             if (iconX < 0) iconX = 4;
             var iconRect = new RectangleF(iconX, cy - iconSize / 2f, iconSize, iconSize);
-            StreamlineIcons.DrawIcon(g, "document", iconRect, EditorColors.TextPrimary, 1f, false);
+            StreamlineIcons.DrawIcon(g, "document", iconRect, EditorColors.TextPrimary, 0f, false);
             TextRenderer.DrawText(g, _titleFileNameText, titleFont,
                 new Rectangle(iconX + iconSize + 6, 0, _titleFileNameLabel.Width - iconSize - 6, _titleFileNameLabel.Height),
                 EditorColors.TextPrimary,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
         };
 
-        titleBarPanel.Controls.Add(_titleFileNameLabel);
-        titleBarPanel.Controls.Add(brandPanel);
-        titleBarPanel.Controls.Add(windowActions);
+        _titleBarPanel.Controls.Add(_titleFileNameLabel);
+        _titleBarPanel.Controls.Add(brandPanel);
+        _titleBarPanel.Controls.Add(windowActions);
 
         // Row 2: Command Bar Panel
         var commandBarPanel = new TableLayoutPanel
@@ -595,7 +596,7 @@ public sealed partial class EditorForm
         commandBarPanel.Controls.Add(commandActions, 1, 0);
 
         _topBarPanel.Controls.Add(commandBarPanel);
-        _topBarPanel.Controls.Add(titleBarPanel);
+        _topBarPanel.Controls.Add(_titleBarPanel);
 
         UpdateWindowStateButton();
 
