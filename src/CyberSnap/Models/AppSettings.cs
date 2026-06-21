@@ -318,7 +318,7 @@ public sealed class AppSettings
     public bool HistoryDeleteOriginalOnPrune { get; set; }
     public ImageSearchSourceOptions ImageSearchSources { get; set; } = ImageSearchSourceOptions.All;
     public bool ShowImageSearchBar { get; set; } = true;
-    public bool ShowAutoPrune { get; set; } = true;
+    public bool ShowAutoPrune { get; set; }
     public bool ImageSearchExactMatch { get; set; }
     public bool AutoIndexImages { get; set; } = false;
     public int HistoryCategoryFilter { get; set; } = 0; // 0=All (default)
