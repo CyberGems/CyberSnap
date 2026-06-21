@@ -515,6 +515,18 @@ public sealed partial class EditorForm : Form
             return;
         }
 
+        if (ctrl is TableLayoutPanel)
+        {
+            ctrl.BackColor = Color.Transparent;
+            return;
+        }
+
+        if (ctrl is DoubleBufferedPanel && ctrl != _statusBarPanel)
+        {
+            ctrl.BackColor = Color.Transparent;
+            return;
+        }
+
         if (ctrl is Panel panel)
         {
             panel.BackColor = EditorColors.BgPrimary;

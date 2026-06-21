@@ -491,7 +491,7 @@ public sealed partial class EditorForm
             int iconX = (_titleFileNameLabel.Width - TextRenderer.MeasureText(_titleFileNameText, titleFont).Width - iconSize - 6) / 2;
             if (iconX < 0) iconX = 4;
             var iconRect = new RectangleF(iconX, cy - iconSize / 2f, iconSize, iconSize);
-            StreamlineIcons.DrawIcon(g, "document", iconRect, EditorColors.TextPrimary, 0f, false);
+            StreamlineIcons.DrawIcon(g, "document", iconRect, EditorColors.TextPrimary, 1f, false);
             TextRenderer.DrawText(g, _titleFileNameText, titleFont,
                 new Rectangle(iconX + iconSize + 6, 0, _titleFileNameLabel.Width - iconSize - 6, _titleFileNameLabel.Height),
                 EditorColors.TextPrimary,
