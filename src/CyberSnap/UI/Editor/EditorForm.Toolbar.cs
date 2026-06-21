@@ -492,7 +492,7 @@ public sealed partial class EditorForm
             int iconX = (_titleFileNameLabel.Width - TextRenderer.MeasureText(_titleFileNameText, titleFont).Width - iconSize - 6) / 2;
             if (iconX < 0) iconX = 4;
             var iconRect = new RectangleF(iconX, cy - iconSize / 2f, iconSize, iconSize);
-            StreamlineIcons.DrawIcon(g, "document", iconRect, EditorColors.TextPrimary, 0f, false);
+            StreamlineIcons.DrawIcon(g, "document", iconRect, EditorColors.Accent, 0f, false);
             TextRenderer.DrawText(g, _titleFileNameText, titleFont,
                 new Rectangle(iconX + iconSize + 6, 0, _titleFileNameLabel.Width - iconSize - 6, _titleFileNameLabel.Height),
                 EditorColors.TextPrimary,
@@ -558,7 +558,7 @@ public sealed partial class EditorForm
         // New, Open & Save (Project operations)
         var newButton = MakeCommandButton("document", LocalizationService.Translate("New"), false);
         newButton.Click += (_, _) => DoNew();
-        RegisterHoverTooltip(newButton, () => WithShortcut("Create a blank canvas", "Ctrl+N"), above: false);
+        RegisterHoverTooltip(newButton, () => WithShortcut("Start a new document", "Ctrl+N"), above: false);
         commandActions.Controls.Add(newButton);
 
         var openButton = MakeCommandButton("folder", LocalizationService.Translate("Open"), false);
@@ -581,6 +581,8 @@ public sealed partial class EditorForm
         _copyButton.Click += (_, _) => DoCopy();
         RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
         commandActions.Controls.Add(_copyButton);
+
+        commandActions.Controls.Add(MakeSeparator());
 
         // Import & Export (Flat image I/O)
         var importButton = MakeCommandButton("import", LocalizationService.Translate("Import"), false);
