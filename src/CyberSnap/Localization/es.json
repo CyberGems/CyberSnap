@@ -441,6 +441,8 @@
   "Import failed": "Error al importar",
   "Export failed": "Error al exportar",
   "Cancel": "Cancelar",
+  "Confirm capture": "Confirmar captura",
+  "Cancel capture": "Cancelar captura",
   "New": "Nuevo",
   "Open": "Abrir",
   "Copied": "Copiado",

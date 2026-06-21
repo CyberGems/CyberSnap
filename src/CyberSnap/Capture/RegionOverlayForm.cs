@@ -988,20 +988,35 @@ public sealed partial class RegionOverlayForm : Form
     }
 
     /// <summary>
-    /// Right-click menu shown while confirming a selection: a single large, red "Close"
-    /// item with an X icon, so exiting is a deliberate choice rather than the abrupt
-    /// instant-cancel. The selection is kept if the menu is dismissed without choosing.
+    /// Right-click menu shown while confirming a selection. Contains "Confirm capture" (green ✓)
+    /// and "Cancel capture" (red cancel/close icon), with larger menu text.
     /// </summary>
     private void ShowConfirmContextMenu(Point clickLocation)
     {
-        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 210);
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+        menu.Font = UiChrome.ChromeFont(11.0f); // larger text as requested
 
-        var closeItem = WindowsMenuRenderer.Item("Close", iconId: "close", danger: true);
-        closeItem.Height = 46; // larger than a standard row for a prominent exit
-        closeItem.Click += (_, _) => Cancel();
-        menu.Items.Add(closeItem);
+        // ── App header ──
+        var headerLabel = new ToolStripLabel($"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}")
+        {
+            ForeColor = UiChrome.SurfaceTextMuted,
+            Font = UiChrome.ChromeFont(8.5f),
+            Padding = new System.Windows.Forms.Padding(10, 12, 0, 2),
+            AutoSize = true,
+        };
+        menu.Items.Add(headerLabel);
+        menu.Items.Add(new ToolStripSeparator());
 
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 210);
+        var confirmColor = Color.FromArgb(34, 197, 94); // Premium vibrant success green
+        var confirmItem = WindowsMenuRenderer.Item("Confirm capture", iconId: "check", customColor: confirmColor, iconSize: 24);
+        confirmItem.Click += (_, _) => CommitConfirmedSelection();
+        menu.Items.Add(confirmItem);
+
+        var cancelItem = WindowsMenuRenderer.Item("Cancel capture", iconId: "close", danger: true, iconSize: 24);
+        cancelItem.Click += (_, _) => Cancel();
+        menu.Items.Add(cancelItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
         menu.Show(PointToScreen(clickLocation));
     }
 

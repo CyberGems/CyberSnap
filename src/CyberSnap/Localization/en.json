@@ -246,6 +246,8 @@
   "Import failed": "Import failed",
   "Export failed": "Export failed",
   "Cancel": "Cancel",
+  "Confirm capture": "Confirm capture",
+  "Cancel capture": "Cancel capture",
   "New": "New",
   "Open": "Open",
   "Copied": "Copied",

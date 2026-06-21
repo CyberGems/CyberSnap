@@ -740,7 +740,6 @@ public sealed partial class RegionOverlayForm
     }
 
     private static readonly int ConfirmHandleSize = 16;
-    private static readonly int ConfirmButtonWidth = 96;
     private static readonly int ConfirmButtonHeight = 34;
     private static readonly int ConfirmButtonGap = 8;
 

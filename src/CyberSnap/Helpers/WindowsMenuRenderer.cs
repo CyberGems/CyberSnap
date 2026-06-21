@@ -90,20 +90,22 @@ public static class WindowsMenuRenderer
         string? shortcut = null,
         string? iconId = null,
         bool active = false,
-        bool danger = false)
+        bool danger = false,
+        Color? customColor = null,
+        int iconSize = 20)
     {
         text = CyberSnap.Services.LocalizationService.Translate(text);
 
-        var color = danger
+        var color = customColor ?? (danger
             ? Color.FromArgb(239, 68, 68)
-            : ToDrawingColor(CyberSnap.UI.Theme.TextPrimary);
+            : ToDrawingColor(CyberSnap.UI.Theme.TextPrimary));
         var textPrimary = ToDrawingColor(CyberSnap.UI.Theme.TextPrimary);
         var textSecondary = ToDrawingColor(CyberSnap.UI.Theme.TextSecondary);
-        var imageColor = danger
+        var imageColor = customColor ?? (danger
             ? color
             : active
                 ? Color.FromArgb(255, textPrimary.R, textPrimary.G, textPrimary.B)
-                : Color.FromArgb(215, textSecondary.R, textSecondary.G, textSecondary.B);
+                : Color.FromArgb(215, textSecondary.R, textSecondary.G, textSecondary.B));
 
         return new ToolStripMenuItem(text)
         {
@@ -111,14 +113,14 @@ public static class WindowsMenuRenderer
             Height = RowHeight,
             Width = DefaultWidth - 8,
             ForeColor = color,
-            Image = iconId is null ? null : FluentIcons.RenderBitmap(iconId, imageColor, 20, active),
+            Image = iconId is null ? null : FluentIcons.RenderBitmap(iconId, imageColor, iconSize, active),
             ImageScaling = ToolStripItemImageScaling.None,
             ShortcutKeyDisplayString = shortcut ?? string.Empty,
             Tag = active
         };
     }
 
-    public static int NormalizeItemWidths(ContextMenuStrip menu, int minWidth = DefaultWidth)
+    public static int NormalizeItemWidths(ContextMenuStrip menu, int minWidth = DefaultWidth, int? itemHeight = null)
     {
         int width = minWidth;
         using var g = Graphics.FromHwnd(IntPtr.Zero);
@@ -134,7 +136,7 @@ public static class WindowsMenuRenderer
             width = Math.Max(width, text + shortcut + (menu.ShowImageMargin ? 124 : 76));
         }
 
-        SetMenuWidth(menu, width);
+        SetMenuWidth(menu, width, itemHeight);
         return width;
     }
 
@@ -163,7 +165,7 @@ public static class WindowsMenuRenderer
         }
     }
 
-    public static void SetMenuWidth(ContextMenuStrip menu, int width)
+    public static void SetMenuWidth(ContextMenuStrip menu, int width, int? itemHeight = null)
     {
         width = Math.Max(120, width);
         menu.MinimumSize = new Size(width, 0);
@@ -174,7 +176,7 @@ public static class WindowsMenuRenderer
             {
                 menuItem.AutoSize = false;
                 menuItem.Width = width - 8;
-                menuItem.Height = RowHeight;
+                menuItem.Height = itemHeight ?? RowHeight;
             }
         }
     }
@@ -224,8 +226,26 @@ public static class WindowsMenuRenderer
 
         protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
         {
-            using var pen = new Pen(_border);
-            e.Graphics.DrawRectangle(pen, 0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            float penWidth = 1.8f;
+            using var pen = new Pen(_border, penWidth);
+            float inset = penWidth / 2f;
+            var rect = new RectangleF(inset, inset, e.ToolStrip.Width - penWidth, e.ToolStrip.Height - penWidth);
+            float radius = IsWin11 ? 8f : 12f;
+            using var path = RoundedRectF(rect, radius);
+            e.Graphics.DrawPath(pen, path);
+        }
+
+        public static GraphicsPath RoundedRectF(RectangleF rect, float radius)
+        {
+            var path = new GraphicsPath();
+            float d = radius * 2;
+            path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+            path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+            path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
         }
 
         protected override void OnRenderImageMargin(ToolStripRenderEventArgs e)
@@ -264,8 +284,8 @@ public static class WindowsMenuRenderer
             if (e.Image is null)
                 return;
 
-            int size = Math.Min(16, Math.Min(e.Item.Height - 9, e.Image.Width));
-            int x = 14 + (20 - size) / 2;
+            int size = Math.Min(24, Math.Min(e.Item.Height - 9, e.Image.Width));
+            int x = 10 + (24 - size) / 2;
             int y = e.Item.ContentRectangle.Y + (e.Item.Height - size) / 2;
             e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
             e.Graphics.DrawImage(e.Image, new Rectangle(x, y, size, size));
