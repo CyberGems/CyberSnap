@@ -641,12 +641,12 @@ public sealed partial class EditorForm
         AddToolButton(draw, 0, 0, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw");
         AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow");
         AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", LocalizationService.Translate("Curved"));
-        AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line");
-        AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box");
-        AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle");
-        AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text Tool");
-        AddToolButton(draw, 1, 2, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight");
-        AddToolButton(draw, 2, 2, AnnotationCanvas.CanvasTool.Blur, "blur", "Blur");
+        AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line", bottomMargin: 7);
+        AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box", bottomMargin: 7);
+        AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle", bottomMargin: 7);
+        AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text Tool", topMargin: 7);
+        AddToolButton(draw, 1, 2, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight", topMargin: 7);
+        AddToolButton(draw, 2, 2, AnnotationCanvas.CanvasTool.Blur, "blur", "Blur", topMargin: 7);
         AddToolButton(draw, 0, 3, AnnotationCanvas.CanvasTool.StepNumber, "step", "Step");
         AddToolButton(draw, 1, 3, AnnotationCanvas.CanvasTool.Magnifier, "magnifier", "Magnifier");
         AddToolButton(draw, 2, 3, AnnotationCanvas.CanvasTool.Emoji, "emoji", "Emoji");
@@ -868,7 +868,9 @@ public sealed partial class EditorForm
         AnnotationCanvas.CanvasTool tool,
         string iconId,
         string labelKey,
-        string? displayKey = null)
+        string? displayKey = null,
+        int topMargin = 4,
+        int bottomMargin = 4)
     {
         // The visible button text can be a shorter label (displayKey) to avoid truncation in the
         // narrow grid; the hover tooltip below still uses the full labelKey.
@@ -880,7 +882,7 @@ public sealed partial class EditorForm
         var button = new EditorToolButton
         {
             Dock = DockStyle.Fill,
-            Margin = new Padding(left, 4, right, 4),
+            Margin = new Padding(left, topMargin, right, bottomMargin),
             IconId = iconId,
             Text = label,
         };
@@ -1661,11 +1663,10 @@ internal sealed class EditorToolButton : EditorButtonBase
 
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
     {
-        bool isSmall = rect.Width < 100;
-        var iconSize = isSmall ? 38f : 44f;
-        var iconTop = isSmall ? 4f : 8f;
-        var textHeight = isSmall ? 18 : 22;
-        var textTop = rect.Bottom - (isSmall ? 22 : 26);
+        var iconSize = 40f;
+        var iconTop = 6f;
+        var textHeight = 20;
+        var textTop = rect.Bottom - 24;
 
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
