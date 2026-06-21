@@ -44,6 +44,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="PDFsharp" Version="6.1.1" />
     <ProjectReference Include="..\CyberSnap.AppModel\CyberSnap.AppModel.csproj" />
     <PackageReference Include="AnimatedGif" Version="1.0.5" />
     <PackageReference Include="FluentFTP" Version="52.1.0" />

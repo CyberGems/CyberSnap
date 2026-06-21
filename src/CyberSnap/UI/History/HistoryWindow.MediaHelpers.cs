@@ -231,23 +231,51 @@ public partial class HistoryWindow
         using (var g = Graphics.FromImage(bmp))
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using var top = new SolidBrush(System.Drawing.Color.FromArgb(54, 54, 54));
-            using var bottom = new SolidBrush(System.Drawing.Color.FromArgb(42, 42, 42));
-            g.FillRectangle(top, 0, 0, bmp.Width, bmp.Height / 2);
-            g.FillRectangle(bottom, 0, bmp.Height / 2, bmp.Width, bmp.Height / 2);
-
-            using var mountain = new SolidBrush(System.Drawing.Color.FromArgb(78, 78, 78));
-            g.FillPolygon(mountain, new[]
+            
+            // Premium background: Dark slate gradient matching CyberGems colors
+            using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(new Rectangle(0, 0, bmp.Width, bmp.Height),
+                System.Drawing.Color.FromArgb(15, 17, 26), System.Drawing.Color.FromArgb(28, 30, 46), LinearGradientMode.Vertical))
             {
-                new System.Drawing.Point(26, 138),
-                new System.Drawing.Point(108, 78),
-                new System.Drawing.Point(162, 122),
-                new System.Drawing.Point(214, 92),
-                new System.Drawing.Point(292, 138)
-            });
+                g.FillRectangle(brush, 0, 0, bmp.Width, bmp.Height);
+            }
 
-            using var sun = new SolidBrush(System.Drawing.Color.FromArgb(145, 145, 145));
-            g.FillEllipse(sun, 216, 34, 34, 34);
+            // Accent border
+            using (var pen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(30, 0, 255, 255), 2f))
+            {
+                g.DrawRectangle(pen, 1, 1, bmp.Width - 3, bmp.Height - 3);
+            }
+
+            // Draw picture icon outline in the center with the accent color
+            using (var accentBrush = new SolidBrush(System.Drawing.Color.FromArgb(80, 0, 255, 255)))
+            using (var accentPen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(120, 0, 255, 255), 2f))
+            {
+                // Draw picture frame
+                var frameRect = new Rectangle(bmp.Width / 2 - 25, bmp.Height / 2 - 20, 50, 40);
+                g.DrawRectangle(accentPen, frameRect);
+
+                // Draw sun
+                g.FillEllipse(accentBrush, frameRect.X + 32, frameRect.Y + 8, 8, 8);
+
+                // Draw mountains
+                var pts = new[]
+                {
+                    new System.Drawing.Point(frameRect.X + 2, frameRect.Bottom - 2),
+                    new System.Drawing.Point(frameRect.X + 18, frameRect.Y + 18),
+                    new System.Drawing.Point(frameRect.X + 28, frameRect.Y + 28),
+                    new System.Drawing.Point(frameRect.X + 36, frameRect.Y + 20),
+                    new System.Drawing.Point(frameRect.Right - 2, frameRect.Bottom - 2)
+                };
+                g.DrawLines(accentPen, pts);
+            }
+
+            // Draw "IMAGE" text below the icon
+            using (var font = new System.Drawing.Font(System.Drawing.SystemFonts.DefaultFont.FontFamily, 9f, System.Drawing.FontStyle.Bold))
+            using (var textBrush = new SolidBrush(System.Drawing.Color.FromArgb(140, 160, 180, 210)))
+            {
+                var text = "NO IMAGE";
+                var size = g.MeasureString(text, font);
+                g.DrawString(text, font, textBrush, (bmp.Width - size.Width) / 2f, bmp.Height / 2f + 25f);
+            }
         }
 
         return BitmapPerf.ToBitmapSource(bmp);
