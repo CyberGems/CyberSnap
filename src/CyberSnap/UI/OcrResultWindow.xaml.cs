@@ -38,15 +38,7 @@ public partial class OcrResultWindow : Window
         OcrTextBox.TextChanged += OcrTextBox_TextChanged;
         UpdateCharCount();
 
-        var ocrMenu = new ContextMenu();
-        ocrMenu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
-        ocrMenu.Items.Add(CreateOcrMenuItem("Cut", "Ctrl+X", () => OcrTextBox.Cut()));
-        ocrMenu.Items.Add(CreateOcrMenuItem("Copy", "Ctrl+C", () => OcrTextBox.Copy()));
-        ocrMenu.Items.Add(CreateOcrMenuItem("Paste", "Ctrl+V", () => OcrTextBox.Paste()));
-        ocrMenu.Items.Add(new Separator());
-        ocrMenu.Items.Add(CreateOcrMenuItem("Select All", "Ctrl+A", () => OcrTextBox.SelectAll()));
-        ocrMenu.Items.Add(CreateOcrMenuItem("Delete", "Del", () => OcrTextBox.Clear()));
-        OcrTextBox.ContextMenu = ocrMenu;
+        SetupOcrContextMenu();
 
         // Use a composite font family so CJK / Arabic / Cyrillic glyphs render correctly
         var fontFamily = new System.Windows.Media.FontFamily("Segoe UI, Microsoft YaHei UI, Malgun Gothic, Yu Gothic UI, Arial Unicode MS, Segoe UI Symbol");
@@ -808,5 +800,22 @@ public partial class OcrResultWindow : Window
         };
         item.Click += (_, _) => action();
         return item;
+    }
+
+    private void SetupOcrContextMenu()
+    {
+        var menu = new ContextMenu();
+        menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+
+        menu.Items.Add(CreateOcrMenuItem("Undo", "Ctrl+Z", () => OcrTextBox.Undo()));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(CreateOcrMenuItem("Cut", "Ctrl+X", () => OcrTextBox.Cut()));
+        menu.Items.Add(CreateOcrMenuItem("Copy", "Ctrl+C", () => OcrTextBox.Copy()));
+        menu.Items.Add(CreateOcrMenuItem("Paste", "Ctrl+V", () => OcrTextBox.Paste()));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(CreateOcrMenuItem("Select All", "Ctrl+A", () => OcrTextBox.SelectAll()));
+        menu.Items.Add(CreateOcrMenuItem("Delete", "Del", () => OcrTextBox.SelectedText = ""));
+
+        OcrTextBox.ContextMenu = menu;
     }
 }
