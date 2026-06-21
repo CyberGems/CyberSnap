@@ -465,7 +465,7 @@ public sealed partial class ImageSearchIndexService : IDisposable
                     rankedInner.Add((entry, textScore));
             }
 
-            return rankedInner.OrderByDescending(x => x.Score).ThenByDescending(x => x.Entry.CapturedAt).Select(x => x.Entry).ToList();
+            return rankedInner.OrderByDescending(x => x.Entry.CapturedAt).ThenByDescending(x => x.Score).Select(x => x.Entry).ToList();
         }, cancellationToken).ConfigureAwait(false);
 
         lock (_gate)

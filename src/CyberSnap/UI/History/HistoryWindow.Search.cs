@@ -174,8 +174,8 @@ public partial class HistoryWindow
                     exactMatch)
             })
             .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => x.Item.Entry.CapturedAt)
+            .OrderByDescending(x => x.Item.Entry.CapturedAt)
+            .ThenByDescending(x => x.Score)
             .Select(x => x.Item)
             .ToList();
 
