@@ -41,7 +41,7 @@ public partial class HistoryWindow
 
         var query = _imageSearchQuery.Trim();
         CancelImageSearchWork();
-        if (string.IsNullOrWhiteSpace(query) || sources == ImageSearchSourceOptions.None)
+        if (string.IsNullOrWhiteSpace(query) || sources == ImageSearchSourceOptions.None || query.Length < 2)
         {
             EnsureMaterializedImageHistoryItems(_historyRenderCount <= 0 ? ImageHistoryPageSize : _historyRenderCount);
             ApplyImmediateImageFilter(query, sources, exactMatch);
@@ -286,15 +286,14 @@ public partial class HistoryWindow
 
     private static string FormatImageSearchVisibleCountText(int visibleCount, int matchedCount, string sizeText)
     {
-        var matchLabel = matchedCount == 1 ? "match" : "matches";
-        return $"{visibleCount} visible of {matchedCount} {matchLabel} · {sizeText}";
+        var matchLabel = LocalizationService.Translate(matchedCount == 1 ? "match" : "matches");
+        return $"{visibleCount} {LocalizationService.Translate("visible of")} {matchedCount} {matchLabel} · {sizeText}";
     }
 
     private static string FormatImageSearchMatchCountText(int matchedCount, bool uploadFilterActive, string sizeText)
     {
-        var sourceLabel = "search";
-        var matchLabel = matchedCount == 1 ? "match" : "matches";
-        return $"{matchedCount} {sourceLabel} {matchLabel} · {sizeText}";
+        var matchLabel = LocalizationService.Translate(matchedCount == 1 ? "match" : "matches");
+        return $"{matchedCount} {LocalizationService.Translate("search")} {matchLabel} · {sizeText}";
     }
 
     private static string FormatImageUploadFilterCountText(int filteredCount, int totalCount, string sizeText)

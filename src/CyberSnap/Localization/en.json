@@ -723,5 +723,9 @@
   "Reset suppressed dialogs": "Reset suppressed dialogs",
   "Restore any confirmation dialogs you previously hid with 'Don't show again'.": "Restore any confirmation dialogs you previously hid with 'Don't show again'.",
   "Suppressed dialogs restored": "Suppressed dialogs restored",
-  "CyberSnap was unable to launch Configuration": "CyberSnap was unable to launch Configuration"
+  "CyberSnap was unable to launch Configuration": "CyberSnap was unable to launch Configuration",
+  "search": "search",
+  "match": "match",
+  "matches": "matches",
+  "visible of": "visible of"
 }
