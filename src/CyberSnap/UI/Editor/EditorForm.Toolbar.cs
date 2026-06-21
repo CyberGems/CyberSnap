@@ -571,16 +571,18 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(_saveButton, () => WithShortcut(LocalizationService.Translate("Save as CyberSnap project file"), "Ctrl+S"), above: false);
         commandActions.Controls.Add(_saveButton);
 
-        // Clipboard actions: Paste & Copy
-        _pasteButton = MakeCommandButton("paste", LocalizationService.Translate("Paste"), false);
-        _pasteButton.Click += (_, _) => DoPaste();
-        RegisterHoverTooltip(_pasteButton, () => WithShortcut("Paste image from clipboard", "Ctrl+V"), above: false);
-        commandActions.Controls.Add(_pasteButton);
+        commandActions.Controls.Add(MakeSeparator());
 
+        // Clipboard actions: Copy & Paste
         _copyButton = MakeCommandButton("copy", LocalizationService.Translate("Copy"), false);
         _copyButton.Click += (_, _) => DoCopy();
         RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
         commandActions.Controls.Add(_copyButton);
+
+        _pasteButton = MakeCommandButton("paste", LocalizationService.Translate("Paste"), false);
+        _pasteButton.Click += (_, _) => DoPaste();
+        RegisterHoverTooltip(_pasteButton, () => WithShortcut("Paste image from clipboard", "Ctrl+V"), above: false);
+        commandActions.Controls.Add(_pasteButton);
 
         commandActions.Controls.Add(MakeSeparator());
 
