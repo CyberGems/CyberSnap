@@ -211,15 +211,22 @@ public sealed partial class RegionOverlayForm
                 float confirmShine = shineOn ? _shinePhase[0] : -1f;
                 float cancelShine = shineOn ? _shinePhase[1] : -1f;
 
+                float confirmOpacity = UI.Motion.Disabled
+                    ? (_hoveredConfirmButton == 1 ? 0.35f : 1.0f)
+                    : (0.35f + 0.65f * _shineMain[0]);
+                float cancelOpacity = UI.Motion.Disabled
+                    ? (_hoveredConfirmButton == 0 ? 0.35f : 1.0f)
+                    : (0.35f + 0.65f * _shineMain[1]);
+
                 // 3D action buttons: green "Confirm" / red "Cancel", each with a white icon
                 // badge, a hover-igniting glow, a click squash, and a glint traveling the
                 // border so they stay readable over any busy capture background.
                 var confirmColor = Color.FromArgb(34, 197, 94);  // green-500
                 var cancelColor = Color.FromArgb(239, 68, 68);   // red-500
                 DrawConfirmActionPill(g, confirmBtn, confirmColor,
-                    LocalizationService.Translate("Confirm").ToUpperInvariant(), btnFont, confirmHover, isCheck: true, confirmPress, confirmShine, _shineMain[0], _shineDup[0]);
+                    LocalizationService.Translate("Confirm").ToUpperInvariant(), btnFont, confirmHover, isCheck: true, confirmPress, confirmShine, _shineMain[0], _shineDup[0], confirmOpacity);
                 DrawConfirmActionPill(g, cancelBtn, cancelColor,
-                    LocalizationService.Translate("Cancel").ToUpperInvariant(), btnFont, cancelHover, isCheck: false, cancelPress, cancelShine, _shineMain[1], _shineDup[1]);
+                    LocalizationService.Translate("Cancel").ToUpperInvariant(), btnFont, cancelHover, isCheck: false, cancelPress, cancelShine, _shineMain[1], _shineDup[1], cancelOpacity);
             }
 
             // Draw selection frame and handles ON TOP of buttons
@@ -247,7 +254,8 @@ public sealed partial class RegionOverlayForm
     /// </summary>
     private static void DrawConfirmActionPill(
         Graphics g, Rectangle rect, Color baseColor, string label, Font font,
-        bool hover, bool isCheck, float pressAmt, float shinePhase, float shineMain, float shineDup)
+        bool hover, bool isCheck, float pressAmt, float shinePhase, float shineMain, float shineDup,
+        float opacity)
     {
         static Color Lighten(Color c, int amt) => Color.FromArgb(
             Math.Min(255, c.R + amt), Math.Min(255, c.G + amt), Math.Min(255, c.B + amt));
@@ -277,7 +285,7 @@ public sealed partial class RegionOverlayForm
             float frac = i / (float)glowSteps;          // 1 (outermost) … ~0.14 (innermost)
             float inflate = glowSpread * frac;
             float falloff = 1f - frac;                  // stronger nearer the button edge
-            int a = (int)(glowPeak * falloff * falloff);
+            int a = (int)(glowPeak * falloff * falloff * opacity);
             if (a <= 0) continue;
             using var glowPen = new Pen(Color.FromArgb(a, baseColor), glowSpread / glowSteps * 2.4f)
             {
@@ -291,12 +299,12 @@ public sealed partial class RegionOverlayForm
         // ── Soft drop shadow under the base ──
         using (var shadowPath = WindowsDockRenderer.RoundedRect(
             new RectangleF(rect.X, rect.Y + depth + 3f, rect.Width, rect.Height), corner))
-        using (var shadowBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 110 : 55, 0, 0, 0)))
+        using (var shadowBrush = new SolidBrush(Color.FromArgb((int)((UiChrome.IsDark ? 110 : 55) * opacity), 0, 0, 0)))
             g.FillPath(shadowBrush, shadowPath);
 
         // ── 3D side: darker extruded block beneath the face ──
         using (var sidePath = WindowsDockRenderer.RoundedRect(baseRect, corner))
-        using (var sideBrush = new SolidBrush(sideColor))
+        using (var sideBrush = new SolidBrush(Color.FromArgb((int)(255 * opacity), sideColor)))
             g.FillPath(sideBrush, sidePath);
 
         // ── Face body (vertical gradient, fully opaque to block background) ──
@@ -304,11 +312,13 @@ public sealed partial class RegionOverlayForm
         {
             using (var fill = new LinearGradientBrush(
                 new RectangleF(face.X, face.Y - 1, face.Width, face.Height + 2),
-                fillTop, fillBottom, LinearGradientMode.Vertical))
+                Color.FromArgb((int)(255 * opacity), fillTop),
+                Color.FromArgb((int)(255 * opacity), fillBottom),
+                LinearGradientMode.Vertical))
                 g.FillPath(fill, facePath);
 
             // Glossy top highlight (fades while pressed)
-            int glossA = (int)((hover ? 60 : 40) * (1f - 0.5f * pressAmt));
+            int glossA = (int)((hover ? 60 : 40) * (1f - 0.5f * pressAmt) * opacity);
             var glossRect = new RectangleF(face.X + 2, face.Y + 1.5f, face.Width - 4, face.Height * 0.46f);
             using (var glossPath = WindowsDockRenderer.RoundedRect(glossRect, Math.Min(corner, glossRect.Height / 2f)))
             using (var glossBrush = new SolidBrush(Color.FromArgb(glossA, 255, 255, 255)))
@@ -320,9 +330,9 @@ public sealed partial class RegionOverlayForm
         if (shinePhase >= 0f)
         {
             if (shineMain > 0.01f)
-                DrawBorderShine(g, face, corner, shinePhase, Color.White, shineMain);
+                DrawBorderShine(g, face, corner, shinePhase, Color.White, shineMain * opacity);
             if (shineDup > 0.01f)
-                DrawBorderShine(g, face, corner, (shinePhase + 0.5f) % 1f, Color.White, shineDup);
+                DrawBorderShine(g, face, corner, (shinePhase + 0.5f) % 1f, Color.White, shineDup * opacity);
         }
 
         // ── Label — white, uppercase, centered in the area right of the badge ──
@@ -332,7 +342,7 @@ public sealed partial class RegionOverlayForm
             LineAlignment = StringAlignment.Center,
             Trimming = StringTrimming.None
         })
-        using (var textBrush = new SolidBrush(Color.White))
+        using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * opacity), Color.White)))
         {
             var textRect = RectangleF.FromLTRB(
                 face.X + face.Height, face.Y, face.Right - face.Height * 0.18f, face.Bottom);
@@ -345,14 +355,14 @@ public sealed partial class RegionOverlayForm
         float bx = face.X + (face.Height - badgeD) / 2f;
         float by = face.Y + (face.Height - badgeD) / 2f;
 
-        using (var badgeShadow = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 90 : 55, 0, 0, 0)))
+        using (var badgeShadow = new SolidBrush(Color.FromArgb((int)((UiChrome.IsDark ? 90 : 55) * opacity), 0, 0, 0)))
             g.FillEllipse(badgeShadow, bx, by + 1.3f, badgeD, badgeD);
-        using (var badgeFill = new SolidBrush(Color.White))
+        using (var badgeFill = new SolidBrush(Color.FromArgb((int)(255 * opacity), Color.White)))
             g.FillEllipse(badgeFill, bx, by, badgeD, badgeD);
 
         // Icon (check or cross) painted in the pill color
         float stroke = Math.Max(2f, badgeD * 0.12f);
-        using (var iconPen = new Pen(baseColor, stroke)
+        using (var iconPen = new Pen(Color.FromArgb((int)(255 * opacity), baseColor), stroke)
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round,
