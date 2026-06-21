@@ -167,6 +167,19 @@ public sealed partial class RegionOverlayForm
             _hoverButtonStartTime = DateTime.UtcNow;
         }
 
+        bool hovBrand = _brandRect.Contains(e.Location);
+        bool hovActivator = _menuActivatorRect.Contains(e.Location);
+        if (hovBrand != _hoveredBrand || hovActivator != _hoveredMenuActivator)
+        {
+            _hoveredBrand = hovBrand;
+            _hoveredMenuActivator = hovActivator;
+            toolbarDirty = true;
+            if (hovBrand || hovActivator)
+            {
+                HideToolbarTooltip();
+            }
+        }
+
         bool prevHoveredAlt = _hoveredAltCaptureBtn;
         _hoveredAltCaptureBtn = _altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location);
         if (_hoveredAltCaptureBtn != prevHoveredAlt)
@@ -1013,6 +1026,8 @@ public sealed partial class RegionOverlayForm
         {
             _eraserHoverIndex = -1;
             _hoveredButton = -1;
+            _hoveredBrand = false;
+            _hoveredMenuActivator = false;
             if (_hoveredTextBtn >= 0)
             {
                 _hoveredTextBtn = -1;

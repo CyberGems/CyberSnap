@@ -48,6 +48,12 @@ public sealed partial class RegionOverlayForm
 
         // Hide the first-time capture banner on any user interaction
         HideCaptureBanner();
+        if (_brandRect.Contains(e.Location) || _menuActivatorRect.Contains(e.Location))
+        {
+            HideToolbarTooltip();
+            ShowToolbarContextMenu(-1, e.Location);
+            return;
+        }
         if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
         {
             if (HandleColorPickerClick(e.Location))
