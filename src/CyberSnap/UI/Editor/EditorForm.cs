@@ -724,17 +724,32 @@ public sealed partial class EditorForm : Form
     {
         var s = Services.SettingsService.LoadStatic();
         bool prefJpg = s?.EditorExportFormat == 1;
-        string ext = prefJpg ? ".jpg" : ".png";
-        string filter = prefJpg
-            ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
-            : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf";
+        bool prefPdf = s?.EditorExportFormat == 2;
+        string ext = prefPdf ? ".pdf" : (prefJpg ? ".jpg" : ".png");
+        string filter = prefPdf
+            ? "Portable Document Format (*.pdf)|*.pdf|PNG|*.png|JPEG|*.jpg"
+            : (prefJpg
+                ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
+                : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf");
+
+        string defaultName;
+        if (string.IsNullOrWhiteSpace(_savedFilePath))
+        {
+            defaultName = prefPdf
+                ? $"CyberSnap_PDF_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+                : $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}{ext}";
+        }
+        else
+        {
+            defaultName = prefPdf && !_savedFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileNameWithoutExtension(_savedFilePath) + ".pdf"
+                : Path.GetFileNameWithoutExtension(_savedFilePath) + $"_edited{ext}";
+        }
 
         using var dlg = new SaveFileDialog
         {
             Filter = filter,
-            FileName = string.IsNullOrWhiteSpace(_savedFilePath)
-                ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}{ext}"
-                : Path.GetFileNameWithoutExtension(_savedFilePath) + $"_edited{ext}",
+            FileName = defaultName,
             DefaultExt = ext,
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
@@ -763,17 +778,32 @@ public sealed partial class EditorForm : Form
     {
         var s = Services.SettingsService.LoadStatic();
         bool prefJpg = s?.EditorExportFormat == 1;
-        string ext = prefJpg ? ".jpg" : ".png";
-        string filter = prefJpg
-            ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
-            : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf";
+        bool prefPdf = s?.EditorExportFormat == 2;
+        string ext = prefPdf ? ".pdf" : (prefJpg ? ".jpg" : ".png");
+        string filter = prefPdf
+            ? "Portable Document Format (*.pdf)|*.pdf|PNG|*.png|JPEG|*.jpg"
+            : (prefJpg
+                ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
+                : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf");
+
+        string defaultName;
+        if (string.IsNullOrWhiteSpace(_savedFilePath))
+        {
+            defaultName = prefPdf
+                ? $"CyberSnap_PDF_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+                : $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}{ext}";
+        }
+        else
+        {
+            defaultName = prefPdf && !_savedFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileNameWithoutExtension(_savedFilePath) + ".pdf"
+                : Path.GetFileNameWithoutExtension(_savedFilePath) + $"_edited{ext}";
+        }
 
         using var dlg = new SaveFileDialog
         {
             Filter = filter,
-            FileName = string.IsNullOrWhiteSpace(_savedFilePath)
-                ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}{ext}"
-                : Path.GetFileNameWithoutExtension(_savedFilePath) + $"_edited{ext}",
+            FileName = defaultName,
             DefaultExt = ext,
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;

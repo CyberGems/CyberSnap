@@ -3703,16 +3703,17 @@
                                     <TextBlock Text="&#xE8B3;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Preferred image export format" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Default image format when exporting from the editor." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Preferred export format" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Default format when exporting from the editor." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="EditorExportFormatCombo" Grid.Column="2" MinWidth="90"
                                           VerticalAlignment="Center"
-                                          AutomationProperties.Name="Preferred image export format"
-                                          ToolTip="Default image format when exporting from the editor."
+                                          AutomationProperties.Name="Preferred export format"
+                                          Services:LocalizationService.SourceToolTip="Default format when exporting from the editor."
                                           SelectionChanged="EditorExportFormatCombo_SelectionChanged">
                                     <ComboBoxItem Content="PNG"/>
                                     <ComboBoxItem Content="JPEG"/>
+                                    <ComboBoxItem Content="PDF"/>
                                 </ComboBox>
                             </Grid>
                         </StackPanel>

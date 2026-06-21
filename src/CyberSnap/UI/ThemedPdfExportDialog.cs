@@ -288,7 +288,7 @@ internal sealed class ThemedPdfExportDialog : Window
                 Text = Services.LocalizationService.Translate("IMAGE"),
                 FontSize = 10,
                 FontWeight = FontWeights.Bold,
-                Foreground = Theme.Brush(Theme.Accent),
+                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 30, 46)),
                 HorizontalAlignment = WpfHorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             }
