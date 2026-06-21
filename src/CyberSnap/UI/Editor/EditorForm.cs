@@ -243,7 +243,7 @@ public sealed partial class EditorForm : Form
                 w, h);
             bool confirmed = ThemedConfirmDialog.Confirm(Handle, title, message, out bool dontShowAgain,
                 danger: false, iconId: "maximize");
-            if (confirmed && dontShowAgain && System.Windows.Application.Current is CyberSnap.App app)
+            if (dontShowAgain && System.Windows.Application.Current is CyberSnap.App app)
                 app.PersistEditorSuppressResizeConfirm(true);
             return confirmed;
         };
