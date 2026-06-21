@@ -232,8 +232,9 @@ public sealed partial class EditorForm : Form
         _canvas.BlankBitmapFactory = (w, h) => CreateBlankCheckerboard(EditorColors.IsDark, w, h);
         _canvas.ConfirmResizeByHandle = (w, h) =>
         {
-            // Skip the dialog if the user previously checked "Don't show again".
-            if (settings?.EditorSuppressResizeConfirm == true)
+            // Reload fresh each time — the delegate outlives the constructor's snapshot.
+            var s = Services.SettingsService.LoadStatic();
+            if (s?.EditorSuppressResizeConfirm == true)
                 return true;
 
             var title = LocalizationService.Translate("Resize canvas");
