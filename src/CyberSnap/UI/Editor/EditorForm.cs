@@ -681,7 +681,7 @@ public sealed partial class EditorForm : Form
     {
         using var dlg = new SaveFileDialog
         {
-            Filter = $"PNG|*.png|JPEG|*.jpg|{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp",
+            Filter = "PNG|*.png|JPEG|*.jpg",
             FileName = string.IsNullOrWhiteSpace(_savedFilePath)
                 ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.png"
                 : Path.GetFileNameWithoutExtension(_savedFilePath) + "_edited.png",
@@ -689,23 +689,16 @@ public sealed partial class EditorForm : Form
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-        if (dlg.FileName.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            DoSaveProject(dlg.FileName);
+            using var output = _canvas.RenderFinal();
+            SaveRenderedBitmap(output, dlg.FileName);
+            _savedFilePath = dlg.FileName;
+            FinishSuccessfulSave(output, dlg.FileName);
         }
-        else
+        catch (Exception ex)
         {
-            try
-            {
-                using var output = _canvas.RenderFinal();
-                SaveRenderedBitmap(output, dlg.FileName);
-                _savedFilePath = dlg.FileName;
-                FinishSuccessfulSave(output, dlg.FileName);
-            }
-            catch (Exception ex)
-            {
-                ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
-            }
+            ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
         }
     }
 
@@ -713,7 +706,7 @@ public sealed partial class EditorForm : Form
     {
         using var dlg = new SaveFileDialog
         {
-            Filter = $"PNG|*.png|JPEG|*.jpg|{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp",
+            Filter = "PNG|*.png|JPEG|*.jpg",
             FileName = string.IsNullOrWhiteSpace(_savedFilePath)
                 ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.png"
                 : Path.GetFileNameWithoutExtension(_savedFilePath) + "_edited.png",
@@ -721,22 +714,15 @@ public sealed partial class EditorForm : Form
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-        if (dlg.FileName.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            DoSaveProject(dlg.FileName);
+            SaveRenderedBitmap(output, dlg.FileName);
+            _savedFilePath = dlg.FileName;
+            FinishSuccessfulSave(output, dlg.FileName);
         }
-        else
+        catch (Exception ex)
         {
-            try
-            {
-                SaveRenderedBitmap(output, dlg.FileName);
-                _savedFilePath = dlg.FileName;
-                FinishSuccessfulSave(output, dlg.FileName);
-            }
-            catch (Exception ex)
-            {
-                ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
-            }
+            ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
         }
     }
 
