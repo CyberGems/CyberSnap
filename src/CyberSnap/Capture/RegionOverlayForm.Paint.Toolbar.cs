@@ -128,7 +128,8 @@ public sealed partial class RegionOverlayForm
         }
 
         // Grayscale and opacity Matrix (40% opacity in dark mode, 35% in light mode)
-        float opacity = UiChrome.IsDark ? 0.35f : 0.40f;
+        float baseOpacity = UiChrome.IsDark ? 0.35f : 0.40f;
+        float opacity = _hoveredBrand ? (UiChrome.IsDark ? 0.70f : 0.80f) : baseOpacity;
         float textOpacity = opacity * 0.80f; // Slightly lower opacity than the solid logo to visually balance thin stroke vs solid block density
         var cm = new ColorMatrix(new float[][]
         {
@@ -400,6 +401,35 @@ public sealed partial class RegionOverlayForm
             int ia = active ? 255 : hover ? 240 : (i == CloseButtonIndex || i == PositionButtonIndex) ? 130 : 200;
             var iconColor = active ? tierAccent : UiChrome.SurfaceTextPrimary;
             DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
+        }
+
+        // Draw elegant mini menu activator
+        if (_hoveredMenuActivator)
+        {
+            using (var path = WindowsDockRenderer.RoundedRect(_menuActivatorRect, UiChrome.ScaleInt(3)))
+            using (var brush = new SolidBrush(Color.FromArgb(30, UiChrome.AccentColor)))
+                g.FillPath(brush, path);
+        }
+
+        int triW = UiChrome.ScaleInt(6);
+        int triH = UiChrome.ScaleInt(4);
+        float tcx = _menuActivatorRect.X + _menuActivatorRect.Width / 2f;
+        float tcy = _menuActivatorRect.Y + _menuActivatorRect.Height / 2f;
+
+        PointF[] points = new PointF[]
+        {
+            new PointF(tcx - triW / 2f, tcy - triH / 2f),
+            new PointF(tcx + triW / 2f, tcy - triH / 2f),
+            new PointF(tcx, tcy + triH / 2f)
+        };
+
+        Color arrowColor = _hoveredMenuActivator 
+            ? UiChrome.AccentColor 
+            : Color.FromArgb((int)((UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f * 255), UiChrome.SurfaceTextPrimary);
+
+        using (var brush = new SolidBrush(arrowColor))
+        {
+            g.FillPolygon(brush, points);
         }
 
         g.SmoothingMode = SmoothingMode.Default;

@@ -94,6 +94,10 @@ public sealed partial class RegionOverlayForm : Form
 
     private bool _showToolNumberBadges = true;
     private Rectangle _toolbarRect;
+    private Rectangle _brandRect;
+    private Rectangle _menuActivatorRect;
+    private bool _hoveredBrand;
+    private bool _hoveredMenuActivator;
     private Rectangle _toolbarAnchorArea;
     private Rectangle _lastOverlayUiBounds;
     private int _toolbarRenderVersion;
@@ -562,7 +566,14 @@ public sealed partial class RegionOverlayForm : Form
         BuildToolbarToolSplit(screenBounds, buttonSize, buttonSpacing, pad);
         _sepAfter = Array.Empty<int>(); // dividers drawn manually inside PaintToolbar
 
+        int activatorWidth = UiChrome.ScaleInt(14);
+        int activatorSpacing = buttonSpacing;
+
         int tier1PrimarySpan = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, pad);
+        if (!IsVerticalDock)
+        {
+            tier1PrimarySpan += activatorWidth + activatorSpacing;
+        }
         int tier2PrimarySpan = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, pad);
         int maxPrimarySpan = Math.Max(tier1PrimarySpan, tier2PrimarySpan);
 
@@ -666,6 +677,9 @@ public sealed partial class RegionOverlayForm : Form
             int col1StartY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - col1Height) / 2;
             int col1X = _toolbarRect.X + pad;
 
+            _brandRect = new Rectangle(col1X, _toolbarRect.Y + pad, buttonSize, col1StartY - (_toolbarRect.Y + pad));
+            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorWidth, _toolbarRect.Y + pad + UiChrome.ScaleInt(4), activatorWidth, activatorWidth);
+
             int cy = col1StartY;
             for (int i = 0; i < _mainBarTools.Length; i++)
             {
@@ -702,12 +716,15 @@ public sealed partial class RegionOverlayForm : Form
         {
             // Row 1: Capture & System Tools
             int row1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
-            int row1StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row1Width) / 2;
+            int row1StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row1Width - activatorWidth - activatorSpacing) / 2;
             if (row1StartX < _toolbarRect.X + brandWidth)
             {
                 row1StartX = _toolbarRect.X + brandWidth;
             }
             int row1Y = _toolbarRect.Y + pad;
+
+            _brandRect = new Rectangle(_toolbarRect.X, _toolbarRect.Y, brandWidth, pad * 2 + buttonSize);
+            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorWidth, _toolbarRect.Y + pad + (buttonSize - activatorWidth) / 2, activatorWidth, activatorWidth);
 
             int cx = row1StartX;
             for (int i = 0; i < _mainBarTools.Length; i++)
