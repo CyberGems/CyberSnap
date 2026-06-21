@@ -42,6 +42,7 @@ public sealed partial class RegionOverlayForm
         if (settings == null) return;
 
         var isSpanish = string.Equals(settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
+        var currentlyEnabled = settings.EnabledTools ?? ToolDef.DefaultEnabledIds();
 
         var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: 200);
         _toolbarContextMenu = menu;
@@ -70,8 +71,7 @@ public sealed partial class RegionOverlayForm
             // Don't allow hiding the last capture tool
             if (tool.Group == 0)
             {
-                var enabled = settings.EnabledTools ?? ToolDef.DefaultEnabledIds();
-                var captureToolsCount = enabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 0));
+                var captureToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 0));
                 if (captureToolsCount <= 1)
                 {
                     hideItem.Enabled = false;
@@ -82,12 +82,24 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(new ToolStripSeparator());
         }
 
+        // Hide annotation bar item
+        var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
+        if (annotationToolsCount > 0)
+        {
+            var hideBarText = isSpanish ? "Ocultar barra de anotaciones" : "Hide annotation bar";
+            var hideBarItem = new ToolStripMenuItem(hideBarText);
+            hideBarItem.Click += (s, e) => {
+                HideAllAnnotationTools();
+            };
+            menu.Items.Add(hideBarItem);
+            menu.Items.Add(new ToolStripSeparator());
+        }
+
         // 3. Show Hidden submenu
         var showHiddenText = isSpanish ? "Mostrar ocultos" : "Show Hidden";
         var showHiddenSubmenu = WindowsMenuRenderer.Submenu(showHiddenText, showImages: false);
 
         var allTools = ToolDef.AllTools;
-        var currentlyEnabled = settings.EnabledTools ?? ToolDef.DefaultEnabledIds();
         var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
 
         if (hiddenTools.Count == 0)
@@ -133,6 +145,22 @@ public sealed partial class RegionOverlayForm
     private void ShowAllTools()
     {
         var enabled = ToolDef.AllTools.Select(t => t.Id).ToList();
+        EnabledToolsChanged?.Invoke(enabled);
+        SetEnabledTools(enabled);
+        CalcToolbar();
+        InvalidateToolbarArea();
+    }
+
+    private void HideAllAnnotationTools()
+    {
+        var settings = Services.SettingsService.LoadStatic();
+        if (settings == null) return;
+        var enabled = (settings.EnabledTools ?? ToolDef.DefaultEnabledIds()).ToList();
+        var annotationIds = ToolDef.AllTools.Where(t => t.Group == 1).Select(t => t.Id);
+        foreach (var id in annotationIds)
+        {
+            enabled.Remove(id);
+        }
         EnabledToolsChanged?.Invoke(enabled);
         SetEnabledTools(enabled);
         CalcToolbar();

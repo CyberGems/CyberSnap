@@ -210,6 +210,7 @@ public partial class SettingsWindow
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
             PopulateWidgetMonitors();
+            WidgetAlwaysOnTopCheck.IsChecked = s.WidgetAlwaysOnTop;
             UpdateWidgetOptionsVisibility(s.ShowCaptureWidget);
             EditorFitCheck.IsChecked = s.EditorFitToWindowOnOpen;
             EditorShowFrameCheck.IsChecked = s.EditorShowFrame;

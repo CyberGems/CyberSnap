@@ -254,21 +254,24 @@ public sealed partial class RegionOverlayForm
         g.TextRenderingHint = oldHint;
 
         // 1. Divider line splitting Tier 1 from Tier 2
-        if (IsVerticalDock)
+        if (_flyoutTools.Length > 0)
         {
-            int dividerX = _toolbarRect.X + pad + buttonSize + buttonSpacing / 2;
-            int inset = UiChrome.ScaleInt(12);
-            WindowsDockRenderer.PaintDivider(g, new Point(dividerX, r.Y + inset), new Point(dividerX, r.Bottom - inset));
-        }
-        else
-        {
-            int dividerY = _toolbarRect.Y + pad + buttonSize + buttonSpacing / 2;
-            int inset = UiChrome.ScaleInt(12);
-            WindowsDockRenderer.PaintDivider(g, new Point(r.X + inset, dividerY), new Point(r.Right - inset, dividerY));
+            if (IsVerticalDock)
+            {
+                int dividerX = _toolbarRect.X + pad + buttonSize + buttonSpacing / 2;
+                int inset = UiChrome.ScaleInt(12);
+                WindowsDockRenderer.PaintDivider(g, new Point(dividerX, r.Y + inset), new Point(dividerX, r.Bottom - inset));
+            }
+            else
+            {
+                int dividerY = _toolbarRect.Y + pad + buttonSize + buttonSpacing / 2;
+                int inset = UiChrome.ScaleInt(12);
+                WindowsDockRenderer.PaintDivider(g, new Point(r.X + inset, dividerY), new Point(r.Right - inset, dividerY));
+            }
         }
 
-        // 2. Tier 1 Dividers: after scroll (2) and last capture tool
-        int[] tier1SepIndices = { 2 };
+        // 2. Tier 1 Dividers: after scroll (3) and last capture tool
+        int[] tier1SepIndices = { 3 };
         foreach (int idx in tier1SepIndices)
         {
             if (idx < 0 || idx >= _toolbarButtons.Length) continue;

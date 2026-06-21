@@ -844,6 +844,7 @@ public partial class SettingsWindow
             "WidgetEnableEditor"        => WidgetEnableEditorCheck,
             "WidgetDockEdge"            => WidgetDockEdgeCombo,
             "WidgetHoverDelay"          => WidgetHoverDelayCombo,
+            "WidgetAlwaysOnTop"         => WidgetAlwaysOnTopCheck,
             _ => null
         };
     }

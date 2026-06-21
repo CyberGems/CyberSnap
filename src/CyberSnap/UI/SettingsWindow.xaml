@@ -2542,6 +2542,27 @@
                             </Grid>
                             <Border x:Name="WidgetOptionsSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
 
+                            <!-- Widget Always On Top CheckBox -->
+                            <Grid x:Name="WidgetAlwaysOnTopRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE718;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Always on top" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Keep the floating widget above all other windows." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="WidgetAlwaysOnTopCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Always on top"
+                                          ToolTip="Keep the floating widget above all other windows."
+                                          Checked="WidgetAlwaysOnTopCheck_Changed" Unchecked="WidgetAlwaysOnTopCheck_Changed"/>
+                            </Grid>
+                            <Border x:Name="WidgetAlwaysOnTopSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+
                             <!-- Enable Editor CheckBox (mirrors the widget's own "Enable editor" toggle) -->
                             <Grid x:Name="WidgetEnableEditorRow" Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>

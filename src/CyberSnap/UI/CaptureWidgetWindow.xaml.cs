@@ -76,6 +76,8 @@ public partial class CaptureWidgetWindow : Window
         Loaded += OnLoaded;
         SourceInitialized += OnSourceInitialized;
 
+        Topmost = _settings.WidgetAlwaysOnTop;
+
         LoadIcons();
         RefreshLayout();
         UpdateEnableEditorState();
@@ -735,7 +737,7 @@ public partial class CaptureWidgetWindow : Window
     {
         // Built with WindowsMenuRenderer so it is pixel-identical to the tray icon menu
         // (dark rounded surface, accent hover bar) instead of the default WPF look.
-        var menu = Helpers.WindowsMenuRenderer.Create(showImages: false, minWidth: 220);
+        var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
 
         menu.Items.Add(BuildDockEdgeSubmenu());
 
@@ -744,6 +746,13 @@ public partial class CaptureWidgetWindow : Window
             menu.Items.Add(screenMenu);
 
         menu.Items.Add(BuildActivationDelaySubmenu());
+
+        menu.Items.Add(BuildCaptureToggle("Always on top", _settings.WidgetAlwaysOnTop,
+            () => {
+                _settings.WidgetAlwaysOnTop = !_settings.WidgetAlwaysOnTop;
+                Topmost = _settings.WidgetAlwaysOnTop;
+                ((App)System.Windows.Application.Current).SyncSettingsAlwaysOnTopCheck();
+            }));
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
@@ -783,12 +792,18 @@ public partial class CaptureWidgetWindow : Window
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
 
         // "Widget" submenu mirrors the right-click context menu options.
-        var widgetMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Widget"));
+        var widgetMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Widget"), showImages: true);
         widgetMenu.DropDownItems.Add(BuildDockEdgeSubmenu());
         var screenMenu = BuildScreenSubmenu();
         if (screenMenu != null)
             widgetMenu.DropDownItems.Add(screenMenu);
         widgetMenu.DropDownItems.Add(BuildActivationDelaySubmenu());
+        widgetMenu.DropDownItems.Add(BuildCaptureToggle("Always on top", _settings.WidgetAlwaysOnTop,
+            () => {
+                _settings.WidgetAlwaysOnTop = !_settings.WidgetAlwaysOnTop;
+                Topmost = _settings.WidgetAlwaysOnTop;
+                ((App)System.Windows.Application.Current).SyncSettingsAlwaysOnTopCheck();
+            }));
         widgetMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
         widgetMenu.DropDownItems.Add(BuildDisableItem());
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(widgetMenu, minWidth: 200);
