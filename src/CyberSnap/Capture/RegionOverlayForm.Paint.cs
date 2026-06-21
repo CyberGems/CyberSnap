@@ -212,11 +212,11 @@ public sealed partial class RegionOverlayForm
                 float cancelShine = shineOn ? _shinePhase[1] : -1f;
 
                 float confirmOpacity = UI.Motion.Disabled
-                    ? (_hoveredConfirmButton == 1 ? 0.35f : 1.0f)
-                    : (0.35f + 0.65f * _shineMain[0]);
+                    ? (_hoveredConfirmButton == 1 ? 0.15f : 1.0f)
+                    : (0.15f + 0.85f * _shineMain[0]);
                 float cancelOpacity = UI.Motion.Disabled
-                    ? (_hoveredConfirmButton == 0 ? 0.35f : 1.0f)
-                    : (0.35f + 0.65f * _shineMain[1]);
+                    ? (_hoveredConfirmButton == 0 ? 0.15f : 1.0f)
+                    : (0.15f + 0.85f * _shineMain[1]);
 
                 // 3D action buttons: green "Confirm" / red "Cancel", each with a white icon
                 // badge, a hover-igniting glow, a click squash, and a glint traveling the
