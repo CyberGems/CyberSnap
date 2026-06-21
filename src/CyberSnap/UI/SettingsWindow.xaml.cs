@@ -95,8 +95,13 @@ public partial class SettingsWindow : Window
             // Restore the last size only. The position is intentionally NOT restored:
             // the window always opens centered on the screen where the user triggered it,
             // even if they moved it before closing last time.
-            this.Width = settings.SettingsWindowWidth;
-            this.Height = settings.SettingsWindowHeight;
+            // Cap the restored size at 80% of the work area so the restored window is
+            // visibly distinct from the maximized state.
+            var wa = SystemParameters.WorkArea;
+            double maxW = Math.Max(MinWidth, wa.Width * 0.80);
+            double maxH = Math.Max(MinHeight, wa.Height * 0.80);
+            this.Width = Math.Min(settings.SettingsWindowWidth, maxW);
+            this.Height = Math.Min(settings.SettingsWindowHeight, maxH);
         }
 
         // Always center on the monitor under the cursor before clamping into the work area.
