@@ -288,14 +288,12 @@ public partial class HistoryWindow
 
     private static string FormatImageSearchVisibleCountText(int visibleCount, int matchedCount, string sizeText)
     {
-        var matchLabel = LocalizationService.Translate(matchedCount == 1 ? "match" : "matches");
-        return $"{visibleCount} {LocalizationService.Translate("visible of")} {matchedCount} {matchLabel} · {sizeText}";
+        return $"{visibleCount} {LocalizationService.Translate("visible of")} {matchedCount} {LocalizationService.Translate("search matches")} · {sizeText}";
     }
 
     private static string FormatImageSearchMatchCountText(int matchedCount, bool uploadFilterActive, string sizeText)
     {
-        var matchLabel = LocalizationService.Translate(matchedCount == 1 ? "match" : "matches");
-        return $"{matchedCount} {LocalizationService.Translate("search")} {matchLabel} · {sizeText}";
+        return $"{matchedCount} {LocalizationService.Translate("search matches")} · {sizeText}";
     }
 
     private static string FormatImageUploadFilterCountText(int filteredCount, int totalCount, string sizeText)
