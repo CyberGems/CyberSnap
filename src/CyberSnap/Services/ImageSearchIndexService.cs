@@ -88,6 +88,23 @@ public static class ImageSearchQueryMatcher
         return ScoreCore(normalizedQuery, normalizedSearchText, normalizedFileName, exactMatch);
     }
 
+    public static int ScorePreNormalized(string normalizedQuery, string normalizedSearchText, string normalizedFileName, string rawFileName, string rawQuery, bool exactMatch = false)
+    {
+        if (string.IsNullOrWhiteSpace(normalizedQuery))
+            return 1;
+
+        if (!string.IsNullOrEmpty(rawFileName) && !string.IsNullOrEmpty(rawQuery))
+        {
+            var rawComparison = StringComparison.OrdinalIgnoreCase;
+            if (rawFileName.StartsWith(rawQuery, rawComparison))
+                return 1000;
+            if (rawFileName.Contains(rawQuery, rawComparison))
+                return 500;
+        }
+
+        return ScoreCore(normalizedQuery, normalizedSearchText, normalizedFileName, exactMatch);
+    }
+
     private static int ScoreCore(string normalizedQuery, string normalizedSearchText, string normalizedFileName, bool exactMatch)
     {
         var queryTokens = Tokenize(normalizedQuery).ToArray();

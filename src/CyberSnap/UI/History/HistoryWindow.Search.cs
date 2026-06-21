@@ -168,6 +168,7 @@ public partial class HistoryWindow
                 Item = item,
                 Score = ScoreLocalImageItem(
                     normalizedQuery,
+                    query,
                     item,
                     allowFileName,
                     allowOcr && item.SearchMetadataHydrated,
@@ -183,14 +184,15 @@ public partial class HistoryWindow
         return rankedItems;
     }
 
-    private static int ScoreLocalImageItem(string normalizedQuery, HistoryItemVM item, bool allowFileName, bool allowOcr, bool exactMatch)
+    private static int ScoreLocalImageItem(string normalizedQuery, string rawQuery, HistoryItemVM item, bool allowFileName, bool allowOcr, bool exactMatch)
     {
         if (string.IsNullOrWhiteSpace(normalizedQuery))
             return 1;
 
         var searchableText = allowOcr ? item.NormalizedSearchText : "";
         var fileName = allowFileName ? item.NormalizedFileNameSearchText : "";
-        return ImageSearchQueryMatcher.ScorePreNormalized(normalizedQuery, searchableText, fileName, exactMatch);
+        var rawFileName = allowFileName ? item.Entry.FileName : "";
+        return ImageSearchQueryMatcher.ScorePreNormalized(normalizedQuery, searchableText, fileName, rawFileName, rawQuery, exactMatch);
     }
 
     private async Task ApplyIndexedImageSearchAsync(int version, string query, ImageSearchSourceOptions sources, CancellationToken cancellationToken)
