@@ -127,6 +127,17 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-suppress-paste-confirm", ex); }
     }
 
+    /// <summary>Persists the editor undo limit (clamped 1–200).</summary>
+    public void PersistEditorUndoLimit(int limit)
+    {
+        if (_settingsService is null) return;
+        var clamped = Math.Clamp(limit, 1, 200);
+        if (_settingsService.Settings.EditorUndoLimit == clamped) return;
+        _settingsService.Settings.EditorUndoLimit = clamped;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-undo-limit", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "show rulers" preference.</summary>
     public void PersistEditorShowRulers(bool showRulers)
     {

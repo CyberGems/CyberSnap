@@ -220,6 +220,7 @@ public partial class SettingsWindow
             EditorShowResizeHandlesCheck.IsChecked = s.EditorShowResizeHandles;
             EditorResizeScaleContentCheck.IsChecked = s.EditorResizeHandlesScaleContent;
             EditorPanModeLockCheck.IsChecked = s.EditorPanModeLockObjects;
+            SelectUndoLimit(s.EditorUndoLimit);
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
             SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
             RecordShowCursorCheck.IsChecked = s.ShowCursor;
@@ -789,14 +790,37 @@ public partial class SettingsWindow
             value => EditorPanModeLockCheck.IsChecked = value);
     }
 
+    private void EditorUndoLimitCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        if (EditorUndoLimitCombo.SelectedItem is not ComboBoxItem item) return;
+        if (item.Tag is not string tagStr || !int.TryParse(tagStr, out int limit)) return;
+        var previous = _settingsService.Settings.EditorUndoLimit;
+        UpdateGeneralPreference(
+            "settings.editor-undo-limit",
+            "Editor undo limit",
+            previous,
+            limit,
+            value => _settingsService.Settings.EditorUndoLimit = value,
+            value =>
+            {
+                for (int i = 0; i < EditorUndoLimitCombo.Items.Count; i++)
+                {
+                    if (EditorUndoLimitCombo.Items[i] is ComboBoxItem cbi && cbi.Tag is string t && int.TryParse(t, out int v) && v == value)
+                    {
+                        EditorUndoLimitCombo.SelectedIndex = i;
+                        return;
+                    }
+                }
+            });
+    }
+
     private void ResetSuppressedDialogsButton_Click(object sender, RoutedEventArgs e)
     {
         _settingsService.Settings.EditorSuppressResizeConfirm = false;
         _settingsService.Settings.EditorSuppressPasteConfirm = false;
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("settings.reset-suppressed-dialogs", ex); }
-        // Flash feedback — the button is a one-shot action with no toggle state,
-        // so briefly change its text to confirm.
         var original = ResetSuppressedDialogsButton.Content?.ToString() ?? "Reset";
         ResetSuppressedDialogsButton.Content = Services.LocalizationService.Translate("Suppressed dialogs restored");
         var timer = new System.Windows.Threading.DispatcherTimer
@@ -809,5 +833,19 @@ public partial class SettingsWindow
             ResetSuppressedDialogsButton.Content = original;
         };
         timer.Start();
+    }
+
+    private void SelectUndoLimit(int limit)
+    {
+        for (int i = 0; i < EditorUndoLimitCombo.Items.Count; i++)
+        {
+            if (EditorUndoLimitCombo.Items[i] is ComboBoxItem item &&
+                item.Tag is string tag && int.TryParse(tag, out int val) && val == limit)
+            {
+                EditorUndoLimitCombo.SelectedIndex = i;
+                return;
+            }
+        }
+        EditorUndoLimitCombo.SelectedIndex = 4; // default to 100
     }
 }

@@ -37,8 +37,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         Emoji,
     }
 
-    private const int UndoStackLimit = 200;
-    private const double MinZoom = 0.1;
+    private int _undoStackLimit = 100;
+    private const double MinZoom = 0.2;
     private const double MaxZoom = 8.0;
 
     // Above this source-pixel count, zoom gestures draw a fast (slightly soft) draft and
@@ -46,7 +46,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     // that the draft would only add a visible blur + snap-back, so we skip it. ~4 MP keeps
     // typical screenshots (1080p/1200p/1440p) crisp while large images stay fluid.
     private const long DraftZoomPixelThreshold = 4_000_000;
-    public const int MinZoomPercent = 10;
+    public const int MinZoomPercent = 20;
     public const int MaxZoomPercent = 800;
 
     private Bitmap _baseBitmap;
@@ -738,6 +738,15 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         OnStateChanged();
     }
 
+    /// <summary>Maximum number of undo steps kept in memory. Clamped 1–200.
+    /// Lower values reduce memory for large canvases; higher values keep more history.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int UndoLimit
+    {
+        get => _undoStackLimit;
+        set => _undoStackLimit = Math.Clamp(value, 1, 200);
+    }
+
     // ── Undo / Redo ────────────────────────────────────────────────────────
 
     public void Push(IEditCommand command)
@@ -759,7 +768,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         }
         command.Apply(this);
         _undoStack.Add(command);
-        if (_undoStack.Count > UndoStackLimit)
+        if (_undoStack.Count > _undoStackLimit)
         {
             var dropped = _undoStack[0];
             _undoStack.RemoveAt(0);
@@ -778,7 +787,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     {
         command.Apply(this);
         _undoStack.Add(command);
-        if (_undoStack.Count > UndoStackLimit)
+        if (_undoStack.Count > _undoStackLimit)
         {
             var dropped = _undoStack[0];
             _undoStack.RemoveAt(0);

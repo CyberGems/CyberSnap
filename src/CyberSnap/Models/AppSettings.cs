@@ -245,6 +245,8 @@ public sealed class AppSettings
     // When true, the "Don't show again" checkbox was checked in the paste-replace
     // confirmation dialog, so future pastes replace the document without asking.
     public bool EditorSuppressPasteConfirm { get; set; }
+    /// <summary>Maximum undo steps in the editor (1–200). Default 100.</summary>
+    public int EditorUndoLimit { get; set; } = 100;
     public bool EditorShowRulers { get; set; } = true;
     public bool EditorShowFrame { get; set; } = true;
     public bool EditorShowHints { get; set; } = true;
