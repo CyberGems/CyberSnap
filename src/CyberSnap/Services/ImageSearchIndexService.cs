@@ -100,6 +100,7 @@ public static class ImageSearchQueryMatcher
                 return 1000;
             if (rawFileName.Contains(rawQuery, rawComparison))
                 return 500;
+            return 0;
         }
 
         return ScoreCore(normalizedQuery, normalizedSearchText, normalizedFileName, exactMatch);
