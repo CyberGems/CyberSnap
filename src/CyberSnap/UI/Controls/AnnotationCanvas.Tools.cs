@@ -842,6 +842,8 @@ public sealed partial class AnnotationCanvas
 
         if (_cropDragging)
         {
+            if (_baseBitmap is null) return;
+
             if (_activeCropHandle == -1)
             {
                 _cropRect = NormRect(_dragStartImg, img);
