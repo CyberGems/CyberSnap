@@ -344,7 +344,7 @@ public sealed partial class EditorForm
         // The bar sits at the bottom of the window, so the bubbles open upward (above: true).
         // RegisterHoverTooltip(_toggleFrameSwitch, "Show a frame around the capture");
         RegisterHoverTooltip(_toggleFitSwitch, "Fit the image to the window when the editor opens");
-        RegisterHoverTooltip(_togglePanLockSwitch, "Lock objects in Pan tool");
+        RegisterHoverTooltip(_togglePanLockSwitch, "Lock object editing in Pan mode");
         RegisterHoverTooltip(coordsPanel, "Cursor position over the image (X, Y)");
 
         RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", LocalizationService.Translate("key 0")));
@@ -1272,7 +1272,7 @@ public sealed partial class EditorForm
         borderItem.ToolTipText = LocalizationService.Translate("Show a frame around the capture in the editor.");
         var fitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-fit image to window"), iconId: null);
         fitItem.ToolTipText = LocalizationService.Translate("Fit the image to the window when the editor opens.");
-        var lockObjectsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Lock objects in Pan tool"), iconId: null);
+        var lockObjectsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Lock object editing in Pan mode"), iconId: null);
         lockObjectsItem.ToolTipText = LocalizationService.Translate("Prevent moving or resizing annotations while the Pan tool is active.");
         var cropHandlesItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-show crop handles"), iconId: null);
         cropHandlesItem.ToolTipText = LocalizationService.Translate("Automatically show crop handles when the crop tool is active.");
@@ -2468,7 +2468,7 @@ internal static class EditorPaint
     {
         var path = new GraphicsPath();
         int diameter = Math.Max(1, radius * 2);
-        if (rect.Width <= diameter || rect.Height <= diameter)
+        if (rect.Width < diameter || rect.Height < diameter)
         {
             path.AddRectangle(rect);
             return path;

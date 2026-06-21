@@ -3634,7 +3634,7 @@
                                           Checked="EditorResizeScaleContentCheck_Changed" Unchecked="EditorResizeScaleContentCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <!-- Lock objects in Pan tool -->
+                            <!-- Lock object editing in Pan mode -->
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -3645,12 +3645,12 @@
                                     <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Lock objects in Pan tool" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Lock object editing in Pan mode" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Prevent moving or resizing annotations while the Pan tool is active." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="EditorPanModeLockCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           ToolTip="Prevent moving or resizing annotations while the Pan tool is active."
-                                          AutomationProperties.Name="Lock objects in Pan tool"
+                                          AutomationProperties.Name="Lock object editing in Pan mode"
                                           Checked="EditorPanModeLockCheck_Changed" Unchecked="EditorPanModeLockCheck_Changed"/>
                             </Grid>
                         </StackPanel>

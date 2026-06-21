@@ -446,7 +446,7 @@
   "Pan": "Pan",
   "Pan (Hold Space)": "Pan (Hold Space)",
   "Lock Objects": "Lock Objects",
-  "Lock objects in Pan tool": "Lock objects in Pan tool",
+  "Lock object editing in Pan mode": "Lock object editing in Pan mode",
   "Prevent moving or resizing annotations while the Pan tool is active.": "Prevent moving or resizing annotations while the Pan tool is active.",
   "Emoji (Scroll Wheel to Resize)": "Emoji (Scroll Wheel to Resize)",
   "Rectangle shape": "Rectangle shape",
