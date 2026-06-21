@@ -461,7 +461,14 @@ public sealed partial class EditorForm
                 return;
             }
             _burgerMenu ??= BuildBurgerMenu();
-            _burgerMenu.Show(menuButton, new Point(0, menuButton.Height));
+            // Use absolute screen coordinates so the menu stays on the correct monitor
+            // even when the button is near the edge (maximized window on multi-monitor).
+            var screenPt = menuButton.PointToScreen(new Point(0, menuButton.Height));
+            var scr = Screen.FromPoint(screenPt);
+            bool nearRight = screenPt.X > scr.Bounds.Left + scr.Bounds.Width * 0.65;
+            _burgerMenu.Show(screenPt, nearRight
+                ? ToolStripDropDownDirection.BelowLeft
+                : ToolStripDropDownDirection.BelowRight);
         };
         windowActions.Controls.Add(menuButton);
 

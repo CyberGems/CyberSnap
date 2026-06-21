@@ -58,7 +58,10 @@ public partial class App
             var name = HotkeyFormatter.Format(s.HotkeyModifiers, s.HotkeyKey);
             var bodyTemplate = LocalizationService.Translate("Press {0} to capture");
             var body = string.Format(bodyTemplate, name);
-            ToastWindow.Show($"CyberSnap {UpdateService.GetCurrentVersionLabel()} ready", body);
+            var title = string.Format(
+                LocalizationService.Translate("CyberSnap v{0} is ready"),
+                UpdateService.GetCurrentVersionLabel());
+            ToastWindow.Show(title, body);
             SoundService.PlayStartupSound();
         }
     }
