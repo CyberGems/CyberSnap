@@ -203,96 +203,23 @@ public sealed partial class RegionOverlayForm
             var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
             using (var btnFont = UiChrome.ChromeFont(11f, FontStyle.Bold))
             {
-                var sf = new StringFormat(StringFormatFlags.NoWrap)
-                {
-                    Alignment = StringAlignment.Center,
-                    LineAlignment = StringAlignment.Center,
-                    Trimming = StringTrimming.None
-                };
-                float corner = UiChrome.ScaledToolbarCornerRadius;
                 bool confirmHover = _hoveredConfirmButton == 0;
                 bool cancelHover = _hoveredConfirmButton == 1;
+                float confirmPress = _pressedConfirmButton == 0 ? _confirmPressAmt : 0f;
+                float cancelPress = _pressedConfirmButton == 1 ? _confirmPressAmt : 0f;
+                bool shineOn = _confirmShineTimer.Enabled && !UI.Motion.Disabled;
+                float confirmShine = shineOn ? _shinePhase[0] : -1f;
+                float cancelShine = shineOn ? _shinePhase[1] : -1f;
 
-                // Soft drop shadow under both buttons for depth
-                using (var shadowPath = WindowsDockRenderer.RoundedRect(
-                    new RectangleF(confirmBtn.X, confirmBtn.Y + 2.5f, confirmBtn.Width, confirmBtn.Height), corner))
-                using (var shadowBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 90 : 45, 0, 0, 0)))
-                    g.FillPath(shadowBrush, shadowPath);
-                using (var shadowPath2 = WindowsDockRenderer.RoundedRect(
-                    new RectangleF(cancelBtn.X, cancelBtn.Y + 2.5f, cancelBtn.Width, cancelBtn.Height), corner))
-                using (var shadowBrush2 = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 90 : 45, 0, 0, 0)))
-                    g.FillPath(shadowBrush2, shadowPath2);
-
-                // ── Confirm button (primary action) ──
-                var confirmAccent = UiChrome.AccentColor;
-                Color accentTop = Color.FromArgb(
-                    Math.Min(255, confirmAccent.R + 45), Math.Min(255, confirmAccent.G + 45), Math.Min(255, confirmAccent.B + 45));
-                Color accentBottom = Color.FromArgb(
-                    (int)(confirmAccent.R * 0.86f), (int)(confirmAccent.G * 0.86f), (int)(confirmAccent.B * 0.86f));
-                using (var confirmPath = WindowsDockRenderer.RoundedRect(confirmBtn, corner))
-                {
-                    // Solid base to completely block background letters
-                    var tier1 = UiChrome.SurfaceTier1;
-                    using var baseFill = new SolidBrush(Color.FromArgb(255, tier1.R, tier1.G, tier1.B));
-                    g.FillPath(baseFill, confirmPath);
-
-                    // Premium vertical gradient accent fill (lighter top → deeper bottom)
-                    using var confirmFill = new System.Drawing.Drawing2D.LinearGradientBrush(
-                        new RectangleF(confirmBtn.X, confirmBtn.Y - 1, confirmBtn.Width, confirmBtn.Height + 2),
-                        Color.FromArgb(confirmHover ? 255 : 235, accentTop),
-                        Color.FromArgb(confirmHover ? 255 : 215, accentBottom),
-                        System.Drawing.Drawing2D.LinearGradientMode.Vertical);
-                    g.FillPath(confirmFill, confirmPath);
-
-                    // Glossy top highlight
-                    var glossRect = new RectangleF(confirmBtn.X + 2, confirmBtn.Y + 1.5f, confirmBtn.Width - 4, confirmBtn.Height * 0.5f);
-                    using var glossPath = WindowsDockRenderer.RoundedRect(glossRect, corner - 1);
-                    using var glossBrush = new SolidBrush(Color.FromArgb(38, 255, 255, 255));
-                    g.FillPath(glossBrush, glossPath);
-                }
-                using (var confirmGlowPen = new Pen(
-                    confirmHover ? Color.FromArgb(90, UiChrome.AccentColor) : Color.FromArgb(50, UiChrome.AccentColor),
-                    confirmHover ? 6f : 5f))
-                using (var confirmGlowPath = WindowsDockRenderer.RoundedRect(
-                    RectangleF.Inflate(confirmBtn, 2, 2), corner))
-                    g.DrawPath(confirmGlowPen, confirmGlowPath);
-                using (var confirmBorderPen = new Pen(
-                    confirmHover ? Color.FromArgb(255, UiChrome.AccentColor) : Color.FromArgb(210, UiChrome.AccentColor), 1.5f))
-                using (var confirmBorderPath = WindowsDockRenderer.RoundedRect(confirmBtn, corner))
-                    g.DrawPath(confirmBorderPen, confirmBorderPath);
-                
-                // Clear high-contrast text
-                using (var confirmTextBrush = new SolidBrush(Color.White))
-                    g.DrawString(LocalizationService.Translate("Confirm"), btnFont, confirmTextBrush, confirmBtn, sf);
-
-                // ── Cancel button (secondary action) ──
-                using (var cancelPath = WindowsDockRenderer.RoundedRect(cancelBtn, corner))
-                {
-                    // Solid base fill with dark red in dark mode, light red in light mode
-                    var cancelBgColor = UiChrome.IsDark
-                        ? Color.FromArgb(255, 45, 12, 12)
-                        : Color.FromArgb(255, 250, 230, 230);
-                    using var cancelFill = new SolidBrush(cancelBgColor);
-                    g.FillPath(cancelFill, cancelPath);
-                    if (cancelHover)
-                    {
-                        using var cancelHoverBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 30 : 20, 239, 68, 68));
-                        g.FillPath(cancelHoverBrush, cancelPath);
-                    }
-                }
-                var neonRedColor = Color.FromArgb(239, 68, 68);
-                using (var cancelGlowPen = new Pen(
-                    cancelHover ? Color.FromArgb(40, neonRedColor) : Color.FromArgb(12, neonRedColor), 4f))
-                using (var cancelGlowPath = WindowsDockRenderer.RoundedRect(
-                    RectangleF.Inflate(cancelBtn, 2, 2), corner))
-                    g.DrawPath(cancelGlowPen, cancelGlowPath);
-                using (var cancelBorderPen = new Pen(
-                    cancelHover ? neonRedColor : Color.FromArgb(UiChrome.IsDark ? 100 : 70, neonRedColor), 1.2f))
-                using (var cancelBorderPath = WindowsDockRenderer.RoundedRect(cancelBtn, corner))
-                    g.DrawPath(cancelBorderPen, cancelBorderPath);
-
-                using (var cancelTextBrush = new SolidBrush(cancelHover ? neonRedColor : UiChrome.SurfaceTextPrimary))
-                    g.DrawString(LocalizationService.Translate("Cancel"), btnFont, cancelTextBrush, cancelBtn, sf);
+                // 3D action buttons: green "Confirm" / red "Cancel", each with a white icon
+                // badge, a hover-igniting glow, a click squash, and a glint traveling the
+                // border so they stay readable over any busy capture background.
+                var confirmColor = Color.FromArgb(34, 197, 94);  // green-500
+                var cancelColor = Color.FromArgb(239, 68, 68);   // red-500
+                DrawConfirmActionPill(g, confirmBtn, confirmColor,
+                    LocalizationService.Translate("Confirm").ToUpperInvariant(), btnFont, confirmHover, isCheck: true, confirmPress, confirmShine, _shineMain[0], _shineDup[0]);
+                DrawConfirmActionPill(g, cancelBtn, cancelColor,
+                    LocalizationService.Translate("Cancel").ToUpperInvariant(), btnFont, cancelHover, isCheck: false, cancelPress, cancelShine, _shineMain[1], _shineDup[1]);
             }
 
             // Draw selection frame and handles ON TOP of buttons
@@ -308,6 +235,206 @@ public sealed partial class RegionOverlayForm
         if (ShowCrosshairGuides && _isSelecting && _lastCursorPos != Point.Empty)
         {
             UpdateCrosshairGuides(_lastCursorPos);
+        }
+    }
+
+    /// <summary>
+    /// Draws a 3D rounded-rectangle confirm/cancel action button: a solid colored face
+    /// with a vertical gradient sitting on a darker extruded "side" block, a white circular
+    /// icon badge (check or cross), a white uppercase label, a soft drop shadow, and an
+    /// outer glow that flares on hover. <paramref name="pressAmt"/> (0→1→0) sinks the face
+    /// onto its base for the click "squash" animation.
+    /// </summary>
+    private static void DrawConfirmActionPill(
+        Graphics g, Rectangle rect, Color baseColor, string label, Font font,
+        bool hover, bool isCheck, float pressAmt, float shinePhase, float shineMain, float shineDup)
+    {
+        static Color Lighten(Color c, int amt) => Color.FromArgb(
+            Math.Min(255, c.R + amt), Math.Min(255, c.G + amt), Math.Min(255, c.B + amt));
+        static Color Darken(Color c, float f) => Color.FromArgb(
+            (int)(c.R * f), (int)(c.G * f), (int)(c.B * f));
+
+        float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
+        float depth = UiChrome.ScaleFloat(5f);   // 3D extrusion thickness
+        float press = depth * pressAmt;           // how far the face sinks while pressed
+
+        // Face sinks downward onto its fixed base while pressed.
+        var face = new RectangleF(rect.X, rect.Y + press, rect.Width, rect.Height);
+        var baseRect = new RectangleF(rect.X, rect.Y + depth, rect.Width, rect.Height);
+
+        Color fillTop = hover ? Lighten(baseColor, 42) : Lighten(baseColor, 20);
+        Color fillBottom = hover ? baseColor : Darken(baseColor, 0.88f);
+        Color sideColor = Darken(baseColor, 0.55f);   // the darker extruded side
+
+        // ── Soft diffused outer glow — concentric low-alpha rings fade outward so it reads
+        //    as a halo, not a hard border. Brightest at the edge, flares on hover. ──
+        var glowBounds = RectangleF.FromLTRB(rect.X, face.Y, rect.Right, baseRect.Bottom);
+        float glowSpread = UiChrome.ScaleFloat(hover ? 11f : 5f);
+        int glowPeak = hover ? 110 : 34;
+        const int glowSteps = 7;
+        for (int i = glowSteps; i >= 1; i--)
+        {
+            float frac = i / (float)glowSteps;          // 1 (outermost) … ~0.14 (innermost)
+            float inflate = glowSpread * frac;
+            float falloff = 1f - frac;                  // stronger nearer the button edge
+            int a = (int)(glowPeak * falloff * falloff);
+            if (a <= 0) continue;
+            using var glowPen = new Pen(Color.FromArgb(a, baseColor), glowSpread / glowSteps * 2.4f)
+            {
+                LineJoin = LineJoin.Round
+            };
+            using var glowPath = WindowsDockRenderer.RoundedRect(
+                RectangleF.Inflate(glowBounds, inflate, inflate), corner + inflate);
+            g.DrawPath(glowPen, glowPath);
+        }
+
+        // ── Soft drop shadow under the base ──
+        using (var shadowPath = WindowsDockRenderer.RoundedRect(
+            new RectangleF(rect.X, rect.Y + depth + 3f, rect.Width, rect.Height), corner))
+        using (var shadowBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 110 : 55, 0, 0, 0)))
+            g.FillPath(shadowBrush, shadowPath);
+
+        // ── 3D side: darker extruded block beneath the face ──
+        using (var sidePath = WindowsDockRenderer.RoundedRect(baseRect, corner))
+        using (var sideBrush = new SolidBrush(sideColor))
+            g.FillPath(sideBrush, sidePath);
+
+        // ── Face body (vertical gradient, fully opaque to block background) ──
+        using (var facePath = WindowsDockRenderer.RoundedRect(face, corner))
+        {
+            using (var fill = new LinearGradientBrush(
+                new RectangleF(face.X, face.Y - 1, face.Width, face.Height + 2),
+                fillTop, fillBottom, LinearGradientMode.Vertical))
+                g.FillPath(fill, facePath);
+
+            // Glossy top highlight (fades while pressed)
+            int glossA = (int)((hover ? 60 : 40) * (1f - 0.5f * pressAmt));
+            var glossRect = new RectangleF(face.X + 2, face.Y + 1.5f, face.Width - 4, face.Height * 0.46f);
+            using (var glossPath = WindowsDockRenderer.RoundedRect(glossRect, Math.Min(corner, glossRect.Height / 2f)))
+            using (var glossBrush = new SolidBrush(Color.FromArgb(glossA, 255, 255, 255)))
+                g.FillPath(glossBrush, glossPath);
+        }
+
+        // ── Traveling glint(s) along the border (off when shinePhase < 0). The hovered
+        //    button shows a second comet half a lap behind; the other button fades out. ──
+        if (shinePhase >= 0f)
+        {
+            if (shineMain > 0.01f)
+                DrawBorderShine(g, face, corner, shinePhase, Color.White, shineMain);
+            if (shineDup > 0.01f)
+                DrawBorderShine(g, face, corner, (shinePhase + 0.5f) % 1f, Color.White, shineDup);
+        }
+
+        // ── Label — white, uppercase, centered in the area right of the badge ──
+        using (var sf = new StringFormat(StringFormatFlags.NoWrap)
+        {
+            Alignment = StringAlignment.Center,
+            LineAlignment = StringAlignment.Center,
+            Trimming = StringTrimming.None
+        })
+        using (var textBrush = new SolidBrush(Color.White))
+        {
+            var textRect = RectangleF.FromLTRB(
+                face.X + face.Height, face.Y, face.Right - face.Height * 0.18f, face.Bottom);
+            g.DrawString(label, font, textBrush, textRect, sf);
+        }
+
+        // ── White circular icon badge on the left ──
+        float pad = face.Height * 0.13f;
+        float badgeD = face.Height - pad * 2f;
+        float bx = face.X + (face.Height - badgeD) / 2f;
+        float by = face.Y + (face.Height - badgeD) / 2f;
+
+        using (var badgeShadow = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 90 : 55, 0, 0, 0)))
+            g.FillEllipse(badgeShadow, bx, by + 1.3f, badgeD, badgeD);
+        using (var badgeFill = new SolidBrush(Color.White))
+            g.FillEllipse(badgeFill, bx, by, badgeD, badgeD);
+
+        // Icon (check or cross) painted in the pill color
+        float stroke = Math.Max(2f, badgeD * 0.12f);
+        using (var iconPen = new Pen(baseColor, stroke)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round
+        })
+        {
+            if (isCheck)
+            {
+                g.DrawLines(iconPen, new[]
+                {
+                    new PointF(bx + badgeD * 0.27f, by + badgeD * 0.53f),
+                    new PointF(bx + badgeD * 0.43f, by + badgeD * 0.69f),
+                    new PointF(bx + badgeD * 0.75f, by + badgeD * 0.33f),
+                });
+            }
+            else
+            {
+                float m = badgeD * 0.31f;
+                g.DrawLine(iconPen, bx + m, by + m, bx + badgeD - m, by + badgeD - m);
+                g.DrawLine(iconPen, bx + badgeD - m, by + m, bx + m, by + badgeD - m);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws a soft "comet" glint that travels along a rounded-rectangle border. The border
+    /// is flattened to a polyline; a bright head with a fading tail is positioned at
+    /// <paramref name="phase"/> (0..1) around the perimeter. Cheap: ~18 short segments.
+    /// </summary>
+    private static void DrawBorderShine(Graphics g, RectangleF face, float corner, float phase, Color tint, float intensity)
+    {
+        using var path = WindowsDockRenderer.RoundedRect(face, corner);
+        path.Flatten();
+        var pts = path.PathPoints;
+        int n = pts.Length;
+        if (n < 2) return;
+
+        var seg = new float[n];
+        float total = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            var a = pts[i];
+            var b = pts[(i + 1) % n];
+            float d = (float)Math.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y));
+            seg[i] = d;
+            total += d;
+        }
+        if (total <= 0f) return;
+
+        PointF PointAt(float dist)
+        {
+            dist = ((dist % total) + total) % total;
+            for (int i = 0; i < n; i++)
+            {
+                if (dist <= seg[i] || i == n - 1)
+                {
+                    float t = seg[i] > 0 ? dist / seg[i] : 0f;
+                    var a = pts[i];
+                    var b = pts[(i + 1) % n];
+                    return new PointF(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t);
+                }
+                dist -= seg[i];
+            }
+            return pts[0];
+        }
+
+        float head = phase * total;
+        float tailLen = total * 0.16f;   // comet length as a fraction of the perimeter
+        const int segments = 18;
+        using var pen = new Pen(tint, UiChrome.ScaleFloat(2f)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        var prev = PointAt(head);
+        for (int k = 1; k <= segments; k++)
+        {
+            float p01 = k / (float)segments;
+            var cur = PointAt(head - tailLen * p01);
+            int a = (int)(170 * intensity * (1f - p01) * (1f - p01)); // bright head → fading tail
+            if (a > 0)
+            {
+                pen.Color = Color.FromArgb(a, tint);
+                g.DrawLine(pen, prev, cur);
+            }
+            prev = cur;
         }
     }
 

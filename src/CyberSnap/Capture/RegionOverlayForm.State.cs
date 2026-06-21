@@ -695,6 +695,11 @@ public sealed partial class RegionOverlayForm
         try { CloseCaptureMagnifier(); } catch { }
         EnsureToolbarReady();
         RefreshToolbar();
+        _shinePhase[0] = 0f;
+        _shinePhase[1] = 0.5f;
+        _shineMain[0] = _shineMain[1] = 1f;
+        _shineDup[0] = _shineDup[1] = 0f;
+        if (!UI.Motion.Disabled) _confirmShineTimer.Start();
         Invalidate();
     }
 
@@ -704,6 +709,7 @@ public sealed partial class RegionOverlayForm
         _confirmRect = Rectangle.Empty;
         _confirmHandleDragIndex = -1;
         _hoveredConfirmButton = -1;
+        ResetConfirmPress();
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
         _selectionEnd = Point.Empty;
@@ -719,6 +725,7 @@ public sealed partial class RegionOverlayForm
         _confirmRect = Rectangle.Empty;
         _confirmHandleDragIndex = -1;
         _hoveredConfirmButton = -1;
+        ResetConfirmPress();
         bool isOcr = _mode == CaptureMode.Ocr;
         bool isScan = _mode == CaptureMode.Scan;
         bool isSticker = _mode == CaptureMode.Sticker;
@@ -761,18 +768,115 @@ public sealed partial class RegionOverlayForm
         };
     }
 
+    private const float ConfirmPressDurationMs = 160f;
+
+    /// <summary>
+    /// Begins the click "squash" animation for a confirm/cancel button, then runs the real
+    /// action (commit or cancel) when it finishes. Runs the action immediately when motion
+    /// is disabled or a press is already playing.
+    /// </summary>
+    private void StartConfirmPress(int button)
+    {
+        if (_pressedConfirmButton >= 0) return; // a press is already playing
+        if (UI.Motion.Disabled)
+        {
+            RunConfirmAction(button);
+            return;
+        }
+        _pressedConfirmButton = button;
+        _pendingConfirmAction = button;
+        _confirmPressAmt = 0f;
+        _pressAnimStart = DateTime.UtcNow;
+        _confirmPressTimer.Start();
+        var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+        Invalidate(InflateForRepaint(button == 0 ? confirmBtn : cancelBtn, 24));
+    }
+
+    private void ConfirmPressTick()
+    {
+        float elapsed = (float)(DateTime.UtcNow - _pressAnimStart).TotalMilliseconds;
+        float phase = Math.Min(1f, elapsed / ConfirmPressDurationMs);
+        _confirmPressAmt = (float)Math.Sin(phase * Math.PI); // 0 → 1 → 0 squash-and-release
+
+        int button = _pressedConfirmButton;
+        if (button >= 0)
+        {
+            var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+            Invalidate(InflateForRepaint(button == 0 ? confirmBtn : cancelBtn, 24));
+        }
+
+        if (phase >= 1f)
+        {
+            _confirmPressTimer.Stop();
+            _confirmPressAmt = 0f;
+            _pressedConfirmButton = -1;
+            int action = _pendingConfirmAction;
+            _pendingConfirmAction = -1;
+            RunConfirmAction(action);
+        }
+    }
+
+    private void RunConfirmAction(int button)
+    {
+        if (button == 0) CommitConfirmedSelection();
+        else if (button == 1) ExitConfirmMode();
+    }
+
+    private void ResetConfirmPress()
+    {
+        _confirmPressTimer.Stop();
+        _pressedConfirmButton = -1;
+        _pendingConfirmAction = -1;
+        _confirmPressAmt = 0f;
+        _confirmShineTimer.Stop();
+    }
+
+    /// <summary>
+    /// Advances the glint that travels around the confirm/cancel borders. A perpetual
+    /// loop while confirming, gated by the "disable animations" setting (UI.Motion.Disabled).
+    /// </summary>
+    private void ConfirmShineTick()
+    {
+        if (UI.Motion.Disabled || !_isConfirmingSelection)
+        {
+            _confirmShineTimer.Stop();
+            return;
+        }
+        // Per button: advance the comet (2× speed while hovered) and ease its intensities.
+        // The hovered button gains a second comet (dup→1); the other's comet fades (main→0).
+        int hov = _hoveredConfirmButton; // -1 none, 0 confirm, 1 cancel
+        float baseDelta = (float)(UiChrome.FrameIntervalMs / 2600.0); // full lap ~2.6s
+        for (int i = 0; i < 2; i++)
+        {
+            _shinePhase[i] += baseDelta * (hov == i ? 2f : 1f);
+            if (_shinePhase[i] >= 1f) _shinePhase[i] -= 1f;
+
+            float targetMain = (hov >= 0 && hov != i) ? 0f : 1f;
+            float targetDup = (hov == i) ? 1f : 0f;
+            _shineMain[i] += (targetMain - _shineMain[i]) * 0.22f;
+            _shineDup[i] += (targetDup - _shineDup[i]) * 0.22f;
+        }
+
+        var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+        Invalidate(InflateForRepaint(confirmBtn, 24));
+        Invalidate(InflateForRepaint(cancelBtn, 24));
+    }
+
     private void RecomputeConfirmButtonWidth()
     {
-        int min = UiChrome.ScaleInt(ConfirmButtonWidth);
-        int pad = UiChrome.ScaleInt(30);
+        int min = UiChrome.ScaleInt(112);
+        // Reserve the left badge zone (~one button height) plus right padding so the
+        // uppercase label always fits on a single line to the right of the icon badge.
+        int badgeZone = UiChrome.ScaleInt(ConfirmButtonHeight);
+        int rightPad = UiChrome.ScaleInt(16);
         try
         {
             using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
             using var g = CreateGraphics();
             float w = Math.Max(
-                g.MeasureString(LocalizationService.Translate("Confirm"), font).Width,
-                g.MeasureString(LocalizationService.Translate("Cancel"), font).Width);
-            _confirmButtonWidth = Math.Max(min, (int)Math.Ceiling(w) + pad);
+                g.MeasureString(LocalizationService.Translate("Confirm").ToUpperInvariant(), font).Width,
+                g.MeasureString(LocalizationService.Translate("Cancel").ToUpperInvariant(), font).Width);
+            _confirmButtonWidth = Math.Max(min, badgeZone + (int)Math.Ceiling(w) + rightPad);
         }
         catch
         {
@@ -792,9 +896,11 @@ public sealed partial class RegionOverlayForm
         // Clamp y so buttons stay inside client area
         if (y + bh > ClientSize.Height - 10)
             y = Math.Max(10, r.Top - bh - UiChrome.ScaleInt(12));
+        // Green "Confirm" sits on the right, red "Cancel" on the left (tuple stays
+        // (confirm, cancel); only the on-screen X positions are swapped).
         return (
-            new Rectangle(x, y, bw, bh),
-            new Rectangle(x + bw + gap, y, bw, bh)
+            new Rectangle(x + bw + gap, y, bw, bh),
+            new Rectangle(x, y, bw, bh)
         );
     }
 
