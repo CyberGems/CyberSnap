@@ -680,13 +680,18 @@ public sealed partial class EditorForm : Form
 
     private void DoSaveAs()
     {
+        var s = Services.SettingsService.LoadStatic();
+        bool prefJpg = s?.EditorExportFormat == 1;
+        string ext = prefJpg ? ".jpg" : ".png";
+        string filter = prefJpg ? "JPEG|*.jpg|PNG|*.png" : "PNG|*.png|JPEG|*.jpg";
+
         using var dlg = new SaveFileDialog
         {
-            Filter = "PNG|*.png|JPEG|*.jpg",
+            Filter = filter,
             FileName = string.IsNullOrWhiteSpace(_savedFilePath)
-                ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.png"
-                : Path.GetFileNameWithoutExtension(_savedFilePath) + "_edited.png",
-            DefaultExt = ".png",
+                ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}{ext}"
+                : Path.GetFileNameWithoutExtension(_savedFilePath) + $"_edited{ext}",
+            DefaultExt = ext,
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
@@ -705,13 +710,18 @@ public sealed partial class EditorForm : Form
 
     private void DoSaveAs(Bitmap output)
     {
+        var s = Services.SettingsService.LoadStatic();
+        bool prefJpg = s?.EditorExportFormat == 1;
+        string ext = prefJpg ? ".jpg" : ".png";
+        string filter = prefJpg ? "JPEG|*.jpg|PNG|*.png" : "PNG|*.png|JPEG|*.jpg";
+
         using var dlg = new SaveFileDialog
         {
-            Filter = "PNG|*.png|JPEG|*.jpg",
+            Filter = filter,
             FileName = string.IsNullOrWhiteSpace(_savedFilePath)
-                ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.png"
-                : Path.GetFileNameWithoutExtension(_savedFilePath) + "_edited.png",
-            DefaultExt = ".png",
+                ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}{ext}"
+                : Path.GetFileNameWithoutExtension(_savedFilePath) + $"_edited{ext}",
+            DefaultExt = ext,
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
 

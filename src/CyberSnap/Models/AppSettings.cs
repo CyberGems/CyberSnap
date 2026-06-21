@@ -247,6 +247,8 @@ public sealed class AppSettings
     public bool EditorSuppressPasteConfirm { get; set; }
     /// <summary>Maximum undo steps in the editor (1–200). Default 100.</summary>
     public int EditorUndoLimit { get; set; } = 100;
+    /// <summary>Preferred image export format: 0 = PNG, 1 = JPEG.</summary>
+    public int EditorExportFormat { get; set; } // 0 = PNG, 1 = JPEG
     public bool EditorShowRulers { get; set; } = true;
     public bool EditorShowFrame { get; set; } = true;
     public bool EditorShowHints { get; set; } = true;
