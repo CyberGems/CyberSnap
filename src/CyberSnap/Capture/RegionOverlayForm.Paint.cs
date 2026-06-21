@@ -231,8 +231,12 @@ public sealed partial class RegionOverlayForm
                 var activeConfirmColor = Color.FromArgb(34, 197, 94);  // green-500
                 var activeCancelColor = Color.FromArgb(239, 68, 68);   // red-500
 
-                Color confirmColor = InterpolateColor(deactColor, activeConfirmColor, confirmFactor);
-                Color cancelColor = InterpolateColor(deactColor, activeCancelColor, cancelFactor);
+                // Blend in 25% of the original active colors to keep a subtle, elegant hint of the green/red tone
+                Color deactConfirmColor = InterpolateColor(deactColor, activeConfirmColor, 0.25f);
+                Color deactCancelColor = InterpolateColor(deactColor, activeCancelColor, 0.25f);
+
+                Color confirmColor = InterpolateColor(deactConfirmColor, activeConfirmColor, confirmFactor);
+                Color cancelColor = InterpolateColor(deactCancelColor, activeCancelColor, cancelFactor);
 
                 // 3D action buttons: green "Confirm" / red "Cancel", each with a white icon
                 // badge, a hover-igniting glow, a click squash, and a glint traveling the
