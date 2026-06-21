@@ -295,8 +295,8 @@ public sealed partial class RegionOverlayForm
         // ── Soft diffused outer glow — concentric low-alpha rings fade outward so it reads
         //    as a halo, not a hard border. Brightest at the edge, flares on hover. ──
         var glowBounds = RectangleF.FromLTRB(rect.X, face.Y, rect.Right, baseRect.Bottom);
-        float glowSpread = UiChrome.ScaleFloat(hover ? 11f : 5f);
-        int glowPeak = hover ? 110 : 34;
+        float glowSpread = UiChrome.ScaleFloat(hover ? 6f : 3f);
+        int glowPeak = hover ? 60 : 18;
         const int glowSteps = 7;
         for (int i = glowSteps; i >= 1; i--)
         {
