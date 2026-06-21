@@ -681,7 +681,7 @@ public sealed partial class EditorForm : Form
     {
         using var dlg = new SaveFileDialog
         {
-            Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|PNG|*.png|JPEG|*.jpg",
+            Filter = $"PNG|*.png|JPEG|*.jpg|{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp",
             FileName = string.IsNullOrWhiteSpace(_savedFilePath)
                 ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.png"
                 : Path.GetFileNameWithoutExtension(_savedFilePath) + "_edited.png",
@@ -713,7 +713,7 @@ public sealed partial class EditorForm : Form
     {
         using var dlg = new SaveFileDialog
         {
-            Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|PNG|*.png|JPEG|*.jpg",
+            Filter = $"PNG|*.png|JPEG|*.jpg|{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp",
             FileName = string.IsNullOrWhiteSpace(_savedFilePath)
                 ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.png"
                 : Path.GetFileNameWithoutExtension(_savedFilePath) + "_edited.png",
@@ -970,10 +970,18 @@ public sealed partial class EditorForm : Form
             {
                 if (!_canvas.IsDefaultBlank)
                 {
-                    var confirmTitle = LocalizationService.Translate("Confirm Paste");
-                    var confirmMsg = LocalizationService.Translate("Pasting this image will replace your current document. Do you want to proceed?");
-                    if (!ThemedConfirmDialog.Confirm(Handle, confirmTitle, confirmMsg, danger: false, iconId: "paste"))
-                        return;
+                    var s = Services.SettingsService.LoadStatic();
+                    if (s?.EditorSuppressPasteConfirm != true)
+                    {
+                        var confirmTitle = LocalizationService.Translate("Confirm Paste");
+                        var confirmMsg = LocalizationService.Translate("Pasting this image will replace your current document. Do you want to proceed?");
+                        bool pasteConfirmed = ThemedConfirmDialog.Confirm(Handle, confirmTitle, confirmMsg,
+                            out bool dontShowAgain, danger: false, iconId: "paste");
+                        if (dontShowAgain && System.Windows.Application.Current is CyberSnap.App app)
+                            app.PersistEditorSuppressPasteConfirm(true);
+                        if (!pasteConfirmed)
+                            return;
+                    }
                 }
 
                 if (_canvas.IsDirty)

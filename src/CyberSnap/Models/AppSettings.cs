@@ -242,6 +242,9 @@ public sealed class AppSettings
     // When true, the "Don't show again" checkbox was checked in the handle-drag resize
     // confirmation dialog, so future handle-drag resizes apply immediately.
     public bool EditorSuppressResizeConfirm { get; set; }
+    // When true, the "Don't show again" checkbox was checked in the paste-replace
+    // confirmation dialog, so future pastes replace the document without asking.
+    public bool EditorSuppressPasteConfirm { get; set; }
     public bool EditorShowRulers { get; set; } = true;
     public bool EditorShowFrame { get; set; } = true;
     public bool EditorShowHints { get; set; } = true;
