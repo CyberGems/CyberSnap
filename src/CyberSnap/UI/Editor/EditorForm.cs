@@ -535,13 +535,28 @@ public sealed partial class EditorForm : Form
 
         if (ctrl is Panel panel)
         {
-            panel.BackColor = EditorColors.BgPrimary;
+            bool inHeaderOrFooter = false;
+            var p = panel.Parent;
+            while (p != null)
+            {
+                if (p == _topBarPanel || p == _statusBarPanel)
+                {
+                    inHeaderOrFooter = true;
+                    break;
+                }
+                p = p.Parent;
+            }
+
+            if (inHeaderOrFooter)
+                panel.BackColor = Color.Transparent;
+            else
+                panel.BackColor = EditorColors.BgPrimary;
         }
         else if (ctrl is Label label)
         {
             if (label == _zoomLabel)
                 label.ForeColor = EditorColors.Accent;
-            else if (label == _coordsLabel || label == _fileNameLabel)
+            else if (label == _coordsLabel || label == _fileNameLabel || label == _liveStatusLabel)
                 label.ForeColor = EditorColors.TextSecondary;
             else
                 label.ForeColor = EditorColors.TextPrimary;
@@ -677,7 +692,9 @@ public sealed partial class EditorForm : Form
             ShowSaveStatus(filePath);
 
             var fileName = Path.GetFileName(filePath);
-            var toastTitle = LocalizationService.Translate("System Message");
+            var toastTitle = filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase)
+                ? LocalizationService.Translate("Project saved")
+                : LocalizationService.Translate("Image saved");
             var toastBody = string.Format(LocalizationService.Translate("Saved: {0}"), fileName);
             ToastWindow.Show(toastTitle, toastBody, filePath);
             return true;
@@ -784,7 +801,9 @@ public sealed partial class EditorForm : Form
         ShowSaveStatus(filePath);
 
         var fileName = Path.GetFileName(filePath);
-        var toastTitle = LocalizationService.Translate("System Message");
+        var toastTitle = filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase)
+            ? LocalizationService.Translate("Project saved")
+            : LocalizationService.Translate("Image saved");
         var toastBody = string.Format(LocalizationService.Translate("Saved: {0}"), fileName);
         ToastWindow.Show(toastTitle, toastBody, filePath);
     }
