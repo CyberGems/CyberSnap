@@ -770,6 +770,24 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         OnStateChanged();
     }
 
+    /// <summary>Records an undoable command without marking the document dirty or clearing the
+    /// <see cref="IsDefaultBlank"/> flag. Used to resize a still-pristine blank canvas: the
+    /// change stays reversible via undo/redo, yet the empty document keeps Save disabled and
+    /// won't prompt to save on close (the IsDefaultBlank guard short-circuits both).</summary>
+    private void PushClean(IEditCommand command)
+    {
+        command.Apply(this);
+        _undoStack.Add(command);
+        if (_undoStack.Count > UndoStackLimit)
+        {
+            var dropped = _undoStack[0];
+            _undoStack.RemoveAt(0);
+            dropped.Dispose();
+        }
+        ClearRedo();
+        OnStateChanged();
+    }
+
     public void Undo()
     {
         if (_undoStack.Count == 0) return;
@@ -1012,6 +1030,13 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Func<int, int, Bitmap>? BlankBitmapFactory { get; set; }
 
+    /// <summary>Optional host hook to confirm an interactive (handle-drag) canvas resize before
+    /// it is applied. Receives the resulting (width, height) in pixels; return false to cancel
+    /// the resize. When null, handle-drag resizes apply without confirmation. Only the on-canvas
+    /// resize handles consult this — the resize dialog has its own Apply button.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Func<int, int, bool>? ConfirmResizeByHandle { get; set; }
+
     /// <summary>Resizes the canvas to a new pixel size and pushes an undoable command.
     /// <paramref name="scaleContent"/> true = resample (stretch image + annotations);
     /// false = re-canvas at the new size with <paramref name="anchor"/> (extend/trim).</summary>
@@ -1021,21 +1046,19 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         height = Math.Clamp(height, MinCanvasSize, MaxCanvasSize);
         if (width == _baseBitmap.Width && height == _baseBitmap.Height) return;
 
-        // A blank document has no real pixels to resample; regenerate a fresh checkerboard at
-        // the new size so it actually looks resized, and keep it a clean (undo-free) blank.
-        if (IsDefaultBlank && BlankBitmapFactory is not null)
-        {
-            BaseBitmap = BlankBitmapFactory(width, height); // setter disposes the old bitmap + resets crop
-            ZoomFit();
-            HideToolBanner();
-            Invalidate();
-            OnStateChanged();
-            return;
-        }
+        var command = new Models.Commands.ResizeCanvasCommand(width, height, scaleContent, anchor);
 
-        Push(new Models.Commands.ResizeCanvasCommand(width, height, scaleContent, anchor));
-        ZoomFit();
+        // A pristine blank document regenerates its checkerboard at the new size (handled inside
+        // the command via BlankBitmapFactory). Record it through PushClean so the resize stays
+        // undoable while keeping the document "clean": IsDefaultBlank is preserved, which keeps
+        // Save disabled and suppresses the save-on-close prompt for an untouched canvas.
+        if (IsDefaultBlank)
+            PushClean(command);
+        else
+            Push(command);
+
         HideToolBanner();
+        _userPanned = true; // Dismiss the welcome banner on first resize (like zoom does).
         Invalidate();
     }
 
