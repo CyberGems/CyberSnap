@@ -3673,8 +3673,9 @@
                                     <TextBlock Text="Restore any confirmation dialogs you previously hid with 'Don't show again'." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <Button x:Name="ResetSuppressedDialogsButton" Grid.Column="2"
-                                        Content="Reset" MinWidth="90" Height="30"
-                                        Style="{StaticResource SecondaryButton}"
+                                        Content="Reset" MinWidth="90"
+                                        VerticalAlignment="Center" Cursor="Hand"
+                                        AutomationProperties.Name="Reset suppressed dialogs"
                                         Click="ResetSuppressedDialogsButton_Click"/>
                             </Grid>
                         </StackPanel>

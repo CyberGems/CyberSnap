@@ -318,6 +318,7 @@
   "Recording error": "Recording error",
   "Scroll capture error": "Scroll capture error",
   "OCR error": "OCR error",
+  "Error": "Error",
   "OCR copied": "OCR copied",
   "OCR ready": "OCR ready",
   "No text found": "No text found",
@@ -704,5 +705,6 @@
   "Don't show again": "Don't show again",
   "Reset suppressed dialogs": "Reset suppressed dialogs",
   "Restore any confirmation dialogs you previously hid with 'Don't show again'.": "Restore any confirmation dialogs you previously hid with 'Don't show again'.",
-  "Suppressed dialogs restored": "Suppressed dialogs restored"
+  "Suppressed dialogs restored": "Suppressed dialogs restored",
+  "CyberSnap was unable to launch Configuration": "CyberSnap was unable to launch Configuration"
 }
