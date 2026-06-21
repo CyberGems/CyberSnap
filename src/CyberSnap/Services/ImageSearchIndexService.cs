@@ -93,9 +93,9 @@ public static class ImageSearchQueryMatcher
         if (string.IsNullOrWhiteSpace(normalizedQuery))
             return 1;
 
+        var rawComparison = StringComparison.OrdinalIgnoreCase;
         if (!string.IsNullOrEmpty(rawFileName) && !string.IsNullOrEmpty(rawQuery))
         {
-            var rawComparison = StringComparison.OrdinalIgnoreCase;
             if (rawFileName.StartsWith(rawQuery, rawComparison))
                 return 1000;
             if (rawFileName.Contains(rawQuery, rawComparison))
@@ -480,7 +480,20 @@ public sealed partial class ImageSearchIndexService : IDisposable
                 cancellationToken.ThrowIfCancellationRequested();
                 textScores.TryGetValue(entry.FilePath, out var textScore);
                 if (textScore > 0)
-                    rankedInner.Add((entry, textScore));
+                {
+                    if (sources.HasFlag(ImageSearchSourceOptions.FileName))
+                    {
+                        var fn = Path.GetFileNameWithoutExtension(entry.FileName);
+                        if (fn.Contains(query, StringComparison.OrdinalIgnoreCase))
+                        {
+                            rankedInner.Add((entry, textScore));
+                            continue;
+                        }
+                    }
+
+                    if (sources.HasFlag(ImageSearchSourceOptions.Ocr))
+                        rankedInner.Add((entry, textScore));
+                }
             }
 
             return rankedInner.OrderByDescending(x => x.Entry.CapturedAt).ThenByDescending(x => x.Score).Select(x => x.Entry).ToList();
