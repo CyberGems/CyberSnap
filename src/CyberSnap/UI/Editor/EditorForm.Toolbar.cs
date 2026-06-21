@@ -135,9 +135,9 @@ public sealed partial class EditorForm
         {
             AutoSize = false,
             SingleLine = true,
-            Width = 104,
+            Width = 130,
             Height = 18,
-            MinimumSize = new Size(104, 0),
+            MinimumSize = new Size(130, 0),
             Text = "0, 0",
             ForeColor = EditorColors.TextPrimary,
             Font = new Font("Consolas", 10.5f, FontStyle.Bold),
