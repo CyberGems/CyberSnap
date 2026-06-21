@@ -728,5 +728,13 @@
   "match": "match",
   "matches": "matches",
   "search matches": "search matches",
-  "visible of": "visible of"
+  "visible of": "visible of",
+  "No items match your search": "No items match your search",
+  "Search matched 0 history items.": "Search matched 0 history items.",
+  "No captures match your search": "No captures match your search",
+  "Search matched 0 saved captures.": "Search matched 0 saved captures.",
+  "No captures yet": "No captures yet",
+  "Screenshots, OCR text, colors, and codes will appear here.": "Screenshots, OCR text, colors, and codes will appear here.",
+  "Screenshots will appear here after capture.": "Screenshots will appear here after capture.",
+  "Select All": "Select All"
 }

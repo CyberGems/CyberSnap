@@ -74,12 +74,14 @@ public partial class HistoryWindow
 
     private void ShowHistoryEmptyState(string title, string detail, bool showRetry = false)
     {
-        HistoryEmptyTitle.Text = title;
-        HistoryEmptyTitle.ToolTip = title;
-        AutomationProperties.SetHelpText(HistoryEmptyTitle, title);
-        HistoryEmptyLabel.Text = detail;
-        HistoryEmptyLabel.ToolTip = detail;
-        AutomationProperties.SetHelpText(HistoryEmptyLabel, detail);
+        var translatedTitle = LocalizationService.Translate(title);
+        var translatedDetail = LocalizationService.Translate(detail);
+        HistoryEmptyTitle.Text = translatedTitle;
+        HistoryEmptyTitle.ToolTip = translatedTitle;
+        AutomationProperties.SetHelpText(HistoryEmptyTitle, translatedTitle);
+        HistoryEmptyLabel.Text = translatedDetail;
+        HistoryEmptyLabel.ToolTip = translatedDetail;
+        AutomationProperties.SetHelpText(HistoryEmptyLabel, translatedDetail);
         HistoryEmptyRetryButton.Visibility = showRetry ? Visibility.Visible : Visibility.Collapsed;
         HistoryEmptyText.Visibility = Visibility.Visible;
     }

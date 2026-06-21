@@ -38,6 +38,16 @@ public partial class OcrResultWindow : Window
         OcrTextBox.TextChanged += OcrTextBox_TextChanged;
         UpdateCharCount();
 
+        var ocrMenu = new ContextMenu();
+        ocrMenu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+        ocrMenu.Items.Add(CreateOcrMenuItem("Cut", "Ctrl+X", () => OcrTextBox.Cut()));
+        ocrMenu.Items.Add(CreateOcrMenuItem("Copy", "Ctrl+C", () => OcrTextBox.Copy()));
+        ocrMenu.Items.Add(CreateOcrMenuItem("Paste", "Ctrl+V", () => OcrTextBox.Paste()));
+        ocrMenu.Items.Add(new Separator());
+        ocrMenu.Items.Add(CreateOcrMenuItem("Select All", "Ctrl+A", () => OcrTextBox.SelectAll()));
+        ocrMenu.Items.Add(CreateOcrMenuItem("Delete", "Del", () => OcrTextBox.Clear()));
+        OcrTextBox.ContextMenu = ocrMenu;
+
         // Use a composite font family so CJK / Arabic / Cyrillic glyphs render correctly
         var fontFamily = new System.Windows.Media.FontFamily("Segoe UI, Microsoft YaHei UI, Malgun Gothic, Yu Gothic UI, Arial Unicode MS, Segoe UI Symbol");
         OcrTextBox.FontFamily = fontFamily;
@@ -787,5 +797,16 @@ public partial class OcrResultWindow : Window
 
             requestCts.Dispose();
         }
+    }
+
+    private static MenuItem CreateOcrMenuItem(string header, string gesture, Action action)
+    {
+        var item = new MenuItem
+        {
+            Header = LocalizationService.Translate(header),
+            InputGestureText = gesture
+        };
+        item.Click += (_, _) => action();
+        return item;
     }
 }

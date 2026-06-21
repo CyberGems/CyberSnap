@@ -984,5 +984,13 @@
   "match": "coincidencia",
   "matches": "coincidencias",
   "search matches": "coincidencias de búsqueda",
-  "visible of": "visibles de"
+  "visible of": "visibles de",
+  "No items match your search": "Ningún elemento coincide con tu búsqueda",
+  "Search matched 0 history items.": "La búsqueda encontró 0 elementos en el historial.",
+  "No captures match your search": "Ninguna captura coincide con tu búsqueda",
+  "Search matched 0 saved captures.": "La búsqueda encontró 0 capturas guardadas.",
+  "No captures yet": "Aún no hay capturas",
+  "Screenshots, OCR text, colors, and codes will appear here.": "Las capturas de pantalla, texto OCR, colores y códigos aparecerán aquí.",
+  "Screenshots will appear here after capture.": "Las capturas de pantalla aparecerán aquí después de capturar.",
+  "Select All": "Seleccionar todo"
 }
