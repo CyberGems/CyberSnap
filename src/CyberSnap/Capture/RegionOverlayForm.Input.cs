@@ -11,6 +11,11 @@ public sealed partial class RegionOverlayForm
         Focus();
         if (e.Button == MouseButtons.Right)
         {
+            if (_isConfirmingSelection)
+            {
+                ShowConfirmContextMenu(e.Location);
+                return;
+            }
             int rightClickBtn = GetToolbarButtonAt(e.Location);
             if (rightClickBtn >= 0 || _toolbarRect.Contains(e.Location))
             {
