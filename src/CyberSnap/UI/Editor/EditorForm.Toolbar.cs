@@ -230,7 +230,7 @@ public sealed partial class EditorForm
             TextAlign = ContentAlignment.MiddleRight,
         };
 
-        var zoomIcon = new Panel
+        var zoomIcon = new DoubleBufferedPanel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.Transparent,
