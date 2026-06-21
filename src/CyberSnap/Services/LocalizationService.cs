@@ -316,7 +316,7 @@ public static class LocalizationService
             }
         }
 
-        if (element is FrameworkElement toolTipElement && element is not ComboBoxItem)
+        if (element is FrameworkElement toolTipElement)
         {
             // Check if SourceToolTip attached property is set
             var sourceToolTip = toolTipElement.GetValue(SourceToolTipProperty) as string;
