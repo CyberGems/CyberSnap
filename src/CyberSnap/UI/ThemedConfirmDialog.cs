@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using CyberSnap.Helpers;
 using Button = System.Windows.Controls.Button;
+using CheckBox = System.Windows.Controls.CheckBox;
 using WpfBrushes = System.Windows.Media.Brushes;
 using WpfColor = System.Windows.Media.Color;
 using WpfCursors = System.Windows.Input.Cursors;
@@ -31,9 +32,10 @@ internal sealed class ThemedConfirmDialog : Window
     private const double PanelWidth = 390;
 
     private bool _confirmed;
+    private bool _suppress;
     private SavePromptResult _saveResult = SavePromptResult.Cancel;
 
-    private ThemedConfirmDialog(string title, string message, string primaryText, string? secondaryText, Kind kind, string? iconId = null)
+    private ThemedConfirmDialog(string title, string message, string primaryText, string? secondaryText, Kind kind, string? iconId = null, bool showSuppressCheck = false)
     {
         Theme.Refresh();
         title = Services.LocalizationService.Translate(title);
@@ -53,7 +55,7 @@ internal sealed class ThemedConfirmDialog : Window
         FontFamily = new WpfFontFamily(UiChrome.PreferredFamilyName);
         Foreground = Theme.Brush(Theme.TextPrimary);
 
-        var content = BuildContent(title, message, primaryText, secondaryText, kind, iconId);
+        var content = BuildContent(title, message, primaryText, secondaryText, kind, iconId, showSuppressCheck);
         Content = content;
         UiScale.ApplyToWindow(this, content, scaleWindowBounds: true);
 
@@ -89,7 +91,21 @@ internal sealed class ThemedConfirmDialog : Window
         string secondaryText = "No",
         bool danger = true,
         string? iconId = null)
-        => Show(null, ownerHandle, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm, iconId);
+        => Show(null, ownerHandle, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm, iconId, false, out _);
+
+    /// <summary>Like <see cref="Confirm(IntPtr, string, string, string, string, bool, string?)"/>,
+    /// but renders a "Don't show again" checkbox. <paramref name="dontShowAgain"/> is set to
+    /// <c>true</c> when the user both confirmed AND checked the box.</summary>
+    public static bool Confirm(
+        IntPtr ownerHandle,
+        string title,
+        string message,
+        out bool dontShowAgain,
+        string primaryText = "Yes",
+        string secondaryText = "No",
+        bool danger = true,
+        string? iconId = null)
+        => Show(null, ownerHandle, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm, iconId, true, out dontShowAgain);
 
     // Single-button informational / error dialog (replacement for MessageBox.Show with one OK button).
     public static void Alert(Window? owner, string title, string message, bool error = false, string okText = "OK")
@@ -137,7 +153,23 @@ internal sealed class ThemedConfirmDialog : Window
         Kind kind,
         string? iconId = null)
     {
-        var dialog = new ThemedConfirmDialog(title, message, primaryText, secondaryText, kind, iconId);
+        return Show(owner, ownerHandle, title, message, primaryText, secondaryText, kind, iconId, false, out _);
+    }
+
+    private static bool Show(
+        Window? owner,
+        IntPtr ownerHandle,
+        string title,
+        string message,
+        string primaryText,
+        string? secondaryText,
+        Kind kind,
+        string? iconId,
+        bool showSuppressCheck,
+        out bool dontShowAgain)
+    {
+        dontShowAgain = false;
+        var dialog = new ThemedConfirmDialog(title, message, primaryText, secondaryText, kind, iconId, showSuppressCheck);
         if (owner is { IsVisible: true })
         {
             dialog.Owner = owner;
@@ -149,12 +181,14 @@ internal sealed class ThemedConfirmDialog : Window
             dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
         }
 
-        return dialog.ShowDialog() == true && dialog._confirmed;
+        bool result = dialog.ShowDialog() == true && dialog._confirmed;
+        dontShowAgain = dialog._suppress;
+        return result;
     }
 
     // ── Content ────────────────────────────────────────────────────────────
 
-    private FrameworkElement BuildContent(string title, string message, string primaryText, string? secondaryText, Kind kind, string? iconId)
+    private FrameworkElement BuildContent(string title, string message, string primaryText, string? secondaryText, Kind kind, string? iconId, bool showSuppressCheck = false)
     {
         var accent = AccentFor(kind);
 
@@ -173,6 +207,7 @@ internal sealed class ThemedConfirmDialog : Window
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });        // icon (centered)
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });        // title + message
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1) });      // separator
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });        // suppress checkbox (optional)
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });        // buttons footer
 
         // Row 0: thin accent strip — CornerRadius matches the shell outer radius so corners blend cleanly.
@@ -228,7 +263,29 @@ internal sealed class ThemedConfirmDialog : Window
         Grid.SetRow(separator, 3);
         root.Children.Add(separator);
 
-        // Row 4: centered buttons.
+        // Row 4: "Don't show again" checkbox (only when requested by the caller).
+        if (showSuppressCheck)
+        {
+            var suppressRow = new StackPanel
+            {
+                HorizontalAlignment = WpfHorizontalAlignment.Center,
+                Margin = new Thickness(10, 8, 10, 2)
+            };
+            var check = new CheckBox
+            {
+                Content = Services.LocalizationService.Translate("Don't show again"),
+                FontSize = 11.5,
+                Foreground = Theme.Brush(Theme.TextSecondary),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            check.Checked += (_, _) => _suppress = true;
+            check.Unchecked += (_, _) => _suppress = false;
+            suppressRow.Children.Add(check);
+            Grid.SetRow(suppressRow, 4);
+            root.Children.Add(suppressRow);
+        }
+
+        // Row 5: centered buttons.
         var buttons = new StackPanel
         {
             Orientation = WpfOrientation.Horizontal,
@@ -266,7 +323,7 @@ internal sealed class ThemedConfirmDialog : Window
                 Close();
             }));
         }
-        Grid.SetRow(buttons, 4);
+        Grid.SetRow(buttons, 5);
         root.Children.Add(buttons);
 
         // Close affordance overlaid at the top-right, spanning the accent + icon rows.

@@ -3655,6 +3655,30 @@
                             </Grid>
                         </StackPanel>
                     </Border>
+
+                    <TextBlock Text="Dialogs" Style="{StaticResource SectionLabel}" Margin="0,24,0,0"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8D3;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Reset suppressed dialogs" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Restore any confirmation dialogs you previously hid with 'Don't show again'." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <Button x:Name="ResetSuppressedDialogsButton" Grid.Column="2"
+                                        Content="Reset" MinWidth="90" Height="30"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Click="ResetSuppressedDialogsButton_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
 

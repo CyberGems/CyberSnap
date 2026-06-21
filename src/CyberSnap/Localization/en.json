@@ -700,5 +700,9 @@
   "Cancel": "Cancel",
   "Save changes to {0}?": "Save changes to {0}?",
   "Confirm Paste": "Confirm Paste",
-  "Pasting this image will replace your current document. Do you want to proceed?": "Pasting this image will replace your current document. Do you want to proceed?"
+  "Pasting this image will replace your current document. Do you want to proceed?": "Pasting this image will replace your current document. Do you want to proceed?",
+  "Don't show again": "Don't show again",
+  "Reset suppressed dialogs": "Reset suppressed dialogs",
+  "Restore any confirmation dialogs you previously hid with 'Don't show again'.": "Restore any confirmation dialogs you previously hid with 'Don't show again'.",
+  "Suppressed dialogs restored": "Suppressed dialogs restored"
 }

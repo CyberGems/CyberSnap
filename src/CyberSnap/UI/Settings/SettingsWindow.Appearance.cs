@@ -788,4 +788,25 @@ public partial class SettingsWindow
             value => _settingsService.Settings.EditorPanModeLockObjects = value,
             value => EditorPanModeLockCheck.IsChecked = value);
     }
+
+    private void ResetSuppressedDialogsButton_Click(object sender, RoutedEventArgs e)
+    {
+        _settingsService.Settings.EditorSuppressResizeConfirm = false;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("settings.reset-suppressed-dialogs", ex); }
+        // Flash feedback — the button is a one-shot action with no toggle state,
+        // so briefly change its text to confirm.
+        var original = ResetSuppressedDialogsButton.Content?.ToString() ?? "Reset";
+        ResetSuppressedDialogsButton.Content = Services.LocalizationService.Translate("Suppressed dialogs restored");
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2)
+        };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            ResetSuppressedDialogsButton.Content = original;
+        };
+        timer.Start();
+    }
 }

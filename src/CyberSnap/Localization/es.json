@@ -951,5 +951,9 @@
   "Target Size": "Dimensiones de destino",
   "Alteration:": "Alteración:",
   "Result:": "Resultado:",
-  "Scale": "Escala"
+  "Scale": "Escala",
+  "Don't show again": "No mostrar más",
+  "Reset suppressed dialogs": "Restablecer diálogos suprimidos",
+  "Restore any confirmation dialogs you previously hid with 'Don't show again'.": "Restaura los diálogos de confirmación que ocultaste con 'No mostrar más'.",
+  "Suppressed dialogs restored": "Diálogos suprimidos restaurados"
 }
