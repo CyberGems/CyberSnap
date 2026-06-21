@@ -3656,7 +3656,7 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Performance" Style="{StaticResource SectionLabel}" Margin="0,24,0,0"/>
+                    <TextBlock Text="Performance" Style="{StaticResource SectionLabel}" Margin="0,24,0,8"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <!-- Undo limit -->
@@ -3690,7 +3690,35 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Dialogs" Style="{StaticResource SectionLabel}" Margin="0,24,0,0"/>
+                    <TextBlock Text="Export" Style="{StaticResource SectionLabel}" Margin="0,24,0,8"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8B3;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Preferred image export format" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Default image format when exporting from the editor." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="EditorExportFormatCombo" Grid.Column="2" MinWidth="90"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Preferred image export format"
+                                          ToolTip="Default image format when exporting from the editor."
+                                          SelectionChanged="EditorExportFormatCombo_SelectionChanged">
+                                    <ComboBoxItem Content="PNG"/>
+                                    <ComboBoxItem Content="JPEG"/>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Dialogs" Style="{StaticResource SectionLabel}" Margin="0,24,0,8"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">

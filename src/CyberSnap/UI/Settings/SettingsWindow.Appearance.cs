@@ -221,6 +221,7 @@ public partial class SettingsWindow
             EditorResizeScaleContentCheck.IsChecked = s.EditorResizeHandlesScaleContent;
             EditorPanModeLockCheck.IsChecked = s.EditorPanModeLockObjects;
             SelectUndoLimit(s.EditorUndoLimit);
+            EditorExportFormatCombo.SelectedIndex = s.EditorExportFormat;
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
             SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
             RecordShowCursorCheck.IsChecked = s.ShowCursor;
@@ -813,6 +814,21 @@ public partial class SettingsWindow
                     }
                 }
             });
+    }
+
+    private void EditorExportFormatCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorExportFormat;
+        var selected = EditorExportFormatCombo.SelectedIndex;
+        if (selected < 0) return;
+        UpdateGeneralPreference(
+            "settings.editor-export-format",
+            "Editor export format",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorExportFormat = value,
+            value => EditorExportFormatCombo.SelectedIndex = value);
     }
 
     private void ResetSuppressedDialogsButton_Click(object sender, RoutedEventArgs e)
