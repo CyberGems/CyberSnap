@@ -41,20 +41,26 @@ public static class WindowsMenuRenderer
         return item;
     }
 
+    private static Color ToDrawingColor(System.Windows.Media.Color c)
+    {
+        return Color.FromArgb(c.A, c.R, c.G, c.B);
+    }
+
     private static void ApplyTheme(ToolStripDropDown dd, bool showImages)
     {
         CyberSnap.UI.Theme.Refresh();
-        var bg = UiChrome.IsDark ? Color.FromArgb(31, 31, 31) : UiChrome.SurfaceElevated;
-        var fg = UiChrome.SurfaceTextPrimary;
-        var accent = UiChrome.AccentColor;
-        var hover = Color.FromArgb(22, accent.R, accent.G, accent.B);
-        var active = Color.FromArgb(36, accent.R, accent.G, accent.B);
-        var muted = UiChrome.SurfaceTextMuted;
-        var sep = UiChrome.IsDark ? Color.FromArgb(26, 255, 255, 255) : Color.FromArgb(16, 0, 0, 0);
+        var bg = ToDrawingColor(CyberSnap.UI.Theme.BgCard);
+        var fg = ToDrawingColor(CyberSnap.UI.Theme.TextPrimary);
+        var accent = ToDrawingColor(CyberSnap.UI.Theme.Accent);
+        var hover = ToDrawingColor(CyberSnap.UI.Theme.TabHoverBg);
+        var active = ToDrawingColor(CyberSnap.UI.Theme.TabActiveBg);
+        var muted = ToDrawingColor(CyberSnap.UI.Theme.TextMuted);
+        var sep = ToDrawingColor(CyberSnap.UI.Theme.Separator);
+        var border = ToDrawingColor(CyberSnap.UI.Theme.BorderSubtle);
 
         dd.BackColor = bg;
         dd.ForeColor = fg;
-        dd.Renderer = new Renderer(bg, fg, hover, active, muted, sep, showImages);
+        dd.Renderer = new Renderer(bg, fg, hover, active, muted, sep, border, accent, showImages);
 
         dd.HandleCreated += (s, _) =>
         {
@@ -90,12 +96,14 @@ public static class WindowsMenuRenderer
 
         var color = danger
             ? Color.FromArgb(239, 68, 68)
-            : UiChrome.SurfaceTextPrimary;
+            : ToDrawingColor(CyberSnap.UI.Theme.TextPrimary);
+        var textPrimary = ToDrawingColor(CyberSnap.UI.Theme.TextPrimary);
+        var textSecondary = ToDrawingColor(CyberSnap.UI.Theme.TextSecondary);
         var imageColor = danger
             ? color
             : active
-                ? Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B)
-                : Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B);
+                ? Color.FromArgb(255, textPrimary.R, textPrimary.G, textPrimary.B)
+                : Color.FromArgb(215, textSecondary.R, textSecondary.G, textSecondary.B);
 
         return new ToolStripMenuItem(text)
         {
@@ -190,9 +198,11 @@ public static class WindowsMenuRenderer
         private readonly Color _active;
         private readonly Color _muted;
         private readonly Color _sep;
+        private readonly Color _border;
+        private readonly Color _accent;
         private readonly bool _showImages;
 
-        public Renderer(Color bg, Color fg, Color hover, Color active, Color muted, Color sep, bool showImages)
+        public Renderer(Color bg, Color fg, Color hover, Color active, Color muted, Color sep, Color border, Color accent, bool showImages)
             : base(new ColorTable(bg))
         {
             _bg = bg;
@@ -201,6 +211,8 @@ public static class WindowsMenuRenderer
             _active = active;
             _muted = muted;
             _sep = sep;
+            _border = border;
+            _accent = accent;
             _showImages = showImages;
         }
 
@@ -212,7 +224,7 @@ public static class WindowsMenuRenderer
 
         protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
         {
-            using var pen = new Pen(_sep);
+            using var pen = new Pen(_border);
             e.Graphics.DrawRectangle(pen, 0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1);
         }
 
@@ -241,7 +253,7 @@ public static class WindowsMenuRenderer
                 int barHeight = e.Item.Height - 16;
                 int barX = 7;
                 int barY = (e.Item.Height - barHeight) / 2;
-                using var accentBrush = new SolidBrush(UiChrome.AccentColor);
+                using var accentBrush = new SolidBrush(_accent);
                 using var barPath = RoundedRect(new Rectangle(barX, barY, barWidth, barHeight), 1);
                 e.Graphics.FillPath(accentBrush, barPath);
             }
