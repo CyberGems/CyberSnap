@@ -19,7 +19,8 @@ public sealed partial class EditorForm
     private Label _fileNameLabel = null!;
     private Label _liveStatusLabel = null!;
     private Control _hintArea = null!;
-    private Label _titleFileNameLabel = null!;
+    private DoubleBufferedPanel _titleFileNameLabel = null!;
+    private string _titleFileNameText = "";
     private Label _zoomLabel = null!;
     private EditorZoomSlider _zoomSlider = null!;
     private bool _suppressZoomSliderChange;
@@ -473,15 +474,29 @@ public sealed partial class EditorForm
         windowActions.Controls.Add(menuButton);
 
         // Filename Label in the middle
-        _titleFileNameLabel = new Label
+        _titleFileNameText = LocalizationService.Translate("Untitled");
+        _titleFileNameLabel = new DoubleBufferedPanel
         {
             Dock = DockStyle.Fill,
-            ForeColor = EditorColors.TextSecondary,
-            Font = new Font("Consolas", 10.5f, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleCenter,
-            Text = LocalizationService.Translate("Untitled"),
+            BackColor = Color.Transparent,
         };
         _titleFileNameLabel.MouseDown += BeginWindowDrag;
+        _titleFileNameLabel.Paint += (_, e) =>
+        {
+            var g = e.Graphics;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            int cy = _titleFileNameLabel.Height / 2;
+            int iconSize = 16;
+            using var titleFont = new Font("Consolas", 10.5f, FontStyle.Bold, GraphicsUnit.Point);
+            int iconX = (_titleFileNameLabel.Width - TextRenderer.MeasureText(_titleFileNameText, titleFont).Width - iconSize - 6) / 2;
+            if (iconX < 0) iconX = 4;
+            var iconRect = new RectangleF(iconX, cy - iconSize / 2f, iconSize, iconSize);
+            StreamlineIcons.DrawIcon(g, "document", iconRect, EditorColors.TextSecondary, 0f, false);
+            TextRenderer.DrawText(g, _titleFileNameText, titleFont,
+                new Rectangle(iconX + iconSize + 6, 0, _titleFileNameLabel.Width - iconSize - 6, _titleFileNameLabel.Height),
+                EditorColors.TextSecondary,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+        };
 
         titleBarPanel.Controls.Add(_titleFileNameLabel);
         titleBarPanel.Controls.Add(brandPanel);
@@ -1136,8 +1151,11 @@ public sealed partial class EditorForm
         
         var titleText = $"{fileName} ({bitmap.Width} x {bitmap.Height} px)";
 
-        if (_titleFileNameLabel != null && _titleFileNameLabel.Text != titleText)
-            _titleFileNameLabel.Text = titleText;
+        if (_titleFileNameLabel != null && _titleFileNameText != titleText)
+        {
+            _titleFileNameText = titleText;
+            _titleFileNameLabel.Invalidate();
+        }
     }
 
     private void UpdateLiveStatusText()
