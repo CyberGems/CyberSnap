@@ -117,6 +117,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-suppress-resize-confirm", ex); }
     }
 
+    /// <summary>Persists whether the paste-replace confirmation dialog was suppressed.</summary>
+    public void PersistEditorSuppressPasteConfirm(bool suppress)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorSuppressPasteConfirm == suppress) return;
+        _settingsService.Settings.EditorSuppressPasteConfirm = suppress;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-suppress-paste-confirm", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "show rulers" preference.</summary>
     public void PersistEditorShowRulers(bool showRulers)
     {

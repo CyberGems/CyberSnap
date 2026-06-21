@@ -792,6 +792,7 @@ public partial class SettingsWindow
     private void ResetSuppressedDialogsButton_Click(object sender, RoutedEventArgs e)
     {
         _settingsService.Settings.EditorSuppressResizeConfirm = false;
+        _settingsService.Settings.EditorSuppressPasteConfirm = false;
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("settings.reset-suppressed-dialogs", ex); }
         // Flash feedback — the button is a one-shot action with no toggle state,
