@@ -248,8 +248,20 @@ public partial class HistoryWindow
             if (!IsLoaded || _suppressHistorySearchBoxTextEvents)
                 return;
 
-            SetAutoPruneRowAutoHidden(false);
             var text = ImageSearchBox.Text ?? "";
+
+            // Sync backing search query fields immediately before triggering any UI/AutoPrune updates
+            if (HistoryCategoryCombo.SelectedIndex <= 1)  // All (0) or Images (1)
+                _imageSearchQuery = text;
+            else if (HistoryCategoryCombo.SelectedIndex == 3)
+                _ocrSearchQuery = text;
+            else if (HistoryCategoryCombo.SelectedIndex == 4)
+                _colorSearchQuery = text;
+            else if (HistoryCategoryCombo.SelectedIndex == 5)
+                _codeSearchQuery = text;
+
+            SetAutoPruneRowAutoHidden(false);
+
             ImageSearchClearBtn.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
             ImageSearchChevron.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
             ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(text) && !ImageSearchBox.IsKeyboardFocused
@@ -258,7 +270,6 @@ public partial class HistoryWindow
 
             if (HistoryCategoryCombo.SelectedIndex <= 1)  // All (0) or Images (1)
             {
-                _imageSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_imageSearchQuery) && !ImageSearchBox.IsKeyboardFocused
                     ? Visibility.Visible
                     : Visibility.Collapsed;
@@ -274,7 +285,6 @@ public partial class HistoryWindow
             }
             else if (HistoryCategoryCombo.SelectedIndex == 3)
             {
-                _ocrSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_ocrSearchQuery) && !ImageSearchBox.IsKeyboardFocused
                     ? Visibility.Visible
                     : Visibility.Collapsed;
@@ -285,7 +295,6 @@ public partial class HistoryWindow
             }
             else if (HistoryCategoryCombo.SelectedIndex == 4)
             {
-                _colorSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_colorSearchQuery) && !ImageSearchBox.IsKeyboardFocused
                     ? Visibility.Visible
                     : Visibility.Collapsed;
@@ -296,7 +305,6 @@ public partial class HistoryWindow
             }
             else if (HistoryCategoryCombo.SelectedIndex == 5)
             {
-                _codeSearchQuery = text;
                 ImageSearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(_codeSearchQuery) && !ImageSearchBox.IsKeyboardFocused
                     ? Visibility.Visible
                     : Visibility.Collapsed;
