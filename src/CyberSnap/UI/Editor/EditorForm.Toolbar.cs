@@ -1266,21 +1266,21 @@ public sealed partial class EditorForm
         var resizeCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         resizeCanvasItem.Click += (_, _) => DoResizeCanvas();
 
-        var borderItem = WindowsMenuRenderer.Item("Border", iconId: null);
+        var borderItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show frame border"), iconId: null);
         borderItem.ToolTipText = LocalizationService.Translate("Show a frame around the capture in the editor.");
-        var fitItem = WindowsMenuRenderer.Item("Auto-fit", iconId: null);
+        var fitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-fit image to window"), iconId: null);
         fitItem.ToolTipText = LocalizationService.Translate("Fit the image to the window when the editor opens.");
-        var lockObjectsItem = WindowsMenuRenderer.Item("Lock Objects", iconId: null);
+        var lockObjectsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Lock objects in Pan tool"), iconId: null);
         lockObjectsItem.ToolTipText = LocalizationService.Translate("Prevent moving or resizing annotations while the Pan tool is active.");
-        var cropHandlesItem = WindowsMenuRenderer.Item("Crop handles", iconId: null);
+        var cropHandlesItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-show crop handles"), iconId: null);
         cropHandlesItem.ToolTipText = LocalizationService.Translate("Automatically show crop handles when the crop tool is active.");
-        var resizeHandlesItem = WindowsMenuRenderer.Item("Resize handles", iconId: null);
+        var resizeHandlesItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show resize handles"), iconId: null);
         resizeHandlesItem.ToolTipText = LocalizationService.Translate("Show the square resize handles around the canvas to resize it.");
-        var resizeScaleItem = WindowsMenuRenderer.Item("Resize scales content", iconId: null);
+        var resizeScaleItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize stretches content"), iconId: null);
         resizeScaleItem.ToolTipText = LocalizationService.Translate("When on, dragging the handles stretches the image. When off, it extends or trims the canvas area only.");
-        var bannersItem = WindowsMenuRenderer.Item("Show banners", iconId: null);
+        var bannersItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show instruction banners"), iconId: null);
         bannersItem.ToolTipText = LocalizationService.Translate("Display tool instruction banners in the editor.");
-        var rulersItem = WindowsMenuRenderer.Item("Show rulers", iconId: null);
+        var rulersItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show measurement rulers"), iconId: null);
         rulersItem.ToolTipText = LocalizationService.Translate("Display measurement rulers in the editor canvas.");
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
 
