@@ -111,8 +111,8 @@ public partial class App
         try
         {
             ToastWindow.ShowError(
-                "Settings failed to open",
-                $"CyberSnap could not open Settings. Try again from the tray menu, or restart CyberSnap if it keeps failing.\n{ex.Message}");
+                LocalizationService.Translate("Error"),
+                $"{LocalizationService.Translate("CyberSnap was unable to launch Configuration")}\n{ex.Message}");
         }
         catch (Exception toastEx)
         {
