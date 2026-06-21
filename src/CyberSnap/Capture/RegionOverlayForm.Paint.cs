@@ -211,18 +211,32 @@ public sealed partial class RegionOverlayForm
                 float confirmShine = shineOn ? _shinePhase[0] : -1f;
                 float cancelShine = shineOn ? _shinePhase[1] : -1f;
 
+                float confirmFactor = UI.Motion.Disabled
+                    ? (_hoveredConfirmButton == 1 ? 0f : 1f)
+                    : _shineMain[0];
+                float cancelFactor = UI.Motion.Disabled
+                    ? (_hoveredConfirmButton == 0 ? 0f : 1f)
+                    : _shineMain[1];
+
                 float confirmOpacity = UI.Motion.Disabled
-                    ? (_hoveredConfirmButton == 1 ? 0.15f : 1.0f)
-                    : (0.15f + 0.85f * _shineMain[0]);
+                    ? (_hoveredConfirmButton == 1 ? 0.35f : 1.0f)
+                    : (0.35f + 0.65f * _shineMain[0]);
                 float cancelOpacity = UI.Motion.Disabled
-                    ? (_hoveredConfirmButton == 0 ? 0.15f : 1.0f)
-                    : (0.15f + 0.85f * _shineMain[1]);
+                    ? (_hoveredConfirmButton == 0 ? 0.35f : 1.0f)
+                    : (0.35f + 0.65f * _shineMain[1]);
+
+                // Deactivated slate colors (solid cool gray, matches dark/light mode background style)
+                Color deactColor = UiChrome.IsDark ? Color.FromArgb(74, 80, 86) : Color.FromArgb(170, 178, 186);
+
+                var activeConfirmColor = Color.FromArgb(34, 197, 94);  // green-500
+                var activeCancelColor = Color.FromArgb(239, 68, 68);   // red-500
+
+                Color confirmColor = InterpolateColor(deactColor, activeConfirmColor, confirmFactor);
+                Color cancelColor = InterpolateColor(deactColor, activeCancelColor, cancelFactor);
 
                 // 3D action buttons: green "Confirm" / red "Cancel", each with a white icon
                 // badge, a hover-igniting glow, a click squash, and a glint traveling the
                 // border so they stay readable over any busy capture background.
-                var confirmColor = Color.FromArgb(34, 197, 94);  // green-500
-                var cancelColor = Color.FromArgb(239, 68, 68);   // red-500
                 DrawConfirmActionPill(g, confirmBtn, confirmColor,
                     LocalizationService.Translate("Confirm").ToUpperInvariant(), btnFont, confirmHover, isCheck: true, confirmPress, confirmShine, _shineMain[0], _shineDup[0], confirmOpacity);
                 DrawConfirmActionPill(g, cancelBtn, cancelColor,
@@ -304,7 +318,7 @@ public sealed partial class RegionOverlayForm
 
         // ── 3D side: darker extruded block beneath the face ──
         using (var sidePath = WindowsDockRenderer.RoundedRect(baseRect, corner))
-        using (var sideBrush = new SolidBrush(Color.FromArgb((int)(255 * opacity), sideColor)))
+        using (var sideBrush = new SolidBrush(Color.FromArgb(255, sideColor)))
             g.FillPath(sideBrush, sidePath);
 
         // ── Face body (vertical gradient, fully opaque to block background) ──
@@ -312,8 +326,8 @@ public sealed partial class RegionOverlayForm
         {
             using (var fill = new LinearGradientBrush(
                 new RectangleF(face.X, face.Y - 1, face.Width, face.Height + 2),
-                Color.FromArgb((int)(255 * opacity), fillTop),
-                Color.FromArgb((int)(255 * opacity), fillBottom),
+                Color.FromArgb(255, fillTop),
+                Color.FromArgb(255, fillBottom),
                 LinearGradientMode.Vertical))
                 g.FillPath(fill, facePath);
 
@@ -342,7 +356,7 @@ public sealed partial class RegionOverlayForm
             LineAlignment = StringAlignment.Center,
             Trimming = StringTrimming.None
         })
-        using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * opacity), Color.White)))
+        using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), Color.White)))
         {
             var textRect = RectangleF.FromLTRB(
                 face.X + face.Height, face.Y, face.Right - face.Height * 0.18f, face.Bottom);
@@ -357,12 +371,12 @@ public sealed partial class RegionOverlayForm
 
         using (var badgeShadow = new SolidBrush(Color.FromArgb((int)((UiChrome.IsDark ? 90 : 55) * opacity), 0, 0, 0)))
             g.FillEllipse(badgeShadow, bx, by + 1.3f, badgeD, badgeD);
-        using (var badgeFill = new SolidBrush(Color.FromArgb((int)(255 * opacity), Color.White)))
+        using (var badgeFill = new SolidBrush(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), Color.White)))
             g.FillEllipse(badgeFill, bx, by, badgeD, badgeD);
 
         // Icon (check or cross) painted in the pill color
         float stroke = Math.Max(2f, badgeD * 0.12f);
-        using (var iconPen = new Pen(Color.FromArgb((int)(255 * opacity), baseColor), stroke)
+        using (var iconPen = new Pen(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), baseColor), stroke)
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round,
@@ -685,6 +699,14 @@ public sealed partial class RegionOverlayForm
     {
         g.DrawLine(pen, x, y, x + dx, y);
         g.DrawLine(pen, x, y, x, y + dy);
+    }
+
+    private static Color InterpolateColor(Color c1, Color c2, float t)
+    {
+        int r = (int)(c1.R + (c2.R - c1.R) * t);
+        int g = (int)(c1.G + (c2.G - c1.G) * t);
+        int b = (int)(c1.B + (c2.B - c1.B) * t);
+        return Color.FromArgb(r, g, b);
     }
 
 }
