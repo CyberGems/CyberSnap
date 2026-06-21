@@ -1267,13 +1267,21 @@ public sealed partial class EditorForm
         resizeCanvasItem.Click += (_, _) => DoResizeCanvas();
 
         var borderItem = WindowsMenuRenderer.Item("Border", iconId: null);
+        borderItem.ToolTipText = LocalizationService.Translate("Show a frame around the capture in the editor.");
         var fitItem = WindowsMenuRenderer.Item("Auto-fit", iconId: null);
+        fitItem.ToolTipText = LocalizationService.Translate("Fit the image to the window when the editor opens.");
         var lockObjectsItem = WindowsMenuRenderer.Item("Lock Objects", iconId: null);
+        lockObjectsItem.ToolTipText = LocalizationService.Translate("Prevent moving or resizing annotations while the Pan tool is active.");
         var cropHandlesItem = WindowsMenuRenderer.Item("Crop handles", iconId: null);
+        cropHandlesItem.ToolTipText = LocalizationService.Translate("Automatically show crop handles when the crop tool is active.");
         var resizeHandlesItem = WindowsMenuRenderer.Item("Resize handles", iconId: null);
+        resizeHandlesItem.ToolTipText = LocalizationService.Translate("Show the square resize handles around the canvas to resize it.");
         var resizeScaleItem = WindowsMenuRenderer.Item("Resize scales content", iconId: null);
+        resizeScaleItem.ToolTipText = LocalizationService.Translate("When on, dragging the handles stretches the image. When off, it extends or trims the canvas area only.");
         var bannersItem = WindowsMenuRenderer.Item("Show banners", iconId: null);
+        bannersItem.ToolTipText = LocalizationService.Translate("Display tool instruction banners in the editor.");
         var rulersItem = WindowsMenuRenderer.Item("Show rulers", iconId: null);
+        rulersItem.ToolTipText = LocalizationService.Translate("Display measurement rulers in the editor canvas.");
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
 
         borderItem.Click += (_, _) =>
@@ -1343,6 +1351,7 @@ public sealed partial class EditorForm
 
         // Show hints item
         var hintsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show hints"), iconId: null);
+        hintsItem.ToolTipText = LocalizationService.Translate("Display tool hints and shortcuts in the editor status bar.");
         hintsItem.Click += (_, _) =>
         {
             _canvas.ShowHints = !_canvas.ShowHints;
