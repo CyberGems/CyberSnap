@@ -263,29 +263,7 @@ internal sealed class ThemedConfirmDialog : Window
         Grid.SetRow(separator, 3);
         root.Children.Add(separator);
 
-        // Row 4: "Don't show again" checkbox (only when requested by the caller).
-        if (showSuppressCheck)
-        {
-            var suppressRow = new StackPanel
-            {
-                HorizontalAlignment = WpfHorizontalAlignment.Center,
-                Margin = new Thickness(10, 8, 10, 2)
-            };
-            var check = new CheckBox
-            {
-                Content = Services.LocalizationService.Translate("Don't show again"),
-                FontSize = 11.5,
-                Foreground = Theme.Brush(Theme.TextSecondary),
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            check.Checked += (_, _) => _suppress = true;
-            check.Unchecked += (_, _) => _suppress = false;
-            suppressRow.Children.Add(check);
-            Grid.SetRow(suppressRow, 4);
-            root.Children.Add(suppressRow);
-        }
-
-        // Row 5: centered buttons.
+        // Row 4: centered buttons.
         var buttons = new StackPanel
         {
             Orientation = WpfOrientation.Horizontal,
@@ -294,7 +272,6 @@ internal sealed class ThemedConfirmDialog : Window
         };
         if (kind == Kind.SavePrompt)
         {
-            // 3-button layout: Cancel (secondary) | No (secondary) | Yes (primary)
             buttons.Children.Add(BuildButton(Services.LocalizationService.Translate("Cancel"), isPrimary: false, kind, () =>
             {
                 _saveResult = SavePromptResult.Cancel;
@@ -323,8 +300,30 @@ internal sealed class ThemedConfirmDialog : Window
                 Close();
             }));
         }
-        Grid.SetRow(buttons, 5);
+        Grid.SetRow(buttons, 4);
         root.Children.Add(buttons);
+
+        // Row 5: "Don't show again" checkbox (only when requested by the caller).
+        if (showSuppressCheck)
+        {
+            var suppressRow = new StackPanel
+            {
+                HorizontalAlignment = WpfHorizontalAlignment.Center,
+                Margin = new Thickness(10, 2, 10, 10)
+            };
+            var check = new CheckBox
+            {
+                Content = Services.LocalizationService.Translate("Don't show again"),
+                FontSize = 11.5,
+                Foreground = Theme.Brush(Theme.TextSecondary),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            check.Checked += (_, _) => _suppress = true;
+            check.Unchecked += (_, _) => _suppress = false;
+            suppressRow.Children.Add(check);
+            Grid.SetRow(suppressRow, 5);
+            root.Children.Add(suppressRow);
+        }
 
         // Close affordance overlaid at the top-right, spanning the accent + icon rows.
         var close = BuildClose();
