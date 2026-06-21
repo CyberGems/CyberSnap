@@ -621,7 +621,7 @@ public partial class SettingsWindow
     {
         try
         {
-            SelectSettingsTab("Gallery");
+            SelectSettingsTab("history");
         }
         catch (Exception ex)
         {
