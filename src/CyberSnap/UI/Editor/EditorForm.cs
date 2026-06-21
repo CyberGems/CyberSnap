@@ -443,6 +443,13 @@ public sealed partial class EditorForm : Form
         }
 
         UpdateControlTheme(this);
+        // Context menus are cached — rebuild them next time so icons/text match the new theme.
+        _burgerMenu?.Dispose();
+        _burgerMenu = null;
+        _canvasMenu?.Dispose();
+        _canvasMenu = null;
+        _imageMenu?.Dispose();
+        _imageMenu = null;
         RefreshLayoutAndRedraw();
     }
 
