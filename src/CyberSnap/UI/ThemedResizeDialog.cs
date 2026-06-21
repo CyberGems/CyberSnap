@@ -124,8 +124,11 @@ internal sealed class ThemedResizeDialog : Window
         Content = content;
         UiScale.ApplyToWindow(this, content, scaleWindowBounds: true);
 
-        SizeToContent = SizeToContent.Manual;
-        RecalculateWindowHeight();
+        // Keep the window auto-sized to its content height. Toggling "Scale content" shows or
+        // hides the anchor grid, which changes the required height; SizeToContent re-fits
+        // automatically, and the SizeChanged clamp keeps the window inside the work area.
+        SizeToContent = SizeToContent.Height;
+        SizeChanged += (_, _) => ClampToWorkingArea();
 
         PreviewKeyDown += (_, e) =>
         {
@@ -136,11 +139,19 @@ internal sealed class ThemedResizeDialog : Window
 
     private void RecalculateWindowHeight()
     {
-        if (Content is FrameworkElement content)
-        {
-            content.Measure(new System.Windows.Size(Width, double.PositiveInfinity));
-            Height = content.DesiredSize.Height;
-        }
+        // SizeToContent.Height already re-fits the window; just make sure the new size
+        // still sits fully inside the work area once layout settles.
+        Dispatcher.BeginInvoke(new Action(ClampToWorkingArea), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void ClampToWorkingArea()
+    {
+        if (ActualHeight <= 0) return;
+        var wa = SystemParameters.WorkArea;
+        double top = Top;
+        if (top + ActualHeight > wa.Bottom) top = wa.Bottom - ActualHeight;
+        if (top < wa.Top) top = wa.Top;
+        Top = top;
     }
 
     public static ResizeResult? Show(IntPtr ownerHandle, int curW, int curH)
@@ -279,13 +290,6 @@ internal sealed class ThemedResizeDialog : Window
             },
             topMargin: 12
         ));
-
-        // Anchor Grid Section (inside left stack, visibility bound to !_scaleContent)
-        _anchorSection = BuildAnchorSection();
-        _anchorSection.Margin = new Thickness(0, 16, 0, 0);
-        _anchorSection.HorizontalAlignment = WpfHorizontalAlignment.Left;
-        _anchorSection.Visibility = _scaleContent ? Visibility.Collapsed : Visibility.Visible;
-        leftStack.Children.Add(_anchorSection);
 
         Grid.SetColumn(leftStack, 0);
         bodyGrid.Children.Add(leftStack);
@@ -537,6 +541,14 @@ internal sealed class ThemedResizeDialog : Window
         badgePanel.Children.Add(resultRow);
 
         hudStack.Children.Add(badgePanel);
+
+        // Anchor grid lives in the HUD's spare space below the stats. Only shown when
+        // content is NOT scaled, so the user can pick where existing annotations sit in
+        // the new canvas. Placing it here (instead of the taller left column) keeps the
+        // dialog from growing off-screen when "Scale content" is toggled off.
+        _anchorSection = BuildAnchorSection();
+        _anchorSection.Visibility = _scaleContent ? Visibility.Collapsed : Visibility.Visible;
+        hudStack.Children.Add(_anchorSection);
 
         hudPanel.Child = hudStack;
         Grid.SetColumn(hudPanel, 2);
@@ -1066,18 +1078,39 @@ internal sealed class ThemedResizeDialog : Window
     private Border BuildAnchorSection()
     {
         var wrap = new Border();
-        var outer = new StackPanel { Orientation = WpfOrientation.Vertical, HorizontalAlignment = WpfHorizontalAlignment.Center };
-        outer.Children.Add(new TextBlock
+        var stack = new StackPanel();
+
+        // Divider so the anchor reads as part of the HUD readout above it.
+        stack.Children.Add(new Border
+        {
+            Height = 1,
+            Background = Theme.Brush(SecondaryButtonBorder),
+            Margin = new Thickness(0, 12, 0, 12)
+        });
+
+        // Label on the left, 3×3 grid on the right — mirrors the alteration/result rows.
+        var row = new Grid();
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var label = new TextBlock
         {
             Text = Services.LocalizationService.Translate("Anchor"),
             FontSize = 11,
             FontWeight = FontWeights.SemiBold,
             Foreground = Theme.Brush(Theme.TextMuted),
-            HorizontalAlignment = WpfHorizontalAlignment.Center,
-            Margin = new Thickness(0, 0, 0, 6),
-        });
+            VerticalAlignment = VerticalAlignment.Center,
+        };
 
-        var grid = new UniformGrid { Rows = 3, Columns = 3, Width = 72, Height = 72 };
+        var grid = new UniformGrid
+        {
+            Rows = 3,
+            Columns = 3,
+            Width = 66,
+            Height = 66,
+            HorizontalAlignment = WpfHorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
         for (int i = 0; i < 9; i++)
         {
             int idx = i;
@@ -1100,8 +1133,14 @@ internal sealed class ThemedResizeDialog : Window
             _anchorCells[i] = cell;
             grid.Children.Add(cell);
         }
-        outer.Children.Add(grid);
-        wrap.Child = outer;
+
+        Grid.SetColumn(label, 0);
+        Grid.SetColumn(grid, 1);
+        row.Children.Add(label);
+        row.Children.Add(grid);
+        stack.Children.Add(row);
+
+        wrap.Child = stack;
         return wrap;
     }
 

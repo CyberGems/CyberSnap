@@ -218,6 +218,7 @@ public sealed partial class AnnotationCanvas
             if (hit >= 0)
             {
                 _resizeDragging = true;
+                _userPanned = true; // Dismiss the welcome banner on first resize drag.
                 _activeResizeHandle = hit;
                 _resizeStartImg = ScreenToImage(e.Location);
                 _resizeStartSize = new Size(_baseBitmap.Width, _baseBitmap.Height);
@@ -1040,12 +1041,28 @@ public sealed partial class AnnotationCanvas
 
         if (_resizeDragging)
         {
-            _resizeDragging = false;
-            Capture = false;
             int handle = _activeResizeHandle;
-            _activeResizeHandle = -1;
             var size = _resizePreviewSize;
-            if (size.Width != _resizeStartSize.Width || size.Height != _resizeStartSize.Height)
+            bool changed = size.Width != _resizeStartSize.Width || size.Height != _resizeStartSize.Height;
+
+            // Show confirmation while the preview is still visible (don't clear
+            // _resizeDragging yet so the dashed outline and size badge stay on screen).
+            if (changed && ConfirmResizeByHandle != null && !ConfirmResizeByHandle(size.Width, size.Height))
+            {
+                // User cancelled — tear down the drag state and restore the original view.
+                _resizeDragging = false;
+                _activeResizeHandle = -1;
+                Capture = false;
+                OnStateChanged();
+                Invalidate();
+                return;
+            }
+
+            _resizeDragging = false;
+            _activeResizeHandle = -1;
+            Capture = false;
+
+            if (changed)
             {
                 // Default: drag extends/trims the canvas area, anchoring the content at the
                 // edge opposite the dragged handle. With ResizeHandlesScaleContent on, the

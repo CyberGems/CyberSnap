@@ -974,19 +974,16 @@ public sealed partial class RegionOverlayForm : Form
 
     private void ShowAnnotationContextMenu(Point clickLocation)
     {
-        var settings = Services.SettingsService.LoadStatic();
-        var isSpanish = string.Equals(settings?.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
-
         var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: 150);
         
         string deleteText;
         if (_multiSelectedIndices.Count > 1)
         {
-            deleteText = isSpanish ? "Eliminar selección" : "Delete selection";
+            deleteText = LocalizationService.Translate("Delete selection");
         }
         else
         {
-            deleteText = isSpanish ? "Eliminar" : "Delete";
+            deleteText = LocalizationService.Translate("Delete");
         }
 
         var deleteItem = new ToolStripMenuItem(deleteText);

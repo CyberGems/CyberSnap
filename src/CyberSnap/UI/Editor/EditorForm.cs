@@ -230,6 +230,14 @@ public sealed partial class EditorForm : Form
         };
         _canvas.StateChanged += OnCanvasStateChanged;
         _canvas.BlankBitmapFactory = (w, h) => CreateBlankCheckerboard(EditorColors.IsDark, w, h);
+        _canvas.ConfirmResizeByHandle = (w, h) =>
+        {
+            var title = LocalizationService.Translate("Resize canvas");
+            var message = string.Format(
+                LocalizationService.Translate("The canvas will be resized to {0} × {1} px. Continue?"),
+                w, h);
+            return ThemedConfirmDialog.Confirm(Handle, title, message, danger: false, iconId: "maximize");
+        };
         _canvas.TextFontSizeChanged += size =>
         {
             if (System.Windows.Application.Current is CyberSnap.App app)

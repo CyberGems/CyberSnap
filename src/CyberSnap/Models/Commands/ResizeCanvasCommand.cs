@@ -60,14 +60,15 @@ public sealed class ResizeCanvasCommand : IEditCommand
         {
             _beforeBitmap = new Bitmap(source);
             _beforeAnnotations = new List<Annotation>(ctx.Annotations);
-            if (ctx is CyberSnap.UI.Controls.AnnotationCanvas canvas && canvas.IsBlankCanvas && canvas.BlankBitmapFactory is not null)
-            {
-                _afterBitmap = canvas.BlankBitmapFactory(_newWidth, _newHeight);
-            }
-            else
-            {
-                _afterBitmap = new Bitmap(_newWidth, _newHeight, PixelFormat.Format32bppPArgb);
-            }
+
+            // A blank checkerboard has no real pixels to resample/pad: regenerate a clean
+            // pattern at the new size and skip painting the old bitmap over it (which would
+            // double the pattern). Annotations drawn on top are still transformed normally.
+            bool isBlank = ctx is CyberSnap.UI.Controls.AnnotationCanvas canvas
+                && canvas.IsBlankCanvas && canvas.BlankBitmapFactory is not null;
+            _afterBitmap = isBlank
+                ? ((CyberSnap.UI.Controls.AnnotationCanvas)ctx).BlankBitmapFactory!(_newWidth, _newHeight)
+                : new Bitmap(_newWidth, _newHeight, PixelFormat.Format32bppPArgb);
             _afterAnnotations = new List<Annotation>();
 
             using (var g = Graphics.FromImage(_afterBitmap))
@@ -77,8 +78,9 @@ public sealed class ResizeCanvasCommand : IEditCommand
 
                 if (_scaleContent)
                 {
-                    g.DrawImage(source, new Rectangle(0, 0, _newWidth, _newHeight),
-                        new Rectangle(0, 0, source.Width, source.Height), GraphicsUnit.Pixel);
+                    if (!isBlank)
+                        g.DrawImage(source, new Rectangle(0, 0, _newWidth, _newHeight),
+                            new Rectangle(0, 0, source.Width, source.Height), GraphicsUnit.Pixel);
 
                     var oldBounds = new Rectangle(0, 0, source.Width, source.Height);
                     var newBounds = new Rectangle(0, 0, _newWidth, _newHeight);
@@ -88,7 +90,8 @@ public sealed class ResizeCanvasCommand : IEditCommand
                 else
                 {
                     var (offX, offY) = AnchorOffset(source.Width, source.Height, _newWidth, _newHeight, _anchor);
-                    g.DrawImage(source, offX, offY, source.Width, source.Height);
+                    if (!isBlank)
+                        g.DrawImage(source, offX, offY, source.Width, source.Height);
 
                     var newBounds = new Rectangle(0, 0, _newWidth, _newHeight);
                     foreach (var a in ctx.Annotations)
@@ -106,6 +109,7 @@ public sealed class ResizeCanvasCommand : IEditCommand
         ctx.Annotations.Clear();
         ctx.Annotations.AddRange(_afterAnnotations!);
         ctx.Invalidate();
+        RefitView(ctx);
     }
 
     public void Revert(IEditorContext ctx)
@@ -116,6 +120,15 @@ public sealed class ResizeCanvasCommand : IEditCommand
         ctx.Annotations.Clear();
         ctx.Annotations.AddRange(_beforeAnnotations);
         ctx.Invalidate();
+        RefitView(ctx);
+    }
+
+    // The canvas size changes, so re-frame the view to fit; otherwise an undone/redone resize
+    // leaves the image at a stale zoom and looks like nothing happened.
+    private static void RefitView(IEditorContext ctx)
+    {
+        if (ctx is CyberSnap.UI.Controls.AnnotationCanvas canvas)
+            canvas.ZoomFit();
     }
 
     private static (int offX, int offY) AnchorOffset(int oldW, int oldH, int newW, int newH, AnchorPosition anchor)
