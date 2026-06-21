@@ -311,6 +311,8 @@
   "Project saved": "Project saved",
   "Image saved": "Image saved",
   "PDF saved": "PDF saved",
+  "Preferred export format": "Preferred export format",
+  "Default format when exporting from the editor.": "Default format when exporting from the editor.",
   "Open Capture Gallery": "Open Capture Gallery",
   "Start a new document": "Start a new document",
   "Paste image from clipboard": "Paste image from clipboard",
