@@ -497,6 +497,12 @@ public sealed partial class EditorForm : Form
             return;
         }
 
+        if (ctrl == _titleBarPanel)
+        {
+            ctrl.BackColor = Color.Transparent;
+            return;
+        }
+
         if (ctrl is HorizontalRuler or VerticalRuler or RulerCornerBlock or EditorCanvasFrame or EditorWindowFrame)
         {
             ctrl.BackColor = EditorColors.BgPrimary;
