@@ -61,13 +61,7 @@ public sealed partial class ImageSearchIndexService
         if (exactMatch)
             return $"\"{escaped}\"";
 
-        var tokens = normalizedQuery
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(token => token.Length > 0)
-            .Select(token => exactMatch ? token.Replace("\"", "\"\"") : $"{token.Replace("\"", "\"\"")}*")
-            .ToArray();
-
-        return tokens.Length == 0 ? escaped : string.Join(" AND ", tokens);
+        return $"\"{escaped}\"*";
     }
 
     private static int ConvertFtsRankToScore(double ftsRank, bool exactMatch)
