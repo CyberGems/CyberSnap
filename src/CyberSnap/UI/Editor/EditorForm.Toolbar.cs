@@ -594,7 +594,7 @@ public sealed partial class EditorForm
 
         var exportButton = MakeCommandButton("export", LocalizationService.Translate("Export"), false);
         exportButton.Click += (_, _) => DoSaveAs();
-        RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png or .jpg image format"), "Ctrl+Shift+S"), above: false);
+        RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png, .jpg or .pdf format"), "Ctrl+Shift+S"), above: false);
         commandActions.Controls.Add(exportButton);
 
         commandBarPanel.Controls.Add(commandActions, 1, 0);
