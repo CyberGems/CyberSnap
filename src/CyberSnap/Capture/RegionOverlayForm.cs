@@ -95,6 +95,7 @@ public sealed partial class RegionOverlayForm : Form
     private bool _showToolNumberBadges = true;
     private Rectangle _toolbarRect;
     private Rectangle _brandRect;
+    private Rectangle _logoRect;
     private Rectangle _menuActivatorRect;
     private bool _hoveredBrand;
     private bool _hoveredMenuActivator;
@@ -734,8 +735,8 @@ public sealed partial class RegionOverlayForm : Form
             {
                 row1StartX = _toolbarRect.X + brandWidth;
             }
-            int row1Y = _toolbarRect.Y + pad;
-            _brandRect = new Rectangle(_toolbarRect.X, _toolbarRect.Y, brandWidth, pad * 2 + buttonSize);
+            int row1Y = _toolbarRect.Y + ((_flyoutTools.Length > 0 ? h / 2 : h) - buttonSize) / 2;
+            _brandRect = new Rectangle(_toolbarRect.X, row1Y, brandWidth, buttonSize);
             _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorWidth, _toolbarRect.Y + pad + UiChrome.ScaleInt(4), activatorWidth, activatorWidth);
 
             int cx = row1StartX;
@@ -756,7 +757,7 @@ public sealed partial class RegionOverlayForm : Form
             _toolbarButtons[CloseButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Close
 
             // Row 2: Annotation Tools
-            int row2Y = _toolbarRect.Y + pad + buttonSize + buttonSpacing;
+            int row2Y = _toolbarRect.Y + h / 2 + (h - h / 2 - buttonSize) / 2;
             int row2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             int row2StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row2Width) / 2;
             int cx2 = row2StartX;
