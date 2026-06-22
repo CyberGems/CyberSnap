@@ -906,6 +906,8 @@
                     <RadioButton x:Name="EditorTab" Content="Editor" Tag="Editor" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
 
+                    <RadioButton x:Name="AchievementsTab" Content="Achievements" Tag="Achievements" GroupName="Main"
+                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="HistoryTab" Content="Gallery" Tag="Gallery" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="AboutTab" Content="About" Tag="About" GroupName="Main"
@@ -2731,19 +2733,6 @@
                                               Services:LocalizationService.SourceToolTip="Add a festive flourish to milestone moments, like your first capture of the day."
                                               Checked="CelebrationsCheck_Changed" Unchecked="CelebrationsCheck_Changed"/>
                                 </Grid>
-                                <!-- Separated progress card: a framed panel holding the neon milestone rail
-                                     (full width), numeric tick labels and stat chips. All inner content is
-                                     built in code-behind (SettingsWindow.Celebrations.cs). -->
-                                <Border Margin="38,6,0,4" Padding="14,12" CornerRadius="8"
-                                        Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                        BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
-                                    <StackPanel>
-                                        <TextBlock Services:LocalizationService.SourceText="Your progress"
-                                                   FontSize="11" Opacity="0.5" Margin="0,0,0,8"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <Grid x:Name="MilestoneRailHost" Height="74"/>
-                                    </StackPanel>
-                                </Border>
                             </StackPanel>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -3940,6 +3929,28 @@
                             </Grid>
                         </StackPanel>
                     </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Achievements / Logros -->
+            <ScrollViewer x:Name="AchievementsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
+                <StackPanel MaxWidth="640" HorizontalAlignment="Left">
+                    <!-- Hero: animated milestone rail (moved here from Notifications) + stat chips.
+                         All inner content is built in code-behind (SettingsWindow.Celebrations.cs). -->
+                    <TextBlock Services:LocalizationService.SourceText="Your progress" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
+                    <Border Padding="16,14" CornerRadius="10"
+                            Background="{DynamicResource ThemeInputBackgroundBrush}"
+                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
+                        <Grid x:Name="MilestoneRailHost" Height="74"/>
+                    </Border>
+
+                    <!-- Statistics cards (built in code-behind: SettingsWindow.Achievements.cs) -->
+                    <TextBlock Services:LocalizationService.SourceText="Statistics" Style="{StaticResource SectionLabel}" Margin="0,18,0,6"/>
+                    <Grid x:Name="AchievementsStatsHost"/>
+
+                    <!-- Medal grid, grouped by category (built in code-behind) -->
+                    <TextBlock Services:LocalizationService.SourceText="Medals" Style="{StaticResource SectionLabel}" Margin="0,18,0,6"/>
+                    <StackPanel x:Name="AchievementsMedalsHost"/>
                 </StackPanel>
             </ScrollViewer>
 

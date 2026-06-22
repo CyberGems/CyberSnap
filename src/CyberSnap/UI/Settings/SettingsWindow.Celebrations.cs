@@ -408,7 +408,7 @@ public partial class SettingsWindow
         };
     }
 
-    // Builds the toggle's description line with an inline "Learn more" link to the About tab.
+    // Builds the toggle's description line with an inline "Learn more" link to the Achievements tab.
     private void BuildAchievementsDescription()
     {
         if (AchievementsDescText is null) return;
@@ -424,15 +424,14 @@ public partial class SettingsWindow
             TextDecorations = null,
             Cursor = System.Windows.Input.Cursors.Hand
         };
-        link.Click += AchievementsAbout_Click;
+        link.Click += AchievementsLink_Click;
         AchievementsDescText.Inlines.Add(link);
     }
 
-    // Jump to the About tab when the description link is clicked.
-    private void AchievementsAbout_Click(object sender, RoutedEventArgs e)
+    // Jump to the Achievements tab when the description link is clicked.
+    private void AchievementsLink_Click(object sender, RoutedEventArgs e)
     {
-        AboutTab.IsChecked = true;
-        ApplyMainTabSelection();
+        SelectSettingsTab("achievements");
         e.Handled = true;
     }
 }
