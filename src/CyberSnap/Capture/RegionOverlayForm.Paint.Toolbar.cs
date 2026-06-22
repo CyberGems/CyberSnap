@@ -271,8 +271,21 @@ public sealed partial class RegionOverlayForm
             }
         }
 
+        int sepIdx = -1;
+        for (int i = 0; i < _mainBarTools.Length; i++)
+        {
+            if (_mainBarTools[i].Id == "recordGif") sepIdx = i;
+        }
+        if (sepIdx == -1)
+        {
+            for (int i = 0; i < _mainBarTools.Length; i++)
+            {
+                if (_mainBarTools[i].Id == "record") sepIdx = i;
+            }
+        }
+
         // 2. Tier 1 Dividers: after scroll (3) and last capture tool
-        int[] tier1SepIndices = { 4 };
+        int[] tier1SepIndices = sepIdx >= 0 ? new int[] { sepIdx } : Array.Empty<int>();
         foreach (int idx in tier1SepIndices)
         {
             if (idx < 0 || idx >= _toolbarButtons.Length) continue;
