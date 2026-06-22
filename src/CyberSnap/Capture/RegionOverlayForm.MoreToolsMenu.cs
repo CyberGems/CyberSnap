@@ -115,6 +115,12 @@ public sealed partial class RegionOverlayForm
         var allTools = ToolDef.AllTools;
         var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
 
+        // When the entire annotation bar is toggled off, don't flood the menu with every
+        // individual annotation tool — the "Show annotation bar" toggle is enough to
+        // restore them all. Capture tools hidden one-by-one still appear here.
+        if (annotationToolsCount == 0)
+            hiddenTools = hiddenTools.Where(t => t.Group != 1).ToList();
+
         if (hiddenTools.Count == 0)
         {
             var emptyText = isSpanish ? "Mostrar herramientas ocultas" : "Show hidden tools";
@@ -143,7 +149,7 @@ public sealed partial class RegionOverlayForm
 
             // 4. Show all hidden
             menu.Items.Add(new ToolStripSeparator());
-            var showAllText = isSpanish ? "Mostrar todos" : "Show all hidden";
+            var showAllText = isSpanish ? "Restaurar herramientas" : "Restore tools";
             var showAllItem = WindowsMenuRenderer.Item(showAllText, iconId: null);
             showAllItem.Click += (s, e) => {
                 ShowAllTools();
