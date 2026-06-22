@@ -52,7 +52,15 @@ public sealed partial class RegionOverlayForm
         };
 
         // CyberSnap header (matches tray context menu style)
-        var headerLabel = new ToolStripLabel($"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}")
+        string appHeaderText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}";
+        if (tool == null)
+        {
+            var hint = isSpanish
+                ? "Haz clic derecho sobre los botones para ocultarlos."
+                : "Right-click on the buttons to hide them.";
+            appHeaderText += $"  •  {hint}";
+        }
+        var headerLabel = new ToolStripLabel(appHeaderText)
         {
             ForeColor = UiChrome.SurfaceTextMuted,
             Font = UiChrome.ChromeFont(8.5f),
@@ -62,17 +70,7 @@ public sealed partial class RegionOverlayForm
         menu.Items.Add(headerLabel);
         menu.Items.Add(new ToolStripSeparator());
 
-        // 1. Tip item (only when right-clicking toolbar background/system buttons)
-        if (tool == null)
-        {
-            var tipText = isSpanish
-                ? "Haz clic derecho sobre los botones para ocultarlos."
-                : "Right-click on the buttons to hide them.";
-            var tipItem = WindowsMenuRenderer.Item(tipText, iconId: "lightbulb");
-            tipItem.Enabled = false;
-            menu.Items.Add(tipItem);
-            menu.Items.Add(new ToolStripSeparator());
-        }
+        // 1. Tip item removed — hint is now part of the header line
 
         // 2. Hide option (only if hideable button with tool clicked)
         if (tool != null)

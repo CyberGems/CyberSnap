@@ -142,7 +142,7 @@ public sealed partial class RegionOverlayForm
         float baseOpacity = UiChrome.IsDark ? 0.35f : 0.40f;
         float opacity = _hoveredBrand ? (UiChrome.IsDark ? 0.70f : 0.80f) : baseOpacity;
         float textOpacity = opacity * 0.80f; // Slightly lower opacity than the solid logo to visually balance thin stroke vs solid block density
-        float sat = _hoveredBrand ? 1f : 0f; // 0 = greyscale, 1 = full saturation
+        float sat = _hoveredBrand ? 0.7f : 0f; // 0 = greyscale, 0.7 = 70% saturation on hover
         float isat = 1f - sat;
         var cm = new ColorMatrix(new float[][]
         {
