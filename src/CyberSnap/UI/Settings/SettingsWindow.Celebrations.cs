@@ -40,6 +40,11 @@ public partial class SettingsWindow
     private LinearGradientBrush? _railSweepBrush;
     private readonly List<Border> _railNodes = new();
 
+    // Numeric tick labels rendered under a curated subset of nodes (kept sparse so the
+    // 15-node rail doesn't crowd). Parallel lists: label element + its fractional X.
+    private readonly List<TextBlock> _railLabels = new();
+    private readonly List<double> _railLabelFracs = new();
+
     // Layout model recomputed on each refresh and consumed by LayoutRail (which needs the live
     // canvas width). Node X = RailPad + frac * usableWidth.
     private double[] _railNodeFracs = Array.Empty<double>();
@@ -102,10 +107,13 @@ public partial class SettingsWindow
 
         MilestoneRailHost!.Children.Clear();
         _railNodes.Clear();
+        _railLabels.Clear();
+        _railLabelFracs.Clear();
         _railSweep = null;
         _railSweepBrush = null;
 
-        _railCanvas = new Canvas { Height = 22, VerticalAlignment = VerticalAlignment.Top };
+        // Tall enough for the rail (top) plus a row of tick labels underneath.
+        _railCanvas = new Canvas { Height = 40, VerticalAlignment = VerticalAlignment.Top };
         MilestoneRailHost.Children.Add(_railCanvas);
 
         var dimBrush = new SolidColorBrush(MediaColor.FromArgb(0x26, 0xFF, 0xFF, 0xFF));
@@ -146,6 +154,23 @@ public partial class SettingsWindow
 
             _railNodes.Add(node);
             _railCanvas.Children.Add(node);
+
+            // Tick label under a curated subset (every other node) to keep the scale legible
+            // without crowding: 1, 100, 500, 1k, 2k, 5k, 10k, 25k.
+            if (i % 2 == 0)
+            {
+                var label = new TextBlock
+                {
+                    Text = i == 0 ? "1" : AbbrevMilestone(railValues[i]),
+                    FontSize = 9,
+                    Opacity = achieved ? 0.6 : 0.38,
+                    Foreground = achieved ? new SolidColorBrush(RailCyan)
+                                          : ((Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White)
+                };
+                _railLabels.Add(label);
+                _railLabelFracs.Add(_railNodeFracs[i]);
+                _railCanvas.Children.Add(label);
+            }
         }
 
         // Grabber: a bright core with a cyan halo, parked at the fractional progress position.
@@ -194,6 +219,14 @@ public partial class SettingsWindow
         return n == 1 ? 0 : gi / (n - 1);
     }
 
+    // Compact milestone label: "750" stays as-is, thousands become "1k" / "7.5k" / "25k".
+    private static string AbbrevMilestone(int v)
+    {
+        if (v < 1000) return v.ToString("N0");
+        double k = v / 1000.0;
+        return (k == Math.Floor(k) ? k.ToString("0") : k.ToString("0.#")) + "k";
+    }
+
     // Positions every rail element from the live canvas width. Called after layout and on resize.
     private void LayoutRail()
     {
@@ -225,6 +258,16 @@ public partial class SettingsWindow
 
         Canvas.SetLeft(_railGrabber, grabberX - _railGrabber.Width / 2);
         Canvas.SetTop(_railGrabber, RailYCenter - _railGrabber.Height / 2);
+
+        // Tick labels: centered under their node, just below the rail.
+        for (int i = 0; i < _railLabels.Count; i++)
+        {
+            var label = _railLabels[i];
+            label.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            double lx = X(_railLabelFracs[i]);
+            Canvas.SetLeft(label, lx - label.DesiredSize.Width / 2);
+            Canvas.SetTop(label, RailYCenter + 13);
+        }
     }
 
     // The one-shot "new milestone" flourish, mirroring ApplyCelebrationVisual: a flowing
@@ -300,37 +343,96 @@ public partial class SettingsWindow
         }
     }
 
+    // Stat chips parked at the bottom of the card: total captures, distance to the next
+    // milestone (or an "all reached" badge), and the current streak once it's going.
     private void UpdateRailCaption(int count, int? next, int streak)
     {
         if (MilestoneRailHost is null) return;
 
-        string countText = string.Format(LocalizationService.Translate("{0} captures and counting"), count);
-        string tailText = next is int nv
-            ? string.Format(LocalizationService.Translate("Next milestone: {0}"), nv)
-            : LocalizationService.Translate("All milestones reached!");
-
-        var caption = new TextBlock
+        var chips = new StackPanel
         {
-            FontSize = 11,
-            Opacity = 0.55,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Bottom
         };
-        caption.Inlines.Add(new Run($"{countText}    ·    {tailText}"));
 
-        // Passive streak awareness — a warm flame + day count once a streak is going (>= 2 days).
+        // Total captures.
+        chips.Children.Add(MakeChip(b =>
+            b.Add(new Run(string.Format(LocalizationService.Translate("{0} captures"), count.ToString("N0"))))));
+
+        // Distance to next milestone, or an "all done" badge.
+        chips.Children.Add(MakeChip(b =>
+        {
+            if (next is int nv)
+                b.Add(new Run(string.Format(LocalizationService.Translate("{0} to next milestone"),
+                    (nv - count).ToString("N0"))));
+            else
+                b.Add(new Run(LocalizationService.Translate("All milestones reached!")));
+        }));
+
+        // Streak — only once it's actually a streak (>= 2 days).
         if (streak >= 2)
         {
-            caption.Inlines.Add(new Run("    ·    "));
-            caption.Inlines.Add(new Run("🔥")
+            chips.Children.Add(MakeChip(b =>
             {
-                FontFamily = new FontFamily("Segoe UI Emoji"),
-                Foreground = new SolidColorBrush(MediaColor.FromRgb(0xFF, 0x9A, 0x3D))
-            });
-            caption.Inlines.Add(new Run(" " + string.Format(LocalizationService.Translate("{0}-day streak"), streak)));
+                b.Add(new Run("🔥")
+                {
+                    FontFamily = new FontFamily("Segoe UI Emoji"),
+                    Foreground = new SolidColorBrush(MediaColor.FromRgb(0xFF, 0x9A, 0x3D))
+                });
+                b.Add(new Run(" " + string.Format(LocalizationService.Translate("{0}-day streak"), streak)));
+            }));
         }
 
-        MilestoneRailHost.Children.Add(caption);
+        MilestoneRailHost.Children.Add(chips);
+    }
+
+    // A single rounded stat chip; the callback fills its inline content.
+    private Border MakeChip(Action<InlineCollection> fill)
+    {
+        var text = new TextBlock
+        {
+            FontSize = 11,
+            Opacity = 0.8,
+            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White
+        };
+        fill(text.Inlines);
+
+        return new Border
+        {
+            CornerRadius = new CornerRadius(5),
+            Padding = new Thickness(8, 3, 8, 3),
+            Margin = new Thickness(0, 0, 6, 0),
+            Background = (Brush?)TryFindResource("ThemeTabActiveBrush")
+                         ?? new SolidColorBrush(MediaColor.FromArgb(0x1F, 0xFF, 0xFF, 0xFF)),
+            Child = text
+        };
+    }
+
+    // Builds the toggle's description line with an inline "Learn more" link to the About tab.
+    private void BuildAchievementsDescription()
+    {
+        if (AchievementsDescText is null) return;
+
+        AchievementsDescText.Inlines.Clear();
+        AchievementsDescText.Inlines.Add(new Run(LocalizationService.Translate(
+            "Add a festive flourish to milestone moments, like your first capture of the day.")));
+        AchievementsDescText.Inlines.Add(new Run(" "));
+
+        var link = new Hyperlink(new Run(LocalizationService.Translate("Learn more")))
+        {
+            Foreground = new SolidColorBrush(RailCyan),
+            TextDecorations = null,
+            Cursor = System.Windows.Input.Cursors.Hand
+        };
+        link.Click += AchievementsAbout_Click;
+        AchievementsDescText.Inlines.Add(link);
+    }
+
+    // Jump to the About tab when the description link is clicked.
+    private void AchievementsAbout_Click(object sender, RoutedEventArgs e)
+    {
+        AboutTab.IsChecked = true;
+        ApplyMainTabSelection();
+        e.Handled = true;
     }
 }

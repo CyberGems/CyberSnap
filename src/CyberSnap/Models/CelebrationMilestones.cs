@@ -8,7 +8,7 @@ namespace CyberSnap.Models;
 public static class CelebrationMilestones
 {
     // Checked by exact match in the capture pipeline, so each fires its flourish once.
-    public static readonly int[] Values = { 50, 100, 250, 500, 750, 1000, 1500, 2000, 3000, 5000 };
+    public static readonly int[] Values = { 50, 100, 250, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 25000 };
 
     // Consecutive-day streak lengths that earn a celebratory toast (checked by exact match).
     public static readonly int[] StreakDays = { 3, 7, 14, 30, 60, 100, 365 };

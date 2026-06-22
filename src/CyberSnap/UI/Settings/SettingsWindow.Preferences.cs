@@ -569,7 +569,7 @@ public partial class SettingsWindow
         // live from settings on each capture.
         UpdateToastPreference(
             "settings.celebrations-enabled",
-            "Celebrations",
+            "Achievements",
             previous,
             enabled,
             value => _settingsService.Settings.CelebrationsEnabled = value,

@@ -201,6 +201,7 @@ public partial class SettingsWindow
             NotificationsEnabledCheck.IsChecked = s.NotificationsEnabled;
             SystemNotificationsCheck.IsChecked = s.SystemNotificationsEnabled;
             CelebrationsCheck.IsChecked = s.CelebrationsEnabled;
+            BuildAchievementsDescription();
             RefreshMilestoneRail(reveal: false);
             UpdateSystemNotificationsRowState(s.NotificationsEnabled);
             MuteSoundsCheck.IsChecked = !s.MuteSounds; // activator: checked = all sounds on
