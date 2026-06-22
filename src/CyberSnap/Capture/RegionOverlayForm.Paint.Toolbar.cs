@@ -146,11 +146,11 @@ public sealed partial class RegionOverlayForm
         float isat = 1f - sat;
         var cm = new ColorMatrix(new float[][]
         {
-            new float[] { isat + sat * 1f, sat * 0f,     sat * 0f,     0f, 0f },
-            new float[] { sat * 0f,     isat + sat * 1f, sat * 0f,     0f, 0f },
-            new float[] { sat * 0f,     sat * 0f,     isat + sat * 1f, 0f, 0f },
-            new float[] { 0f,           0f,           0f,           opacity, 0f },
-            new float[] { 0f,           0f,           0f,           0f, 1f }
+            new float[] { isat * 0.299f + sat, isat * 0.299f,       isat * 0.299f,       0f, 0f },
+            new float[] { isat * 0.587f,       isat * 0.587f + sat, isat * 0.587f,       0f, 0f },
+            new float[] { isat * 0.114f,       isat * 0.114f,       isat * 0.114f + sat, 0f, 0f },
+            new float[] { 0f,                  0f,                  0f,                  opacity, 0f },
+            new float[] { 0f,                  0f,                  0f,                  0f, 1f }
         });
 
         int logoSz = UiChrome.ScaleInt(10); // Reduced by 20% as requested
