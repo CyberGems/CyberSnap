@@ -159,11 +159,11 @@ public sealed partial class RegionOverlayForm
 
         var screenPoint = PointToScreen(clickLocation);
 
-        // When triggered from the menu activator (... button) or brand area,
-        // offset the menu so it doesn't cover the button — a second click
-        // on the activator toggles the menu closed.
+        // When triggered from the menu activator (... button), anchor the menu at
+        // the right edge so it never covers the button — regardless of where inside
+        // the activator the user clicked.
         if (buttonIndex == -1 && _menuActivatorRect.Contains(clickLocation))
-            screenPoint.Y = PointToScreen(new Point(0, _menuActivatorRect.Bottom)).Y;
+            screenPoint = PointToScreen(new Point(_menuActivatorRect.Right, _menuActivatorRect.Top));
 
         menu.Show(screenPoint);
     }
