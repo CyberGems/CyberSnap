@@ -48,6 +48,45 @@ public sealed partial class RegionOverlayForm
 
         // Hide the first-time capture banner on any user interaction
         HideCaptureBanner();
+
+        // Region confirmation mode: handles and buttons take priority
+        if (_isConfirmingSelection)
+        {
+            int ch = HitTestConfirmHandle(e.Location);
+            if (ch >= 0)
+            {
+                _confirmHandleDragIndex = ch;
+                _isConfirmDragging = false;
+                _confirmDragStart = e.Location;
+                _confirmDragStartRect = _confirmRect;
+                return;
+            }
+            int confirmBtnHit = HitTestConfirmButton(e.Location);
+            if (confirmBtnHit == 0)
+            {
+                StartConfirmPress(0); // squash animation, then CommitConfirmedSelection
+                return;
+            }
+            if (confirmBtnHit == 1)
+            {
+                StartConfirmPress(1); // squash animation, then ExitConfirmMode
+                return;
+            }
+            if (_confirmRect.Contains(e.Location))
+            {
+                // Start dragging the confirmed region
+                _isConfirmDragging = true;
+                _confirmHandleDragIndex = -1;
+                _confirmDragStart = e.Location;
+                _confirmDragOffset = new Point(e.Location.X - _confirmRect.X, e.Location.Y - _confirmRect.Y);
+                _confirmDragStartRect = _confirmRect;
+                return;
+            }
+            // Left-click outside the confirm UI: ignore it, so a stray click never captures
+            // and the pending selection is kept. Esc and right-click still cancel/exit.
+            return;
+        }
+
         if (_brandRect.Contains(e.Location) || _menuActivatorRect.Contains(e.Location))
         {
             HideToolbarTooltip();
@@ -447,44 +486,6 @@ public sealed partial class RegionOverlayForm
         if (_mode == CaptureMode.ColorPicker)
         {
             ColorPicked?.Invoke(_hexStr);
-            return;
-        }
-
-        // Region confirmation mode: handles and buttons take priority
-        if (_isConfirmingSelection)
-        {
-            int ch = HitTestConfirmHandle(e.Location);
-            if (ch >= 0)
-            {
-                _confirmHandleDragIndex = ch;
-                _isConfirmDragging = false;
-                _confirmDragStart = e.Location;
-                _confirmDragStartRect = _confirmRect;
-                return;
-            }
-            int confirmBtnHit = HitTestConfirmButton(e.Location);
-            if (confirmBtnHit == 0)
-            {
-                StartConfirmPress(0); // squash animation, then CommitConfirmedSelection
-                return;
-            }
-            if (confirmBtnHit == 1)
-            {
-                StartConfirmPress(1); // squash animation, then ExitConfirmMode
-                return;
-            }
-            if (_confirmRect.Contains(e.Location))
-            {
-                // Start dragging the confirmed region
-                _isConfirmDragging = true;
-                _confirmHandleDragIndex = -1;
-                _confirmDragStart = e.Location;
-                _confirmDragOffset = new Point(e.Location.X - _confirmRect.X, e.Location.Y - _confirmRect.Y);
-                _confirmDragStartRect = _confirmRect;
-                return;
-            }
-            // Left-click outside the confirm UI: ignore it, so a stray click never captures
-            // and the pending selection is kept. Esc and right-click still cancel/exit.
             return;
         }
 
