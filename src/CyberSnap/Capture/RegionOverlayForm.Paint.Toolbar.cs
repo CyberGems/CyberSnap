@@ -85,25 +85,36 @@ public sealed partial class RegionOverlayForm
         using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 80 : 50, UiChrome.AccentColor), 1f))
             g.DrawPath(pen, path);
 
-        // Render gorgeous glowing neon accent line along the docked screen edge of the bar
-        using (var pen = new Pen(UiChrome.AccentColor, 2f))
+        // Render gorgeous glowing neon accent line along the docked screen edge of the bar.
+        // Trace the rounded corners (not a flat line stopping short of them) so the accent hugs the
+        // bar's radius and reaches into the corners, matching the system-toast accent style.
+        using (var path = BuildDockedEdgePath(r, cr, ActiveDockSide))
         {
-            var dock = ActiveDockSide;
-            if (dock == CaptureDockSide.Top)
+            if (path != null)
             {
-                g.DrawLine(pen, r.X + cr, r.Y + 1f, r.Right - cr, r.Y + 1f);
-            }
-            else if (dock == CaptureDockSide.Bottom)
-            {
-                g.DrawLine(pen, r.X + cr, r.Bottom - 1f, r.Right - cr, r.Bottom - 1f);
-            }
-            else if (dock == CaptureDockSide.Left)
-            {
-                g.DrawLine(pen, r.X + 1f, r.Y + cr, r.X + 1f, r.Bottom - cr);
-            }
-            else if (dock == CaptureDockSide.Right)
-            {
-                g.DrawLine(pen, r.Right - 1f, r.Y + cr, r.Right - 1f, r.Bottom - cr);
+                var dock = ActiveDockSide;
+                bool horizontal = dock == CaptureDockSide.Top || dock == CaptureDockSide.Bottom;
+                var accent = UiChrome.AccentColor;
+                var fade = Color.FromArgb(0, accent);
+                // Gradient runs along the bar's long axis, fading to transparent at both tips so the
+                // neon line dissolves softly into the rounded corners instead of ending abruptly.
+                PointF p0 = new PointF(r.X, r.Y);
+                PointF p1 = horizontal ? new PointF(r.Right, r.Y) : new PointF(r.X, r.Bottom);
+                using (var brush = new LinearGradientBrush(p0, p1, accent, accent))
+                {
+                    brush.InterpolationColors = new ColorBlend
+                    {
+                        Colors = new[] { fade, accent, accent, fade },
+                        Positions = new[] { 0f, 0.10f, 0.90f, 1f },
+                    };
+                    using (var pen = new Pen(brush, 2f)
+                    {
+                        StartCap = LineCap.Round,
+                        EndCap = LineCap.Round,
+                        LineJoin = LineJoin.Round,
+                    })
+                        g.DrawPath(pen, path);
+                }
             }
         }
 
@@ -257,17 +268,18 @@ public sealed partial class RegionOverlayForm
         // 1. Divider line splitting Tier 1 from Tier 2
         if (_flyoutTools.Length > 0)
         {
+            // The divider runs perpendicular to the docked edge, so its ends meet a straight border
+            // (not a rounded corner) — a small inset lets it reach nearly to the extremes.
+            int dividerInset = UiChrome.ScaleInt(4);
             if (IsVerticalDock)
             {
                 int dividerX = _toolbarRect.X + pad + buttonSize + buttonSpacing / 2;
-                int inset = UiChrome.ScaleInt(12);
-                WindowsDockRenderer.PaintDivider(g, new Point(dividerX, r.Y + inset), new Point(dividerX, r.Bottom - inset));
+                WindowsDockRenderer.PaintDivider(g, new Point(dividerX, r.Y + dividerInset), new Point(dividerX, r.Bottom - dividerInset));
             }
             else
             {
                 int dividerY = _toolbarRect.Y + pad + buttonSize + buttonSpacing / 2;
-                int inset = UiChrome.ScaleInt(12);
-                WindowsDockRenderer.PaintDivider(g, new Point(r.X + inset, dividerY), new Point(r.Right - inset, dividerY));
+                WindowsDockRenderer.PaintDivider(g, new Point(r.X + dividerInset, dividerY), new Point(r.Right - dividerInset, dividerY));
             }
         }
 
@@ -323,9 +335,27 @@ public sealed partial class RegionOverlayForm
             }
         }
 
+        // 2b. Divider isolating the Cancel (X) button from the styling/system cluster, so it doesn't
+        // read as just another tool. Drawn in the existing gap before Close — no layout changes.
+        if (PositionButtonIndex < _toolbarButtons.Length && CloseButtonIndex < _toolbarButtons.Length)
+        {
+            var posBtn = _toolbarButtons[PositionButtonIndex];
+            var closeBtn = _toolbarButtons[CloseButtonIndex];
+            if (IsVerticalDock)
+            {
+                int sy = (posBtn.Bottom + closeBtn.Y) / 2;
+                WindowsDockRenderer.PaintDivider(g, new Point(closeBtn.X + 4, sy), new Point(closeBtn.Right - 4, sy));
+            }
+            else
+            {
+                int sx = (posBtn.Right + closeBtn.X) / 2;
+                WindowsDockRenderer.PaintDivider(g, new Point(sx, closeBtn.Y + 4), new Point(sx, closeBtn.Bottom - 4));
+            }
+        }
+
         // 3. Tier 2 Dividers: after indices offset by _mainBarTools.Length + 4
         int drawingStartIdx = _mainBarTools.Length + 4;
-        int[] tier2Offsets = { 1, 8 };
+        int[] tier2Offsets = { 2, 9 };
         int[] tier2Seps = tier2Offsets.Select(offset => drawingStartIdx + offset).ToArray();
         foreach (int idx in tier2Seps)
         {
@@ -360,7 +390,9 @@ public sealed partial class RegionOverlayForm
             {
                 WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
                 float lineY = btn.Y + btn.Height / 2f;
-                float margin = 6f;
+                // Inset to roughly match the icon glyphs' footprint so the preview doesn't crowd the
+                // group separator on its left.
+                float margin = 9f;
                 float lineX1 = btn.X + margin;
                 float lineX2 = btn.Right - margin;
                 int alpha = active ? 255 : hover ? 230 : 175;
@@ -409,9 +441,20 @@ public sealed partial class RegionOverlayForm
                 continue;
             }
 
+            // Cancel button: render in danger red (hover bg + icon tint) so it reads as a destructive
+            // action, not just another tool sitting at the end of the row.
+            if (i == CloseButtonIndex)
+            {
+                var danger = UiChrome.SurfaceDanger;
+                WindowsDockRenderer.PaintButton(g, btn, active: false, hovered: hover, accent: danger);
+                int ca = hover ? 255 : 165;
+                DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ca, danger.R, danger.G, danger.B), active: false);
+                continue;
+            }
+
             WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
 
-            int ia = active ? 255 : hover ? 240 : (i == CloseButtonIndex || i == PositionButtonIndex) ? 130 : 200;
+            int ia = active ? 255 : hover ? 240 : (i == PositionButtonIndex) ? 130 : 200;
             var iconColor = active ? tierAccent : UiChrome.SurfaceTextPrimary;
             DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
         }
@@ -447,6 +490,40 @@ public sealed partial class RegionOverlayForm
 
         g.SmoothingMode = SmoothingMode.Default;
         g.PixelOffsetMode = PixelOffsetMode.Default;
+    }
+
+    /// <summary>Path tracing the docked edge of the bar including its two corner arcs, so the neon
+    /// accent line curves into the rounded corners instead of stopping short of them.</summary>
+    private static GraphicsPath? BuildDockedEdgePath(Rectangle rect, float radius, CaptureDockSide dock)
+    {
+        float r = Math.Max(1f, radius - 1f);
+        float d = r * 2f;
+        // Sit just inside the panel border (1px) like the previous flat line did.
+        var b = new RectangleF(rect.X + 1f, rect.Y + 1f, rect.Width - 2f, rect.Height - 2f);
+        var path = new GraphicsPath();
+        switch (dock)
+        {
+            case CaptureDockSide.Top:
+                path.AddArc(b.X, b.Y, d, d, 180f, 90f);                 // top-left corner
+                path.AddArc(b.Right - d, b.Y, d, d, 270f, 90f);         // top edge + top-right corner
+                break;
+            case CaptureDockSide.Bottom:
+                path.AddArc(b.X, b.Bottom - d, d, d, 180f, -90f);       // bottom-left corner
+                path.AddArc(b.Right - d, b.Bottom - d, d, d, 90f, -90f);// bottom edge + bottom-right corner
+                break;
+            case CaptureDockSide.Left:
+                path.AddArc(b.X, b.Y, d, d, 270f, -90f);                // top-left corner
+                path.AddArc(b.X, b.Bottom - d, d, d, 180f, -90f);       // left edge + bottom-left corner
+                break;
+            case CaptureDockSide.Right:
+                path.AddArc(b.Right - d, b.Y, d, d, 270f, 90f);         // top-right corner
+                path.AddArc(b.Right - d, b.Bottom - d, d, d, 0f, 90f);  // right edge + bottom-right corner
+                break;
+            default:
+                path.Dispose();
+                return null;
+        }
+        return path;
     }
 
     private static Color ScaleAlpha(Color color, float factor)

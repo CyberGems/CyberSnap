@@ -545,6 +545,7 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       0), // ruler          → 0x30
         new("select",      "Move & Resize",        '\uE1E3', CaptureMode.Move,        1), // cursor-click   → 0x31
         new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser         → 0x33
+        new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1), // highlighter
         new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type           → 0x37
         new("arrow",       "Arrow",        '\uE051', CaptureMode.Arrow,       1), // arrow-up-right → 0x32
         new("line",        "Line",         '\uE11F', CaptureMode.Line,        1), // minus          → 0x36
@@ -552,7 +553,6 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("curvedArrow", "Curved Arrow", '\uE146', CaptureMode.CurvedArrow, 1), // redo           → 0x35
         new("circleShape", "Circle",       '\uE07A', CaptureMode.CircleShape, 1), // circle         → 0x38
         new("rectShape",   "Rectangle",    '\uE16A', CaptureMode.RectShape,   1), // square         → 0x39
-        new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1), // highlighter
         new("step",        "Step Number",  '\uE1D0', CaptureMode.StepNumber,  1), // list-ordered   → 0x3A
         new("magnifier",   "Magnifier",    '\uE721', CaptureMode.Magnifier,   1),
         new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1), // blend

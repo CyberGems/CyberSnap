@@ -103,19 +103,28 @@ public sealed partial class RegionOverlayForm
         menu.Items.Add(showBarItem);
         menu.Items.Add(new ToolStripSeparator());
 
-        // 3. Show Hidden submenu
-        var showHiddenText = isSpanish ? "Mostrar ocultos" : "Show Hidden";
-        var showHiddenSubmenu = WindowsMenuRenderer.Submenu(showHiddenText, showImages: true);
-
+        // 3. Show Hidden — rendered as a flat section, NOT a nested submenu. The capture overlay is a
+        // single window that spans every monitor, so on a multi-monitor setup with mixed DPI the
+        // WinForms ToolStripDropDown places a second-level submenu on the wrong monitor and swallows
+        // its first hover (per-monitor-DPI support for ToolStrip is known to be unreliable). Listing
+        // the hidden tools inline sidesteps that entire class of bug.
         var allTools = ToolDef.AllTools;
         var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
 
         if (hiddenTools.Count == 0)
         {
-            showHiddenSubmenu.Enabled = false;
+            var emptyText = isSpanish ? "Mostrar ocultos" : "Show Hidden";
+            var emptyItem = WindowsMenuRenderer.Item(emptyText, iconId: null);
+            emptyItem.Enabled = false;
+            menu.Items.Add(emptyItem);
         }
         else
         {
+            var headerText = isSpanish ? "Mostrar ocultos:" : "Show Hidden:";
+            var header = WindowsMenuRenderer.Item(headerText, iconId: null);
+            header.Enabled = false;
+            menu.Items.Add(header);
+
             foreach (var hTool in hiddenTools)
             {
                 var iconId = hTool.Id == "scroll" ? "scrollCapture" : hTool.Id;
@@ -124,14 +133,10 @@ public sealed partial class RegionOverlayForm
                 toolItem.Click += (s, e) => {
                     ShowTool(targetId);
                 };
-                showHiddenSubmenu.DropDownItems.Add(toolItem);
+                menu.Items.Add(toolItem);
             }
-        }
-        menu.Items.Add(showHiddenSubmenu);
 
-        // 4. Show all hidden
-        if (hiddenTools.Count > 0)
-        {
+            // 4. Show all hidden
             menu.Items.Add(new ToolStripSeparator());
             var showAllText = isSpanish ? "Mostrar todos" : "Show all hidden";
             var showAllItem = WindowsMenuRenderer.Item(showAllText, iconId: null);
@@ -150,19 +155,9 @@ public sealed partial class RegionOverlayForm
         };
         menu.Items.Add(closeMenuItem);
 
-        var menuWidth = WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
-        if (showHiddenSubmenu.DropDownItems.Count > 0)
-        {
-            WindowsMenuRenderer.NormalizeDropDownWidths(showHiddenSubmenu, 160);
-        }
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
 
         var screenPoint = PointToScreen(clickLocation);
-        var wa = Screen.FromPoint(screenPoint).WorkingArea;
-        const int submenuWidth = 180;
-        showHiddenSubmenu.DropDownDirection = (screenPoint.X + menuWidth + submenuWidth > wa.Right)
-            ? ToolStripDropDownDirection.Left
-            : ToolStripDropDownDirection.Right;
-
         menu.Show(screenPoint);
     }
 

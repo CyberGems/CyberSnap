@@ -184,7 +184,7 @@ public partial class SettingsWindow
         var selected = DisableAnimationsCheck.IsChecked == true;
         UpdateGeneralPreference(
             "settings.disable-animations",
-            "Disable animations",
+            "Disable animated effects",
             previous,
             selected,
             value => _settingsService.Settings.DisableAnimations = value,

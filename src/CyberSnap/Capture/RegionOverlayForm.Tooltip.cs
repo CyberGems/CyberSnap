@@ -99,6 +99,14 @@ public sealed partial class RegionOverlayForm
         var settings = Services.SettingsService.LoadStatic();
         var isSpanish = settings != null && string.Equals(settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
 
+        // Cancel button: spell out what it cancels (the whole capture, discarded) and surface the Esc shortcut.
+        if (button == CloseButtonIndex)
+        {
+            return isSpanish
+                ? "Cancelar captura  (Esc)\nDescarta la selección y cierra sin guardar"
+                : "Cancel capture  (Esc)\nDiscard the selection and close without saving";
+        }
+
         if (button < _mainBarTools.Length)
         {
             var tool = _mainBarTools[button];

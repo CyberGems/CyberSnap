@@ -96,6 +96,8 @@ public static class UiChrome
     public static System.Drawing.Color SurfaceTooltip => IsDark ? System.Drawing.Color.FromArgb(255, 30, 33, 34) : System.Drawing.Color.FromArgb(255, 237, 240, 246);
     public static System.Drawing.Color AccentColor => IsDark ? System.Drawing.Color.FromArgb(255, 75, 130, 246) : System.Drawing.Color.FromArgb(255, 0, 120, 215);
     public static System.Drawing.Color AccentTier2 => IsDark ? System.Drawing.Color.FromArgb(255, 61, 109, 245) : System.Drawing.Color.FromArgb(255, 0, 100, 200);
+    // Destructive-action accent (cancel/discard). Matches the menu's danger red so the X reads as "not a tool".
+    public static System.Drawing.Color SurfaceDanger => IsDark ? System.Drawing.Color.FromArgb(255, 248, 113, 113) : System.Drawing.Color.FromArgb(255, 220, 38, 38);
     public static System.Drawing.Color SurfaceShadow => System.Drawing.Color.FromArgb(IsDark ? 60 : 34, 0, 0, 0);
     public static System.Drawing.Color SurfaceDimOverlay => System.Drawing.Color.FromArgb(IsDark ? 35 : 18, 0, 0, 0);
     public static System.Drawing.Color SurfaceSelectionOverlay => System.Drawing.Color.FromArgb(IsDark ? 100 : 72, 0, 0, 0);
