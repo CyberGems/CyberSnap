@@ -67,10 +67,10 @@ public sealed partial class RegionOverlayForm
             string headerText;
             if (systemButtonName != null)
             {
-                var sysNote = isSpanish
-                    ? "Botón de sistema — siempre visible"
-                    : "System button — always visible";
-                headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}\n{systemButtonName}  •  {sysNote}";
+                var sysLine = isSpanish
+                    ? $"Botón {systemButtonName}  •  Siempre visible"
+                    : $"{systemButtonName}  button  •  Always visible";
+                headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}\n{sysLine}";
             }
             else
             {
