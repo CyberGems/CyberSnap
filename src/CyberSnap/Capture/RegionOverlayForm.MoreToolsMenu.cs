@@ -51,24 +51,23 @@ public sealed partial class RegionOverlayForm
             _toolbarContextMenu = null;
         };
 
-        // CyberSnap header (matches tray context menu style)
-        string appHeaderText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}";
+        // CyberSnap header — only shown when the hint is displayed (toolbar background / brand click)
         if (tool == null)
         {
             var hint = isSpanish
                 ? "Haz clic derecho sobre los botones para ocultarlos."
                 : "Right-click on the buttons to hide them.";
-            appHeaderText += $"  •  {hint}";
+            var appHeaderText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}  •  {hint}";
+            var headerLabel = new ToolStripLabel(appHeaderText)
+            {
+                ForeColor = UiChrome.SurfaceTextMuted,
+                Font = UiChrome.ChromeFont(8.5f),
+                Padding = new System.Windows.Forms.Padding(10, 12, 0, 2),
+                AutoSize = true,
+            };
+            menu.Items.Add(headerLabel);
+            menu.Items.Add(new ToolStripSeparator());
         }
-        var headerLabel = new ToolStripLabel(appHeaderText)
-        {
-            ForeColor = UiChrome.SurfaceTextMuted,
-            Font = UiChrome.ChromeFont(8.5f),
-            Padding = new System.Windows.Forms.Padding(10, 12, 0, 2),
-            AutoSize = true,
-        };
-        menu.Items.Add(headerLabel);
-        menu.Items.Add(new ToolStripSeparator());
 
         // 1. Tip item removed — hint is now part of the header line
 
