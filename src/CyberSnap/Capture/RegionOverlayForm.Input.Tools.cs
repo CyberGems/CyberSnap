@@ -261,7 +261,7 @@ public sealed partial class RegionOverlayForm
             _hoverButtonStartTime = DateTime.UtcNow;
         }
 
-        bool hovBrand = _brandRect.Contains(e.Location);
+        bool hovBrand = _logoRect.Contains(e.Location);
         bool hovActivator = _menuActivatorRect.Contains(e.Location);
         if (hovBrand != _hoveredBrand || hovActivator != _hoveredMenuActivator)
         {
@@ -427,6 +427,8 @@ public sealed partial class RegionOverlayForm
         else if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location))
             target = _hoveredAltCaptureBtn ? Cursors.Hand : Cursors.Default;
 
+        else if (_logoRect.Contains(e.Location))
+            target = Cursors.Hand;
         else if (_toolbarRect.Contains(e.Location))
             target = btn >= 0 ? Cursors.Hand : Cursors.Default;
         else if (_isTyping && _hoveredTextBtn == 8)

@@ -51,6 +51,17 @@ public sealed partial class RegionOverlayForm
             _toolbarContextMenu = null;
         };
 
+        // CyberSnap header (matches tray context menu style)
+        var headerLabel = new ToolStripLabel($"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}")
+        {
+            ForeColor = UiChrome.SurfaceTextMuted,
+            Font = UiChrome.ChromeFont(8.5f),
+            Padding = new System.Windows.Forms.Padding(10, 12, 0, 2),
+            AutoSize = true,
+        };
+        menu.Items.Add(headerLabel);
+        menu.Items.Add(new ToolStripSeparator());
+
         // 1. Tip item (only when right-clicking toolbar background/system buttons)
         if (tool == null)
         {

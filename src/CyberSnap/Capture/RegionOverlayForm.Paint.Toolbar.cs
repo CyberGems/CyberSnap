@@ -142,13 +142,15 @@ public sealed partial class RegionOverlayForm
         float baseOpacity = UiChrome.IsDark ? 0.35f : 0.40f;
         float opacity = _hoveredBrand ? (UiChrome.IsDark ? 0.70f : 0.80f) : baseOpacity;
         float textOpacity = opacity * 0.80f; // Slightly lower opacity than the solid logo to visually balance thin stroke vs solid block density
+        float sat = _hoveredBrand ? 1f : 0f; // 0 = greyscale, 1 = full saturation
+        float isat = 1f - sat;
         var cm = new ColorMatrix(new float[][]
         {
-            new float[] { 0.299f, 0.299f, 0.299f, 0f, 0f },
-            new float[] { 0.587f, 0.587f, 0.587f, 0f, 0f },
-            new float[] { 0.114f, 0.114f, 0.114f, 0f, 0f },
-            new float[] { 0f,     0f,     0f,     opacity, 0f },
-            new float[] { 0f,     0f,     0f,     0f, 1f }
+            new float[] { isat + sat * 1f, sat * 0f,     sat * 0f,     0f, 0f },
+            new float[] { sat * 0f,     isat + sat * 1f, sat * 0f,     0f, 0f },
+            new float[] { sat * 0f,     sat * 0f,     isat + sat * 1f, 0f, 0f },
+            new float[] { 0f,           0f,           0f,           opacity, 0f },
+            new float[] { 0f,           0f,           0f,           0f, 1f }
         });
 
         int logoSz = UiChrome.ScaleInt(10); // Reduced by 20% as requested
@@ -161,6 +163,7 @@ public sealed partial class RegionOverlayForm
             // Draw logo icon at the top of Column 1 (centered)
             float lx = _toolbarRect.X + pad + (buttonSize - logoSz) / 2f;
             float ly = _toolbarRect.Y + pad + UiChrome.ScaleInt(6);
+            _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
             
             if (_brandBitmap != null)
             {
@@ -227,6 +230,8 @@ public sealed partial class RegionOverlayForm
                 lx = _toolbarRect.X + (availableBrandWidth - logoSz) / 2f;
                 ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
             }
+            
+            _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
             
             if (_brandBitmap != null)
             {
