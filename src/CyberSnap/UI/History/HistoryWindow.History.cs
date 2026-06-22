@@ -776,8 +776,8 @@ public partial class HistoryWindow
 
         if (vm.SelectionBadge != null)
         {
-            vm.SelectionBadge.Visibility = _selectMode || vm.IsSelected ? Visibility.Visible : Visibility.Collapsed;
-            vm.SelectionBadge.Opacity = vm.IsSelected ? 1 : 0.45;
+            // Badge is always visible; only the checkmark toggles.
+            vm.SelectionBadge.Opacity = vm.IsSelected ? 1 : 0.55;
             UpdateSelectionBadgeAccessibility(vm.SelectionBadge, vm.IsSelected);
             if (vm.SelectionBadge is FrameworkElement { Tag: UIElement check })
                 check.Visibility = vm.IsSelected ? Visibility.Visible : Visibility.Hidden;
