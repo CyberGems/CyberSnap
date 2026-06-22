@@ -670,6 +670,19 @@ public sealed partial class RegionOverlayForm : Form
             CaptureDockSide,
             UiChrome.ScaledToolbarTopMargin);
 
+        int sepIdx = -1;
+        for (int i = 0; i < _mainBarTools.Length; i++)
+        {
+            if (_mainBarTools[i].Id == "recordGif") sepIdx = i;
+        }
+        if (sepIdx == -1)
+        {
+            for (int i = 0; i < _mainBarTools.Length; i++)
+            {
+                if (_mainBarTools[i].Id == "record") sepIdx = i;
+            }
+        }
+
         if (IsVerticalDock)
         {
             // Column 1: Capture & System Tools
@@ -685,7 +698,7 @@ public sealed partial class RegionOverlayForm : Form
             {
                 _toolbarButtons[i] = new Rectangle(col1X, cy, buttonSize, buttonSize);
                 cy += buttonSize + buttonSpacing;
-                if (i == 4)
+                if (i == sepIdx)
                     cy += GroupGap;
             }
             cy += GroupGap;
@@ -730,7 +743,7 @@ public sealed partial class RegionOverlayForm : Form
             {
                 _toolbarButtons[i] = new Rectangle(cx, row1Y, buttonSize, buttonSize);
                 cx += buttonSize + buttonSpacing;
-                if (i == 4)
+                if (i == sepIdx)
                     cx += GroupGap;
             }
             cx += GroupGap;
