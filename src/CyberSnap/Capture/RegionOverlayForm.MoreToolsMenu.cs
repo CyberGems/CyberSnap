@@ -157,6 +157,21 @@ public sealed partial class RegionOverlayForm
         }
 
         var screenPoint = PointToScreen(clickLocation);
+
+        // Adjust submenu direction to prevent spilling onto other monitors
+        var wa = Screen.FromPoint(screenPoint).WorkingArea;
+        var sz = menu.PreferredSize;
+        const int submenuWidth = 180;
+        var subDirection = (screenPoint.X + sz.Width + submenuWidth > wa.Right)
+            ? ToolStripDropDownDirection.Left
+            : ToolStripDropDownDirection.Right;
+
+        foreach (ToolStripItem it in menu.Items)
+        {
+            if (it is ToolStripMenuItem mi && mi.HasDropDownItems)
+                mi.DropDownDirection = subDirection;
+        }
+
         menu.Show(screenPoint);
     }
 
