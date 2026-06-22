@@ -25,6 +25,10 @@ public partial class SettingsWindow
     private static readonly string GlyphStar = ((char)0xE735).ToString();   // FavoriteStarFill
     private static readonly string GlyphLock = ((char)0xE72E).ToString();   // Lock
 
+    // Icon font with MDL2 fallback — matches the rest of the app (see SettingIconGlyph style).
+    // Without the fallback, glyphs render as empty squares on systems lacking Segoe Fluent Icons.
+    private static readonly FontFamily IconFont = new("Segoe Fluent Icons, Segoe MDL2 Assets");
+
     // (Re)builds the statistics cards and medal grid from the live settings. Called when the
     // Achievements tab is selected and after the Celebrations toggle changes.
     private void RefreshAchievements()
@@ -82,7 +86,7 @@ public partial class SettingsWindow
         {
             Text = glyph,
             FontSize = 20,
-            FontFamily = isEmoji ? new FontFamily("Segoe UI Emoji") : new FontFamily("Segoe Fluent Icons"),
+            FontFamily = isEmoji ? new FontFamily("Segoe UI Emoji") : IconFont,
             Foreground = new SolidColorBrush(accent),
             HorizontalAlignment = HAlign.Center,
             Margin = new Thickness(0, 0, 0, 6),
@@ -174,7 +178,7 @@ public partial class SettingsWindow
         {
             Text = a.Glyph,
             FontSize = 22,
-            FontFamily = new FontFamily("Segoe Fluent Icons"),
+            FontFamily = IconFont,
             Foreground = a.Unlocked
                 ? new SolidColorBrush(color)
                 : new SolidColorBrush(MediaColor.FromArgb(0x55, 0xFF, 0xFF, 0xFF)),
@@ -209,7 +213,7 @@ public partial class SettingsWindow
             {
                 Text = GlyphLock,
                 FontSize = 12,
-                FontFamily = new FontFamily("Segoe Fluent Icons"),
+                FontFamily = IconFont,
                 Foreground = new SolidColorBrush(MediaColor.FromArgb(0x99, 0xFF, 0xFF, 0xFF)),
                 HorizontalAlignment = HAlign.Right,
                 VerticalAlignment = VerticalAlignment.Bottom
