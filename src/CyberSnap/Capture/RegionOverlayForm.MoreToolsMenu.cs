@@ -51,14 +51,36 @@ public sealed partial class RegionOverlayForm
             _toolbarContextMenu = null;
         };
 
-        // CyberSnap header — only shown when the hint is displayed (toolbar background / brand click)
+        // CyberSnap header — always shown when a system button or toolbar background is clicked
         if (tool == null)
         {
-            var hint = isSpanish
-                ? "Haz clic derecho sobre los botones para ocultarlos."
-                : "Right-click on the buttons to hide them.";
-            var appHeaderText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}  •  {hint}";
-            var headerLabel = new ToolStripLabel(appHeaderText)
+            string? systemButtonName = null;
+            if (buttonIndex == StrokeWidthButtonIndex)
+                systemButtonName = LocalizationService.Translate("Shape stroke width");
+            else if (buttonIndex == ColorButtonIndex)
+                systemButtonName = LocalizationService.Translate("Active drawing and text color");
+            else if (buttonIndex == PositionButtonIndex)
+                systemButtonName = LocalizationService.Translate("Toolbar Position");
+            else if (buttonIndex == CloseButtonIndex)
+                systemButtonName = LocalizationService.Translate("Cancel");
+
+            string headerText;
+            if (systemButtonName != null)
+            {
+                var sysNote = isSpanish
+                    ? "Botón de sistema — siempre visible"
+                    : "System button — always visible";
+                headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}\n{systemButtonName}  •  {sysNote}";
+            }
+            else
+            {
+                var hint = isSpanish
+                    ? "Haz clic derecho sobre los botones para ocultarlos."
+                    : "Right-click on the buttons to hide them.";
+                headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}  •  {hint}";
+            }
+
+            var headerLabel = new ToolStripLabel(headerText)
             {
                 ForeColor = UiChrome.SurfaceTextMuted,
                 Font = UiChrome.ChromeFont(8.5f),
