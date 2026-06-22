@@ -298,12 +298,10 @@ public partial class HistoryWindow
             catch (Exception ex) { ToastWindow.ShowError("Copy failed", ex.Message); }
         });
 
-        // Type badge in the image area
         var badgeLabel = entry.Kind == HistoryKind.Video ? "VID"
             : entry.Kind == HistoryKind.Gif ? "GIF" : "IMG";
         var badgeColor = entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(255, 100, 100)
             : entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60) : System.Windows.Media.Color.FromRgb(80, 190, 180);
-        AddTypeBadge(shell.ImageContainer, badgeLabel, badgeColor);
 
         // Add play icon overlay for videos (same as CreateVideoCard)
         if (entry.Kind == HistoryKind.Video)
@@ -340,15 +338,7 @@ public partial class HistoryWindow
         };
         shell.InfoPanel.Children.Add(nameBlock);
 
-        var timeBlock = new TextBlock
-        {
-            Text = vm.TimeAgo,
-            FontSize = 10,
-            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
-            Opacity = 0.3,
-            TextTrimming = TextTrimming.CharacterEllipsis
-        };
-        shell.InfoPanel.Children.Add(timeBlock);
+        shell.InfoPanel.Children.Add(CreateBadgeTimeText(badgeLabel, badgeColor, vm.TimeAgo));
 
         shell.Card.MouseLeftButtonDown += (_, e) =>
         {
@@ -377,7 +367,6 @@ public partial class HistoryWindow
 
         // Top: the actual text content (replaces the image thumbnail area)
         var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true, MaxWidth = HistoryCardPreferredWidth };
-        AddTypeBadge(textArea, "OCR", System.Windows.Media.Color.FromRgb(100, 180, 255));
         var selBadge = CreateUnifiedSelectionBadge();
         textArea.Children.Add(selBadge);
         var displayText = text.Length > 80 ? text[..80] + "…" : text;
@@ -390,7 +379,7 @@ public partial class HistoryWindow
             TextTrimming = TextTrimming.CharacterEllipsis,
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
             Foreground = Theme.Brush(Theme.TextPrimary),
-            Margin = new Thickness(10, 26, 10, 10),  // top margin clears the badge, right fills to edge
+            Margin = new Thickness(10, 8, 10, 10),
             VerticalAlignment = VerticalAlignment.Top
         });
         AttachCardMenu(card, textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
@@ -400,7 +389,7 @@ public partial class HistoryWindow
         // Bottom: just the capture time
         var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
         info.Children.Add(new TextBlock { Text = LocalizationService.Translate("OCR Text"), FontSize = 11, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), TextTrimming = TextTrimming.CharacterEllipsis });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), Opacity = 0.3, TextTrimming = TextTrimming.CharacterEllipsis });
+        info.Children.Add(CreateBadgeTimeText("OCR", System.Windows.Media.Color.FromRgb(100, 180, 255), FormatTimeAgo(entry.CapturedAt)));
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
@@ -444,7 +433,6 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
-        AddTypeBadge(swatchArea, "CLR", System.Windows.Media.Color.FromRgb(255, 160, 80));
         var selBadge = CreateUnifiedSelectionBadge();
         swatchArea.Children.Add(selBadge);
         AttachCardMenu(card, swatchArea, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
@@ -468,7 +456,7 @@ public partial class HistoryWindow
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
             TextTrimming = TextTrimming.CharacterEllipsis
         });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), Opacity = 0.3, TextTrimming = TextTrimming.CharacterEllipsis });
+        info.Children.Add(CreateBadgeTimeText("CLR", System.Windows.Media.Color.FromRgb(255, 160, 80), FormatTimeAgo(entry.CapturedAt)));
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
@@ -510,7 +498,6 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var previewArea = new Grid { Background = Brushes.White, MaxWidth = HistoryCardPreferredWidth };
-        AddTypeBadge(previewArea, "QR", System.Windows.Media.Color.FromRgb(120, 200, 120));
         var selBadge = CreateUnifiedSelectionBadge();
         previewArea.Children.Add(selBadge);
         var previewKey = $"{text}|{format}";
@@ -542,7 +529,7 @@ public partial class HistoryWindow
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
             TextTrimming = TextTrimming.CharacterEllipsis
         });
-        info.Children.Add(new TextBlock { Text = FormatTimeAgo(entry.CapturedAt), FontSize = 10, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), Opacity = 0.3, TextTrimming = TextTrimming.CharacterEllipsis });
+        info.Children.Add(CreateBadgeTimeText("QR", System.Windows.Media.Color.FromRgb(120, 200, 120), FormatTimeAgo(entry.CapturedAt)));
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         Grid.SetRow(infoBorder, 1);
@@ -579,26 +566,27 @@ public partial class HistoryWindow
 
     // ── Helpers ──
 
-    private static void AddTypeBadge(Grid parent, string label, System.Windows.Media.Color color)
+    private static TextBlock CreateBadgeTimeText(string badgeLabel, System.Windows.Media.Color badgeColor, string timeAgo)
     {
-        var pill = new Border
+        var tb = new TextBlock
         {
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, color.R, color.G, color.B)),
-            CornerRadius = new CornerRadius(4),
-            Padding = new Thickness(6, 2, 6, 2),
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 6, 6, 0),
-            Child = new TextBlock
-            {
-                Text = label,
-                FontSize = 8.5,
-                FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White,
-                FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName)
-            }
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
-        parent.Children.Add(pill);
+        tb.Inlines.Add(new System.Windows.Documents.Run
+        {
+            Text = badgeLabel,
+            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(255, badgeColor.R, badgeColor.G, badgeColor.B)),
+            FontWeight = FontWeights.Bold,
+            FontSize = 10
+        });
+        tb.Inlines.Add(new System.Windows.Documents.Run
+        {
+            Text = $" \u00B7 {timeAgo}",
+            FontSize = 10,
+            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(76, 255, 255, 255))
+        });
+        return tb;
     }
 
     /// <summary>Creates a centered checkmark badge for select mode (same style as image cards).</summary>
