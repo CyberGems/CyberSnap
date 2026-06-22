@@ -685,7 +685,7 @@ public sealed partial class RegionOverlayForm : Form
             {
                 _toolbarButtons[i] = new Rectangle(col1X, cy, buttonSize, buttonSize);
                 cy += buttonSize + buttonSpacing;
-                if (i == 2)
+                if (i == 4)
                     cy += GroupGap;
             }
             cy += GroupGap;
@@ -722,16 +722,15 @@ public sealed partial class RegionOverlayForm : Form
                 row1StartX = _toolbarRect.X + brandWidth;
             }
             int row1Y = _toolbarRect.Y + pad;
-
             _brandRect = new Rectangle(_toolbarRect.X, _toolbarRect.Y, brandWidth, pad * 2 + buttonSize);
-            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorWidth, _toolbarRect.Y + pad + (buttonSize - activatorWidth) / 2, activatorWidth, activatorWidth);
+            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorWidth, _toolbarRect.Y + pad + UiChrome.ScaleInt(4), activatorWidth, activatorWidth);
 
             int cx = row1StartX;
             for (int i = 0; i < _mainBarTools.Length; i++)
             {
                 _toolbarButtons[i] = new Rectangle(cx, row1Y, buttonSize, buttonSize);
                 cx += buttonSize + buttonSpacing;
-                if (i == 2)
+                if (i == 4)
                     cx += GroupGap;
             }
             cx += GroupGap;

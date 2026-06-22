@@ -128,6 +128,12 @@ public sealed partial class RegionOverlayForm
             }
             return;
         }
+        else if (_toolbarRect.Contains(e.Location))
+        {
+            HideToolbarTooltip();
+            ShowToolbarContextMenu(-1, e.Location);
+            return;
+        }
 
         // Color picker popup: check if clicked a swatch
         if (_colorPickerOpen)

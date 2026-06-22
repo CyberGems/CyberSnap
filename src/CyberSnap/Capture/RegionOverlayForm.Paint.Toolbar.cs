@@ -272,7 +272,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // 2. Tier 1 Dividers: after scroll (3) and last capture tool
-        int[] tier1SepIndices = { 3 };
+        int[] tier1SepIndices = { 4 };
         foreach (int idx in tier1SepIndices)
         {
             if (idx < 0 || idx >= _toolbarButtons.Length) continue;

@@ -53,7 +53,9 @@ public sealed partial class RegionOverlayForm
         // 1. Tip item (only when right-clicking toolbar background/system buttons)
         if (tool == null)
         {
-            var tipText = isSpanish ? "Click derecho en herramienta para ocultar" : "Right-click a tool to hide";
+            var tipText = isSpanish
+                ? "💡 Haz clic derecho sobre los botones para ocultarlos."
+                : "💡 Right-click on the buttons to hide them.";
             var tipItem = new ToolStripMenuItem(tipText) { Enabled = false };
             menu.Items.Add(tipItem);
             menu.Items.Add(new ToolStripSeparator());
