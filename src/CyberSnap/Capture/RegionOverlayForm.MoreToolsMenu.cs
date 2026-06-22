@@ -84,18 +84,26 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(new ToolStripSeparator());
         }
 
-        // Hide annotation bar item
+        // Show annotation bar checkable toggle (always visible)
         var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
-        if (annotationToolsCount > 0)
+        var showBarText = isSpanish ? "Mostrar barra de anotaciones" : "Show annotation bar";
+        var showBarItem = new ToolStripMenuItem(showBarText)
         {
-            var hideBarText = isSpanish ? "Ocultar barra de anotaciones" : "Hide annotation bar";
-            var hideBarItem = new ToolStripMenuItem(hideBarText);
-            hideBarItem.Click += (s, e) => {
+            CheckOnClick = true,
+            Checked = annotationToolsCount > 0
+        };
+        showBarItem.Click += (s, e) => {
+            if (showBarItem.Checked)
+            {
+                ShowAllAnnotationTools();
+            }
+            else
+            {
                 HideAllAnnotationTools();
-            };
-            menu.Items.Add(hideBarItem);
-            menu.Items.Add(new ToolStripSeparator());
-        }
+            }
+        };
+        menu.Items.Add(showBarItem);
+        menu.Items.Add(new ToolStripSeparator());
 
         // 3. Show Hidden submenu
         var showHiddenText = isSpanish ? "Mostrar ocultos" : "Show Hidden";
@@ -162,6 +170,25 @@ public sealed partial class RegionOverlayForm
         foreach (var id in annotationIds)
         {
             enabled.Remove(id);
+        }
+        EnabledToolsChanged?.Invoke(enabled);
+        SetEnabledTools(enabled);
+        CalcToolbar();
+        InvalidateToolbarArea();
+    }
+
+    private void ShowAllAnnotationTools()
+    {
+        var settings = Services.SettingsService.LoadStatic();
+        if (settings == null) return;
+        var enabled = (settings.EnabledTools ?? ToolDef.DefaultEnabledIds()).ToList();
+        var annotationIds = ToolDef.AllTools.Where(t => t.Group == 1).Select(t => t.Id);
+        foreach (var id in annotationIds)
+        {
+            if (!enabled.Contains(id))
+            {
+                enabled.Add(id);
+            }
         }
         EnabledToolsChanged?.Invoke(enabled);
         SetEnabledTools(enabled);
