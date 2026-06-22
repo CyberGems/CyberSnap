@@ -158,6 +158,13 @@ public sealed partial class RegionOverlayForm
         WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
 
         var screenPoint = PointToScreen(clickLocation);
+
+        // When triggered from the menu activator (... button) or brand area,
+        // offset the menu so it doesn't cover the button — a second click
+        // on the activator toggles the menu closed.
+        if (buttonIndex == -1 && _menuActivatorRect.Contains(clickLocation))
+            screenPoint.Y = PointToScreen(new Point(0, _menuActivatorRect.Bottom)).Y;
+
         menu.Show(screenPoint);
     }
 
