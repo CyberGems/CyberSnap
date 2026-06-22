@@ -39,6 +39,100 @@ public sealed partial class RegionOverlayForm
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
+        if (_isConfirmingSelection)
+        {
+            _prevCursorPos = _lastCursorPos;
+            _lastCursorPos = e.Location;
+
+            // 1. Confirm-mode handle resize
+            if (_confirmHandleDragIndex >= 0)
+            {
+                ClearCrosshairGuides();
+                SetSnapGuides(false, false);
+                int dx = e.Location.X - _confirmDragStart.X;
+                int dy = e.Location.Y - _confirmDragStart.Y;
+                var ob = _confirmDragStartRect;
+                Rectangle nb = _confirmHandleDragIndex switch
+                {
+                    0 => Rectangle.FromLTRB(ob.Left + dx, ob.Top + dy, ob.Right, ob.Bottom),  // TL
+                    1 => Rectangle.FromLTRB(ob.Left, ob.Top + dy, ob.Right + dx, ob.Bottom),  // TR
+                    2 => Rectangle.FromLTRB(ob.Left + dx, ob.Top, ob.Right, ob.Bottom + dy),  // BL
+                    3 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + dx, ob.Bottom + dy),  // BR
+                    4 => Rectangle.FromLTRB(ob.Left, ob.Top + dy, ob.Right, ob.Bottom),       // Top
+                    5 => Rectangle.FromLTRB(ob.Left + dx, ob.Top, ob.Right, ob.Bottom),       // Left
+                    6 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + dx, ob.Bottom),       // Right
+                    7 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right, ob.Bottom + dy),       // Bottom
+                    _ => ob
+                };
+                if (nb.Width > 5 && nb.Height > 5)
+                {
+                    var oldRect = _confirmRect;
+                    var (oldConfirm, oldCancel) = GetConfirmButtonRects();
+                    _confirmRect = nb;
+                    InvalidateSelectionChromePart(oldRect, Point.Empty);
+                    InvalidateSelectionChromePart(_confirmRect, Point.Empty);
+                    var (confirm, cancel) = GetConfirmButtonRects();
+                    Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
+                    Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
+                }
+                return;
+            }
+
+            // 2. Confirm-mode region drag (move entire selection without resizing)
+            if (_isConfirmDragging)
+            {
+                ClearCrosshairGuides();
+                SetSnapGuides(false, false);
+                int newX = e.Location.X - _confirmDragOffset.X;
+                int newY = e.Location.Y - _confirmDragOffset.Y;
+                var oldRect = _confirmRect;
+                var (oldConfirm, oldCancel) = GetConfirmButtonRects();
+                _confirmRect = new Rectangle(newX, newY, oldRect.Width, oldRect.Height);
+                InvalidateSelectionChromePart(oldRect, Point.Empty);
+                InvalidateSelectionChromePart(_confirmRect, Point.Empty);
+                var (confirm, cancel) = GetConfirmButtonRects();
+                Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
+                Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
+                return;
+            }
+
+            // 3. Confirm-mode hover takes priority
+            int prevHoveredConfirm = _hoveredConfirmButton;
+            _hoveredConfirmButton = -1;
+
+            System.Windows.Forms.Cursor confirmTarget = Cursors.Default;
+            int ch = HitTestConfirmHandle(e.Location);
+            int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
+            if (ch >= 0)
+                confirmTarget = ch switch
+                {
+                    0 or 3 => Cursors.SizeNWSE,
+                    1 or 2 => Cursors.SizeNESW,
+                    4 or 7 => Cursors.SizeNS,
+                    5 or 6 => Cursors.SizeWE,
+                    _ => Cursors.Default
+                };
+            else if (btnHit >= 0)
+            {
+                confirmTarget = Cursors.Hand;
+                _hoveredConfirmButton = btnHit;
+            }
+            else if (_confirmRect.Contains(e.Location))
+                confirmTarget = Cursors.SizeAll;
+            else
+                confirmTarget = CursorFactory.PrecisionCursor;
+
+            if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
+
+            if (_hoveredConfirmButton != prevHoveredConfirm)
+            {
+                var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+                Invalidate(InflateForRepaint(confirmBtn, 20));
+                Invalidate(InflateForRepaint(cancelBtn, 20));
+            }
+            return;
+        }
+
         if (_isMarqueeSelecting)
         {
             _marqueeEnd = e.Location;
@@ -232,61 +326,7 @@ public sealed partial class RegionOverlayForm
             needsRepaint = true;
         }
 
-        // Confirm-mode handle resize
-        if (_isConfirmingSelection && _confirmHandleDragIndex >= 0)
-        {
-            ClearCrosshairGuides();
-            SetSnapGuides(false, false);
-            int dx = e.Location.X - _confirmDragStart.X;
-            int dy = e.Location.Y - _confirmDragStart.Y;
-            var ob = _confirmDragStartRect;
-            Rectangle nb = _confirmHandleDragIndex switch
-            {
-                0 => Rectangle.FromLTRB(ob.Left + dx, ob.Top + dy, ob.Right, ob.Bottom),  // TL
-                1 => Rectangle.FromLTRB(ob.Left, ob.Top + dy, ob.Right + dx, ob.Bottom),  // TR
-                2 => Rectangle.FromLTRB(ob.Left + dx, ob.Top, ob.Right, ob.Bottom + dy),  // BL
-                3 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + dx, ob.Bottom + dy),  // BR
-                4 => Rectangle.FromLTRB(ob.Left, ob.Top + dy, ob.Right, ob.Bottom),       // Top
-                5 => Rectangle.FromLTRB(ob.Left + dx, ob.Top, ob.Right, ob.Bottom),       // Left
-                6 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + dx, ob.Bottom),       // Right
-                7 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right, ob.Bottom + dy),       // Bottom
-                _ => ob
-            };
-            if (nb.Width > 5 && nb.Height > 5)
-            {
-                var oldRect = _confirmRect;
-                // Snapshot old button positions BEFORE moving _confirmRect so we can
-                // erase the previous paint (prevents ghost/trail during fast drag).
-                var (oldConfirm, oldCancel) = GetConfirmButtonRects();
-                _confirmRect = nb;
-                InvalidateSelectionChromePart(oldRect, Point.Empty);
-                InvalidateSelectionChromePart(_confirmRect, Point.Empty);
-                var (confirm, cancel) = GetConfirmButtonRects();
-                Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
-                Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
-            }
-            return;
-        }
 
-        // Confirm-mode region drag (move entire selection without resizing)
-        if (_isConfirmingSelection && _isConfirmDragging)
-        {
-            ClearCrosshairGuides();
-            SetSnapGuides(false, false);
-            int newX = e.Location.X - _confirmDragOffset.X;
-            int newY = e.Location.Y - _confirmDragOffset.Y;
-            var oldRect = _confirmRect;
-            // Snapshot old button positions BEFORE moving _confirmRect so we can
-            // erase the previous paint (prevents ghost/trail during fast drag).
-            var (oldConfirm, oldCancel) = GetConfirmButtonRects();
-            _confirmRect = new Rectangle(newX, newY, oldRect.Width, oldRect.Height);
-            InvalidateSelectionChromePart(oldRect, Point.Empty);
-            InvalidateSelectionChromePart(_confirmRect, Point.Empty);
-            var (confirm, cancel) = GetConfirmButtonRects();
-            Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
-            Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
-            return;
-        }
 
         // Select tool resize
         if (_isSelectResizing && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count && _selectResizeOriginalAnnotation is not null)
@@ -386,44 +426,7 @@ public sealed partial class RegionOverlayForm
             target = IsPointInColorPickerSwatch(e.Location) ? Cursors.Hand : Cursors.Default;
         else if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location))
             target = _hoveredAltCaptureBtn ? Cursors.Hand : Cursors.Default;
-        else if (_isConfirmingSelection)
-        {
-            // Confirm-mode hover takes priority over the toolbar rect: near screen edges the
-            // confirm buttons can overlap _toolbarRect, and letting the toolbar branch win
-            // there swallowed the button hover (buttons worked on click but never lit up).
-            int prevHoveredConfirm = _hoveredConfirmButton;
-            _hoveredConfirmButton = -1;
 
-            int ch = HitTestConfirmHandle(e.Location);
-            int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
-            if (ch >= 0)
-                target = ch switch
-                {
-                    0 or 3 => Cursors.SizeNWSE,
-                    1 or 2 => Cursors.SizeNESW,
-                    4 or 7 => Cursors.SizeNS,
-                    5 or 6 => Cursors.SizeWE,
-                    _ => Cursors.Default
-                };
-            else if (btnHit >= 0)
-            {
-                target = Cursors.Hand;
-                _hoveredConfirmButton = btnHit;
-            }
-            else if (_toolbarRect.Contains(e.Location))
-                target = btn >= 0 ? Cursors.Hand : Cursors.Default; // toolbar fallback
-            else if (_confirmRect.Contains(e.Location))
-                target = Cursors.SizeAll;
-            else
-                target = CursorFactory.PrecisionCursor;
-
-            if (_hoveredConfirmButton != prevHoveredConfirm)
-            {
-                var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
-                Invalidate(InflateForRepaint(confirmBtn, 20));
-                Invalidate(InflateForRepaint(cancelBtn, 20));
-            }
-        }
         else if (_toolbarRect.Contains(e.Location))
             target = btn >= 0 ? Cursors.Hand : Cursors.Default;
         else if (_isTyping && _hoveredTextBtn == 8)
@@ -550,8 +553,7 @@ public sealed partial class RegionOverlayForm
         else if (_captureMagnifierForm != null && (!ShowCaptureMagnifier || !ToolDef.IsCaptureTool(_mode) || IsPointInOverlayUi(e.Location)))
             CloseCaptureMagnifier();
 
-        if (_isConfirmingSelection)
-            return;
+
 
         switch (_mode)
         {
