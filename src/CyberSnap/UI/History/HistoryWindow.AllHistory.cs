@@ -382,7 +382,7 @@ public partial class HistoryWindow
             Margin = new Thickness(10, 8, 10, 10),
             VerticalAlignment = VerticalAlignment.Top
         });
-        AttachCardMenu(card, textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 
@@ -435,7 +435,7 @@ public partial class HistoryWindow
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
         var selBadge = CreateUnifiedSelectionBadge();
         swatchArea.Children.Add(selBadge);
-        AttachCardMenu(card, swatchArea, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
+        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -515,7 +515,7 @@ public partial class HistoryWindow
         var img = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(16), Source = previewSrc };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
         previewArea.Children.Add(img);  // add image BEFORE AttachCardMenu so button is on top
-        AttachCardMenu(card, previewArea, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 
@@ -739,7 +739,7 @@ public partial class HistoryWindow
 
     // ── Hover action menu (matches existing card menu style) ──
 
-    private void AttachCardMenu(Border card, Grid imageArea, Action onCopy, Action? onDelete = null)
+    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null)
     {
         // Use the same styled menu as image/media cards
         var menu = CreateCardActionMenu();
@@ -754,27 +754,29 @@ public partial class HistoryWindow
             menu.IsOpen = true;
         };
 
-        // Hover button also opens the same menu
+        // Bottom-right menu button (visible on hover)
         var btn = new System.Windows.Controls.Button
         {
             ToolTip = LocalizationService.Translate("Actions"),
             Focusable = false,
-            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(210, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
-            Width = 24, Height = 24,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(6),
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 0, 0, 0)),
-            Foreground = Brushes.White,
-            Content = "···",
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 255)),
+            BorderThickness = new Thickness(0),
+            Width = 24, Height = 20,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(0, 0, 4, 2),
+            Background = Brushes.Transparent,
+            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 255)),
+            Content = "\u22EF",
+            FontSize = 14,
             Visibility = Visibility.Collapsed
         };
         System.Windows.Controls.Panel.SetZIndex(btn, 999);  // ensure button always sits above other children
         menu.PlacementTarget = btn;
         btn.Click += (_, _) => menu.IsOpen = true;
 
-        imageArea.Children.Add(btn);
+        Grid.SetRow(btn, 1);
+        rootGrid.Children.Add(btn);
 
         card.MouseEnter += (_, _) => { if (btn != null) btn.Visibility = Visibility.Visible; };
         card.MouseLeave += (_, _) => { if (btn != null && !menu.IsOpen) btn.Visibility = Visibility.Collapsed; };
