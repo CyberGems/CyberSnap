@@ -14,6 +14,7 @@ public sealed partial class RegionOverlayForm
     public event Action<List<string>>? EnabledToolsChanged;
 
     private ContextMenuStrip? _toolbarContextMenu;
+    private static List<string>? _rememberedAnnotationTools;
 
     private void ShowToolbarContextMenu(int buttonIndex, Point clickLocation)
     {
@@ -44,7 +45,7 @@ public sealed partial class RegionOverlayForm
         var isSpanish = string.Equals(settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
         var currentlyEnabled = settings.EnabledTools ?? ToolDef.DefaultEnabledIds();
 
-        var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: 200);
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 200);
         _toolbarContextMenu = menu;
         menu.Closed += (s, e) => {
             _toolbarContextMenu = null;
@@ -54,9 +55,10 @@ public sealed partial class RegionOverlayForm
         if (tool == null)
         {
             var tipText = isSpanish
-                ? "💡 Haz clic derecho sobre los botones para ocultarlos."
-                : "💡 Right-click on the buttons to hide them.";
-            var tipItem = new ToolStripMenuItem(tipText) { Enabled = false };
+                ? "Haz clic derecho sobre los botones para ocultarlos."
+                : "Right-click on the buttons to hide them.";
+            var tipItem = WindowsMenuRenderer.Item(tipText, iconId: "lightbulb");
+            tipItem.Enabled = false;
             menu.Items.Add(tipItem);
             menu.Items.Add(new ToolStripSeparator());
         }
@@ -65,7 +67,7 @@ public sealed partial class RegionOverlayForm
         if (tool != null)
         {
             var hideText = isSpanish ? $"Ocultar \"{LocalizationService.Translate(tool.Label)}\"" : $"Hide \"{LocalizationService.Translate(tool.Label)}\"";
-            var hideItem = new ToolStripMenuItem(hideText);
+            var hideItem = WindowsMenuRenderer.Item(hideText, iconId: "trash");
             hideItem.Click += (s, e) => {
                 HideTool(tool.Id);
             };
@@ -87,19 +89,15 @@ public sealed partial class RegionOverlayForm
         // Show annotation bar checkable toggle (always visible)
         var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
         var showBarText = isSpanish ? "Mostrar barra de anotaciones" : "Show annotation bar";
-        var showBarItem = new ToolStripMenuItem(showBarText)
-        {
-            CheckOnClick = true,
-            Checked = annotationToolsCount > 0
-        };
+        var showBarItem = WindowsMenuRenderer.Item(showBarText, iconId: annotationToolsCount > 0 ? "check" : null);
         showBarItem.Click += (s, e) => {
-            if (showBarItem.Checked)
+            if (annotationToolsCount > 0)
             {
-                ShowAllAnnotationTools();
+                HideAllAnnotationTools();
             }
             else
             {
-                HideAllAnnotationTools();
+                ShowAllAnnotationTools();
             }
         };
         menu.Items.Add(showBarItem);
@@ -107,7 +105,7 @@ public sealed partial class RegionOverlayForm
 
         // 3. Show Hidden submenu
         var showHiddenText = isSpanish ? "Mostrar ocultos" : "Show Hidden";
-        var showHiddenSubmenu = WindowsMenuRenderer.Submenu(showHiddenText, showImages: false);
+        var showHiddenSubmenu = WindowsMenuRenderer.Submenu(showHiddenText, showImages: true);
 
         var allTools = ToolDef.AllTools;
         var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
@@ -120,7 +118,8 @@ public sealed partial class RegionOverlayForm
         {
             foreach (var hTool in hiddenTools)
             {
-                var toolItem = new ToolStripMenuItem(LocalizationService.Translate(hTool.Label));
+                var iconId = hTool.Id == "scroll" ? "scrollCapture" : hTool.Id;
+                var toolItem = WindowsMenuRenderer.Item(LocalizationService.Translate(hTool.Label), iconId: iconId);
                 var targetId = hTool.Id;
                 toolItem.Click += (s, e) => {
                     ShowTool(targetId);
@@ -135,7 +134,7 @@ public sealed partial class RegionOverlayForm
         {
             menu.Items.Add(new ToolStripSeparator());
             var showAllText = isSpanish ? "Mostrar todos" : "Show all hidden";
-            var showAllItem = new ToolStripMenuItem(showAllText);
+            var showAllItem = WindowsMenuRenderer.Item(showAllText, iconId: null);
             showAllItem.Click += (s, e) => {
                 ShowAllTools();
             };
@@ -166,7 +165,15 @@ public sealed partial class RegionOverlayForm
         var settings = Services.SettingsService.LoadStatic();
         if (settings == null) return;
         var enabled = (settings.EnabledTools ?? ToolDef.DefaultEnabledIds()).ToList();
-        var annotationIds = ToolDef.AllTools.Where(t => t.Group == 1).Select(t => t.Id);
+        var annotationIds = ToolDef.AllTools.Where(t => t.Group == 1).Select(t => t.Id).ToList();
+
+        // Remember which annotation tools were actually enabled before hiding
+        var currentlyEnabledAnnotations = enabled.Where(id => annotationIds.Contains(id)).ToList();
+        if (currentlyEnabledAnnotations.Count > 0)
+        {
+            _rememberedAnnotationTools = currentlyEnabledAnnotations;
+        }
+
         foreach (var id in annotationIds)
         {
             enabled.Remove(id);
@@ -182,8 +189,18 @@ public sealed partial class RegionOverlayForm
         var settings = Services.SettingsService.LoadStatic();
         if (settings == null) return;
         var enabled = (settings.EnabledTools ?? ToolDef.DefaultEnabledIds()).ToList();
-        var annotationIds = ToolDef.AllTools.Where(t => t.Group == 1).Select(t => t.Id);
-        foreach (var id in annotationIds)
+
+        List<string> toolsToEnable;
+        if (_rememberedAnnotationTools != null && _rememberedAnnotationTools.Count > 0)
+        {
+            toolsToEnable = _rememberedAnnotationTools;
+        }
+        else
+        {
+            toolsToEnable = ToolDef.AllTools.Where(t => t.Group == 1).Select(t => t.Id).ToList();
+        }
+
+        foreach (var id in toolsToEnable)
         {
             if (!enabled.Contains(id))
             {
