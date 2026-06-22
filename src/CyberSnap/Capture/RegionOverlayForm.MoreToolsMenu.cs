@@ -70,6 +70,7 @@ public sealed partial class RegionOverlayForm
             var hideItem = WindowsMenuRenderer.Item(hideText, iconId: "trash");
             hideItem.Click += (s, e) => {
                 HideTool(tool.Id);
+                _toolbarContextMenu?.Close();
             };
 
             // Don't allow hiding the last capture tool
@@ -99,6 +100,9 @@ public sealed partial class RegionOverlayForm
             {
                 ShowAllAnnotationTools();
             }
+            // Close the menu immediately so it doesn't repopulate with
+            // tools whose visibility just changed.
+            _toolbarContextMenu?.Close();
         };
         menu.Items.Add(showBarItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -132,6 +136,7 @@ public sealed partial class RegionOverlayForm
                 var targetId = hTool.Id;
                 toolItem.Click += (s, e) => {
                     ShowTool(targetId);
+                    _toolbarContextMenu?.Close();
                 };
                 menu.Items.Add(toolItem);
             }
@@ -142,6 +147,7 @@ public sealed partial class RegionOverlayForm
             var showAllItem = WindowsMenuRenderer.Item(showAllText, iconId: null);
             showAllItem.Click += (s, e) => {
                 ShowAllTools();
+                _toolbarContextMenu?.Close();
             };
             menu.Items.Add(showAllItem);
         }
