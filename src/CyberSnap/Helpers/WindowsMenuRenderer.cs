@@ -140,8 +140,9 @@ public static class WindowsMenuRenderer
         return width;
     }
 
-    /// <summary>Size a submenu's drop-down items uniformly, like NormalizeItemWidths does for a top-level menu.</summary>
-    public static void NormalizeDropDownWidths(ToolStripMenuItem parent, int minWidth = DefaultWidth)
+    /// <summary>Size a submenu's drop-down items uniformly, like NormalizeItemWidths does for a top-level menu.
+    /// Returns the resulting drop-down width so callers can position it without querying layout.</summary>
+    public static int NormalizeDropDownWidths(ToolStripMenuItem parent, int minWidth = DefaultWidth)
     {
         int width = minWidth;
         using var g = Graphics.FromHwnd(IntPtr.Zero);
@@ -163,6 +164,7 @@ public static class WindowsMenuRenderer
                 menuItem.Height = RowHeight;
             }
         }
+        return width;
     }
 
     public static void SetMenuWidth(ContextMenuStrip menu, int width, int? itemHeight = null)

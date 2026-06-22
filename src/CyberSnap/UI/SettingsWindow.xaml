@@ -2338,7 +2338,7 @@
                                           Checked="ShowToolBannersCheck_Changed" Unchecked="ShowToolBannersCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <!-- Disable Animations -->
+                            <!-- Disable Animated Effects -->
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -2349,12 +2349,12 @@
                                     <TextBlock Text="&#xE768;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Disable animations" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Reduce motion effects across the app." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Disable animated effects" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Skip toast countdown bar, slide-in, and glow animations." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="DisableAnimationsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Disable animations"
-                                          ToolTip="Reduce motion effects across the app."
+                                          AutomationProperties.Name="Disable animated effects"
+                                          ToolTip="Skip toast countdown bar, slide-in, and glow animations."
                                           Checked="DisableAnimationsCheck_Changed" Unchecked="DisableAnimationsCheck_Changed"/>
                             </Grid>
                         </StackPanel>

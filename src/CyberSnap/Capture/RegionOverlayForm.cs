@@ -715,7 +715,7 @@ public sealed partial class RegionOverlayForm : Form
             int col2Height = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             int col2StartY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - col2Height) / 2;
             int cy2 = col2StartY;
-            int[] tier2Seps = { 1, 8 };
+            int[] tier2Seps = { 2, 9 };
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
                 int btnIdx = _mainBarTools.Length + 4 + i;
@@ -760,7 +760,7 @@ public sealed partial class RegionOverlayForm : Form
             int row2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             int row2StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row2Width) / 2;
             int cx2 = row2StartX;
-            int[] tier2Seps = { 1, 8 };
+            int[] tier2Seps = { 2, 9 };
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
                 int btnIdx = _mainBarTools.Length + 4 + i;
