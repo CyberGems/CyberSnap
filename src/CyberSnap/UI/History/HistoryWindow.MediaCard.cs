@@ -229,33 +229,63 @@ public partial class HistoryWindow
             actionMenu.IsOpen = true;
         };
 
-        // Badge opens the action menu and has a hover glow.
-        void OpenActionMenu()
+        var actionMenuBtn = new System.Windows.Controls.Button
         {
-            actionMenu.PlacementTarget = selectionBadge;
-            actionMenu.IsOpen = true;
+            ToolTip = LocalizationService.Translate("Actions"),
+            Focusable = true,
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(210, 255, 255, 255)),
+            BorderThickness = new Thickness(1),
+            Width = 24,
+            Height = 24,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(6),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 0, 0, 0)),
+            Foreground = Brushes.White,
+            Content = "···",
+            Visibility = Visibility.Collapsed
+        };
+        AutomationProperties.SetName(actionMenuBtn, $"{kindLabel} actions");
+        AutomationProperties.SetHelpText(actionMenuBtn, "Press Enter or Space to open this history item's actions.");
+
+        void UpdateActionMenuBtnVisibility()
+        {
+            if (card.IsMouseOver || card.IsKeyboardFocusWithin || actionMenu.IsOpen)
+            {
+                actionMenuBtn.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                actionMenuBtn.Visibility = Visibility.Collapsed;
+            }
         }
 
-        selectionBadge.MouseLeftButtonUp += (_, e) =>
+        void OpenActionMenu()
+        {
+            actionMenu.PlacementTarget = actionMenuBtn;
+            actionMenu.IsOpen = true;
+            UpdateActionMenuBtnVisibility();
+        }
+
+        actionMenuBtn.PreviewMouseLeftButtonUp += (_, e) =>
         {
             e.Handled = true;
-            suppressOpenAction = true;
             OpenActionMenu();
         };
 
-        selectionBadge.MouseEnter += (_, _) =>
+        actionMenuBtn.KeyDown += (_, e) =>
         {
-            selectionBadge.Opacity = 1.0;
-            selectionBadge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 40, 40, 40));
-            selectionBadge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 255, 255, 255));
+            if (!IsHistoryCardActivationKey(e))
+                return;
+            e.Handled = true;
+            OpenActionMenu();
         };
 
-        selectionBadge.MouseLeave += (_, _) =>
-        {
-            selectionBadge.Opacity = 0.55;
-            selectionBadge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20));
-            selectionBadge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
-        };
+        actionMenuBtn.GotKeyboardFocus += (_, _) => UpdateActionMenuBtnVisibility();
+        actionMenuBtn.LostKeyboardFocus += (_, _) => UpdateActionMenuBtnVisibility();
+        actionMenu.Closed += (_, _) => UpdateActionMenuBtnVisibility();
+
+        imgContainer.Children.Add(actionMenuBtn);
 
         card.SizeChanged += (s, _) =>
         {
@@ -268,18 +298,22 @@ public partial class HistoryWindow
         card.MouseEnter += (s, _) =>
         {
             hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            UpdateActionMenuBtnVisibility();
         };
         card.MouseLeave += (s, _) =>
         {
             if (!card.IsKeyboardFocusWithin)
                 hoverBorder.BorderBrush = Brushes.Transparent;
+            UpdateActionMenuBtnVisibility();
         };
         card.GotKeyboardFocus += (_, _) =>
         {
             hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            UpdateActionMenuBtnVisibility();
         };
         card.LostKeyboardFocus += (_, _) =>
         {
+            UpdateActionMenuBtnVisibility();
             if (card.IsKeyboardFocusWithin)
                 return;
 
@@ -417,7 +451,7 @@ public partial class HistoryWindow
         {
             Data = System.Windows.Media.Geometry.Parse("M6,14 L11,19 L22,8"),
             Stroke = Brushes.White,
-            StrokeThickness = 3.2,
+            StrokeThickness = 2.6,
             StrokeStartLineCap = System.Windows.Media.PenLineCap.Round,
             StrokeEndLineCap = System.Windows.Media.PenLineCap.Round,
             Stretch = Stretch.Uniform,
@@ -435,10 +469,9 @@ public partial class HistoryWindow
             BorderThickness = new Thickness(1),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            IsHitTestVisible = true,
-            Cursor = Cursors.Hand,
-            Visibility = Visibility.Visible,
-            Opacity = 0.55,
+            IsHitTestVisible = false,
+            Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed,
+            Opacity = isSelected ? 1 : 0.45,
             Child = checkPath,
             Tag = checkPath
         };
