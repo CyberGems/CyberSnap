@@ -141,6 +141,15 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(showAllItem);
         }
 
+        // 5. Close/Cancel menu
+        menu.Items.Add(new ToolStripSeparator());
+        var closeMenuText = isSpanish ? "Cerrar menú" : "Close menu";
+        var closeMenuItem = WindowsMenuRenderer.Item(closeMenuText, iconId: "close");
+        closeMenuItem.Click += (s, e) => {
+            menu.Close();
+        };
+        menu.Items.Add(closeMenuItem);
+
         WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
         if (showHiddenSubmenu.DropDownItems.Count > 0)
         {
