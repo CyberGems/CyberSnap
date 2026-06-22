@@ -214,6 +214,17 @@ public partial class App
     // day, and persists (Save is debounced, so per-capture saving is cheap). Returns null when
     // celebrations are off — then nothing counts, matching the previous behavior. Callers pick how
     // to surface the flourish from the result.
+    // Flips a first-time achievement flag on its very first occurrence and persists it (Save is
+    // debounced). No-op once already unlocked. Independent of CelebrationsEnabled — the medal
+    // grid records what happened even with celebration toasts turned off.
+    private void MarkFirstTime(bool alreadyUnlocked, Action setUnlocked)
+    {
+        if (alreadyUnlocked) return;
+        setUnlocked();
+        try { _settingsService!.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogWarning("capture.first-time-save", ex.Message, ex); }
+    }
+
     private (int Count, bool IsFirstToday, int Streak)? RegisterCaptureForCelebration(AppSettings settings)
     {
         if (!settings.CelebrationsEnabled)
@@ -342,6 +353,8 @@ public partial class App
                     // celebratory sweep while keeping its functional text; the no-toast workbench
                     // path just counts silently and surfaces the milestone in the Settings rail.
                     var ocrFlourish = TryRegisterCaptureFlourish(_settingsService.Settings);
+                    MarkFirstTime(_settingsService.Settings.HasFirstOcr,
+                        () => _settingsService.Settings.HasFirstOcr = true);
 
                     if (_settingsService.Settings.OcrAutoCopyToClipboard)
                     {

@@ -309,6 +309,11 @@ public sealed class AppSettings
     public int CurrentStreak { get; set; }
     // Best streak ever reached (kept for records / future display).
     public int LongestStreak { get; set; }
+    // First-time achievement flags — set once the user first performs each action, used to
+    // unlock the matching "first time" medal in the Achievements tab.
+    public bool HasFirstOcr { get; set; }
+    public bool HasFirstRecording { get; set; }
+    public bool HasFirstScrollingCapture { get; set; }
     public int ToastMonitorIndex { get; set; } = -1; // -1 = Auto/Follow, 0+ = fixed index
     public CaptureMode DefaultCaptureMode { get; set; } = CaptureMode.Rectangle;
     public CenterSelectionAspectRatio CenterSelectionAspectRatio { get; set; } = CenterSelectionAspectRatio.Free;

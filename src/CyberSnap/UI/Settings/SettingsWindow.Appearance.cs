@@ -57,6 +57,7 @@ public partial class SettingsWindow
             [OcrTab] = "\uE8C8", // OCR
             [HotkeysTab] = "\uE765", // Hotkeys
             [HistoryTab] = "\uEB9F", // History
+            [AchievementsTab] = "\uE735", // Achievements (star)
             [AboutTab] = "\uE946" // About
         };
 
@@ -624,16 +625,20 @@ public partial class SettingsWindow
         RecordingPanel.Visibility = RecordingTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        AchievementsPanel.Visibility = AchievementsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         AboutPanel.Visibility = AboutTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         PageTitleText.Text = LocalizationService.Translate(GetSelectedSettingsPageTitle());
 
         if (OcrTab.IsChecked == true)
             LoadOcrTab();
 
-        // Reveal the milestone rail when the Notifications tab is shown, so a newly reached
-        // milestone gets its one-shot flourish at the moment the user actually sees it.
-        if (ToastTab.IsChecked == true)
+        // Reveal the milestone rail + refresh stats/medals when the Achievements tab is shown,
+        // so a newly reached milestone gets its one-shot flourish at the moment the user sees it.
+        if (AchievementsTab.IsChecked == true)
+        {
+            RefreshAchievements();
             RefreshMilestoneRail(reveal: true);
+        }
     }
 
     private void ResetHotkeysBtn_Click(object sender, RoutedEventArgs e)
@@ -663,6 +668,7 @@ public partial class SettingsWindow
         if (OcrTab.IsChecked == true) return "OCR";
         if (HotkeysTab.IsChecked == true) return "Hotkeys";
         if (HistoryTab.IsChecked == true) return "Gallery";
+        if (AchievementsTab.IsChecked == true) return "Achievements";
         if (AboutTab.IsChecked == true) return "About";
         return "General";
     }

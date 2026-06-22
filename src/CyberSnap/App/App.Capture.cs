@@ -120,6 +120,7 @@ public partial class App
                         // rides the celebratory sweep while keeping its functional text (file size, copy
                         // status). The milestone also surfaces afterwards in the Settings rail.
                         bool flourish = TryRegisterCaptureFlourish(s);
+                        MarkFirstTime(s.HasFirstRecording, () => s.HasFirstRecording = true);
 
                         if (firstFrame != null)
                         {
@@ -220,6 +221,8 @@ public partial class App
                     Dispatcher.BeginInvoke(() =>
                     {
                         HandleCaptureResult(result);
+                        MarkFirstTime(_settingsService!.Settings.HasFirstScrollingCapture,
+                            () => _settingsService!.Settings.HasFirstScrollingCapture = true);
                         ScheduleIdleMemoryTrim();
                     });
                 };

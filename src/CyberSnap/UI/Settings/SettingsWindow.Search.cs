@@ -162,6 +162,7 @@ public partial class SettingsWindow
             (OcrPanel,        "ocr",           "OCR & Translation"),
             (HotkeysPanel,    "hotkeys",       "Hotkeys"),
             (HistoryPanel,    "history",       "Gallery"),
+            (AchievementsPanel, "achievements", "Achievements"),
             (AboutPanel,      "about",         "About"),
         };
 
@@ -653,6 +654,7 @@ public partial class SettingsWindow
             ["ocr"]           = OcrTab,
             ["hotkeys"]       = HotkeysTab,
             ["history"]       = HistoryTab,
+            ["achievements"]  = AchievementsTab,
             ["runtimes"]      = AboutTab,
             ["about"]         = AboutTab,
             ["editor"]        = EditorTab,

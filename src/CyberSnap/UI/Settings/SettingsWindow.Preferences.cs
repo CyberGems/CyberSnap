@@ -577,6 +577,8 @@ public partial class SettingsWindow
 
         // Reflect the new on/off state in the milestone rail (dims when off, lights up when on).
         RefreshMilestoneRail(reveal: true);
+        // Refresh the Achievements tab too, so stats/medals are current if the user visits it next.
+        RefreshAchievements();
     }
 
     // The "System messages" sub-toggle only applies while the master switch is on, so it is
