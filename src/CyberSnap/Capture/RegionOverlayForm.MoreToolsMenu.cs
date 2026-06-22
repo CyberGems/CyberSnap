@@ -113,14 +113,14 @@ public sealed partial class RegionOverlayForm
 
         if (hiddenTools.Count == 0)
         {
-            var emptyText = isSpanish ? "Mostrar ocultos" : "Show Hidden";
+            var emptyText = isSpanish ? "Mostrar herramientas ocultas" : "Show hidden tools";
             var emptyItem = WindowsMenuRenderer.Item(emptyText, iconId: null);
             emptyItem.Enabled = false;
             menu.Items.Add(emptyItem);
         }
         else
         {
-            var headerText = isSpanish ? "Mostrar ocultos:" : "Show Hidden:";
+            var headerText = isSpanish ? "Herramientas ocultas:" : "Hidden tools:";
             var header = WindowsMenuRenderer.Item(headerText, iconId: null);
             header.Enabled = false;
             menu.Items.Add(header);
