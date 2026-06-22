@@ -1,6 +1,5 @@
 ﻿using System.Drawing;
 using System.IO;
-using System.Collections.Specialized;
 
 namespace CyberSnap.Services;
 
@@ -18,11 +17,6 @@ public static class ClipboardService
             dataObject.SetData("PNG", false, new MemoryStream(pngBuffer.Array!, pngBuffer.Offset, pngBuffer.Count, writable: false, publiclyVisible: true));
         else
             dataObject.SetData("PNG", false, new MemoryStream(pngStream.ToArray(), writable: false));
-
-        if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
-        {
-            dataObject.SetFileDropList(new StringCollection { filePath });
-        }
 
         SetClipboardWithRetry(dataObject);
     }

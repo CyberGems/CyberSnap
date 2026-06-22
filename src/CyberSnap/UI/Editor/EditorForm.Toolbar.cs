@@ -576,7 +576,7 @@ public sealed partial class EditorForm
         // Clipboard actions: Copy & Paste
         _copyButton = MakeCommandButton("copy", LocalizationService.Translate("Copy"), false);
         _copyButton.Click += (_, _) => DoCopy();
-        RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy the image to the clipboard", "Ctrl+C"), above: false);
+        RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy entire canvas to clipboard", "Ctrl+C"), above: false);
         commandActions.Controls.Add(_copyButton);
 
         _pasteButton = MakeCommandButton("paste", LocalizationService.Translate("Paste"), false);

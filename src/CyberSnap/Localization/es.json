@@ -733,7 +733,7 @@
   "Drag to zoom in or out": "Arrastra para acercar o alejar",
   "Undo the last change": "Deshacer el último cambio",
   "Redo the last undone change": "Rehacer el último cambio deshecho",
-  "Copy the image to the clipboard": "Copiar la imagen al portapapeles",
+  "Copy entire canvas to clipboard": "Copiar todo el lienzo al portapapeles",
   "Save the image": "Guardar la imagen",
   "Save the image as a new file": "Guardar la imagen como un archivo nuevo",
   "Save as CyberSnap project file": "Guardar como proyecto de CyberSnap",
