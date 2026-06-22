@@ -754,6 +754,7 @@ public sealed partial class RegionOverlayForm : Form
             cx += buttonSize + buttonSpacing;
             _toolbarButtons[PositionButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Position
             cx += buttonSize + buttonSpacing;
+            cx += GroupGap;
             _toolbarButtons[CloseButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Close
 
             // Row 2: Annotation Tools
