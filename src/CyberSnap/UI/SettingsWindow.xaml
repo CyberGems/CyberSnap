@@ -2350,11 +2350,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Disable animated effects" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Skip toast countdown bar, slide-in, and glow animations." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Disables all animated effects across CyberSnap" Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="DisableAnimationsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Disable animated effects"
-                                          ToolTip="Skip toast countdown bar, slide-in, and glow animations."
+                                          ToolTip="Disables all animated effects across CyberSnap"
                                           Checked="DisableAnimationsCheck_Changed" Unchecked="DisableAnimationsCheck_Changed"/>
                             </Grid>
                         </StackPanel>
