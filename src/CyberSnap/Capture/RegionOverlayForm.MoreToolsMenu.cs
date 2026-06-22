@@ -18,13 +18,6 @@ public sealed partial class RegionOverlayForm
 
     private void ShowToolbarContextMenu(int buttonIndex, Point clickLocation)
     {
-        var screenPoint = PointToScreen(clickLocation);
-        var wa = Screen.FromPoint(screenPoint).WorkingArea;
-        // Estimate total width needed (menu width ~220px + submenu width ~180px = 400px)
-        var subDirection = (screenPoint.X + 400 > wa.Right)
-            ? ToolStripDropDownDirection.Left
-            : ToolStripDropDownDirection.Right;
-
         ToolDef? tool = null;
         bool isHideable = buttonIndex >= 0 &&
                           buttonIndex != ColorButtonIndex &&
@@ -113,7 +106,6 @@ public sealed partial class RegionOverlayForm
         // 3. Show Hidden submenu
         var showHiddenText = isSpanish ? "Mostrar ocultos" : "Show Hidden";
         var showHiddenSubmenu = WindowsMenuRenderer.Submenu(showHiddenText, showImages: true);
-        showHiddenSubmenu.DropDownDirection = subDirection;
 
         var allTools = ToolDef.AllTools;
         var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
@@ -158,11 +150,18 @@ public sealed partial class RegionOverlayForm
         };
         menu.Items.Add(closeMenuItem);
 
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
+        var menuWidth = WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
         if (showHiddenSubmenu.DropDownItems.Count > 0)
         {
             WindowsMenuRenderer.NormalizeDropDownWidths(showHiddenSubmenu, 160);
         }
+
+        var screenPoint = PointToScreen(clickLocation);
+        var wa = Screen.FromPoint(screenPoint).WorkingArea;
+        const int submenuWidth = 180;
+        showHiddenSubmenu.DropDownDirection = (screenPoint.X + menuWidth + submenuWidth > wa.Right)
+            ? ToolStripDropDownDirection.Left
+            : ToolStripDropDownDirection.Right;
 
         menu.Show(screenPoint);
     }
