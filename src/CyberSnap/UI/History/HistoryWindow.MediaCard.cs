@@ -233,16 +233,17 @@ public partial class HistoryWindow
         {
             ToolTip = LocalizationService.Translate("Actions"),
             Focusable = true,
-            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(210, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 255)),
+            BorderThickness = new Thickness(0),
             Width = 24,
-            Height = 24,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(6),
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 0, 0, 0)),
-            Foreground = Brushes.White,
-            Content = "···",
+            Height = 20,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(0, 0, 4, 2),
+            Background = Brushes.Transparent,
+            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 255)),
+            Content = "\u22EF",
+            FontSize = 14,
             Visibility = Visibility.Collapsed
         };
         AutomationProperties.SetName(actionMenuBtn, $"{kindLabel} actions");
@@ -285,7 +286,9 @@ public partial class HistoryWindow
         actionMenuBtn.LostKeyboardFocus += (_, _) => UpdateActionMenuBtnVisibility();
         actionMenu.Closed += (_, _) => UpdateActionMenuBtnVisibility();
 
-        imgContainer.Children.Add(actionMenuBtn);
+        Grid.SetRow(actionMenuBtn, 1);
+        System.Windows.Controls.Panel.SetZIndex(actionMenuBtn, 999);
+        root.Children.Add(actionMenuBtn);
 
         card.SizeChanged += (s, _) =>
         {
