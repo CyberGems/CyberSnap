@@ -17,7 +17,7 @@ namespace CyberSnap.UI;
 
 public partial class HistoryWindow
 {
-    private sealed record MediaCardShell(Border Card, Grid ImageContainer, StackPanel InfoPanel, System.Windows.Controls.Image Image, Border SelectionBadge);
+    private sealed record MediaCardShell(Border Card, Grid ImageContainer, StackPanel InfoPanel, System.Windows.Controls.Image Image, Border SelectionBadge, Grid Root);
 
     private static bool IsDraggableFile(string? path) =>
         !string.IsNullOrWhiteSpace(path) && File.Exists(path);
@@ -391,7 +391,7 @@ public partial class HistoryWindow
         vm.SelectionBadge = selectionBadge;
         UpdateCardSelection(vm);
 
-        return new MediaCardShell(card, imgContainer, info, img, selectionBadge);
+        return new MediaCardShell(card, imgContainer, info, img, selectionBadge, root);
     }
 
     private static string GetHistoryKindLabel(HistoryKind kind) => kind switch

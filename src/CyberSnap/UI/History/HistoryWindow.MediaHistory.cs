@@ -240,27 +240,7 @@ public partial class HistoryWindow
             }
         });
 
-        var gifBadge = new Border
-        {
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, 255, 180, 60)),
-            CornerRadius = new CornerRadius(4),
-            Padding = new Thickness(6, 2, 6, 2),
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 6, 6, 0),
-            Child = new TextBlock
-            {
-                Text = "GIF",
-                FontSize = 8.5,
-                FontWeight = FontWeights.Bold,
-                Foreground = System.Windows.Media.Brushes.White,
-                FontFamily = new FontFamily(UiChrome.PreferredFamilyName)
-            }
-        };
-        AutomationProperties.SetName(gifBadge, "GIF media type badge");
-        AutomationProperties.SetHelpText(gifBadge, "This history item is an animated GIF.");
-        shell.ImageContainer.Children.Add(gifBadge);
-        AddMediaInfo(shell.InfoPanel, vm.Entry.FileName, vm.TimeAgo, filePath);
+        AddMediaInfo(shell.InfoPanel, vm.Entry.FileName, vm.TimeAgo, filePath, "GIF", System.Windows.Media.Color.FromRgb(255, 180, 60));
         return shell.Card;
     }
 
@@ -379,7 +359,7 @@ public partial class HistoryWindow
         });
     }
 
-    private static void AddMediaInfo(StackPanel panel, string fileName, string timeAgo, string filePath)
+    private static void AddMediaInfo(StackPanel panel, string fileName, string timeAgo, string filePath, string? badgeLabel = null, System.Windows.Media.Color? badgeColor = null)
     {
         var sizeStr = TryGetMediaSizeText(filePath);
 
@@ -414,14 +394,17 @@ public partial class HistoryWindow
             }
         }
 
-        panel.Children.Add(new TextBlock
-        {
-            Text = timeAgo,
-            FontSize = 10,
-            FontFamily = new FontFamily(UiChrome.PreferredFamilyName),
-            Opacity = 0.3,
-            ToolTip = $"{LocalizationService.Translate("Captured")} {timeAgo}"
-        });
+        if (badgeLabel is not null && badgeColor.HasValue)
+            panel.Children.Add(CreateBadgeTimeText(badgeLabel, badgeColor.Value, timeAgo));
+        else
+            panel.Children.Add(new TextBlock
+            {
+                Text = timeAgo,
+                FontSize = 10,
+                FontFamily = new FontFamily(UiChrome.PreferredFamilyName),
+                Opacity = 0.3,
+                ToolTip = $"{LocalizationService.Translate("Captured")} {timeAgo}"
+            });
         if (panel.Children[^1] is TextBlock capturedBlock)
         {
             AutomationProperties.SetName(capturedBlock, "Media capture time");
