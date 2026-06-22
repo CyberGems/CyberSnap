@@ -89,8 +89,7 @@ public sealed partial class RegionOverlayForm
 
         if (_brandRect.Contains(e.Location) || _menuActivatorRect.Contains(e.Location))
         {
-            HideToolbarTooltip();
-            ShowToolbarContextMenu(-1, e.Location);
+            // Left-click on the brand area is a no-op; right-click still shows the context menu.
             return;
         }
         if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
@@ -169,8 +168,7 @@ public sealed partial class RegionOverlayForm
         }
         else if (_toolbarRect.Contains(e.Location))
         {
-            HideToolbarTooltip();
-            ShowToolbarContextMenu(-1, e.Location);
+            // Left-click on empty toolbar space is a no-op; right-click still shows the context menu.
             return;
         }
 
