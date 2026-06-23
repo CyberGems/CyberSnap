@@ -286,6 +286,10 @@ public partial class HistoryWindow
             UpdateChevronVisibility();
         }
 
+        menuChevron.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            e.Handled = true;
+        };
         menuChevron.PreviewMouseLeftButtonUp += (_, e) =>
         {
             e.Handled = true;
