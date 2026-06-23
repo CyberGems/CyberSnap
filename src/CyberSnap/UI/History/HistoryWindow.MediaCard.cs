@@ -239,7 +239,7 @@ public partial class HistoryWindow
 
         var badgeHoverColor = vm.Entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(255, 100, 100)
             : vm.Entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60)
-            : System.Windows.Media.Color.FromRgb(80, 190, 180);
+            : System.Windows.Media.Color.FromRgb(100, 180, 255);
         var badgeHoverBrush = new SolidColorBrush(badgeHoverColor);
         var defaultChevronBrush = new SolidColorBrush(Theme.IsDark
             ? System.Windows.Media.Color.FromArgb(80, 255, 255, 255)
