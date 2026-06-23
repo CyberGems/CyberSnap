@@ -775,12 +775,12 @@ public partial class HistoryWindow
         };
         var chevron = new Border
         {
-            Width = 22, Height = 20,
-            CornerRadius = new CornerRadius(4),
+            Width = 20, Height = 18,
+            CornerRadius = new CornerRadius(3),
             Background = Brushes.Transparent,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 4, 6, 0),
+            Margin = new Thickness(0, 5, 5, 0),
             Cursor = Cursors.Hand,
             IsHitTestVisible = true,
             Visibility = Visibility.Collapsed,
@@ -795,7 +795,7 @@ public partial class HistoryWindow
             if (card.IsMouseOver || card.IsKeyboardFocusWithin || menu.IsOpen)
             {
                 chevron.Visibility = Visibility.Visible;
-                chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(30, 255, 255, 255));
+                chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 255, 255, 255));
                 chevronPath.Fill = badgeHoverBrush;
             }
             else
