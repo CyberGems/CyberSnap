@@ -806,6 +806,7 @@ public partial class HistoryWindow
             }
         }
 
+        chevron.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
         chevron.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; menu.IsOpen = true; };
         chevron.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Space) { e.Handled = true; menu.IsOpen = true; } };
         chevron.GotKeyboardFocus += (_, _) => UpdateChevronVisibility();
