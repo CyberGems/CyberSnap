@@ -238,12 +238,12 @@ public partial class HistoryWindow
             Width = 18,
             Height = 16,
             HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(0, 0, 2, 1),
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 4, 4, 0),
             Background = Brushes.Transparent,
             Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255)),
-            Content = "\u22EF",
-            FontSize = 13,
+            Content = "\u25BE",
+            FontSize = 11,
             Visibility = Visibility.Collapsed
         };
 
@@ -294,9 +294,8 @@ public partial class HistoryWindow
         actionMenuBtn.LostKeyboardFocus += (_, _) => UpdateActionMenuBtnVisibility();
         actionMenu.Closed += (_, _) => UpdateActionMenuBtnVisibility();
 
-        Grid.SetRow(actionMenuBtn, 1);
         System.Windows.Controls.Panel.SetZIndex(actionMenuBtn, 999);
-        root.Children.Add(actionMenuBtn);
+        imgContainer.Children.Add(actionMenuBtn);
 
         card.SizeChanged += (s, _) =>
         {
