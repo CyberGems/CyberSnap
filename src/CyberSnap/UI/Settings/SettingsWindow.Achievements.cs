@@ -204,7 +204,7 @@ public partial class SettingsWindow
             FontSize = 22,
             FontFamily = IconFont,
             Foreground = a.Unlocked
-                ? new SolidColorBrush(color)
+                ? new SolidColorBrush(Theme.IsDark ? color : MediaColor.FromArgb(255, (byte)Math.Max(color.R - 30, 0), (byte)Math.Max(color.G - 30, 0), (byte)Math.Max(color.B - 30, 0)))
                 : new SolidColorBrush(ThemeAlpha(0x55)),
             HorizontalAlignment = HAlign.Center,
             VerticalAlignment = VerticalAlignment.Center
@@ -216,7 +216,7 @@ public partial class SettingsWindow
             Height = badgeSize,
             CornerRadius = new CornerRadius(badgeSize / 2),
             Background = a.Unlocked
-                ? new SolidColorBrush(MediaColor.FromArgb(0x33, color.R, color.G, color.B))
+                ? new SolidColorBrush(MediaColor.FromArgb(Theme.IsDark ? (byte)0x33 : (byte)0x50, color.R, color.G, color.B))
                 : ThemeAlphaBrush(0x0C),
             BorderBrush = a.Unlocked
                 ? new SolidColorBrush(color)
