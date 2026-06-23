@@ -755,30 +755,55 @@ public partial class HistoryWindow
         var defaultChevronBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255));
         var badgeHoverBrush = badgeColor.HasValue ? new SolidColorBrush(badgeColor.Value) : defaultChevronBrush;
 
-        var chevron = new System.Windows.Shapes.Path
+        var chevronPath = new System.Windows.Shapes.Path
         {
             Data = System.Windows.Media.Geometry.Parse("M 0 0 L 6 0 L 3 4.5 Z"),
             Fill = defaultChevronBrush,
             Width = 7, Height = 5,
             Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var chevron = new Border
+        {
+            Width = 24, Height = 22,
+            CornerRadius = new CornerRadius(4),
+            Background = Brushes.Transparent,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 7, 6, 0),
+            Margin = new Thickness(0, 4, 4, 0),
             Cursor = Cursors.Hand,
             IsHitTestVisible = true,
-            Visibility = Visibility.Collapsed
+            Visibility = Visibility.Collapsed,
+            Child = chevronPath,
+            ToolTip = LocalizationService.Translate("Actions")
         };
         System.Windows.Controls.Panel.SetZIndex(chevron, 999);
         menu.PlacementTarget = chevron;
+
+        void UpdateChevronVisibility()
+        {
+            if (card.IsMouseOver || card.IsKeyboardFocusWithin || menu.IsOpen)
+            {
+                chevron.Visibility = Visibility.Visible;
+                chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 255, 255, 255));
+                chevronPath.Fill = badgeHoverBrush;
+            }
+            else
+            {
+                chevron.Visibility = Visibility.Collapsed;
+                chevron.Background = Brushes.Transparent;
+                chevronPath.Fill = defaultChevronBrush;
+            }
+        }
+
         chevron.MouseLeftButtonUp += (_, e) => { e.Handled = true; menu.IsOpen = true; };
-
-        chevron.MouseEnter += (_, _) => { chevron.Fill = badgeHoverBrush; };
-        chevron.MouseLeave += (_, _) => { if (!card.IsMouseOver && !menu.IsOpen) chevron.Fill = defaultChevronBrush; };
-        menu.Closed += (_, _) => { if (!card.IsMouseOver) chevron.Fill = defaultChevronBrush; };
-
-        card.MouseEnter += (_, _) => { chevron.Visibility = Visibility.Visible; chevron.Fill = badgeHoverBrush; };
-        card.MouseLeave += (_, _) => { if (!menu.IsOpen) { chevron.Visibility = Visibility.Collapsed; chevron.Fill = defaultChevronBrush; } };
-        menu.Closed += (_, _) => { if (!card.IsMouseOver) chevron.Visibility = Visibility.Collapsed; };
+        chevron.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Space) { e.Handled = true; menu.IsOpen = true; } };
+        chevron.GotKeyboardFocus += (_, _) => UpdateChevronVisibility();
+        chevron.LostKeyboardFocus += (_, _) => UpdateChevronVisibility();
+        menu.Closed += (_, _) => UpdateChevronVisibility();
+        card.MouseEnter += (_, _) => UpdateChevronVisibility();
+        card.MouseLeave += (_, _) => UpdateChevronVisibility();
 
         Grid.SetRow(chevron, 1);
         rootGrid.Children.Add(chevron);
