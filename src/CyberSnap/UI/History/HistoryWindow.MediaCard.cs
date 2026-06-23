@@ -264,7 +264,7 @@ public partial class HistoryWindow
             IsHitTestVisible = true,
             Visibility = Visibility.Collapsed,
             Child = menuChevronPath,
-            ToolTip = LocalizationService.Translate("Actions")
+            ToolTip = new System.Windows.Controls.ToolTip { Content = LocalizationService.Translate("Actions") }
         };
         System.Windows.Controls.Panel.SetZIndex(menuChevron, 999);
 
@@ -303,8 +303,15 @@ public partial class HistoryWindow
             }
         }
 
+        void DismissChevronToolTip()
+        {
+            if (menuChevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
+                tt.IsOpen = false;
+        }
+
         void OpenActionMenu()
         {
+            DismissChevronToolTip();
             actionMenu.PlacementTarget = menuChevron;
             actionMenu.IsOpen = true;
             UpdateChevronVisibility();
@@ -313,6 +320,8 @@ public partial class HistoryWindow
         menuChevron.PreviewMouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
+            DismissChevronToolTip();
+            menuChevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 255, 255, 255));
         };
         menuChevron.PreviewMouseLeftButtonUp += (_, e) =>
         {
