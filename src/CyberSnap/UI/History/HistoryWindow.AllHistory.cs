@@ -863,6 +863,17 @@ public partial class HistoryWindow
         {
             e.Handled = true;
             DismissChevronToolTip();
+            if (menu.IsOpen)
+            {
+                menu.IsOpen = false;
+                UpdateChevronVisibility();
+            }
+            else
+            {
+                menu.PlacementTarget = chevron;
+                menu.IsOpen = true;
+                UpdateChevronVisibility();
+            }
             chevron.Background = new SolidColorBrush(Theme.IsDark
                 ? System.Windows.Media.Color.FromArgb(60, 255, 255, 255)
                 : System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
@@ -870,16 +881,6 @@ public partial class HistoryWindow
         chevron.PreviewMouseLeftButtonUp += (_, e) =>
         {
             e.Handled = true;
-            DismissChevronToolTip();
-            if (menu.IsOpen)
-            {
-                menu.IsOpen = false;
-                UpdateChevronVisibility();
-                return;
-            }
-            menu.PlacementTarget = chevron;
-            menu.IsOpen = true;
-            UpdateChevronVisibility();
         };
         chevron.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Space) { e.Handled = true; if (menu.IsOpen) { menu.IsOpen = false; } else { menu.IsOpen = true; } } };
         chevron.GotKeyboardFocus += (_, _) => UpdateChevronVisibility();

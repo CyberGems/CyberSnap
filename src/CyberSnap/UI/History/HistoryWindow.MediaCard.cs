@@ -321,21 +321,28 @@ public partial class HistoryWindow
         void OpenActionMenu()
         {
             DismissChevronToolTip();
+            actionMenu.PlacementTarget = menuChevron;
+            actionMenu.IsOpen = true;
+            UpdateChevronVisibility();
+        }
+
+        void ToggleActionMenu()
+        {
+            DismissChevronToolTip();
             if (actionMenu.IsOpen)
             {
                 actionMenu.IsOpen = false;
                 UpdateChevronVisibility();
                 return;
             }
-            actionMenu.PlacementTarget = menuChevron;
-            actionMenu.IsOpen = true;
-            UpdateChevronVisibility();
+            OpenActionMenu();
         }
 
         menuChevron.PreviewMouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
             DismissChevronToolTip();
+            ToggleActionMenu();
             menuChevron.Background = new SolidColorBrush(Theme.IsDark
                 ? System.Windows.Media.Color.FromArgb(60, 255, 255, 255)
                 : System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
@@ -343,7 +350,6 @@ public partial class HistoryWindow
         menuChevron.PreviewMouseLeftButtonUp += (_, e) =>
         {
             e.Handled = true;
-            OpenActionMenu();
         };
 
         menuChevron.KeyDown += (_, e) =>
