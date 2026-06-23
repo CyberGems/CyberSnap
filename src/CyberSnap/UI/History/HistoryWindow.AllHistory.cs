@@ -382,7 +382,7 @@ public partial class HistoryWindow
             Margin = new Thickness(10, 8, 10, 10),
             VerticalAlignment = VerticalAlignment.Top
         });
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(100, 180, 255));
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 
@@ -435,7 +435,7 @@ public partial class HistoryWindow
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
         var selBadge = CreateUnifiedSelectionBadge();
         swatchArea.Children.Add(selBadge);
-        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry));
+        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(255, 160, 80));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -515,7 +515,7 @@ public partial class HistoryWindow
         var img = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(16), Source = previewSrc };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
         previewArea.Children.Add(img);  // add image BEFORE AttachCardMenu so button is on top
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry), System.Windows.Media.Color.FromRgb(120, 200, 120));
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 
@@ -739,7 +739,7 @@ public partial class HistoryWindow
 
     // ── Hover action menu (matches existing card menu style) ──
 
-    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null)
+    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null, System.Windows.Media.Color? badgeColor = null)
     {
         // Use the same styled menu as image/media cards
         var menu = CreateCardActionMenu();
@@ -755,20 +755,23 @@ public partial class HistoryWindow
         };
 
         // Bottom-right menu button (visible on hover)
+        var defaultBtnBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255));
+        var badgeHoverBrush = badgeColor.HasValue ? new SolidColorBrush(badgeColor.Value) : defaultBtnBrush;
+
         var btn = new System.Windows.Controls.Button
         {
             ToolTip = LocalizationService.Translate("Actions"),
             Focusable = false,
-            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 255)),
+            BorderBrush = Brushes.Transparent,
             BorderThickness = new Thickness(0),
-            Width = 24, Height = 20,
+            Width = 18, Height = 16,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(0, 0, 4, 2),
+            Margin = new Thickness(0, 0, 2, 1),
             Background = Brushes.Transparent,
-            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 255)),
+            Foreground = defaultBtnBrush,
             Content = "\u22EF",
-            FontSize = 14,
+            FontSize = 13,
             Visibility = Visibility.Collapsed
         };
         System.Windows.Controls.Panel.SetZIndex(btn, 999);  // ensure button always sits above other children
@@ -778,9 +781,9 @@ public partial class HistoryWindow
         Grid.SetRow(btn, 1);
         rootGrid.Children.Add(btn);
 
-        card.MouseEnter += (_, _) => { if (btn != null) btn.Visibility = Visibility.Visible; };
-        card.MouseLeave += (_, _) => { if (btn != null && !menu.IsOpen) btn.Visibility = Visibility.Collapsed; };
-        menu.Closed += (_, _) => { if (btn != null && !card.IsMouseOver) btn.Visibility = Visibility.Collapsed; };
+        card.MouseEnter += (_, _) => { if (btn != null) { btn.Visibility = Visibility.Visible; btn.Foreground = badgeHoverBrush; } };
+        card.MouseLeave += (_, _) => { if (btn != null && !menu.IsOpen) { btn.Visibility = Visibility.Collapsed; btn.Foreground = defaultBtnBrush; } };
+        menu.Closed += (_, _) => { if (btn != null && !card.IsMouseOver) { btn.Visibility = Visibility.Collapsed; btn.Foreground = defaultBtnBrush; } };
     }
 
     private void DeleteOcrEntry(OcrHistoryEntry entry)
