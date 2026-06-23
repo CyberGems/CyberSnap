@@ -47,6 +47,21 @@ public partial class App : Application
         _historyWindow?.RequestRefresh();
     }
 
+    /// <summary>Records a file path as most-recently-opened in the Editor (newest first, max 6),
+    /// persisting it to settings so the burger menu's "Open recent" submenu stays current.</summary>
+    public void PersistRecentFile(string path)
+    {
+        if (_settingsService is null || string.IsNullOrWhiteSpace(path)) return;
+        var list = _settingsService.Settings.RecentFilePaths;
+        // De-dupe case-insensitively, insert newest first, cap at 6.
+        list.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        list.Insert(0, path);
+        if (list.Count > 6)
+            list.RemoveRange(6, list.Count - 6);
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-recent-file", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "auto-fit vs real size on open" preference.</summary>
     public void PersistEditorFitPreference(bool fitToWindow)
     {

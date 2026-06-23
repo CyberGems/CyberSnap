@@ -94,6 +94,8 @@ public sealed partial class EditorForm : Form
             {
                 var captured = new Bitmap(tempBmp);
                 ShowEditor(captured, filePath);
+                if (_instance is not null)
+                    _instance.AddRecentFile(filePath);
             }
         }
         catch (Exception ex)
@@ -110,6 +112,16 @@ public sealed partial class EditorForm : Form
         MaybeAutoMaximizeForCapture();
         UpdateCaptureCaption();
         RefreshUi();
+        AddRecentFile(filePath);
+    }
+
+    /// <summary>Records a file path in the app's recent-files list (persists to settings.json
+    /// via the running App instance). Silently no-ops when the editor is hosted outside the app.</summary>
+    private void AddRecentFile(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return;
+        if (System.Windows.Application.Current is App app)
+            app.PersistRecentFile(filePath);
     }
 
     public static void ShowEditorEmptyOrPrompt()
@@ -690,6 +702,7 @@ public sealed partial class EditorForm : Form
             UpdateCaptureCaption();
             RefreshUi();
             ShowSaveStatus(filePath);
+            AddRecentFile(filePath);
 
             var fileName = Path.GetFileName(filePath);
             var toastTitle = filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase)
@@ -1064,6 +1077,7 @@ public sealed partial class EditorForm : Form
                         {
                             var captured = new Bitmap(tempBmp);
                             LoadCapture(captured, dlg.FileName);
+                            AddRecentFile(dlg.FileName);
                         }
                     }
                 }
