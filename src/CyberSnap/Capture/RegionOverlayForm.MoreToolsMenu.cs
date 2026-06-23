@@ -14,7 +14,38 @@ public sealed partial class RegionOverlayForm
     public event Action<List<string>>? EnabledToolsChanged;
 
     private ContextMenuStrip? _toolbarContextMenu;
+    private QuickStartGuide? _quickStartGuide;
     private static List<string>? _rememberedAnnotationTools;
+
+    private void ShowQuickStartGuide()
+    {
+        if (_quickStartGuide != null && _quickStartGuide.Visible)
+        {
+            _quickStartGuide.Close();
+            _quickStartGuide = null;
+            return;
+        }
+
+        _quickStartGuide ??= new QuickStartGuide();
+
+        var logoScreen = new Rectangle(
+            _virtualBounds.X + _logoRect.X,
+            _virtualBounds.Y + _logoRect.Y,
+            _logoRect.Width,
+            _logoRect.Height);
+
+        _quickStartGuide.ShowNear(this, logoScreen, above: IsBottomDock);
+        _quickStartGuide.FormClosed += (_, _) => _quickStartGuide = null;
+    }
+
+    private void DismissQuickStartGuide()
+    {
+        if (_quickStartGuide != null && _quickStartGuide.Visible)
+        {
+            _quickStartGuide.Close();
+            _quickStartGuide = null;
+        }
+    }
 
     private void ShowToolbarContextMenu(int buttonIndex, Point clickLocation)
     {
