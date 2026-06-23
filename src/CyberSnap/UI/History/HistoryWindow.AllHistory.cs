@@ -528,7 +528,7 @@ public partial class HistoryWindow
         var img = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(16), Source = previewSrc };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
         previewArea.Children.Add(img);  // add image BEFORE AttachCardMenu so button is on top
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry), System.Windows.Media.Color.FromRgb(120, 200, 120));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry), System.Windows.Media.Color.FromRgb(176, 136, 240));
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 
@@ -542,14 +542,14 @@ public partial class HistoryWindow
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
             TextTrimming = TextTrimming.CharacterEllipsis
         });
-        info.Children.Add(CreateBadgeTimeText("QR", System.Windows.Media.Color.FromRgb(120, 200, 120), FormatTimeAgo(entry.CapturedAt)));
+        info.Children.Add(CreateBadgeTimeText("QR", System.Windows.Media.Color.FromRgb(176, 136, 240), FormatTimeAgo(entry.CapturedAt)));
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         infoBorder.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
-        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(120, 200, 120));
+        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(176, 136, 240));
 
         var capturedText = text;
         card.Child = root;
@@ -803,32 +803,70 @@ public partial class HistoryWindow
             IsHitTestVisible = true,
             Visibility = Visibility.Collapsed,
             Child = chevronPath,
-            ToolTip = LocalizationService.Translate("Actions")
+            ToolTip = new System.Windows.Controls.ToolTip { Content = LocalizationService.Translate("Actions") }
         };
         System.Windows.Controls.Panel.SetZIndex(chevron, 999);
-        menu.PlacementTarget = chevron;
+
+        bool chevronHovered = false;
 
         void UpdateChevronVisibility()
         {
-            if (card.IsMouseOver || card.IsKeyboardFocusWithin || menu.IsOpen)
+            if (menu.IsOpen)
             {
                 chevron.Visibility = Visibility.Visible;
-                chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 255, 255, 255));
+                chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255));
                 chevronPath.Fill = badgeHoverBrush;
+                return;
+            }
+
+            if (card.IsMouseOver || card.IsKeyboardFocusWithin)
+            {
+                chevron.Visibility = Visibility.Visible;
+                if (chevronHovered)
+                {
+                    chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255));
+                    chevronPath.Fill = badgeHoverBrush;
+                }
+                else
+                {
+                    chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(12, 255, 255, 255));
+                    chevronPath.Fill = defaultChevronBrush;
+                }
             }
             else
             {
                 chevron.Visibility = Visibility.Collapsed;
                 chevron.Background = Brushes.Transparent;
                 chevronPath.Fill = defaultChevronBrush;
+                chevronHovered = false;
             }
         }
 
-        chevron.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
-        chevron.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; menu.IsOpen = true; };
+        void DismissChevronToolTip()
+        {
+            if (chevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
+                tt.IsOpen = false;
+        }
+
+        chevron.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            e.Handled = true;
+            DismissChevronToolTip();
+            chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 255, 255, 255));
+        };
+        chevron.PreviewMouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
+            DismissChevronToolTip();
+            menu.PlacementTarget = chevron;
+            menu.IsOpen = true;
+            UpdateChevronVisibility();
+        };
         chevron.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Space) { e.Handled = true; menu.IsOpen = true; } };
         chevron.GotKeyboardFocus += (_, _) => UpdateChevronVisibility();
         chevron.LostKeyboardFocus += (_, _) => UpdateChevronVisibility();
+        chevron.MouseEnter += (_, _) => { chevronHovered = true; UpdateChevronVisibility(); };
+        chevron.MouseLeave += (_, _) => { chevronHovered = false; UpdateChevronVisibility(); };
         menu.Closed += (_, _) => UpdateChevronVisibility();
         card.MouseEnter += (_, _) => UpdateChevronVisibility();
         card.MouseLeave += (_, _) => UpdateChevronVisibility();
