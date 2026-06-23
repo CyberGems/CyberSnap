@@ -1053,19 +1053,18 @@ public sealed partial class RegionOverlayForm : Form
 
     private void ShowAnnotationContextMenu(Point clickLocation)
     {
-        var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: 150);
-        
-        string deleteText;
-        if (_multiSelectedIndices.Count > 1)
-        {
-            deleteText = LocalizationService.Translate("Delete selection");
-        }
-        else
-        {
-            deleteText = LocalizationService.Translate("Delete");
-        }
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 180);
 
-        var deleteItem = new ToolStripMenuItem(deleteText);
+        bool multi = _multiSelectedIndices.Count > 1;
+        var duplicateItem = WindowsMenuRenderer.Item(
+            multi ? "Duplicate selection" : "Duplicate",
+            iconId: "copy");
+        duplicateItem.Click += (s, e) => DuplicateSelection();
+
+        var deleteItem = WindowsMenuRenderer.Item(
+            multi ? "Delete selection" : "Delete",
+            iconId: "trash",
+            danger: true);
         deleteItem.Click += (s, e) => {
             if (_multiSelectedIndices.Count > 1)
             {
@@ -1077,12 +1076,9 @@ public sealed partial class RegionOverlayForm : Form
             }
         };
 
-        var duplicateItem = new ToolStripMenuItem(LocalizationService.Translate("Duplicate"));
-        duplicateItem.Click += (s, e) => DuplicateSelection();
-
         menu.Items.Add(duplicateItem);
         menu.Items.Add(deleteItem);
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 150);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 180);
 
         var screenPoint = PointToScreen(clickLocation);
         menu.Show(screenPoint);
