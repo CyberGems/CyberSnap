@@ -162,8 +162,8 @@ public partial class SettingsWindow
                 var label = new TextBlock
                 {
                     Text = i == 0 ? "1" : AbbrevMilestone(railValues[i]),
-                    FontSize = 9,
-                    Opacity = achieved ? 0.6 : 0.38,
+                    FontSize = 10.5,
+                    Opacity = achieved ? 0.7 : 0.4,
                     Foreground = achieved ? new SolidColorBrush(RailCyan)
                                           : ((Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White)
                 };
@@ -352,7 +352,8 @@ public partial class SettingsWindow
         var chips = new StackPanel
         {
             Orientation = System.Windows.Controls.Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Bottom
+            VerticalAlignment = VerticalAlignment.Bottom,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center
         };
 
         // Total captures.
@@ -391,47 +392,21 @@ public partial class SettingsWindow
     {
         var text = new TextBlock
         {
-            FontSize = 11,
-            Opacity = 0.8,
+            FontSize = 13,
+            Opacity = 0.9,
             Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White
         };
         fill(text.Inlines);
 
         return new Border
         {
-            CornerRadius = new CornerRadius(5),
-            Padding = new Thickness(8, 3, 8, 3),
-            Margin = new Thickness(0, 0, 6, 0),
+            CornerRadius = new CornerRadius(7),
+            Padding = new Thickness(12, 6, 12, 6),
+            Margin = new Thickness(5, 0, 5, 0),
             Background = (Brush?)TryFindResource("ThemeTabActiveBrush")
                          ?? new SolidColorBrush(MediaColor.FromArgb(0x1F, 0xFF, 0xFF, 0xFF)),
             Child = text
         };
     }
 
-    // Builds the toggle's description line with an inline "Learn more" link to the Achievements tab.
-    private void BuildAchievementsDescription()
-    {
-        if (AchievementsDescText is null) return;
-
-        AchievementsDescText.Inlines.Clear();
-        AchievementsDescText.Inlines.Add(new Run(LocalizationService.Translate(
-            "Add a festive flourish to milestone moments, like your first capture of the day.")));
-        AchievementsDescText.Inlines.Add(new Run(" "));
-
-        var link = new Hyperlink(new Run(LocalizationService.Translate("Learn more")))
-        {
-            Foreground = new SolidColorBrush(RailCyan),
-            TextDecorations = null,
-            Cursor = System.Windows.Input.Cursors.Hand
-        };
-        link.Click += AchievementsLink_Click;
-        AchievementsDescText.Inlines.Add(link);
-    }
-
-    // Jump to the Achievements tab when the description link is clicked.
-    private void AchievementsLink_Click(object sender, RoutedEventArgs e)
-    {
-        SelectSettingsTab("achievements");
-        e.Handled = true;
-    }
 }

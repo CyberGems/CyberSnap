@@ -21,7 +21,7 @@ namespace CyberSnap.UI;
 // statistics and medal sections that surround it.
 public partial class SettingsWindow
 {
-    private static readonly string GlyphCamera = ((char)0xE7C2).ToString(); // Camera (Capture)
+    private static readonly string GlyphCamera = ((char)0xE722).ToString(); // Camera (present in both Fluent + MDL2)
     private static readonly string GlyphStar = ((char)0xE735).ToString();   // FavoriteStarFill
     private static readonly string GlyphLock = ((char)0xE72E).ToString();   // Lock
 
@@ -70,7 +70,7 @@ public partial class SettingsWindow
         {
             var (glyph, value, labelKey, accent) = stats[i];
             var card = MakeStatCard(glyph, value, LocalizationService.Translate(labelKey), accent);
-            card.Margin = new Thickness(3);
+            card.Margin = new Thickness(5);
             Grid.SetColumn(card, i % 2);
             Grid.SetRow(card, i / 2);
             host.Children.Add(card);
@@ -139,16 +139,30 @@ public partial class SettingsWindow
         host.Children.Clear();
 
         var achievements = AchievementCatalog.Build(s, LocalizationService.Translate);
-        AddMedalSection(host, "Capture milestones",
-            achievements.Where(a => a.Kind == AchievementKind.CaptureMilestone));
-        AddMedalSection(host, "Day streaks",
-            achievements.Where(a => a.Kind == AchievementKind.Streak));
-        AddMedalSection(host, "First time",
-            achievements.Where(a => a.Kind == AchievementKind.FirstTime));
+        var groups = new (string Key, AchievementKind Kind)[]
+        {
+            ("Capture milestones", AchievementKind.CaptureMilestone),
+            ("Day streaks", AchievementKind.Streak),
+            ("First time", AchievementKind.FirstTime),
+        };
+        for (int i = 0; i < groups.Length; i++)
+            AddMedalSection(host, groups[i].Key,
+                achievements.Where(a => a.Kind == groups[i].Kind), first: i == 0);
     }
 
-    private void AddMedalSection(StackPanel host, string categoryKey, IEnumerable<Achievement> medals)
+    private void AddMedalSection(StackPanel host, string categoryKey, IEnumerable<Achievement> medals, bool first)
     {
+        // Thin divider above every category but the first, for gentle in-card separation.
+        if (!first)
+        {
+            host.Children.Add(new Border
+            {
+                Height = 1,
+                Background = (Brush?)TryFindResource("ThemeSeparatorBrush") ?? Brushes.Transparent,
+                Margin = new Thickness(0, 16, 0, 0)
+            });
+        }
+
         var label = new TextBlock
         {
             Text = LocalizationService.Translate(categoryKey),
@@ -157,11 +171,13 @@ public partial class SettingsWindow
             Opacity = 0.7,
             FontFamily = new FontFamily("Segoe UI Variable Text"),
             Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White,
-            Margin = new Thickness(0, 10, 0, 6)
+            Margin = new Thickness(0, first ? 4 : 14, 0, 10)
         };
         host.Children.Add(label);
 
-        var panel = new WrapPanel { ItemWidth = 92, Margin = new Thickness(0, 0, 0, 4) };
+        // Fixed item box keeps rows tidy despite tiles varying in height (locked tiles carry a
+        // progress line, unlocked ones don't).
+        var panel = new WrapPanel { ItemWidth = 94, ItemHeight = 104, Margin = new Thickness(0, 0, 0, 2) };
         foreach (var a in medals)
             panel.Children.Add(MakeMedalTile(a));
         host.Children.Add(panel);
@@ -257,7 +273,7 @@ public partial class SettingsWindow
             Child = panel,
             ToolTip = a.Description,
             HorizontalAlignment = HAlign.Center,
-            Margin = new Thickness(0, 0, 0, 6)
+            VerticalAlignment = VerticalAlignment.Top
         };
     }
 

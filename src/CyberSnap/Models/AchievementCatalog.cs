@@ -12,7 +12,7 @@ public static class AchievementCatalog
     // Glyphs (Segoe Fluent Icons) used on the medal tiles, built from code points so the source
     // stays free of literal private-use characters. These match glyphs used elsewhere in the app.
     private static readonly string GlyphStar = ((char)0xE735).ToString();    // FavoriteStarFill
-    private static readonly string GlyphCapture = ((char)0xE7C2).ToString(); // capture
+    private static readonly string GlyphCapture = ((char)0xE722).ToString(); // camera (present in both Fluent + MDL2)
     private static readonly string GlyphOcr = ((char)0xE8C8).ToString();     // OCR
     private static readonly string GlyphVideo = ((char)0xE768).ToString();   // video
 
