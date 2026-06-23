@@ -68,6 +68,21 @@ public partial class SettingsWindow
             value => _historyService.PruneByRetention(value));
     }
 
+    private void HistoryClickActionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressHistoryPreferenceChange) return;
+
+        var previous = _settingsService.Settings.HistoryClickAction;
+        var selected = (HistoryClickAction)Math.Clamp(HistoryClickActionCombo.SelectedIndex, 0, 2);
+        UpdateHistoryPreference(
+            "settings.history-click-action",
+            "Click action",
+            previous,
+            selected,
+            value => _settingsService.Settings.HistoryClickAction = value,
+            value => HistoryClickActionCombo.SelectedIndex = (int)value);
+    }
+
     private void UpdateHistoryPreference<T>(
         string diagnosticKey,
         string label,

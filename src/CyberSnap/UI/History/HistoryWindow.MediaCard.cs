@@ -123,7 +123,12 @@ public partial class HistoryWindow
         AutomationProperties.SetName(card, $"{kindLabel} history item");
         AutomationProperties.SetHelpText(card, "Press Enter or Space to open this history item. Press Ctrl+C to copy it. In select mode, press Enter or Space to select it.");
 
-        imgContainer.ToolTip = LocalizationService.Translate("Open in Editor");
+        imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+        {
+            HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
+            HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
+            _ => LocalizationService.Translate("Open in Editor"),
+        };
         imgContainer.Cursor = Cursors.Hand;
 
         // Context menu
@@ -355,7 +360,27 @@ public partial class HistoryWindow
 
             if (!_selectMode)
             {
-                OpenFileWithDefaultApp(vm.Entry.FilePath);
+                switch (_settingsService.Settings.HistoryClickAction)
+                {
+                    case HistoryClickAction.OpenInEditor:
+                        try
+                        {
+                            using var bmp = new System.Drawing.Bitmap(vm.Entry.FilePath);
+                            CyberSnap.UI.Editor.EditorForm.ShowEditor(new System.Drawing.Bitmap(bmp), vm.Entry.FilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            ToastWindow.ShowError("Editor failed", $"Could not open editor: {ex.Message}");
+                        }
+                        break;
+                    case HistoryClickAction.CopyToClipboard:
+                        copyAction();
+                        break;
+                    case HistoryClickAction.OpenInDefaultViewer:
+                    default:
+                        OpenFileWithDefaultApp(vm.Entry.FilePath);
+                        break;
+                }
                 e.Handled = true;
                 return;
             }

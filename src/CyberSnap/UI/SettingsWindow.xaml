@@ -2723,9 +2723,7 @@
                                     </Border>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Services:LocalizationService.SourceText="Achievements" Style="{StaticResource SettingTitle}"/>
-                                        <!-- Description + "Learn more" link built in code-behind (AchievementsDescText)
-                                             so the Hyperlink can live inline alongside the translated text. -->
-                                        <TextBlock x:Name="AchievementsDescText" Style="{StaticResource SettingDescription}"/>
+                                        <TextBlock Services:LocalizationService.SourceText="Add a festive flourish to milestone moments, like your first capture of the day." Style="{StaticResource SettingDescription}"/>
                                     </StackPanel>
                                     <CheckBox x:Name="CelebrationsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                               Width="150" HorizontalAlignment="Left"
@@ -3860,6 +3858,44 @@
                         </StackPanel>
                     </Border>
 
+                    <TextBlock Text="Interaction" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE74A;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Thumbnail click action" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Action performed when clicking a capture thumbnail in the Gallery." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="HistoryClickActionCombo" Grid.Column="2" MinWidth="145"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Thumbnail click action"
+                                          ToolTip="Choose what happens when you click a capture thumbnail."
+                                          SelectionChanged="HistoryClickActionCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Open in editor"
+                                                  ToolTip="Open the capture in the built-in editor."
+                                                  AutomationProperties.Name="Open in editor"
+                                                  AutomationProperties.HelpText="Opens the image in the post-capture editor for annotation and adjustments."/>
+                                    <ComboBoxItem Content="Copy to clipboard"
+                                                  ToolTip="Copy the capture to your clipboard."
+                                                  AutomationProperties.Name="Copy to clipboard"
+                                                  AutomationProperties.HelpText="Copies the image to the system clipboard without opening any window."/>
+                                    <ComboBoxItem Content="Open in default viewer"
+                                                  ToolTip="Open the file with the system default image viewer."
+                                                  AutomationProperties.Name="Open in default viewer"
+                                                  AutomationProperties.HelpText="Opens the saved file using your operating system's default image application."/>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Search" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
                     <Border x:Name="GeneralImageSearchSettingsCard" Style="{StaticResource Card}">
                         <StackPanel>
@@ -3933,24 +3969,42 @@
             </ScrollViewer>
 
             <!-- Achievements / Logros -->
-            <ScrollViewer x:Name="AchievementsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,42,18,18">
-                <StackPanel MaxWidth="640" HorizontalAlignment="Left">
-                    <!-- Hero: animated milestone rail (moved here from Notifications) + stat chips.
-                         All inner content is built in code-behind (SettingsWindow.Celebrations.cs). -->
-                    <TextBlock Services:LocalizationService.SourceText="Your progress" Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
-                    <Border Padding="16,14" CornerRadius="10"
-                            Background="{DynamicResource ThemeInputBackgroundBrush}"
+            <ScrollViewer x:Name="AchievementsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="24,42,24,24">
+                <StackPanel MaxWidth="680" HorizontalAlignment="Left">
+                    <!-- Each section is a self-contained card (header inside) so nothing floats on the
+                         bare panel. Cards use the lighter ThemeCardBrush; inner tiles use the darker
+                         ThemeInputBackgroundBrush for an inset hierarchy. Inner content (rail, stat
+                         cells, medal grid) is built in code-behind. -->
+
+                    <!-- Hero: animated milestone rail + stat chips (SettingsWindow.Celebrations.cs). -->
+                    <Border Padding="20,16,20,18" CornerRadius="12" Margin="0,0,0,16"
+                            Background="{DynamicResource ThemeCardBrush}"
                             BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
-                        <Grid x:Name="MilestoneRailHost" Height="74"/>
+                        <StackPanel>
+                            <TextBlock Services:LocalizationService.SourceText="Your progress" Style="{StaticResource SectionLabel}" Margin="0,0,0,14"/>
+                            <Grid x:Name="MilestoneRailHost" Height="74"/>
+                        </StackPanel>
                     </Border>
 
-                    <!-- Statistics cards (built in code-behind: SettingsWindow.Achievements.cs) -->
-                    <TextBlock Services:LocalizationService.SourceText="Statistics" Style="{StaticResource SectionLabel}" Margin="0,18,0,6"/>
-                    <Grid x:Name="AchievementsStatsHost"/>
+                    <!-- Statistics: 2×2 stat cells (SettingsWindow.Achievements.cs). -->
+                    <Border Padding="20,16,20,18" CornerRadius="12" Margin="0,0,0,16"
+                            Background="{DynamicResource ThemeCardBrush}"
+                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Services:LocalizationService.SourceText="Statistics" Style="{StaticResource SectionLabel}" Margin="0,0,0,12"/>
+                            <Grid x:Name="AchievementsStatsHost"/>
+                        </StackPanel>
+                    </Border>
 
-                    <!-- Medal grid, grouped by category (built in code-behind) -->
-                    <TextBlock Services:LocalizationService.SourceText="Medals" Style="{StaticResource SectionLabel}" Margin="0,18,0,6"/>
-                    <StackPanel x:Name="AchievementsMedalsHost"/>
+                    <!-- Medals: categories with sub-headers + tile grids (SettingsWindow.Achievements.cs). -->
+                    <Border Padding="20,16,20,18" CornerRadius="12"
+                            Background="{DynamicResource ThemeCardBrush}"
+                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Services:LocalizationService.SourceText="Medals" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                            <StackPanel x:Name="AchievementsMedalsHost"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
 
