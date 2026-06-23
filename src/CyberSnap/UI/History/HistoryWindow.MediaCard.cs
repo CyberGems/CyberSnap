@@ -229,60 +229,55 @@ public partial class HistoryWindow
             actionMenu.IsOpen = true;
         };
 
-        var actionMenuBtn = new System.Windows.Controls.Button
-        {
-            ToolTip = LocalizationService.Translate("Actions"),
-            Focusable = true,
-            BorderBrush = Brushes.Transparent,
-            BorderThickness = new Thickness(0),
-            Width = 18,
-            Height = 16,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 4, 4, 0),
-            Background = Brushes.Transparent,
-            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255)),
-            Content = "\u25BE",
-            FontSize = 11,
-            Visibility = Visibility.Collapsed
-        };
-
         var badgeHoverColor = vm.Entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(255, 100, 100)
             : vm.Entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60)
             : System.Windows.Media.Color.FromRgb(80, 190, 180);
         var badgeHoverBrush = new SolidColorBrush(badgeHoverColor);
-        var defaultBtnBrush = actionMenuBtn.Foreground;
-        AutomationProperties.SetName(actionMenuBtn, $"{kindLabel} actions");
-        AutomationProperties.SetHelpText(actionMenuBtn, "Press Enter or Space to open this history item's actions.");
+        var defaultChevronBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255));
 
-        void UpdateActionMenuBtnVisibility()
+        var menuChevron = new System.Windows.Shapes.Path
+        {
+            Data = System.Windows.Media.Geometry.Parse("M 0 0 L 6 0 L 3 4.5 Z"),
+            Fill = defaultChevronBrush,
+            Width = 7, Height = 5,
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 7, 6, 0),
+            Cursor = Cursors.Hand,
+            IsHitTestVisible = true,
+            Visibility = Visibility.Collapsed
+        };
+        System.Windows.Controls.Panel.SetZIndex(menuChevron, 999);
+
+        void UpdateChevronVisibility()
         {
             if (card.IsMouseOver || card.IsKeyboardFocusWithin || actionMenu.IsOpen)
             {
-                actionMenuBtn.Visibility = Visibility.Visible;
-                actionMenuBtn.Foreground = badgeHoverBrush;
+                menuChevron.Visibility = Visibility.Visible;
+                menuChevron.Fill = badgeHoverBrush;
             }
             else
             {
-                actionMenuBtn.Visibility = Visibility.Collapsed;
-                actionMenuBtn.Foreground = defaultBtnBrush;
+                menuChevron.Visibility = Visibility.Collapsed;
+                menuChevron.Fill = defaultChevronBrush;
             }
         }
 
         void OpenActionMenu()
         {
-            actionMenu.PlacementTarget = actionMenuBtn;
+            actionMenu.PlacementTarget = menuChevron;
             actionMenu.IsOpen = true;
-            UpdateActionMenuBtnVisibility();
+            UpdateChevronVisibility();
         }
 
-        actionMenuBtn.PreviewMouseLeftButtonUp += (_, e) =>
+        menuChevron.MouseLeftButtonUp += (_, e) =>
         {
             e.Handled = true;
             OpenActionMenu();
         };
 
-        actionMenuBtn.KeyDown += (_, e) =>
+        menuChevron.KeyDown += (_, e) =>
         {
             if (!IsHistoryCardActivationKey(e))
                 return;
@@ -290,12 +285,12 @@ public partial class HistoryWindow
             OpenActionMenu();
         };
 
-        actionMenuBtn.GotKeyboardFocus += (_, _) => UpdateActionMenuBtnVisibility();
-        actionMenuBtn.LostKeyboardFocus += (_, _) => UpdateActionMenuBtnVisibility();
-        actionMenu.Closed += (_, _) => UpdateActionMenuBtnVisibility();
+        menuChevron.GotKeyboardFocus += (_, _) => UpdateChevronVisibility();
+        menuChevron.LostKeyboardFocus += (_, _) => UpdateChevronVisibility();
+        actionMenu.Closed += (_, _) => UpdateChevronVisibility();
 
-        System.Windows.Controls.Panel.SetZIndex(actionMenuBtn, 999);
-        imgContainer.Children.Add(actionMenuBtn);
+        Grid.SetRow(menuChevron, 1);
+        root.Children.Add(menuChevron);
 
         card.SizeChanged += (s, _) =>
         {
@@ -308,22 +303,22 @@ public partial class HistoryWindow
         card.MouseEnter += (s, _) =>
         {
             hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
-            UpdateActionMenuBtnVisibility();
+            UpdateChevronVisibility();
         };
         card.MouseLeave += (s, _) =>
         {
             if (!card.IsKeyboardFocusWithin)
                 hoverBorder.BorderBrush = Brushes.Transparent;
-            UpdateActionMenuBtnVisibility();
+            UpdateChevronVisibility();
         };
         card.GotKeyboardFocus += (_, _) =>
         {
             hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
-            UpdateActionMenuBtnVisibility();
+            UpdateChevronVisibility();
         };
         card.LostKeyboardFocus += (_, _) =>
         {
-            UpdateActionMenuBtnVisibility();
+            UpdateChevronVisibility();
             if (card.IsKeyboardFocusWithin)
                 return;
 
