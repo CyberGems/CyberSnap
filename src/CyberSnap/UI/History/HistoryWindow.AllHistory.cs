@@ -585,13 +585,21 @@ public partial class HistoryWindow
 
     private static void AddCategoryGradientOverlay(Grid root, System.Windows.Media.Color accentColor)
     {
+        var brush = new System.Windows.Media.LinearGradientBrush
+        {
+            StartPoint = new System.Windows.Point(0, 0),
+            EndPoint = new System.Windows.Point(0, 1),
+            GradientStops = new System.Windows.Media.GradientStopCollection
+            {
+                new(System.Windows.Media.Colors.Transparent, 0),
+                new(System.Windows.Media.Colors.Transparent, 0.5),
+                new(System.Windows.Media.Color.FromArgb(28, accentColor.R, accentColor.G, accentColor.B), 1)
+            }
+        };
         var overlay = new Border
         {
             IsHitTestVisible = false,
-            Background = new System.Windows.Media.LinearGradientBrush(
-                System.Windows.Media.Colors.Transparent,
-                System.Windows.Media.Color.FromArgb(28, accentColor.R, accentColor.G, accentColor.B),
-                90),
+            Background = brush,
             CornerRadius = new CornerRadius(0, 0, 8, 8)
         };
         Grid.SetRow(overlay, 1);
