@@ -11,11 +11,6 @@ public sealed partial class RegionOverlayForm
     {
         if ((keyData & Keys.KeyCode) == Keys.Escape)
         {
-            if (_quickStartGuide != null && _quickStartGuide.Visible)
-            {
-                DismissQuickStartGuide();
-                return true;
-            }
             if (_emojiPickerOpen)
             {
                 _emojiPickerOpen = false;
@@ -36,11 +31,6 @@ public sealed partial class RegionOverlayForm
         {
             e.SuppressKeyPress = true;
             e.Handled = true;
-            if (_quickStartGuide != null && _quickStartGuide.Visible)
-            {
-                DismissQuickStartGuide();
-                return;
-            }
             if (_emojiPickerOpen)
             {
                 _emojiPickerOpen = false;
