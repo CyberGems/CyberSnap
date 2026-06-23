@@ -122,6 +122,13 @@ public enum AppThemeMode
     Light
 }
 
+public enum HistoryClickAction
+{
+    OpenInEditor,
+    CopyToClipboard,
+    OpenInDefaultViewer
+}
+
 public sealed class AppSettings
 {
     public sealed class ToastButtonLayoutSettings
@@ -327,6 +334,7 @@ public sealed class AppSettings
     public bool ImageSearchExactMatch { get; set; }
     public bool AutoIndexImages { get; set; } = false;
     public int HistoryCategoryFilter { get; set; } = 0; // 0=All (default)
+    public HistoryClickAction HistoryClickAction { get; set; } = HistoryClickAction.OpenInEditor;
 
     public double ToastDurationSeconds { get; set; } = 2.5;
     public double SystemToastDurationSeconds { get; set; } = 4.0;

@@ -112,6 +112,12 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("save_history", "Save history", SettingsValueKind.Toggle, "Track captures in local history.", "SaveHistory"),
                         new SettingDefinition("history_retention", "Retention period", SettingsValueKind.Choice, "How long captures stay in history.", "HistoryRetention"),
                         new SettingDefinition("compress_history", "Compress history", SettingsValueKind.Toggle, "Prefer compressed history image formats where applicable.", "CompressHistory"),
+                        new SettingDefinition("history_click_action", "Click action", SettingsValueKind.Choice, "Action when clicking a capture thumbnail in the Gallery.", "HistoryClickAction",
+                        [
+                            new("open_in_editor", "Open in editor"),
+                            new("copy_to_clipboard", "Copy to clipboard"),
+                            new("open_in_default_viewer", "Open in default viewer"),
+                        ]),
                     ]),
                 new SettingsSectionDefinition(
                     "search",
