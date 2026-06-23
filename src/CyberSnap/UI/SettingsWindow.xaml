@@ -2672,6 +2672,30 @@
                                           ToolTip="Choose which monitor the widget appears on."
                                           SelectionChanged="WidgetMonitorCombo_SelectionChanged"/>
                             </Grid>
+                            <Border x:Name="WidgetResetPositionSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+
+                            <!-- Reset Widget Position Button -->
+                            <Grid x:Name="WidgetResetPositionRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE72C;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Reset position" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Return the widget to its default centered position." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <Button x:Name="WidgetResetPositionButton" Grid.Column="2" MinWidth="120"
+                                        VerticalAlignment="Center" Padding="14,7"
+                                        AutomationProperties.Name="Reset widget position"
+                                        ToolTip="Return the widget to its default centered position."
+                                        Click="WidgetResetPositionButton_Click">
+                                    <TextBlock Text="Reset"/>
+                                </Button>
+                            </Grid>
                         </StackPanel>
                     </Border>
                 </StackPanel>

@@ -1151,6 +1151,13 @@ public partial class SettingsWindow
             });
     }
 
+    private void WidgetResetPositionButton_Click(object sender, RoutedEventArgs e)
+    {
+        _settingsService.Settings.WidgetDockPositionOffset = 0.5;
+        _settingsService.Save();
+        ((App)Application.Current).RefreshWidgetWindowLayout();
+    }
+
     private void UpdateWidgetOptionsVisibility(bool visible)
     {
         var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
@@ -1164,6 +1171,8 @@ public partial class SettingsWindow
         WidgetHoverDelayRow.Visibility = visibility;
         WidgetMonitorSeparator.Visibility = visibility;
         WidgetMonitorRow.Visibility = visibility;
+        WidgetResetPositionSeparator.Visibility = visibility;
+        WidgetResetPositionRow.Visibility = visibility;
     }
 
     private void UpdateImageIndexVisibility(bool visible)

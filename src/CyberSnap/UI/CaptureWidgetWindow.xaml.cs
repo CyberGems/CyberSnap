@@ -739,7 +739,7 @@ public partial class CaptureWidgetWindow : Window
         // (dark rounded surface, accent hover bar) instead of the default WPF look.
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
 
-        menu.Items.Add(BuildDockEdgeSubmenu());
+        menu.Items.Add(BuildPositionSubmenu());
 
         var screenMenu = BuildScreenSubmenu();
         if (screenMenu != null)
@@ -793,7 +793,8 @@ public partial class CaptureWidgetWindow : Window
 
         // "Widget" submenu mirrors the right-click context menu options.
         var widgetMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Widget"), showImages: true);
-        widgetMenu.DropDownItems.Add(BuildDockEdgeSubmenu());
+        widgetMenu.DropDownItems.Add(BuildPositionSubmenu());
+
         var screenMenu = BuildScreenSubmenu();
         if (screenMenu != null)
             widgetMenu.DropDownItems.Add(screenMenu);
@@ -937,6 +938,42 @@ public partial class CaptureWidgetWindow : Window
             Close();
         };
         return disableItem;
+    }
+
+    private System.Windows.Forms.ToolStripMenuItem BuildPositionSubmenu()
+    {
+        var positionMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Position"));
+
+        // Dock edge items: Top, Bottom, Left, Right
+        var edges = new[] { CaptureDockSide.Top, CaptureDockSide.Bottom, CaptureDockSide.Left, CaptureDockSide.Right };
+        var edgeLabels = new[] { "Top", "Bottom", "Left", "Right" };
+        for (int i = 0; i < edges.Length; i++)
+        {
+            var ed = edges[i];
+            var item = Helpers.WindowsMenuRenderer.Item(edgeLabels[i], active: _settings.WidgetDockEdge == ed);
+            item.Click += (s, ev) =>
+            {
+                _settings.WidgetDockEdge = ed;
+                _settingsService.Save();
+                RefreshLayout();
+            };
+            positionMenu.DropDownItems.Add(item);
+        }
+
+        positionMenu.DropDownItems.Add(new System.Windows.Forms.ToolStripSeparator());
+
+        // Reset position item
+        var resetItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("Reset position"));
+        resetItem.Click += (s, ev) =>
+        {
+            _settings.WidgetDockPositionOffset = 0.5;
+            _settingsService.Save();
+            PositionWindow();
+        };
+        positionMenu.DropDownItems.Add(resetItem);
+
+        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(positionMenu, minWidth: 180);
+        return positionMenu;
     }
 
     // Shared menu presentation: keep the widget expanded while open, clamp to the working area,
