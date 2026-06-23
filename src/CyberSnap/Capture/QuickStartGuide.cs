@@ -8,19 +8,19 @@ namespace CyberSnap.Capture;
 
 public sealed class QuickStartGuide : Form
 {
-    private const int MaxWidth = 440;
-    private const int PadX = 20;
-    private const int PadY = 20;
+    private const int MaxWidth = 480;
+    private const int PadX = 22;
+    private const int PadY = 22;
     private const int HeaderHeight = 36;
     private const int PrimaryRowHeight = 40;
-    private const int ShortcutRowHeight = 30;
-    private const int TipRowHeight = 28;
+    private const int ShortcutRowHeight = 32;
+    private const int TipRowHeight = 30;
     private const int SectionGap = 14;
     private const int IconSize = 18;
     private const int IconTextGap = 12;
-    private const int PillPadH = 12;
+    private const int PillPadH = 14;
     private const int PillGap = 8;
-    private const int PillKeyLabelGap = 8;
+    private const int PillKeyLabelGap = 10;
     private const float Corner = 10f;
 
     private readonly Font _headerFont = UiChrome.ChromeFont(10.5f, FontStyle.Bold);
@@ -128,13 +128,13 @@ public sealed class QuickStartGuide : Form
         _tips = isSpanish
             ? new[]
             {
-                new TipDef("select", "Click derecho → ocultar tool del toolbar"),
+                new TipDef("captureRect", "Click derecho → ocultar tool del toolbar"),
                 new TipDef("add", "Click ▼ → opciones del toolbar"),
                 new TipDef("sticker", "Las anotaciones aparecen tras capturar"),
             }
             : new[]
             {
-                new TipDef("select", "Right-click → hide tool from toolbar"),
+                new TipDef("captureRect", "Right-click → hide tool from toolbar"),
                 new TipDef("add", "Click ▼ → toolbar options"),
                 new TipDef("sticker", "Annotations appear after capture"),
             };
@@ -155,7 +155,7 @@ public sealed class QuickStartGuide : Form
                     TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
             maxTextWidth = Math.Max(maxTextWidth, primaryW);
 
-            // Shortcut pills - measure each pill individually
+            // Shortcut pills
             foreach (var sc in _shortcuts)
             {
                 int kw = TextRenderer.MeasureText(g, sc.Key, _keyFont,
@@ -181,7 +181,7 @@ public sealed class QuickStartGuide : Form
             maxTextWidth = Math.Max(maxTextWidth, brandW);
         }
 
-        int width = Math.Min(MaxWidth, Math.Max(220, maxTextWidth + PadX * 2 + 4));
+        int width = Math.Min(MaxWidth, Math.Max(240, maxTextWidth + PadX * 2 + 4));
 
         // Calculate height
         int y = PadY;
@@ -192,7 +192,7 @@ public sealed class QuickStartGuide : Form
         y += shortcutRows * ShortcutRowHeight + SectionGap;
         y += 20;
         y += _tips.Length * TipRowHeight + 6;
-        y += PadY + 16 + 18;                   // footer + brand line
+        y += PadY + 16 + 18;
         _totalHeight = y;
         int height = _totalHeight;
 
@@ -256,7 +256,7 @@ public sealed class QuickStartGuide : Form
         // ── Primary capture action ──
         int iconX = PadX + 2;
         var iconRect = new RectangleF(iconX, curY + (PrimaryRowHeight - IconSize) / 2f, IconSize, IconSize);
-        FluentIcons.DrawIcon(g, "select", iconRect,
+        FluentIcons.DrawIcon(g, "captureRect", iconRect,
             Color.FromArgb(200, UiChrome.AccentColor.R, UiChrome.AccentColor.G, UiChrome.AccentColor.B),
             iconInset: 0f);
 
@@ -300,12 +300,12 @@ public sealed class QuickStartGuide : Form
             }
 
             TextRenderer.DrawText(g, sc.Key, _keyFont,
-                new Rectangle((int)pillX + PillPadH, curY + 2, keyW, pillH),
+                new Rectangle((int)pillX + PillPadH, curY + 2, keyW + 4, pillH),
                 UiChrome.AccentColor,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
             TextRenderer.DrawText(g, sc.Label, _bodyFont,
-                new Rectangle((int)pillX + keyW + PillPadH + PillKeyLabelGap, curY + 2, labelW, pillH),
+                new Rectangle((int)pillX + keyW + PillPadH + PillKeyLabelGap, curY + 2, labelW + 4, pillH),
                 UiChrome.SurfaceTextSecondary,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
