@@ -382,7 +382,7 @@ public partial class HistoryWindow
             Margin = new Thickness(10, 8, 10, 10),
             VerticalAlignment = VerticalAlignment.Top
         });
-        AttachCardMenu(card, textArea, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(100, 180, 255));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(100, 180, 255));
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 
@@ -435,7 +435,7 @@ public partial class HistoryWindow
         var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
         var selBadge = CreateUnifiedSelectionBadge();
         swatchArea.Children.Add(selBadge);
-        AttachCardMenu(card, swatchArea, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(255, 160, 80));
+        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(255, 160, 80));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -515,7 +515,7 @@ public partial class HistoryWindow
         var img = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(16), Source = previewSrc };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
         previewArea.Children.Add(img);  // add image BEFORE AttachCardMenu so button is on top
-        AttachCardMenu(card, previewArea, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry), System.Windows.Media.Color.FromRgb(120, 200, 120));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteCodeEntry(entry), System.Windows.Media.Color.FromRgb(120, 200, 120));
         Grid.SetRow(previewArea, 0);
         root.Children.Add(previewArea);
 
@@ -739,50 +739,49 @@ public partial class HistoryWindow
 
     // ── Hover action menu (matches existing card menu style) ──
 
-    private void AttachCardMenu(Border card, Grid imageArea, Action onCopy, Action? onDelete = null, System.Windows.Media.Color? badgeColor = null)
+    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null, System.Windows.Media.Color? badgeColor = null)
     {
-        // Use the same styled menu as image/media cards
         var menu = CreateCardActionMenu();
         menu.Items.Add(CreateCardActionMenuItem("Copy", onCopy));
         if (onDelete is not null)
             menu.Items.Add(CreateCardActionMenuItem("Delete", onDelete));
 
-        // Right-click opens the menu
         card.MouseRightButtonUp += (_, e) =>
         {
             e.Handled = true;
             menu.IsOpen = true;
         };
 
-        // Top-right menu button (visible on hover)
-        var defaultBtnBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255));
-        var badgeHoverBrush = badgeColor.HasValue ? new SolidColorBrush(badgeColor.Value) : defaultBtnBrush;
+        var defaultChevronBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255));
+        var badgeHoverBrush = badgeColor.HasValue ? new SolidColorBrush(badgeColor.Value) : defaultChevronBrush;
 
-        var btn = new System.Windows.Controls.Button
+        var chevron = new System.Windows.Shapes.Path
         {
-            ToolTip = LocalizationService.Translate("Actions"),
-            Focusable = false,
-            BorderBrush = Brushes.Transparent,
-            BorderThickness = new Thickness(0),
-            Width = 18, Height = 16,
+            Data = System.Windows.Media.Geometry.Parse("M 0 0 L 6 0 L 3 4.5 Z"),
+            Fill = defaultChevronBrush,
+            Width = 7, Height = 5,
+            Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 4, 4, 0),
-            Background = Brushes.Transparent,
-            Foreground = defaultBtnBrush,
-            Content = "\u25BE",
-            FontSize = 11,
+            Margin = new Thickness(0, 7, 6, 0),
+            Cursor = Cursors.Hand,
+            IsHitTestVisible = true,
             Visibility = Visibility.Collapsed
         };
-        System.Windows.Controls.Panel.SetZIndex(btn, 999);
-        menu.PlacementTarget = btn;
-        btn.Click += (_, _) => menu.IsOpen = true;
+        System.Windows.Controls.Panel.SetZIndex(chevron, 999);
+        menu.PlacementTarget = chevron;
+        chevron.MouseLeftButtonUp += (_, e) => { e.Handled = true; menu.IsOpen = true; };
 
-        imageArea.Children.Add(btn);
+        chevron.MouseEnter += (_, _) => { chevron.Fill = badgeHoverBrush; };
+        chevron.MouseLeave += (_, _) => { if (!card.IsMouseOver && !menu.IsOpen) chevron.Fill = defaultChevronBrush; };
+        menu.Closed += (_, _) => { if (!card.IsMouseOver) chevron.Fill = defaultChevronBrush; };
 
-        card.MouseEnter += (_, _) => { if (btn != null) { btn.Visibility = Visibility.Visible; btn.Foreground = badgeHoverBrush; } };
-        card.MouseLeave += (_, _) => { if (btn != null && !menu.IsOpen) { btn.Visibility = Visibility.Collapsed; btn.Foreground = defaultBtnBrush; } };
-        menu.Closed += (_, _) => { if (btn != null && !card.IsMouseOver) { btn.Visibility = Visibility.Collapsed; btn.Foreground = defaultBtnBrush; } };
+        card.MouseEnter += (_, _) => { chevron.Visibility = Visibility.Visible; chevron.Fill = badgeHoverBrush; };
+        card.MouseLeave += (_, _) => { if (!menu.IsOpen) { chevron.Visibility = Visibility.Collapsed; chevron.Fill = defaultChevronBrush; } };
+        menu.Closed += (_, _) => { if (!card.IsMouseOver) chevron.Visibility = Visibility.Collapsed; };
+
+        Grid.SetRow(chevron, 1);
+        rootGrid.Children.Add(chevron);
     }
 
     private void DeleteOcrEntry(OcrHistoryEntry entry)
