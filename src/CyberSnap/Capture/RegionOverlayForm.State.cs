@@ -641,6 +641,58 @@ public sealed partial class RegionOverlayForm
         _selectResizeHandle = -1;
     }
 
+    /// <summary>Duplicates the current selection (single or multi) as a single undo-able
+    /// operation. Clones are offset by (20,20) client-space pixels, clamped to stay inside
+    /// the overlay's client area. The selection moves to the new clones.</summary>
+    private void DuplicateSelection()
+    {
+        var indices = _multiSelectedIndices.Count > 0
+            ? _multiSelectedIndices.Where(i => i >= 0 && i < _undoStack.Count).OrderBy(i => i).ToList()
+            : (_selectedAnnotationIndex >= 0
+                ? new List<int> { _selectedAnnotationIndex }
+                : new List<int>());
+        if (indices.Count == 0) return;
+
+        var originals = indices.Select(i => _undoStack[i]).ToList();
+
+        // Union bounds of the originals in client space, clamped so the offset clone stays visible.
+        Rectangle union = Rectangle.Empty;
+        foreach (var a in originals)
+        {
+            var b = GetAnnotationBounds(a);
+            union = union.IsEmpty ? b : Rectangle.Union(union, b);
+        }
+        var limit = ClientRectangle;
+        int dx = 20, dy = 20;
+        if (!union.IsEmpty)
+        {
+            int newX = Math.Clamp(union.X + dx, limit.X, Math.Max(limit.X, limit.Right - union.Width));
+            int newY = Math.Clamp(union.Y + dy, limit.Y, Math.Max(limit.Y, limit.Bottom - union.Height));
+            dx = newX - union.X;
+            dy = newY - union.Y;
+        }
+
+        var clones = originals.Select(a => AnnotationTransforms.Translate(a, dx, dy)).ToList();
+        int insertStart = _undoStack.Count;
+        PushEditCommand(new AddMultipleAnnotationsCommand(clones));
+
+        int added = _undoStack.Count - insertStart;
+        if (added <= 0) return;
+
+        _multiSelectedIndices.Clear();
+        if (added == 1)
+        {
+            _selectedAnnotationIndex = insertStart;
+        }
+        else
+        {
+            _selectedAnnotationIndex = -1;
+            for (int i = 0; i < added; i++)
+                _multiSelectedIndices.Add(insertStart + i);
+        }
+        Invalidate();
+    }
+
     private sealed class OverlayEditorContext : IEditorContext
     {
         private readonly RegionOverlayForm _owner;

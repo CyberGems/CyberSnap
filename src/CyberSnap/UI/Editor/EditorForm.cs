@@ -1696,6 +1696,10 @@ public sealed partial class EditorForm : Form
             }
         };
 
+        var duplicateItem = new ToolStripMenuItem(LocalizationService.Translate("Duplicate"));
+        duplicateItem.Click += (s, e) => _canvas.DuplicateSelectionInternal();
+
+        menu.Items.Add(duplicateItem);
         menu.Items.Add(deleteItem);
         WindowsMenuRenderer.NormalizeItemWidths(menu, 150);
 

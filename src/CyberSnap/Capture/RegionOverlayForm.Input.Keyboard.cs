@@ -162,6 +162,18 @@ public sealed partial class RegionOverlayForm
                 return;
             }
         }
+
+        // Duplicate selected annotation
+        if (e.KeyCode == Keys.D && e.Control && _mode == CaptureMode.Move)
+        {
+            if (_selectedAnnotationIndex >= 0 || _multiSelectedIndices.Count > 0)
+            {
+                DuplicateSelection();
+                e.SuppressKeyPress = true;
+                e.Handled = true;
+                return;
+            }
+        }
     }
 
     protected override void OnKeyPress(KeyPressEventArgs e)
