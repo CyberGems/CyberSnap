@@ -87,7 +87,13 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        if (_logoRect.Contains(e.Location) || _menuActivatorRect.Contains(e.Location))
+        if (_logoRect.Contains(e.Location))
+        {
+            HideToolbarTooltip();
+            ShowQuickStartGuide();
+            return;
+        }
+        if (_menuActivatorRect.Contains(e.Location))
         {
             HideToolbarTooltip();
             ShowToolbarContextMenu(-1, e.Location);
@@ -152,6 +158,7 @@ public sealed partial class RegionOverlayForm
                     _isMouseDownOnCaptureBtn = true;
                     _mouseDownStartTime = DateTime.UtcNow;
                     HideToolbarTooltip();
+                    DismissQuickStartGuide();
                 }
                 else
                 {
