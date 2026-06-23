@@ -1291,6 +1291,32 @@ public sealed partial class EditorForm
         var resizeCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         resizeCanvasItem.Click += (_, _) => DoResizeCanvas();
 
+        // ── Standard edit actions ──
+        var copyItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy"), iconId: "copy");
+        copyItem.Click += (_, _) => DoCopy();
+
+        var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
+        pasteItem.Click += (_, _) => DoPaste();
+
+        var duplicateItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Duplicate"), iconId: "copy");
+        duplicateItem.Click += (_, _) => _canvas.DuplicateSelectionInternal();
+
+        var deleteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Delete"), iconId: "trash", danger: true);
+        deleteItem.Click += (_, _) =>
+        {
+            if (_canvas.MultiSelectedIndicesInternal.Count > 1)
+            {
+                _canvas.DeleteMultiSelectedAnnotationsInternal();
+            }
+            else if (_canvas.SelectedAnnotationIndexInternal >= 0)
+            {
+                _canvas.DeleteAnnotationAtInternal(_canvas.SelectedAnnotationIndexInternal);
+            }
+        };
+
+        // ── "View" submenu: all toggles ──
+        var viewItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("View"), showImages: true);
+
         var borderItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show frame border"), iconId: null);
         borderItem.ToolTipText = LocalizationService.Translate("Show a frame around the capture in the editor.");
         var fitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-fit image to window"), iconId: null);
@@ -1307,8 +1333,18 @@ public sealed partial class EditorForm
         bannersItem.ToolTipText = LocalizationService.Translate("Display tool instruction banners in the editor.");
         var rulersItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show measurement rulers"), iconId: null);
         rulersItem.ToolTipText = LocalizationService.Translate("Display measurement rulers in the editor canvas.");
+        var hintsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show hints"), iconId: null);
+        hintsItem.ToolTipText = LocalizationService.Translate("Display tool hints and shortcuts in the editor status bar.");
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
+        var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Exit"), iconId: "close");
+        settingsItem.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.ShowSettings("editor");
+        };
+        exitItem.Click += (_, _) => Close();
 
+        // Toggle handlers
         borderItem.Click += (_, _) =>
         {
             _toggleFrameSwitch.Checked = !_toggleFrameSwitch.Checked;
@@ -1317,17 +1353,14 @@ public sealed partial class EditorForm
                 app.PersistEditorShowFrame(_toggleFrameSwitch.Checked);
             }
         };
-
         fitItem.Click += (_, _) =>
         {
             _toggleFitSwitch.Checked = !_toggleFitSwitch.Checked;
         };
-
         lockObjectsItem.Click += (_, _) =>
         {
             _togglePanLockSwitch.Checked = !_togglePanLockSwitch.Checked;
         };
-
         cropHandlesItem.Click += (_, _) =>
         {
             _canvas.EditorAutoCropControls = !_canvas.EditorAutoCropControls;
@@ -1336,7 +1369,6 @@ public sealed partial class EditorForm
                 app.PersistEditorAutoCropControls(_canvas.EditorAutoCropControls);
             }
         };
-
         resizeHandlesItem.Click += (_, _) =>
         {
             _canvas.EditorShowResizeHandles = !_canvas.EditorShowResizeHandles;
@@ -1345,7 +1377,6 @@ public sealed partial class EditorForm
                 app.PersistEditorShowResizeHandles(_canvas.EditorShowResizeHandles);
             }
         };
-
         resizeScaleItem.Click += (_, _) =>
         {
             _canvas.ResizeHandlesScaleContent = !_canvas.ResizeHandlesScaleContent;
@@ -1354,7 +1385,6 @@ public sealed partial class EditorForm
                 app.PersistEditorResizeHandlesScaleContent(_canvas.ResizeHandlesScaleContent);
             }
         };
-
         bannersItem.Click += (_, _) =>
         {
             _canvas.ShowBanners = !_canvas.ShowBanners;
@@ -1363,7 +1393,6 @@ public sealed partial class EditorForm
                 app.PersistEditorShowBanners(_canvas.ShowBanners);
             }
         };
-
         rulersItem.Click += (_, _) =>
         {
             bool nextState = !(_topRulerContainer != null && _topRulerContainer.Visible);
@@ -1373,10 +1402,6 @@ public sealed partial class EditorForm
                 app.PersistEditorShowRulers(nextState);
             }
         };
-
-        // Show hints item
-        var hintsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show hints"), iconId: null);
-        hintsItem.ToolTipText = LocalizationService.Translate("Display tool hints and shortcuts in the editor status bar.");
         hintsItem.Click += (_, _) =>
         {
             _canvas.ShowHints = !_canvas.ShowHints;
@@ -1384,35 +1409,64 @@ public sealed partial class EditorForm
             {
                 app.PersistEditorShowHints(_canvas.ShowHints);
             }
-            // Update the status bar hint label visibility
             if (_hintArea != null)
                 _hintArea.Visible = _canvas.ShowHints && ClientSize.Width >= 950;
         };
 
-        settingsItem.Click += (_, _) =>
-        {
-            if (System.Windows.Application.Current is CyberSnap.App app)
-                app.ShowSettings("editor");
-        };
+        // View submenu contents (grouped with separators for readability)
+        viewItem.DropDownItems.Add(borderItem);
+        viewItem.DropDownItems.Add(fitItem);
+        viewItem.DropDownItems.Add(lockObjectsItem);
+        viewItem.DropDownItems.Add(new ToolStripSeparator());
+        viewItem.DropDownItems.Add(cropHandlesItem);
+        viewItem.DropDownItems.Add(resizeHandlesItem);
+        viewItem.DropDownItems.Add(resizeScaleItem);
+        viewItem.DropDownItems.Add(new ToolStripSeparator());
+        viewItem.DropDownItems.Add(bannersItem);
+        viewItem.DropDownItems.Add(rulersItem);
+        viewItem.DropDownItems.Add(hintsItem);
 
+        // Main menu layout
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(resizeCanvasItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(borderItem);
-        menu.Items.Add(fitItem);
-        menu.Items.Add(lockObjectsItem);
-        menu.Items.Add(cropHandlesItem);
-        menu.Items.Add(resizeHandlesItem);
-        menu.Items.Add(resizeScaleItem);
-        menu.Items.Add(bannersItem);
-        menu.Items.Add(rulersItem);
-        menu.Items.Add(hintsItem);
+        menu.Items.Add(copyItem);
+        menu.Items.Add(pasteItem);
+        menu.Items.Add(duplicateItem);
+        menu.Items.Add(deleteItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(viewItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
+        menu.Items.Add(exitItem);
 
         menu.Opened += (_, _) =>
         {
             UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, rulersItem, hintsItem);
+            bool hasSelection = _canvas.SelectedAnnotationIndexInternal >= 0 || _canvas.MultiSelectedIndicesInternal.Count > 0;
+            bool multi = _canvas.MultiSelectedIndicesInternal.Count > 1;
+            pasteItem.Enabled = Clipboard.ContainsImage();
+            duplicateItem.Enabled = hasSelection;
+            deleteItem.Enabled = hasSelection;
+            if (multi)
+            {
+                deleteItem.Text = LocalizationService.Translate("Delete selection");
+                duplicateItem.Text = LocalizationService.Translate("Duplicate selection");
+            }
+            else
+            {
+                deleteItem.Text = LocalizationService.Translate("Delete");
+                duplicateItem.Text = LocalizationService.Translate("Duplicate");
+            }
+
+            // Keep the "View" submenu on the same monitor as the burger menu: when the menu
+            // opens near the right edge of its screen, drop the submenu to the LEFT so it
+            // doesn't spill onto the adjacent monitor.
+            var menuScreen = Screen.FromPoint(menu.Bounds.Location);
+            bool nearRightEdge = menu.Bounds.Right > menuScreen.WorkingArea.Right - 120;
+            viewItem.DropDownDirection = nearRightEdge
+                ? ToolStripDropDownDirection.Left
+                : ToolStripDropDownDirection.Right;
         };
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);

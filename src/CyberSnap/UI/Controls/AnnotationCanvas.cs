@@ -1138,6 +1138,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     internal void DeleteMultiSelectedAnnotationsInternal() => DeleteMultiSelectedAnnotations();
 
+    internal void DuplicateSelectionInternal() => DuplicateSelection();
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)

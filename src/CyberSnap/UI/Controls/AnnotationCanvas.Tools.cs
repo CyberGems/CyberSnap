@@ -1449,6 +1449,12 @@ public sealed partial class AnnotationCanvas
             e.Handled = true;
             return;
         }
+        if (e.KeyCode == Keys.D && e.Control && (_selectedAnnotationIndex >= 0 || _multiSelectedIndices.Count > 0))
+        {
+            DuplicateSelection();
+            e.Handled = true;
+            return;
+        }
         if (e.KeyCode == Keys.A && e.Control)
         {
             SelectAll();
@@ -2167,6 +2173,63 @@ public sealed partial class AnnotationCanvas
         var msg = string.Format(LocalizationService.Translate("{0} objects deleted"), count);
         ShowToolBanner(msg);
         OnStateChanged();
+    }
+
+    /// <summary>Duplicates the current selection (single or multi) as a single undo-able
+    /// operation. Clones are offset by (20,20) image-space pixels, clamped so they stay
+    /// on the canvas (the Add guard rejects off-canvas inserts). The selection moves to
+    /// the new clones.</summary>
+    private void DuplicateSelection()
+    {
+        var indices = _multiSelectedIndices.Count > 0
+            ? _multiSelectedIndices.Where(i => i >= 0 && i < _annotations.Count).OrderBy(i => i).ToList()
+            : (_selectedAnnotationIndex >= 0
+                ? new List<int> { _selectedAnnotationIndex }
+                : new List<int>());
+        if (indices.Count == 0) return;
+
+        var originals = indices.Select(i => _annotations[i]).ToList();
+
+        // Union bounds of the originals in image space, clamped so the offset clone stays on canvas.
+        Rectangle union = Rectangle.Empty;
+        foreach (var a in originals)
+        {
+            var b = AnnotationTransforms.GetBounds(a);
+            union = union.IsEmpty ? b : Rectangle.Union(union, b);
+        }
+        var canvasBounds = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
+        int dx = 20, dy = 20;
+        if (!union.IsEmpty)
+        {
+            int newX = Math.Clamp(union.X + dx, 0, Math.Max(0, canvasBounds.Width - union.Width));
+            int newY = Math.Clamp(union.Y + dy, 0, Math.Max(0, canvasBounds.Height - union.Height));
+            dx = newX - union.X;
+            dy = newY - union.Y;
+        }
+
+        var clones = originals.Select(a => AnnotationTransforms.Translate(a, dx, dy)).ToList();
+        int insertStart = _annotations.Count;
+        Push(new AddMultipleAnnotationsCommand(clones));
+
+        // Push may reject silently if the batch is entirely off-canvas (shouldn't happen with the
+        // clamp above, but guard anyway): only update selection if the clones were actually added.
+        int added = _annotations.Count - insertStart;
+        if (added <= 0) return;
+
+        _multiSelectedIndices.Clear();
+        if (added == 1)
+        {
+            _selectedAnnotationIndex = insertStart;
+        }
+        else
+        {
+            _selectedAnnotationIndex = -1;
+            for (int i = 0; i < added; i++)
+                _multiSelectedIndices.Add(insertStart + i);
+        }
+        _multiDragOriginals = null;
+        OnStateChanged();
+        Invalidate();
     }
 
     /// <summary>Toggles an annotation index in/out of the multi-selection set.
