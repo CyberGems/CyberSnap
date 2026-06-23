@@ -141,10 +141,21 @@
                                 CornerRadius="4"
                                 Background="Transparent"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter ContentSource="Header"
-                                              RecognizesAccessKey="True"
-                                              HorizontalAlignment="Left"
-                                              VerticalAlignment="Center"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="24"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0"
+                                                  ContentSource="Icon"
+                                                  VerticalAlignment="Center"
+                                                  HorizontalAlignment="Center"
+                                                  Margin="0,0,4,0"/>
+                                <ContentPresenter Grid.Column="1"
+                                                  ContentSource="Header"
+                                                  RecognizesAccessKey="True"
+                                                  VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">

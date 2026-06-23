@@ -772,9 +772,9 @@ public partial class HistoryWindow
     private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null, System.Windows.Media.Color? badgeColor = null)
     {
         var menu = CreateCardActionMenu();
-        menu.Items.Add(CreateCardActionMenuItem("Copy", onCopy));
+        menu.Items.Add(CreateCardActionMenuItem("Copy", onCopy, null, "copy"));
         if (onDelete is not null)
-            menu.Items.Add(CreateCardActionMenuItem("Delete", onDelete));
+            menu.Items.Add(CreateCardActionMenuItem("Delete", onDelete, null, "trash", danger: true));
 
         card.MouseRightButtonUp += (_, e) =>
         {

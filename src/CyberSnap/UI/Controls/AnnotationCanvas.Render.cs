@@ -227,22 +227,28 @@ public sealed partial class AnnotationCanvas
             bounds.Height + 2 * offset
         );
 
+        // Theme-aware accent: cyan reads great on the dark canvas but washes out on the
+        // light one, so on light we use the app's blue accent (Theme.Accent). All selection
+        // chrome (box, handles, move knob) shares this single color.
+        var accent = Theme.Accent;
+        byte aR = accent.R, aG = accent.G, aB = accent.B;
+
         // Alpha values
         int accentAlpha = isSelected ? 255 : 95;
         int shadowAlpha = isSelected ? 100 : 35;
-        int fillAlpha = isSelected ? 15 : 6; // subtle cyan tint
+        int fillAlpha = isSelected ? 15 : 6; // subtle accent tint
         int dashAlpha = isSelected ? 180 : 60;
 
-        var accentColor = Color.FromArgb(accentAlpha, 0, 255, 255);
+        var accentColor = Color.FromArgb(accentAlpha, aR, aG, aB);
         var shadowColor = Color.FromArgb(shadowAlpha, 0, 0, 0);
 
         // Fill and dash
-        using (var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, 0, 255, 255)))
+        using (var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, aR, aG, aB)))
         {
             g.FillRectangle(fillBrush, rect);
         }
 
-        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, 0, 255, 255), 1.5f / z))
+        using (var dashPen = new Pen(Color.FromArgb(dashAlpha, aR, aG, aB), 1.5f / z))
         {
             dashPen.DashStyle = DashStyle.Dash;
             dashPen.DashPattern = new[] { 4f, 3f };
@@ -293,58 +299,64 @@ public sealed partial class AnnotationCanvas
             g.DrawLine(thickPen, rect.Right, midY - barLen / 2f, rect.Right, midY + barLen / 2f);
         }
 
-        // 3. Center move knob — only rendered when the annotation is actively selected.
-        // A cyan circle with a crosshair gives an unambiguous "grab here to move" affordance.
-        if (isSelected)
+        // 3. Center move handle — a free-standing 4-way move arrow (✥), rendered on both
+        // hover and selection. There is NO enclosing ring (the arrows ARE the handle, so it
+        // reads as a move cursor, not a circle/target), and it's drawn in SCREEN space — i.e.
+        // outside the zoom transform — so it stays pixel-crisp and a constant size at any zoom
+        // (drawing it inside the scaled transform softened it badly when zoomed in).
         {
-            float knobR    = 8f / z;   // circle radius
-            float armLen   = 5f / z;   // arm length of the interior move glyph
-            float headLen  = 2.3f / z; // arrowhead chevron length
+            // Image-space center → screen space, then step out of the zoom/pan transform.
+            float scx = (float)(_pan.X + midX * _zoom);
+            float scy = (float)(_pan.Y + midY * _zoom);
 
-            // Soft outer glow so the knob reads against any background color.
-            using var glowBrush = new SolidBrush(Color.FromArgb(14, 0, 255, 255));
-            g.FillEllipse(glowBrush,
-                midX - knobR * 1.7f, midY - knobR * 1.7f,
-                knobR * 3.4f,        knobR * 3.4f);
+            var gstate = g.Save();
+            g.ResetTransform();
 
-            // Semi-transparent cyan fill
-            using var knobFill = new SolidBrush(Color.FromArgb(30, 0, 255, 255));
-            g.FillEllipse(knobFill, midX - knobR, midY - knobR, knobR * 2f, knobR * 2f);
+            const float armLen   = 11f;   // reach from center to each arrowhead tip
+            const float gap      = 3.5f;  // central empty gap so the four arrows read as distinct
+            const float headBack = 4.5f;  // how far the arrowhead chevron runs back along the stem
+            const float headW    = 3.4f;  // arrowhead half-width (perpendicular spread)
 
-            // Drop-shadow ring
-            using var knobShadow = new Pen(Color.FromArgb(55, 0, 0, 0), penWidthShadow * 0.55f);
-            g.DrawEllipse(knobShadow, midX - knobR, midY - knobR, knobR * 2f, knobR * 2f);
+            // State-aware alphas — dimmer on hover, full on selection (mirrors the box/handles).
+            int glyphA = isSelected ? 255 : 175;
+            // Contrast halo follows the glyph shape (NOT a disc): dark on the dark theme,
+            // light on the light theme, so the arrows pop without painting a circle.
+            int haloA  = isSelected ? 150 : 90;
+            var haloColor  = Theme.IsDark ? Color.FromArgb(haloA, 0, 0, 0)
+                                          : Color.FromArgb(haloA, 255, 255, 255);
+            var glyphColor = Color.FromArgb(glyphA, aR, aG, aB);
 
-            // Accent ring — thin and slightly softened so a small selection doesn't read as a saturated blob.
-            using var knobRing = new Pen(Color.FromArgb(200, 0, 255, 255), penWidthThick * 0.5f);
-            g.DrawEllipse(knobRing, midX - knobR, midY - knobR, knobR * 2f, knobR * 2f);
-
-            // Interior 4-way move glyph — arrows pointing out signal "drag in any direction",
-            // echoing the OS move cursor.
-            using var glyphPen = new Pen(Color.FromArgb(200, 0, 255, 255), 1.2f / z)
+            void DrawMoveArrows(Pen p)
             {
-                StartCap = LineCap.Round,
-                EndCap   = LineCap.Round,
-                LineJoin = LineJoin.Round
-            };
+                // Stems (with a central gap so the four arrows read as distinct)
+                g.DrawLine(p, scx - armLen, scy, scx - gap, scy);
+                g.DrawLine(p, scx + gap,    scy, scx + armLen, scy);
+                g.DrawLine(p, scx, scy - armLen, scx, scy - gap);
+                g.DrawLine(p, scx, scy + gap,    scx, scy + armLen);
+                // Arrowheads (chevrons) at each tip, pointing outward
+                g.DrawLine(p, scx + armLen, scy, scx + armLen - headBack, scy - headW);
+                g.DrawLine(p, scx + armLen, scy, scx + armLen - headBack, scy + headW);
+                g.DrawLine(p, scx - armLen, scy, scx - armLen + headBack, scy - headW);
+                g.DrawLine(p, scx - armLen, scy, scx - armLen + headBack, scy + headW);
+                g.DrawLine(p, scx, scy - armLen, scx - headW, scy - armLen + headBack);
+                g.DrawLine(p, scx, scy - armLen, scx + headW, scy - armLen + headBack);
+                g.DrawLine(p, scx, scy + armLen, scx - headW, scy + armLen - headBack);
+                g.DrawLine(p, scx, scy + armLen, scx + headW, scy + armLen - headBack);
+            }
 
-            // Stems
-            g.DrawLine(glyphPen, midX - armLen, midY, midX + armLen, midY);
-            g.DrawLine(glyphPen, midX, midY - armLen, midX, midY + armLen);
+            using (var halo = new Pen(haloColor, 3.6f)
+            {
+                StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round
+            })
+                DrawMoveArrows(halo);
 
-            // Arrowheads (chevrons) at each tip, pointing outward
-            // Right
-            g.DrawLine(glyphPen, midX + armLen, midY, midX + armLen - headLen, midY - headLen);
-            g.DrawLine(glyphPen, midX + armLen, midY, midX + armLen - headLen, midY + headLen);
-            // Left
-            g.DrawLine(glyphPen, midX - armLen, midY, midX - armLen + headLen, midY - headLen);
-            g.DrawLine(glyphPen, midX - armLen, midY, midX - armLen + headLen, midY + headLen);
-            // Top
-            g.DrawLine(glyphPen, midX, midY - armLen, midX - headLen, midY - armLen + headLen);
-            g.DrawLine(glyphPen, midX, midY - armLen, midX + headLen, midY - armLen + headLen);
-            // Bottom
-            g.DrawLine(glyphPen, midX, midY + armLen, midX - headLen, midY + armLen - headLen);
-            g.DrawLine(glyphPen, midX, midY + armLen, midX + headLen, midY + armLen - headLen);
+            using (var glyphPen = new Pen(glyphColor, 1.9f)
+            {
+                StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round
+            })
+                DrawMoveArrows(glyphPen);
+
+            g.Restore(gstate);
         }
     }
 

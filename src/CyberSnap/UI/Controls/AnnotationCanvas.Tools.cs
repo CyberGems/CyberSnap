@@ -173,12 +173,10 @@ public sealed partial class AnnotationCanvas
 
     private void UpdateCursor()
     {
-        if (IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0)
-        {
-            Cursor = Cursors.SizeAll;
-            return;
-        }
-
+        // Note: the hand ("click to select") cursor is NOT decided here — it's applied in
+        // OnMouseMove only when the pointer is actually over an object's drawn pixels (its
+        // surface) or its controls, never over the empty interior of its wrap box. This
+        // method just yields the active tool's default cursor.
         Cursor = _activeTool switch
         {
             CanvasTool.Pan => CursorFactory.PanCursor,
@@ -336,9 +334,14 @@ public sealed partial class AnnotationCanvas
                 handle = GetSelectHandle(e.Location, activeHoverIdx);
                 if (handle >= 0) clickedIdx = activeHoverIdx;
             }
-            if (handle < 0 && activeHoverIdx >= 0)
+            // No control hit → select only when the click lands on the object's actual drawn
+            // pixels (its surface), never on the empty interior of its wrap box. Clicking the
+            // hollow interior falls through below and draws, exactly like clicking blank canvas.
+            if (handle < 0)
             {
-                clickedIdx = activeHoverIdx;
+                int surfIdx = HitTestAnnotationSurface(img);
+                if (surfIdx == _suppressHoverIndex) surfIdx = -1;
+                if (surfIdx >= 0) clickedIdx = surfIdx;
             }
 
             if (clickedIdx >= 0)
@@ -357,9 +360,9 @@ public sealed partial class AnnotationCanvas
                 }
                 ClearMultiSelection();
                 _selectedAnnotationIndex = clickedIdx;
-                // Handle 8 = center move knob: treat as a body drag, not a resize.
                 if (handle >= 0 && handle != 8)
                 {
+                    // A resize handle (corners/edges) → resize.
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
                     _selectDragStartImg = img;
@@ -367,12 +370,16 @@ public sealed partial class AnnotationCanvas
                     _selectResizeOriginalAnnotation = _annotations[clickedIdx];
                     _isDragging = true;
                 }
-                else
+                else if (handle == 8)
                 {
+                    // Center move knob → move. Objects are only draggable from this knob,
+                    // not from anywhere in their (often hollow) body.
                     _selectOriginalAnnotation = _annotations[clickedIdx];
                     _selectDragStartImg = img;
                     _isDragging = true;
                 }
+                // else: a plain body click — just select so the controls (incl. the move
+                // knob) appear; the user grabs the knob to actually move it.
                 Invalidate();
                 return;
             }
@@ -416,19 +423,31 @@ public sealed partial class AnnotationCanvas
                     if (handle >= 0) targetIdx = _selectedAnnotationIndex;
                 }
 
-                // Otherwise, if hovering another annotation, check ITS handles too so that
-                // grabbing a resize handle of the hovered object resizes it instead of moving it.
+                // Otherwise, check the hovered annotation's controls. We use the bbox-hover
+                // index here (not the surface) so the resize handles and the center move knob —
+                // which sits in the hollow interior — stay grabbable even over empty space.
                 if (handle < 0)
                 {
-                    int hoverIdx = (_moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count)
+                    int controlIdx = (_moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count)
                         ? _moveHoverIndex
                         : HitTestAnnotation(img);
-                    if (hoverIdx >= 0)
+                    if (controlIdx >= 0)
                     {
-                        int hoverHandle = GetSelectHandle(e.Location, hoverIdx);
-                        handle = hoverHandle;          // -1 if the click was on the body
-                        targetIdx = hoverIdx;
+                        int hoverHandle = GetSelectHandle(e.Location, controlIdx);
+                        if (hoverHandle >= 0)
+                        {
+                            handle = hoverHandle;
+                            targetIdx = controlIdx;
+                        }
                     }
+                }
+
+                // No control hit → select/move only when the click lands on an object's actual
+                // drawn pixels (its surface), never on the empty interior of its wrap box. A
+                // miss leaves targetIdx = -1, handled below as an empty-space click (marquee).
+                if (handle < 0)
+                {
+                    targetIdx = HitTestAnnotationSurface(img);
                 }
 
                 // Ctrl+Click: toggle multi-selection
@@ -454,8 +473,8 @@ public sealed partial class AnnotationCanvas
                 }
                 else if (targetIdx >= 0)
                 {
-                    // Body or center-knob (handle 8) → move/select.
-                    // If clicked item is part of a multi-selection, initiate multi-drag.
+                    // If the clicked item (matched by surface or control) is part of a
+                    // multi-selection, initiate a group drag.
                     if (_multiSelectedIndices.Count > 1 && _multiSelectedIndices.Contains(targetIdx))
                     {
                         _multiDragStartImg = img;
@@ -466,13 +485,22 @@ public sealed partial class AnnotationCanvas
                         _selectedAnnotationIndex = targetIdx;
                         _isDragging = true;
                     }
-                    else
+                    else if (handle == 8)
                     {
+                        // Center move knob → move. A single object is only draggable from this
+                        // knob, not from anywhere in its (often hollow) body.
                         ClearMultiSelection();
                         _selectedAnnotationIndex = targetIdx;
                         _selectOriginalAnnotation = _annotations[targetIdx];
                         _selectDragStartImg = img;
                         _isDragging = true;
+                    }
+                    else
+                    {
+                        // Plain body click — select only so the controls (incl. the move knob)
+                        // appear; the user grabs the knob to actually move it.
+                        ClearMultiSelection();
+                        _selectedAnnotationIndex = targetIdx;
                     }
                 }
                 else
@@ -830,6 +858,16 @@ public sealed partial class AnnotationCanvas
                         8       => Cursors.SizeAll,  // center move knob
                         _       => Cursors.Default
                     };
+                    return;
+                }
+
+                // Hand cursor only over the object's actual drawn pixels (its surface), never
+                // over the empty interior of its wrap box. Controls are already handled above.
+                int hoverIdx = _moveHoverIndex >= 0 ? _moveHoverIndex : _selectedAnnotationIndex;
+                if (hoverIdx >= 0 && hoverIdx < _annotations.Count
+                    && IsOverAnnotationSurface(_annotations[hoverIdx], ScreenToImage(e.Location)))
+                {
+                    Cursor = Cursors.Hand;
                     return;
                 }
             }
@@ -2070,6 +2108,19 @@ public sealed partial class AnnotationCanvas
         return -1;
     }
 
+    /// <summary>Like <see cref="HitTestAnnotation"/> but matches only the topmost annotation
+    /// whose actual drawn pixels (its surface) lie under the point — hollow shapes ignore their
+    /// empty interior. Drives click/selection so it agrees with the surface-scoped hand cursor.</summary>
+    private int HitTestAnnotationSurface(Point pt)
+    {
+        for (int i = _annotations.Count - 1; i >= 0; i--)
+        {
+            if (IsOverAnnotationSurface(_annotations[i], pt))
+                return i;
+        }
+        return -1;
+    }
+
     private bool TryEraseAnnotationAt(Point pt)
     {
         _eraserHoverIndex = -1;
@@ -2183,6 +2234,65 @@ public sealed partial class AnnotationCanvas
 
     private static Rectangle InflateRect(Rectangle r, int x, int y) =>
         Rectangle.Inflate(r, x, y);
+
+    // Hit tolerance (px) added on each side of a hollow shape's stroke so its thin outline
+    // is still comfortable to hover.
+    private const int SurfaceOutlineTolerance = 6;
+
+    /// <summary>True only when <paramref name="pt"/> (image space) lies over the annotation's
+    /// actually-drawn pixels — its stroke/fill — not merely inside its bounding box. Scopes the
+    /// hand cursor to the object's surface: hollow shapes (circle/rect) count only their outline,
+    /// not their empty interior. Other types already fill (or closely hug) their bounds, so they
+    /// reuse the regular bounding-box hit test.</summary>
+    private bool IsOverAnnotationSurface(Annotation a, Point pt)
+    {
+        return a switch
+        {
+            CircleShapeAnnotation cs => IsOnEllipseOutline(cs.Rect, cs.StrokeWidth, pt),
+            RectShapeAnnotation rs   => IsOnRectOutline(rs.Rect, rs.StrokeWidth, pt),
+            _                        => HitTestSingle(a, pt, 10),
+        };
+    }
+
+    private static bool IsOnEllipseOutline(Rectangle rect, float strokeWidth, Point pt)
+    {
+        rect = NormalizeRect(rect);
+        if (rect.Width <= 0 || rect.Height <= 0) return false;
+        float band = strokeWidth / 2f + SurfaceOutlineTolerance;
+        float cx = rect.X + rect.Width / 2f;
+        float cy = rect.Y + rect.Height / 2f;
+
+        bool Inside(float expand)
+        {
+            float rx = rect.Width / 2f + expand;
+            float ry = rect.Height / 2f + expand;
+            if (rx <= 0 || ry <= 0) return false;
+            float nx = (pt.X - cx) / rx;
+            float ny = (pt.Y - cy) / ry;
+            return nx * nx + ny * ny <= 1f;
+        }
+
+        // On the ring = inside the outer (stroke + tolerance) ellipse but outside the inner one.
+        return Inside(band) && !Inside(-band);
+    }
+
+    private static bool IsOnRectOutline(Rectangle rect, float strokeWidth, Point pt)
+    {
+        rect = NormalizeRect(rect);
+        if (rect.Width <= 0 || rect.Height <= 0) return false;
+        int band = (int)(strokeWidth / 2f + SurfaceOutlineTolerance);
+        if (!InflateRect(rect, band, band).Contains(pt)) return false;
+        var inner = InflateRect(rect, -band, -band);
+        // On the border = inside the outer rect but outside the inner (hollow) rect.
+        return inner.Width <= 0 || inner.Height <= 0 || !inner.Contains(pt);
+    }
+
+    private static Rectangle NormalizeRect(Rectangle r)
+    {
+        int x = Math.Min(r.X, r.X + r.Width);
+        int y = Math.Min(r.Y, r.Y + r.Height);
+        return new Rectangle(x, y, Math.Abs(r.Width), Math.Abs(r.Height));
+    }
 
     private static float Distance(Point a, Point b) =>
         (float)Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
@@ -2321,9 +2431,9 @@ public sealed partial class AnnotationCanvas
             }
         }
 
-        // Handle 8: center move knob — circular hit area, slightly larger than the edge handles.
+        // Handle 8: center move knob — circular hit area sized to cover the 4-way arrow glyph.
         var center = new Point(selRect.X + selRect.Width / 2, selRect.Y + selRect.Height / 2);
-        const int centerHitRadius = 12;
+        const int centerHitRadius = 14;
         int cdx = screenPt.X - center.X;
         int cdy = screenPt.Y - center.Y;
         if (cdx * cdx + cdy * cdy <= centerHitRadius * centerHitRadius)

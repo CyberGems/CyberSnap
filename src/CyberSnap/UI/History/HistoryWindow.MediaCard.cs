@@ -139,7 +139,7 @@ public partial class HistoryWindow
             {
                 suppressOpenAction = true;
                 OpenFileWithDefaultApp(vm.Entry.FilePath);
-            }, "Open this file with the system default viewer."));
+            }, "Open this file with the system default viewer.", "arrow"));
         }
         if (vm.Entry.Kind == HistoryKind.Image && HasHistoryFilePath(vm.Entry.FilePath))
         {
@@ -155,13 +155,13 @@ public partial class HistoryWindow
                 {
                     ToastWindow.ShowError("Editor failed", $"Could not open editor: {ex.Message}");
                 }
-            }, "Open this image in the post-capture editor."));
+            }, "Open this image in the post-capture editor.", "compose"));
         }
         actionMenu.Items.Add(CreateCardActionMenuItem(GetHistoryCopyMenuLabel(vm.Entry), () =>
         {
             suppressOpenAction = true;
             copyAction();
-        }, GetHistoryCopyMenuHelpText(vm.Entry, kindLabel)));
+        }, GetHistoryCopyMenuHelpText(vm.Entry, kindLabel), "copy"));
 
         if (vm.Entry.Kind == HistoryKind.Image && HasHistoryFilePath(vm.Entry.FilePath))
         {
@@ -206,7 +206,7 @@ public partial class HistoryWindow
                 {
                     ToastWindow.ShowError("OCR failed", $"Failed to extract text: {ex.Message}");
                 }
-            }, "Extract text from this image using OCR."));
+            }, "Extract text from this image using OCR.", "ocr"));
         }
 
         if (HasHistoryFilePath(vm.Entry.FilePath))
@@ -215,7 +215,7 @@ public partial class HistoryWindow
             {
                 suppressOpenAction = true;
                 ShowFileInFolder(vm.Entry.FilePath);
-            }, "Show this file in File Explorer."));
+            }, "Show this file in File Explorer.", "folder"));
         }
         actionMenu.Items.Add(CreateCardActionMenuItem("Delete from disk", () =>
         {
@@ -228,7 +228,7 @@ public partial class HistoryWindow
 
             _historyService.DeleteEntry(vm.Entry);
             LoadCurrentHistoryTab();
-        }, "Permanently delete this file from disk and history."));
+        }, "Permanently delete this file from disk and history.", "trash", danger: true));
         actionMenu.PlacementTarget = card;
         card.MouseRightButtonUp += (_, e) =>
         {
@@ -527,7 +527,8 @@ public partial class HistoryWindow
         return menu;
     }
 
-    private MenuItem CreateCardActionMenuItem(string label, Action action, string? helpText = null)
+    private MenuItem CreateCardActionMenuItem(string label, Action action, string? helpText = null,
+        string? iconId = null, bool danger = false)
     {
         var translatedLabel = LocalizationService.Translate(label);
         var translatedHelpText = helpText != null ? LocalizationService.Translate(helpText) : LocalizationService.Translate("Run this history action.");
@@ -536,6 +537,22 @@ public partial class HistoryWindow
             Header = translatedLabel,
             ToolTip = translatedHelpText
         };
+        if (iconId != null)
+        {
+            var iconColor = danger
+                ? System.Drawing.Color.FromArgb(239, 68, 68, 68)
+                : System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+            item.Icon = new System.Windows.Controls.Image
+            {
+                Source = Helpers.FluentIcons.RenderWpf(iconId, iconColor, 16),
+                Width = 16,
+                Height = 16
+            };
+        }
+        if (danger)
+        {
+            item.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(239, 68, 68));
+        }
         item.SetResourceReference(MenuItem.StyleProperty, "HistoryActionsMenuItem");
         AutomationProperties.SetName(item, translatedLabel);
         AutomationProperties.SetHelpText(item, translatedHelpText);
