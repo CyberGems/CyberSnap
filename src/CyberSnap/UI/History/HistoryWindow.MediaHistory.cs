@@ -404,7 +404,7 @@ public partial class HistoryWindow
                 Text = timeAgo,
                 FontSize = 10,
                 FontFamily = new FontFamily(UiChrome.PreferredFamilyName),
-                Opacity = 0.3,
+                Foreground = Theme.Brush(Theme.TextMuted),
                 ToolTip = $"{LocalizationService.Translate("Captured")} {timeAgo}"
             });
         if (panel.Children[^1] is TextBlock capturedBlock)

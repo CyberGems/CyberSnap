@@ -667,7 +667,7 @@ public partial class HistoryWindow
             Text = timeAndStatus,
             FontSize = 10,
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
-            Opacity = 0.3,
+            Foreground = Theme.Brush(Theme.TextMuted),
             TextTrimming = TextTrimming.CharacterEllipsis
         };
         vm.TimeStatusTextBlock = timeStatusBlock;
