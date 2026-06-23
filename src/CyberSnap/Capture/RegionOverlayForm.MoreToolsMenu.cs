@@ -55,49 +55,73 @@ public sealed partial class RegionOverlayForm
         if (tool == null)
         {
             string? systemButtonName = null;
+            string? systemIconId = null;
             if (buttonIndex == StrokeWidthButtonIndex)
+            {
                 systemButtonName = LocalizationService.Translate("Shape stroke width");
+                systemIconId = "ruler";
+            }
             else if (buttonIndex == ColorButtonIndex)
+            {
                 systemButtonName = LocalizationService.Translate("Active drawing and text color");
+                systemIconId = "picker";
+            }
             else if (buttonIndex == PositionButtonIndex)
+            {
                 systemButtonName = LocalizationService.Translate("Toolbar Position");
+                systemIconId = "position";
+            }
             else if (buttonIndex == CloseButtonIndex)
+            {
                 systemButtonName = LocalizationService.Translate("Cancel");
+                systemIconId = "close";
+            }
 
-            string headerText;
             if (systemButtonName != null)
             {
                 var sysLine = isSpanish
                     ? $"Botón {systemButtonName}  •  Siempre visible"
                     : $"{systemButtonName}  button  •  Always visible";
-                headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}\n{sysLine}";
+                var headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}\n{sysLine}";
+
+                // Show the button's icon for visual reference
+                var headerItem = WindowsMenuRenderer.Item(headerText, iconId: systemIconId);
+                headerItem.Enabled = false;
+                headerItem.Height = 52;
+                menu.Items.Add(headerItem);
+                menu.Items.Add(new ToolStripSeparator());
             }
             else
             {
                 var hint = isSpanish
                     ? "Haz clic derecho sobre los botones para ocultarlos."
                     : "Right-click on the buttons to hide them.";
-                headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}  •  {hint}";
-            }
+                var headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}  •  {hint}";
 
-            var headerLabel = new ToolStripLabel(headerText)
-            {
-                ForeColor = UiChrome.SurfaceTextMuted,
-                Font = UiChrome.ChromeFont(8.5f),
-                Padding = new System.Windows.Forms.Padding(10, 12, 0, 2),
-                AutoSize = true,
-            };
-            menu.Items.Add(headerLabel);
-            menu.Items.Add(new ToolStripSeparator());
+                var headerLabel = new ToolStripLabel(headerText)
+                {
+                    ForeColor = UiChrome.SurfaceTextMuted,
+                    Font = UiChrome.ChromeFont(8.5f),
+                    Padding = new System.Windows.Forms.Padding(10, 12, 0, 2),
+                    AutoSize = true,
+                };
+                menu.Items.Add(headerLabel);
+                menu.Items.Add(new ToolStripSeparator());
+            }
         }
 
         // 1. Tip item removed — hint is now part of the header line
 
+        // Compute hidden tools early — needed for the Restore item below
+        var allTools = ToolDef.AllTools;
+        var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
+
         // 2. Hide option (only if hideable button with tool clicked)
         if (tool != null)
         {
+            var toolIconId = tool.Id == "scroll" ? "scrollCapture" : tool.Id;
             var hideText = isSpanish ? $"Ocultar \"{LocalizationService.Translate(tool.Label)}\"" : $"Hide \"{LocalizationService.Translate(tool.Label)}\"";
-            var hideItem = WindowsMenuRenderer.Item(hideText, iconId: "trash");
+            var hideItem = WindowsMenuRenderer.Item(hideText, iconId: toolIconId);
             hideItem.Click += (s, e) => {
                 HideTool(tool.Id);
                 _toolbarContextMenu?.Close();
@@ -114,10 +138,13 @@ public sealed partial class RegionOverlayForm
                 }
             }
             menu.Items.Add(hideItem);
-            menu.Items.Add(new ToolStripSeparator());
+
+            // Restore hidden tools — placed right below the hide action
+            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
         }
 
-        // Show annotation bar checkable toggle (always visible)
+        // Show annotation bar checkable toggle — created now, added at different positions
+        // depending on whether we're in the tool-specific or general menu.
         var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
         var showBarText = isSpanish ? "Mostrar barra de anotaciones" : "Show annotation bar";
         var showBarItem = WindowsMenuRenderer.Item(showBarText, iconId: annotationToolsCount > 0 ? "check" : null);
@@ -130,20 +157,21 @@ public sealed partial class RegionOverlayForm
             {
                 ShowAllAnnotationTools();
             }
-            // Close the menu immediately so it doesn't repopulate with
-            // tools whose visibility just changed.
             _toolbarContextMenu?.Close();
         };
-        menu.Items.Add(showBarItem);
-        menu.Items.Add(new ToolStripSeparator());
+
+        // General menu: annotation bar stays in its natural position
+        if (tool == null)
+        {
+            menu.Items.Add(showBarItem);
+            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
+        }
 
         // 3. Show Hidden — rendered as a flat section, NOT a nested submenu. The capture overlay is a
         // single window that spans every monitor, so on a multi-monitor setup with mixed DPI the
         // WinForms ToolStripDropDown places a second-level submenu on the wrong monitor and swallows
         // its first hover (per-monitor-DPI support for ToolStrip is known to be unreliable). Listing
         // the hidden tools inline sidesteps that entire class of bug.
-        var allTools = ToolDef.AllTools;
-        var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
 
         // When the entire annotation bar is toggled off, don't flood the menu with every
         // individual annotation tool — the "Show annotation bar" toggle is enough to
@@ -151,15 +179,9 @@ public sealed partial class RegionOverlayForm
         if (annotationToolsCount == 0)
             hiddenTools = hiddenTools.Where(t => t.Group != 1).ToList();
 
-        if (hiddenTools.Count == 0)
+        if (hiddenTools.Count > 0)
         {
-            var emptyText = isSpanish ? "Mostrar herramientas ocultas" : "Show hidden tools";
-            var emptyItem = WindowsMenuRenderer.Item(emptyText, iconId: null);
-            emptyItem.Enabled = false;
-            menu.Items.Add(emptyItem);
-        }
-        else
-        {
+            menu.Items.Add(new ToolStripSeparator());
             var headerText = isSpanish ? "Herramientas ocultas:" : "Hidden tools:";
             var header = WindowsMenuRenderer.Item(headerText, iconId: null);
             header.Enabled = false;
@@ -167,8 +189,8 @@ public sealed partial class RegionOverlayForm
 
             foreach (var hTool in hiddenTools)
             {
-                var iconId = hTool.Id == "scroll" ? "scrollCapture" : hTool.Id;
-                var toolItem = WindowsMenuRenderer.Item(LocalizationService.Translate(hTool.Label), iconId: iconId);
+                var toolItem = WindowsMenuRenderer.Item(LocalizationService.Translate(hTool.Label), iconId: "add");
+                toolItem.Padding = new Padding(24, 0, 0, 0);
                 var targetId = hTool.Id;
                 toolItem.Click += (s, e) => {
                     ShowTool(targetId);
@@ -176,19 +198,19 @@ public sealed partial class RegionOverlayForm
                 };
                 menu.Items.Add(toolItem);
             }
-
-            // 4. Show all hidden
-            menu.Items.Add(new ToolStripSeparator());
-            var showAllText = isSpanish ? "Restaurar herramientas" : "Restore tools";
-            var showAllItem = WindowsMenuRenderer.Item(showAllText, iconId: null);
-            showAllItem.Click += (s, e) => {
-                ShowAllTools();
-                _toolbarContextMenu?.Close();
-            };
-            menu.Items.Add(showAllItem);
         }
 
-        // 5. Close/Cancel menu
+        // Tool-specific menu: annotation bar goes just above Close.
+        // Only add a separator if there were hidden tools listed above (the
+        // hidden-tools section already supplies its own separator in that case).
+        if (tool != null)
+        {
+            if (hiddenTools.Count == 0)
+                menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(showBarItem);
+        }
+
+        // 4. Close/Cancel menu
         menu.Items.Add(new ToolStripSeparator());
         var closeMenuText = isSpanish ? "Cerrar menú" : "Close menu";
         var closeMenuItem = WindowsMenuRenderer.Item(closeMenuText, iconId: "close");
@@ -198,6 +220,10 @@ public sealed partial class RegionOverlayForm
         menu.Items.Add(closeMenuItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
+
+        // Restore the taller height for system-button header items (they hold two lines of text)
+        if (menu.Items.Count > 0 && menu.Items[0] is ToolStripMenuItem firstItem && firstItem.Height == WindowsMenuRenderer.RowHeight)
+            firstItem.Height = 52;
 
         var screenPoint = PointToScreen(clickLocation);
 
@@ -217,6 +243,18 @@ public sealed partial class RegionOverlayForm
         SetEnabledTools(enabled);
         CalcToolbar();
         InvalidateToolbarArea();
+    }
+
+    private void AddRestoreHiddenToolsItem(ContextMenuStrip menu, bool isSpanish, int hiddenCount)
+    {
+        var restoreText = isSpanish ? "Restaurar herramientas ocultas" : "Restore hidden tools";
+        var restoreItem = WindowsMenuRenderer.Item(restoreText, iconId: "add");
+        restoreItem.Enabled = hiddenCount > 0;
+        restoreItem.Click += (s, e) => {
+            ShowAllTools();
+            _toolbarContextMenu?.Close();
+        };
+        menu.Items.Add(restoreItem);
     }
 
     private void HideAllAnnotationTools()

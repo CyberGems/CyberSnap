@@ -286,8 +286,9 @@ public static class WindowsMenuRenderer
             if (e.Image is null)
                 return;
 
+            int indent = e.Item.Padding.Left;
             int size = Math.Min(24, Math.Min(e.Item.Height - 9, e.Image.Width));
-            int x = 10 + (24 - size) / 2;
+            int x = 10 + indent + (24 - size) / 2;
             int y = e.Item.ContentRectangle.Y + (e.Item.Height - size) / 2;
             e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
             e.Graphics.DrawImage(e.Image, new Rectangle(x, y, size, size));
@@ -303,7 +304,8 @@ public static class WindowsMenuRenderer
 
             e.Graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
             string shortcut = item.ShortcutKeyDisplayString ?? string.Empty;
-            int left = _showImages ? 43 : 14;
+            int indent = item.Padding.Left;
+            int left = (_showImages ? 43 : 14) + indent;
             int shortcutWidth = string.IsNullOrEmpty(shortcut)
                 ? 0
                 : TextRenderer.MeasureText(e.Graphics, shortcut, item.Font).Width + 18;
