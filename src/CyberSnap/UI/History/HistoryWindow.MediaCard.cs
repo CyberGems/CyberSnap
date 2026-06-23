@@ -233,19 +233,25 @@ public partial class HistoryWindow
         {
             ToolTip = LocalizationService.Translate("Actions"),
             Focusable = true,
-            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 255)),
+            BorderBrush = Brushes.Transparent,
             BorderThickness = new Thickness(0),
-            Width = 24,
-            Height = 20,
+            Width = 18,
+            Height = 16,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(0, 0, 4, 2),
+            Margin = new Thickness(0, 0, 2, 1),
             Background = Brushes.Transparent,
-            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(120, 255, 255, 255)),
+            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255)),
             Content = "\u22EF",
-            FontSize = 14,
+            FontSize = 13,
             Visibility = Visibility.Collapsed
         };
+
+        var badgeHoverColor = vm.Entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(255, 100, 100)
+            : vm.Entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60)
+            : System.Windows.Media.Color.FromRgb(80, 190, 180);
+        var badgeHoverBrush = new SolidColorBrush(badgeHoverColor);
+        var defaultBtnBrush = actionMenuBtn.Foreground;
         AutomationProperties.SetName(actionMenuBtn, $"{kindLabel} actions");
         AutomationProperties.SetHelpText(actionMenuBtn, "Press Enter or Space to open this history item's actions.");
 
@@ -254,10 +260,12 @@ public partial class HistoryWindow
             if (card.IsMouseOver || card.IsKeyboardFocusWithin || actionMenu.IsOpen)
             {
                 actionMenuBtn.Visibility = Visibility.Visible;
+                actionMenuBtn.Foreground = badgeHoverBrush;
             }
             else
             {
                 actionMenuBtn.Visibility = Visibility.Collapsed;
+                actionMenuBtn.Foreground = defaultBtnBrush;
             }
         }
 
