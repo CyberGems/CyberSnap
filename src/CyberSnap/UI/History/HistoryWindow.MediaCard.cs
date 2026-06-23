@@ -268,19 +268,38 @@ public partial class HistoryWindow
         };
         System.Windows.Controls.Panel.SetZIndex(menuChevron, 999);
 
+        bool chevronHovered = false;
+
         void UpdateChevronVisibility()
         {
-            if (card.IsMouseOver || card.IsKeyboardFocusWithin || actionMenu.IsOpen)
+            if (actionMenu.IsOpen)
             {
                 menuChevron.Visibility = Visibility.Visible;
-                menuChevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(20, 255, 255, 255));
+                menuChevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255));
                 menuChevronPath.Fill = badgeHoverBrush;
+                return;
+            }
+
+            if (card.IsMouseOver || card.IsKeyboardFocusWithin)
+            {
+                menuChevron.Visibility = Visibility.Visible;
+                if (chevronHovered)
+                {
+                    menuChevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255));
+                    menuChevronPath.Fill = badgeHoverBrush;
+                }
+                else
+                {
+                    menuChevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(12, 255, 255, 255));
+                    menuChevronPath.Fill = defaultChevronBrush;
+                }
             }
             else
             {
                 menuChevron.Visibility = Visibility.Collapsed;
                 menuChevron.Background = Brushes.Transparent;
                 menuChevronPath.Fill = defaultChevronBrush;
+                chevronHovered = false;
             }
         }
 
@@ -311,6 +330,8 @@ public partial class HistoryWindow
 
         menuChevron.GotKeyboardFocus += (_, _) => UpdateChevronVisibility();
         menuChevron.LostKeyboardFocus += (_, _) => UpdateChevronVisibility();
+        menuChevron.MouseEnter += (_, _) => { chevronHovered = true; UpdateChevronVisibility(); };
+        menuChevron.MouseLeave += (_, _) => { chevronHovered = false; UpdateChevronVisibility(); };
         actionMenu.Closed += (_, _) => UpdateChevronVisibility();
 
         Grid.SetRow(menuChevron, 1);
