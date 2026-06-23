@@ -766,12 +766,12 @@ public partial class HistoryWindow
         };
         var chevron = new Border
         {
-            Width = 24, Height = 22,
+            Width = 22, Height = 20,
             CornerRadius = new CornerRadius(4),
             Background = Brushes.Transparent,
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 4, 4, 0),
+            Margin = new Thickness(0, 4, 6, 0),
             Cursor = Cursors.Hand,
             IsHitTestVisible = true,
             Visibility = Visibility.Collapsed,
@@ -786,7 +786,7 @@ public partial class HistoryWindow
             if (card.IsMouseOver || card.IsKeyboardFocusWithin || menu.IsOpen)
             {
                 chevron.Visibility = Visibility.Visible;
-                chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 255, 255, 255));
+                chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(30, 255, 255, 255));
                 chevronPath.Fill = badgeHoverBrush;
             }
             else
@@ -797,7 +797,7 @@ public partial class HistoryWindow
             }
         }
 
-        chevron.MouseLeftButtonUp += (_, e) => { e.Handled = true; menu.IsOpen = true; };
+        chevron.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; menu.IsOpen = true; };
         chevron.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Space) { e.Handled = true; menu.IsOpen = true; } };
         chevron.GotKeyboardFocus += (_, _) => UpdateChevronVisibility();
         chevron.LostKeyboardFocus += (_, _) => UpdateChevronVisibility();
