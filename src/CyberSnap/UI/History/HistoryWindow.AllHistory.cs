@@ -871,11 +871,17 @@ public partial class HistoryWindow
         {
             e.Handled = true;
             DismissChevronToolTip();
+            if (menu.IsOpen)
+            {
+                menu.IsOpen = false;
+                UpdateChevronVisibility();
+                return;
+            }
             menu.PlacementTarget = chevron;
             menu.IsOpen = true;
             UpdateChevronVisibility();
         };
-        chevron.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Space) { e.Handled = true; menu.IsOpen = true; } };
+        chevron.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Space) { e.Handled = true; if (menu.IsOpen) { menu.IsOpen = false; } else { menu.IsOpen = true; } } };
         chevron.GotKeyboardFocus += (_, _) => UpdateChevronVisibility();
         chevron.LostKeyboardFocus += (_, _) => UpdateChevronVisibility();
         chevron.MouseEnter += (_, _) => { chevronHovered = true; UpdateChevronVisibility(); };

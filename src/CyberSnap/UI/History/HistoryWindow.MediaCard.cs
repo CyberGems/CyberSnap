@@ -321,6 +321,12 @@ public partial class HistoryWindow
         void OpenActionMenu()
         {
             DismissChevronToolTip();
+            if (actionMenu.IsOpen)
+            {
+                actionMenu.IsOpen = false;
+                UpdateChevronVisibility();
+                return;
+            }
             actionMenu.PlacementTarget = menuChevron;
             actionMenu.IsOpen = true;
             UpdateChevronVisibility();
