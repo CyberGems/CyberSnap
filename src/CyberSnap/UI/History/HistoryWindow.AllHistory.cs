@@ -361,18 +361,28 @@ public partial class HistoryWindow
         var selBadge = CreateUnifiedSelectionBadge();
         textArea.Children.Add(selBadge);
         var displayText = text.Length > 80 ? text[..80] + "…" : text;
-        // Add TextBlock BEFORE AttachCardMenu so the action button sits on top (Z-order)
-        textArea.Children.Add(new TextBlock
+        var ocrTextBlock = new TextBlock
         {
             Text = displayText,
             FontSize = 11,
             TextWrapping = TextWrapping.Wrap,
             TextTrimming = TextTrimming.CharacterEllipsis,
-            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            FontFamily = new System.Windows.Media.FontFamily("Consolas"),
             Foreground = Theme.Brush(Theme.TextPrimary),
-            Margin = new Thickness(10, 8, 10, 10),
             VerticalAlignment = VerticalAlignment.Top
-        });
+        };
+        var ocrContainer = new Border
+        {
+            Background = Theme.Brush(Theme.BgElevated),
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
+            BorderThickness = new System.Windows.Thickness(1),
+            CornerRadius = new System.Windows.CornerRadius(4),
+            Margin = new System.Windows.Thickness(8, 6, 8, 8),
+            Padding = new System.Windows.Thickness(8, 6, 8, 6),
+            Child = ocrTextBlock
+        };
+        // Add container BEFORE AttachCardMenu so the action button sits on top (Z-order)
+        textArea.Children.Add(ocrContainer);
         AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(100, 180, 255));
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
