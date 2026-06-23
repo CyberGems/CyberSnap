@@ -79,16 +79,25 @@ public sealed partial class RegionOverlayForm
 
             if (systemButtonName != null)
             {
+                // Brand line — no icon, just "CyberSnap vX.X"
+                var brandText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}";
+                var brandLabel = new ToolStripLabel(brandText)
+                {
+                    ForeColor = UiChrome.SurfaceTextMuted,
+                    Font = UiChrome.ChromeFont(8.5f),
+                    Padding = new System.Windows.Forms.Padding(10, 8, 0, 0),
+                    AutoSize = true,
+                };
+                menu.Items.Add(brandLabel);
+                menu.Items.Add(new ToolStripSeparator());
+
+                // Button reference line — shows the icon for visual context
                 var sysLine = isSpanish
                     ? $"Botón {systemButtonName}  •  Siempre visible"
                     : $"{systemButtonName}  button  •  Always visible";
-                var headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}\n{sysLine}";
-
-                // Show the button's icon for visual reference
-                var headerItem = WindowsMenuRenderer.Item(headerText, iconId: systemIconId);
-                headerItem.Enabled = false;
-                headerItem.Height = 52;
-                menu.Items.Add(headerItem);
+                var refItem = WindowsMenuRenderer.Item(sysLine, iconId: systemIconId);
+                refItem.Enabled = false;
+                menu.Items.Add(refItem);
                 menu.Items.Add(new ToolStripSeparator());
             }
             else
@@ -220,10 +229,6 @@ public sealed partial class RegionOverlayForm
         menu.Items.Add(closeMenuItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
-
-        // Restore the taller height for system-button header items (they hold two lines of text)
-        if (menu.Items.Count > 0 && menu.Items[0] is ToolStripMenuItem firstItem && firstItem.Height == WindowsMenuRenderer.RowHeight)
-            firstItem.Height = 52;
 
         var screenPoint = PointToScreen(clickLocation);
 
