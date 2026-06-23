@@ -241,6 +241,7 @@ public partial class HistoryWindow
         });
 
         AddMediaInfo(shell.InfoPanel, vm.Entry.FileName, vm.TimeAgo, filePath, "GIF", System.Windows.Media.Color.FromRgb(255, 180, 60));
+        AddCategoryGradientOverlay(shell.Root, System.Windows.Media.Color.FromRgb(255, 180, 60));
         return shell.Card;
     }
 
@@ -298,6 +299,7 @@ public partial class HistoryWindow
         shell.ImageContainer.Children.Add(playIcon);
 
         AddMediaInfo(shell.InfoPanel, vm.Entry.FileName, vm.TimeAgo, filePath);
+        AddCategoryGradientOverlay(shell.Root, System.Windows.Media.Color.FromRgb(255, 100, 100));
         return shell.Card;
     }
 

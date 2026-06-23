@@ -340,6 +340,8 @@ public partial class HistoryWindow
 
         shell.InfoPanel.Children.Add(CreateBadgeTimeText(badgeLabel, badgeColor, vm.TimeAgo));
 
+        AddCategoryGradientOverlay(shell.Root, badgeColor);
+
         return shell.Card;
     }
 
@@ -350,17 +352,6 @@ public partial class HistoryWindow
         var text = entry.Text ?? "";
         var card = CreateBaseUnifiedCard("Text history item", "Copy this OCR text");
         _unifiedCardEntries[card] = entry;
-
-        // Distinguish OCR cards: left stripe + subtle tinted background
-        var ocrAccent = System.Windows.Media.Color.FromRgb(100, 180, 255);
-        card.BorderBrush = new SolidColorBrush(ocrAccent);
-        card.BorderThickness = new System.Windows.Thickness(3, 1, 1, 1);
-        var bgCard = Theme.BgCard;
-        var tintStrength = 0.06;
-        card.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(
-            (byte)(bgCard.R + (ocrAccent.R - bgCard.R) * tintStrength),
-            (byte)(bgCard.G + (ocrAccent.G - bgCard.G) * tintStrength),
-            (byte)(bgCard.B + (ocrAccent.B - bgCard.B) * tintStrength)));
 
         var root = new Grid();
         var imageRow = new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) };
@@ -408,11 +399,11 @@ public partial class HistoryWindow
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
+        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(100, 180, 255));
 
         var capturedText = text;
         card.Child = root;
-        var ocrBgBrush = card.Background as SolidColorBrush;
-        SetupUnifiedCardHoverAndClip(card, root, imageRow, ocrBgBrush);
+        SetupUnifiedCardHoverAndClip(card, root, imageRow);
         textArea.ToolTip = LocalizationService.Translate("Copy this OCR text");
         textArea.Cursor = Cursors.Hand;
         textArea.MouseLeftButtonDown += (_, e) =>
@@ -480,6 +471,7 @@ public partial class HistoryWindow
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
+        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(255, 160, 80));
 
         card.Child = root;
         SetupUnifiedCardHoverAndClip(card, root, imageRow);
@@ -557,6 +549,7 @@ public partial class HistoryWindow
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
+        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(120, 200, 120));
 
         var capturedText = text;
         card.Child = root;
@@ -588,6 +581,21 @@ public partial class HistoryWindow
         var card = CreateBaseUnifiedCard("History item", "");
         card.Child = new TextBlock { Text = FormatTimeAgo(item.CapturedAt), FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8) };
         return card;
+    }
+
+    private static void AddCategoryGradientOverlay(Grid root, System.Windows.Media.Color accentColor)
+    {
+        var overlay = new Border
+        {
+            IsHitTestVisible = false,
+            Background = new System.Windows.Media.LinearGradientBrush(
+                System.Windows.Media.Colors.Transparent,
+                System.Windows.Media.Color.FromArgb(28, accentColor.R, accentColor.G, accentColor.B),
+                90),
+            CornerRadius = new CornerRadius(0, 0, 8, 8)
+        };
+        Grid.SetRow(overlay, 1);
+        root.Children.Add(overlay);
     }
 
     // ── Helpers ──
@@ -698,9 +706,8 @@ public partial class HistoryWindow
     }
 
     /// <summary>Adds a hover overlay border and rounded-corner clip, matching image card behavior.</summary>
-    private void SetupUnifiedCardHoverAndClip(Border card, Grid root, RowDefinition imageRow, System.Windows.Media.Brush? normalBackground = null)
+    private void SetupUnifiedCardHoverAndClip(Border card, Grid root, RowDefinition imageRow)
     {
-        var bgNormal = normalBackground ?? Theme.Brush(Theme.BgCard);
         var hoverBorder = new Border
         {
             BorderThickness = new Thickness(1),
@@ -729,7 +736,7 @@ public partial class HistoryWindow
         {
             if (!card.IsKeyboardFocusWithin)
             {
-                card.Background = bgNormal;
+                card.Background = Theme.Brush(Theme.BgCard);
                 hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
             }
         };
@@ -742,7 +749,7 @@ public partial class HistoryWindow
         {
             if (!card.IsMouseOver)
             {
-                card.Background = bgNormal;
+                card.Background = Theme.Brush(Theme.BgCard);
                 hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
             }
         };

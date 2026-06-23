@@ -674,6 +674,7 @@ public partial class HistoryWindow
         shell.InfoPanel.Children.Add(timeStatusBlock);
 
         RefreshHistoryCardTextMetadata(vm);
+        AddCategoryGradientOverlay(shell.Root, System.Windows.Media.Color.FromRgb(80, 190, 180));
         return shell.Card;
     }
 
