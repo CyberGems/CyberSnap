@@ -75,7 +75,7 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(imageRow);
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var imgContainer = new Grid();
+        var imgContainer = new Grid { Background = Brushes.Transparent };
         imgContainer.Children.Add(img);
         imgContainer.Children.Add(selectionBadge);
         Grid.SetRow(imgContainer, 0);
@@ -89,6 +89,8 @@ public partial class HistoryWindow
             Background = Theme.Brush(Theme.BgSecondary),
             Child = info
         };
+        infoBorder.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
+        infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
 
