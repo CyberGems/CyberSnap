@@ -398,7 +398,9 @@ public partial class HistoryWindow
         var capturedText = text;
         card.Child = root;
         SetupUnifiedCardHoverAndClip(card, root, imageRow);
-        card.MouseLeftButtonDown += (_, e) =>
+        textArea.ToolTip = LocalizationService.Translate("Copy this OCR text");
+        textArea.Cursor = Cursors.Hand;
+        textArea.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
             e.Handled = true;
@@ -464,7 +466,9 @@ public partial class HistoryWindow
 
         card.Child = root;
         SetupUnifiedCardHoverAndClip(card, root, imageRow);
-        card.MouseLeftButtonDown += (_, e) =>
+        swatchArea.ToolTip = LocalizationService.Translate("Copy this color");
+        swatchArea.Cursor = Cursors.Hand;
+        swatchArea.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
             e.Handled = true;
@@ -538,7 +542,10 @@ public partial class HistoryWindow
         var capturedText = text;
         card.Child = root;
         SetupUnifiedCardHoverAndClip(card, root, imageRow);
-        card.MouseLeftButtonDown += (_, e) =>
+        var translatedCodeTooltip = LocalizationService.Translate("Copy this QR & Barcode text");
+        previewArea.ToolTip = translatedCodeTooltip;
+        previewArea.Cursor = Cursors.Hand;
+        previewArea.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
             e.Handled = true;
@@ -652,7 +659,6 @@ public partial class HistoryWindow
 
     private Border CreateBaseUnifiedCard(string automationName, string tooltip)
     {
-        var translatedTooltip = string.IsNullOrEmpty(tooltip) ? "" : LocalizationService.Translate(tooltip);
         var card = new Border
         {
             Width = HistoryCardPreferredWidth,
@@ -663,14 +669,11 @@ public partial class HistoryWindow
             Background = Theme.Brush(Theme.BgCard),
             BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new Thickness(1),
-            Cursor = Cursors.Hand,
             Focusable = true,
-            ToolTip = translatedTooltip
         };
         AutomationProperties.SetName(card, automationName);
-        AutomationProperties.SetHelpText(card, translatedTooltip);
 
-        card.Tag = false;  // selection state: false=unselected, true=selected; also marks for UpdateHistoryWrapPanelCardWidths
+        card.Tag = false;
 
         return card;
     }

@@ -114,14 +114,15 @@ public partial class HistoryWindow
             Background = Theme.Brush(Theme.BgCard),
             BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new Thickness(1),
-            Cursor = Cursors.Hand,
             Focusable = true,
-            ToolTip = LocalizationService.Translate("Open in Editor"),
             Child = root,
             Tag = vm,
         };
         AutomationProperties.SetName(card, $"{kindLabel} history item");
         AutomationProperties.SetHelpText(card, "Press Enter or Space to open this history item. Press Ctrl+C to copy it. In select mode, press Enter or Space to select it.");
+
+        imgContainer.ToolTip = LocalizationService.Translate("Open in Editor");
+        imgContainer.Cursor = Cursors.Hand;
 
         // Context menu
         var actionMenu = CreateCardActionMenu();
@@ -360,7 +361,7 @@ public partial class HistoryWindow
             e.Handled = true;
         }
 
-        card.MouseLeftButtonUp += (_, e) => ActivateCard(e);
+        imgContainer.MouseLeftButtonUp += (_, e) => ActivateCard(e);
         card.KeyDown += (_, e) =>
         {
             if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
@@ -376,18 +377,18 @@ public partial class HistoryWindow
             ActivateCard(e);
         };
 
-        // Drag-and-drop support: drag the file out of the history card
+        // Drag-and-drop support: drag the file out of the history card (image area only)
         System.Windows.Point? dragStart = null;
-        card.PreviewMouseLeftButtonDown += (_, e) =>
+        imgContainer.PreviewMouseLeftButtonDown += (_, e) =>
         {
-            dragStart = e.GetPosition(card);
+            dragStart = e.GetPosition(imgContainer);
         };
-        card.PreviewMouseMove += (_, e) =>
+        imgContainer.PreviewMouseMove += (_, e) =>
         {
             if (dragStart is null || e.LeftButton != MouseButtonState.Pressed)
                 return;
 
-            var pos = e.GetPosition(card);
+            var pos = e.GetPosition(imgContainer);
             var diff = pos - dragStart.Value;
             if (Math.Abs(diff.X) < 5 && Math.Abs(diff.Y) < 5)
                 return;
@@ -400,9 +401,9 @@ public partial class HistoryWindow
             suppressOpenAction = true;
             var data = new System.Windows.DataObject();
             data.SetFileDropList(new System.Collections.Specialized.StringCollection { filePath });
-            System.Windows.DragDrop.DoDragDrop(card, data, System.Windows.DragDropEffects.Copy | System.Windows.DragDropEffects.Move);
+            System.Windows.DragDrop.DoDragDrop(imgContainer, data, System.Windows.DragDropEffects.Copy | System.Windows.DragDropEffects.Move);
         };
-        card.PreviewMouseLeftButtonUp += (_, _) => { dragStart = null; };
+        imgContainer.PreviewMouseLeftButtonUp += (_, _) => { dragStart = null; };
 
         vm.Card = card;
         vm.SelectionBadge = selectionBadge;
