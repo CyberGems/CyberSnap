@@ -375,7 +375,7 @@ public partial class HistoryWindow
         };
         var ocrContainer = new Border
         {
-            Background = Theme.Brush(Theme.BgElevated),
+            Background = Theme.Brush(Theme.IsDark ? Theme.BgElevated : Theme.BgPrimary),
             BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new System.Windows.Thickness(1),
             CornerRadius = new System.Windows.CornerRadius(4),
@@ -585,10 +585,11 @@ public partial class HistoryWindow
 
     private static void AddCategoryGradientOverlay(Grid root, System.Windows.Media.Color accentColor)
     {
+        var alpha = Theme.IsDark ? (byte)28 : (byte)40;
         var overlay = new Border
         {
             IsHitTestVisible = false,
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(28, accentColor.R, accentColor.G, accentColor.B)),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(alpha, accentColor.R, accentColor.G, accentColor.B)),
             CornerRadius = new CornerRadius(0, 0, 8, 8)
         };
         Grid.SetRow(overlay, 1);
@@ -615,7 +616,9 @@ public partial class HistoryWindow
         {
             Text = $" \u00B7 {timeAgo}",
             FontSize = 10,
-            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(76, 255, 255, 255))
+            Foreground = Theme.Brush(Theme.IsDark
+                ? System.Windows.Media.Color.FromArgb(76, 255, 255, 255)
+                : System.Windows.Media.Color.FromArgb(100, 0, 0, 0))
         });
         return tb;
     }
@@ -691,7 +694,7 @@ public partial class HistoryWindow
             Margin = new Thickness(HistoryCardMargin),
             CornerRadius = new CornerRadius(8),
             Background = Theme.Brush(Theme.BgCard),
-            BorderBrush = Theme.Brush(Theme.BorderSubtle),
+            BorderBrush = Theme.Brush(Theme.IsDark ? Theme.BorderSubtle : Theme.Border),
             BorderThickness = new Thickness(1),
             Focusable = true,
         };
@@ -779,8 +782,16 @@ public partial class HistoryWindow
             menu.IsOpen = true;
         };
 
-        var defaultChevronBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255));
+        var defaultChevronBrush = new SolidColorBrush(Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(80, 255, 255, 255)
+            : System.Windows.Media.Color.FromArgb(80, 0, 0, 0));
         var badgeHoverBrush = badgeColor.HasValue ? new SolidColorBrush(badgeColor.Value) : defaultChevronBrush;
+        var chevronHoverBg = new SolidColorBrush(Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(40, 255, 255, 255)
+            : System.Windows.Media.Color.FromArgb(40, 0, 0, 0));
+        var chevronIdleBg = new SolidColorBrush(Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(12, 255, 255, 255)
+            : System.Windows.Media.Color.FromArgb(12, 0, 0, 0));
 
         var chevronPath = new System.Windows.Shapes.Path
         {
@@ -814,7 +825,7 @@ public partial class HistoryWindow
             if (menu.IsOpen)
             {
                 chevron.Visibility = Visibility.Visible;
-                chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255));
+                chevron.Background = chevronHoverBg;
                 chevronPath.Fill = badgeHoverBrush;
                 return;
             }
@@ -824,12 +835,12 @@ public partial class HistoryWindow
                 chevron.Visibility = Visibility.Visible;
                 if (chevronHovered)
                 {
-                    chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255));
+                    chevron.Background = chevronHoverBg;
                     chevronPath.Fill = badgeHoverBrush;
                 }
                 else
                 {
-                    chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(12, 255, 255, 255));
+                    chevron.Background = chevronIdleBg;
                     chevronPath.Fill = defaultChevronBrush;
                 }
             }
@@ -852,7 +863,9 @@ public partial class HistoryWindow
         {
             e.Handled = true;
             DismissChevronToolTip();
-            chevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 255, 255, 255));
+            chevron.Background = new SolidColorBrush(Theme.IsDark
+                ? System.Windows.Media.Color.FromArgb(60, 255, 255, 255)
+                : System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
         };
         chevron.PreviewMouseLeftButtonUp += (_, e) =>
         {

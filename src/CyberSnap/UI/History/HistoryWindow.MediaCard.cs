@@ -114,7 +114,7 @@ public partial class HistoryWindow
             Margin = new Thickness(HistoryCardMargin),
             CornerRadius = new CornerRadius(8),
             Background = Theme.Brush(Theme.BgCard),
-            BorderBrush = Theme.Brush(Theme.BorderSubtle),
+            BorderBrush = Theme.Brush(Theme.IsDark ? Theme.BorderSubtle : Theme.Border),
             BorderThickness = new Thickness(1),
             Focusable = true,
             Child = root,
@@ -241,7 +241,9 @@ public partial class HistoryWindow
             : vm.Entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60)
             : System.Windows.Media.Color.FromRgb(80, 190, 180);
         var badgeHoverBrush = new SolidColorBrush(badgeHoverColor);
-        var defaultChevronBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255));
+        var defaultChevronBrush = new SolidColorBrush(Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(80, 255, 255, 255)
+            : System.Windows.Media.Color.FromArgb(80, 0, 0, 0));
 
         var menuChevronPath = new System.Windows.Shapes.Path
         {
@@ -270,12 +272,19 @@ public partial class HistoryWindow
 
         bool chevronHovered = false;
 
+        var chevronHoverBg = new SolidColorBrush(Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(40, 255, 255, 255)
+            : System.Windows.Media.Color.FromArgb(40, 0, 0, 0));
+        var chevronIdleBg = new SolidColorBrush(Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(12, 255, 255, 255)
+            : System.Windows.Media.Color.FromArgb(12, 0, 0, 0));
+
         void UpdateChevronVisibility()
         {
             if (actionMenu.IsOpen)
             {
                 menuChevron.Visibility = Visibility.Visible;
-                menuChevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255));
+                menuChevron.Background = chevronHoverBg;
                 menuChevronPath.Fill = badgeHoverBrush;
                 return;
             }
@@ -285,12 +294,12 @@ public partial class HistoryWindow
                 menuChevron.Visibility = Visibility.Visible;
                 if (chevronHovered)
                 {
-                    menuChevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255));
+                    menuChevron.Background = chevronHoverBg;
                     menuChevronPath.Fill = badgeHoverBrush;
                 }
                 else
                 {
-                    menuChevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(12, 255, 255, 255));
+                    menuChevron.Background = chevronIdleBg;
                     menuChevronPath.Fill = defaultChevronBrush;
                 }
             }
@@ -321,7 +330,9 @@ public partial class HistoryWindow
         {
             e.Handled = true;
             DismissChevronToolTip();
-            menuChevron.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 255, 255, 255));
+            menuChevron.Background = new SolidColorBrush(Theme.IsDark
+                ? System.Windows.Media.Color.FromArgb(60, 255, 255, 255)
+                : System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
         };
         menuChevron.PreviewMouseLeftButtonUp += (_, e) =>
         {
