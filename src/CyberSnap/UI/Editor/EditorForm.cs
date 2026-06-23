@@ -1643,9 +1643,9 @@ public sealed partial class EditorForm : Form
         int vHover = _canvas.HitTestVerticalGuide(e.Location);
         if (hHover >= 0 || vHover >= 0)
         {
-            var guideMenu = WindowsMenuRenderer.Create(showImages: false, minWidth: 160);
-            var deleteItem = WindowsMenuRenderer.Item("Delete Guide", iconId: null);
-            var clearAllItem = WindowsMenuRenderer.Item("Clear All Guides", iconId: null);
+            var guideMenu = WindowsMenuRenderer.Create(showImages: true, minWidth: 180);
+            var deleteItem = WindowsMenuRenderer.Item("Delete Guide", iconId: "trash", danger: true);
+            var clearAllItem = WindowsMenuRenderer.Item("Clear All Guides", iconId: "trash", danger: true);
 
             int hIdx = hHover;
             int vIdx = vHover;
@@ -1663,6 +1663,7 @@ public sealed partial class EditorForm : Form
 
             guideMenu.Items.Add(deleteItem);
             guideMenu.Items.Add(clearAllItem);
+            WindowsMenuRenderer.NormalizeItemWidths(guideMenu, 180);
             guideMenu.Show(_canvas, e.Location);
             return;
         }
@@ -1687,19 +1688,18 @@ public sealed partial class EditorForm : Form
 
     private void ShowEditorAnnotationContextMenu(Point clickLocation)
     {
-        var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: 150);
-        
-        string deleteText;
-        if (_canvas.MultiSelectedIndicesInternal.Count > 1)
-        {
-            deleteText = LocalizationService.Translate("Delete selection");
-        }
-        else
-        {
-            deleteText = LocalizationService.Translate("Delete");
-        }
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 180);
 
-        var deleteItem = new ToolStripMenuItem(deleteText);
+        bool multi = _canvas.MultiSelectedIndicesInternal.Count > 1;
+        var duplicateItem = WindowsMenuRenderer.Item(
+            multi ? "Duplicate selection" : "Duplicate",
+            iconId: "copy");
+        duplicateItem.Click += (s, e) => _canvas.DuplicateSelectionInternal();
+
+        var deleteItem = WindowsMenuRenderer.Item(
+            multi ? "Delete selection" : "Delete",
+            iconId: "trash",
+            danger: true);
         deleteItem.Click += (s, e) => {
             if (_canvas.MultiSelectedIndicesInternal.Count > 1)
             {
@@ -1711,12 +1711,9 @@ public sealed partial class EditorForm : Form
             }
         };
 
-        var duplicateItem = new ToolStripMenuItem(LocalizationService.Translate("Duplicate"));
-        duplicateItem.Click += (s, e) => _canvas.DuplicateSelectionInternal();
-
         menu.Items.Add(duplicateItem);
         menu.Items.Add(deleteItem);
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 150);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 180);
 
         menu.Show(_canvas, clickLocation);
     }
