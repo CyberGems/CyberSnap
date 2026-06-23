@@ -79,18 +79,6 @@ public sealed partial class RegionOverlayForm
 
             if (systemButtonName != null)
             {
-                // Brand line — no icon, just "CyberSnap vX.X"
-                var brandText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}";
-                var brandLabel = new ToolStripLabel(brandText)
-                {
-                    ForeColor = UiChrome.SurfaceTextMuted,
-                    Font = UiChrome.ChromeFont(8.5f),
-                    Padding = new System.Windows.Forms.Padding(10, 8, 0, 0),
-                    AutoSize = true,
-                };
-                menu.Items.Add(brandLabel);
-                menu.Items.Add(new ToolStripSeparator());
-
                 // Button reference line — shows the icon for visual context
                 var sysLine = isSpanish
                     ? $"Botón {systemButtonName}  •  Siempre visible"
