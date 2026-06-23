@@ -29,6 +29,14 @@ public partial class SettingsWindow
     // Without the fallback, glyphs render as empty squares on systems lacking Segoe Fluent Icons.
     private static readonly FontFamily IconFont = new("Segoe Fluent Icons, Segoe MDL2 Assets");
 
+    private static MediaColor ThemeAlpha(byte alpha) => Theme.IsDark
+        ? MediaColor.FromArgb(alpha, 255, 255, 255)
+        : MediaColor.FromArgb(alpha, 0, 0, 0);
+
+    private static Brush ThemeAlphaBrush(byte alpha) => new SolidColorBrush(ThemeAlpha(alpha));
+
+    private static readonly Brush FallbackTextBrush = Theme.IsDark ? Brushes.White : Brushes.Black;
+
     // (Re)builds the statistics cards and medal grid from the live settings. Called when the
     // Achievements tab is selected and after the Celebrations toggle changes.
     private void RefreshAchievements()
@@ -99,7 +107,7 @@ public partial class SettingsWindow
             FontSize = 24,
             FontWeight = FontWeights.SemiBold,
             FontFamily = new FontFamily("Segoe UI Variable Display"),
-            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White,
+            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
             HorizontalAlignment = HAlign.Center
         };
 
@@ -107,9 +115,9 @@ public partial class SettingsWindow
         {
             Text = label,
             FontSize = 11,
-            Opacity = 0.6,
+            Opacity = Theme.IsDark ? 0.6 : 0.7,
             FontFamily = new FontFamily("Segoe UI Variable Text"),
-            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White,
+            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
             HorizontalAlignment = HAlign.Center,
             Margin = new Thickness(0, 2, 0, 0)
         };
@@ -124,9 +132,9 @@ public partial class SettingsWindow
             Padding = new Thickness(14, 16, 14, 14),
             CornerRadius = new CornerRadius(8),
             Background = (Brush?)TryFindResource("ThemeInputBackgroundBrush")
-                         ?? new SolidColorBrush(MediaColor.FromArgb(0x14, 0xFF, 0xFF, 0xFF)),
+                         ?? ThemeAlphaBrush(0x14),
             BorderBrush = (Brush?)TryFindResource("ThemeInputBorderBrush")
-                          ?? new SolidColorBrush(MediaColor.FromArgb(0x22, 0xFF, 0xFF, 0xFF)),
+                          ?? ThemeAlphaBrush(0x22),
             BorderThickness = new Thickness(1),
             Child = panel
         };
@@ -170,7 +178,7 @@ public partial class SettingsWindow
             FontWeight = FontWeights.SemiBold,
             Opacity = 0.7,
             FontFamily = new FontFamily("Segoe UI Variable Text"),
-            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White,
+            Foreground = (Brush?)TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
             Margin = new Thickness(0, first ? 4 : 14, 0, 10)
         };
         host.Children.Add(label);
@@ -197,7 +205,7 @@ public partial class SettingsWindow
             FontFamily = IconFont,
             Foreground = a.Unlocked
                 ? new SolidColorBrush(color)
-                : new SolidColorBrush(MediaColor.FromArgb(0x55, 0xFF, 0xFF, 0xFF)),
+                : new SolidColorBrush(ThemeAlpha(0x55)),
             HorizontalAlignment = HAlign.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -209,10 +217,10 @@ public partial class SettingsWindow
             CornerRadius = new CornerRadius(badgeSize / 2),
             Background = a.Unlocked
                 ? new SolidColorBrush(MediaColor.FromArgb(0x33, color.R, color.G, color.B))
-                : new SolidColorBrush(MediaColor.FromArgb(0x0C, 0xFF, 0xFF, 0xFF)),
+                : ThemeAlphaBrush(0x0C),
             BorderBrush = a.Unlocked
                 ? new SolidColorBrush(color)
-                : new SolidColorBrush(MediaColor.FromArgb(0x1F, 0xFF, 0xFF, 0xFF)),
+                : ThemeAlphaBrush(0x1F),
             BorderThickness = new Thickness(a.Unlocked ? 2 : 1),
             Child = glyphBlock
         };
@@ -230,7 +238,7 @@ public partial class SettingsWindow
                 Text = GlyphLock,
                 FontSize = 12,
                 FontFamily = IconFont,
-                Foreground = new SolidColorBrush(MediaColor.FromArgb(0x99, 0xFF, 0xFF, 0xFF)),
+                Foreground = ThemeAlphaBrush(0x99),
                 HorizontalAlignment = HAlign.Right,
                 VerticalAlignment = VerticalAlignment.Bottom
             });
@@ -243,8 +251,8 @@ public partial class SettingsWindow
             TextWrapping = TextWrapping.Wrap,
             TextAlignment = TextAlignment.Center,
             FontFamily = new FontFamily("Segoe UI Variable Text"),
-            Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White,
-            Opacity = a.Unlocked ? 0.9 : 0.45,
+            Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
+            Opacity = a.Unlocked ? 0.9 : (Theme.IsDark ? 0.45 : 0.6),
             HorizontalAlignment = HAlign.Center,
             Margin = new Thickness(0, 6, 0, 0)
         };
@@ -260,9 +268,9 @@ public partial class SettingsWindow
             {
                 Text = $"{cur.ToString("N0")}/{target.ToString("N0")}",
                 FontSize = 9,
-                Opacity = 0.4,
+                Opacity = Theme.IsDark ? 0.4 : 0.55,
                 FontFamily = new FontFamily("Segoe UI Variable Text"),
-                Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? Brushes.White,
+                Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
                 HorizontalAlignment = HAlign.Center,
                 Margin = new Thickness(0, 1, 0, 0)
             });
