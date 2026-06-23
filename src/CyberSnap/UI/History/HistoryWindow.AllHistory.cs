@@ -301,7 +301,7 @@ public partial class HistoryWindow
         var badgeLabel = entry.Kind == HistoryKind.Video ? "VID"
             : entry.Kind == HistoryKind.Gif ? "GIF" : "IMG";
         var badgeColor = entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(255, 100, 100)
-            : entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60) : System.Windows.Media.Color.FromRgb(80, 190, 180);
+            : entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60) : System.Windows.Media.Color.FromRgb(100, 180, 255);
 
         // Add play icon overlay for videos (same as CreateVideoCard)
         if (entry.Kind == HistoryKind.Video)
@@ -385,21 +385,21 @@ public partial class HistoryWindow
         };
         // Add container BEFORE AttachCardMenu so the action button sits on top (Z-order)
         textArea.Children.Add(ocrContainer);
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(100, 180, 255));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(80, 190, 180));
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 
         // Bottom: just the capture time
         var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
         info.Children.Add(new TextBlock { Text = LocalizationService.Translate("OCR Text"), FontSize = 11, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), TextTrimming = TextTrimming.CharacterEllipsis });
-        info.Children.Add(CreateBadgeTimeText("OCR", System.Windows.Media.Color.FromRgb(100, 180, 255), FormatTimeAgo(entry.CapturedAt)));
+        info.Children.Add(CreateBadgeTimeText("OCR", System.Windows.Media.Color.FromRgb(80, 190, 180), FormatTimeAgo(entry.CapturedAt)));
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         infoBorder.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
-        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(100, 180, 255));
+        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(80, 190, 180));
 
         var capturedText = text;
         card.Child = root;
