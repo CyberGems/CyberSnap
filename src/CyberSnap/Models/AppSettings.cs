@@ -259,6 +259,11 @@ public sealed class AppSettings
     public bool EditorShowRulers { get; set; } = true;
     public bool EditorShowFrame { get; set; } = true;
     public bool EditorShowHints { get; set; } = true;
+
+    /// <summary>Most recently opened files (projects and images) shown in the Editor's
+    /// burger "Open recent" submenu. Newest first; capped to 6 entries.</summary>
+    public List<string> RecentFilePaths { get; set; } = new();
+
     public bool SaveToFile { get; set; } = true;
     public bool AskForFileNameOnSave { get; set; }
     public string FileNameTemplate { get; set; } = Helpers.FileNameTemplate.DefaultTemplate;

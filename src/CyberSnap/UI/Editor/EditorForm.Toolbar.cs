@@ -1286,6 +1286,20 @@ public sealed partial class EditorForm
             _burgerMenuLastClosed = DateTime.UtcNow;
         };
 
+        var newItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New"), iconId: "document");
+        newItem.Click += (_, _) => DoNew();
+
+        var openItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Open..."), iconId: "folder");
+        openItem.Click += (_, _) => DoOpen();
+
+        var openRecentItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open recent"), showImages: true);
+        openRecentItem.Image = FluentIcons.RenderBitmap("history",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
+
+        var saveItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save"), iconId: "save");
+        saveItem.Click += (_, _) => DoSave();
+
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project as..."), iconId: "save");
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
 
@@ -1428,7 +1442,12 @@ public sealed partial class EditorForm
         viewItem.DropDownItems.Add(hintsItem);
 
         // Main menu layout
+        menu.Items.Add(newItem);
+        menu.Items.Add(openItem);
+        menu.Items.Add(openRecentItem);
+        menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(resizeCanvasItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(copyItem);
@@ -1460,18 +1479,62 @@ public sealed partial class EditorForm
                 duplicateItem.Text = LocalizationService.Translate("Duplicate");
             }
 
-            // Keep the "View" submenu on the same monitor as the burger menu: when the burger
-            // button is near the right edge of its screen (same condition that opens the
-            // menu with BelowLeft), drop the submenu to the LEFT so it doesn't spill onto
-            // the adjacent monitor. Uses the same coordinate signal as the burger's own
-            // open direction (robust under mixed-DPI multi-monitor).
-            viewItem.DropDownDirection = _burgerMenuNearRight
+            // Rebuild the "Open recent" submenu from the persisted list each time the burger
+            // opens (paths change as the user opens/saves files in this or another session).
+            RebuildOpenRecentSubMenu(openRecentItem);
+
+            // Save reflects the current document's save-ability: disabled for a pristine
+            // blank canvas, enabled when there's something to save.
+            saveItem.Enabled = !(_canvas.IsDefaultBlank && !_canvas.IsDirty);
+
+            // Keep the submenus on the same monitor as the burger menu: when the burger button
+            // is near the right edge of its screen (same condition that opens the menu with
+            // BelowLeft), drop the submenus to the LEFT so they don't spill onto the adjacent
+            // monitor. Uses the same coordinate signal as the burger's own open direction
+            // (robust under mixed-DPI multi-monitor).
+            var dir = _burgerMenuNearRight
                 ? ToolStripDropDownDirection.Left
                 : ToolStripDropDownDirection.Right;
+            viewItem.DropDownDirection = dir;
+            openRecentItem.DropDownDirection = dir;
         };
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
+    }
+
+    /// <summary>Repopulates the "Open recent" submenu from <see cref="SettingsService"/>. Shows up
+    /// to 6 entries (full path as tooltip, file name as label); if none, a disabled placeholder.</summary>
+    private void RebuildOpenRecentSubMenu(ToolStripMenuItem openRecentItem)
+    {
+        openRecentItem.DropDownItems.Clear();
+
+        var recents = SettingsService.LoadStatic()?.RecentFilePaths
+            ?.Where(p => !string.IsNullOrWhiteSpace(p))
+            .Take(6)
+            .ToList();
+
+        bool any = recents is { Count: > 0 };
+        openRecentItem.Enabled = any;
+
+        if (!any)
+        {
+            var placeholder = WindowsMenuRenderer.Item(LocalizationService.Translate("No recent files"));
+            placeholder.Enabled = false;
+            openRecentItem.DropDownItems.Add(placeholder);
+            return;
+        }
+
+        foreach (var path in recents!)
+        {
+            var item = WindowsMenuRenderer.Item(
+                Path.GetFileName(path),
+                iconId: Path.GetExtension(path).Equals(".csnp", StringComparison.OrdinalIgnoreCase) ? "save" : null);
+            item.ToolTipText = path;
+            var capturedPath = path;
+            item.Click += (_, _) => ShowEditorFromFile(capturedPath);
+            openRecentItem.DropDownItems.Add(item);
+        }
     }
 
     private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
