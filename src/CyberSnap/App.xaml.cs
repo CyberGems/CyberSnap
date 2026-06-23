@@ -62,6 +62,15 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-recent-file", ex); }
     }
 
+    /// <summary>Clears the editor's recent-files list and persists the empty state.</summary>
+    public void ClearRecentFiles()
+    {
+        if (_settingsService is null) return;
+        _settingsService.Settings.RecentFilePaths.Clear();
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.clear-recent-files", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "auto-fit vs real size on open" preference.</summary>
     public void PersistEditorFitPreference(bool fitToWindow)
     {

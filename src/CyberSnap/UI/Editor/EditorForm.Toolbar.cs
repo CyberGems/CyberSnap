@@ -1535,6 +1535,21 @@ public sealed partial class EditorForm
             item.Click += (_, _) => ShowEditorFromFile(capturedPath);
             openRecentItem.DropDownItems.Add(item);
         }
+
+        // "Clear recent" at the end, behind a separator; empties the list and rebuilds.
+        openRecentItem.DropDownItems.Add(new ToolStripSeparator());
+        var clearItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Clear recent"), iconId: "trash", danger: true);
+        clearItem.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is App app)
+                app.ClearRecentFiles();
+            openRecentItem.DropDownItems.Clear();
+            openRecentItem.Enabled = false;
+            var placeholder = WindowsMenuRenderer.Item(LocalizationService.Translate("No recent files"));
+            placeholder.Enabled = false;
+            openRecentItem.DropDownItems.Add(placeholder);
+        };
+        openRecentItem.DropDownItems.Add(clearItem);
     }
 
     private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
