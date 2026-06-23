@@ -1487,6 +1487,7 @@ public sealed partial class EditorForm : Form
     private ContextMenuStrip? _imageMenu;
     private ContextMenuStrip? _burgerMenu;
     private DateTime _burgerMenuLastClosed = DateTime.MinValue;
+    private bool _burgerMenuNearRight;
 
     private void BuildContextMenus()
     {

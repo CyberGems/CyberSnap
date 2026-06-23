@@ -468,6 +468,7 @@ public sealed partial class EditorForm
             var screenPt = menuButton.PointToScreen(new Point(0, menuButton.Height));
             var scr = Screen.FromPoint(screenPt);
             bool nearRight = screenPt.X > scr.Bounds.Left + scr.Bounds.Width * 0.65;
+            _burgerMenuNearRight = nearRight;
             _burgerMenu.Show(screenPt, nearRight
                 ? ToolStripDropDownDirection.BelowLeft
                 : ToolStripDropDownDirection.BelowRight);
@@ -1459,12 +1460,12 @@ public sealed partial class EditorForm
                 duplicateItem.Text = LocalizationService.Translate("Duplicate");
             }
 
-            // Keep the "View" submenu on the same monitor as the burger menu: when the menu
-            // opens near the right edge of its screen, drop the submenu to the LEFT so it
-            // doesn't spill onto the adjacent monitor.
-            var menuScreen = Screen.FromPoint(menu.Bounds.Location);
-            bool nearRightEdge = menu.Bounds.Right > menuScreen.WorkingArea.Right - 120;
-            viewItem.DropDownDirection = nearRightEdge
+            // Keep the "View" submenu on the same monitor as the burger menu: when the burger
+            // button is near the right edge of its screen (same condition that opens the
+            // menu with BelowLeft), drop the submenu to the LEFT so it doesn't spill onto
+            // the adjacent monitor. Uses the same coordinate signal as the burger's own
+            // open direction (robust under mixed-DPI multi-monitor).
+            viewItem.DropDownDirection = _burgerMenuNearRight
                 ? ToolStripDropDownDirection.Left
                 : ToolStripDropDownDirection.Right;
         };
