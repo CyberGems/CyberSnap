@@ -741,5 +741,19 @@
   "No captures yet": "No captures yet",
   "Screenshots, OCR text, colors, and codes will appear here.": "Screenshots, OCR text, colors, and codes will appear here.",
   "Screenshots will appear here after capture.": "Screenshots will appear here after capture.",
-  "Select All": "Select All"
+  "Select All": "Select All",
+  "Interaction": "Interaction",
+  "Thumbnail click action": "Thumbnail click action",
+  "Action performed when clicking a capture thumbnail in the Gallery.": "Action performed when clicking a capture thumbnail in the Gallery.",
+  "Choose what happens when you click a capture thumbnail.": "Choose what happens when you click a capture thumbnail.",
+  "Open in editor": "Open in editor",
+  "Copy to clipboard": "Copy to clipboard",
+  "Open in default viewer": "Open in default viewer",
+  "Open the capture in the built-in editor.": "Open the capture in the built-in editor.",
+  "Open the capture in the post-capture editor for annotation and adjustments.": "Open the capture in the post-capture editor for annotation and adjustments.",
+  "Copy the capture to your clipboard.": "Copy the capture to your clipboard.",
+  "Copies the image to the system clipboard without opening any window.": "Copies the image to the system clipboard without opening any window.",
+  "Open the file with the system default image viewer.": "Open the file with the system default image viewer.",
+  "Opens the saved file using your operating system's default image application.": "Opens the saved file using your operating system's default image application.",
+  "Open in Editor": "Open in Editor"
 }

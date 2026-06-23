@@ -340,15 +340,6 @@ public partial class HistoryWindow
 
         shell.InfoPanel.Children.Add(CreateBadgeTimeText(badgeLabel, badgeColor, vm.TimeAgo));
 
-        shell.Card.MouseLeftButtonDown += (_, e) =>
-        {
-            e.Handled = true;
-            if (_selectMode) return;  // let MouseLeftButtonUp (ActivateCard) handle selection toggle
-            if (!System.IO.File.Exists(entry.FilePath)) { ShowHistoryFileMissingError(entry.FilePath); return; }
-            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = entry.FilePath, UseShellExecute = true }); }
-            catch { }
-        };
-
         return shell.Card;
     }
 
