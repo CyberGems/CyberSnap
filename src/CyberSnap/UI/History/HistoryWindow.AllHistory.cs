@@ -340,7 +340,7 @@ public partial class HistoryWindow
 
         shell.InfoPanel.Children.Add(CreateBadgeTimeText(badgeLabel, badgeColor, vm.TimeAgo));
 
-        AddCategoryGradientOverlay(shell.Root, badgeColor);
+        AddCategoryTint(shell.Root, badgeColor);
 
         return shell.Card;
     }
@@ -399,7 +399,7 @@ public partial class HistoryWindow
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
-        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(80, 190, 180));
+        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(80, 190, 180), alphaOverride: Theme.IsDark ? (byte)40 : (byte)55);
 
         var capturedText = text;
         card.Child = root;
@@ -471,7 +471,7 @@ public partial class HistoryWindow
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
-        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(255, 160, 80));
+        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(255, 160, 80));
 
         card.Child = root;
         SetupUnifiedCardHoverAndClip(card, root, imageRow);
@@ -549,7 +549,7 @@ public partial class HistoryWindow
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
-        AddCategoryGradientOverlay(root, System.Windows.Media.Color.FromRgb(176, 136, 240));
+        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(176, 136, 240));
 
         var capturedText = text;
         card.Child = root;
@@ -583,9 +583,9 @@ public partial class HistoryWindow
         return card;
     }
 
-    private static void AddCategoryGradientOverlay(Grid root, System.Windows.Media.Color accentColor)
+    private static void AddCategoryTint(Grid root, System.Windows.Media.Color accentColor, byte? alphaOverride = null)
     {
-        var alpha = Theme.IsDark ? (byte)28 : (byte)40;
+        var alpha = alphaOverride ?? (Theme.IsDark ? (byte)28 : (byte)40);
         var overlay = new Border
         {
             IsHitTestVisible = false,
