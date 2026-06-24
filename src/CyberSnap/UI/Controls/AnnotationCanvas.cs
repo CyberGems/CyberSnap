@@ -749,6 +749,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     // ── Undo / Redo ────────────────────────────────────────────────────────
 
+    private const int MaxAnnotations = 200;
+
     public void Push(IEditCommand command)
     {
         if (command is AddAnnotationCommand addCmd)
@@ -758,6 +760,13 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             if (!bounds.IsEmpty && !bounds.IntersectsWith(canvasBounds))
             {
                 ShowToolBanner(LocalizationService.Translate("Draw objects inside the canvas"));
+                return;
+            }
+            if (Annotations.Count >= MaxAnnotations)
+            {
+                ShowToolBanner(
+                    string.Format(LocalizationService.Translate("Maximum annotations reached ({0})"), MaxAnnotations),
+                    sticky: true);
                 return;
             }
         }
