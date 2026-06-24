@@ -1057,6 +1057,13 @@ public sealed partial class RegionOverlayForm : Form
     /// </summary>
     private void ShowEmptyAreaContextMenu(Point clickLocation)
     {
+        // Respect the master switch — when disabled, fall back to immediate cancel.
+        if (!Services.SettingsService.LoadStatic()?.ConfirmBeforeExit ?? true)
+        {
+            Cancel();
+            return;
+        }
+
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
         menu.Font = UiChrome.ChromeFont(11.0f);
 
@@ -1067,6 +1074,20 @@ public sealed partial class RegionOverlayForm : Form
         if (_mode == CaptureMode.ScrollCapture)
         {
             var cancelLabel = isSpanish ? "Cancelar captura por desplazamiento" : "Cancel scroll capture";
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            cancelItem.Click += (_, _) => Cancel();
+            menu.Items.Add(cancelItem);
+        }
+        else if (_mode == CaptureMode.ColorPicker)
+        {
+            var cancelLabel = isSpanish ? "Cancelar selección de color" : "Cancel color picker";
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            cancelItem.Click += (_, _) => Cancel();
+            menu.Items.Add(cancelItem);
+        }
+        else if (_mode == CaptureMode.Ocr)
+        {
+            var cancelLabel = isSpanish ? "Cancelar extracción de texto" : "Cancel text extraction";
             var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);

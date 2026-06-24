@@ -254,6 +254,44 @@ public sealed partial class RegionOverlayForm
         cancelCapItem.Click += (s, e) => Cancel();
         menu.Items.Add(cancelCapItem);
 
+        // Confirm before exit toggle
+        menu.Items.Add(new ToolStripSeparator());
+        var confirmExitEnabled = settings.ConfirmBeforeExit;
+        var confirmExitText = isSpanish ? "Confirmar antes de salir" : "Confirm before exit";
+        var confirmExitItem = WindowsMenuRenderer.Item(confirmExitText, iconId: confirmExitEnabled ? "check" : null, iconSize: 24);
+        confirmExitItem.Click += (s, e) =>
+        {
+            var svc = new Services.SettingsService(null);
+            svc.Load();
+            svc.Settings.ConfirmBeforeExit = !svc.Settings.ConfirmBeforeExit;
+            svc.Save();
+            menu.AutoClose = false;
+            var blinkTimer = new System.Windows.Forms.Timer { Interval = 90 };
+            int blinks = 0;
+            var checkColor = System.Drawing.Color.FromArgb(255,
+                CyberSnap.UI.Theme.TextPrimary.R,
+                CyberSnap.UI.Theme.TextPrimary.G,
+                CyberSnap.UI.Theme.TextPrimary.B);
+            var onImage = Helpers.FluentIcons.RenderBitmap("check", checkColor, 24, active: true);
+            var newVal = !confirmExitEnabled;
+            var evenImage = newVal ? onImage : null;
+            var oddImage  = newVal ? null : onImage;
+            blinkTimer.Tick += (_, _) =>
+            {
+                confirmExitItem.Image = blinks % 2 == 0 ? evenImage : oddImage;
+                blinks++;
+                if (blinks > 4)
+                {
+                    blinkTimer.Stop();
+                    blinkTimer.Dispose();
+                    menu.AutoClose = true;
+                    _toolbarContextMenu?.Close();
+                }
+            };
+            blinkTimer.Start();
+        };
+        menu.Items.Add(confirmExitItem);
+
         // Help banners toggle
         menu.Items.Add(new ToolStripSeparator());
         var bannersEnabled = settings.ShowToolBanners;

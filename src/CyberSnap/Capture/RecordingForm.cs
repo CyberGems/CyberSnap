@@ -222,6 +222,12 @@ public sealed partial class RecordingForm : Form
 
     private void ShowEmptyAreaContextMenu(Point clickLocation)
     {
+        if (!Services.SettingsService.LoadStatic()?.ConfirmBeforeExit ?? true)
+        {
+            CancelFromEscape();
+            return;
+        }
+
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
         menu.Font = UiChrome.ChromeFont(11.0f);
 
