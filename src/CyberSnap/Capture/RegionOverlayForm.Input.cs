@@ -587,7 +587,7 @@ public sealed partial class RegionOverlayForm
                 _lineStart = e.Location;
                 break;
             case CaptureMode.Ruler:
-                HideToolbarForCaptureTool();
+                // Ruler is an annotation tool — don't hide the toolbar while measuring.
                 _isRulerDragging = true;
                 _rulerStart = e.Location;
                 break;
