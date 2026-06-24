@@ -2551,7 +2551,6 @@ internal sealed class EditorZoomSlider : Control
     protected override void OnMouseEnter(EventArgs e)
     {
         _hover = true;
-        Focus();
         Invalidate();
         base.OnMouseEnter(e);
     }

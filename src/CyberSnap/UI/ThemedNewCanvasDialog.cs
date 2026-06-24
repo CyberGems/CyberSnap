@@ -287,6 +287,7 @@ internal sealed class ThemedNewCanvasDialog : Window
     {
         if (_suppress) return;
         _width = v;
+        DeselectAllChips();
         UpdateWarning();
     }
 
@@ -294,6 +295,7 @@ internal sealed class ThemedNewCanvasDialog : Window
     {
         if (_suppress) return;
         _height = v;
+        DeselectAllChips();
         UpdateWarning();
     }
 
@@ -360,6 +362,16 @@ internal sealed class ThemedNewCanvasDialog : Window
             chip.Tag = isActive;
             chip.Background = Theme.Brush(isActive ? WithAlpha(accent, 60) : FieldBackground);
             chip.BorderBrush = Theme.Brush(isActive ? WithAlpha(accent, 200) : WithAlpha(accent, 60));
+        }
+    }
+
+    private void DeselectAllChips()
+    {
+        foreach (var (chip, _, _) in _resolutionChipElements)
+        {
+            chip.Tag = false;
+            chip.Background = Theme.Brush(FieldBackground);
+            chip.BorderBrush = Theme.Brush(WithAlpha(Theme.Accent, 60));
         }
     }
 

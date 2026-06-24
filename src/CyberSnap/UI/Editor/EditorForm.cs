@@ -1290,7 +1290,7 @@ public sealed partial class EditorForm : Form
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
-        if (keyData == (Keys.Control | Keys.N)) { DoNew(); return true; }
+        if (keyData == (Keys.Control | Keys.N)) { DoNewCanvas(); return true; }
         if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
         if (keyData == (Keys.Control | Keys.I)) { DoImport(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
