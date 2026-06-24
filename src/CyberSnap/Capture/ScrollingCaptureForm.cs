@@ -183,6 +183,37 @@ public sealed partial class ScrollingCaptureForm : Form
         base.OnKeyDown(e);
     }
 
+    private void ShowEmptyAreaContextMenu(Point clickLocation)
+    {
+        if (!Services.SettingsService.LoadStatic()?.ConfirmBeforeExit ?? true)
+        {
+            Cancel();
+            return;
+        }
+
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+        menu.Font = UiChrome.ChromeFont(11.0f);
+
+        var isSpanish = string.Equals(
+            Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
+            "es", StringComparison.OrdinalIgnoreCase);
+
+        var cancelLabel = isSpanish ? "Cancelar captura por desplazamiento" : "Cancel scroll capture";
+        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+        cancelItem.Click += (_, _) => Cancel();
+        menu.Items.Add(cancelItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        var closeLabel = isSpanish ? "Cerrar menú" : "Close menu";
+        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "close", iconSize: 24);
+        closeItem.Click += (_, _) => menu.Close();
+        menu.Items.Add(closeItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
+        menu.Show(PointToScreen(clickLocation));
+    }
+
     private void HandleEscape()
     {
         if (_state == State.Capturing && _frameCount > 1)
@@ -195,7 +226,12 @@ public sealed partial class ScrollingCaptureForm : Form
     {
         if (e.Button == MouseButtons.Right)
         {
-            HandleEscape();
+            if (_state == State.Capturing && _frameCount > 1)
+                StopCapturing();
+            else if (_state == State.Capturing)
+                ShowEmptyAreaContextMenu(e.Location);
+            else
+                ShowEmptyAreaContextMenu(e.Location);
             return;
         }
 
