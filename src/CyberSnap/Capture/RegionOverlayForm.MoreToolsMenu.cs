@@ -252,29 +252,31 @@ public sealed partial class RegionOverlayForm
             StandaloneToolBanner.Enabled = newValue;
             svc.Save();
 
-            // Blink the icon twice to confirm the toggle before closing
-            var blinkTimer = new System.Windows.Forms.Timer { Interval = 100 };
+            // Prevent the menu from auto-closing so the blink animation plays.
+            menu.AutoClose = false;
+
+            var blinkTimer = new System.Windows.Forms.Timer { Interval = 90 };
             int blinks = 0;
             var checkColor = System.Drawing.Color.FromArgb(255,
                 CyberSnap.UI.Theme.TextPrimary.R,
                 CyberSnap.UI.Theme.TextPrimary.G,
                 CyberSnap.UI.Theme.TextPrimary.B);
             var onImage = Helpers.FluentIcons.RenderBitmap("check", checkColor, 20, active: true);
-            // Blink between the new state icon and its opposite so both enable
-            // and disable produce a visible flash.
-            var offImage = newValue ? null : onImage;
-            var showImage = newValue ? onImage : null;
+            // Blink the left-bar checkmark area: alternate between the new-state
+            // icon and its opposite so both enable and disable produce a visible flash.
+            var evenImage = newValue ? onImage : null;   // blinks 0,2 → target state
+            var oddImage  = newValue ? null : onImage;    // blinks 1,3 → opposite
             blinkTimer.Tick += (_, _) =>
             {
+                bannersItem.Image = blinks % 2 == 0 ? evenImage : oddImage;
                 blinks++;
-                if (blinks > 3)
+                if (blinks > 4)
                 {
                     blinkTimer.Stop();
                     blinkTimer.Dispose();
+                    menu.AutoClose = true;
                     _toolbarContextMenu?.Close();
-                    return;
                 }
-                bannersItem.Image = blinks % 2 == 1 ? showImage : offImage;
             };
             blinkTimer.Start();
         };
