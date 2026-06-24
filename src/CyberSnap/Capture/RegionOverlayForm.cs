@@ -1053,35 +1053,118 @@ public sealed partial class RegionOverlayForm : Form
 
     private void ShowAnnotationContextMenu(Point clickLocation)
     {
-        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 180);
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+        var isSpanish = string.Equals(
+            Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
+            "es", StringComparison.OrdinalIgnoreCase);
 
         bool multi = _multiSelectedIndices.Count > 1;
-        var duplicateItem = WindowsMenuRenderer.Item(
-            multi ? "Duplicate selection" : "Duplicate",
-            iconId: "copy");
+        int count = multi ? _multiSelectedIndices.Count : 1;
+
+        // Smart duplicate label with type and count
+        string duplicateLabel;
+        if (_selectedAnnotationIndex >= 0 || multi)
+        {
+            var ann = multi
+                ? _multiSelectedIndices
+                    .Where(i => i >= 0 && i < _undoStack.Count)
+                    .Select(i => GetAnnotationTypeLabel(_undoStack[i]))
+                    .Distinct()
+                    .ToList()
+                : (_selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count
+                    ? new List<string> { GetAnnotationTypeLabel(_undoStack[_selectedAnnotationIndex]) }
+                    : new List<string>());
+
+            if (ann.Count == 1)
+            {
+                var typeName = ann[0];
+                if (count == 1)
+                    duplicateLabel = isSpanish ? $"Duplicar {typeName}" : $"Duplicate {typeName}";
+                else
+                    duplicateLabel = isSpanish ? $"Duplicar {count} {typeName}s" : $"Duplicate {count} {typeName}s";
+            }
+            else
+            {
+                duplicateLabel = isSpanish ? "Duplicar selección" : "Duplicate selection";
+            }
+        }
+        else
+        {
+            duplicateLabel = isSpanish ? "Duplicar" : "Duplicate";
+        }
+
+        var duplicateItem = WindowsMenuRenderer.Item(duplicateLabel, iconId: "copy");
         duplicateItem.Click += (s, e) => DuplicateSelection();
 
-        var deleteItem = WindowsMenuRenderer.Item(
-            multi ? "Delete selection" : "Delete",
-            iconId: "trash",
-            danger: true);
+        var deleteLabel = multi
+            ? (isSpanish ? "Eliminar selección" : "Delete selection")
+            : (isSpanish ? "Eliminar" : "Delete");
+        var deleteItem = WindowsMenuRenderer.Item(deleteLabel, iconId: "trash", danger: true);
         deleteItem.Click += (s, e) => {
             if (_multiSelectedIndices.Count > 1)
-            {
                 DeleteMultiSelectedAnnotations();
-            }
             else if (_selectedAnnotationIndex >= 0)
-            {
                 DeleteAnnotationAt(_selectedAnnotationIndex);
-            }
         };
 
         menu.Items.Add(duplicateItem);
         menu.Items.Add(deleteItem);
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 180);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        var captureFsLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
+        var captureItem = WindowsMenuRenderer.Item(captureFsLabel, iconId: "captureRect");
+        captureItem.Click += (s, e) =>
+        {
+            RegionSelected?.Invoke(_virtualBounds);
+        };
+        menu.Items.Add(captureItem);
+
+        var cancelCaptureLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
+        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close");
+        cancelCapItem.Click += (s, e) => Cancel();
+        menu.Items.Add(cancelCapItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        var closeMenuLabel = isSpanish ? "Cerrar menú" : "Close menu";
+        var closeItem = WindowsMenuRenderer.Item(closeMenuLabel, iconId: "close");
+        closeItem.Click += (s, e) => menu.Close();
+        menu.Items.Add(closeItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 220);
 
         var screenPoint = PointToScreen(clickLocation);
         menu.Show(screenPoint);
+    }
+
+    private static string GetAnnotationTypeLabel(Annotation a)
+    {
+        var mode = a switch
+        {
+            RulerAnnotation => CaptureMode.Ruler,
+            ArrowAnnotation => CaptureMode.Arrow,
+            LineAnnotation => CaptureMode.Line,
+            CurvedArrowAnnotation => CaptureMode.CurvedArrow,
+            DrawStroke => CaptureMode.Draw,
+            RectShapeAnnotation => CaptureMode.RectShape,
+            CircleShapeAnnotation => CaptureMode.CircleShape,
+            TextAnnotation => CaptureMode.Text,
+            HighlightAnnotation => CaptureMode.Highlight,
+            BlurRect => CaptureMode.Blur,
+            StepNumberAnnotation => CaptureMode.StepNumber,
+            MagnifierAnnotation => CaptureMode.Magnifier,
+            EmojiAnnotation => CaptureMode.Emoji,
+            EraserFill => CaptureMode.Eraser,
+            _ => (CaptureMode?)null,
+        };
+        if (mode != null)
+        {
+            var tool = ToolDef.AllTools.FirstOrDefault(t => t.Mode == mode.Value);
+            if (tool != null)
+                return LocalizationService.Translate(tool.Label).ToLowerInvariant();
+        }
+        return "object";
     }
 
     private void ShowToolBanner(string text, bool persistent = false)
