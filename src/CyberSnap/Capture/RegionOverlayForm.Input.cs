@@ -594,6 +594,12 @@ public sealed partial class RegionOverlayForm
                 // Ruler is an annotation tool — don't hide the toolbar while measuring.
                 // Dismiss the instruction banner so its fade animation can't fire repaints mid-drag.
                 HideToolBanner();
+                // Clear any ruler selected via right-click so its frame doesn't linger over the new drag.
+                if (_selectedAnnotationIndex >= 0)
+                {
+                    _selectedAnnotationIndex = -1;
+                    Invalidate();
+                }
                 _isRulerDragging = true;
                 _rulerStart = e.Location;
                 break;
