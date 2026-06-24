@@ -560,7 +560,7 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("ocr",         "OCR",          '\uE53C', CaptureMode.Ocr,         0), // scan-text
         new("scan",        "QR & Barcodes",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
         new("picker",      "Color Picker", '\uE2B1', CaptureMode.ColorPicker, 0), // eyedropper
-        new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       1), // ruler (annotation)
+        new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       0), // ruler (annotation, but kept in capture row)
         new("select",      "Move & Resize",        '\uE1E3', CaptureMode.Move,        1), // cursor-click   → 0x31
         new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser         → 0x33
         new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1), // highlighter

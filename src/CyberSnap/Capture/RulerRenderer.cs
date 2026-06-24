@@ -168,7 +168,7 @@ public static class RulerRenderer
     }
 
     /// <summary>Tighter bounds for hit-testing and selection frame — covers the line
-    /// plus the measurement label without the excessive paint invalidation margin.</summary>
+    /// plus enough room for the floating measurement label (up to ~400px wide).</summary>
     public static Rectangle GetSelectionBounds(Point from, Point to)
     {
         int minX = Math.Min(from.X, to.X);
@@ -180,7 +180,8 @@ public static class RulerRenderer
 
         int midX = (from.X + to.X) / 2;
         int midY = (from.Y + to.Y) / 2;
-        var labelRect = new Rectangle(midX - 110, midY - 70, 220, 140);
+        // Large enough for "1234px · W: 800px H: 600px · -45.0°" + padding
+        var labelRect = new Rectangle(midX - 300, midY - 180, 600, 360);
 
         return Rectangle.Union(lineRect, labelRect);
     }
