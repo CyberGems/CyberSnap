@@ -448,8 +448,8 @@ public sealed partial class RegionOverlayForm : Form
                 LocalizationService.Translate("Click & drag to capture · Toolbar below · Right-click or Esc to cancel"),
                 bannerWorkingArea,
                 Bounds,
-                onInvalidate: () => Invalidate(),
-                persistent: true);
+                persistent: true,
+                onInvalidateRect: r => Invalidate(r));
             _captureBannerShown = true;
         }
 
@@ -1096,18 +1096,19 @@ public sealed partial class RegionOverlayForm : Form
             text,
             bannerWorkingArea,
             Bounds,
-            onInvalidate: () => Invalidate(),
-            persistent: persistent);
-        Invalidate();
+            persistent: persistent,
+            onInvalidateRect: r => Invalidate(r));
+        Invalidate(_banner.InvalidateBounds);
     }
 
     private void HideToolBanner()
     {
         if (_banner != null)
         {
+            var bounds = _banner.InvalidateBounds;
             _banner.Dispose();
             _banner = null;
-            Invalidate();
+            Invalidate(bounds);
         }
     }
 }

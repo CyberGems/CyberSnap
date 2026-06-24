@@ -632,7 +632,14 @@ public sealed partial class RegionOverlayForm
                 InvalidateLivePreview(RectFromPoints(_lineStart, oldCursor, 1), RectFromPoints(_lineStart, e.Location, 1), 18);
                 break;
             case CaptureMode.Ruler when _isRulerDragging:
-                InvalidateLivePreview(RulerRenderer.GetLiveBounds(_rulerStart, GetRulerEnd(oldCursor)), RulerRenderer.GetLiveBounds(_rulerStart, GetRulerEnd(e.Location)), 0);
+                // Invalidate the precise paint extent (line + the label's *actual* rect) at both the
+                // old and new positions. Tight bounds clear the old label without ghosting, yet keep
+                // the per-frame repaint small so the overlay's dimming blend stays fluid while dragging.
+                InvalidateLivePreview(RulerRenderer.GetLivePreviewBounds(_rulerStart, GetRulerEnd(oldCursor), ClientRectangle), RulerRenderer.GetLivePreviewBounds(_rulerStart, GetRulerEnd(e.Location), ClientRectangle), 0);
+                // Force the small dirty region to paint now. The overlay's mouse-move handler is heavy
+                // (toolbar/hover bookkeeping) and floods the queue, starving low-priority WM_PAINT — the
+                // line then lags and catches up in jumps. A synchronous Update keeps it glued to the cursor.
+                Update();
                 break;
             case CaptureMode.Arrow when _isArrowDragging:
                 InvalidateLivePreview(RectFromPoints(_arrowStart, oldCursor, 1), RectFromPoints(_arrowStart, e.Location, 1), 32);

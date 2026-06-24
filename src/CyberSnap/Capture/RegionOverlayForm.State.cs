@@ -388,7 +388,9 @@ public sealed partial class RegionOverlayForm
         ArrowAnnotation arr => RectFromPoints(arr.From, arr.To, 8),
         CurvedArrowAnnotation ca => BoundsOfPoints(ca.Points, 8),
         LineAnnotation ln => RectFromPoints(ln.From, ln.To, 6),
-        RulerAnnotation ru => RulerRenderer.GetSelectionBounds(ru.From, ru.To),
+        // Tight wrapper around the line + the label's *actual* rect. GetSelectionBounds used a fixed
+        // ~600×360 box, so even a tiny ruler got a huge selection frame regardless of its real size.
+        RulerAnnotation ru => RulerRenderer.GetLivePreviewBounds(ru.From, ru.To, ClientRectangle),
         DrawStroke ds => BoundsOfPoints(ds.Points, 4),
         BlurRect br => br.Rect,
         HighlightAnnotation hl => hl.Rect,

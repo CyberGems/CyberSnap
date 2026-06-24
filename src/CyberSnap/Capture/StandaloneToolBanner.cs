@@ -20,6 +20,7 @@ public sealed class StandaloneToolBanner : IDisposable
     private readonly Rectangle _workingArea;
     private readonly Rectangle _bounds;
     private readonly Action? _onInvalidate;
+    private readonly Action<Rectangle>? _onInvalidateRect;
     private readonly bool _persistent;
 
     /// <summary>Master switch — when false, no banner renders anywhere.</summary>
@@ -41,17 +42,60 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <param name="onInvalidate">Optional callback to trigger form repaint on animation ticks.</param>
     /// <param name="persistent">When true, the banner holds at full opacity indefinitely and only
     /// disappears when <see cref="Dismiss"/> is called (e.g. on first user interaction).</param>
-    public StandaloneToolBanner(string text, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false)
+    public StandaloneToolBanner(string text, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null)
     {
         _text = text;
         _workingArea = workingArea;
         _bounds = bounds;
         _onInvalidate = onInvalidate;
+        _onInvalidateRect = onInvalidateRect;
         _persistent = persistent;
+
+        // Pre-compute the banner rect so region-based invalidation works from the very first tick
+        // (before Render has run once). Matches the layout math in Render().
+        ComputeBannerRect();
 
         _timer = new System.Windows.Forms.Timer { Interval = 16 }; // ~60 fps
         _timer.Tick += OnTick;
         _timer.Start();
+    }
+
+    private void ComputeBannerRect()
+    {
+        using var tmp = new Bitmap(1, 1);
+        using var g = Graphics.FromImage(tmp);
+        using var font = new Font("Segoe UI Variable Display", 16f, FontStyle.Regular, GraphicsUnit.Point);
+        var size = g.MeasureString(_text, font);
+
+        const int paddingH = 28;
+        const int paddingV = 17;
+        float width = size.Width + paddingH * 2;
+        float height = size.Height + paddingV * 2;
+        float y = _workingArea.Top - _bounds.Top + 35;
+        float x = _workingArea.Left - _bounds.Left + (_workingArea.Width - width) / 2f;
+        _bannerRect = new RectangleF(x, y, width, height);
+    }
+
+    /// <summary>Inflated client-space rect covering the banner pill plus its glow — the only region
+    /// that needs repainting when the banner animates. Lets the host invalidate just this area
+    /// instead of the whole (potentially multi-monitor) form.</summary>
+    public Rectangle InvalidateBounds
+    {
+        get
+        {
+            var r = _bannerRect;
+            r.Inflate(12, 12);
+            return Rectangle.Round(r);
+        }
+    }
+
+    /// <summary>Trigger a host repaint — region-scoped when a rect callback was supplied, else full.</summary>
+    private void RaiseInvalidate()
+    {
+        if (_onInvalidateRect != null)
+            _onInvalidateRect(InvalidateBounds);
+        else
+            _onInvalidate?.Invoke();
     }
 
     /// <summary>Whether the given client-space cursor position is over the banner.</summary>
@@ -125,7 +169,7 @@ public sealed class StandaloneToolBanner : IDisposable
                     _state = State.Hold;
                     _holdTicks = 0;
                 }
-                _onInvalidate?.Invoke();
+                RaiseInvalidate();
                 break;
 
             case State.Hold:
@@ -146,7 +190,7 @@ public sealed class StandaloneToolBanner : IDisposable
                     _opacity = 0.0f;
                     _timer?.Stop();
                 }
-                _onInvalidate?.Invoke();
+                RaiseInvalidate();
                 break;
         }
     }
@@ -172,7 +216,7 @@ public sealed class StandaloneToolBanner : IDisposable
             _state = State.FadeOut;
             _opacity = 0f;
             _timer?.Stop();
-            _onInvalidate?.Invoke();
+            RaiseInvalidate();
         }
     }
 

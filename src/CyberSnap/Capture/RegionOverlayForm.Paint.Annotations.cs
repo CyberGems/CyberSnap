@@ -208,8 +208,8 @@ public sealed partial class RegionOverlayForm
             r = U(r, GetShapeRect(cursorPoint));
         if (_mode == CaptureMode.Line && _isLineDragging)
             r = U(r, RectFromPoints(_lineStart, cursorPoint, 8));
-        // Ruler excluded from smear-proofing: GetRulerPaintBounds is already accurate
-        // and the dimming overlay would accumulate alpha in re-invalidated areas.
+        if (_mode == CaptureMode.Ruler && _isRulerDragging)
+            r = U(r, RulerRenderer.GetLivePreviewBounds(_rulerStart, GetRulerEnd(cursorPoint), ClientRectangle));
         if (_mode == CaptureMode.Arrow && _isArrowDragging)
             r = U(r, RectFromPoints(_arrowStart, cursorPoint, 28));
         if (_mode == CaptureMode.CurvedArrow && _isCurvedArrowDragging && _currentCurvedArrow is { Count: >= 2 })
