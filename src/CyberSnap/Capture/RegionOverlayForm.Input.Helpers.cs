@@ -121,6 +121,17 @@ public sealed partial class RegionOverlayForm
         ToolColorChanged?.Invoke(color);
     }
 
+    /// <summary>Maps a tool id to the Streamline/Fluent icon id the capture toolbar renders, so the
+    /// tool banner shows the exact same vector icon. Mirrors the id mappings in the toolbar paint path
+    /// (<see cref="DrawIcon"/> and the toolbar build in RegionOverlayForm.cs).</summary>
+    private static string ToolbarIconIdFor(string toolId) => toolId switch
+    {
+        "crop" => "rect",
+        "rect" => "captureRect",
+        "scroll" => "scrollCapture",
+        var id => id,
+    };
+
     private void SetMode(CaptureMode m, string? toolId = null)
     {
         if (_isTyping) CommitText();
@@ -239,8 +250,17 @@ public sealed partial class RegionOverlayForm
         // Tool name + icon in white, action description + suffix in accent cyan.
         var suffix = " · " + LocalizationService.Translate("Right-click or Esc to cancel");
         var tool = ToolDef.AllTools.FirstOrDefault(t => t.Mode == m);
-        var toolIcon = tool != null ? tool.Icon + " " : "";
+        // Render the SAME vector icon the toolbar uses, by id — not the font char (which has no
+        // glyph in the banner's text font and shows up as a generic box).
+        var iconId = tool != null ? ToolbarIconIdFor(tool.Id) : null;
+        if (iconId != null && !Helpers.FluentIcons.HasIcon(iconId)) iconId = null;
         var toolName = tool != null ? LocalizationService.Translate(tool.Label) : "";
+        // Recording banners use a shorter, area-focused label instead of the full "Screen Recorder (…)"
+        // tool name, so they read "Grabación MP4: Clic y arrastra para seleccionar área · …".
+        if (m == CaptureMode.Record)
+            toolName = LocalizationService.Translate("MP4 Recording");
+        else if (m == CaptureMode.RecordGif)
+            toolName = LocalizationService.Translate("GIF Recording");
 
         string? action = null;
         if (m == CaptureMode.Rectangle)
@@ -258,9 +278,9 @@ public sealed partial class RegionOverlayForm
         else if (m == CaptureMode.ColorPicker)
             action = LocalizationService.Translate("Click a pixel to pick its color");
         else if (m == CaptureMode.Record)
-            action = LocalizationService.Translate("Click & drag to record video");
+            action = LocalizationService.Translate("Click & drag to select area");
         else if (m == CaptureMode.RecordGif)
-            action = LocalizationService.Translate("Click & drag to record GIF");
+            action = LocalizationService.Translate("Click & drag to select area");
         else if (m == CaptureMode.Move)
             action = LocalizationService.Translate("Click & drag to move or resize");
         else if (m == CaptureMode.Eraser)
@@ -292,13 +312,13 @@ public sealed partial class RegionOverlayForm
 
         if (action != null && !string.IsNullOrEmpty(toolName))
         {
-            var label = toolIcon + toolName + ": ";
+            var label = toolName + ": ";
             var segments = new BannerSegment[]
             {
                 new(label, Color.White),
                 new(action + suffix, null), // null = accent color
             };
-            ShowToolBanner(segments, persistent: false);
+            ShowToolBanner(segments, persistent: false, iconId: iconId);
         }
         else
         {

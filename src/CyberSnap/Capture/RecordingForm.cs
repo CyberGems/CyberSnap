@@ -151,17 +151,25 @@ public sealed partial class RecordingForm : Form
         _tooltip.UseAnimation = true;
         _tooltip.UseFading = true;
 
-        // ── Banner (unified style with standalone tools) ──
-        var bannerText = (_format == Models.RecordingFormat.MP4
-            ? LocalizationService.Translate("Drag to Select MP4 Recording Area")
-            : LocalizationService.Translate("Drag to Select GIF Recording Area"))
+        // ── Banner (unified style with the capture-overlay tool banners) ──
+        // White "MP4/GIF Recording:" label + leading record icon, then the accent-cyan action.
+        bool isMp4 = _format == Models.RecordingFormat.MP4;
+        var label = LocalizationService.Translate(isMp4 ? "MP4 Recording" : "GIF Recording") + ": ";
+        var action = LocalizationService.Translate("Click & drag to select area")
             + " · " + LocalizationService.Translate("Right-click or Esc to cancel");
+        var iconId = isMp4 ? "record" : "recordGif";
+        var bannerSegments = new BannerSegment[]
+        {
+            new(label, Color.White),
+            new(action, null), // null = accent color
+        };
         var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
         _banner = new StandaloneToolBanner(
-            bannerText,
+            bannerSegments,
             bannerWorkingArea,
             Bounds,
-            onInvalidate: () => Invalidate());
+            onInvalidate: () => Invalidate(),
+            iconId: iconId);
     }
 
     protected override CreateParams CreateParams

@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using CyberSnap.Helpers;
 using CyberSnap.UI;
 
 namespace CyberSnap.Capture;
@@ -22,6 +23,13 @@ public sealed class StandaloneToolBanner : IDisposable
 {
     private readonly string _text;
     private readonly IReadOnlyList<BannerSegment>? _segments;
+    /// <summary>Optional Streamline/Fluent icon id rendered as a real vector glyph to the left of
+    /// the text — the SAME SVG the capture toolbar draws, so the banner matches it exactly
+    /// (a font char would just render as tofu in the banner's text font).</summary>
+    private readonly string? _iconId;
+    private readonly Color _iconColor;
+    /// <summary>Gap between the leading icon and the text.</summary>
+    private const int IconGap = 10;
     private readonly Rectangle _workingArea;
     private readonly Rectangle _bounds;
     private readonly Action? _onInvalidate;
@@ -47,10 +55,12 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <param name="onInvalidate">Optional callback to trigger form repaint on animation ticks.</param>
     /// <param name="persistent">When true, the banner holds at full opacity indefinitely and only
     /// disappears when <see cref="Dismiss"/> is called (e.g. on first user interaction).</param>
-    public StandaloneToolBanner(string text, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null)
+    public StandaloneToolBanner(string text, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null, string? iconId = null, Color? iconColor = null)
     {
         _text = text;
         _segments = null;
+        _iconId = iconId;
+        _iconColor = iconColor ?? Color.White;
         _workingArea = workingArea;
         _bounds = bounds;
         _onInvalidate = onInvalidate;
@@ -74,10 +84,12 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <param name="bounds">Form bounds used to convert screen → client coordinates.</param>
     /// <param name="onInvalidate">Optional callback to trigger form repaint on animation ticks.</param>
     /// <param name="persistent">When true, the banner holds at full opacity indefinitely.</param>
-    public StandaloneToolBanner(IReadOnlyList<BannerSegment> segments, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null)
+    public StandaloneToolBanner(IReadOnlyList<BannerSegment> segments, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null, string? iconId = null, Color? iconColor = null)
     {
         _segments = segments;
         _text = string.Concat(segments.Select(s => s.Text));
+        _iconId = iconId;
+        _iconColor = iconColor ?? Color.White;
         _workingArea = workingArea;
         _bounds = bounds;
         _onInvalidate = onInvalidate;
@@ -100,7 +112,8 @@ public sealed class StandaloneToolBanner : IDisposable
 
         const int paddingH = 28;
         const int paddingV = 17;
-        float width = size.Width + paddingH * 2;
+        float iconBlock = _iconId != null ? size.Height * 0.92f + IconGap : 0f;
+        float width = size.Width + iconBlock + paddingH * 2;
         float height = size.Height + paddingV * 2;
         float y = _workingArea.Top - _bounds.Top + 35;
         float x = _workingArea.Left - _bounds.Left + (_workingArea.Width - width) / 2f;
@@ -147,7 +160,9 @@ public sealed class StandaloneToolBanner : IDisposable
 
             const int paddingH = 28;
             const int paddingV = 17;
-            float width = size.Width + paddingH * 2;
+            float iconSize = size.Height * 0.92f;
+            float iconBlock = _iconId != null ? iconSize + IconGap : 0f;
+            float width = size.Width + iconBlock + paddingH * 2;
             float height = size.Height + paddingV * 2;
 
             float y = _workingArea.Top - _bounds.Top + 35;
@@ -173,6 +188,17 @@ public sealed class StandaloneToolBanner : IDisposable
             g.DrawPath(glowPen, path);
             g.DrawPath(borderPen, path);
 
+            // Leading vector icon — the exact same Streamline/Fluent SVG the capture toolbar
+            // draws, rendered at inset 0 to fill its slot. Fades with the banner via alphaText.
+            if (_iconId != null)
+            {
+                float iconX = x + paddingH;
+                float iconY = y + (height - iconSize) / 2f;
+                FluentIcons.DrawIcon(g, _iconId,
+                    new RectangleF(iconX, iconY, iconSize, iconSize),
+                    Color.FromArgb(alphaText, _iconColor), 0f);
+            }
+
             using var sf = new StringFormat
             {
                 Alignment = StringAlignment.Near,
@@ -182,7 +208,7 @@ public sealed class StandaloneToolBanner : IDisposable
             if (_segments != null)
             {
                 // Draw each segment with its own color, laid out left-to-right.
-                float cursorX = x + paddingH;
+                float cursorX = x + paddingH + iconBlock;
                 float textTop = y + paddingV;
                 foreach (var seg in _segments)
                 {
@@ -194,7 +220,7 @@ public sealed class StandaloneToolBanner : IDisposable
             }
             else
             {
-                var textRect = new RectangleF(x + paddingH, y + paddingV, size.Width, size.Height);
+                var textRect = new RectangleF(x + paddingH + iconBlock, y + paddingV, size.Width, size.Height);
                 using var textBrush = new SolidBrush(Color.FromArgb(alphaText, accent));
                 sf.Alignment = StringAlignment.Center;
                 g.DrawString(_text, font, textBrush, textRect, sf);

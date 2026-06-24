@@ -1101,7 +1101,7 @@ public sealed partial class RegionOverlayForm : Form
         Invalidate(_banner.InvalidateBounds);
     }
 
-    private void ShowToolBanner(IReadOnlyList<BannerSegment> segments, bool persistent = false)
+    private void ShowToolBanner(IReadOnlyList<BannerSegment> segments, bool persistent = false, string? iconId = null)
     {
         if (_banner != null)
         {
@@ -1114,7 +1114,8 @@ public sealed partial class RegionOverlayForm : Form
             bannerWorkingArea,
             Bounds,
             persistent: persistent,
-            onInvalidateRect: r => Invalidate(r));
+            onInvalidateRect: r => Invalidate(r),
+            iconId: iconId);
         Invalidate(_banner.InvalidateBounds);
     }
 
