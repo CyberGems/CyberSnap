@@ -89,9 +89,7 @@ internal static class SelectionFrameRenderer
         using (var glowPen = new Pen(Color.FromArgb(70, accent), 8f))
             g.DrawRectangle(glowPen, glowRect);
 
-        // Barely-there accent fill tint so content stays fully readable
-        using (var fillBrush = new SolidBrush(Color.FromArgb(4, accent.R, accent.G, accent.B)))
-            g.FillRectangle(fillBrush, rect);
+        // No fill tint — only the outline/brackets mark the detected window, leaving its content untouched.
 
         // Accent-colored outline
         var outline = rect;

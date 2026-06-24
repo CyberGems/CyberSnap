@@ -591,6 +591,8 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Ruler:
                 // Ruler is an annotation tool — don't hide the toolbar while measuring.
+                // Dismiss the instruction banner so its fade animation can't fire repaints mid-drag.
+                HideToolBanner();
                 _isRulerDragging = true;
                 _rulerStart = e.Location;
                 break;

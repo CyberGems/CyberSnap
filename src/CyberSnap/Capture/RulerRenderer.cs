@@ -23,6 +23,18 @@ public static class RulerRenderer
     private static Font? _distFont;
     private static int _themeKey;
 
+    // Label padding (must match between layout and text placement)
+    private const float LabelPadH = 14;
+    private const float LabelPadV = 8;
+
+    /// <summary>Create the (theme-independent) label fonts if not already created.
+    /// Safe to call outside a paint pass — needed for bounds computation during drag.</summary>
+    private static void EnsureFonts()
+    {
+        _font ??= new Font("Segoe UI Variable Text", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
+        _distFont ??= new Font("Segoe UI Variable Text", 11.5f, FontStyle.Bold, GraphicsUnit.Point);
+    }
+
     public static void EnsureChrome(bool isDark)
     {
         var text = isDark
@@ -53,8 +65,7 @@ public static class RulerRenderer
         _borderPen = new Pen(border, 1.0f);
         _fgBrush = new SolidBrush(text);
         _accentBrush = new SolidBrush(accent);
-        _font ??= new Font("Segoe UI Variable Text", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
-        _distFont ??= new Font("Segoe UI Variable Text", 11.5f, FontStyle.Bold, GraphicsUnit.Point);
+        EnsureFonts();
         _themeKey = key;
     }
 
@@ -87,50 +98,9 @@ public static class RulerRenderer
         string restText = $"  \u2022  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  \u2022  {angle:0.0}\u00b0";
         var distSz = TextRenderer.MeasureText(g, distText, _distFont!);
         var restSz = TextRenderer.MeasureText(g, restText, _font!);
-        float totalW = distSz.Width + restSz.Width;
         float maxH = Math.Max(distSz.Height, restSz.Height);
-        var mid = new PointF((from.X + to.X) / 2f, (from.Y + to.Y) / 2f);
 
-        // Determine preferred label normal direction (pointing up, or left if horizontal)
-        float lnx = 0, lny = -1;
-        if (dist > 1)
-        {
-            lnx = -dy / dist;
-            lny = dx / dist;
-            if (lny > 0 || (lny == 0 && lnx > 0))
-            {
-                lnx = -lnx;
-                lny = -lny;
-            }
-        }
-
-        float padH = 14;
-        float padV = 8;
-        float w = totalW + padH * 2;
-        float h = maxH + padV * 2;
-        float ext = MathF.Abs(lnx * w / 2f) + MathF.Abs(lny * h / 2f);
-        float d = ext + 14f;
-
-        var labelCenter = new PointF(mid.X + lnx * d, mid.Y + lny * d);
-        var label = new RectangleF(labelCenter.X - w / 2f, labelCenter.Y - h / 2f, w, h);
-
-        // If preferred direction goes off top/left, try the opposite side of the line
-        if (label.Left < 4 || label.Top < 4)
-        {
-            var altCenter = new PointF(mid.X - lnx * d, mid.Y - lny * d);
-            var altLabel = new RectangleF(altCenter.X - w / 2f, altCenter.Y - h / 2f, w, h);
-            if (altLabel.Left >= 4 && altLabel.Top >= 4 &&
-                altLabel.Right <= clientBounds.Width - 4 &&
-                altLabel.Bottom <= clientBounds.Height - 4)
-            {
-                label = altLabel;
-            }
-        }
-
-        // Clamp to client bounds to ensure it never goes off-screen
-        float lx = Math.Clamp(label.X, 4f, clientBounds.Width - w - 4f);
-        float ly = Math.Clamp(label.Y, 4f, clientBounds.Height - h - 4f);
-        label = new RectangleF(lx, ly, w, h);
+        var label = ComputeLabelRect(from, to, clientBounds, distSz, restSz);
 
         PaintLabelShadow(g, label, 8f, 48, 1f);
         using var path = RoundedRect(label, 8f);
@@ -138,8 +108,8 @@ public static class RulerRenderer
         g.DrawPath(_borderPen!, path);
         // Center the text block horizontally within the label
         // Use TextRenderer (GDI) for accurate measurement and rendering
-        var distRect = new Rectangle((int)(label.X + padH), (int)(label.Y + padV), distSz.Width, (int)maxH);
-        var restRect = new Rectangle(distRect.Right, (int)(label.Y + padV), restSz.Width, (int)maxH);
+        var distRect = new Rectangle((int)(label.X + LabelPadH), (int)(label.Y + LabelPadV), distSz.Width, (int)maxH);
+        var restRect = new Rectangle(distRect.Right, (int)(label.Y + LabelPadV), restSz.Width, (int)maxH);
         TextRenderer.DrawText(g, distText, _distFont!, distRect, _accentBrush!.Color,
             TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         TextRenderer.DrawText(g, restText, _font!, restRect, _fgBrush!.Color,
@@ -194,6 +164,86 @@ public static class RulerRenderer
         var labelRect = new Rectangle(midX - 300, midY - 180, 600, 360);
 
         return Rectangle.Union(lineRect, labelRect);
+    }
+
+    /// <summary>Precise dirty rectangle for one live ruler frame: the line plus the *actual*
+    /// floating label rect (not the conservative box). Tight bounds keep the per-frame repaint
+    /// — and the overlay's dimming alpha-blend over it — cheap enough to stay fluid while dragging.</summary>
+    public static Rectangle GetLivePreviewBounds(Point from, Point to, Rectangle clientBounds)
+    {
+        EnsureFonts();
+        float dx = to.X - from.X;
+        float dy = to.Y - from.Y;
+        float dist = MathF.Sqrt(dx * dx + dy * dy);
+        float angle = MathF.Atan2(dy, dx) * 180f / MathF.PI;
+        string distText = $"{(int)dist}px";
+        string restText = $"  •  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  •  {angle:0.0}°";
+        var distSz = TextRenderer.MeasureText(distText, _distFont!);
+        var restSz = TextRenderer.MeasureText(restText, _font!);
+
+        var labelF = ComputeLabelRect(from, to, clientBounds, distSz, restSz);
+        var labelRect = Rectangle.Round(labelF);
+        labelRect.Inflate(22, 22); // cover the drop shadow + anti-aliasing
+
+        int minX = Math.Min(from.X, to.X);
+        int minY = Math.Min(from.Y, to.Y);
+        int maxX = Math.Max(from.X, to.X);
+        int maxY = Math.Max(from.Y, to.Y);
+        var lineRect = Rectangle.FromLTRB(minX - 12, minY - 12, maxX + 12, maxY + 12);
+
+        return Rectangle.Union(lineRect, labelRect);
+    }
+
+    /// <summary>Computes the floating label rectangle for the given ruler, matching Paint()'s layout
+    /// exactly. Factored out so live-drag invalidation can target the label's true position.</summary>
+    private static RectangleF ComputeLabelRect(Point from, Point to, Rectangle clientBounds, Size distSz, Size restSz)
+    {
+        float dx = to.X - from.X;
+        float dy = to.Y - from.Y;
+        float dist = MathF.Sqrt(dx * dx + dy * dy);
+
+        float totalW = distSz.Width + restSz.Width;
+        float maxH = Math.Max(distSz.Height, restSz.Height);
+        var mid = new PointF((from.X + to.X) / 2f, (from.Y + to.Y) / 2f);
+
+        // Determine preferred label normal direction (pointing up, or left if horizontal)
+        float lnx = 0, lny = -1;
+        if (dist > 1)
+        {
+            lnx = -dy / dist;
+            lny = dx / dist;
+            if (lny > 0 || (lny == 0 && lnx > 0))
+            {
+                lnx = -lnx;
+                lny = -lny;
+            }
+        }
+
+        float w = totalW + LabelPadH * 2;
+        float h = maxH + LabelPadV * 2;
+        float ext = MathF.Abs(lnx * w / 2f) + MathF.Abs(lny * h / 2f);
+        float d = ext + 14f;
+
+        var labelCenter = new PointF(mid.X + lnx * d, mid.Y + lny * d);
+        var label = new RectangleF(labelCenter.X - w / 2f, labelCenter.Y - h / 2f, w, h);
+
+        // If preferred direction goes off top/left, try the opposite side of the line
+        if (label.Left < 4 || label.Top < 4)
+        {
+            var altCenter = new PointF(mid.X - lnx * d, mid.Y - lny * d);
+            var altLabel = new RectangleF(altCenter.X - w / 2f, altCenter.Y - h / 2f, w, h);
+            if (altLabel.Left >= 4 && altLabel.Top >= 4 &&
+                altLabel.Right <= clientBounds.Width - 4 &&
+                altLabel.Bottom <= clientBounds.Height - 4)
+            {
+                label = altLabel;
+            }
+        }
+
+        // Clamp to client bounds to ensure it never goes off-screen
+        float lx = Math.Clamp(label.X, 4f, clientBounds.Width - w - 4f);
+        float ly = Math.Clamp(label.Y, 4f, clientBounds.Height - h - 4f);
+        return new RectangleF(lx, ly, w, h);
     }
 
     // ── Internal helpers ──

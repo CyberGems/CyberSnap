@@ -44,11 +44,10 @@ public sealed partial class RegionOverlayForm
         bool isScan = _mode == CaptureMode.Scan;
         bool isSelectionMode = _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;
 
-        // Subtle dimming overlay — always present to indicate overlay is active.
-        // In selection mode, the selected region is excluded (kept clear).
-        var accent = UiChrome.AccentColor;
-        var overlayColor = Color.FromArgb(3, accent.R, accent.G, accent.B);
-
+        // Dimming overlay — shown ONLY while dragging out / confirming a capture selection,
+        // with the selected region excluded so it stands out against the dimmed surroundings.
+        // Outside selection (idle, annotation tools like the ruler) there is NO dim: a full-screen
+        // alpha blend every frame is what made live tool previews stutter. Tune alpha to taste.
         if (_isSelecting || _isConfirmingSelection)
         {
             var activeSelectionRect = _isConfirmingSelection ? _confirmRect : _selectionRect;
@@ -59,7 +58,7 @@ public sealed partial class RegionOverlayForm
                 {
                     g.ExcludeClip(activeSelectionRect);
                 }
-                using (var dimBrush = new SolidBrush(overlayColor))
+                using (var dimBrush = new SolidBrush(Color.FromArgb(120, 0, 0, 0)))
                 {
                     g.FillRectangle(dimBrush, ClientRectangle);
                 }
@@ -67,13 +66,6 @@ public sealed partial class RegionOverlayForm
             finally
             {
                 g.Restore(state);
-            }
-        }
-        else if (!_hasSelection && !_autoDetectActive)
-        {
-            using (var dimBrush = new SolidBrush(overlayColor))
-            {
-                g.FillRectangle(dimBrush, ClientRectangle);
             }
         }
 
@@ -145,7 +137,13 @@ public sealed partial class RegionOverlayForm
         }
 
         if (_mode == CaptureMode.ColorPicker)
-            return; // magnifier is its own layered window, overlay stays static
+        {
+            // The picker magnifier is its own layered window, so the overlay stays static — but the
+            // instruction banner still lives on this form and must be painted before we bail out,
+            // otherwise the Color Picker is the only tool with no banner.
+            _banner?.Render(g);
+            return;
+        }
 
         if (isSelectionMode && !_isSelecting && !_hasSelection && _autoDetectActive && _autoDetectRect.Width > 0)
         {
