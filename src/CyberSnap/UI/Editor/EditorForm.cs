@@ -1047,6 +1047,25 @@ public sealed partial class EditorForm : Form
         _canvas.ResizeCanvas(result.Width, result.Height, result.ScaleContent, result.Anchor);
     }
 
+    private void DoNewCanvas()
+    {
+        if (_canvas.IsDirty)
+        {
+            if (!PromptSaveChanges())
+                return;
+        }
+
+        var result = ThemedNewCanvasDialog.Show(Handle);
+        if (result is null) return;
+
+        var blank = CreateBlankCheckerboard(EditorColors.IsDark, result.Width, result.Height);
+        LoadCapture(blank, null, autoMaximize: false);
+        _canvas.IsDefaultBlank = true;
+        _canvas.IsBlankCanvas = true;
+        _canvas.ZoomFit();
+        _canvas.Invalidate();
+    }
+
     private void DoOpen()
     {
         if (_canvas.IsDirty)
