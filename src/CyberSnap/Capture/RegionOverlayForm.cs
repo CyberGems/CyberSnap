@@ -1078,6 +1078,25 @@ public sealed partial class RegionOverlayForm : Form
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
+        else if (_mode == CaptureMode.Ruler)
+        {
+            var cancelRulerLabel = isSpanish ? "Cancelar dibujo de reglas" : "Cancel ruler drawing";
+            var cancelRulerItem = WindowsMenuRenderer.Item(cancelRulerLabel, iconId: "close", danger: true, iconSize: 24);
+            cancelRulerItem.Click += (_, _) => Cancel();
+            menu.Items.Add(cancelRulerItem);
+
+            menu.Items.Add(new ToolStripSeparator());
+
+            var fsLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
+            var fsItem = WindowsMenuRenderer.Item(fsLabel, iconId: "captureRect", iconSize: 24);
+            fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
+            menu.Items.Add(fsItem);
+
+            var cancelLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            cancelItem.Click += (_, _) => Cancel();
+            menu.Items.Add(cancelItem);
+        }
         else if (_mode == CaptureMode.ColorPicker)
         {
             var cancelLabel = isSpanish ? "Cancelar selección de color" : "Cancel color picker";

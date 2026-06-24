@@ -276,7 +276,7 @@ public sealed partial class RecordingForm : Form
             if (_state == State.Recording)
                 StopRecording();
             else if (_state == State.PreRecording)
-                DiscardRecording();
+                ShowEmptyAreaContextMenu(e.Location);
             else
                 ShowEmptyAreaContextMenu(e.Location);
             return;
