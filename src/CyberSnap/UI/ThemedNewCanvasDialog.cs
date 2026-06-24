@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -43,12 +43,12 @@ internal sealed class ThemedNewCanvasDialog : Window
 
     private static readonly (string Label, int W, int H)[] ResolutionPresets =
     {
-        ("640 Ã— 480", 640, 480),
-        ("800 Ã— 600", 800, 600),
-        ("1024 Ã— 768", 1024, 768),
-        ("1366 Ã— 768", 1366, 768),
-        ("1920 Ã— 1080", 1920, 1080),
-        ("2560 Ã— 1440", 2560, 1440),
+        ("640 × 480", 640, 480),
+        ("800 × 600", 800, 600),
+        ("1024 × 768", 1024, 768),
+        ("1366 × 768", 1366, 768),
+        ("1920 × 1080", 1920, 1080),
+        ("2560 × 1440", 2560, 1440),
     };
 
     private int _width;
@@ -66,6 +66,8 @@ internal sealed class ThemedNewCanvasDialog : Window
     private ColorPickerPopup _colorPicker = null!;
     private DateTime _bgPopupClosedAt;
     private TextBlock _warningText = null!;
+    private Button _createButton = null!;
+    private bool _isOversized;
 
     private readonly System.Collections.Generic.List<(Border Border, int W, int H)> _resolutionChipElements = new();
 
@@ -99,7 +101,12 @@ internal sealed class ThemedNewCanvasDialog : Window
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape) { e.Handled = true; Close(); }
-            else if (e.Key == Key.Enter) { e.Handled = true; Commit(); }
+            else if (e.Key == Key.Enter)
+            {
+                if (_isOversized) return;
+                e.Handled = true;
+                Commit();
+            }
         };
     }
 
@@ -232,8 +239,6 @@ internal sealed class ThemedNewCanvasDialog : Window
             Visibility = Visibility.Collapsed,
         };
         bodyStack.Children.Add(_warningText);
-        UpdateWarning();
-
         // Canvas background: a swatch dropdown that opens the reusable color-picker flyout.
         bodyStack.Children.Add(SectionLabel("Canvas background", 14));
         bodyStack.Children.Add(BuildCanvasBackgroundDropdown());
@@ -248,8 +253,11 @@ internal sealed class ThemedNewCanvasDialog : Window
             Margin = new Thickness(0, 20, 0, 0)
         };
         buttons.Children.Add(BuildButton("Cancel", isPrimary: false, () => Close()));
-        buttons.Children.Add(BuildButton("Create", isPrimary: true, Commit));
+        _createButton = BuildButton("Create", isPrimary: true, Commit);
+        buttons.Children.Add(_createButton);
         root.Children.Add(buttons);
+
+        UpdateWarning();
 
         shell.Child = root;
         shell.MouseLeftButtonDown += (_, e) =>
@@ -265,6 +273,7 @@ internal sealed class ThemedNewCanvasDialog : Window
 
     private void Commit()
     {
+        if (_isOversized) return;
         _width = Math.Clamp(_width, Controls.AnnotationCanvas.MinCanvasSize, Controls.AnnotationCanvas.MaxCanvasSize);
         _height = Math.Clamp(_height, Controls.AnnotationCanvas.MinCanvasSize, Controls.AnnotationCanvas.MaxCanvasSize);
         _confirmed = true;
@@ -302,16 +311,43 @@ internal sealed class ThemedNewCanvasDialog : Window
     private void UpdateWarning()
     {
         bool exceeds = _width > MaxManualWidth || _height > MaxManualHeight;
+        _isOversized = exceeds;
+        _createButton.IsEnabled = !exceeds;
+
+        var accent = Theme.Accent;
         if (exceeds)
         {
+            _warningText.BeginAnimation(OpacityProperty, null);
             _warningText.Text = string.Format(
                 Services.LocalizationService.Translate("Canvas size exceeds 4K resolution"),
                 MaxManualWidth, MaxManualHeight);
             _warningText.Visibility = Visibility.Visible;
+            _warningText.Opacity = 1.0;
+
+            _createButton.Background = Theme.Brush(SecondaryButtonBg);
+            _createButton.BorderBrush = Theme.Brush(SecondaryButtonBorder);
+            _createButton.Foreground = Theme.Brush(Theme.TextMuted);
+            _createButton.Cursor = WpfCursors.Arrow;
         }
         else
         {
-            _warningText.Visibility = Visibility.Collapsed;
+            if (_warningText.Visibility == Visibility.Visible)
+            {
+                var fadeOut = new System.Windows.Media.Animation.DoubleAnimation(1.0, 0.0,
+                    TimeSpan.FromMilliseconds(200));
+                fadeOut.Completed += (_, _) =>
+                {
+                    _warningText.BeginAnimation(OpacityProperty, null);
+                    _warningText.Visibility = Visibility.Collapsed;
+                    _warningText.Opacity = 1.0;
+                };
+                _warningText.BeginAnimation(OpacityProperty, fadeOut);
+            }
+
+            _createButton.Background = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)40 : (byte)28));
+            _createButton.BorderBrush = Theme.Brush(WithAlpha(accent, 170));
+            _createButton.Foreground = Theme.Brush(WpfColor.FromRgb(accent.R, accent.G, accent.B));
+            _createButton.Cursor = WpfCursors.Hand;
         }
     }
 
