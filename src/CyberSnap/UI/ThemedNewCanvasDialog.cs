@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -30,7 +30,7 @@ internal sealed class NewCanvasResult
 }
 
 /// <summary>
-/// Simplified "New canvas" dialog — resolution presets and width/height inputs.
+/// Simplified "New canvas" dialog â€” resolution presets and width/height inputs.
 /// Much leaner than ThemedResizeDialog (no aspect lock, scale, or anchor grid).
 /// </summary>
 internal sealed class ThemedNewCanvasDialog : Window
@@ -38,14 +38,17 @@ internal sealed class ThemedNewCanvasDialog : Window
     private const double GlowMargin = 16;
     private const double PanelWidth = 400;
 
+    private const int MaxManualWidth = 3840;   // 4K UHD
+    private const int MaxManualHeight = 2160;  // 4K UHD
+
     private static readonly (string Label, int W, int H)[] ResolutionPresets =
     {
-        ("640 × 480", 640, 480),
-        ("800 × 600", 800, 600),
-        ("1024 × 768", 1024, 768),
-        ("1366 × 768", 1366, 768),
-        ("1920 × 1080", 1920, 1080),
-        ("2560 × 1440", 2560, 1440),
+        ("640 Ã— 480", 640, 480),
+        ("800 Ã— 600", 800, 600),
+        ("1024 Ã— 768", 1024, 768),
+        ("1366 Ã— 768", 1366, 768),
+        ("1920 Ã— 1080", 1920, 1080),
+        ("2560 Ã— 1440", 2560, 1440),
     };
 
     private int _width;
@@ -62,6 +65,7 @@ internal sealed class ThemedNewCanvasDialog : Window
     private Popup _bgPopup = null!;
     private ColorPickerPopup _colorPicker = null!;
     private DateTime _bgPopupClosedAt;
+    private TextBlock _warningText = null!;
 
     private readonly System.Collections.Generic.List<(Border Border, int W, int H)> _resolutionChipElements = new();
 
@@ -129,7 +133,7 @@ internal sealed class ThemedNewCanvasDialog : Window
         return null;
     }
 
-    // ── Content ────────────────────────────────────────────────────────────
+    // â”€â”€ Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private FrameworkElement BuildContent()
     {
@@ -216,6 +220,20 @@ internal sealed class ThemedNewCanvasDialog : Window
         inputsRow.Children.Add(heightCol);
         bodyStack.Children.Add(inputsRow);
 
+        // Warning for oversized canvas
+        _warningText = new TextBlock
+        {
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Theme.Brush(System.Windows.Media.Color.FromRgb(248, 113, 113)),
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Left,
+            Margin = new Thickness(0, 8, 0, 0),
+            Visibility = Visibility.Collapsed,
+        };
+        bodyStack.Children.Add(_warningText);
+        UpdateWarning();
+
         // Canvas background: a swatch dropdown that opens the reusable color-picker flyout.
         bodyStack.Children.Add(SectionLabel("Canvas background", 14));
         bodyStack.Children.Add(BuildCanvasBackgroundDropdown());
@@ -254,18 +272,20 @@ internal sealed class ThemedNewCanvasDialog : Window
         Close();
     }
 
-    // ── Input handling ─────────────────────────────────────────────────────
+    // â”€â”€ Input handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private void OnWidthChanged(int v)
     {
         if (_suppress) return;
         _width = v;
+        UpdateWarning();
     }
 
     private void OnHeightChanged(int v)
     {
         if (_suppress) return;
         _height = v;
+        UpdateWarning();
     }
 
     private void ApplyResolution(int w, int h)
@@ -275,7 +295,24 @@ internal sealed class ThemedNewCanvasDialog : Window
         _height = h;
         SetBoxText(_widthBox, w);
         SetBoxText(_heightBox, h);
+
         _suppress = false;
+    }
+
+    private void UpdateWarning()
+    {
+        bool exceeds = _width > MaxManualWidth || _height > MaxManualHeight;
+        if (exceeds)
+        {
+            _warningText.Text = string.Format(
+                Services.LocalizationService.Translate("Canvas size exceeds 4K resolution"),
+                MaxManualWidth, MaxManualHeight);
+            _warningText.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            _warningText.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void HighlightResolutionChip(Border active)
@@ -290,7 +327,7 @@ internal sealed class ThemedNewCanvasDialog : Window
         }
     }
 
-    // ── Canvas background ──────────────────────────────────────────────────
+    // â”€â”€ Canvas background â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private FrameworkElement BuildCanvasBackgroundDropdown()
     {
@@ -340,7 +377,7 @@ internal sealed class ThemedNewCanvasDialog : Window
             Child = grid,
         };
         // CornerRadius alone doesn't clip children, so the swatch would poke out square at the
-        // rounded corners — clip the whole pill to a rounded rect instead.
+        // rounded corners â€” clip the whole pill to a rounded rect instead.
         dropdown.SizeChanged += (_, e) =>
             dropdown.Clip = new RectangleGeometry(new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), 6, 6);
         // Toggle on mouse-UP: opening on mouse-down lets the popup (StaysOpen=false) read the
@@ -358,7 +395,7 @@ internal sealed class ThemedNewCanvasDialog : Window
                 : (System.Drawing.Color?)null;
             RefreshSwatch();
         };
-        // Accept pressed, or a screen pick started → close the flyout.
+        // Accept pressed, or a screen pick started â†’ close the flyout.
         _colorPicker.CloseRequested += () => _bgPopup.IsOpen = false;
         _bgPopup = new Popup
         {
@@ -405,7 +442,7 @@ internal sealed class ThemedNewCanvasDialog : Window
             ColorPickerPopup.PaintCheckerboard(dc, w, h);
     }
 
-    // ── UI builders ────────────────────────────────────────────────────────
+    // â”€â”€ UI builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private FrameworkElement SectionLabel(string text, double topMargin) => new TextBlock
     {
@@ -586,7 +623,7 @@ internal sealed class ThemedNewCanvasDialog : Window
         return button;
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────────
+    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private static void SetBoxText(WpfTextBox box, int value)
     {
