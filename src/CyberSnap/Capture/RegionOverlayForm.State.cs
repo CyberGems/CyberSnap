@@ -377,8 +377,16 @@ public sealed partial class RegionOverlayForm
         _nextStepNumber = maxStep + 1;
     }
 
+    private const int MaxAnnotations = 200;
+
     private void AddAnnotation(Annotation annotation)
     {
+        if (_undoStack.Count >= MaxAnnotations)
+        {
+            ShowToolBanner(
+                string.Format(LocalizationService.Translate("Maximum annotations reached ({0})"), MaxAnnotations));
+            return;
+        }
         PushEditCommand(new AddAnnotationCommand(annotation));
     }
 
