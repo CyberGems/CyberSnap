@@ -9,6 +9,7 @@ public sealed partial class RegionOverlayForm
     protected override void OnMouseDown(MouseEventArgs e)
     {
         Focus();
+        DismissQuickStartGuide();
         if (e.Button == MouseButtons.Right)
         {
             if (_isConfirmingSelection)
