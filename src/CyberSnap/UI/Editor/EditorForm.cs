@@ -736,6 +736,7 @@ public sealed partial class EditorForm : Form
     {
         using var dlg = new SaveFileDialog
         {
+            Title = LocalizationService.Translate("Save project as..."),
             Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp",
             FileName = string.IsNullOrWhiteSpace(_savedFilePath)
                 ? $"CyberSnap_Editor_{DateTime.Now:yyyyMMdd_HHmmss}.csnp"
@@ -773,6 +774,7 @@ public sealed partial class EditorForm : Form
 
         using var dlg = new SaveFileDialog
         {
+            Title = LocalizationService.Translate("Export canvas as..."),
             Filter = filter,
             FileName = defaultName,
             DefaultExt = ext,
@@ -826,6 +828,7 @@ public sealed partial class EditorForm : Form
 
         using var dlg = new SaveFileDialog
         {
+            Title = LocalizationService.Translate("Export canvas as..."),
             Filter = filter,
             FileName = defaultName,
             DefaultExt = ext,
@@ -1092,7 +1095,7 @@ public sealed partial class EditorForm : Form
         using (var dlg = new OpenFileDialog
         {
             Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tiff|All Files|*.*",
-            Title = LocalizationService.Translate("Open Image")
+            Title = LocalizationService.Translate("Open a project or image")
         })
         {
             if (dlg.ShowDialog(this) == DialogResult.OK)
