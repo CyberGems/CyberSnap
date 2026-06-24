@@ -426,7 +426,6 @@ public sealed partial class EditorForm : Form
             UpdateWindowChromeRegion();
             Activate();
             BringToFront();
-            _canvas.Focus();
             RefreshUi();
             UpdateStatusBarResponsiveLayout();
 
@@ -434,6 +433,8 @@ public sealed partial class EditorForm : Form
             _enableComposited = false;
             UpdateStyles();
             RefreshLayoutAndRedraw();
+
+            _canvas.Focus();
         };
     }
 
@@ -1298,7 +1299,48 @@ public sealed partial class EditorForm : Form
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
         if (keyData == (Keys.Control | Keys.V)) { DoPaste(); return true; }
         if (keyData == (Keys.Control | Keys.A)) { _canvas.SelectAll(); return true; }
+
+        // Canvas shortcuts: mirrored from AnnotationCanvas.OnKeyDown so they work
+        // even when the canvas does not have keyboard focus (WPF-hosted WinForms issue).
+        if (keyData == (Keys.Control | Keys.Z)) { _canvas.Undo(); return true; }
+        if (keyData == (Keys.Control | Keys.Shift | Keys.Z) || keyData == (Keys.Control | Keys.Y))
+        { _canvas.Redo(); return true; }
+        if (keyData == (Keys.Control | Keys.D)) { _canvas.DuplicateSelectionInternal(); return true; }
+
+        // Ensure canvas gets focus for single-key shortcuts.
+        if (!_canvas.Focused && keyData is Keys.Space or Keys.Delete or Keys.Escape
+            or Keys.Oemplus or Keys.Add or Keys.OemMinus or Keys.Subtract
+            or Keys.D0 or Keys.NumPad0 or Keys.F2)
+        {
+            _canvas.Focus();
+        }
+
         return base.ProcessCmdKey(ref msg, keyData);
+    }
+
+    protected override bool ProcessKeyPreview(ref Message m)
+    {
+        // Route all key messages to the canvas even when it doesn't have focus.
+        // This is the reliable fallback for WPF-hosted WinForms where ProcessCmdKey
+        // may not be invoked and the canvas can lose focus unexpectedly.
+        if (m.Msg is 0x100 or 0x104) // WM_KEYDOWN / WM_SYSKEYDOWN
+        {
+            var key = (Keys)(int)m.WParam;
+            if (Control.ModifierKeys == Keys.Control && key is Keys.Z)
+            {
+                if (Control.ModifierKeys.HasFlag(Keys.Shift)) _canvas.Redo(); else _canvas.Undo();
+                return true;
+            }
+            if (Control.ModifierKeys == Keys.Control && key is Keys.Y) { _canvas.Redo(); return true; }
+            if (Control.ModifierKeys == Keys.Control && key is Keys.D) { _canvas.DuplicateSelectionInternal(); return true; }
+            if (Control.ModifierKeys == Keys.Control && key is Keys.A) { _canvas.SelectAll(); return true; }
+            if (key is Keys.Space && !_canvas.Focused) { _canvas.Focus(); return false; }
+            if (key is Keys.Delete or Keys.Escape or Keys.F2 or Keys.Oemplus or Keys.Add or Keys.OemMinus or Keys.Subtract or Keys.D0 or Keys.NumPad0)
+            {
+                if (!_canvas.Focused) _canvas.Focus();
+            }
+        }
+        return base.ProcessKeyPreview(ref m);
     }
 
 

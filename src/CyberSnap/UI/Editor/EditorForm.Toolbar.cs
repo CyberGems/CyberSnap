@@ -1302,7 +1302,7 @@ public sealed partial class EditorForm
             Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
             20, false);
 
-        var newCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New canvas..."), iconId: "document");
+        var newCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New canvas..."), shortcut: "Ctrl+N", iconId: "document");
         newCanvasItem.Click += (_, _) => DoNewCanvas();
 
         var newCaptureItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New capture..."), iconId: "captureRect");
@@ -1335,7 +1335,7 @@ public sealed partial class EditorForm
         newSubmenu.DropDownItems.Add(newFromClipboardItem);
         WindowsMenuRenderer.NormalizeDropDownWidths(newSubmenu, minWidth: 200);
 
-        var openItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Open..."), iconId: "folder");
+        var openItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Open..."), shortcut: "Ctrl+O", iconId: "folder");
         openItem.Click += (_, _) => DoOpen();
 
         var openRecentItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open recent"), showImages: true);
@@ -1343,32 +1343,32 @@ public sealed partial class EditorForm
             Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
             20, false);
 
-        var saveItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save"), iconId: "save");
+        var saveItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save"), shortcut: "Ctrl+S", iconId: "save");
         saveItem.Click += (_, _) => DoSave();
 
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project as..."), iconId: "save");
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
 
-        var importItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Import"), iconId: "import");
+        var importItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Import"), shortcut: "Ctrl+I", iconId: "import");
         importItem.Click += (_, _) => DoImport();
 
-        var exportItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export"), iconId: "export");
+        var exportItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export"), shortcut: "Ctrl+Shift+S", iconId: "export");
         exportItem.Click += (_, _) => DoSaveAs();
 
         var resizeCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         resizeCanvasItem.Click += (_, _) => DoResizeCanvas();
 
         // ── Standard edit actions ──
-        var copyItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy"), iconId: "copy");
+        var copyItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy"), shortcut: "Ctrl+C", iconId: "copy");
         copyItem.Click += (_, _) => DoCopy();
 
-        var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
+        var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), shortcut: "Ctrl+V", iconId: "paste");
         pasteItem.Click += (_, _) => DoPaste();
 
-        var duplicateItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Duplicate"), iconId: "copy");
+        var duplicateItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Duplicate"), shortcut: "Ctrl+D", iconId: "copy");
         duplicateItem.Click += (_, _) => _canvas.DuplicateSelectionInternal();
 
-        var deleteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Delete"), iconId: "trash", danger: true);
+        var deleteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Delete"), shortcut: "Del", iconId: "trash", danger: true);
         deleteItem.Click += (_, _) =>
         {
             if (_canvas.MultiSelectedIndicesInternal.Count > 1)
