@@ -238,6 +238,23 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(showBarItem);
         }
 
+        // Help banners toggle
+        var bannersEnabled = settings.ShowToolBanners;
+        var bannersText = isSpanish ? "Mostrar banners de ayuda" : "Show help banners";
+        var bannersItem = WindowsMenuRenderer.Item(bannersText, iconId: bannersEnabled ? "check" : null);
+        bannersItem.Click += (s, e) =>
+        {
+            var s2 = Services.SettingsService.LoadStatic();
+            if (s2 == null) return;
+            s2.ShowToolBanners = !s2.ShowToolBanners;
+            StandaloneToolBanner.Enabled = s2.ShowToolBanners;
+            var svc = new Services.SettingsService(null);
+            svc.Settings = s2;
+            svc.Save();
+            _toolbarContextMenu?.Close();
+        };
+        menu.Items.Add(bannersItem);
+
         // 4. Close/Cancel menu
         menu.Items.Add(new ToolStripSeparator());
         var closeMenuText = isSpanish ? "Cerrar menú" : "Close menu";

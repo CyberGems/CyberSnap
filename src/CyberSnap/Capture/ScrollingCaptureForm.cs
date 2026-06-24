@@ -146,7 +146,7 @@ public sealed partial class ScrollingCaptureForm : Form
         else if (_screenshot is not null)
         {
             _hintBanner = new StandaloneToolBanner(
-                "Drag to select scrolling area",
+                "Drag to select scrolling area · Right-click or Esc to cancel",
                 Screen.FromPoint(Cursor.Position).WorkingArea,
                 Bounds,
                 onInvalidate: () => Invalidate(),
