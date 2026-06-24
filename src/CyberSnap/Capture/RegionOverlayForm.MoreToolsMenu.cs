@@ -239,19 +239,44 @@ public sealed partial class RegionOverlayForm
         }
 
         // Help banners toggle
+        menu.Items.Add(new ToolStripSeparator());
         var bannersEnabled = settings.ShowToolBanners;
         var bannersText = isSpanish ? "Mostrar banners de ayuda" : "Show help banners";
         var bannersItem = WindowsMenuRenderer.Item(bannersText, iconId: bannersEnabled ? "check" : null);
         bannersItem.Click += (s, e) =>
         {
-            var s2 = Services.SettingsService.LoadStatic();
-            if (s2 == null) return;
-            s2.ShowToolBanners = !s2.ShowToolBanners;
-            StandaloneToolBanner.Enabled = s2.ShowToolBanners;
             var svc = new Services.SettingsService(null);
-            svc.Settings = s2;
+            svc.Load();
+            var newValue = !svc.Settings.ShowToolBanners;
+            svc.Settings.ShowToolBanners = newValue;
+            StandaloneToolBanner.Enabled = newValue;
             svc.Save();
-            _toolbarContextMenu?.Close();
+
+            // Blink the icon twice to confirm the toggle before closing
+            var blinkTimer = new System.Windows.Forms.Timer { Interval = 100 };
+            int blinks = 0;
+            var checkColor = System.Drawing.Color.FromArgb(255,
+                CyberSnap.UI.Theme.TextPrimary.R,
+                CyberSnap.UI.Theme.TextPrimary.G,
+                CyberSnap.UI.Theme.TextPrimary.B);
+            var onImage = Helpers.FluentIcons.RenderBitmap("check", checkColor, 20, active: true);
+            // Blink between the new state icon and its opposite so both enable
+            // and disable produce a visible flash.
+            var offImage = newValue ? null : onImage;
+            var showImage = newValue ? onImage : null;
+            blinkTimer.Tick += (_, _) =>
+            {
+                blinks++;
+                if (blinks > 3)
+                {
+                    blinkTimer.Stop();
+                    blinkTimer.Dispose();
+                    _toolbarContextMenu?.Close();
+                    return;
+                }
+                bannersItem.Image = blinks % 2 == 1 ? showImage : offImage;
+            };
+            blinkTimer.Start();
         };
         menu.Items.Add(bannersItem);
 
