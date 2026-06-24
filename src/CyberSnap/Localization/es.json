@@ -125,6 +125,7 @@
   "Behavior": "Comportamiento",
   "Capture behavior": "Comportamiento de captura",
   "Scrolling capture": "Captura con desplazamiento",
+  "Select scrolling area": "Selecciona el área de desplazamiento",
   "Window detection": "Detección de ventanas",
   "Detect windows when hovering before selection.": "Detecta ventanas al pasar el cursor antes de seleccionar.",
   "Off": "Apagado",
