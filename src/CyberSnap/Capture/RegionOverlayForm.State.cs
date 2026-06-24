@@ -388,7 +388,7 @@ public sealed partial class RegionOverlayForm
         ArrowAnnotation arr => RectFromPoints(arr.From, arr.To, 8),
         CurvedArrowAnnotation ca => BoundsOfPoints(ca.Points, 8),
         LineAnnotation ln => RectFromPoints(ln.From, ln.To, 6),
-        RulerAnnotation ru => GetRulerPaintBounds(ru.From, ru.To),
+        RulerAnnotation ru => RulerRenderer.GetSelectionBounds(ru.From, ru.To),
         DrawStroke ds => BoundsOfPoints(ds.Points, 4),
         BlurRect br => br.Rect,
         HighlightAnnotation hl => hl.Rect,

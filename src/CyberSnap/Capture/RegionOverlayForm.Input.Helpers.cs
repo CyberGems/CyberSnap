@@ -261,6 +261,8 @@ public sealed partial class RegionOverlayForm
             ShowToolBanner(LocalizationService.Translate("Select scrolling area") + suffix, persistent: false);
         else if (m == CaptureMode.Ruler)
             ShowToolBanner(LocalizationService.Translate("Click & drag to measure") + suffix, persistent: false);
+        else if (m == CaptureMode.ColorPicker)
+            ShowToolBanner(LocalizationService.Translate("Click a pixel to pick its color") + suffix, persistent: false);
         else
             HideToolBanner();
 
