@@ -247,6 +247,11 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
+        if (m == CaptureMode.ScrollCapture)
+            ShowToolBanner(LocalizationService.Translate("Select scrolling area"), persistent: true);
+        else
+            HideToolBanner();
+
         Invalidate(Rectangle.Union(InflateForRepaint(GetEmojiPickerBounds(), 12), InflateForRepaint(GetColorPickerBounds(), 12)));
         RefreshToolbar();
     }

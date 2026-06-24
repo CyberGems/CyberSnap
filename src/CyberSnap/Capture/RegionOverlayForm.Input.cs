@@ -506,6 +506,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Sticker:
             case CaptureMode.Upscale:
                 HideToolbarForCaptureTool();
+                HideToolBanner();
                 var previousSelectionRect = _selectionRect;
                 var previousAutoDetectRect = _autoDetectRect;
                 bool previousSelectionVisible = _hasSelection;
