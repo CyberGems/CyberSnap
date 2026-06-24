@@ -902,13 +902,13 @@
                 <StackPanel>
                     <RadioButton x:Name="SettingsTab" Content="General" Tag="General" GroupName="Main"
                                  IsChecked="True" Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="ToastTab" Content="Notifications" Tag="Notifications" GroupName="Main"
-                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="CaptureTab" Content="Capture" Tag="Capture" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="RecordingTab" Content="Video" Tag="Video" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="OcrTab" Content="OCR" Tag="OCR" GroupName="Main"
+                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
+                    <RadioButton x:Name="ToastTab" Content="Notifications" Tag="Notifications" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="HotkeysTab" Content="Hotkeys" Tag="Hotkeys" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
@@ -917,9 +917,9 @@
                     <RadioButton x:Name="EditorTab" Content="Editor" Tag="Editor" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
 
-                    <RadioButton x:Name="AchievementsTab" Content="Achievements" Tag="Achievements" GroupName="Main"
-                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="HistoryTab" Content="Gallery" Tag="Gallery" GroupName="Main"
+                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
+                    <RadioButton x:Name="AchievementsTab" Content="Achievements" Tag="Achievements" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="AboutTab" Content="About" Tag="About" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
