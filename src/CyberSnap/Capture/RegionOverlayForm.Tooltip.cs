@@ -66,6 +66,33 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
+        // Menu activator (▼ chevron) tooltip
+        if (_hoveredMenuActivator)
+        {
+            if (_tooltipButton == 998)
+                return;
+
+            _tooltipButton = 998;
+            _toolbarToolTip ??= new WindowsToolTip();
+
+            var isSpanish = string.Equals(
+                Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
+                "es", StringComparison.OrdinalIgnoreCase);
+            var activatorText = isSpanish
+                ? "Más opciones\nMostrar/ocultar banners de ayuda"
+                : "More options\nToggle help banners";
+
+            var activatorAnchor = new Rectangle(
+                _virtualBounds.X + _menuActivatorRect.X,
+                _virtualBounds.Y + _menuActivatorRect.Y,
+                _menuActivatorRect.Width,
+                _menuActivatorRect.Height);
+            _toolbarToolTip.ShowNear(this, activatorText, activatorAnchor, IsBottomDock);
+            _tooltipVisible = true;
+            _tooltipShowTime = DateTime.UtcNow;
+            return;
+        }
+
         if (_tooltipButton == _hoveredButton)
             return;
 

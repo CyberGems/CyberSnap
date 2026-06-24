@@ -144,12 +144,14 @@ public sealed class QuickStartGuide : Form
             {
                 new TipDef("captureRect", "Click derecho → ocultar tool del toolbar"),
                 new TipDef("add", "Click ▼ → opciones del toolbar"),
+                new TipDef(null, "Click ▼ → mostrar/ocultar banners de ayuda"),
                 new TipDef("sticker", "Las anotaciones aparecen tras capturar"),
             }
             : new[]
             {
                 new TipDef("captureRect", "Right-click → hide tool from toolbar"),
                 new TipDef("add", "Click ▼ → toolbar options"),
+                new TipDef(null, "Click ▼ → toggle help banners"),
                 new TipDef("sticker", "Annotations appear after capture"),
             };
 
