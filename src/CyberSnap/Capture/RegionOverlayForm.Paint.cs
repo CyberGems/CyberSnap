@@ -83,8 +83,11 @@ public sealed partial class RegionOverlayForm
             DrawMoveHandles(g, hoverBounds, isSelected: false, moveOnly: !IsResizable(hovered));
         }
 
-        // Move tool: draw selection highlight and handles
-        if (IsDrawingOrMoveMode(_mode) && _multiSelectedIndices.Count > 1)
+        // Move tool: draw selection highlight and handles.
+        // Ruler is not a drawing/move mode, but right-clicking a ruler selects it for its context
+        // menu — so include Ruler here too, otherwise the selection frame never shows on right-click.
+        bool showSelectionFrame = IsDrawingOrMoveMode(_mode) || _mode == CaptureMode.Ruler;
+        if (showSelectionFrame && _multiSelectedIndices.Count > 1)
         {
             foreach (int idx in _multiSelectedIndices)
             {
@@ -96,7 +99,7 @@ public sealed partial class RegionOverlayForm
                 }
             }
         }
-        else if (IsDrawingOrMoveMode(_mode) && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
+        else if (showSelectionFrame && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
         {
             var selected = _selectPreviewAnnotation ?? _undoStack[_selectedAnnotationIndex];
             var bounds = GetAnnotationBounds(selected);
