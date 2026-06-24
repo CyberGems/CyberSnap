@@ -41,6 +41,7 @@ public sealed class QuickStartGuide : Form
     private string _footerText = "";
     private string _brandText = "";
     private int _totalHeight;
+    private Rectangle _closeRect;
 
     public QuickStartGuide()
     {
@@ -71,7 +72,18 @@ public sealed class QuickStartGuide : Form
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
+        if (_closeRect.Contains(e.Location))
+        {
+            Close();
+            return;
+        }
         Close();
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        Cursor = _closeRect.Contains(e.Location) ? Cursors.Hand : Cursors.Default;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -242,10 +254,21 @@ public sealed class QuickStartGuide : Form
         int contentW = Width - PadX * 2;
 
         // ── Header ──
-        var headerRect = new Rectangle(PadX, curY, contentW, HeaderHeight);
+        const int closeBtnSize = 16;
+        _closeRect = new Rectangle(Width - PadX - closeBtnSize - 4, PadY + (HeaderHeight - closeBtnSize) / 2,
+                                    closeBtnSize + 8, closeBtnSize + 8);
+        var headerRect = new Rectangle(PadX, curY, contentW - closeBtnSize - 12, HeaderHeight);
         TextRenderer.DrawText(g, _title, _headerFont, headerRect,
             UiChrome.AccentColor,
             TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+
+        // Close button (X)
+        FluentIcons.DrawIcon(g, "close",
+            new RectangleF(_closeRect.X + 4, _closeRect.Y + 4, closeBtnSize, closeBtnSize),
+            Color.FromArgb(150, UiChrome.SurfaceTextSecondary.R,
+                               UiChrome.SurfaceTextSecondary.G,
+                               UiChrome.SurfaceTextSecondary.B),
+            iconInset: 0f);
         curY += HeaderHeight;
 
         // Separator
