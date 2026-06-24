@@ -64,8 +64,8 @@ public sealed partial class ScrollingCaptureForm : Form
     private int _bestMatchIndex;
     private int _bestIgnoreBottomOffset;
     private int _consecutiveDuplicates;
-    private int _consecutiveNonAccepted;
-    private const int MaxConsecutiveNonAccepted = 8;
+    private DateTime _lastAcceptedFrameTime;
+    private static readonly TimeSpan NoProgressTimeout = TimeSpan.FromSeconds(1.5);
     private enum FrameCaptureResult { Accepted, Pending, Duplicate, Rejected, Failed }
 
     // Control bar
@@ -328,6 +328,8 @@ public sealed partial class ScrollingCaptureForm : Form
                 _consecutiveDuplicates = 0;
             }
 
+            _lastAcceptedFrameTime = DateTime.UtcNow;
+
             CaptureFrame(forceAccept: true);
 
             if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
@@ -350,7 +352,7 @@ public sealed partial class ScrollingCaptureForm : Form
         if (_captureTimer is not null)
             return;
 
-        int interval = _captureMode == ScrollingCaptureMode.AssistAutoscroll ? 150 : CaptureIntervalMs;
+        int interval = CaptureIntervalMs;
         _captureTimer = new System.Windows.Forms.Timer { Interval = interval };
         _captureTimer.Tick += (_, _) => HandleTimerTick();
         _captureTimer.Start();
@@ -358,28 +360,25 @@ public sealed partial class ScrollingCaptureForm : Form
 
     private void HandleTimerTick()
     {
+        // Stop if no frame has been accepted for too long (prevents infinite scroll).
+        if (DateTime.UtcNow - _lastAcceptedFrameTime > NoProgressTimeout)
+        {
+            StopCapturing();
+            return;
+        }
+
         if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
         {
             var result = CaptureFrame(forceAccept: false);
             if (result == FrameCaptureResult.Accepted)
             {
                 _consecutiveDuplicates = 0;
-                _consecutiveNonAccepted = 0;
+                _lastAcceptedFrameTime = DateTime.UtcNow;
             }
             else if (result == FrameCaptureResult.Duplicate)
             {
                 _consecutiveDuplicates++;
-                _consecutiveNonAccepted++;
-                if (_consecutiveDuplicates >= 3 || _consecutiveNonAccepted >= MaxConsecutiveNonAccepted)
-                {
-                    StopCapturing();
-                    return;
-                }
-            }
-            else
-            {
-                _consecutiveNonAccepted++;
-                if (_consecutiveNonAccepted >= MaxConsecutiveNonAccepted)
+                if (_consecutiveDuplicates >= 3)
                 {
                     StopCapturing();
                     return;
@@ -394,12 +393,13 @@ public sealed partial class ScrollingCaptureForm : Form
             var result = CaptureFrame(forceAccept: false);
             if (result == FrameCaptureResult.Accepted)
             {
-                _consecutiveNonAccepted = 0;
+                _consecutiveDuplicates = 0;
+                _lastAcceptedFrameTime = DateTime.UtcNow;
             }
-            else
+            else if (result == FrameCaptureResult.Duplicate)
             {
-                _consecutiveNonAccepted++;
-                if (_consecutiveNonAccepted >= MaxConsecutiveNonAccepted)
+                _consecutiveDuplicates++;
+                if (_consecutiveDuplicates >= 3)
                 {
                     StopCapturing();
                     return;
@@ -1050,7 +1050,7 @@ public sealed partial class ScrollingCaptureForm : Form
             _mode = mode;
             _isCapturing = false;
             _status = mode == ScrollingCaptureMode.AssistAutoscroll ? "Autoscroll  —  ready"
-                : mode == ScrollingCaptureMode.Automatic ? "Auto  —  ready" : "Manual  —  ready";
+                : "Manual  —  ready";
 
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
@@ -1302,7 +1302,6 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             string label = count == 1 ? "frame" : "frames";
             return _mode == ScrollingCaptureMode.AssistAutoscroll ? $"Autoscroll: {count} {label}"
-                : _mode == ScrollingCaptureMode.Automatic ? $"Auto: {count} {label}"
                 : $"Manual: {count} {label}";
         }
     }

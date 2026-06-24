@@ -1000,7 +1000,8 @@ public sealed partial class RegionOverlayForm
                 {
                     _autoDetectRect = Rectangle.Empty;
                     _autoDetectActive = false;
-                    if (ConfirmRegionBeforeCapture)
+                    // Scroll capture skips confirm — goes straight to the scrolling control bar.
+                    if (ConfirmRegionBeforeCapture && !isScroll)
                         EnterConfirmMode(_selectionRect);
                     else if (isOcr) OcrRegionSelected?.Invoke(_selectionRect);
                     else if (isScan) ScanRegionSelected?.Invoke(_selectionRect);

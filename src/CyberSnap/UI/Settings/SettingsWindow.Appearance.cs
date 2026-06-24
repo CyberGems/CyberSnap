@@ -194,6 +194,8 @@ public partial class SettingsWindow
                 ScrollingCaptureMode.Manual => 1,
                 _ => 0
             };
+            ScrollCaptureModeIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture",
+                System.Drawing.Color.FromArgb(Theme.TextPrimary.A, Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B), 22);
             WindowDetectionCheck.IsChecked = s.WindowDetection != WindowDetectionMode.Off;
             ShowCursorCheck.IsChecked = s.ShowCursor;
             AnnotationStrokeShadowCheck.IsChecked = s.AnnotationStrokeShadow;
