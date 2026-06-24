@@ -238,6 +238,21 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(showBarItem);
         }
 
+        // Full-screen capture & cancel — available from every toolbar context menu
+        menu.Items.Add(new ToolStripSeparator());
+        var fsCaptureLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
+        var fsItem = WindowsMenuRenderer.Item(fsCaptureLabel, iconId: "captureRect");
+        fsItem.Click += (s, e) =>
+        {
+            RegionSelected?.Invoke(_virtualBounds);
+        };
+        menu.Items.Add(fsItem);
+
+        var cancelCaptureLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
+        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close");
+        cancelCapItem.Click += (s, e) => Cancel();
+        menu.Items.Add(cancelCapItem);
+
         // Help banners toggle
         menu.Items.Add(new ToolStripSeparator());
         var bannersEnabled = settings.ShowToolBanners;
