@@ -257,12 +257,10 @@ public sealed partial class RegionOverlayForm
             ShowToolBanner(LocalizationService.Translate("Select text area to recognize") + suffix, persistent: false);
         else if (m == CaptureMode.Scan)
             ShowToolBanner(LocalizationService.Translate("Select QR or barcode to scan") + suffix, persistent: false);
-        else if (m == CaptureMode.Sticker)
-            ShowToolBanner(LocalizationService.Translate("Select a region to make a sticker") + suffix, persistent: false);
-        else if (m == CaptureMode.Upscale)
-            ShowToolBanner(LocalizationService.Translate("Select a region to upscale") + suffix, persistent: false);
         else if (m == CaptureMode.ScrollCapture)
             ShowToolBanner(LocalizationService.Translate("Select scrolling area") + suffix, persistent: false);
+        else if (m == CaptureMode.Ruler)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to measure") + suffix, persistent: false);
         else
             HideToolBanner();
 
