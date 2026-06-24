@@ -172,6 +172,7 @@ public partial class SettingsWindow
             UpdateImageIndexVisibility(s.AutoIndexImages);
             DisableAnimationsCheck.IsChecked = s.DisableAnimations;
             ShowToolBannersCheck.IsChecked = s.ShowToolBanners;
+            ConfirmBeforeExitCheck.IsChecked = s.ConfirmBeforeExit;
             SelectAppTheme(s.ThemeMode);
             SelectUiScale(s.UiScale);
             OcrAutoCopyCheck.IsChecked = s.OcrAutoCopyToClipboard;

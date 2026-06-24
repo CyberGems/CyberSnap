@@ -191,6 +191,21 @@ public partial class SettingsWindow
             value => StandaloneToolBanner.Enabled = value);
     }
 
+    private void ConfirmBeforeExitCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.ConfirmBeforeExit;
+        var selected = ConfirmBeforeExitCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.confirm-before-exit",
+            "Confirm before exit",
+            previous,
+            selected,
+            value => _settingsService.Settings.ConfirmBeforeExit = value,
+            value => ConfirmBeforeExitCheck.IsChecked = value);
+    }
+
     private void DisableAnimationsCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressGeneralPreferenceChange) return;

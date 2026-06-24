@@ -2354,6 +2354,26 @@
                                           Checked="ShowToolBannersCheck_Changed" Unchecked="ShowToolBannersCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Confirm Before Exit -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE711;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Confirm before exit" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Show a confirmation menu on right-click before canceling capture." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ConfirmBeforeExitCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Confirm before exit"
+                                          ToolTip="Show a confirmation menu on right-click before canceling capture."
+                                          Checked="ConfirmBeforeExitCheck_Changed" Unchecked="ConfirmBeforeExitCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <!-- Disable Animated Effects -->
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
