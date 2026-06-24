@@ -182,7 +182,7 @@ public sealed partial class RegionOverlayForm
     }
 
     internal static Rectangle GetRulerPaintBounds(Point from, Point to)
-        => RulerRenderer.GetPaintBounds(from, to);
+        => RulerRenderer.GetSelectionBounds(from, to);
 
     /// <summary>Returns conservative bounds for whatever live preview is currently being painted.
     /// Used as a smear-prevention fallback so the next invalidate always clears the previous paint.</summary>

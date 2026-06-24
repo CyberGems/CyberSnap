@@ -167,6 +167,24 @@ public static class RulerRenderer
         return Rectangle.Union(lineRect, labelRect);
     }
 
+    /// <summary>Tighter bounds for hit-testing and selection frame — covers the line
+    /// plus the measurement label without the excessive paint invalidation margin.</summary>
+    public static Rectangle GetSelectionBounds(Point from, Point to)
+    {
+        int minX = Math.Min(from.X, to.X);
+        int minY = Math.Min(from.Y, to.Y);
+        int maxX = Math.Max(from.X, to.X);
+        int maxY = Math.Max(from.Y, to.Y);
+
+        var lineRect = Rectangle.FromLTRB(minX - 16, minY - 16, maxX + 16, maxY + 16);
+
+        int midX = (from.X + to.X) / 2;
+        int midY = (from.Y + to.Y) / 2;
+        var labelRect = new Rectangle(midX - 110, midY - 70, 220, 140);
+
+        return Rectangle.Union(lineRect, labelRect);
+    }
+
     // ── Internal helpers ──
 
     private static GraphicsPath RoundedRect(RectangleF r, float rad)
