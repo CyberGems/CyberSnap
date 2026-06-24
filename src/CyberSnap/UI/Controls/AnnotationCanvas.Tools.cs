@@ -366,7 +366,7 @@ public sealed partial class AnnotationCanvas
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
                     _selectDragStartImg = img;
-                    _selectHandleBounds = GetAnnotationVisualBounds(_annotations[clickedIdx]);
+                    _selectHandleBounds = Rectangle.Round(GetAnnotationVisualBounds(_annotations[clickedIdx]));
                     _selectResizeOriginalAnnotation = _annotations[clickedIdx];
                     _isDragging = true;
                 }
@@ -467,7 +467,7 @@ public sealed partial class AnnotationCanvas
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
                     _selectDragStartImg = img;
-                    _selectHandleBounds = GetAnnotationVisualBounds(_annotations[targetIdx]);
+                    _selectHandleBounds = Rectangle.Round(GetAnnotationVisualBounds(_annotations[targetIdx]));
                     _selectResizeOriginalAnnotation = _annotations[targetIdx];
                     _isDragging = true;
                 }
@@ -646,7 +646,7 @@ public sealed partial class AnnotationCanvas
             {
                 for (int i = 0; i < _annotations.Count; i++)
                 {
-                    var bounds = GetAnnotationVisualBounds(_annotations[i]);
+                    var bounds = Rectangle.Round(GetAnnotationVisualBounds(_annotations[i]));
                     if (bounds != Rectangle.Empty && marqueeRect.IntersectsWith(bounds))
                     {
                         _multiSelectedIndices.Add(i);
@@ -2289,7 +2289,7 @@ public sealed partial class AnnotationCanvas
             DrawStroke ds => ds.Points.Any(p => Distance(p, pt) <= tol),
             TextAnnotation ta => MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background).Contains(pt),
             StepNumberAnnotation sn => Distance(sn.Pos, pt) <= tol * 3,
-            EmojiAnnotation em => InflateRect(GetAnnotationVisualBounds(em), tol, tol).Contains(pt),
+            EmojiAnnotation em => InflateRect(GetAnnotationBounds(em), tol, tol).Contains(pt),
             MagnifierAnnotation mg => Distance(mg.Pos, pt) <= tol * 4,
             _ => false,
         };
@@ -2464,7 +2464,52 @@ public sealed partial class AnnotationCanvas
 
     /// <summary>Whether an annotation supports resizing. Fixed-size badges (step numbers) can
     /// only be repositioned, so they expose a move-only control box (no resize handles).</summary>
-    private static bool IsResizable(Annotation a) => a is not StepNumberAnnotation;
+    private static bool IsResizable(Annotation a) => a is not StepNumberAnnotation and not MagnifierAnnotation;
+
+    /// <summary>Returns the screen-space bounding box of an annotation's visual representation,
+    /// including its stroke width. Used to draw the selection/hover control box.</summary>
+    private RectangleF GetAnnotationVisualBounds(Annotation a)
+    {
+        return a switch
+        {
+            BlurRect br => br.Rect,
+            HighlightAnnotation hl => hl.Rect,
+            RectShapeAnnotation rs => rs.Rect,
+            CircleShapeAnnotation cs => cs.Rect,
+            EraserFill ef => ef.Rect,
+            ArrowAnnotation arr => GetSegmentBounds(arr.From, arr.To, arr.StrokeWidth),
+            LineAnnotation ln => GetSegmentBounds(ln.From, ln.To, ln.StrokeWidth),
+            RulerAnnotation ru => GetSegmentBounds(ru.From, ru.To, 6f), // Ruler stroke width ~6px
+            CurvedArrowAnnotation ca => GetPointsBounds(ca.Points, ca.StrokeWidth),
+            DrawStroke ds => GetPointsBounds(ds.Points, ds.StrokeWidth),
+            TextAnnotation ta => MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background),
+            StepNumberAnnotation sn => new RectangleF(sn.Pos.X - 16, sn.Pos.Y - 16, 32, 32),
+            EmojiAnnotation em => new RectangleF(em.Pos.X - em.Size / 2f, em.Pos.Y - em.Size / 2f, em.Size, em.Size),
+            MagnifierAnnotation mg => new RectangleF(mg.Pos.X - 60, mg.Pos.Y - 60, 120, 120),
+            _ => RectangleF.Empty,
+        };
+    }
+
+    private RectangleF GetSegmentBounds(Point from, Point to, float strokeWidth)
+    {
+        float pad = strokeWidth / 2f + 4f; // Extra padding for hit tolerance
+        float x = Math.Min(from.X, to.X) - pad;
+        float y = Math.Min(from.Y, to.Y) - pad;
+        float w = Math.Abs(to.X - from.X) + pad * 2;
+        float h = Math.Abs(to.Y - from.Y) + pad * 2;
+        return new RectangleF(x, y, w, h);
+    }
+
+    private RectangleF GetPointsBounds(List<Point> points, float strokeWidth)
+    {
+        if (points.Count == 0) return RectangleF.Empty;
+        float pad = strokeWidth / 2f + 4f;
+        float minX = points.Min(p => p.X) - pad;
+        float minY = points.Min(p => p.Y) - pad;
+        float maxX = points.Max(p => p.X) + pad;
+        float maxY = points.Max(p => p.Y) + pad;
+        return new RectangleF(minX, minY, maxX - minX, maxY - minY);
+    }
 
     private int GetSelectHandle(Point screenPt, int annotationIndex)
     {

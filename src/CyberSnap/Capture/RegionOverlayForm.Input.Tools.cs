@@ -37,6 +37,7 @@ public sealed partial class RegionOverlayForm
         }
     }
 
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
         if (_isConfirmingSelection)

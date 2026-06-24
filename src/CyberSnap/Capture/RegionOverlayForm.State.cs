@@ -498,6 +498,7 @@ public sealed partial class RegionOverlayForm
             CaptureMode.Magnifier => true,
             CaptureMode.Emoji => true,
             CaptureMode.Line => true,
+            CaptureMode.Ruler => true,
             _ => false
         };
     }

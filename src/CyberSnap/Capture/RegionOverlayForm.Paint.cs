@@ -83,10 +83,8 @@ public sealed partial class RegionOverlayForm
             DrawMoveHandles(g, hoverBounds, isSelected: false, moveOnly: !IsResizable(hovered));
         }
 
-        // Move tool: draw selection highlight and handles.
-        // Ruler is not a drawing/move mode, but right-clicking a ruler selects it for its context
-        // menu — so include Ruler here too, otherwise the selection frame never shows on right-click.
-        bool showSelectionFrame = IsDrawingOrMoveMode(_mode) || _mode == CaptureMode.Ruler;
+        // Move or drawing tool: draw selection highlight and handles.
+        bool showSelectionFrame = IsDrawingOrMoveMode(_mode);
         if (showSelectionFrame && _multiSelectedIndices.Count > 1)
         {
             foreach (int idx in _multiSelectedIndices)
