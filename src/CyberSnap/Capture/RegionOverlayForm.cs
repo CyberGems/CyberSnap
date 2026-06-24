@@ -1051,6 +1051,50 @@ public sealed partial class RegionOverlayForm : Form
         menu.Show(PointToScreen(clickLocation));
     }
 
+    /// <summary>
+    /// Right-click menu shown on empty area during capture mode selection.
+    /// Offers full-screen capture, cancel, or close — no more abrupt Esc-like cancel.
+    /// </summary>
+    private void ShowEmptyAreaContextMenu(Point clickLocation)
+    {
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+        menu.Font = UiChrome.ChromeFont(11.0f);
+
+        var isSpanish = string.Equals(
+            Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
+            "es", StringComparison.OrdinalIgnoreCase);
+
+        if (_mode == CaptureMode.ScrollCapture)
+        {
+            var cancelLabel = isSpanish ? "Cancelar captura por desplazamiento" : "Cancel scroll capture";
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            cancelItem.Click += (_, _) => Cancel();
+            menu.Items.Add(cancelItem);
+        }
+        else
+        {
+            var fsLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
+            var fsItem = WindowsMenuRenderer.Item(fsLabel, iconId: "captureRect", iconSize: 24);
+            fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
+            menu.Items.Add(fsItem);
+
+            var cancelLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            cancelItem.Click += (_, _) => Cancel();
+            menu.Items.Add(cancelItem);
+        }
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        var closeLabel = isSpanish ? "Cerrar menú" : "Close menu";
+        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "close", iconSize: 24);
+        closeItem.Click += (_, _) => menu.Close();
+        menu.Items.Add(closeItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
+        menu.Show(PointToScreen(clickLocation));
+    }
+
     private void ShowAnnotationContextMenu(Point clickLocation)
     {
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
