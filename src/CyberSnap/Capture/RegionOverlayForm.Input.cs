@@ -30,7 +30,10 @@ public sealed partial class RegionOverlayForm
                 {
                     _selectedAnnotationIndex = hit;
                     _multiSelectedIndices.Clear();
+                    // Force immediate repaint so the selection frame is visible
+                    // before the context menu appears.
                     Invalidate();
+                    Update();
                 }
                 ShowAnnotationContextMenu(e.Location);
                 return;

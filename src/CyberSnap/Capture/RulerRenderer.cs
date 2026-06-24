@@ -167,6 +167,16 @@ public static class RulerRenderer
         return Rectangle.Union(lineRect, labelRect);
     }
 
+    /// <summary>Tight bounds for live drag preview — only covers the line, not the full label.</summary>
+    public static Rectangle GetLiveBounds(Point from, Point to)
+    {
+        int minX = Math.Min(from.X, to.X);
+        int minY = Math.Min(from.Y, to.Y);
+        int maxX = Math.Max(from.X, to.X);
+        int maxY = Math.Max(from.Y, to.Y);
+        return Rectangle.FromLTRB(minX - 40, minY - 40, maxX + 40, maxY + 40);
+    }
+
     /// <summary>Tighter bounds for hit-testing and selection frame — covers the line
     /// plus enough room for the floating measurement label (up to ~400px wide).</summary>
     public static Rectangle GetSelectionBounds(Point from, Point to)

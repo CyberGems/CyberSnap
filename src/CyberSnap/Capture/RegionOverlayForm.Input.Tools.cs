@@ -632,7 +632,7 @@ public sealed partial class RegionOverlayForm
                 InvalidateLivePreview(RectFromPoints(_lineStart, oldCursor, 1), RectFromPoints(_lineStart, e.Location, 1), 18);
                 break;
             case CaptureMode.Ruler when _isRulerDragging:
-                InvalidateLivePreview(GetRulerPaintBounds(_rulerStart, GetRulerEnd(oldCursor)), GetRulerPaintBounds(_rulerStart, GetRulerEnd(e.Location)), 0);
+                InvalidateLivePreview(RulerRenderer.GetLiveBounds(_rulerStart, GetRulerEnd(oldCursor)), RulerRenderer.GetLiveBounds(_rulerStart, GetRulerEnd(e.Location)), 0);
                 break;
             case CaptureMode.Arrow when _isArrowDragging:
                 InvalidateLivePreview(RectFromPoints(_arrowStart, oldCursor, 1), RectFromPoints(_arrowStart, e.Location, 1), 32);
