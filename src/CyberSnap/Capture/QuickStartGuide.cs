@@ -117,7 +117,6 @@ public sealed class QuickStartGuide : Form
                 new ShortcutDef("Ctrl+Z", "Deshacer"),
                 new ShortcutDef("Ctrl+Y", "Rehacer"),
                 new ShortcutDef("Ctrl+C", "Copiar"),
-                new ShortcutDef("Ctrl+S", "Guardar"),
             }
             : new[]
             {
@@ -126,7 +125,6 @@ public sealed class QuickStartGuide : Form
                 new ShortcutDef("Ctrl+Z", "Undo"),
                 new ShortcutDef("Ctrl+Y", "Redo"),
                 new ShortcutDef("Ctrl+C", "Copy"),
-                new ShortcutDef("Ctrl+S", "Save"),
             };
 
         _tips = isSpanish
