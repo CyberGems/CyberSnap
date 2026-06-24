@@ -114,6 +114,8 @@ public sealed class QuickStartGuide : Form
             {
                 new ShortcutDef("Space", "Confirmar"),
                 new ShortcutDef("Esc", "Cancelar"),
+                new ShortcutDef("Ctrl+Z", "Deshacer"),
+                new ShortcutDef("Ctrl+Y", "Rehacer"),
                 new ShortcutDef("Ctrl+C", "Copiar"),
                 new ShortcutDef("Ctrl+S", "Guardar"),
             }
@@ -121,6 +123,8 @@ public sealed class QuickStartGuide : Form
             {
                 new ShortcutDef("Space", "Confirm"),
                 new ShortcutDef("Esc", "Cancel"),
+                new ShortcutDef("Ctrl+Z", "Undo"),
+                new ShortcutDef("Ctrl+Y", "Redo"),
                 new ShortcutDef("Ctrl+C", "Copy"),
                 new ShortcutDef("Ctrl+S", "Save"),
             };
