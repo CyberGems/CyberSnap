@@ -263,6 +263,34 @@ public sealed partial class RegionOverlayForm
             ShowToolBanner(LocalizationService.Translate("Click & drag to measure") + suffix, persistent: false);
         else if (m == CaptureMode.ColorPicker)
             ShowToolBanner(LocalizationService.Translate("Click a pixel to pick its color") + suffix, persistent: false);
+        else if (m == CaptureMode.Move)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to move or resize") + suffix, persistent: false);
+        else if (m == CaptureMode.Eraser)
+            ShowToolBanner(LocalizationService.Translate("Click or drag to erase objects") + suffix, persistent: false);
+        else if (m == CaptureMode.Highlight)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to highlight") + suffix, persistent: false);
+        else if (m == CaptureMode.Text)
+            ShowToolBanner(LocalizationService.Translate("Click to place text") + suffix, persistent: false);
+        else if (m == CaptureMode.Arrow)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to draw arrow") + suffix, persistent: false);
+        else if (m == CaptureMode.Line)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to draw line") + suffix, persistent: false);
+        else if (m == CaptureMode.Draw)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to draw") + suffix, persistent: false);
+        else if (m == CaptureMode.CurvedArrow)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to draw curved arrow") + suffix, persistent: false);
+        else if (m == CaptureMode.CircleShape)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to draw circle") + suffix, persistent: false);
+        else if (m == CaptureMode.RectShape)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to draw rectangle") + suffix, persistent: false);
+        else if (m == CaptureMode.StepNumber)
+            ShowToolBanner(LocalizationService.Translate("Click to place step number") + suffix, persistent: false);
+        else if (m == CaptureMode.Magnifier)
+            ShowToolBanner(LocalizationService.Translate("Click to place magnifier") + suffix, persistent: false);
+        else if (m == CaptureMode.Blur)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to blur") + suffix, persistent: false);
+        else if (m == CaptureMode.Emoji)
+            ShowToolBanner(LocalizationService.Translate("Click to pick emoji") + suffix, persistent: false);
         else
             HideToolBanner();
 

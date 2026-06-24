@@ -160,7 +160,7 @@ public sealed partial class AnnotationCanvas
             // Eraser hover highlight
             if (i == _eraserHoverIndex)
             {
-                var bounds = GetAnnotationVisualBounds(_annotations[i]);
+                var bounds = GetAnnotationBounds(_annotations[i]);
                 if (bounds.Width > 0 && bounds.Height > 0)
                 {
                     using var overlay = new SolidBrush(Color.FromArgb(50, 220, 50, 50));
@@ -181,7 +181,7 @@ public sealed partial class AnnotationCanvas
             && _moveHoverIndex != _selectedAnnotationIndex && !_multiSelectedIndices.Contains(_moveHoverIndex))
         {
             var hovered = _annotations[_moveHoverIndex];
-            var bounds = GetAnnotationVisualBounds(hovered);
+            var bounds = GetAnnotationBounds(hovered);
             DrawMoveHandles(g, bounds, isSelected: false, moveOnly: !IsResizable(hovered));
         }
 
@@ -193,7 +193,7 @@ public sealed partial class AnnotationCanvas
                 if (idx >= 0 && idx < _annotations.Count)
                 {
                     var ann = _annotations[idx];
-                    var bounds = GetAnnotationVisualBounds(ann);
+                    var bounds = GetAnnotationBounds(ann);
                     DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(ann));
                 }
             }
@@ -202,7 +202,7 @@ public sealed partial class AnnotationCanvas
         else if (_preSpaceTool == null && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _annotations.Count)
         {
             var selected = _annotations[_selectedAnnotationIndex];
-            var bounds = GetAnnotationVisualBounds(selected);
+            var bounds = GetAnnotationBounds(selected);
             DrawMoveHandles(g, bounds, isSelected: true, moveOnly: !IsResizable(selected));
         }
     }
@@ -625,7 +625,7 @@ public sealed partial class AnnotationCanvas
             (float)((p.Y - _pan.Y) / _zoom));
     }
 
-    private static Rectangle GetAnnotationVisualBounds(Annotation a)
+    private static Rectangle GetAnnotationBounds(Annotation a)
     {
         return a switch
         {

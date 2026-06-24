@@ -755,7 +755,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     {
         if (command is AddAnnotationCommand addCmd)
         {
-            var bounds = GetAnnotationVisualBounds(addCmd.Annotation);
+            var bounds = GetAnnotationBounds(addCmd.Annotation);
             var canvasBounds = new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height);
             if (!bounds.IsEmpty && !bounds.IntersectsWith(canvasBounds))
             {
