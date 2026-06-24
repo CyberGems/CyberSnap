@@ -235,6 +235,76 @@ public sealed partial class RegionOverlayForm
         if (m == CaptureMode.Magnifier)
             _isPlacingMagnifier = true;
 
+        // Show a mode-specific help banner so the user knows what to do.
+        // Tool name + icon in white, action description + suffix in accent cyan.
+        var suffix = " · " + LocalizationService.Translate("Right-click or Esc to cancel");
+        var tool = ToolDef.AllTools.FirstOrDefault(t => t.Mode == m);
+        var toolIcon = tool != null ? tool.Icon + " " : "";
+        var toolName = tool != null ? LocalizationService.Translate(tool.Label) : "";
+
+        string? action = null;
+        if (m == CaptureMode.Rectangle)
+            action = LocalizationService.Translate("Click & drag to capture");
+        else if (m == CaptureMode.Center)
+            action = LocalizationService.Translate("Click for centered capture");
+        else if (m == CaptureMode.Ocr)
+            action = LocalizationService.Translate("Select text area to recognize");
+        else if (m == CaptureMode.Scan)
+            action = LocalizationService.Translate("Select QR or barcode to scan");
+        else if (m == CaptureMode.ScrollCapture)
+            action = LocalizationService.Translate("Select scrolling area");
+        else if (m == CaptureMode.Ruler)
+            action = LocalizationService.Translate("Click & drag to measure");
+        else if (m == CaptureMode.ColorPicker)
+            action = LocalizationService.Translate("Click a pixel to pick its color");
+        else if (m == CaptureMode.Record)
+            action = LocalizationService.Translate("Click & drag to record video");
+        else if (m == CaptureMode.RecordGif)
+            action = LocalizationService.Translate("Click & drag to record GIF");
+        else if (m == CaptureMode.Move)
+            action = LocalizationService.Translate("Click & drag to move or resize");
+        else if (m == CaptureMode.Eraser)
+            action = LocalizationService.Translate("Click or drag to erase objects");
+        else if (m == CaptureMode.Highlight)
+            action = LocalizationService.Translate("Click & drag to highlight");
+        else if (m == CaptureMode.Text)
+            action = LocalizationService.Translate("Click to place text");
+        else if (m == CaptureMode.Arrow)
+            action = LocalizationService.Translate("Click & drag to draw arrow");
+        else if (m == CaptureMode.Line)
+            action = LocalizationService.Translate("Click & drag to draw line");
+        else if (m == CaptureMode.Draw)
+            action = LocalizationService.Translate("Click & drag to draw");
+        else if (m == CaptureMode.CurvedArrow)
+            action = LocalizationService.Translate("Click & drag to draw curved arrow");
+        else if (m == CaptureMode.CircleShape)
+            action = LocalizationService.Translate("Click & drag to draw circle");
+        else if (m == CaptureMode.RectShape)
+            action = LocalizationService.Translate("Click & drag to draw rectangle");
+        else if (m == CaptureMode.StepNumber)
+            action = LocalizationService.Translate("Click to place step number");
+        else if (m == CaptureMode.Magnifier)
+            action = LocalizationService.Translate("Click to place magnifier");
+        else if (m == CaptureMode.Blur)
+            action = LocalizationService.Translate("Click & drag to blur");
+        else if (m == CaptureMode.Emoji)
+            action = LocalizationService.Translate("Click to pick emoji");
+
+        if (action != null && !string.IsNullOrEmpty(toolName))
+        {
+            var label = toolIcon + toolName + ": ";
+            var segments = new BannerSegment[]
+            {
+                new(label, Color.White),
+                new(action + suffix, null), // null = accent color
+            };
+            ShowToolBanner(segments, persistent: false);
+        }
+        else
+        {
+            HideToolBanner();
+        }
+
         if (m == CaptureMode.Record)
         {
             RecordingRequested?.Invoke(Models.RecordingFormat.MP4);
@@ -246,53 +316,6 @@ public sealed partial class RegionOverlayForm
             RecordingRequested?.Invoke(Models.RecordingFormat.GIF);
             return;
         }
-
-        // Show a mode-specific help banner so the user knows what to do.
-        var suffix = " · " + LocalizationService.Translate("Right-click or Esc to cancel");
-        if (m == CaptureMode.Rectangle)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to capture") + suffix, persistent: false);
-        else if (m == CaptureMode.Center)
-            ShowToolBanner(LocalizationService.Translate("Click for centered capture") + suffix, persistent: false);
-        else if (m == CaptureMode.Ocr)
-            ShowToolBanner(LocalizationService.Translate("Select text area to recognize") + suffix, persistent: false);
-        else if (m == CaptureMode.Scan)
-            ShowToolBanner(LocalizationService.Translate("Select QR or barcode to scan") + suffix, persistent: false);
-        else if (m == CaptureMode.ScrollCapture)
-            ShowToolBanner(LocalizationService.Translate("Select scrolling area") + suffix, persistent: false);
-        else if (m == CaptureMode.Ruler)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to measure") + suffix, persistent: false);
-        else if (m == CaptureMode.ColorPicker)
-            ShowToolBanner(LocalizationService.Translate("Click a pixel to pick its color") + suffix, persistent: false);
-        else if (m == CaptureMode.Move)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to move or resize") + suffix, persistent: false);
-        else if (m == CaptureMode.Eraser)
-            ShowToolBanner(LocalizationService.Translate("Click or drag to erase objects") + suffix, persistent: false);
-        else if (m == CaptureMode.Highlight)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to highlight") + suffix, persistent: false);
-        else if (m == CaptureMode.Text)
-            ShowToolBanner(LocalizationService.Translate("Click to place text") + suffix, persistent: false);
-        else if (m == CaptureMode.Arrow)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to draw arrow") + suffix, persistent: false);
-        else if (m == CaptureMode.Line)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to draw line") + suffix, persistent: false);
-        else if (m == CaptureMode.Draw)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to draw") + suffix, persistent: false);
-        else if (m == CaptureMode.CurvedArrow)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to draw curved arrow") + suffix, persistent: false);
-        else if (m == CaptureMode.CircleShape)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to draw circle") + suffix, persistent: false);
-        else if (m == CaptureMode.RectShape)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to draw rectangle") + suffix, persistent: false);
-        else if (m == CaptureMode.StepNumber)
-            ShowToolBanner(LocalizationService.Translate("Click to place step number") + suffix, persistent: false);
-        else if (m == CaptureMode.Magnifier)
-            ShowToolBanner(LocalizationService.Translate("Click to place magnifier") + suffix, persistent: false);
-        else if (m == CaptureMode.Blur)
-            ShowToolBanner(LocalizationService.Translate("Click & drag to blur") + suffix, persistent: false);
-        else if (m == CaptureMode.Emoji)
-            ShowToolBanner(LocalizationService.Translate("Click to pick emoji") + suffix, persistent: false);
-        else
-            HideToolBanner();
 
         Invalidate(Rectangle.Union(InflateForRepaint(GetEmojiPickerBounds(), 12), InflateForRepaint(GetColorPickerBounds(), 12)));
         RefreshToolbar();

@@ -4,6 +4,10 @@ using CyberSnap.UI;
 
 namespace CyberSnap.Capture;
 
+/// <summary>A text segment with optional color override. When <see cref="Color"/> is null,
+/// the banner's default accent color is used.</summary>
+public readonly record struct BannerSegment(string Text, Color? Color = null);
+
 /// <summary>
 /// Reusable animated instruction banner for standalone tool forms (e.g. ruler, color picker).
 /// Renders a centered pill-shaped banner that fades in, holds while hovered, then fades out.
@@ -17,6 +21,7 @@ namespace CyberSnap.Capture;
 public sealed class StandaloneToolBanner : IDisposable
 {
     private readonly string _text;
+    private readonly IReadOnlyList<BannerSegment>? _segments;
     private readonly Rectangle _workingArea;
     private readonly Rectangle _bounds;
     private readonly Action? _onInvalidate;
@@ -45,6 +50,7 @@ public sealed class StandaloneToolBanner : IDisposable
     public StandaloneToolBanner(string text, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null)
     {
         _text = text;
+        _segments = null;
         _workingArea = workingArea;
         _bounds = bounds;
         _onInvalidate = onInvalidate;
@@ -56,6 +62,31 @@ public sealed class StandaloneToolBanner : IDisposable
         ComputeBannerRect();
 
         _timer = new System.Windows.Forms.Timer { Interval = 16 }; // ~60 fps
+        _timer.Tick += OnTick;
+        _timer.Start();
+    }
+
+    /// <summary>
+    /// Creates the banner with individually colored text segments.
+    /// </summary>
+    /// <param name="segments">Text segments, each with optional color override (null = accent color).</param>
+    /// <param name="workingArea">Screen working area the banner should center on (in screen coordinates).</param>
+    /// <param name="bounds">Form bounds used to convert screen → client coordinates.</param>
+    /// <param name="onInvalidate">Optional callback to trigger form repaint on animation ticks.</param>
+    /// <param name="persistent">When true, the banner holds at full opacity indefinitely.</param>
+    public StandaloneToolBanner(IReadOnlyList<BannerSegment> segments, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null)
+    {
+        _segments = segments;
+        _text = string.Concat(segments.Select(s => s.Text));
+        _workingArea = workingArea;
+        _bounds = bounds;
+        _onInvalidate = onInvalidate;
+        _onInvalidateRect = onInvalidateRect;
+        _persistent = persistent;
+
+        ComputeBannerRect();
+
+        _timer = new System.Windows.Forms.Timer { Interval = 16 };
         _timer.Tick += OnTick;
         _timer.Start();
     }
@@ -137,19 +168,37 @@ public sealed class StandaloneToolBanner : IDisposable
             using var bgBrush = new SolidBrush(Color.FromArgb(alphaBg, 13, 15, 23));
             using var glowPen = new Pen(Color.FromArgb(alphaGlow, accent), 3f);
             using var borderPen = new Pen(Color.FromArgb(alphaBorder, accent), 1.5f);
-            using var textBrush = new SolidBrush(Color.FromArgb(alphaText, accent));
 
             g.FillPath(bgBrush, path);
             g.DrawPath(glowPen, path);
             g.DrawPath(borderPen, path);
 
-            var textRect = new RectangleF(x + paddingH, y + paddingV, size.Width, size.Height);
             using var sf = new StringFormat
             {
-                Alignment = StringAlignment.Center,
+                Alignment = StringAlignment.Near,
                 LineAlignment = StringAlignment.Center
             };
-            g.DrawString(_text, font, textBrush, textRect, sf);
+
+            if (_segments != null)
+            {
+                // Draw each segment with its own color, laid out left-to-right.
+                float cursorX = x + paddingH;
+                float textTop = y + paddingV;
+                foreach (var seg in _segments)
+                {
+                    var segColor = seg.Color ?? accent;
+                    using var segBrush = new SolidBrush(Color.FromArgb(alphaText, segColor));
+                    g.DrawString(seg.Text, font, segBrush, cursorX, textTop);
+                    cursorX += g.MeasureString(seg.Text, font).Width;
+                }
+            }
+            else
+            {
+                var textRect = new RectangleF(x + paddingH, y + paddingV, size.Width, size.Height);
+                using var textBrush = new SolidBrush(Color.FromArgb(alphaText, accent));
+                sf.Alignment = StringAlignment.Center;
+                g.DrawString(_text, font, textBrush, textRect, sf);
+            }
         }
         finally
         {

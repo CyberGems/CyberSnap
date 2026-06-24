@@ -1101,6 +1101,23 @@ public sealed partial class RegionOverlayForm : Form
         Invalidate(_banner.InvalidateBounds);
     }
 
+    private void ShowToolBanner(IReadOnlyList<BannerSegment> segments, bool persistent = false)
+    {
+        if (_banner != null)
+        {
+            _banner.Dispose();
+            _banner = null;
+        }
+        var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+        _banner = new StandaloneToolBanner(
+            segments,
+            bannerWorkingArea,
+            Bounds,
+            persistent: persistent,
+            onInvalidateRect: r => Invalidate(r));
+        Invalidate(_banner.InvalidateBounds);
+    }
+
     private void HideToolBanner()
     {
         if (_banner != null)
