@@ -553,7 +553,17 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(galleryButton, "Open Capture Gallery", above: false);
         commandActions.Controls.Add(galleryButton);
 
-        // Spacer between gallery and file actions
+        // Capture
+        var captureButton = MakeCommandButton("captureRect", LocalizationService.Translate("Capture"), false);
+        captureButton.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.OnHotkeyPressedProxy();
+        };
+        RegisterHoverTooltip(captureButton, () => WithShortcut(LocalizationService.Translate("Take a new screenshot"), "F1"), above: false);
+        commandActions.Controls.Add(captureButton);
+
+        // Spacer between gallery/capture and file actions
         commandActions.Controls.Add(MakeSeparator());
 
         // New, Open & Save (Project operations)
@@ -1286,8 +1296,44 @@ public sealed partial class EditorForm
             _burgerMenuLastClosed = DateTime.UtcNow;
         };
 
-        var newItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New"), iconId: "document");
-        newItem.Click += (_, _) => DoNew();
+        // ── "New" submenu ──
+        var newSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("New"), showImages: true);
+        newSubmenu.Image = FluentIcons.RenderBitmap("document",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
+
+        var newCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New canvas..."));
+        newCanvasItem.Click += (_, _) => DoNewCanvas();
+
+        var newCaptureItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New capture..."), iconId: "captureRect");
+        newCaptureItem.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.OnHotkeyPressedProxy();
+        };
+
+        var newFromClipboardItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New from clipboard"), iconId: "paste");
+        newFromClipboardItem.Click += (_, _) =>
+        {
+            if (!Clipboard.ContainsImage()) return;
+            if (_canvas.IsDirty && !PromptSaveChanges()) return;
+            using (var img = Clipboard.GetImage())
+            {
+                if (img != null)
+                {
+                    var bmp = new Bitmap(img);
+                    LoadCapture(bmp, null);
+                    _canvas.ZoomFit();
+                    _canvas.IsDefaultBlank = false;
+                    RefreshUi();
+                }
+            }
+        };
+
+        newSubmenu.DropDownItems.Add(newCanvasItem);
+        newSubmenu.DropDownItems.Add(newCaptureItem);
+        newSubmenu.DropDownItems.Add(newFromClipboardItem);
+        WindowsMenuRenderer.NormalizeDropDownWidths(newSubmenu, minWidth: 200);
 
         var openItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Open..."), iconId: "folder");
         openItem.Click += (_, _) => DoOpen();
@@ -1302,6 +1348,12 @@ public sealed partial class EditorForm
 
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project as..."), iconId: "save");
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
+
+        var importItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Import"), iconId: "import");
+        importItem.Click += (_, _) => DoImport();
+
+        var exportItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export"), iconId: "export");
+        exportItem.Click += (_, _) => DoSaveAs();
 
         var resizeCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         resizeCanvasItem.Click += (_, _) => DoResizeCanvas();
@@ -1442,20 +1494,23 @@ public sealed partial class EditorForm
         viewItem.DropDownItems.Add(hintsItem);
 
         // Main menu layout
-        menu.Items.Add(newItem);
+        menu.Items.Add(newSubmenu);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(viewItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(openItem);
         menu.Items.Add(openRecentItem);
         menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
-        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(resizeCanvasItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(importItem);
+        menu.Items.Add(exportItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(copyItem);
         menu.Items.Add(pasteItem);
         menu.Items.Add(duplicateItem);
         menu.Items.Add(deleteItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(viewItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(settingsItem);
         menu.Items.Add(exitItem);
