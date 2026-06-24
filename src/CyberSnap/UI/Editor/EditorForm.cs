@@ -1326,14 +1326,28 @@ public sealed partial class EditorForm : Form
         if (m.Msg is 0x100 or 0x104) // WM_KEYDOWN / WM_SYSKEYDOWN
         {
             var key = (Keys)(int)m.WParam;
-            if (Control.ModifierKeys == Keys.Control && key is Keys.Z)
+            var mod = Control.ModifierKeys;
+
+            // File / clipboard operations
+            if (mod == Keys.Control && key is Keys.N) { DoNewCanvas(); return true; }
+            if (mod == Keys.Control && key is Keys.O) { DoOpen(); return true; }
+            if (mod == Keys.Control && key is Keys.I) { DoImport(); return true; }
+            if (mod == Keys.Control && key is Keys.S) { DoSave(); return true; }
+            if (mod == (Keys.Control | Keys.Shift) && key is Keys.S) { DoSaveAs(); return true; }
+            if (mod == Keys.Control && key is Keys.C) { DoCopy(); return true; }
+            if (mod == Keys.Control && key is Keys.V) { DoPaste(); return true; }
+
+            // Canvas operations
+            if (mod == Keys.Control && key is Keys.Z)
             {
-                if (Control.ModifierKeys.HasFlag(Keys.Shift)) _canvas.Redo(); else _canvas.Undo();
+                if (mod.HasFlag(Keys.Shift)) _canvas.Redo(); else _canvas.Undo();
                 return true;
             }
-            if (Control.ModifierKeys == Keys.Control && key is Keys.Y) { _canvas.Redo(); return true; }
-            if (Control.ModifierKeys == Keys.Control && key is Keys.D) { _canvas.DuplicateSelectionInternal(); return true; }
-            if (Control.ModifierKeys == Keys.Control && key is Keys.A) { _canvas.SelectAll(); return true; }
+            if (mod == Keys.Control && key is Keys.Y) { _canvas.Redo(); return true; }
+            if (mod == Keys.Control && key is Keys.D) { _canvas.DuplicateSelectionInternal(); return true; }
+            if (mod == Keys.Control && key is Keys.A) { _canvas.SelectAll(); return true; }
+
+            // Single-key shortcuts — ensure canvas has focus
             if (key is Keys.Space && !_canvas.Focused) { _canvas.Focus(); return false; }
             if (key is Keys.Delete or Keys.Escape or Keys.F2 or Keys.Oemplus or Keys.Add or Keys.OemMinus or Keys.Subtract or Keys.D0 or Keys.NumPad0)
             {
