@@ -77,6 +77,7 @@ public sealed partial class RegionOverlayForm
         var currentlyEnabled = settings.EnabledTools ?? ToolDef.DefaultEnabledIds();
 
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 200);
+        menu.Font = UiChrome.ChromeFont(11.0f); // unified style with confirm context menu
         _toolbarContextMenu = menu;
         menu.Closed += (s, e) => {
             _toolbarContextMenu = null;
@@ -114,7 +115,7 @@ public sealed partial class RegionOverlayForm
                 var sysLine = isSpanish
                     ? $"Botón {systemButtonName}  •  Siempre visible"
                     : $"{systemButtonName}  button  •  Always visible";
-                var refItem = WindowsMenuRenderer.Item(sysLine, iconId: systemIconId);
+                var refItem = WindowsMenuRenderer.Item(sysLine, iconId: systemIconId, iconSize: 24);
                 refItem.Enabled = false;
                 menu.Items.Add(refItem);
                 menu.Items.Add(new ToolStripSeparator());
@@ -149,7 +150,7 @@ public sealed partial class RegionOverlayForm
         {
             var toolIconId = tool.Id == "scroll" ? "scrollCapture" : tool.Id;
             var hideText = isSpanish ? $"Ocultar \"{LocalizationService.Translate(tool.Label)}\"" : $"Hide \"{LocalizationService.Translate(tool.Label)}\"";
-            var hideItem = WindowsMenuRenderer.Item(hideText, iconId: toolIconId);
+            var hideItem = WindowsMenuRenderer.Item(hideText, iconId: toolIconId, iconSize: 24);
             hideItem.Click += (s, e) => {
                 HideTool(tool.Id);
                 _toolbarContextMenu?.Close();
@@ -175,7 +176,7 @@ public sealed partial class RegionOverlayForm
         // depending on whether we're in the tool-specific or general menu.
         var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
         var showBarText = isSpanish ? "Mostrar barra de anotaciones" : "Show annotation bar";
-        var showBarItem = WindowsMenuRenderer.Item(showBarText, iconId: annotationToolsCount > 0 ? "check" : null);
+        var showBarItem = WindowsMenuRenderer.Item(showBarText, iconId: annotationToolsCount > 0 ? "check" : null, iconSize: 24);
         showBarItem.Click += (s, e) => {
             if (annotationToolsCount > 0)
             {
@@ -211,13 +212,13 @@ public sealed partial class RegionOverlayForm
         {
             menu.Items.Add(new ToolStripSeparator());
             var headerText = isSpanish ? "Herramientas ocultas:" : "Hidden tools:";
-            var header = WindowsMenuRenderer.Item(headerText, iconId: null);
+            var header = WindowsMenuRenderer.Item(headerText, iconId: null, iconSize: 24);
             header.Enabled = false;
             menu.Items.Add(header);
 
             foreach (var hTool in hiddenTools)
             {
-                var toolItem = WindowsMenuRenderer.Item(LocalizationService.Translate(hTool.Label), iconId: "add");
+                var toolItem = WindowsMenuRenderer.Item(LocalizationService.Translate(hTool.Label), iconId: "add", iconSize: 24);
                 toolItem.Padding = new Padding(24, 0, 0, 0);
                 var targetId = hTool.Id;
                 toolItem.Click += (s, e) => {
@@ -241,7 +242,7 @@ public sealed partial class RegionOverlayForm
         // Full-screen capture & cancel — available from every toolbar context menu
         menu.Items.Add(new ToolStripSeparator());
         var fsCaptureLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
-        var fsItem = WindowsMenuRenderer.Item(fsCaptureLabel, iconId: "captureRect");
+        var fsItem = WindowsMenuRenderer.Item(fsCaptureLabel, iconId: "captureRect", iconSize: 24);
         fsItem.Click += (s, e) =>
         {
             RegionSelected?.Invoke(_virtualBounds);
@@ -249,7 +250,7 @@ public sealed partial class RegionOverlayForm
         menu.Items.Add(fsItem);
 
         var cancelCaptureLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
-        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close");
+        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", iconSize: 24);
         cancelCapItem.Click += (s, e) => Cancel();
         menu.Items.Add(cancelCapItem);
 
@@ -257,7 +258,7 @@ public sealed partial class RegionOverlayForm
         menu.Items.Add(new ToolStripSeparator());
         var bannersEnabled = settings.ShowToolBanners;
         var bannersText = isSpanish ? "Mostrar banners de ayuda" : "Show help banners";
-        var bannersItem = WindowsMenuRenderer.Item(bannersText, iconId: bannersEnabled ? "check" : null);
+        var bannersItem = WindowsMenuRenderer.Item(bannersText, iconId: bannersEnabled ? "check" : null, iconSize: 24);
         bannersItem.Click += (s, e) =>
         {
             var svc = new Services.SettingsService(null);
@@ -300,13 +301,13 @@ public sealed partial class RegionOverlayForm
         // 4. Close/Cancel menu
         menu.Items.Add(new ToolStripSeparator());
         var closeMenuText = isSpanish ? "Cerrar menú" : "Close menu";
-        var closeMenuItem = WindowsMenuRenderer.Item(closeMenuText, iconId: "close");
+        var closeMenuItem = WindowsMenuRenderer.Item(closeMenuText, iconId: "close", iconSize: 24);
         closeMenuItem.Click += (s, e) => {
             menu.Close();
         };
         menu.Items.Add(closeMenuItem);
 
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 200);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 200, itemHeight: 46);
 
         var screenPoint = PointToScreen(clickLocation);
 
@@ -331,7 +332,7 @@ public sealed partial class RegionOverlayForm
     private void AddRestoreHiddenToolsItem(ContextMenuStrip menu, bool isSpanish, int hiddenCount)
     {
         var restoreText = isSpanish ? "Restaurar herramientas ocultas" : "Restore hidden tools";
-        var restoreItem = WindowsMenuRenderer.Item(restoreText, iconId: "add");
+        var restoreItem = WindowsMenuRenderer.Item(restoreText, iconId: "add", iconSize: 24);
         restoreItem.Enabled = hiddenCount > 0;
         restoreItem.Click += (s, e) => {
             ShowAllTools();

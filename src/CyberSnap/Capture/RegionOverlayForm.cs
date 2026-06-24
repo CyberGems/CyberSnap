@@ -1054,6 +1054,7 @@ public sealed partial class RegionOverlayForm : Form
     private void ShowAnnotationContextMenu(Point clickLocation)
     {
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+        menu.Font = UiChrome.ChromeFont(11.0f); // unified style with confirm context menu
         var isSpanish = string.Equals(
             Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
             "es", StringComparison.OrdinalIgnoreCase);
@@ -1093,13 +1094,13 @@ public sealed partial class RegionOverlayForm : Form
             duplicateLabel = isSpanish ? "Duplicar" : "Duplicate";
         }
 
-        var duplicateItem = WindowsMenuRenderer.Item(duplicateLabel, iconId: "copy");
+        var duplicateItem = WindowsMenuRenderer.Item(duplicateLabel, iconId: "copy", iconSize: 24);
         duplicateItem.Click += (s, e) => DuplicateSelection();
 
         var deleteLabel = multi
             ? (isSpanish ? "Eliminar selección" : "Delete selection")
             : (isSpanish ? "Eliminar" : "Delete");
-        var deleteItem = WindowsMenuRenderer.Item(deleteLabel, iconId: "trash", danger: true);
+        var deleteItem = WindowsMenuRenderer.Item(deleteLabel, iconId: "trash", danger: true, iconSize: 24);
         deleteItem.Click += (s, e) => {
             if (_multiSelectedIndices.Count > 1)
                 DeleteMultiSelectedAnnotations();
@@ -1113,7 +1114,7 @@ public sealed partial class RegionOverlayForm : Form
         menu.Items.Add(new ToolStripSeparator());
 
         var captureFsLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
-        var captureItem = WindowsMenuRenderer.Item(captureFsLabel, iconId: "captureRect");
+        var captureItem = WindowsMenuRenderer.Item(captureFsLabel, iconId: "captureRect", iconSize: 24);
         captureItem.Click += (s, e) =>
         {
             RegionSelected?.Invoke(_virtualBounds);
@@ -1121,18 +1122,18 @@ public sealed partial class RegionOverlayForm : Form
         menu.Items.Add(captureItem);
 
         var cancelCaptureLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
-        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close");
+        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", iconSize: 24);
         cancelCapItem.Click += (s, e) => Cancel();
         menu.Items.Add(cancelCapItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
         var closeMenuLabel = isSpanish ? "Cerrar menú" : "Close menu";
-        var closeItem = WindowsMenuRenderer.Item(closeMenuLabel, iconId: "close");
+        var closeItem = WindowsMenuRenderer.Item(closeMenuLabel, iconId: "close", iconSize: 24);
         closeItem.Click += (s, e) => menu.Close();
         menu.Items.Add(closeItem);
 
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 220);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
 
         var screenPoint = PointToScreen(clickLocation);
         menu.Show(screenPoint);
