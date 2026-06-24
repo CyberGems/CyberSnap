@@ -248,7 +248,7 @@ public sealed partial class RegionOverlayForm
         }
 
         if (m == CaptureMode.ScrollCapture)
-            ShowToolBanner(LocalizationService.Translate("Select scrolling area"), persistent: true);
+            ShowToolBanner(LocalizationService.Translate("Select scrolling area") + " · " + LocalizationService.Translate("Right-click or Esc to cancel"), persistent: false);
         else
             HideToolBanner();
 
