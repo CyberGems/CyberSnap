@@ -255,7 +255,7 @@ public sealed class QuickStartGuide : Form
 
         // ── Header ──
         const int closeBtnSize = 16;
-        _closeRect = new Rectangle(Width - PadX - closeBtnSize - 4, PadY + (HeaderHeight - closeBtnSize) / 2,
+        _closeRect = new Rectangle(Width - PadX - closeBtnSize - 4, PadY - 6,
                                     closeBtnSize + 8, closeBtnSize + 8);
         var headerRect = new Rectangle(PadX, curY, contentW - closeBtnSize - 12, HeaderHeight);
         TextRenderer.DrawText(g, _title, _headerFont, headerRect,
