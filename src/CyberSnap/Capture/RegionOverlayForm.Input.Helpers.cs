@@ -247,8 +247,22 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        if (m == CaptureMode.ScrollCapture)
-            ShowToolBanner(LocalizationService.Translate("Select scrolling area") + " · " + LocalizationService.Translate("Right-click or Esc to cancel"), persistent: false);
+        // Show a mode-specific help banner so the user knows what to do.
+        var suffix = " · " + LocalizationService.Translate("Right-click or Esc to cancel");
+        if (m == CaptureMode.Rectangle)
+            ShowToolBanner(LocalizationService.Translate("Click & drag to capture") + suffix, persistent: false);
+        else if (m == CaptureMode.Center)
+            ShowToolBanner(LocalizationService.Translate("Click for centered capture") + suffix, persistent: false);
+        else if (m == CaptureMode.Ocr)
+            ShowToolBanner(LocalizationService.Translate("Select text area to recognize") + suffix, persistent: false);
+        else if (m == CaptureMode.Scan)
+            ShowToolBanner(LocalizationService.Translate("Select QR or barcode to scan") + suffix, persistent: false);
+        else if (m == CaptureMode.Sticker)
+            ShowToolBanner(LocalizationService.Translate("Select a region to make a sticker") + suffix, persistent: false);
+        else if (m == CaptureMode.Upscale)
+            ShowToolBanner(LocalizationService.Translate("Select a region to upscale") + suffix, persistent: false);
+        else if (m == CaptureMode.ScrollCapture)
+            ShowToolBanner(LocalizationService.Translate("Select scrolling area") + suffix, persistent: false);
         else
             HideToolBanner();
 
