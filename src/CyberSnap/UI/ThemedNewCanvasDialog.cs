@@ -2,11 +2,13 @@ using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using CyberSnap.Helpers;
+using CyberSnap.UI.Controls;
 using Button = System.Windows.Controls.Button;
 using WpfBrushes = System.Windows.Media.Brushes;
 using WpfColor = System.Windows.Media.Color;
@@ -22,6 +24,9 @@ internal sealed class NewCanvasResult
 {
     public int Width;
     public int Height;
+
+    /// <summary>Solid fill chosen by the user, or null to keep the default transparent checkerboard.</summary>
+    public System.Drawing.Color? BackgroundColor;
 }
 
 /// <summary>
@@ -50,6 +55,13 @@ internal sealed class ThemedNewCanvasDialog : Window
 
     private WpfTextBox _widthBox = null!;
     private WpfTextBox _heightBox = null!;
+
+    private System.Drawing.Color? _backgroundColor;
+    private DrawingVisual _swatchVisual = null!;
+    private Border _swatchHost = null!;
+    private Popup _bgPopup = null!;
+    private ColorPickerPopup _colorPicker = null!;
+    private DateTime _bgPopupClosedAt;
 
     private readonly System.Collections.Generic.List<(Border Border, int W, int H)> _resolutionChipElements = new();
 
@@ -111,6 +123,7 @@ internal sealed class ThemedNewCanvasDialog : Window
             {
                 Width = dialog._width,
                 Height = dialog._height,
+                BackgroundColor = dialog._backgroundColor,
             };
         }
         return null;
@@ -169,19 +182,20 @@ internal sealed class ThemedNewCanvasDialog : Window
             var chip = MakeChip(label, border =>
             {
                 ApplyResolution(w, h);
-                // Highlight the clicked chip
-                foreach (var (cb, _, _) in _resolutionChipElements)
-                {
-                    bool isActive = cb == border;
-                    cb.Tag = isActive;
-                    cb.Background = Theme.Brush(isActive ? WithAlpha(accent, 60) : FieldBackground);
-                    cb.BorderBrush = Theme.Brush(isActive ? WithAlpha(accent, 200) : WithAlpha(accent, 60));
-                }
+                HighlightResolutionChip(border);
             });
             _resolutionChipElements.Add((chip, w, h));
             resWrap.Children.Add(chip);
         }
         bodyStack.Children.Add(resWrap);
+
+        // Pre-select the chip matching the default size so the dialog opens with a clear choice.
+        foreach (var (chip, w, h) in _resolutionChipElements)
+            if (w == _width && h == _height)
+            {
+                HighlightResolutionChip(chip);
+                break;
+            }
 
         // Width / Height inputs
         bodyStack.Children.Add(SectionLabel("Dimensions", 14));
@@ -201,6 +215,10 @@ internal sealed class ThemedNewCanvasDialog : Window
         inputsRow.Children.Add(widthCol);
         inputsRow.Children.Add(heightCol);
         bodyStack.Children.Add(inputsRow);
+
+        // Canvas background: a swatch dropdown that opens the reusable color-picker flyout.
+        bodyStack.Children.Add(SectionLabel("Canvas background", 14));
+        bodyStack.Children.Add(BuildCanvasBackgroundDropdown());
 
         root.Children.Add(bodyStack);
 
@@ -258,6 +276,133 @@ internal sealed class ThemedNewCanvasDialog : Window
         SetBoxText(_widthBox, w);
         SetBoxText(_heightBox, h);
         _suppress = false;
+    }
+
+    private void HighlightResolutionChip(Border active)
+    {
+        var accent = Theme.Accent;
+        foreach (var (chip, _, _) in _resolutionChipElements)
+        {
+            bool isActive = chip == active;
+            chip.Tag = isActive;
+            chip.Background = Theme.Brush(isActive ? WithAlpha(accent, 60) : FieldBackground);
+            chip.BorderBrush = Theme.Brush(isActive ? WithAlpha(accent, 200) : WithAlpha(accent, 60));
+        }
+    }
+
+    // ── Canvas background ──────────────────────────────────────────────────
+
+    private FrameworkElement BuildCanvasBackgroundDropdown()
+    {
+        var accent = Theme.Accent;
+
+        // Swatch (fills) + chevron, inside a single rounded button-like border.
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        _swatchVisual = new DrawingVisual();
+        _swatchHost = new Border
+        {
+            CornerRadius = new CornerRadius(6, 0, 0, 6),
+            ClipToBounds = true,
+            Child = new ColorPickerPopup.VisualDrawingVisualHost(_swatchVisual),
+        };
+        _swatchHost.SizeChanged += (_, _) => RefreshSwatch();
+        Grid.SetColumn(_swatchHost, 0);
+        grid.Children.Add(_swatchHost);
+
+        var chevron = new System.Windows.Shapes.Path
+        {
+            Data = Geometry.Parse("M 0,0 L 8,0 L 4,5 Z"),
+            Fill = Theme.Brush(Theme.TextSecondary),
+            HorizontalAlignment = WpfHorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var chevronCell = new Border
+        {
+            Width = 28,
+            Background = Theme.Brush(FieldBackground),
+            BorderBrush = Theme.Brush(WithAlpha(accent, 90)),
+            BorderThickness = new Thickness(1, 0, 0, 0),
+            Child = chevron,
+        };
+        Grid.SetColumn(chevronCell, 1);
+        grid.Children.Add(chevronCell);
+
+        var dropdown = new Border
+        {
+            Height = 34,
+            CornerRadius = new CornerRadius(6),
+            BorderBrush = Theme.Brush(WithAlpha(accent, 90)),
+            BorderThickness = new Thickness(1),
+            Cursor = WpfCursors.Hand,
+            Child = grid,
+        };
+        // CornerRadius alone doesn't clip children, so the swatch would poke out square at the
+        // rounded corners — clip the whole pill to a rounded rect instead.
+        dropdown.SizeChanged += (_, e) =>
+            dropdown.Clip = new RectangleGeometry(new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), 6, 6);
+        // Toggle on mouse-UP: opening on mouse-down lets the popup (StaysOpen=false) read the
+        // matching mouse-up as an outside click and close itself instantly. Mouse-down is still
+        // swallowed so it doesn't reach the shell's DragMove handler and move the window.
+        dropdown.MouseLeftButtonDown += (_, e) => e.Handled = true;
+        dropdown.MouseLeftButtonUp += (_, e) => { e.Handled = true; ToggleBgPopup(); };
+
+        // Reusable color-picker flyout, hosted in a Popup anchored to the dropdown.
+        _colorPicker = new ColorPickerPopup { Margin = new Thickness(10) };
+        _colorPicker.ColorChanged += color =>
+        {
+            _backgroundColor = color is { } c
+                ? System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B)
+                : (System.Drawing.Color?)null;
+            RefreshSwatch();
+        };
+        // Accept pressed, or a screen pick started → close the flyout.
+        _colorPicker.CloseRequested += () => _bgPopup.IsOpen = false;
+        _bgPopup = new Popup
+        {
+            PlacementTarget = dropdown,
+            Placement = PlacementMode.Bottom,
+            VerticalOffset = 2,
+            StaysOpen = false,
+            AllowsTransparency = true,
+            PopupAnimation = PopupAnimation.Fade,
+            Child = _colorPicker,
+        };
+        _bgPopup.Closed += (_, _) => _bgPopupClosedAt = DateTime.UtcNow;
+
+        // Host both in a container so the (zero-size) popup doesn't affect layout.
+        var container = new Grid();
+        container.Children.Add(dropdown);
+        container.Children.Add(_bgPopup);
+        return container;
+    }
+
+    private void ToggleBgPopup()
+    {
+        if (_bgPopup.IsOpen)
+        {
+            _bgPopup.IsOpen = false;
+            return;
+        }
+        // Clicking the button while the popup is open first closes it via the outside-click hook
+        // (on mouse-down); don't let this mouse-up immediately reopen it.
+        if ((DateTime.UtcNow - _bgPopupClosedAt).TotalMilliseconds < 250)
+            return;
+        _bgPopup.IsOpen = true;
+    }
+
+    private void RefreshSwatch()
+    {
+        var w = Math.Max(1, (int)_swatchHost.ActualWidth);
+        var h = Math.Max(1, (int)_swatchHost.ActualHeight);
+
+        using var dc = _swatchVisual.RenderOpen();
+        if (_backgroundColor is { } c)
+            dc.DrawRectangle(Theme.Brush(WpfColor.FromRgb(c.R, c.G, c.B)), null, new Rect(0, 0, w, h));
+        else
+            ColorPickerPopup.PaintCheckerboard(dc, w, h);
     }
 
     // ── UI builders ────────────────────────────────────────────────────────

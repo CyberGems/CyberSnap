@@ -171,6 +171,18 @@ public sealed partial class EditorForm : Form
         return blank;
     }
 
+    private static Bitmap CreateSolidBackground(int width, int height, Color color)
+    {
+        width = Math.Clamp(width, AnnotationCanvas.MinCanvasSize, AnnotationCanvas.MaxCanvasSize);
+        height = Math.Clamp(height, AnnotationCanvas.MinCanvasSize, AnnotationCanvas.MaxCanvasSize);
+        var bmp = new Bitmap(width, height);
+        using (var g = Graphics.FromImage(bmp))
+        {
+            g.Clear(color);
+        }
+        return bmp;
+    }
+
 
     /// <summary>
     /// Brings an already-open editor back to the foreground for a new capture. Windows blocks a
@@ -1058,7 +1070,9 @@ public sealed partial class EditorForm : Form
         var result = ThemedNewCanvasDialog.Show(Handle);
         if (result is null) return;
 
-        var blank = CreateBlankCheckerboard(EditorColors.IsDark, result.Width, result.Height);
+        var blank = result.BackgroundColor is { } bg
+            ? CreateSolidBackground(result.Width, result.Height, bg)
+            : CreateBlankCheckerboard(EditorColors.IsDark, result.Width, result.Height);
         LoadCapture(blank, null, autoMaximize: false);
         _canvas.IsDefaultBlank = true;
         _canvas.IsBlankCanvas = true;

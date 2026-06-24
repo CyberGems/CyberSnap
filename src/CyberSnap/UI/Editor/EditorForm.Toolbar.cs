@@ -568,7 +568,7 @@ public sealed partial class EditorForm
 
         // New, Open & Save (Project operations)
         var newButton = MakeCommandButton("document", LocalizationService.Translate("New"), false);
-        newButton.Click += (_, _) => DoNew();
+        newButton.Click += (_, _) => DoNewCanvas();
         RegisterHoverTooltip(newButton, () => WithShortcut("Start a new document", "Ctrl+N"), above: false);
         commandActions.Controls.Add(newButton);
 
@@ -1302,7 +1302,7 @@ public sealed partial class EditorForm
             Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
             20, false);
 
-        var newCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New canvas..."));
+        var newCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New canvas..."), iconId: "document");
         newCanvasItem.Click += (_, _) => DoNewCanvas();
 
         var newCaptureItem = WindowsMenuRenderer.Item(LocalizationService.Translate("New capture..."), iconId: "captureRect");

@@ -22,6 +22,14 @@ public sealed class StandaloneColorPickerForm : Form
     private readonly StandaloneToolBanner _banner;
     private PickerMagnifierForm? _magnifierForm;
     private Color _pickedColor = Color.Black;
+
+    /// <summary>
+    /// The color the user committed by left-clicking, or null if they cancelled
+    /// (right-click / Escape). Lets an embedding caller adopt the result directly,
+    /// without racing the clipboard.
+    /// </summary>
+    public Color? PickedColor { get; private set; }
+
     private string _hexStr = "000000";
     private string _rgbStr = "0, 0, 0";
     private Point _cursorPos;
@@ -152,6 +160,7 @@ public sealed class StandaloneColorPickerForm : Form
         // Re-read pixel directly from screenshot to ensure accuracy
         var argb = _pixelData[cy * _bmpW + cx];
         var color = Color.FromArgb(argb);
+        PickedColor = color;
         string hex = $"{color.R:X2}{color.G:X2}{color.B:X2}";
 
         // Copy to clipboard
