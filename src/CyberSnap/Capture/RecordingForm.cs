@@ -220,6 +220,34 @@ public sealed partial class RecordingForm : Form
         base.OnKeyDown(e);
     }
 
+    private void ShowEmptyAreaContextMenu(Point clickLocation)
+    {
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+        menu.Font = UiChrome.ChromeFont(11.0f);
+
+        var isSpanish = string.Equals(
+            Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
+            "es", StringComparison.OrdinalIgnoreCase);
+        bool isMp4 = _format == Models.RecordingFormat.MP4;
+
+        var cancelLabel = isMp4
+            ? (isSpanish ? "Cancelar captura MP4" : "Cancel MP4 capture")
+            : (isSpanish ? "Cancelar captura GIF" : "Cancel GIF capture");
+        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+        cancelItem.Click += (_, _) => CancelFromEscape();
+        menu.Items.Add(cancelItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        var closeLabel = isSpanish ? "Cerrar menú" : "Close menu";
+        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "close", iconSize: 24);
+        closeItem.Click += (_, _) => menu.Close();
+        menu.Items.Add(closeItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
+        menu.Show(PointToScreen(clickLocation));
+    }
+
     private void CancelFromEscape()
     {
         if (_state == State.Recording)
@@ -244,7 +272,7 @@ public sealed partial class RecordingForm : Form
             else if (_state == State.PreRecording)
                 DiscardRecording();
             else
-                CancelFromEscape();
+                ShowEmptyAreaContextMenu(e.Location);
             return;
         }
 

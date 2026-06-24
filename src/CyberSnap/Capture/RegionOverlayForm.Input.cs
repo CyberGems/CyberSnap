@@ -45,7 +45,7 @@ public sealed partial class RegionOverlayForm
                 ShowConfirmContextMenu(e.Location);
                 return;
             }
-            Cancel();
+            ShowEmptyAreaContextMenu(e.Location);
             return;
         }
         if (e.Button != MouseButtons.Left) return;
