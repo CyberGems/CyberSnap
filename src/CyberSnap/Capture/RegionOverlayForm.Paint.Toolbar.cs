@@ -360,6 +360,7 @@ public sealed partial class RegionOverlayForm
 
         // 3. Tier 2 Dividers: after highlight and after rectShape, computed dynamically
         // so they stay correct even when adjacent tools are hidden.
+        int drawingStartIdx = _mainBarTools.Length + 4;
         var tier2SepIds = new[] { "highlight", "rectShape" };
         var tier2Seps = new List<int>();
         foreach (var sepId in tier2SepIds)
