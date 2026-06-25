@@ -203,9 +203,8 @@ public sealed partial class RegionOverlayForm
 
         if (hiddenTools.Count > 0)
         {
-            // Restore all hidden tools — shown only when capture tools are individually hidden.
-            if (tool == null)
-                AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
+            // Restore all hidden tools
+            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
 
             menu.Items.Add(new ToolStripSeparator());
             var headerText = isSpanish ? "Herramientas ocultas:" : "Hidden tools:";
@@ -233,8 +232,14 @@ public sealed partial class RegionOverlayForm
         {
             if (hiddenTools.Count == 0)
                 menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(showBarItem);
+            // Restore hidden tools — same position as the chevron menu
+            if (hiddenTools.Count > 0)
+                AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
         }
+
+        // Show annotation bar — placed above Confirm before exit for visibility
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(showBarItem);
 
         // Confirm before exit toggle
         menu.Items.Add(new ToolStripSeparator());
@@ -270,20 +275,23 @@ public sealed partial class RegionOverlayForm
         };
         menu.Items.Add(bannersItem);
 
-        // Full-screen capture & cancel — action items grouped above Close menu
-        menu.Items.Add(new ToolStripSeparator());
-        var fsCaptureLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
-        var fsItem = WindowsMenuRenderer.Item(fsCaptureLabel, iconId: "captureRect", iconSize: 24);
-        fsItem.Click += (s, e) =>
+        // Full-screen capture & cancel — only in the general chevron menu
+        if (tool == null)
         {
-            RegionSelected?.Invoke(_virtualBounds);
-        };
-        menu.Items.Add(fsItem);
+            menu.Items.Add(new ToolStripSeparator());
+            var fsCaptureLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
+            var fsItem = WindowsMenuRenderer.Item(fsCaptureLabel, iconId: "captureRect", iconSize: 24);
+            fsItem.Click += (s, e) =>
+            {
+                RegionSelected?.Invoke(_virtualBounds);
+            };
+            menu.Items.Add(fsItem);
 
-        var cancelCaptureLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
-        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", danger: true, iconSize: 24);
-        cancelCapItem.Click += (s, e) => Cancel();
-        menu.Items.Add(cancelCapItem);
+            var cancelCaptureLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
+            var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", danger: true, iconSize: 24);
+            cancelCapItem.Click += (s, e) => Cancel();
+            menu.Items.Add(cancelCapItem);
+        }
 
         // Close menu
         menu.Items.Add(new ToolStripSeparator());
