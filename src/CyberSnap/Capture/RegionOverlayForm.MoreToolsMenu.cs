@@ -187,8 +187,6 @@ public sealed partial class RegionOverlayForm
         if (tool == null)
         {
             menu.Items.Add(showBarItem);
-            if (hiddenTools.Count > 0)
-                AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
         }
 
         // 3. Show Hidden — rendered as a flat section, NOT a nested submenu. The capture overlay is a
@@ -223,6 +221,11 @@ public sealed partial class RegionOverlayForm
                 menu.Items.Add(toolItem);
             }
         }
+
+        // Restore all hidden tools — shown in general menu only when capture tools
+        // are individually hidden (annotation bar toggle already handles its own restore).
+        if (tool == null && hiddenTools.Count > 0)
+            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
 
         // Tool-specific menu: annotation bar goes just above Close.
         // Only add a separator if there were hidden tools listed above (the
