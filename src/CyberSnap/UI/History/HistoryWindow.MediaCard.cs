@@ -229,25 +229,31 @@ public partial class HistoryWindow
                 Height = 16,
             },
         };
+        deleteMenu.SetResourceReference(MenuItem.StyleProperty, "HistoryActionsMenuStyle");
 
         bool hasFile = HasHistoryFilePath(vm.Entry.FilePath);
+        var isSpanish = string.Equals(_settingsService.Settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
 
-        // 1. Delete from Gallery only (keep file on disk)
+        // 1. Delete from Gallery only (keep file on disk) — not destructive, normal color
         var delGalleryItem = CreateCardActionMenuItem("Delete from Gallery", () =>
         {
             suppressOpenAction = true;
             _historyService.DeleteEntry(vm.Entry);
             LoadCurrentHistoryTab();
-        }, "Remove this item from the gallery, but keep the file on disk.", null, danger: true);
+        }, "Remove this item from the gallery, but keep the file on disk.");
 
         // 2. Delete from disk only (keep in gallery)
         var delDiskItem = CreateCardActionMenuItem("Delete from disk", () =>
         {
             suppressOpenAction = true;
-            if (!ThemedConfirmDialog.Confirm(this,
-                    $"Delete {vm.Entry.FileName}?",
-                    $"This will permanently delete the file.\n\n{vm.Entry.FilePath}",
-                    "Delete", "Cancel"))
+            var title = isSpanish
+                ? $"¿Eliminar {vm.Entry.FileName}?"
+                : $"Delete {vm.Entry.FileName}?";
+            var body = isSpanish
+                ? $"Esto eliminará permanentemente el archivo.\n\n{vm.Entry.FilePath}"
+                : $"This will permanently delete the file.\n\n{vm.Entry.FilePath}";
+            if (!ThemedConfirmDialog.Confirm(this, title, body,
+                    LocalizationService.Translate("Delete"), LocalizationService.Translate("Cancel")))
                 return;
             try { File.Delete(vm.Entry.FilePath); } catch { }
         }, "Permanently delete the file from disk, but keep the gallery entry.", "trash", danger: true);
@@ -257,10 +263,14 @@ public partial class HistoryWindow
         var delBothItem = CreateCardActionMenuItem("Delete from Gallery + disk", () =>
         {
             suppressOpenAction = true;
-            if (!ThemedConfirmDialog.Confirm(this,
-                    $"Delete {vm.Entry.FileName}?",
-                    $"This will permanently delete the file and its gallery entry.\n\n{vm.Entry.FilePath}",
-                    "Delete", "Cancel"))
+            var title = isSpanish
+                ? $"¿Eliminar {vm.Entry.FileName}?"
+                : $"Delete {vm.Entry.FileName}?";
+            var body = isSpanish
+                ? $"Esto eliminará permanentemente el archivo y su entrada en la galería.\n\n{vm.Entry.FilePath}"
+                : $"This will permanently delete the file and its gallery entry.\n\n{vm.Entry.FilePath}";
+            if (!ThemedConfirmDialog.Confirm(this, title, body,
+                    LocalizationService.Translate("Delete"), LocalizationService.Translate("Cancel")))
                 return;
             _historyService.DeleteEntry(vm.Entry);
             LoadCurrentHistoryTab();
