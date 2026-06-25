@@ -149,7 +149,7 @@ public sealed partial class RegionOverlayForm
         // 2. Hide option (only if hideable button with tool clicked)
         if (tool != null)
         {
-            var toolIconId = tool.Id == "scroll" ? "scrollCapture" : tool.Id;
+            var toolIconId = tool.Id switch { "crop" => "rect", "rect" => "captureRect", "scroll" => "scrollCapture", var id => id };
             var hideText = isSpanish ? $"Ocultar \"{LocalizationService.Translate(tool.Label)}\"" : $"Hide \"{LocalizationService.Translate(tool.Label)}\"";
             var hideItem = WindowsMenuRenderer.Item(hideText, iconId: toolIconId, iconSize: 24);
             hideItem.Click += (s, e) => {
