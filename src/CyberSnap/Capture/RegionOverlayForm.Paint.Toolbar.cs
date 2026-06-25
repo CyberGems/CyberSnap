@@ -357,6 +357,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // 3. Tier 2 Dividers: after the last visible tool in each group.
+        int drawingStartIdx = _mainBarTools.Length + 4;
         // Group 1: select/eraser/highlight — separator after last visible of the three.
         // Group 2: rectShape.
         var tier2Groups = new[] {
