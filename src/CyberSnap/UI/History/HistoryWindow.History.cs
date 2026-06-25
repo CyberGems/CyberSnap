@@ -820,21 +820,21 @@ public partial class HistoryWindow
         DeleteSelectedBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
         DeleteSelectedBtn.IsEnabled = !historyUnavailable && _selectMode && selectedCount > 0;
         DeleteSelectedBtn.Content = selectedCount > 0
-            ? $"Delete selected ({selectedCount})"
-            : "Delete selected";
+            ? LocalizationService.Translate("Delete selected") + $" ({selectedCount})"
+            : LocalizationService.Translate("Delete selected");
 
         var selectHelp = _selectMode
             ? string.Format(LocalizationService.Translate("Finish selecting {0}"), categoryLabel)
             : string.Format(LocalizationService.Translate("Select {0}"), categoryLabel);
         var selectName = selectHelp;
         var deleteAllHelp = totalCount > 0
-            ? string.Format(LocalizationService.Translate("Clear all {0} {1} from history (thumbnails + index). Source files on disk are kept."), totalCount, totalCategoryLabel)
+            ? string.Format(LocalizationService.Translate("Delete all {0} {1} from history. Source files on disk will also be deleted."), totalCount, totalCategoryLabel)
             : string.Format(LocalizationService.Translate("No {0} to clear in the current category"), categoryLabel);
         var deleteAllName = totalCount > 0
             ? string.Format(LocalizationService.Translate("Delete all {0} {1} in the current history category"), totalCount, totalCategoryLabel)
             : string.Format(LocalizationService.Translate("Clear {0}"), categoryLabel);
         var deleteSelectedHelp = selectedCount > 0
-            ? string.Format(LocalizationService.Translate("Remove {0} selected {1} from history (thumbnails + index). Source files on disk are kept."), selectedCount, selectedCategoryLabel)
+            ? string.Format(LocalizationService.Translate("Delete {0} selected {1} from history. Source files on disk will also be deleted."), selectedCount, selectedCategoryLabel)
             : string.Format(LocalizationService.Translate("Select {0} before removing selected items"), categoryLabel);
         var deleteSelectedName = selectedCount > 0
             ? string.Format(LocalizationService.Translate("Delete {0} selected {1}"), selectedCount, selectedCategoryLabel)

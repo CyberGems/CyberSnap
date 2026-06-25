@@ -253,6 +253,8 @@
   "Delete {0} selected {1}": "Eliminar {0} {1} seleccionados",
   "Select {0} before removing selected items": "Selecciona {0} antes de eliminar",
   "Remove selected {0}": "Eliminar {0} seleccionados",
+  "Delete all {0} {1} from history. Source files on disk will also be deleted.": "Eliminar todos los {0} {1} de la Galería. Los archivos fuente en el disco también se eliminarán.",
+  "Delete {0} selected {1} from history. Source files on disk will also be deleted.": "Eliminar {0} {1} seleccionados de la Galería. Los archivos fuente en el disco también se eliminarán.",
   "Select history items": "Seleccionar elementos de la galería",
   "Clear current history tab": "Vaciar pestaña actual de la galería",
   "Delete all items in the current history tab": "Eliminar todos los elementos de la pestaña actual",
