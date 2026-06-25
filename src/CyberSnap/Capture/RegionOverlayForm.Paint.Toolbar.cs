@@ -288,32 +288,18 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // 2. Tier 1 Divider: after recordGif (or record as fallback), plus always after last capture
-        var tier1SepIds = new[] { "recordGif" };
+        // 2. Tier 1 Divider: after last visible of {scroll, recordGif, record},
+        // plus always after the last capture tool (before system buttons).
+        var tier1Group = new[] { "scroll", "recordGif", "record" };
         var tier1Seps = new List<int>();
-        foreach (var sepId in tier1SepIds)
+        int lastInGroup = -1;
+        for (int i = 0; i < _mainBarTools.Length; i++)
         {
-            for (int i = 0; i < _mainBarTools.Length; i++)
-            {
-                if (_mainBarTools[i].Id == sepId)
-                {
-                    tier1Seps.Add(i);
-                    break;
-                }
-            }
+            if (tier1Group.Contains(_mainBarTools[i].Id))
+                lastInGroup = i;
         }
-        // Fallback: if recordGif not found, try record
-        if (tier1Seps.Count == 0)
-        {
-            for (int i = 0; i < _mainBarTools.Length; i++)
-            {
-                if (_mainBarTools[i].Id == "record")
-                {
-                    tier1Seps.Add(i);
-                    break;
-                }
-            }
-        }
+        if (lastInGroup >= 0)
+            tier1Seps.Add(lastInGroup);
         // Always add a separator after the last capture tool (before system buttons)
         int lastCaptureIdx = _mainBarTools.Length - 1;
         if (lastCaptureIdx >= 0 && !tier1Seps.Contains(lastCaptureIdx))
