@@ -847,23 +847,16 @@ public partial class HistoryWindow
             }
         }
 
-        // Chevron click toggles menu — anchored to the chevron itself
+        // Chevron click opens menu at cursor position (same as right-click).
+        // ContextMenu auto-closes on outside click — no toggle logic needed.
         chevron.PreviewMouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
             if (chevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
                 tt.IsOpen = false;
-
-            if (menu.IsOpen)
-            {
-                menu.IsOpen = false;
-            }
-            else
-            {
-                menu.PlacementTarget = chevron;
-                menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-                menu.IsOpen = true;
-            }
+            menu.PlacementTarget = null;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            menu.IsOpen = true;
         };
         chevron.PreviewMouseLeftButtonUp += (_, e) => e.Handled = true;
 
