@@ -194,7 +194,8 @@ public sealed partial class RegionOverlayForm
         if (tool == null)
         {
             menu.Items.Add(showBarItem);
-            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
+            if (hiddenTools.Count > 0)
+                AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
         }
 
         // 3. Show Hidden — rendered as a flat section, NOT a nested submenu. The capture overlay is a
@@ -256,8 +257,8 @@ public sealed partial class RegionOverlayForm
             var status = newVal
                 ? (isSpanish ? "Activado" : "On")
                 : (isSpanish ? "Desactivado" : "Off");
-            BeginInvoke(() => ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
             _toolbarContextMenu?.Close();
+            BeginInvoke(() => ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
         };
         menu.Items.Add(confirmExitItem);
 
@@ -279,8 +280,8 @@ public sealed partial class RegionOverlayForm
             var status = newValue
                 ? (isSpanish ? "Activados" : "On")
                 : (isSpanish ? "Desactivados" : "Off");
-            BeginInvoke(() => ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
             _toolbarContextMenu?.Close();
+            BeginInvoke(() => ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
         };
         menu.Items.Add(bannersItem);
 
