@@ -517,7 +517,8 @@ public partial class SettingsWindow
 
     private void UpdateWindowTitle()
     {
-        var title = $"CyberSnap {UpdateService.GetCurrentVersionLabel()} - Configuration";
+        var configLabel = LocalizationService.Translate("Configuration");
+        var title = $"CyberSnap {UpdateService.GetCurrentVersionLabel()} - {configLabel}";
         Title = title;
         SettingsTitleBar.Title = title;
     }
