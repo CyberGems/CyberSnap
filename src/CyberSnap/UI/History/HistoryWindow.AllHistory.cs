@@ -776,6 +776,7 @@ public partial class HistoryWindow
         if (onDelete is not null)
             menu.Items.Add(CreateCardActionMenuItem("Delete", onDelete, null, "trash", danger: true));
 
+        menu.PlacementTarget = card;
         card.MouseRightButtonUp += (_, e) =>
         {
             e.Handled = true;
