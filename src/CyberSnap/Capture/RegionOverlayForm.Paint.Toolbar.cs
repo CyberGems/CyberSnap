@@ -288,9 +288,9 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // 2. Tier 1 Divider: after last visible of {scroll, recordGif, record},
-        // plus always after the last capture tool (before system buttons).
-        var tier1Group = new[] { "scroll", "recordGif", "record" };
+        // 2. Tier 1 Divider: after last visible capture/recording tool before the
+        // utility section (OCR, Scan, Picker, Ruler), plus always after last capture.
+        var tier1Group = new[] { "rect", "center", "scroll", "recordGif", "record" };
         var tier1Seps = new List<int>();
         int lastInGroup = -1;
         for (int i = 0; i < _mainBarTools.Length; i++)
