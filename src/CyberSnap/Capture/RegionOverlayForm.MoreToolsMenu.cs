@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
-using CyberSnap.UI;
 
 namespace CyberSnap.Capture;
 
@@ -182,13 +181,7 @@ public sealed partial class RegionOverlayForm
             else
                 ShowAllAnnotationTools();
             // Defer toast to after menu closes — toolbar rebuild can disrupt the menu pump.
-            var barLabel = isSpanish ? "Barra de anotaciones" : "Annotation bar";
-            var status = wasVisible
-                ? (isSpanish ? "Ocultada" : "Hidden")
-                : (isSpanish ? "Visible" : "Shown");
             _toolbarContextMenu?.Close();
-            BeginInvoke(() =>
-                ToastWindow.Show(ToastSpec.Standard(barLabel, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
         };
 
         if (tool == null)
@@ -253,12 +246,7 @@ public sealed partial class RegionOverlayForm
             var newVal = !svc.Settings.ConfirmBeforeExit;
             svc.Settings.ConfirmBeforeExit = newVal;
             svc.Save();
-            var title = isSpanish ? "Confirmar antes de salir" : "Confirm before exit";
-            var status = newVal
-                ? (isSpanish ? "Activado" : "On")
-                : (isSpanish ? "Desactivado" : "Off");
             _toolbarContextMenu?.Close();
-            BeginInvoke(() => ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
         };
         menu.Items.Add(confirmExitItem);
 
@@ -276,12 +264,7 @@ public sealed partial class RegionOverlayForm
             StandaloneToolBanner.Enabled = newValue;
             svc.Save();
 
-            var title = isSpanish ? "Banners de ayuda" : "Help banners";
-            var status = newValue
-                ? (isSpanish ? "Activados" : "On")
-                : (isSpanish ? "Desactivados" : "Off");
             _toolbarContextMenu?.Close();
-            BeginInvoke(() => ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
         };
         menu.Items.Add(bannersItem);
 
