@@ -288,9 +288,8 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // 2. Tier 1 Dividers: after specific capture tools (dynamic by ID),
-        // plus a final separator between the last capture tool and the system buttons.
-        var tier1SepIds = new[] { "scroll", "recordGif", "ruler" };
+        // 2. Tier 1 Divider: after recordGif (or record as fallback), plus always after last capture
+        var tier1SepIds = new[] { "recordGif" };
         var tier1Seps = new List<int>();
         foreach (var sepId in tier1SepIds)
         {
@@ -303,8 +302,8 @@ public sealed partial class RegionOverlayForm
                 }
             }
         }
-        // If "recordGif" is hidden, try "record" as fallback
-        if (!tier1Seps.Any(idx => _mainBarTools[idx].Id == "recordGif"))
+        // Fallback: if recordGif not found, try record
+        if (tier1Seps.Count == 0)
         {
             for (int i = 0; i < _mainBarTools.Length; i++)
             {
@@ -360,7 +359,7 @@ public sealed partial class RegionOverlayForm
         // 3. Tier 2 Dividers: after highlight and after rectShape, computed dynamically
         // so they stay correct even when adjacent tools are hidden.
         int drawingStartIdx = _mainBarTools.Length + 4;
-        var tier2SepIds = new[] { "eraser", "highlight", "rectShape", "blur" };
+        var tier2SepIds = new[] { "highlight", "rectShape" };
         var tier2Seps = new List<int>();
         foreach (var sepId in tier2SepIds)
         {
