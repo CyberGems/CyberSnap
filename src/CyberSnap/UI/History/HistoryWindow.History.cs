@@ -1244,11 +1244,12 @@ public partial class HistoryWindow
         var del = LocalizationService.Translate("Delete");
         var all = LocalizationService.Translate("all");
         var tab = LocalizationService.Translate("in this history tab");
-        var undone = LocalizationService.Translate("This cannot be undone. Delete all");
+        var undone = LocalizationService.Translate("This cannot be undone. The files will be permanently deleted from disk and removed from the Gallery.");
         return step switch
         {
-            1 => $"{del} {all} {totalCount} {categoryLabel} {tab}?",
-            2 => $"{undone} {totalCount} {categoryLabel}?",
+            1 => $"{del} {all} {totalCount} {categoryLabel} {tab}?\n\n" +
+                 LocalizationService.Translate("This will permanently delete the files from disk and remove them from the Gallery."),
+            2 => $"{undone}\n\n{del} {totalCount} {categoryLabel}?",
             _ => ""
         };
     }
