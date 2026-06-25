@@ -716,13 +716,20 @@ public sealed partial class RegionOverlayForm : Form
             int col2Height = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             int col2StartY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - col2Height) / 2;
             int cy2 = col2StartY;
-            int[] tier2Seps = { 2, 9 };
+            // Dynamic separator positions by tool ID (matches Paint.Toolbar.cs tier2)
+            var tier2SepIdsV = new[] { "highlight", "rectShape" };
+            var tier2SepFlyoutIndicesV = new HashSet<int>();
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                if (tier2SepIdsV.Contains(_flyoutTools[i].Id))
+                    tier2SepFlyoutIndicesV.Add(i);
+            }
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
                 int btnIdx = _mainBarTools.Length + 4 + i;
                 _toolbarButtons[btnIdx] = new Rectangle(col2X, cy2, buttonSize, buttonSize);
                 cy2 += buttonSize + buttonSpacing;
-                if (Array.IndexOf(tier2Seps, i) >= 0)
+                if (tier2SepFlyoutIndicesV.Contains(i))
                     cy2 += GroupGap;
             }
         }
@@ -762,13 +769,20 @@ public sealed partial class RegionOverlayForm : Form
             int row2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             int row2StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row2Width) / 2;
             int cx2 = row2StartX;
-            int[] tier2Seps = { 2, 9 };
+            // Dynamic separator positions by tool ID (matches Paint.Toolbar.cs tier2)
+            var tier2SepIds = new[] { "highlight", "rectShape" };
+            var tier2SepFlyoutIndices = new HashSet<int>();
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                if (tier2SepIds.Contains(_flyoutTools[i].Id))
+                    tier2SepFlyoutIndices.Add(i);
+            }
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
                 int btnIdx = _mainBarTools.Length + 4 + i;
                 _toolbarButtons[btnIdx] = new Rectangle(cx2, row2Y, buttonSize, buttonSize);
                 cx2 += buttonSize + buttonSpacing;
-                if (Array.IndexOf(tier2Seps, i) >= 0)
+                if (tier2SepFlyoutIndices.Contains(i))
                     cx2 += GroupGap;
             }
         }
