@@ -1126,7 +1126,7 @@ public sealed partial class RegionOverlayForm : Form
 
         menu.Items.Add(new ToolStripSeparator());
 
-        var closeLabel = isSpanish ? "Cerrar menú" : "Close menu";
+        var closeLabel = isSpanish ? "Cerrar menú y continuar" : "Close menu and continue";
         var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "close", iconSize: 24);
         closeItem.Click += (_, _) => menu.Close();
         menu.Items.Add(closeItem);
@@ -1212,7 +1212,7 @@ public sealed partial class RegionOverlayForm : Form
 
         menu.Items.Add(new ToolStripSeparator());
 
-        var closeMenuLabel = isSpanish ? "Cerrar menú" : "Close menu";
+        var closeMenuLabel = isSpanish ? "Cerrar menú y continuar" : "Close menu and continue";
         var closeItem = WindowsMenuRenderer.Item(closeMenuLabel, iconId: "close", iconSize: 24);
         closeItem.Click += (s, e) => menu.Close();
         menu.Items.Add(closeItem);

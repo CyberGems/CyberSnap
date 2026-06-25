@@ -191,10 +191,10 @@ public sealed partial class RegionOverlayForm
                 ToastWindow.Show(ToastSpec.Standard(barLabel, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
         };
 
-        // General menu: annotation bar stays in its natural position
         if (tool == null)
         {
             menu.Items.Add(showBarItem);
+            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
         }
 
         // 3. Show Hidden — rendered as a flat section, NOT a nested submenu. The capture overlay is a
@@ -256,7 +256,7 @@ public sealed partial class RegionOverlayForm
             var status = newVal
                 ? (isSpanish ? "Activado" : "On")
                 : (isSpanish ? "Desactivado" : "Off");
-            ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false });
+            BeginInvoke(() => ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
             _toolbarContextMenu?.Close();
         };
         menu.Items.Add(confirmExitItem);
@@ -279,7 +279,7 @@ public sealed partial class RegionOverlayForm
             var status = newValue
                 ? (isSpanish ? "Activados" : "On")
                 : (isSpanish ? "Desactivados" : "Off");
-            ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false });
+            BeginInvoke(() => ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
             _toolbarContextMenu?.Close();
         };
         menu.Items.Add(bannersItem);
@@ -301,7 +301,7 @@ public sealed partial class RegionOverlayForm
 
         // Close menu
         menu.Items.Add(new ToolStripSeparator());
-        var closeMenuText = isSpanish ? "Cerrar menú" : "Close menu";
+        var closeMenuText = isSpanish ? "Cerrar menú y continuar" : "Close menu and continue";
         var closeMenuItem = WindowsMenuRenderer.Item(closeMenuText, iconId: "close", iconSize: 24);
         closeMenuItem.Click += (s, e) => {
             menu.Close();
