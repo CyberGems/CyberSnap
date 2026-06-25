@@ -217,23 +217,19 @@ public partial class HistoryWindow
                 ShowFileInFolder(vm.Entry.FilePath);
             }, "Show this file in File Explorer.", "folder"));
         }
-        // Delete submenu
-        var deleteMenu = new MenuItem
+        // Delete section — flat items with a visual header for grouping
+        var deleteHeader = new MenuItem
         {
             Header = LocalizationService.Translate("Delete"),
-            Icon = new System.Windows.Controls.Image
-            {
-                Source = Helpers.FluentIcons.RenderWpf("trash",
-                    System.Drawing.Color.FromArgb(210, 239, 68, 68), 16),
-                Width = 16,
-                Height = 16,
-            },
+            IsEnabled = false,
         };
+        actionMenu.Items.Add(new Separator());
+        actionMenu.Items.Add(deleteHeader);
 
         bool hasFile = HasHistoryFilePath(vm.Entry.FilePath);
         var isSpanish = string.Equals(_settingsService.Settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
 
-        // 1. Delete from Gallery only (keep file on disk) — not destructive, normal color
+        // 1. Delete from Gallery only (keep file on disk) — not destructive
         var delGalleryItem = CreateCardActionMenuItem("Delete from Gallery", () =>
         {
             suppressOpenAction = true;
@@ -276,10 +272,9 @@ public partial class HistoryWindow
         }, "Permanently delete the file from disk and remove from gallery.", "trash", danger: true);
         delBothItem.IsEnabled = hasFile;
 
-        deleteMenu.Items.Add(delGalleryItem);
-        deleteMenu.Items.Add(delDiskItem);
-        deleteMenu.Items.Add(delBothItem);
-        actionMenu.Items.Add(deleteMenu);
+        actionMenu.Items.Add(delGalleryItem);
+        actionMenu.Items.Add(delDiskItem);
+        actionMenu.Items.Add(delBothItem);
         actionMenu.PlacementTarget = card;
         card.MouseRightButtonUp += (_, e) =>
         {
