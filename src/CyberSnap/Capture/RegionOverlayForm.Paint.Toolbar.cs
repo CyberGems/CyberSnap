@@ -356,21 +356,24 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // 3. Tier 2 Dividers: after highlight and after rectShape, computed dynamically
-        // so they stay correct even when adjacent tools are hidden.
-        int drawingStartIdx = _mainBarTools.Length + 4;
-        var tier2SepIds = new[] { "highlight", "rectShape" };
+        // 3. Tier 2 Dividers: after the last visible tool in each group.
+        // Group 1: select/eraser/highlight — separator after last visible of the three.
+        // Group 2: rectShape.
+        var tier2Groups = new[] {
+            new[] { "select", "eraser", "highlight" },
+            new[] { "rectShape" }
+        };
         var tier2Seps = new List<int>();
-        foreach (var sepId in tier2SepIds)
+        foreach (var group in tier2Groups)
         {
+            int lastIdx = -1;
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
-                if (_flyoutTools[i].Id == sepId)
-                {
-                    tier2Seps.Add(_mainBarTools.Length + 4 + i);
-                    break;
-                }
+                if (group.Contains(_flyoutTools[i].Id))
+                    lastIdx = i;
             }
+            if (lastIdx >= 0)
+                tier2Seps.Add(_mainBarTools.Length + 4 + lastIdx);
         }
         foreach (int idx in tier2Seps)
         {

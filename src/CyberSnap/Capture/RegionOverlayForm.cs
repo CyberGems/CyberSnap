@@ -716,13 +716,22 @@ public sealed partial class RegionOverlayForm : Form
             int col2Height = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             int col2StartY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - col2Height) / 2;
             int cy2 = col2StartY;
-            // Dynamic separator positions by tool ID (matches Paint.Toolbar.cs tier2)
-            var tier2SepIdsV = new[] { "highlight", "rectShape" };
+            // Separator after last visible in each group (matches Paint.Toolbar.cs)
+            var tier2GroupsV = new[] {
+                new[] { "select", "eraser", "highlight" },
+                new[] { "rectShape" }
+            };
             var tier2SepFlyoutIndicesV = new HashSet<int>();
-            for (int i = 0; i < _flyoutTools.Length; i++)
+            foreach (var group in tier2GroupsV)
             {
-                if (tier2SepIdsV.Contains(_flyoutTools[i].Id))
-                    tier2SepFlyoutIndicesV.Add(i);
+                int lastIdx = -1;
+                for (int i = 0; i < _flyoutTools.Length; i++)
+                {
+                    if (group.Contains(_flyoutTools[i].Id))
+                        lastIdx = i;
+                }
+                if (lastIdx >= 0)
+                    tier2SepFlyoutIndicesV.Add(lastIdx);
             }
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
@@ -769,13 +778,22 @@ public sealed partial class RegionOverlayForm : Form
             int row2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
             int row2StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row2Width) / 2;
             int cx2 = row2StartX;
-            // Dynamic separator positions by tool ID (matches Paint.Toolbar.cs tier2)
-            var tier2SepIds = new[] { "highlight", "rectShape" };
+            // Separator after last visible in each group (matches Paint.Toolbar.cs)
+            var tier2Groups = new[] {
+                new[] { "select", "eraser", "highlight" },
+                new[] { "rectShape" }
+            };
             var tier2SepFlyoutIndices = new HashSet<int>();
-            for (int i = 0; i < _flyoutTools.Length; i++)
+            foreach (var group in tier2Groups)
             {
-                if (tier2SepIds.Contains(_flyoutTools[i].Id))
-                    tier2SepFlyoutIndices.Add(i);
+                int lastIdx = -1;
+                for (int i = 0; i < _flyoutTools.Length; i++)
+                {
+                    if (group.Contains(_flyoutTools[i].Id))
+                        lastIdx = i;
+                }
+                if (lastIdx >= 0)
+                    tier2SepFlyoutIndices.Add(lastIdx);
             }
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
