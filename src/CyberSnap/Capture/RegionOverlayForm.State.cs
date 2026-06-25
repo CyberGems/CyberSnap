@@ -74,10 +74,6 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            if (enabledIds.Contains("record") && !enabledIds.Contains("recordGif"))
-            {
-                enabledIds.Add("recordGif");
-            }
             _visibleTools = ToolDef.AllTools.Where(t => enabledIds.Contains(t.Id)).ToArray();
         }
 
