@@ -1020,7 +1020,7 @@ public sealed partial class RegionOverlayForm : Form
 
     /// <summary>
     /// Right-click menu shown while confirming a selection. Contains "Confirm capture" (green ✓)
-    /// and "Cancel capture" (red cancel/close icon), with larger menu text.
+    /// and "Cancel capture and exit" (red cancel/close icon), with larger menu text.
     /// </summary>
     private void ShowConfirmContextMenu(Point clickLocation)
     {
@@ -1043,7 +1043,7 @@ public sealed partial class RegionOverlayForm : Form
         confirmItem.Click += (_, _) => CommitConfirmedSelection();
         menu.Items.Add(confirmItem);
 
-        var cancelItem = WindowsMenuRenderer.Item("Cancel capture", iconId: "close", danger: true, iconSize: 24);
+        var cancelItem = WindowsMenuRenderer.Item("Cancel capture and exit", iconId: "close", danger: true, iconSize: 24);
         cancelItem.Click += (_, _) => Cancel();
         menu.Items.Add(cancelItem);
 
@@ -1092,7 +1092,7 @@ public sealed partial class RegionOverlayForm : Form
             fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
             menu.Items.Add(fsItem);
 
-            var cancelLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
+            var cancelLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
             var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
@@ -1118,7 +1118,7 @@ public sealed partial class RegionOverlayForm : Form
             fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
             menu.Items.Add(fsItem);
 
-            var cancelLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
+            var cancelLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
             var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
@@ -1205,7 +1205,7 @@ public sealed partial class RegionOverlayForm : Form
         };
         menu.Items.Add(captureItem);
 
-        var cancelCaptureLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
+        var cancelCaptureLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
         var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", iconSize: 24);
         cancelCapItem.Click += (s, e) => Cancel();
         menu.Items.Add(cancelCapItem);

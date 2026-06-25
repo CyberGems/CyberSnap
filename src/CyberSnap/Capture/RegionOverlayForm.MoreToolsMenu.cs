@@ -203,6 +203,10 @@ public sealed partial class RegionOverlayForm
 
         if (hiddenTools.Count > 0)
         {
+            // Restore all hidden tools — shown only when capture tools are individually hidden.
+            if (tool == null)
+                AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
+
             menu.Items.Add(new ToolStripSeparator());
             var headerText = isSpanish ? "Herramientas ocultas:" : "Hidden tools:";
             var header = WindowsMenuRenderer.Item(headerText, iconId: null, iconSize: 24);
@@ -221,11 +225,6 @@ public sealed partial class RegionOverlayForm
                 menu.Items.Add(toolItem);
             }
         }
-
-        // Restore all hidden tools — shown in general menu only when capture tools
-        // are individually hidden (annotation bar toggle already handles its own restore).
-        if (tool == null && hiddenTools.Count > 0)
-            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
 
         // Tool-specific menu: annotation bar goes just above Close.
         // Only add a separator if there were hidden tools listed above (the
@@ -281,7 +280,7 @@ public sealed partial class RegionOverlayForm
         };
         menu.Items.Add(fsItem);
 
-        var cancelCaptureLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
+        var cancelCaptureLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
         var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", danger: true, iconSize: 24);
         cancelCapItem.Click += (s, e) => Cancel();
         menu.Items.Add(cancelCapItem);
@@ -289,7 +288,7 @@ public sealed partial class RegionOverlayForm
         // Close menu
         menu.Items.Add(new ToolStripSeparator());
         var closeMenuText = isSpanish ? "Cerrar menú y continuar" : "Close menu and continue";
-        var closeMenuItem = WindowsMenuRenderer.Item(closeMenuText, iconId: "close", iconSize: 24);
+        var closeMenuItem = WindowsMenuRenderer.Item(closeMenuText, iconId: null, iconSize: 24);
         closeMenuItem.Click += (s, e) => {
             menu.Close();
         };
