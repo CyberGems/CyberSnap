@@ -823,20 +823,22 @@ public partial class HistoryWindow
             ? $"Delete selected ({selectedCount})"
             : "Delete selected";
 
-        var selectHelp = _selectMode ? $"Finish selecting {categoryLabel}" : $"Select {categoryLabel}";
-        var selectName = _selectMode ? $"Finish selecting {categoryLabel}" : $"Select {categoryLabel}";
+        var selectHelp = _selectMode
+            ? string.Format(LocalizationService.Translate("Finish selecting {0}"), categoryLabel)
+            : string.Format(LocalizationService.Translate("Select {0}"), categoryLabel);
+        var selectName = selectHelp;
         var deleteAllHelp = totalCount > 0
-            ? $"Clear all {totalCount} {totalCategoryLabel} from history (thumbnails + index). Source files on disk are kept."
-            : $"No {categoryLabel} to clear in the current category";
+            ? string.Format(LocalizationService.Translate("Clear all {0} {1} from history (thumbnails + index). Source files on disk are kept."), totalCount, totalCategoryLabel)
+            : string.Format(LocalizationService.Translate("No {0} to clear in the current category"), categoryLabel);
         var deleteAllName = totalCount > 0
-            ? $"Delete all {totalCount} {totalCategoryLabel} in the current history category"
-            : $"Clear {categoryLabel}";
+            ? string.Format(LocalizationService.Translate("Delete all {0} {1} in the current history category"), totalCount, totalCategoryLabel)
+            : string.Format(LocalizationService.Translate("Clear {0}"), categoryLabel);
         var deleteSelectedHelp = selectedCount > 0
-            ? $"Remove {selectedCount} selected {selectedCategoryLabel} from history (thumbnails + index). Source files on disk are kept."
-            : $"Select {categoryLabel} before removing selected items";
+            ? string.Format(LocalizationService.Translate("Remove {0} selected {1} from history (thumbnails + index). Source files on disk are kept."), selectedCount, selectedCategoryLabel)
+            : string.Format(LocalizationService.Translate("Select {0} before removing selected items"), categoryLabel);
         var deleteSelectedName = selectedCount > 0
-            ? $"Delete {selectedCount} selected {selectedCategoryLabel}"
-            : $"Remove selected {categoryLabel}";
+            ? string.Format(LocalizationService.Translate("Delete {0} selected {1}"), selectedCount, selectedCategoryLabel)
+            : string.Format(LocalizationService.Translate("Remove selected {0}"), categoryLabel);
 
         SelectBtn.ToolTip = selectHelp;
         DeleteAllBtn.ToolTip = deleteAllHelp;
