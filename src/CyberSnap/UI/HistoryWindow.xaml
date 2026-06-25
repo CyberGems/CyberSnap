@@ -380,16 +380,20 @@
                             <DockPanel>
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button x:Name="SelectBtn" Content="Select" Style="{StaticResource HistoryActionButton}"
+                                            Services:LocalizationService.SourceText="Select"
                                              Margin="0,0,6,0" ToolTip="Select history items"
+                                            Services:LocalizationService.SourceText="Select history items"
                                              AutomationProperties.Name="Select history items"
                                              AutomationProperties.HelpText="Select history items"
                                              Cursor="Hand" Click="ToggleSelectMode"/>
                                     <Button x:Name="DeleteAllBtn" Content="Clear all" Style="{StaticResource HistoryDangerButton}"
+                                            Services:LocalizationService.SourceText="Clear all"
                                             ToolTip="Delete all items in the current history tab"
                                             AutomationProperties.Name="Clear current history tab"
                                             AutomationProperties.HelpText="Delete all items in the current history tab"
                                             Cursor="Hand" Click="DeleteAllClick"/>
                                     <Button x:Name="DeleteSelectedBtn" Content="Delete selected" Style="{StaticResource HistoryDangerButton}"
+                                            Services:LocalizationService.SourceText="Delete selected"
                                              Margin="6,0,0,0" Visibility="Collapsed"
                                              ToolTip="Delete selected history items"
                                              AutomationProperties.Name="Delete selected history items"
