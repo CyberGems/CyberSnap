@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
+using CyberSnap.UI;
 
 namespace CyberSnap.Capture;
 
@@ -178,15 +179,19 @@ public sealed partial class RegionOverlayForm
         var showBarText = isSpanish ? "Mostrar barra de anotaciones" : "Show annotation bar";
         var showBarItem = WindowsMenuRenderer.Item(showBarText, iconId: annotationToolsCount > 0 ? "check" : null, iconSize: 24);
         showBarItem.Click += (s, e) => {
-            if (annotationToolsCount > 0)
-            {
+            bool wasVisible = annotationToolsCount > 0;
+            if (wasVisible)
                 HideAllAnnotationTools();
-            }
             else
-            {
                 ShowAllAnnotationTools();
-            }
+            // Defer toast to after menu closes — toolbar rebuild can disrupt the menu pump.
+            var barLabel = isSpanish ? "Barra de anotaciones" : "Annotation bar";
+            var status = wasVisible
+                ? (isSpanish ? "Ocultada" : "Hidden")
+                : (isSpanish ? "Visible" : "Shown");
             _toolbarContextMenu?.Close();
+            BeginInvoke(() =>
+                ToastWindow.Show(ToastSpec.Standard(barLabel, status) with { SuppressSound = true, DurationSeconds = 2 }));
         };
 
         // General menu: annotation bar stays in its natural position
@@ -239,21 +244,6 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(showBarItem);
         }
 
-        // Full-screen capture & cancel — available from every toolbar context menu
-        menu.Items.Add(new ToolStripSeparator());
-        var fsCaptureLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
-        var fsItem = WindowsMenuRenderer.Item(fsCaptureLabel, iconId: "captureRect", iconSize: 24);
-        fsItem.Click += (s, e) =>
-        {
-            RegionSelected?.Invoke(_virtualBounds);
-        };
-        menu.Items.Add(fsItem);
-
-        var cancelCaptureLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
-        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", iconSize: 24);
-        cancelCapItem.Click += (s, e) => Cancel();
-        menu.Items.Add(cancelCapItem);
-
         // Confirm before exit toggle
         menu.Items.Add(new ToolStripSeparator());
         var confirmExitEnabled = settings.ConfirmBeforeExit;
@@ -263,32 +253,15 @@ public sealed partial class RegionOverlayForm
         {
             var svc = new Services.SettingsService(null);
             svc.Load();
-            svc.Settings.ConfirmBeforeExit = !svc.Settings.ConfirmBeforeExit;
+            var newVal = !svc.Settings.ConfirmBeforeExit;
+            svc.Settings.ConfirmBeforeExit = newVal;
             svc.Save();
-            menu.AutoClose = false;
-            var blinkTimer = new System.Windows.Forms.Timer { Interval = 90 };
-            int blinks = 0;
-            var checkColor = System.Drawing.Color.FromArgb(255,
-                CyberSnap.UI.Theme.TextPrimary.R,
-                CyberSnap.UI.Theme.TextPrimary.G,
-                CyberSnap.UI.Theme.TextPrimary.B);
-            var onImage = Helpers.FluentIcons.RenderBitmap("check", checkColor, 24, active: true);
-            var newVal = !confirmExitEnabled;
-            var evenImage = newVal ? onImage : null;
-            var oddImage  = newVal ? null : onImage;
-            blinkTimer.Tick += (_, _) =>
-            {
-                confirmExitItem.Image = blinks % 2 == 0 ? evenImage : oddImage;
-                blinks++;
-                if (blinks > 4)
-                {
-                    blinkTimer.Stop();
-                    blinkTimer.Dispose();
-                    menu.AutoClose = true;
-                    _toolbarContextMenu?.Close();
-                }
-            };
-            blinkTimer.Start();
+            var title = isSpanish ? "Confirmar antes de salir" : "Confirm before exit";
+            var status = newVal
+                ? (isSpanish ? "Activado" : "On")
+                : (isSpanish ? "Desactivado" : "Off");
+            ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2 });
+            _toolbarContextMenu?.Close();
         };
         menu.Items.Add(confirmExitItem);
 
@@ -306,37 +279,31 @@ public sealed partial class RegionOverlayForm
             StandaloneToolBanner.Enabled = newValue;
             svc.Save();
 
-            // Prevent the menu from auto-closing so the blink animation plays.
-            menu.AutoClose = false;
-
-            var blinkTimer = new System.Windows.Forms.Timer { Interval = 90 };
-            int blinks = 0;
-            var checkColor = System.Drawing.Color.FromArgb(255,
-                CyberSnap.UI.Theme.TextPrimary.R,
-                CyberSnap.UI.Theme.TextPrimary.G,
-                CyberSnap.UI.Theme.TextPrimary.B);
-            var onImage = Helpers.FluentIcons.RenderBitmap("check", checkColor, 20, active: true);
-            // Blink the left-bar checkmark area: alternate between the new-state
-            // icon and its opposite so both enable and disable produce a visible flash.
-            var evenImage = newValue ? onImage : null;   // blinks 0,2 → target state
-            var oddImage  = newValue ? null : onImage;    // blinks 1,3 → opposite
-            blinkTimer.Tick += (_, _) =>
-            {
-                bannersItem.Image = blinks % 2 == 0 ? evenImage : oddImage;
-                blinks++;
-                if (blinks > 4)
-                {
-                    blinkTimer.Stop();
-                    blinkTimer.Dispose();
-                    menu.AutoClose = true;
-                    _toolbarContextMenu?.Close();
-                }
-            };
-            blinkTimer.Start();
+            var title = isSpanish ? "Banners de ayuda" : "Help banners";
+            var status = newValue
+                ? (isSpanish ? "Activados" : "On")
+                : (isSpanish ? "Desactivados" : "Off");
+            ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2 });
+            _toolbarContextMenu?.Close();
         };
         menu.Items.Add(bannersItem);
 
-        // 4. Close/Cancel menu
+        // Full-screen capture & cancel — action items grouped above Close menu
+        menu.Items.Add(new ToolStripSeparator());
+        var fsCaptureLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
+        var fsItem = WindowsMenuRenderer.Item(fsCaptureLabel, iconId: "captureRect", iconSize: 24);
+        fsItem.Click += (s, e) =>
+        {
+            RegionSelected?.Invoke(_virtualBounds);
+        };
+        menu.Items.Add(fsItem);
+
+        var cancelCaptureLabel = isSpanish ? "Cancelar captura" : "Cancel capture";
+        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", danger: true, iconSize: 24);
+        cancelCapItem.Click += (s, e) => Cancel();
+        menu.Items.Add(cancelCapItem);
+
+        // Close menu
         menu.Items.Add(new ToolStripSeparator());
         var closeMenuText = isSpanish ? "Cerrar menú" : "Close menu";
         var closeMenuItem = WindowsMenuRenderer.Item(closeMenuText, iconId: "close", iconSize: 24);
