@@ -217,14 +217,8 @@ public partial class HistoryWindow
                 ShowFileInFolder(vm.Entry.FilePath);
             }, "Show this file in File Explorer.", "folder"));
         }
-        // Delete section — flat items with a visual header for grouping
-        var deleteHeader = new MenuItem
-        {
-            Header = LocalizationService.Translate("Delete"),
-            IsEnabled = false,
-        };
+        // Delete section
         actionMenu.Items.Add(new Separator());
-        actionMenu.Items.Add(deleteHeader);
 
         bool hasFile = HasHistoryFilePath(vm.Entry.FilePath);
         var isSpanish = string.Equals(_settingsService.Settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
@@ -235,7 +229,7 @@ public partial class HistoryWindow
             suppressOpenAction = true;
             _historyService.DeleteEntry(vm.Entry);
             LoadCurrentHistoryTab();
-        }, "Remove this item from the gallery, but keep the file on disk.");
+        }, "Remove this item from the gallery, but keep the file on disk.", "trash");
 
         // 2. Delete from disk only (keep in gallery)
         var delDiskItem = CreateCardActionMenuItem("Delete from disk", () =>
@@ -587,7 +581,7 @@ public partial class HistoryWindow
         if (iconId != null)
         {
             var iconColor = danger
-                ? System.Drawing.Color.FromArgb(239, 68, 68, 68)
+                ? System.Drawing.Color.FromArgb(210, 239, 68, 68)
                 : System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
             item.Icon = new System.Windows.Controls.Image
             {
