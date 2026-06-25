@@ -1088,7 +1088,6 @@ public partial class HistoryWindow
 
             if (!ConfirmDeleteAllStep(1, totalCount, tab)) return;
             if (!ConfirmDeleteAllStep(2, totalCount, tab)) return;
-            if (!ConfirmDeleteAllStep(3, totalCount, tab)) return;
 
             CancelImageSearchWork();
             if (HistoryCategoryCombo.SelectedIndex == 0) _historyService.ClearImages();
@@ -1236,7 +1235,8 @@ public partial class HistoryWindow
     private static string BuildDeleteAllConfirmationTitle(int step, int totalCount, string categoryLabel)
     {
         var del = LocalizationService.Translate("Delete");
-        return $"{del} {totalCount} {categoryLabel} ({step}/3)";
+        var confirmation = LocalizationService.Translate("Confirmation");
+        return $"{del} {totalCount} {categoryLabel} ({confirmation} {step} {LocalizationService.Translate("of")} 2)";
     }
 
     private static string BuildDeleteAllConfirmationMessage(int step, int totalCount, string categoryLabel)
@@ -1244,13 +1244,11 @@ public partial class HistoryWindow
         var del = LocalizationService.Translate("Delete");
         var all = LocalizationService.Translate("all");
         var tab = LocalizationService.Translate("in this history tab");
-        var really = LocalizationService.Translate("Really delete all");
         var undone = LocalizationService.Translate("This cannot be undone. Delete all");
         return step switch
         {
             1 => $"{del} {all} {totalCount} {categoryLabel} {tab}?",
-            2 => $"{really} {totalCount} {categoryLabel}?",
-            3 => $"{undone} {totalCount} {categoryLabel}?",
+            2 => $"{undone} {totalCount} {categoryLabel}?",
             _ => ""
         };
     }
