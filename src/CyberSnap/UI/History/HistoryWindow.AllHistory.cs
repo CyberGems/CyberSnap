@@ -847,10 +847,11 @@ public partial class HistoryWindow
             }
         }
 
-        // Chevron click opens menu at cursor (WPF auto-closes on outside click)
+        // Chevron click opens menu (only if not already open — prevents toggle)
         chevron.PreviewMouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
+            if (menu.IsOpen) return;
             if (chevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
                 tt.IsOpen = false;
             menu.PlacementTarget = card;
