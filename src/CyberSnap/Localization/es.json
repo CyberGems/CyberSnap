@@ -255,6 +255,8 @@
   "Remove selected {0}": "Eliminar {0} seleccionados",
   "Confirmation": "Confirmación",
   "of": "de",
+  "This cannot be undone. The files will be permanently deleted from disk and removed from the Gallery.": "Esto no se puede deshacer. Los archivos se eliminarán permanentemente del disco y de la Galería.",
+  "This will permanently delete the files from disk and remove them from the Gallery.": "Esto eliminará permanentemente los archivos del disco y los quitará de la Galería.",
   "Delete all {0} {1} from history. Source files on disk will also be deleted.": "Eliminar todos los {0} {1} de la Galería. Los archivos fuente en el disco también se eliminarán.",
   "Delete {0} selected {1} from history. Source files on disk will also be deleted.": "Eliminar {0} {1} seleccionados de la Galería. Los archivos fuente en el disco también se eliminarán.",
   "Select history items": "Seleccionar elementos de la galería",
