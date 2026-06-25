@@ -123,8 +123,8 @@ public sealed partial class RegionOverlayForm
             else
             {
                 var hint = isSpanish
-                    ? "Haz clic derecho sobre los botones para ocultarlos."
-                    : "Right-click on the buttons to hide them.";
+                    ? "Clic en el logo para ver consejos"
+                    : "Click the logo for tips";
                 var headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}  •  {hint}";
 
                 var headerLabel = new ToolStripLabel(headerText)
@@ -135,7 +135,8 @@ public sealed partial class RegionOverlayForm
                     AutoSize = true,
                 };
                 menu.Items.Add(headerLabel);
-                menu.Items.Add(new ToolStripSeparator());
+                if (hiddenTools.Count > 0)
+                    menu.Items.Add(new ToolStripSeparator());
             }
         }
 
@@ -167,7 +168,8 @@ public sealed partial class RegionOverlayForm
                 }
             }
             menu.Items.Add(hideItem);
-            menu.Items.Add(new ToolStripSeparator());
+            if (hiddenTools.Count > 0)
+                menu.Items.Add(new ToolStripSeparator());
         }
 
         // Show annotation bar checkable toggle — created now, added at different positions
@@ -223,15 +225,6 @@ public sealed partial class RegionOverlayForm
                 };
                 menu.Items.Add(toolItem);
             }
-        }
-
-        // Tool-specific menu: annotation bar goes just above Close.
-        // Only add a separator if there were hidden tools listed above (the
-        // hidden-tools section already supplies its own separator in that case).
-        if (tool != null)
-        {
-            if (hiddenTools.Count == 0)
-                menu.Items.Add(new ToolStripSeparator());
         }
 
         // Show annotation bar — placed above Confirm before exit for visibility
