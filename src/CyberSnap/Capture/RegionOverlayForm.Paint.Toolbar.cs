@@ -288,22 +288,39 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        int sepIdx = -1;
-        for (int i = 0; i < _mainBarTools.Length; i++)
-        {
-            if (_mainBarTools[i].Id == "recordGif") sepIdx = i;
-        }
-        if (sepIdx == -1)
+        // 2. Tier 1 Dividers: after specific capture tools (dynamic by ID),
+        // plus a final separator between the last capture tool and the system buttons.
+        var tier1SepIds = new[] { "scroll", "recordGif", "ruler" };
+        var tier1Seps = new List<int>();
+        foreach (var sepId in tier1SepIds)
         {
             for (int i = 0; i < _mainBarTools.Length; i++)
             {
-                if (_mainBarTools[i].Id == "record") sepIdx = i;
+                if (_mainBarTools[i].Id == sepId)
+                {
+                    tier1Seps.Add(i);
+                    break;
+                }
             }
         }
+        // If "recordGif" is hidden, try "record" as fallback
+        if (!tier1Seps.Any(idx => _mainBarTools[idx].Id == "recordGif"))
+        {
+            for (int i = 0; i < _mainBarTools.Length; i++)
+            {
+                if (_mainBarTools[i].Id == "record")
+                {
+                    tier1Seps.Add(i);
+                    break;
+                }
+            }
+        }
+        // Always add a separator after the last capture tool (before system buttons)
+        int lastCaptureIdx = _mainBarTools.Length - 1;
+        if (lastCaptureIdx >= 0 && !tier1Seps.Contains(lastCaptureIdx))
+            tier1Seps.Add(lastCaptureIdx);
 
-        // 2. Tier 1 Dividers: after scroll (3) and last capture tool
-        int[] tier1SepIndices = sepIdx >= 0 ? new int[] { sepIdx } : Array.Empty<int>();
-        foreach (int idx in tier1SepIndices)
+        foreach (int idx in tier1Seps)
         {
             if (idx < 0 || idx >= _toolbarButtons.Length) continue;
             if (IsVerticalDock)
@@ -318,24 +335,6 @@ public sealed partial class RegionOverlayForm
                 int sx = _toolbarButtons[idx].Right + (buttonSpacing + GroupGap) / 2;
                 int sy1 = _toolbarButtons[idx].Y + 4;
                 int sy2 = _toolbarButtons[idx].Bottom - 4;
-                WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
-            }
-        }
-        int lastCaptureIdx = _mainBarTools.Length - 1;
-        if (lastCaptureIdx >= 0 && _toolbarButtons.Length > lastCaptureIdx)
-        {
-            if (IsVerticalDock)
-            {
-                int sy = _toolbarButtons[lastCaptureIdx].Bottom + (buttonSpacing + GroupGap) / 2;
-                int sx1 = _toolbarButtons[lastCaptureIdx].X + 4;
-                int sx2 = _toolbarButtons[lastCaptureIdx].Right - 4;
-                WindowsDockRenderer.PaintDivider(g, new Point(sx1, sy), new Point(sx2, sy));
-            }
-            else
-            {
-                int sx = _toolbarButtons[lastCaptureIdx].Right + (buttonSpacing + GroupGap) / 2;
-                int sy1 = _toolbarButtons[lastCaptureIdx].Y + 4;
-                int sy2 = _toolbarButtons[lastCaptureIdx].Bottom - 4;
                 WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
             }
         }
@@ -361,7 +360,7 @@ public sealed partial class RegionOverlayForm
         // 3. Tier 2 Dividers: after highlight and after rectShape, computed dynamically
         // so they stay correct even when adjacent tools are hidden.
         int drawingStartIdx = _mainBarTools.Length + 4;
-        var tier2SepIds = new[] { "highlight", "rectShape" };
+        var tier2SepIds = new[] { "eraser", "highlight", "rectShape", "blur" };
         var tier2Seps = new List<int>();
         foreach (var sepId in tier2SepIds)
         {
