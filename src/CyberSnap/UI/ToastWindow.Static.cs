@@ -89,6 +89,14 @@ public partial class ToastWindow
         if (_current?.TryUpdateInPlace(spec) == true)
             return;
 
+        // Ensure toast creation/show happens on the WPF dispatcher thread.
+        var wpfDispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (wpfDispatcher != null && !wpfDispatcher.CheckAccess())
+        {
+            wpfDispatcher.BeginInvoke(() => Show(spec));
+            return;
+        }
+
         ReplaceCurrentToast();
         var toast = new ToastWindow(spec);
         _current = toast;
