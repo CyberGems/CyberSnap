@@ -167,6 +167,7 @@ public sealed partial class RegionOverlayForm
                 }
             }
             menu.Items.Add(hideItem);
+            menu.Items.Add(new ToolStripSeparator());
         }
 
         // Show annotation bar checkable toggle — created now, added at different positions
@@ -206,7 +207,6 @@ public sealed partial class RegionOverlayForm
             // Restore all hidden tools
             AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
 
-            menu.Items.Add(new ToolStripSeparator());
             var headerText = isSpanish ? "Herramientas ocultas:" : "Hidden tools:";
             var header = WindowsMenuRenderer.Item(headerText, iconId: null, iconSize: 24);
             header.Enabled = false;
@@ -232,9 +232,6 @@ public sealed partial class RegionOverlayForm
         {
             if (hiddenTools.Count == 0)
                 menu.Items.Add(new ToolStripSeparator());
-            // Restore hidden tools — same position as the chevron menu
-            if (hiddenTools.Count > 0)
-                AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
         }
 
         // Show annotation bar — placed above Confirm before exit for visibility
