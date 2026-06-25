@@ -229,7 +229,6 @@ public partial class HistoryWindow
                 Height = 16,
             },
         };
-        deleteMenu.SetResourceReference(MenuItem.StyleProperty, "HistoryActionsMenuStyle");
 
         bool hasFile = HasHistoryFilePath(vm.Entry.FilePath);
         var isSpanish = string.Equals(_settingsService.Settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
