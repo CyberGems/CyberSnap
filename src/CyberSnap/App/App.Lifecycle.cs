@@ -250,8 +250,8 @@ public partial class App
         try
         {
             ToastWindow.ShowError(
-                "History failed to open",
-                $"CyberSnap could not open History. Try again from the tray menu, or restart CyberSnap if it keeps failing.\n{ex.Message}");
+                LocalizationService.Translate("Error"),
+                LocalizationService.Translate("Gallery was unable to open.") + $"\n{ex.Message}");
         }
         catch (Exception toastEx)
         {
