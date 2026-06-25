@@ -168,9 +168,6 @@ public sealed partial class RegionOverlayForm
                 }
             }
             menu.Items.Add(hideItem);
-
-            // Restore hidden tools — placed right below the hide action
-            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
         }
 
         // Show annotation bar checkable toggle — created now, added at different positions
@@ -191,14 +188,13 @@ public sealed partial class RegionOverlayForm
                 : (isSpanish ? "Visible" : "Shown");
             _toolbarContextMenu?.Close();
             BeginInvoke(() =>
-                ToastWindow.Show(ToastSpec.Standard(barLabel, status) with { SuppressSound = true, DurationSeconds = 2 }));
+                ToastWindow.Show(ToastSpec.Standard(barLabel, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false }));
         };
 
         // General menu: annotation bar stays in its natural position
         if (tool == null)
         {
             menu.Items.Add(showBarItem);
-            AddRestoreHiddenToolsItem(menu, isSpanish, hiddenTools.Count);
         }
 
         // 3. Show Hidden — rendered as a flat section, NOT a nested submenu. The capture overlay is a
@@ -260,7 +256,7 @@ public sealed partial class RegionOverlayForm
             var status = newVal
                 ? (isSpanish ? "Activado" : "On")
                 : (isSpanish ? "Desactivado" : "Off");
-            ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2 });
+            ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false });
             _toolbarContextMenu?.Close();
         };
         menu.Items.Add(confirmExitItem);
@@ -283,7 +279,7 @@ public sealed partial class RegionOverlayForm
             var status = newValue
                 ? (isSpanish ? "Activados" : "On")
                 : (isSpanish ? "Desactivados" : "Off");
-            ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2 });
+            ToastWindow.Show(ToastSpec.Standard(title, status) with { SuppressSound = true, DurationSeconds = 2, IsSystemMessage = false });
             _toolbarContextMenu?.Close();
         };
         menu.Items.Add(bannersItem);
