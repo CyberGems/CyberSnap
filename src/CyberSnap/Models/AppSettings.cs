@@ -572,7 +572,7 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("curvedArrow", "Curved Arrow", '\uE146', CaptureMode.CurvedArrow, 1), // redo           → 0x35
         new("circleShape", "Circle",       '\uE07A', CaptureMode.CircleShape, 1), // circle         → 0x38
         new("rectShape",   "Rectangle",    '\uE16A', CaptureMode.RectShape,   1), // square         → 0x39
-        new("step",        "Step Number",  '\uE1D0', CaptureMode.StepNumber,  1), // list-ordered   → 0x3A
+        new("step",        "Steps",       '\uE1D0', CaptureMode.StepNumber,  1), // list-ordered   → 0x3A
         new("magnifier",   "Magnifier",    '\uE721', CaptureMode.Magnifier,   1),
         new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1), // blend
         new("emoji",       "Emoji",        '\uE167', CaptureMode.Emoji,       1), // smile
