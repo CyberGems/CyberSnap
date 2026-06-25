@@ -374,7 +374,12 @@ public partial class App
                 overlay.SetEnabledTools(_settingsService.Settings.EnabledTools);
                 overlay.EnabledToolsChanged += enabledTools =>
                 {
-                    _settingsService!.Settings.EnabledTools = enabledTools;
+                    // Merge with latest cached settings to avoid overwriting changes
+                    // made by the chevron toggles (which may not be flushed to disk yet).
+                    var latest = Services.SettingsService.LoadStatic();
+                    if (latest != null)
+                        _settingsService!.Settings = latest;
+                    _settingsService.Settings.EnabledTools = enabledTools;
                     _settingsService.Save();
                 };
                 overlay.SetShowToolNumberBadges(_settingsService.Settings.ShowToolNumberBadges);
