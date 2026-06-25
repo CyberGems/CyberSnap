@@ -358,10 +358,21 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // 3. Tier 2 Dividers: after indices offset by _mainBarTools.Length + 4
-        int drawingStartIdx = _mainBarTools.Length + 4;
-        int[] tier2Offsets = { 2, 9 };
-        int[] tier2Seps = tier2Offsets.Select(offset => drawingStartIdx + offset).ToArray();
+        // 3. Tier 2 Dividers: after highlight and after rectShape, computed dynamically
+        // so they stay correct even when adjacent tools are hidden.
+        var tier2SepIds = new[] { "highlight", "rectShape" };
+        var tier2Seps = new List<int>();
+        foreach (var sepId in tier2SepIds)
+        {
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                if (_flyoutTools[i].Id == sepId)
+                {
+                    tier2Seps.Add(_mainBarTools.Length + 4 + i);
+                    break;
+                }
+            }
+        }
         foreach (int idx in tier2Seps)
         {
             if (idx < 0 || idx >= _toolbarButtons.Length) continue;
