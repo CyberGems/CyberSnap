@@ -780,7 +780,7 @@ public partial class HistoryWindow
         card.MouseRightButtonUp += (_, e) =>
         {
             e.Handled = true;
-            menu.PlacementTarget = null;
+            menu.PlacementTarget = card;
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
             menu.IsOpen = true;
         };
@@ -847,14 +847,13 @@ public partial class HistoryWindow
             }
         }
 
-        // Chevron click opens menu at cursor position (same as right-click).
-        // ContextMenu auto-closes on outside click — no toggle logic needed.
+        // Chevron click opens menu at cursor (WPF auto-closes on outside click)
         chevron.PreviewMouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
             if (chevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
                 tt.IsOpen = false;
-            menu.PlacementTarget = null;
+            menu.PlacementTarget = card;
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
             menu.IsOpen = true;
         };
