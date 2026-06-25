@@ -671,17 +671,13 @@ public sealed partial class RegionOverlayForm : Form
             CaptureDockSide,
             UiChrome.ScaledToolbarTopMargin);
 
+        // Last visible in the pre-utility group (matches Paint.Toolbar.cs tier1)
+        var tier1Group = new[] { "rect", "center", "scroll", "recordGif", "record" };
         int sepIdx = -1;
         for (int i = 0; i < _mainBarTools.Length; i++)
         {
-            if (_mainBarTools[i].Id == "recordGif") sepIdx = i;
-        }
-        if (sepIdx == -1)
-        {
-            for (int i = 0; i < _mainBarTools.Length; i++)
-            {
-                if (_mainBarTools[i].Id == "record") sepIdx = i;
-            }
+            if (tier1Group.Contains(_mainBarTools[i].Id))
+                sepIdx = i;
         }
 
         if (IsVerticalDock)
