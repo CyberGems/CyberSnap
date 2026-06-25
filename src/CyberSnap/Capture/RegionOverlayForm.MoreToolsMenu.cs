@@ -83,6 +83,10 @@ public sealed partial class RegionOverlayForm
             _toolbarContextMenu = null;
         };
 
+        // Compute hidden tools early — needed for header separators and Restore item below
+        var allTools = ToolDef.AllTools;
+        var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
+
         // CyberSnap header — always shown when a system button or toolbar background is clicked
         if (tool == null)
         {
@@ -141,10 +145,6 @@ public sealed partial class RegionOverlayForm
         }
 
         // 1. Tip item removed — hint is now part of the header line
-
-        // Compute hidden tools early — needed for the Restore item below
-        var allTools = ToolDef.AllTools;
-        var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
 
         // 2. Hide option (only if hideable button with tool clicked)
         if (tool != null)
