@@ -91,7 +91,7 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        if (_logoRect.Contains(e.Location))
+        if (_logoRect.Contains(e.Location) || _brandRect.Contains(e.Location))
         {
             HideToolbarTooltip();
             ShowQuickStartGuide();
