@@ -573,12 +573,13 @@ public partial class HistoryWindow
         string? iconId = null, bool danger = false)
     {
         var translatedLabel = LocalizationService.Translate(label);
-        var translatedHelpText = helpText != null ? LocalizationService.Translate(helpText) : null;
+        var translatedHelpText = helpText != null ? LocalizationService.Translate(helpText) : "";
         var item = new MenuItem
         {
             Header = translatedLabel,
-            ToolTip = translatedHelpText
         };
+        if (!string.IsNullOrEmpty(translatedHelpText))
+            item.ToolTip = translatedHelpText;
         if (iconId != null)
         {
             var iconColor = danger
