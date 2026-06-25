@@ -139,7 +139,7 @@ public partial class HistoryWindow
             {
                 suppressOpenAction = true;
                 OpenFileWithDefaultApp(vm.Entry.FilePath);
-            }, "Open this file with the system default viewer.", "arrow"));
+            }, "Open with the system default viewer.", "arrow"));
         }
         if (vm.Entry.Kind == HistoryKind.Image && HasHistoryFilePath(vm.Entry.FilePath))
         {
@@ -155,7 +155,7 @@ public partial class HistoryWindow
                 {
                     ToastWindow.ShowError("Editor failed", $"Could not open editor: {ex.Message}");
                 }
-            }, "Open this image in the post-capture editor.", "compose"));
+            }, "Open this image in the Editor.", "compose"));
         }
         actionMenu.Items.Add(CreateCardActionMenuItem(GetHistoryCopyMenuLabel(vm.Entry), () =>
         {
@@ -217,18 +217,60 @@ public partial class HistoryWindow
                 ShowFileInFolder(vm.Entry.FilePath);
             }, "Show this file in File Explorer.", "folder"));
         }
-        actionMenu.Items.Add(CreateCardActionMenuItem("Delete from disk", () =>
+        // Delete submenu
+        var deleteMenu = new MenuItem
+        {
+            Header = LocalizationService.Translate("Delete"),
+            Icon = new System.Windows.Controls.Image
+            {
+                Source = Helpers.FluentIcons.RenderWpf("trash",
+                    System.Drawing.Color.FromArgb(210, 239, 68, 68), 16),
+                Width = 16,
+                Height = 16,
+            },
+        };
+
+        bool hasFile = HasHistoryFilePath(vm.Entry.FilePath);
+
+        // 1. Delete from Gallery only (keep file on disk)
+        var delGalleryItem = CreateCardActionMenuItem("Delete from Gallery", () =>
+        {
+            suppressOpenAction = true;
+            _historyService.DeleteEntry(vm.Entry);
+            LoadCurrentHistoryTab();
+        }, "Remove this item from the gallery, but keep the file on disk.", null, danger: true);
+
+        // 2. Delete from disk only (keep in gallery)
+        var delDiskItem = CreateCardActionMenuItem("Delete from disk", () =>
         {
             suppressOpenAction = true;
             if (!ThemedConfirmDialog.Confirm(this,
                     $"Delete {vm.Entry.FileName}?",
-                    $"This will permanently delete the file and its history entry.\n\n{vm.Entry.FilePath}",
+                    $"This will permanently delete the file.\n\n{vm.Entry.FilePath}",
                     "Delete", "Cancel"))
                 return;
+            try { File.Delete(vm.Entry.FilePath); } catch { }
+        }, "Permanently delete the file from disk, but keep the gallery entry.", "trash", danger: true);
+        delDiskItem.IsEnabled = hasFile;
 
+        // 3. Delete from Gallery + disk
+        var delBothItem = CreateCardActionMenuItem("Delete from Gallery + disk", () =>
+        {
+            suppressOpenAction = true;
+            if (!ThemedConfirmDialog.Confirm(this,
+                    $"Delete {vm.Entry.FileName}?",
+                    $"This will permanently delete the file and its gallery entry.\n\n{vm.Entry.FilePath}",
+                    "Delete", "Cancel"))
+                return;
             _historyService.DeleteEntry(vm.Entry);
             LoadCurrentHistoryTab();
-        }, "Permanently delete this file from disk and history.", "trash", danger: true));
+        }, "Permanently delete the file from disk and remove from gallery.", "trash", danger: true);
+        delBothItem.IsEnabled = hasFile;
+
+        deleteMenu.Items.Add(delGalleryItem);
+        deleteMenu.Items.Add(delDiskItem);
+        deleteMenu.Items.Add(delBothItem);
+        actionMenu.Items.Add(deleteMenu);
         actionMenu.PlacementTarget = card;
         card.MouseRightButtonUp += (_, e) =>
         {
@@ -531,7 +573,7 @@ public partial class HistoryWindow
         string? iconId = null, bool danger = false)
     {
         var translatedLabel = LocalizationService.Translate(label);
-        var translatedHelpText = helpText != null ? LocalizationService.Translate(helpText) : LocalizationService.Translate("Run this history action.");
+        var translatedHelpText = helpText != null ? LocalizationService.Translate(helpText) : null;
         var item = new MenuItem
         {
             Header = translatedLabel,
