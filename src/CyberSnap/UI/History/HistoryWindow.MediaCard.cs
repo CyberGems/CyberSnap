@@ -329,7 +329,7 @@ public partial class HistoryWindow
                 return;
             }
 
-            if (card.IsMouseOver || card.IsKeyboardFocusWithin)
+            if (card.IsMouseOver)
             {
                 menuChevron.Visibility = Visibility.Visible;
                 if (chevronHovered)
@@ -346,65 +346,29 @@ public partial class HistoryWindow
             else
             {
                 menuChevron.Visibility = Visibility.Collapsed;
-                menuChevron.Background = Brushes.Transparent;
-                menuChevronPath.Fill = defaultChevronBrush;
                 chevronHovered = false;
             }
-        }
-
-        void DismissChevronToolTip()
-        {
-            if (menuChevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
-                tt.IsOpen = false;
-        }
-
-        void OpenActionMenu()
-        {
-            DismissChevronToolTip();
-            actionMenu.PlacementTarget = menuChevron;
-            actionMenu.IsOpen = true;
-            UpdateChevronVisibility();
-        }
-
-        void ToggleActionMenu()
-        {
-            DismissChevronToolTip();
-            if (actionMenu.IsOpen)
-            {
-                actionMenu.IsOpen = false;
-                UpdateChevronVisibility();
-                return;
-            }
-            OpenActionMenu();
         }
 
         menuChevron.PreviewMouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
-            DismissChevronToolTip();
-            ToggleActionMenu();
-            menuChevron.Background = new SolidColorBrush(Theme.IsDark
-                ? System.Windows.Media.Color.FromArgb(60, 255, 255, 255)
-                : System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
+            if (actionMenu.IsOpen) return;
+            if (menuChevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
+                tt.IsOpen = false;
+            actionMenu.PlacementTarget = card;
+            actionMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            actionMenu.IsOpen = true;
         };
-        menuChevron.PreviewMouseLeftButtonUp += (_, e) =>
-        {
-            e.Handled = true;
-        };
+        menuChevron.PreviewMouseLeftButtonUp += (_, e) => e.Handled = true;
 
-        menuChevron.KeyDown += (_, e) =>
-        {
-            if (!IsHistoryCardActivationKey(e))
-                return;
-            e.Handled = true;
-            OpenActionMenu();
-        };
-
-        menuChevron.GotKeyboardFocus += (_, _) => UpdateChevronVisibility();
-        menuChevron.LostKeyboardFocus += (_, _) => UpdateChevronVisibility();
         menuChevron.MouseEnter += (_, _) => { chevronHovered = true; UpdateChevronVisibility(); };
         menuChevron.MouseLeave += (_, _) => { chevronHovered = false; UpdateChevronVisibility(); };
-        actionMenu.Closed += (_, _) => UpdateChevronVisibility();
+        actionMenu.Closed += (_, _) =>
+        {
+            chevronHovered = false;
+            UpdateChevronVisibility();
+        };
 
         Grid.SetRow(menuChevron, 1);
         root.Children.Add(menuChevron);
