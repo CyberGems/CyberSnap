@@ -911,6 +911,7 @@
                     <RadioButton x:Name="ToastTab" Content="Notifications" Tag="Notifications" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="HotkeysTab" Content="Hotkeys" Tag="Hotkeys" GroupName="Main"
+                                 Services:LocalizationService.SourceText="Hotkeys"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="WidgetTab" Content="Widget" Tag="Widget" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
@@ -2385,8 +2386,8 @@
                                     <TextBlock Text="&#xE711;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Confirm before exit" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Show a confirmation menu on right-click before canceling capture, recording, or OCR." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Confirm before exit" Text="Confirm before exit" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Show a confirmation menu on right-click before canceling capture, recording, or OCR." Text="Show a confirmation menu on right-click before canceling capture, recording, or OCR." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="ConfirmBeforeExitCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Confirm before exit"

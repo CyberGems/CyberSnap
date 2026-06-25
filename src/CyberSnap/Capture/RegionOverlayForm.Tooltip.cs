@@ -137,6 +137,9 @@ public sealed partial class RegionOverlayForm
         if (button < _mainBarTools.Length)
         {
             var tool = _mainBarTools[button];
+            // OCR tool gets a more descriptive label in the tooltip
+            if (tool.Id == "ocr")
+                text = isSpanish ? "Extraer texto (OCR)" : "Extract text (OCR)";
             var hotkey = settings?.GetToolHotkey(tool.Id) ?? (0u, 0u);
             if (hotkey.key != 0)
                 text += $"  ({HotkeyFormatter.Format(hotkey.mod, hotkey.key)})";
