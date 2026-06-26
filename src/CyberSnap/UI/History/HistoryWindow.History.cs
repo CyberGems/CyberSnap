@@ -880,13 +880,13 @@ public partial class HistoryWindow
     {
         return HistoryCategoryCombo.SelectedIndex switch
         {
-            0 => (_allImageHistoryEntries.Count > 0 ? _allImageHistoryEntries.Count : _historyService.ImageEntries.Count)
-                 + (_allGifItems.Count > 0 ? _allGifItems.Count : _historyService.MediaEntries.Count)
+            0 => _historyService.ImageEntries.Count
+                 + _historyService.MediaEntries.Count
                  + _historyService.OcrEntries.Count
                  + _historyService.ColorEntries.Count
                  + _historyService.CodeEntries.Count,
-            1 => _allImageHistoryEntries.Count > 0 ? _allImageHistoryEntries.Count : _historyService.ImageEntries.Count,
-            2 => _allGifItems.Count > 0 ? _allGifItems.Count : _historyService.MediaEntries.Count,
+            1 => _historyService.ImageEntries.Count,
+            2 => _historyService.MediaEntries.Count,
             3 => _historyService.OcrEntries.Count,
             4 => _historyService.ColorEntries.Count,
             5 => _historyService.CodeEntries.Count,
@@ -1252,9 +1252,9 @@ public partial class HistoryWindow
 
     private static string BuildDeleteAllConfirmationMessage(int step, int totalCount, string categoryLabel)
     {
-        var confirmation = LocalizationService.Translate("Confirmation");
-        var of = LocalizationService.Translate("of");
-        var confirmStep = $"({confirmation} {step} {of} 2)";
+        var confirmation = LocalizationService.Translate("Confirmation").ToUpperInvariant();
+        var of = LocalizationService.Translate("of").ToUpperInvariant();
+        var confirmStep = $"\n\n── {confirmation} {step} {of} 2 ──";
         return step switch
         {
             1 => string.Format(LocalizationService.Translate("This will permanently delete ALL {0} thumbnails and physical files from disk."), categoryLabel) +
