@@ -1633,15 +1633,25 @@
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="File name pattern" Style="{StaticResource SettingTitle}"/>
                                     <TextBlock Text="Use tokens to build capture file names." Style="{StaticResource SettingDescription}"/>
-                                    <TextBox x:Name="FileNameTemplateBox" MinWidth="145" MaxWidth="300"
-                                             HorizontalAlignment="Stretch" Margin="0,8,0,0"
-                                             HorizontalScrollBarVisibility="Auto"
-                                             ToolTip="Use tokens to build capture file names."
-                                             AutomationProperties.Name="File name pattern"
-                                             PreviewKeyDown="FileNameTemplateBox_PreviewKeyDown"
-                                             TextChanged="FileNameTemplateBox_TextChanged"
-                                             Background="{DynamicResource ThemeInputBackgroundBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"/>
+                                    <DockPanel Margin="0,8,0,0">
+                                        <Button x:Name="FileNameTemplateResetBtn" Content="↺"
+                                                DockPanel.Dock="Right" Margin="4,0,0,0"
+                                                Width="32" Height="32" Padding="0"
+                                                FontSize="14" FontWeight="Bold"
+                                                ToolTip="Reset to default pattern"
+                                                AutomationProperties.Name="Reset file name pattern to default"
+                                                Style="{StaticResource ChromeButton}"
+                                                Click="FileNameTemplateResetBtn_Click"/>
+                                        <TextBox x:Name="FileNameTemplateBox" MinWidth="145" MaxWidth="285"
+                                                 HorizontalAlignment="Stretch"
+                                                 HorizontalScrollBarVisibility="Auto"
+                                                 ToolTip="Use tokens to build capture file names."
+                                                 AutomationProperties.Name="File name pattern"
+                                                 PreviewKeyDown="FileNameTemplateBox_PreviewKeyDown"
+                                                 TextChanged="FileNameTemplateBox_TextChanged"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"/>
+                                    </DockPanel>
                                     <WrapPanel x:Name="FileNameTokenPanel" Margin="0,8,0,-6"/>
                                     <TextBlock x:Name="FileNameTemplatePreviewText" FontSize="11" Margin="0,6,0,0"
                                                Foreground="{DynamicResource ThemeTextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>

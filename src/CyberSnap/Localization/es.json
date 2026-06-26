@@ -1120,5 +1120,21 @@
   "Opens the saved file using your operating system's default image application.": "Abre el archivo guardado con la aplicación de imágenes predeterminada de tu sistema.",
   "Open in Editor": "Abrir en editor",
   "Open in default viewer": "Abrir en visor predeterminado",
-  "Click to select this item": "Clic para seleccionar este elemento"
+  "Click to select this item": "Clic para seleccionar este elemento",
+  "Year": "Año",
+  "Month": "Mes",
+  "Day": "Día",
+  "Hour": "Hora",
+  "Minute": "Minuto",
+  "Second": "Segundo",
+  "Date": "Fecha",
+  "Time": "Hora",
+  "Date time": "Fecha y hora",
+  "Aspect": "Relación",
+  "Random": "Aleatorio",
+  "Insert {0} token": "Insertar token {0}",
+  "Reset to default pattern": "Restablecer patrón predeterminado",
+  "File name pattern": "Patrón de nombre de archivo",
+  "Use tokens to build capture file names.": "Usa tokens para construir los nombres de archivo.",
+  "Preview": "Vista previa"
 }

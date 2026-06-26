@@ -488,6 +488,7 @@ public partial class SettingsWindow : Window
     {
         FileNameTemplateBox.Text = currentTemplate;
         UpdateFileNameTemplatePreview(currentTemplate);
+        FileNameTemplateResetBtn.ToolTip = LocalizationService.Translate("Reset to default pattern");
     }
 
     private void SetSaveDirectoryPath(string path)
@@ -600,18 +601,39 @@ public partial class SettingsWindow : Window
         if (FileNameTemplatePreviewText is null)
             return;
 
-        FileNameTemplatePreviewText.Text = $"Preview: {Helpers.FileNameTemplate.FormatExample(template)}.png";
+        var previewLabel = LocalizationService.Translate("Preview");
+        FileNameTemplatePreviewText.Text = $"{previewLabel}: {Helpers.FileNameTemplate.FormatExample(template)}.png";
     }
 
     private void LoadFileNameTokenButtons()
     {
         FileNameTokenPanel.Children.Clear();
+
+        var lang = _settingsService.Settings.InterfaceLanguage;
+        var tokenLabels = new Dictionary<string, string>
+        {
+            ["Year"] = LocalizationService.Translate(lang, "Year"),
+            ["Month"] = LocalizationService.Translate(lang, "Month"),
+            ["Day"] = LocalizationService.Translate(lang, "Day"),
+            ["Hour"] = LocalizationService.Translate(lang, "Hour"),
+            ["Minute"] = LocalizationService.Translate(lang, "Minute"),
+            ["Second"] = LocalizationService.Translate(lang, "Second"),
+            ["Date"] = LocalizationService.Translate(lang, "Date"),
+            ["Time"] = LocalizationService.Translate(lang, "Time"),
+            ["Date time"] = LocalizationService.Translate(lang, "Date time"),
+            ["Width"] = LocalizationService.Translate(lang, "Width"),
+            ["Height"] = LocalizationService.Translate(lang, "Height"),
+            ["Aspect"] = LocalizationService.Translate(lang, "Aspect"),
+            ["Random"] = LocalizationService.Translate(lang, "Random"),
+        };
+
         foreach (var (token, label) in FileNameTokens)
         {
+            var translatedLabel = tokenLabels.GetValueOrDefault(label, label);
             var button = new System.Windows.Controls.Button
             {
                 Content = token,
-                ToolTip = $"Insert {label} token",
+                ToolTip = string.Format(LocalizationService.Translate(lang, "Insert {0} token"), translatedLabel),
                 FontSize = 11,
                 MinHeight = 28,
                 Padding = new Thickness(9, 4, 9, 4),
@@ -619,7 +641,7 @@ public partial class SettingsWindow : Window
                 Tag = token,
                 Cursor = System.Windows.Input.Cursors.Hand
             };
-            AutomationProperties.SetName(button, $"Insert {label} token");
+            AutomationProperties.SetName(button, string.Format(LocalizationService.Translate(lang, "Insert {0} token"), translatedLabel));
             AutomationProperties.SetHelpText(button, token);
             button.Click += FileNameTokenButton_Click;
             FileNameTokenPanel.Children.Add(button);
@@ -664,6 +686,11 @@ public partial class SettingsWindow : Window
         box.SelectionStart = tokenRange.Start;
         box.SelectionLength = 0;
         e.Handled = true;
+    }
+
+    private void FileNameTemplateResetBtn_Click(object sender, RoutedEventArgs e)
+    {
+        FileNameTemplateBox.Text = Helpers.FileNameTemplate.DefaultTemplate;
     }
 
     private static bool NeedsLeadingSeparator(string text, int insertionIndex)

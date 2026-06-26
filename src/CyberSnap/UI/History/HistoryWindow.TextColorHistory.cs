@@ -877,17 +877,16 @@ public partial class HistoryWindow
         {
             badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
             badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
+            badge.BorderThickness = new Thickness(1.5);
         }
         else
         {
-            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20));
+            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 20, 20, 20));
             badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
+            badge.BorderThickness = new Thickness(2);
         }
         UpdateSelectionBadgeAccessibility(badge, selected);
-        if (badge.Tag is ValueTuple<UIElement, UIElement> icons)
-        {
-            icons.Item1.Visibility = selected ? Visibility.Hidden : Visibility.Visible;  // ring
-            icons.Item2.Visibility = selected ? Visibility.Visible : Visibility.Hidden; // check
-        }
+        if (badge.Tag is UIElement check)
+            check.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
     }
 }
