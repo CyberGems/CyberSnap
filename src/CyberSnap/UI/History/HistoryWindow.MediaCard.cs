@@ -120,6 +120,16 @@ public partial class HistoryWindow
             Child = root,
             Tag = vm,
         };
+        card.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (!_selectMode || HistoryCategoryCombo.SelectedIndex != 0)
+                return;
+            // Track selection explicitly for the All tab; let the existing MouseLeftButtonUp handler toggle vm.IsSelected
+            if (_selectedCardsInAllTab.Contains(card))
+                _selectedCardsInAllTab.Remove(card);
+            else
+                _selectedCardsInAllTab.Add(card);
+        };
         AutomationProperties.SetName(card, $"{kindLabel} history item");
         AutomationProperties.SetHelpText(card, "Press Enter or Space to open this history item. Press Ctrl+C to copy it. In select mode, press Enter or Space to select it.");
 

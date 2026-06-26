@@ -36,12 +36,14 @@ public partial class HistoryWindow
     private List<UnifiedHistoryItem> _allUnifiedEntries = new();
     private List<UnifiedHistoryItem> _filteredUnifiedEntries = new();
     private readonly Dictionary<Border, object> _unifiedCardEntries = new();  // card → raw entry (OcrHistoryEntry, etc.)
+    private readonly HashSet<Border> _selectedCardsInAllTab = new();
 
     private void LoadAllHistory()
     {
         var sw = Stopwatch.StartNew();
         HistoryStack.Children.Clear();
         _unifiedCardEntries.Clear();
+        _selectedCardsInAllTab.Clear();
         HideHistoryEmptyState();
 
         // Clear and rebuild image cache so switching to Images is instant
@@ -414,6 +416,10 @@ public partial class HistoryWindow
             {
                 var selected = card.Tag is not true;
                 card.Tag = selected;
+                if (selected)
+                    _selectedCardsInAllTab.Add(card);
+                else
+                    _selectedCardsInAllTab.Remove(card);
                 UpdateUnifiedCardSelectionVisual(card, selected);
                 UpdateHistoryActionButtons();
                 return;
@@ -485,6 +491,10 @@ public partial class HistoryWindow
             {
                 var selected = card.Tag is not true;
                 card.Tag = selected;
+                if (selected)
+                    _selectedCardsInAllTab.Add(card);
+                else
+                    _selectedCardsInAllTab.Remove(card);
                 UpdateUnifiedCardSelectionVisual(card, selected);
                 UpdateHistoryActionButtons();
                 return;
@@ -565,6 +575,10 @@ public partial class HistoryWindow
             {
                 var selected = card.Tag is not true;
                 card.Tag = selected;
+                if (selected)
+                    _selectedCardsInAllTab.Add(card);
+                else
+                    _selectedCardsInAllTab.Remove(card);
                 UpdateUnifiedCardSelectionVisual(card, selected);
                 UpdateHistoryActionButtons();
                 return;

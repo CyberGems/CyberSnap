@@ -434,7 +434,7 @@ public sealed partial class HistoryService : IDisposable
     {
         lock (_gate)
         {
-            _ocrEntries.Remove(entry);
+            _ocrEntries.RemoveAll(e => e.CapturedAt == entry.CapturedAt && e.Text == entry.Text);
             SaveOcrIndex();
         }
         NotifyChanged();
@@ -442,13 +442,13 @@ public sealed partial class HistoryService : IDisposable
 
     public void DeleteOcrEntries(IEnumerable<OcrHistoryEntry> entries)
     {
-        var set = entries as HashSet<OcrHistoryEntry> ?? new HashSet<OcrHistoryEntry>(entries);
+        var set = entries.Select(e => (e.CapturedAt, e.Text)).ToHashSet();
         if (set.Count == 0)
             return;
 
         lock (_gate)
         {
-            _ocrEntries.RemoveAll(set.Contains);
+            _ocrEntries.RemoveAll(e => set.Contains((e.CapturedAt, e.Text)));
             SaveOcrIndex();
         }
         NotifyChanged();
@@ -470,7 +470,7 @@ public sealed partial class HistoryService : IDisposable
     {
         lock (_gate)
         {
-            _colorEntries.Remove(entry);
+            _colorEntries.RemoveAll(e => e.CapturedAt == entry.CapturedAt && e.Hex == entry.Hex);
             SaveColorIndex();
         }
         NotifyChanged();
@@ -478,13 +478,13 @@ public sealed partial class HistoryService : IDisposable
 
     public void DeleteColorEntries(IEnumerable<ColorHistoryEntry> entries)
     {
-        var set = entries as HashSet<ColorHistoryEntry> ?? new HashSet<ColorHistoryEntry>(entries);
+        var set = entries.Select(e => (e.CapturedAt, e.Hex)).ToHashSet();
         if (set.Count == 0)
             return;
 
         lock (_gate)
         {
-            _colorEntries.RemoveAll(set.Contains);
+            _colorEntries.RemoveAll(e => set.Contains((e.CapturedAt, e.Hex)));
             SaveColorIndex();
         }
         NotifyChanged();
@@ -514,7 +514,7 @@ public sealed partial class HistoryService : IDisposable
     {
         lock (_gate)
         {
-            _codeEntries.Remove(entry);
+            _codeEntries.RemoveAll(e => e.CapturedAt == entry.CapturedAt && e.Text == entry.Text && e.Format == entry.Format);
             SaveCodeIndex();
         }
         NotifyChanged();
@@ -522,13 +522,13 @@ public sealed partial class HistoryService : IDisposable
 
     public void DeleteCodeEntries(IEnumerable<CodeHistoryEntry> entries)
     {
-        var set = entries as HashSet<CodeHistoryEntry> ?? new HashSet<CodeHistoryEntry>(entries);
+        var set = entries.Select(e => (e.CapturedAt, e.Text, e.Format)).ToHashSet();
         if (set.Count == 0)
             return;
 
         lock (_gate)
         {
-            _codeEntries.RemoveAll(set.Contains);
+            _codeEntries.RemoveAll(e => set.Contains((e.CapturedAt, e.Text, e.Format)));
             SaveCodeIndex();
         }
         NotifyChanged();
