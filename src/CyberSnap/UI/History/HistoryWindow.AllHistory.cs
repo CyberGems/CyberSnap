@@ -834,6 +834,8 @@ public partial class HistoryWindow
             e.Handled = true;
             menu.PlacementTarget = card;
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            menu.HorizontalOffset = 0;
+            menu.VerticalOffset = 0;
             menu.IsOpen = true;
         };
 
@@ -899,18 +901,37 @@ public partial class HistoryWindow
             }
         }
 
-        // Chevron click opens menu (only if not already open — prevents toggle)
         chevron.PreviewMouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
-            if (menu.IsOpen) return;
+        };
+
+        DateTime menuClosedAt = DateTime.MinValue;
+        bool closingMenuFromChevron = false;
+
+        chevron.PreviewMouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
             if (chevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
                 tt.IsOpen = false;
-            menu.PlacementTarget = card;
-            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+
+            if (menu.IsOpen)
+            {
+                closingMenuFromChevron = true;
+                menu.IsOpen = false;
+                UpdateChevronVisual();
+                return;
+            }
+
+            if ((DateTime.UtcNow - menuClosedAt).TotalMilliseconds < 250)
+                return;
+
+            menu.PlacementTarget = chevron;
+            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            menu.HorizontalOffset = 0;
+            menu.VerticalOffset = 2;
             menu.IsOpen = true;
         };
-        chevron.PreviewMouseLeftButtonUp += (_, e) => e.Handled = true;
 
         // Hover tracking
         chevron.MouseEnter += (_, _) => { chevronHovered = true; UpdateChevronVisual(); };
@@ -919,6 +940,11 @@ public partial class HistoryWindow
         // Menu closed → update visual state
         menu.Closed += (_, _) =>
         {
+            if (closingMenuFromChevron)
+                closingMenuFromChevron = false;
+            else
+                menuClosedAt = DateTime.UtcNow;
+
             chevronHovered = false;
             UpdateChevronVisual();
         };

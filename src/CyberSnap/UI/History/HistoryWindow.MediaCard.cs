@@ -284,6 +284,10 @@ public partial class HistoryWindow
         {
             e.Handled = true;
             suppressOpenAction = true;
+            actionMenu.PlacementTarget = card;
+            actionMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+            actionMenu.HorizontalOffset = 0;
+            actionMenu.VerticalOffset = 0;
             actionMenu.IsOpen = true;
         };
 
@@ -363,19 +367,44 @@ public partial class HistoryWindow
         menuChevron.PreviewMouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
-            if (actionMenu.IsOpen) return;
+        };
+
+        DateTime actionMenuClosedAt = DateTime.MinValue;
+        bool closingActionMenuFromChevron = false;
+
+        menuChevron.PreviewMouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
             if (menuChevron.ToolTip is System.Windows.Controls.ToolTip tt && tt.IsOpen)
                 tt.IsOpen = false;
-            actionMenu.PlacementTarget = card;
-            actionMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+
+            if (actionMenu.IsOpen)
+            {
+                closingActionMenuFromChevron = true;
+                actionMenu.IsOpen = false;
+                UpdateChevronVisibility();
+                return;
+            }
+
+            if ((DateTime.UtcNow - actionMenuClosedAt).TotalMilliseconds < 250)
+                return;
+
+            actionMenu.PlacementTarget = menuChevron;
+            actionMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            actionMenu.HorizontalOffset = 0;
+            actionMenu.VerticalOffset = 2;
             actionMenu.IsOpen = true;
         };
-        menuChevron.PreviewMouseLeftButtonUp += (_, e) => e.Handled = true;
 
         menuChevron.MouseEnter += (_, _) => { chevronHovered = true; UpdateChevronVisibility(); };
         menuChevron.MouseLeave += (_, _) => { chevronHovered = false; UpdateChevronVisibility(); };
         actionMenu.Closed += (_, _) =>
         {
+            if (closingActionMenuFromChevron)
+                closingActionMenuFromChevron = false;
+            else
+                actionMenuClosedAt = DateTime.UtcNow;
+
             chevronHovered = false;
             UpdateChevronVisibility();
         };
