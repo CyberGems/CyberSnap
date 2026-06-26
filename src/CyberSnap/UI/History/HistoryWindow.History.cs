@@ -1113,10 +1113,10 @@ public partial class HistoryWindow
             UpdateSelectModeControls();
 
             LoadCurrentHistoryTab();
-            UpdateCategoryCounts();
+            Dispatcher.BeginInvoke(() => UpdateCategoryCounts());
             UpdateImageSearchActionButtons();
             UpdateHistoryActionButtons();
-            SetHistoryDeleteStatus($"Deleted all {tab}.");
+            SetHistoryDeleteStatus(string.Format(LocalizationService.Translate("Deleted all {0}."), tab));
         }
         catch (Exception ex)
         {
@@ -1198,10 +1198,10 @@ public partial class HistoryWindow
             }
 
             LoadCurrentHistoryTab();
-            UpdateCategoryCounts();
+            Dispatcher.BeginInvoke(() => UpdateCategoryCounts());
             UpdateImageSearchActionButtons();
             UpdateHistoryActionButtons();
-            SetHistoryDeleteStatus($"Deleted {selectedCount} selected {selectedLabel}.");
+            SetHistoryDeleteStatus(string.Format(LocalizationService.Translate("Deleted {0} selected {1}."), selectedCount, selectedLabel));
         }
         catch (Exception ex)
         {
