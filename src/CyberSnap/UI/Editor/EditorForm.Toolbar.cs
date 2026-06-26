@@ -39,6 +39,7 @@ public sealed partial class EditorForm
     private readonly Dictionary<AnnotationCanvas.CanvasTool, EditorToolButton> _toolButtons = new();
     private EmojiPickerPopup? _emojiPicker;
     private readonly Dictionary<Color, EditorColorButton> _colorButtons = new();
+    private EditorColorButton _customColorButton = null!;
     private readonly List<EditorStrokeWidthButton> _strokeWidthButtons = new();
 
     private static readonly Color[] PaletteColors =
@@ -51,11 +52,61 @@ public sealed partial class EditorForm
         Color.FromArgb(234, 179, 8),
         Color.FromArgb(34, 197, 94),
         Color.White,
-        Color.FromArgb(15, 23, 42),
         Color.FromArgb(236, 72, 153),
         Color.FromArgb(148, 163, 184),
         Color.Black,
     };
+
+    private void ShowColorPickerPopup(EditorColorButton button)
+    {
+        var screenPt = button.PointToScreen(new Point(button.Width, 0));
+        var screen = Screen.FromControl(button);
+        double left = screenPt.X + 8;
+        if (left + 280 > screen.Bounds.Right)
+        {
+            left = button.PointToScreen(new Point(0, 0)).X - 280 - 8;
+        }
+
+        double top = screenPt.Y - 100;
+        if (top + 360 > screen.Bounds.Bottom)
+        {
+            top = screen.Bounds.Bottom - 360 - 8;
+        }
+        if (top < screen.Bounds.Top)
+        {
+            top = screen.Bounds.Top + 8;
+        }
+
+        System.Windows.Media.Color? initialWpfColor = null;
+        if (button.HasCustomColor)
+        {
+            var c = button.SwatchColor;
+            initialWpfColor = System.Windows.Media.Color.FromRgb(c.R, c.G, c.B);
+        }
+
+        var flyout = new ColorPickerFlyoutWindow(new System.Windows.Point(left, top), wpfColor =>
+        {
+            if (wpfColor is { } c)
+            {
+                var newColor = Color.FromArgb(c.A, c.R, c.G, c.B);
+                button.SwatchColor = newColor;
+                button.HasCustomColor = true;
+                _canvas.ToolColor = newColor;
+                button.Invalidate();
+                UpdateColorSwatch();
+
+                if (System.Windows.Application.Current is CyberSnap.App app)
+                {
+                    app.PersistEditorToolColor(newColor.ToArgb());
+                    app.PersistEditorCustomColor(newColor.ToArgb());
+                }
+            }
+        }, initialWpfColor);
+
+        flyout.Show();
+        flyout.Activate();
+        flyout.Focus();
+    }
 
     private void BuildToolbar()
     {
@@ -788,7 +839,6 @@ public sealed partial class EditorForm
             "Yellow",
             "Green",
             "White",
-            "Dark Slate",
             "Pink",
             "Gray",
             "Black"
@@ -817,6 +867,41 @@ public sealed partial class EditorForm
             palette.Controls.Add(swatch, index % paletteColumns, index / paletteColumns);
             index++;
         }
+
+        // 12th button: Custom Color
+        _customColorButton = new EditorColorButton
+        {
+            IsCustomButton = true,
+            Width = swatchSize,
+            Height = swatchSize,
+            Anchor = AnchorStyles.None,
+            Margin = new Padding(0),
+        };
+
+        var settings = SettingsService.LoadStatic();
+        if (settings != null && settings.EditorCustomColorArgb != 0)
+        {
+            _customColorButton.SwatchColor = Color.FromArgb(settings.EditorCustomColorArgb);
+            _customColorButton.HasCustomColor = true;
+        }
+
+        _customColorButton.Click += (_, _) =>
+        {
+            if (!_customColorButton.HasCustomColor || _customColorButton.Checked)
+            {
+                ShowColorPickerPopup(_customColorButton);
+            }
+            else
+            {
+                _canvas.ToolColor = _customColorButton.SwatchColor;
+                UpdateColorSwatch();
+                if (System.Windows.Application.Current is CyberSnap.App app)
+                    app.PersistEditorToolColor(_customColorButton.SwatchColor.ToArgb());
+            }
+        };
+
+        RegisterHoverTooltip(_customColorButton, LocalizationService.Translate("Custom Color"));
+        palette.Controls.Add(_customColorButton, index % paletteColumns, index / paletteColumns);
 
         var strokeWidths = new[] { 2f, 3f, 4f, 6f, 10f };
         var widthRow = new TableLayoutPanel
@@ -1146,8 +1231,25 @@ public sealed partial class EditorForm
 
     private void UpdateColorSwatch()
     {
+        bool matchedAny = false;
         foreach (var kv in _colorButtons)
-            kv.Value.Checked = kv.Key.ToArgb() == _canvas.ToolColor.ToArgb();
+        {
+            bool match = kv.Key.ToArgb() == _canvas.ToolColor.ToArgb();
+            kv.Value.Checked = match;
+            if (match) matchedAny = true;
+        }
+
+        if (_customColorButton != null)
+        {
+            if (_customColorButton.HasCustomColor && !matchedAny)
+            {
+                _customColorButton.Checked = _customColorButton.SwatchColor.ToArgb() == _canvas.ToolColor.ToArgb();
+            }
+            else
+            {
+                _customColorButton.Checked = false;
+            }
+        }
     }
 
     private void UpdateStrokeWidthButtons()
@@ -2304,6 +2406,12 @@ internal sealed class EditorColorButton : Button
         }
     }
 
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool IsCustomButton { get; set; }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool HasCustomColor { get; set; }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics;
@@ -2338,9 +2446,26 @@ internal sealed class EditorColorButton : Button
 
         var inner = Rectangle.Inflate(outer, -6, -6);
         using var innerPath = EditorPaint.RoundedRect(inner, 5);
-        using var swatch = new SolidBrush(SwatchColor);
         using var swatchPen = new Pen(Color.FromArgb(140, 255, 255, 255));
-        g.FillPath(swatch, innerPath);
+
+        if (IsCustomButton && !HasCustomColor)
+        {
+            using (var brush = new LinearGradientBrush(inner, Color.Red, Color.Blue, 0f))
+            {
+                Color[] colors = { Color.Red, Color.Orange, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Purple, Color.Red };
+                float[] positions = { 0.0f, 0.14f, 0.28f, 0.42f, 0.57f, 0.71f, 0.85f, 1.0f };
+                var blend = new ColorBlend();
+                blend.Colors = colors;
+                blend.Positions = positions;
+                brush.InterpolationColors = blend;
+                g.FillPath(brush, innerPath);
+            }
+        }
+        else
+        {
+            using var swatch = new SolidBrush(SwatchColor);
+            g.FillPath(swatch, innerPath);
+        }
         g.DrawPath(swatchPen, innerPath);
     }
 

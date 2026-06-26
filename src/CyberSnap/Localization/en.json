@@ -832,5 +832,6 @@
   "Hue value (0-360 degrees)": "Hue value (0-360 degrees)",
   "Saturation value (0-100%)": "Saturation value (0-100%)",
   "Brightness value (0-100%)": "Brightness value (0-100%)",
-  "Adjust brightness": "Adjust brightness"
+  "Adjust brightness": "Adjust brightness",
+  "Custom Color": "Custom Color"
 }

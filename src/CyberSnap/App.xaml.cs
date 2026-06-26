@@ -216,6 +216,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-tool-color", ex); }
     }
 
+    /// <summary>Persists the custom color configured in the editor color palette.</summary>
+    public void PersistEditorCustomColor(int argb)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorCustomColorArgb == argb) return;
+        _settingsService.Settings.EditorCustomColorArgb = argb;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-custom-color", ex); }
+    }
+
     /// <summary>Persists the stroke width last chosen in the editor (shared with the capture overlay).</summary>
     public void PersistEditorStrokeWidth(float width)
     {
