@@ -386,6 +386,20 @@
                                              AutomationProperties.Name="Select history items"
                                              AutomationProperties.HelpText="Select history items"
                                              Cursor="Hand" Click="ToggleSelectMode"/>
+                                    <Button x:Name="SelectAllBtn" Content="☑" Style="{StaticResource HistoryActionButton}"
+                                             Width="36" Padding="0" Margin="0,0,4,0"
+                                             Visibility="Collapsed"
+                                             FontSize="16"
+                                             ToolTip="Select all items"
+                                             AutomationProperties.Name="Select all history items"
+                                             Cursor="Hand" Click="SelectAllClick"/>
+                                    <Button x:Name="UnselectBtn" Content="✕" Style="{StaticResource HistoryActionButton}"
+                                             Width="36" Padding="0" Margin="0,0,6,0"
+                                             Visibility="Collapsed"
+                                             FontSize="14"
+                                             ToolTip="Clear selection"
+                                             AutomationProperties.Name="Clear history selection"
+                                             Cursor="Hand" Click="UnselectClick"/>
                                     <Button x:Name="DeleteAllBtn" Content="Clear all" Style="{StaticResource HistoryDangerButton}"
                                             Services:LocalizationService.SourceText="Clear all"
                                             ToolTip="Delete all items in the current history tab"
