@@ -2,7 +2,7 @@
 
 public static class FileNameTemplate
 {
-    public const string DefaultTemplate = "{year}-{month}-{day}_{hour}-{min}-{sec}-{rand}";
+    public const string DefaultTemplate = "{year}-{month}-{day}_{hour}-{min}-{sec}";
     public const string LegacyDefaultTemplate = "CyberSnap_{year}-{month}-{day}_{hour}-{min}-{sec}_{rand}";
 
     public static string Format(string template, int width = 0, int height = 0)
