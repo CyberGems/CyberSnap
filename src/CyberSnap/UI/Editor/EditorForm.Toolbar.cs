@@ -61,21 +61,49 @@ public sealed partial class EditorForm
     {
         var screenPt = button.PointToScreen(new Point(button.Width, 0));
         var screen = Screen.FromControl(button);
-        double left = screenPt.X + 8;
-        if (left + 280 > screen.Bounds.Right)
+
+        double dpiScaleX = 1.0;
+        double dpiScaleY = 1.0;
+        var mainWpf = System.Windows.Application.Current.MainWindow;
+        if (mainWpf != null)
         {
-            left = button.PointToScreen(new Point(0, 0)).X - 280 - 8;
+            var source = System.Windows.PresentationSource.FromVisual(mainWpf);
+            if (source != null && source.CompositionTarget != null)
+            {
+                dpiScaleX = source.CompositionTarget.TransformToDevice.M11;
+                dpiScaleY = source.CompositionTarget.TransformToDevice.M22;
+            }
+        }
+        else
+        {
+            using (var g = button.CreateGraphics())
+            {
+                dpiScaleX = g.DpiX / 96.0;
+                dpiScaleY = g.DpiY / 96.0;
+            }
         }
 
-        double top = screenPt.Y - 100;
-        if (top + 360 > screen.Bounds.Bottom)
+        double physicalWidth = 280 * dpiScaleX;
+        double physicalHeight = 360 * dpiScaleY;
+
+        double physicalLeft = screenPt.X + (8 * dpiScaleX);
+        if (physicalLeft + physicalWidth > screen.Bounds.Right)
         {
-            top = screen.Bounds.Bottom - 360 - 8;
+            physicalLeft = button.PointToScreen(new Point(0, 0)).X - physicalWidth - (8 * dpiScaleX);
         }
-        if (top < screen.Bounds.Top)
+
+        double physicalTop = screenPt.Y - (100 * dpiScaleY);
+        if (physicalTop + physicalHeight > screen.Bounds.Bottom)
         {
-            top = screen.Bounds.Top + 8;
+            physicalTop = screen.Bounds.Bottom - physicalHeight - (8 * dpiScaleY);
         }
+        if (physicalTop < screen.Bounds.Top)
+        {
+            physicalTop = screen.Bounds.Top + (8 * dpiScaleY);
+        }
+
+        double logicalLeft = physicalLeft / dpiScaleX;
+        double logicalTop = physicalTop / dpiScaleY;
 
         System.Windows.Media.Color? initialWpfColor = null;
         if (button.HasCustomColor)
@@ -84,7 +112,7 @@ public sealed partial class EditorForm
             initialWpfColor = System.Windows.Media.Color.FromRgb(c.R, c.G, c.B);
         }
 
-        var flyout = new ColorPickerFlyoutWindow(new System.Windows.Point(left, top), wpfColor =>
+        var flyout = new ColorPickerFlyoutWindow(new System.Windows.Point(logicalLeft, logicalTop), wpfColor =>
         {
             if (wpfColor is { } c)
             {
