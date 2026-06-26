@@ -2480,6 +2480,37 @@ internal sealed class EditorColorButton : Button
         {
             using var swatch = new SolidBrush(SwatchColor);
             g.FillPath(swatch, innerPath);
+
+            if (IsCustomButton && HasCustomColor)
+            {
+                using (var clipRegion = new Region(innerPath))
+                {
+                    g.Clip = clipRegion;
+                    var pts = new Point[]
+                    {
+                        new Point(inner.Right - 10, inner.Bottom),
+                        new Point(inner.Right, inner.Bottom - 10),
+                        new Point(inner.Right, inner.Bottom)
+                    };
+                    using (var path = new GraphicsPath())
+                    {
+                        path.AddPolygon(pts);
+                        using (var brush = new LinearGradientBrush(new Rectangle(inner.Right - 10, inner.Bottom - 10, 10, 10), Color.Red, Color.Blue, 45f))
+                        {
+                            Color[] colors = { Color.Red, Color.Yellow, Color.Green, Color.Blue, Color.Purple };
+                            float[] positions = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
+                            var blend = new ColorBlend { Colors = colors, Positions = positions };
+                            brush.InterpolationColors = blend;
+                            g.FillPath(brush, path);
+                        }
+                    }
+                    using (var sepPen = new Pen(Color.FromArgb(100, 255, 255, 255), 1f))
+                    {
+                        g.DrawLine(sepPen, inner.Right - 10, inner.Bottom, inner.Right, inner.Bottom - 10);
+                    }
+                    g.ResetClip();
+                }
+            }
         }
         g.DrawPath(swatchPen, innerPath);
     }
