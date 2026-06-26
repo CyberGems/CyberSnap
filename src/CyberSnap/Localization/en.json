@@ -823,6 +823,14 @@
   "Select all items": "Select all items",
   "Clear selection": "Clear selection",
   "Delete {0} selected items?": "Delete {0} selected items?",
-  "This action CANNOT be undone.": "This action CANNOT be undone.",
-  "{0} selected": "{0} selected"
+  "{0} selected": "{0} selected",
+  "Canvas background color (solid or transparent checkerboard)": "Canvas background color (solid or transparent checkerboard)",
+  "Color comparison (Left: original, Right: new color)": "Color comparison (Left: original, Right: new color)",
+  "Pick color from screen (Press Esc to cancel)": "Pick color from screen (Press Esc to cancel)",
+  "Hexadecimal color code (RRGGBB)": "Hexadecimal color code (RRGGBB)",
+  "RGB color value (0-255)": "RGB color value (0-255)",
+  "Hue value (0-360 degrees)": "Hue value (0-360 degrees)",
+  "Saturation value (0-100%)": "Saturation value (0-100%)",
+  "Brightness value (0-100%)": "Brightness value (0-100%)",
+  "Adjust brightness": "Adjust brightness"
 }

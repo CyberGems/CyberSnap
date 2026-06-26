@@ -62,6 +62,20 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-recent-file", ex); }
     }
 
+    /// <summary>Records a color as most-recently-selected in the editor,
+    /// persisting it to settings so the color picker's "Recent colors" list stays current.</summary>
+    public void PersistRecentColor(string hex)
+    {
+        if (_settingsService is null || string.IsNullOrWhiteSpace(hex)) return;
+        var list = _settingsService.Settings.RecentColors;
+        list.RemoveAll(c => string.Equals(c, hex, StringComparison.OrdinalIgnoreCase));
+        list.Insert(0, hex);
+        if (list.Count > 12)
+            list.RemoveRange(12, list.Count - 12);
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-recent-color", ex); }
+    }
+
     /// <summary>Clears the editor's recent-files list and persists the empty state.</summary>
     public void ClearRecentFiles()
     {

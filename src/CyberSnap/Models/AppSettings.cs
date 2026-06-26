@@ -264,6 +264,9 @@ public sealed class AppSettings
     /// burger "Open recent" submenu. Newest first; capped to 6 entries.</summary>
     public List<string> RecentFilePaths { get; set; } = new();
 
+    /// <summary>Most recently selected colors in the color picker. Hex format. Capped to 12 entries.</summary>
+    public List<string> RecentColors { get; set; } = new();
+
     public bool SaveToFile { get; set; } = true;
     public bool AskForFileNameOnSave { get; set; }
     public string FileNameTemplate { get; set; } = Helpers.FileNameTemplate.DefaultTemplate;

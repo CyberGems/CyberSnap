@@ -407,9 +407,8 @@ internal sealed class ThemedNewCanvasDialog : Window
         var chevronCell = new Border
         {
             Width = 28,
-            Background = Theme.Brush(FieldBackground),
-            BorderBrush = Theme.Brush(WithAlpha(accent, 90)),
-            BorderThickness = new Thickness(1, 0, 0, 0),
+            Background = WpfBrushes.Transparent, // Transparent so it blends with dropdown background
+            BorderThickness = new Thickness(0), // No harsh border inside the unified card
             Child = chevron,
         };
         Grid.SetColumn(chevronCell, 1);
@@ -419,15 +418,13 @@ internal sealed class ThemedNewCanvasDialog : Window
         {
             Height = 34,
             CornerRadius = new CornerRadius(6),
+            Background = Theme.Brush(FieldBackground), // Field background on dropdown for cohesive look
             BorderBrush = Theme.Brush(WithAlpha(accent, 90)),
             BorderThickness = new Thickness(1),
             Cursor = WpfCursors.Hand,
             Child = grid,
         };
-        // CornerRadius alone doesn't clip children, so the swatch would poke out square at the
-        // rounded corners â€” clip the whole pill to a rounded rect instead.
-        dropdown.SizeChanged += (_, e) =>
-            dropdown.Clip = new RectangleGeometry(new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), 6, 6);
+        ToolTipService.SetToolTip(dropdown, Services.LocalizationService.Translate("Canvas background color (solid or transparent checkerboard)"));
         // Toggle on mouse-UP: opening on mouse-down lets the popup (StaysOpen=false) read the
         // matching mouse-up as an outside click and close itself instantly. Mouse-down is still
         // swallowed so it doesn't reach the shell's DragMove handler and move the window.
@@ -435,7 +432,7 @@ internal sealed class ThemedNewCanvasDialog : Window
         dropdown.MouseLeftButtonUp += (_, e) => { e.Handled = true; ToggleBgPopup(); };
 
         // Reusable color-picker flyout, hosted in a Popup anchored to the dropdown.
-        _colorPicker = new ColorPickerPopup { Margin = new Thickness(10) };
+        _colorPicker = new ColorPickerPopup();
         _colorPicker.ColorChanged += color =>
         {
             _backgroundColor = color is { } c
@@ -443,8 +440,14 @@ internal sealed class ThemedNewCanvasDialog : Window
                 : (System.Drawing.Color?)null;
             RefreshSwatch();
         };
-        // Accept pressed, or a screen pick started â†’ close the flyout.
-        _colorPicker.CloseRequested += () => _bgPopup.IsOpen = false;
+        
+        // Accept pressed, or a screen pick started → close the flyout instantly to prevent fade capturing.
+        _colorPicker.CloseRequested += () =>
+        {
+            _bgPopup.PopupAnimation = PopupAnimation.None;
+            _bgPopup.IsOpen = false;
+        };
+
         _bgPopup = new Popup
         {
             PlacementTarget = dropdown,
@@ -457,9 +460,51 @@ internal sealed class ThemedNewCanvasDialog : Window
         };
         _bgPopup.Closed += (_, _) => _bgPopupClosedAt = DateTime.UtcNow;
 
-        // Host both in a container so the (zero-size) popup doesn't affect layout.
+        // Wrap dropdown and reset button in a parent layout Grid
+        var mainGrid = new Grid();
+        mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        Grid.SetColumn(dropdown, 0);
+        mainGrid.Children.Add(dropdown);
+
+        // Reset button to restore default transparent checkerboard
+        var resetBtn = new Border
+        {
+            Width = 28,
+            Height = 34,
+            Margin = new Thickness(8, 0, 0, 0),
+            CornerRadius = new CornerRadius(6),
+            Background = Theme.Brush(SecondaryButtonBg),
+            BorderBrush = Theme.Brush(SecondaryButtonBorder),
+            BorderThickness = new Thickness(1),
+            Cursor = WpfCursors.Hand,
+            Child = new System.Windows.Controls.Image
+            {
+                Source = FluentIcons.RenderWpf("close", ToDrawingColor(Theme.TextSecondary, 220), 12),
+                Width = 12,
+                Height = 12,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = WpfHorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            }
+        };
+        resetBtn.MouseEnter += (_, _) => resetBtn.Background = Theme.Brush(Theme.TabHoverBg);
+        resetBtn.MouseLeave += (_, _) => resetBtn.Background = Theme.Brush(SecondaryButtonBg);
+        resetBtn.MouseLeftButtonDown += (_, e) =>
+        {
+            e.Handled = true;
+            _backgroundColor = null;
+            _colorPicker.ClearColor();
+            RefreshSwatch();
+        };
+        ToolTipService.SetToolTip(resetBtn, Services.LocalizationService.Translate("Clear"));
+        Grid.SetColumn(resetBtn, 1);
+        mainGrid.Children.Add(resetBtn);
+
+        // Host in a container so the (zero-size) popup doesn't affect layout.
         var container = new Grid();
-        container.Children.Add(dropdown);
+        container.Children.Add(mainGrid);
         container.Children.Add(_bgPopup);
         return container;
     }
@@ -475,6 +520,8 @@ internal sealed class ThemedNewCanvasDialog : Window
         // (on mouse-down); don't let this mouse-up immediately reopen it.
         if ((DateTime.UtcNow - _bgPopupClosedAt).TotalMilliseconds < 250)
             return;
+        
+        _bgPopup.PopupAnimation = PopupAnimation.Fade; // Re-enable fade animation on opening
         _bgPopup.IsOpen = true;
     }
 
@@ -484,10 +531,13 @@ internal sealed class ThemedNewCanvasDialog : Window
         var h = Math.Max(1, (int)_swatchHost.ActualHeight);
 
         using var dc = _swatchVisual.RenderOpen();
+        // Clip to round the left corners to match the parent border's inner CornerRadius(5)
+        dc.PushClip(new RectangleGeometry(new Rect(0, 0, w + 50, h), 5, 5));
         if (_backgroundColor is { } c)
             dc.DrawRectangle(Theme.Brush(WpfColor.FromRgb(c.R, c.G, c.B)), null, new Rect(0, 0, w, h));
         else
             ColorPickerPopup.PaintCheckerboard(dc, w, h);
+        dc.Pop();
     }
 
     // â”€â”€ UI builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -111,6 +111,15 @@ public sealed class StandaloneColorPickerForm : Form
         base.Dispose(disposing);
     }
 
+    // ── Lifecycle ──
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        Activate();
+        Focus();
+    }
+
     // ── Keyboard ──
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
