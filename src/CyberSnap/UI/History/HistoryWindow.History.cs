@@ -816,6 +816,7 @@ public partial class HistoryWindow
         var selectedCategoryLabel = GetCurrentHistoryCategoryLabel(selectedCount);
 
         SelectBtn.IsEnabled = !historyUnavailable && (visibleCount > 0 || _selectMode);
+        DeleteAllBtn.Visibility = _selectMode ? Visibility.Collapsed : Visibility.Visible;
         DeleteAllBtn.IsEnabled = !historyUnavailable && totalCount > 0;
         DeleteSelectedBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
         DeleteSelectedBtn.IsEnabled = !historyUnavailable && _selectMode && selectedCount > 0;
