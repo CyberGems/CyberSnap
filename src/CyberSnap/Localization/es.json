@@ -1152,5 +1152,6 @@
   "Hue value (0-360 degrees)": "Valor de matiz (0-360 grados)",
   "Saturation value (0-100%)": "Valor de saturación (0-100%)",
   "Brightness value (0-100%)": "Valor de brillo (0-100%)",
-  "Adjust brightness": "Ajustar brillo"
+  "Adjust brightness": "Ajustar brillo",
+  "Custom Color": "Color personalizado"
 }
