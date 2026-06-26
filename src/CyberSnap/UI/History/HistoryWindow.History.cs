@@ -869,10 +869,11 @@ public partial class HistoryWindow
         return HistoryCategoryCombo.SelectedIndex switch
         {
             0 => CountAllCardsInVisualTree(HistoryStack),
-            1 => _filteredOcrEntries.Count,
+            1 => _filteredHistoryItems.Count,
             2 => _filteredGifItems.Count,
-            3 => _filteredColorEntries.Count,
-            4 => _filteredCodeEntries.Count,
+            3 => _filteredOcrEntries.Count,
+            4 => _filteredColorEntries.Count,
+            5 => _filteredCodeEntries.Count,
             _ => 0
         };
     }
@@ -899,7 +900,7 @@ public partial class HistoryWindow
     {
         return HistoryCategoryCombo.SelectedIndex switch
         {
-            0 => CountAllSelectedCardsInVisualTree(HistoryStack),
+            0 => _selectedCardsInAllTab.Count,
             1 => CountAllSelectedCardsInVisualTree(HistoryStack),
             2 => CountSelectedCardsInVisualTree(GifsPanel),
             3 => OcrStack.Children.OfType<Border>().Count(card => card.Tag is true),
@@ -989,6 +990,8 @@ public partial class HistoryWindow
                     UpdateUnifiedCardSelectionVisual(border, false);
                 }
             });
+            if (HistoryCategoryCombo.SelectedIndex == 0)
+                _selectedCardsInAllTab.Clear();
         }
 
         foreach (var card in GetCurrentSelectableCards())
@@ -1023,6 +1026,7 @@ public partial class HistoryWindow
         return HistoryCategoryCombo.SelectedIndex switch
         {
             0 => _filteredHistoryItems,
+            1 => _filteredHistoryItems,
             2 => _filteredGifItems,
             _ => Enumerable.Empty<HistoryItemVM>()
         };
@@ -1118,6 +1122,8 @@ public partial class HistoryWindow
             _selectMode = false;
             UpdateSelectModeControls();
 
+            InvalidateHistoryCategoryCaches();
+            _historyImageCacheReady = false;
             LoadCurrentHistoryTab();
             Dispatcher.BeginInvoke(() => UpdateCategoryCounts());
             UpdateImageSearchActionButtons();
@@ -1138,7 +1144,69 @@ public partial class HistoryWindow
     {
         try
         {
-            var selectedCount = GetCurrentSelectedHistoryItemCount();
+            // Capture selections before showing the dialog. ShowDialog pumps dispatcher messages,
+            // so a pending history refresh can rebuild the All view and clear selected card state.
+            List<HistoryEntry> fileEntriesToDelete = new();
+            List<OcrHistoryEntry> ocrEntriesToDelete = new();
+            List<ColorHistoryEntry> colorEntriesToDelete = new();
+            List<CodeHistoryEntry> codeEntriesToDelete = new();
+            List<HistoryItemVM> mediaItemsToDelete = new();
+
+            if (HistoryCategoryCombo.SelectedIndex == 0)
+            {
+                foreach (var card in _selectedCardsInAllTab)
+                {
+                    if (card.Tag is HistoryItemVM vm)
+                        fileEntriesToDelete.Add(vm.Entry);
+                    else if (_unifiedCardEntries.TryGetValue(card, out var entry))
+                    {
+                        if (entry is HistoryEntry fileEntry)
+                            fileEntriesToDelete.Add(fileEntry);
+                        else if (entry is OcrHistoryEntry ocr)
+                            ocrEntriesToDelete.Add(ocr);
+                        else if (entry is ColorHistoryEntry color)
+                            colorEntriesToDelete.Add(color);
+                        else if (entry is CodeHistoryEntry code)
+                            codeEntriesToDelete.Add(code);
+                    }
+                }
+            }
+            else if (HistoryCategoryCombo.SelectedIndex == 1)
+            {
+                foreach (var vm in _filteredHistoryItems)
+                {
+                    if (vm.IsSelected)
+                        fileEntriesToDelete.Add(vm.Entry);
+                }
+            }
+            else if (HistoryCategoryCombo.SelectedIndex == 2)
+            {
+                mediaItemsToDelete = _filteredGifItems.Where(i => i.IsSelected).ToList();
+            }
+            else if (HistoryCategoryCombo.SelectedIndex == 3)
+            {
+                ocrEntriesToDelete = OcrStack.Children.OfType<Border>()
+                    .Where(b => b.Tag is true)
+                    .Select(card => card.DataContext)
+                    .OfType<OcrHistoryEntry>()
+                    .ToList();
+            }
+            else if (HistoryCategoryCombo.SelectedIndex == 4)
+            {
+                colorEntriesToDelete = ColorStack.Children.OfType<Border>()
+                    .Select(s => s.Tag).OfType<ColorHistoryEntry>().ToList();
+            }
+            else if (HistoryCategoryCombo.SelectedIndex == 5)
+            {
+                codeEntriesToDelete = CodeStack.Children.OfType<Border>()
+                    .Select(s => s.Tag).OfType<CodeHistoryEntry>().ToList();
+            }
+
+            var selectedCount = fileEntriesToDelete.Count
+                                + ocrEntriesToDelete.Count
+                                + colorEntriesToDelete.Count
+                                + codeEntriesToDelete.Count
+                                + mediaItemsToDelete.Count;
             var selectedLabel = GetCurrentHistoryCategoryLabel(selectedCount);
             if (selectedCount <= 0)
             {
@@ -1151,63 +1219,25 @@ public partial class HistoryWindow
                 return;
 
             CancelImageSearchWork();
+
+            // ── Now clear UI selection state ──
             _selectMode = false;
             UpdateSelectModeControls();
 
-            if (HistoryCategoryCombo.SelectedIndex == 0)
-            {
-                var toDelete = GetSelectedEntriesFromVisualTree(HistoryStack);
-                _historyService.RemoveEntries(toDelete);
+            // ── Execute deletions ──
+            if (fileEntriesToDelete.Count > 0)
+                _historyService.DeleteEntries(fileEntriesToDelete);
+            if (ocrEntriesToDelete.Count > 0)
+                _historyService.DeleteOcrEntries(ocrEntriesToDelete);
+            if (colorEntriesToDelete.Count > 0)
+                _historyService.DeleteColorEntries(colorEntriesToDelete);
+            if (codeEntriesToDelete.Count > 0)
+                _historyService.DeleteCodeEntries(codeEntriesToDelete);
+            if (mediaItemsToDelete.Count > 0)
+                DeleteMediaItems(mediaItemsToDelete);
 
-                // Also delete selected unified entries (text, color, code)
-                var unifiedToDelete = new List<Border>();
-                WalkVisualBorders(HistoryStack, border =>
-                {
-                    if (border.Tag is true && _unifiedCardEntries.TryGetValue(border, out var rawEntry))
-                        unifiedToDelete.Add(border);
-                });
-                foreach (var card in unifiedToDelete)
-                {
-                    if (_unifiedCardEntries.TryGetValue(card, out var rawEntry))
-                    {
-                        if (rawEntry is OcrHistoryEntry ocr) _historyService.DeleteOcrEntry(ocr);
-                        else if (rawEntry is ColorHistoryEntry color) _historyService.DeleteColorEntry(color);
-                        else if (rawEntry is CodeHistoryEntry code) _historyService.DeleteCodeEntry(code);
-                    }
-                    _unifiedCardEntries.Remove(card);
-                }
-            }
-            else if (HistoryCategoryCombo.SelectedIndex == 1)
-            {
-                var toDelete = GetSelectedEntriesFromVisualTree(HistoryStack);
-                _historyService.RemoveEntries(toDelete);
-            }
-            else if (HistoryCategoryCombo.SelectedIndex == 2)
-            {
-                DeleteMediaItems(_filteredGifItems.Where(i => i.IsSelected).ToList());
-            }
-            else if (HistoryCategoryCombo.SelectedIndex == 3)
-            {
-                var entriesToDelete = OcrStack.Children.OfType<Border>()
-                    .Where(b => b.Tag is true)
-                    .Select(card => card.DataContext)
-                    .OfType<OcrHistoryEntry>()
-                    .ToList();
-                _historyService.DeleteOcrEntries(entriesToDelete);
-            }
-            else if (HistoryCategoryCombo.SelectedIndex == 4)
-            {
-                var toDelete = ColorStack.Children.OfType<Border>()
-                    .Select(s => s.Tag).OfType<ColorHistoryEntry>().ToList();
-                _historyService.DeleteColorEntries(toDelete);
-            }
-            else if (HistoryCategoryCombo.SelectedIndex == 5)
-            {
-                var toDelete = CodeStack.Children.OfType<Border>()
-                    .Select(s => s.Tag).OfType<CodeHistoryEntry>().ToList();
-                _historyService.DeleteCodeEntries(toDelete);
-            }
-
+            InvalidateHistoryCategoryCaches();
+            _historyImageCacheReady = false;
             LoadCurrentHistoryTab();
             Dispatcher.BeginInvoke(() => UpdateCategoryCounts());
             UpdateImageSearchActionButtons();
