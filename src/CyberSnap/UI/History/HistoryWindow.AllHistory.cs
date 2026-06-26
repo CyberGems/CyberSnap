@@ -195,6 +195,17 @@ public partial class HistoryWindow
         AppendGroupedUnifiedItems(HistoryStack, added, CreateUnifiedCard);
         // Update fingerprint after appending more items
         PrimeHistoryFingerprint();
+
+        // Refresh selection visuals for newly loaded cards when in select mode
+        if (_selectMode)
+        {
+            WalkVisualBorders(HistoryStack, border =>
+            {
+                if (border.Tag is bool selected)
+                    UpdateUnifiedCardSelectionVisual(border, selected);
+            });
+        }
+
         _ = Dispatcher.BeginInvoke(() =>
         {
             if (IsLoaded && HistoryTab.IsChecked == true && HistoryCategoryCombo.SelectedIndex == 0)
