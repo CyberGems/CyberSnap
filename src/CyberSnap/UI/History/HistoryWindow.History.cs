@@ -17,6 +17,8 @@ namespace CyberSnap.UI;
 public partial class HistoryWindow
 {
     private bool _selectMode;
+    private bool _wasSelectAllDelete; // tracks if Select All was used before Delete Selected
+    private bool _selectAllActive;    // when true, lazy-loaded cards auto-select in All tab
     private List<HistoryItemVM> _historyItems = new();
     private List<HistoryItemVM> _filteredHistoryItems = new();
     private List<HistoryItemVM> _gifItems = new();
@@ -821,6 +823,8 @@ public partial class HistoryWindow
     private void ToggleSelectMode(object sender, RoutedEventArgs e)
     {
         _selectMode = !_selectMode;
+        _wasSelectAllDelete = false;
+        _selectAllActive = false;
         if (!_selectMode)
             ClearCurrentHistorySelections();
 
@@ -829,9 +833,79 @@ public partial class HistoryWindow
         UpdateImageSearchActionButtons();
     }
 
+    private void SelectAllClick(object sender, RoutedEventArgs e)
+    {
+        _wasSelectAllDelete = true;
+        _selectAllActive = true;
+
+        // Select all image/GIF VMs
+        foreach (var item in GetCurrentHistorySelectionItems())
+            item.IsSelected = true;
+
+        // Select all unified cards (All tab)
+        if (HistoryCategoryCombo.SelectedIndex == 0)
+        {
+            _selectedCardsInAllTab.Clear();
+            WalkVisualBorders(HistoryStack, border =>
+            {
+                if (border.Tag is bool selected)
+                {
+                    border.Tag = true;
+                    _selectedCardsInAllTab.Add(border);
+                    UpdateUnifiedCardSelectionVisual(border, true);
+                }
+                else if (border.Tag is HistoryItemVM vm)
+                {
+                    vm.IsSelected = true;
+                    UpdateCardSelection(vm);
+                }
+            });
+        }
+
+        // Select all cards in specific tabs (GIF, OCR, Color, Code)
+        if (HistoryCategoryCombo.SelectedIndex == 2)
+        {
+            foreach (var item in _filteredGifItems)
+                item.IsSelected = true;
+            WalkVisualBorders(GifsPanel, border =>
+            {
+                if (border.Tag is HistoryItemVM vm)
+                    UpdateCardSelection(vm);
+            });
+        }
+
+        // Select all OCR/Color/Code cards in their tabs
+        var selectableCards = GetCurrentSelectableCards().ToList();
+        foreach (var card in selectableCards)
+        {
+            if (HistoryCategoryCombo.SelectedIndex == 3)
+                card.Tag = true;
+            else if (HistoryCategoryCombo.SelectedIndex == 4)
+                card.Tag = card.DataContext is ColorHistoryEntry entry ? entry : null;
+            else if (HistoryCategoryCombo.SelectedIndex == 5)
+                card.Tag = card.DataContext is CodeHistoryEntry codeEntry ? codeEntry : null;
+            RefreshSelectableCardSelection(card);
+        }
+
+        UpdateHistoryActionButtons();
+    }
+
+    private void UnselectClick(object sender, RoutedEventArgs e)
+    {
+        _wasSelectAllDelete = false;
+        _selectAllActive = false;
+        ClearCurrentHistorySelections();
+        RefreshVisibleCardSelections();
+        UpdateHistoryActionButtons();
+    }
+
     private void UpdateSelectModeControls()
     {
         SelectBtn.Content = LocalizationService.Translate(_selectMode ? "Done" : "Select");
+        SelectAllBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
+        SelectAllBtn.ToolTip = LocalizationService.Translate("Select all items");
+        UnselectBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
+        UnselectBtn.ToolTip = LocalizationService.Translate("Clear selection");
         UpdateHistoryActionButtons();
     }
 
@@ -1250,8 +1324,22 @@ public partial class HistoryWindow
             }
 
             if (!ConfirmDeleteSelected(selectedCount, selectedLabel))
+            {
+                // When "Select All" was used, cancel means clear everything
+                if (_wasSelectAllDelete)
+                {
+                    _wasSelectAllDelete = false;
+                    _selectAllActive = false;
+                    _selectMode = false;
+                    ClearCurrentHistorySelections();
+                    UpdateSelectModeControls();
+                    RefreshVisibleCardSelections();
+                }
                 return;
+            }
 
+            _wasSelectAllDelete = false;
+            _selectAllActive = false;
             CancelImageSearchWork();
 
             // ── Now clear UI selection state ──

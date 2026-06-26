@@ -1136,5 +1136,7 @@
   "Reset to default pattern": "Restablecer patrón predeterminado",
   "File name pattern": "Patrón de nombre de archivo",
   "Use the buttons to build capture file names.": "Usa los botones para formar los nombres de archivo.",
-  "Preview": "Vista previa"
+  "Preview": "Vista previa",
+  "Select all items": "Seleccionar todos los elementos",
+  "Clear selection": "Limpiar selección"
 }

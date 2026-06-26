@@ -201,6 +201,12 @@ public partial class HistoryWindow
         {
             WalkVisualBorders(HistoryStack, border =>
             {
+                if (_selectAllActive && border.Tag is bool)
+                {
+                    // Auto-select new cards loaded during "Select All"
+                    border.Tag = true;
+                    _selectedCardsInAllTab.Add(border);
+                }
                 if (border.Tag is bool selected)
                     UpdateUnifiedCardSelectionVisual(border, selected);
             });
