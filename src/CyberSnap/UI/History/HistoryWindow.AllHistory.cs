@@ -478,15 +478,30 @@ public partial class HistoryWindow
         root.Children.Add(swatchArea);
 
         var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
-        // Single line: "Color  #FF8844"
-        info.Children.Add(new TextBlock
+        // Line: "Color  #FF8844" + RGB in smaller non-bold
+        var colorLabelBlock = new TextBlock
         {
-            Text = $"Color  {displayHex}",
             FontSize = 11,
-            FontWeight = FontWeights.Bold,
             FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
             TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        colorLabelBlock.Inlines.Add(new System.Windows.Documents.Run
+        {
+            Text = "Color  ",
+            FontWeight = FontWeights.Bold
         });
+        colorLabelBlock.Inlines.Add(new System.Windows.Documents.Run
+        {
+            Text = displayHex,
+            FontWeight = FontWeights.Bold
+        });
+        colorLabelBlock.Inlines.Add(new System.Windows.Documents.Run
+        {
+            Text = $"  RGB({r}, {g}, {b})",
+            FontSize = 9,
+            Foreground = Theme.Brush(Theme.TextSecondary)
+        });
+        info.Children.Add(colorLabelBlock);
         info.Children.Add(CreateBadgeTimeText("CLR", System.Windows.Media.Color.FromRgb(255, 160, 80), FormatTimeAgo(entry.CapturedAt)));
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };

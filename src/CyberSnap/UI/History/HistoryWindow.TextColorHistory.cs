@@ -450,125 +450,135 @@ public partial class HistoryWindow
         var swatchColor = hasValidColor
             ? System.Windows.Media.Color.FromRgb(r, g, b)
             : System.Windows.Media.Color.FromArgb(0, 0, 0, 0);
+
+        // ── Card shell (matching unified style) ──
         var card = new Border
         {
+            Width = HistoryCardPreferredWidth,
+            MinWidth = HistoryCardMinWidth,
+            MaxWidth = HistoryCardMaxWidth,
+            Margin = new Thickness(HistoryCardMargin),
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(10, 8, 12, 8),
-            Margin = new Thickness(0, 0, 0, 3),
-            Background = HistoryCardIdleBrush,
-            BorderBrush = Brushes.Transparent,
+            Background = Theme.Brush(Theme.BgCard),
+            BorderBrush = Theme.Brush(Theme.IsDark ? Theme.BorderSubtle : Theme.Border),
             BorderThickness = new Thickness(1),
-            Cursor = System.Windows.Input.Cursors.Hand,
             Focusable = true,
-            ToolTip = LocalizationService.Translate("Copy this color value"),
             DataContext = entry
         };
         AutomationProperties.SetName(card, $"Color history item {displayHex}");
-        AutomationProperties.SetHelpText(card, "Press Enter or Space to copy this color. In select mode, press Enter or Space to select it.");
 
+        var root = new Grid();
+        var imageRow = new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) };
+        root.RowDefinitions.Add(imageRow);
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        // ── Swatch area (large, centered) ──
+        var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
+        var selBadge = CreateSelectionBadge(false);
+        swatchArea.Children.Add(selBadge);
+        swatchArea.Children.Add(new Border
+        {
+            Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
+            Background = new SolidColorBrush(swatchColor),
+            BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(1),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        Grid.SetRow(swatchArea, 0);
+        root.Children.Add(swatchArea);
+
+        // ── Info bar ──
+        var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
+        var colorLabelBlock = new TextBlock
+        {
+            FontSize = 11,
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        colorLabelBlock.Inlines.Add(new System.Windows.Documents.Run
+        {
+            Text = "Color  ",
+            FontWeight = FontWeights.Bold
+        });
+        colorLabelBlock.Inlines.Add(new System.Windows.Documents.Run
+        {
+            Text = displayHex,
+            FontWeight = FontWeights.Bold
+        });
+        colorLabelBlock.Inlines.Add(new System.Windows.Documents.Run
+        {
+            Text = $"  RGB({r}, {g}, {b})",
+            FontSize = 9,
+            Foreground = Theme.Brush(Theme.TextSecondary)
+        });
+        info.Children.Add(colorLabelBlock);
+        info.Children.Add(CreateBadgeTimeText("CLR", System.Windows.Media.Color.FromRgb(255, 160, 80), FormatTimeAgo(entry.CapturedAt)));
+
+        var infoBorder = new Border
+        {
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Background = Theme.Brush(Theme.BgSecondary),
+            Child = info
+        };
+        infoBorder.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
+        infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
+        Grid.SetRow(infoBorder, 1);
+        root.Children.Add(infoBorder);
+
+        // ── Category tint ──
+        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(255, 160, 80));
+
+        // Hover overlay
+        var hoverBorder = new Border
+        {
+            BorderThickness = new Thickness(1),
+            BorderBrush = System.Windows.Media.Brushes.Transparent,
+            CornerRadius = new CornerRadius(7),
+            IsHitTestVisible = false,
+            Background = System.Windows.Media.Brushes.Transparent
+        };
+        Grid.SetRow(hoverBorder, 0);
+        Grid.SetRowSpan(hoverBorder, 2);
+        root.Children.Add(hoverBorder);
+
+        card.Child = root;
+
+        // Hover / focus effects
         card.MouseEnter += (_, _) =>
         {
-            card.Background = HistoryCardHoverBrush;
-            card.BorderBrush = HistoryCardFocusBrush;
+            hoverBorder.BorderBrush = Theme.Brush(Theme.Accent);
+            hoverBorder.Background = Theme.Brush(Theme.AccentSubtle);
         };
         card.MouseLeave += (_, _) =>
         {
             if (!card.IsKeyboardFocusWithin)
             {
-                card.Background = HistoryCardIdleBrush;
-                card.BorderBrush = Brushes.Transparent;
+                hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                hoverBorder.Background = System.Windows.Media.Brushes.Transparent;
             }
         };
         card.GotKeyboardFocus += (_, _) =>
         {
-            card.Background = HistoryCardHoverBrush;
-            card.BorderBrush = HistoryCardFocusBrush;
+            hoverBorder.BorderBrush = Theme.Brush(Theme.Accent);
+            hoverBorder.Background = Theme.Brush(Theme.AccentSubtle);
         };
         card.LostKeyboardFocus += (_, _) =>
         {
-            if (card.IsMouseOver)
-                return;
-
-            card.Background = HistoryCardIdleBrush;
-            card.BorderBrush = Brushes.Transparent;
+            if (card.IsMouseOver) return;
+            hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+            hoverBorder.Background = System.Windows.Media.Brushes.Transparent;
         };
 
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var swatch = new Border
-        {
-            Width = 36,
-            Height = 36,
-            CornerRadius = new CornerRadius(18),
-            Background = new SolidColorBrush(swatchColor),
-            BorderThickness = new Thickness(1),
-            BorderBrush = Theme.Brush(Theme.BorderSubtle),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 12, 0),
-            ToolTip = hasValidColor ? $"Color preview {displayHex}" : "Invalid color preview"
-        };
-        var swatchHelpText = hasValidColor
-            ? $"Preview of saved color {displayHex}."
-            : $"Saved color value {entry.Hex} could not be parsed.";
-        AutomationProperties.SetName(swatch, $"Color swatch {displayHex}");
-        AutomationProperties.SetHelpText(swatch, swatchHelpText);
-        Grid.SetColumn(swatch, 0);
-        grid.Children.Add(swatch);
-
-        var infoStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        var hexBlock = new TextBlock
-        {
-            Text = displayHex,
-            FontSize = 13,
-            FontWeight = FontWeights.Medium,
-            Foreground = Theme.Brush(Theme.TextPrimary),
-            FontFamily = new System.Windows.Media.FontFamily("Cascadia Code, Consolas, Segoe UI Variable Text"),
-            ToolTip = displayHex
-        };
-        AutomationProperties.SetName(hexBlock, "Color hex value");
-        AutomationProperties.SetHelpText(hexBlock, displayHex);
-        infoStack.Children.Add(hexBlock);
-        var colorMetadataText = hasValidColor
-            ? $"RGB({r}, {g}, {b}) · {FormatTimeAgo(entry.CapturedAt)}"
-            : $"Invalid color · {FormatTimeAgo(entry.CapturedAt)}";
-        var metadataBlock = new TextBlock
-        {
-            Text = colorMetadataText,
-            FontSize = 10,
-            Opacity = 0.35,
-            Margin = new Thickness(0, 1, 0, 0),
-            ToolTip = colorMetadataText
-        };
-        AutomationProperties.SetName(metadataBlock, "Color details");
-        AutomationProperties.SetHelpText(metadataBlock, colorMetadataText);
-        infoStack.Children.Add(metadataBlock);
-        Grid.SetColumn(infoStack, 1);
-        grid.Children.Add(infoStack);
-
-        var copyBtn = new Button
-        {
-            Content = LocalizationService.Translate("Copy"),
-            FontSize = 10,
-            Padding = new Thickness(8, 3, 8, 3),
-            VerticalAlignment = VerticalAlignment.Center,
-            Cursor = System.Windows.Input.Cursors.Hand,
-            ToolTip = LocalizationService.Translate("Copy this color value")
-        };
-        AutomationProperties.SetName(copyBtn, "Copy color value");
-        AutomationProperties.SetHelpText(copyBtn, "Copy this color value to the clipboard.");
+        // ── Click / keyboard handlers ──
         var capturedHex = entry.Hex;
-        var badge = CreateSelectionBadge(false);
-        copyBtn.Click += (_, _) => CopyColorValue();
 
         void ToggleSelection()
         {
             var selected = card.Tag is ColorHistoryEntry;
             selected = !selected;
             card.Tag = selected ? entry : null;
-            UpdateSelectableCardSelection(card, badge, selected);
+            UpdateSelectableCardSelection(card, selBadge, selected);
             UpdateHistoryActionButtons();
         }
 
@@ -586,39 +596,23 @@ public partial class HistoryWindow
                     $"CyberSnap could not copy this color history item. Try again from Config -> History, or copy the visible color value manually.\n{ex.Message}");
             }
         }
-        Grid.SetColumn(copyBtn, 2);
-        grid.Children.Add(copyBtn);
-
-        var root = new Grid();
-        root.Children.Add(grid);
-        root.Children.Add(badge);
-        card.Child = root;
 
         card.MouseLeftButtonDown += (_, e) =>
         {
             e.Handled = true;
-            if (_selectMode)
-            {
-                ToggleSelection();
-                return;
-            }
-
+            if (_selectMode) { ToggleSelection(); return; }
             CopyColorValue();
         };
 
         card.KeyDown += (_, e) =>
         {
-            if (!IsHistoryCardActivationKey(e))
-                return;
-
+            if (!IsHistoryCardActivationKey(e)) return;
             e.Handled = true;
-            if (_selectMode)
-                ToggleSelection();
-            else
-                CopyColorValue();
+            if (_selectMode) ToggleSelection();
+            else CopyColorValue();
         };
 
-        UpdateSelectableCardSelection(card, badge, selected: false);
+        UpdateSelectableCardSelection(card, selBadge, selected: false);
         return card;
     }
 
