@@ -880,7 +880,11 @@ public partial class HistoryWindow
     {
         return HistoryCategoryCombo.SelectedIndex switch
         {
-            0 => _allImageHistoryEntries.Count > 0 ? _allImageHistoryEntries.Count : _historyService.ImageEntries.Count,
+            0 => (_allImageHistoryEntries.Count > 0 ? _allImageHistoryEntries.Count : _historyService.ImageEntries.Count)
+                 + (_allGifItems.Count > 0 ? _allGifItems.Count : _historyService.MediaEntries.Count)
+                 + _historyService.OcrEntries.Count
+                 + _historyService.ColorEntries.Count
+                 + _historyService.CodeEntries.Count,
             1 => _allImageHistoryEntries.Count > 0 ? _allImageHistoryEntries.Count : _historyService.ImageEntries.Count,
             2 => _allGifItems.Count > 0 ? _allGifItems.Count : _historyService.MediaEntries.Count,
             3 => _historyService.OcrEntries.Count,
@@ -1090,7 +1094,15 @@ public partial class HistoryWindow
             if (!ConfirmDeleteAllStep(2, totalCount, tab)) return;
 
             CancelImageSearchWork();
-            if (HistoryCategoryCombo.SelectedIndex == 0) _historyService.ClearImages();
+            if (HistoryCategoryCombo.SelectedIndex == 0)
+            {
+                // "All" tab: clear everything across all categories
+                _historyService.ClearImages();
+                DeleteMediaItems(_allGifItems);
+                _historyService.ClearOcr();
+                _historyService.ClearColors();
+                _historyService.ClearCodes();
+            }
             else if (HistoryCategoryCombo.SelectedIndex == 2) DeleteMediaItems(_allGifItems);
             else if (HistoryCategoryCombo.SelectedIndex == 3) _historyService.ClearOcr();
             else if (HistoryCategoryCombo.SelectedIndex == 4) _historyService.ClearColors();
@@ -1245,9 +1257,9 @@ public partial class HistoryWindow
         var confirmStep = $"({confirmation} {step} {of} 2)";
         return step switch
         {
-            1 => LocalizationService.Translate("This will permanently delete ALL capture thumbnails and physical files from disk.") +
+            1 => string.Format(LocalizationService.Translate("This will permanently delete ALL {0} thumbnails and physical files from disk."), categoryLabel) +
                  $"\n\n{confirmStep}",
-            2 => LocalizationService.Translate("This cannot be undone. Everything will be permanently deleted from disk and the Gallery.") +
+            2 => string.Format(LocalizationService.Translate("This cannot be undone. All {0} will be permanently deleted from disk and the Gallery."), categoryLabel) +
                  $"\n\n{confirmStep}",
             _ => ""
         };
