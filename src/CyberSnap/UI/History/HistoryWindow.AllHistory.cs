@@ -692,6 +692,16 @@ public partial class HistoryWindow
         }
         if (badge.Tag is UIElement check)
             check.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
+
+        // Update card tooltip for select mode + suppress child tooltips
+        card.ToolTip = _selectMode
+            ? LocalizationService.Translate("Click to select this item")
+            : null;
+        foreach (var child in root.Children)
+        {
+            if (child is FrameworkElement fe && fe.ToolTip != null)
+                ToolTipService.SetIsEnabled(fe, !_selectMode);
+        }
     }
 
     private static Border? FindUnifiedSelectionBadge(Grid root)
