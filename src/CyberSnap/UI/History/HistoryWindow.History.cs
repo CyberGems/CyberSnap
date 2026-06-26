@@ -1235,21 +1235,20 @@ public partial class HistoryWindow
     private static string BuildDeleteAllConfirmationTitle(int step, int totalCount, string categoryLabel)
     {
         var del = LocalizationService.Translate("Delete");
-        var confirmation = LocalizationService.Translate("Confirmation");
-        return $"{del} {totalCount} {categoryLabel} ({confirmation} {step} {LocalizationService.Translate("of")} 2)";
+        return $"{del} {totalCount} {categoryLabel}";
     }
 
     private static string BuildDeleteAllConfirmationMessage(int step, int totalCount, string categoryLabel)
     {
-        var del = LocalizationService.Translate("Delete");
-        var all = LocalizationService.Translate("all");
-        var tab = LocalizationService.Translate("in this history tab");
-        var undone = LocalizationService.Translate("This cannot be undone. The files will be permanently deleted from disk and removed from the Gallery.");
+        var confirmation = LocalizationService.Translate("Confirmation");
+        var of = LocalizationService.Translate("of");
+        var confirmStep = $"({confirmation} {step} {of} 2)";
         return step switch
         {
-            1 => $"{del} {all} {totalCount} {categoryLabel} {tab}?\n\n" +
-                 LocalizationService.Translate("This will permanently delete the files from disk and remove them from the Gallery."),
-            2 => $"{undone}\n\n{del} {totalCount} {categoryLabel}?",
+            1 => LocalizationService.Translate("This will permanently delete ALL capture thumbnails and physical files from disk.") +
+                 $"\n\n{confirmStep}",
+            2 => LocalizationService.Translate("This cannot be undone. Everything will be permanently deleted from disk and the Gallery.") +
+                 $"\n\n{confirmStep}",
             _ => ""
         };
     }
