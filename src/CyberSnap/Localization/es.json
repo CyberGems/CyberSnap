@@ -1138,5 +1138,8 @@
   "Use the buttons to build capture file names.": "Usa los botones para formar los nombres de archivo.",
   "Preview": "Vista previa",
   "Select all items": "Seleccionar todos los elementos",
-  "Clear selection": "Limpiar selección"
+  "Clear selection": "Limpiar selección",
+  "Delete {0} selected items": "Eliminar {0} elementos seleccionados",
+  "This action CANNOT be undone.": "Esta acción NO se puede deshacer.",
+  "{0} selected": "{0} seleccionados"
 }

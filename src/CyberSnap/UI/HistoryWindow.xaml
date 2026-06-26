@@ -400,6 +400,13 @@
                                              ToolTip="Clear selection"
                                              AutomationProperties.Name="Clear history selection"
                                              Cursor="Hand" Click="UnselectClick"/>
+                                    <TextBlock x:Name="SelectionCountLabel"
+                                               VerticalAlignment="Center"
+                                               Margin="6,0,10,0"
+                                               FontSize="13" FontWeight="Bold"
+                                               Foreground="{DynamicResource ThemeAccentBrush}"
+                                               Visibility="Collapsed"
+                                               Text=""/>
                                     <Button x:Name="DeleteAllBtn" Content="Clear all" Style="{StaticResource HistoryDangerButton}"
                                             Services:LocalizationService.SourceText="Clear all"
                                             ToolTip="Delete all items in the current history tab"
