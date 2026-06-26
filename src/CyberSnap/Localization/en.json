@@ -822,7 +822,7 @@
   "Use the buttons to build capture file names.": "Use the buttons to build capture file names.",
   "Select all items": "Select all items",
   "Clear selection": "Clear selection",
-  "Delete {0} selected items": "Delete {0} selected items",
+  "Delete {0} selected items?": "Delete {0} selected items?",
   "This action CANNOT be undone.": "This action CANNOT be undone.",
   "{0} selected": "{0} selected"
 }

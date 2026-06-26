@@ -826,7 +826,15 @@ public partial class HistoryWindow
         _wasSelectAllDelete = false;
         _selectAllActive = false;
         if (!_selectMode)
+        {
             ClearCurrentHistorySelections();
+        }
+        else
+        {
+            // Clear search when entering select mode to avoid search+select bugs
+            CancelImageSearchWork();
+            if (ImageSearchBox != null) ImageSearchBox.Text = "";
+        }
 
         UpdateSelectModeControls();
         RefreshVisibleCardSelections();
@@ -906,6 +914,8 @@ public partial class HistoryWindow
         SelectAllBtn.ToolTip = LocalizationService.Translate("Select all items");
         UnselectBtn.Visibility = _selectMode ? Visibility.Visible : Visibility.Collapsed;
         UnselectBtn.ToolTip = LocalizationService.Translate("Clear selection");
+        // Hide search bar in select mode to save space and avoid search+select bugs
+        ImageSearchRow.Visibility = _selectMode ? Visibility.Collapsed : Visibility.Visible;
         UpdateHistoryActionButtons();
     }
 
@@ -1389,7 +1399,7 @@ public partial class HistoryWindow
     private bool ConfirmDeleteSelected(int selectedCount, string categoryLabel)
     {
         var del = LocalizationService.Translate("Delete");
-        var title = string.Format(LocalizationService.Translate("Delete {0} selected items"), selectedCount);
+        var title = string.Format(LocalizationService.Translate("Delete {0} selected items?"), selectedCount);
         var body = LocalizationService.Translate("This action CANNOT be undone.");
         if (ThemedConfirmDialog.Confirm(this, title, body, del, LocalizationService.Translate("Cancel")))
             return true;

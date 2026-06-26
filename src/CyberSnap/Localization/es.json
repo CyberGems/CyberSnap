@@ -1139,7 +1139,7 @@
   "Preview": "Vista previa",
   "Select all items": "Seleccionar todos los elementos",
   "Clear selection": "Limpiar selección",
-  "Delete {0} selected items": "Eliminar {0} elementos seleccionados",
+  "Delete {0} selected items?": "¿Eliminar {0} elementos seleccionados?",
   "This action CANNOT be undone.": "Esta acción NO se puede deshacer.",
   "{0} selected": "{0} seleccionados"
 }
