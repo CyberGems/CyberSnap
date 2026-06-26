@@ -101,6 +101,7 @@ public sealed partial class EditorForm
 
         var flyout = new ColorPickerFlyoutWindow((int)physicalLeft, (int)physicalTop, wpfColor =>
         {
+            var app = System.Windows.Application.Current as CyberSnap.App;
             if (wpfColor is { } c)
             {
                 var newColor = Color.FromArgb(c.A, c.R, c.G, c.B);
@@ -110,11 +111,33 @@ public sealed partial class EditorForm
                 button.Invalidate();
                 UpdateColorSwatch();
 
-                if (System.Windows.Application.Current is CyberSnap.App app)
+                if (app != null)
                 {
                     app.PersistEditorToolColor(newColor.ToArgb());
                     app.PersistEditorCustomColor(newColor.ToArgb());
                 }
+            }
+            else
+            {
+                button.HasCustomColor = false;
+                button.SwatchColor = Color.Empty;
+                button.Invalidate();
+
+                if (app != null)
+                {
+                    app.PersistEditorCustomColor(0);
+                }
+
+                if (button.Checked)
+                {
+                    var defaultColor = PaletteColors[0];
+                    _canvas.ToolColor = defaultColor;
+                    if (app != null)
+                    {
+                        app.PersistEditorToolColor(defaultColor.ToArgb());
+                    }
+                }
+                UpdateColorSwatch();
             }
         }, initialWpfColor);
 
