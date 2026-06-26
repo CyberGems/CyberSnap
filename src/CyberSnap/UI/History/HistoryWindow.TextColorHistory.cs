@@ -537,6 +537,9 @@ public partial class HistoryWindow
         Grid.SetRow(swatchArea, 0);
         root.Children.Add(swatchArea);
 
+        swatchArea.ToolTip = LocalizationService.Translate("Copy this color");
+        swatchArea.Cursor = System.Windows.Input.Cursors.Hand;
+
         // ── Info bar ──
         var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
         var colorLabelBlock = new TextBlock
@@ -578,6 +581,10 @@ public partial class HistoryWindow
 
         // ── Category tint ──
         AddCategoryTint(root, System.Windows.Media.Color.FromRgb(255, 160, 80));
+
+        // ── Context menu + chevron ──
+        var capturedHex = entry.Hex;
+        AttachCardMenu(card, root, () => CopyColorToClipboard(capturedHex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(255, 160, 80));
 
         // Hover overlay
         var hoverBorder = new Border
@@ -621,7 +628,6 @@ public partial class HistoryWindow
         };
 
         // ── Click / keyboard handlers ──
-        var capturedHex = entry.Hex;
 
         void ToggleSelection()
         {
