@@ -59,51 +59,38 @@ public sealed partial class EditorForm
 
     private void ShowColorPickerPopup(EditorColorButton button)
     {
-        var screenPt = button.PointToScreen(new Point(button.Width, 0));
-        var screen = Screen.FromControl(button);
-
-        double dpiScaleX = 1.0;
-        double dpiScaleY = 1.0;
-        var mainWpf = System.Windows.Application.Current.MainWindow;
-        if (mainWpf != null)
-        {
-            var source = System.Windows.PresentationSource.FromVisual(mainWpf);
-            if (source != null && source.CompositionTarget != null)
-            {
-                dpiScaleX = source.CompositionTarget.TransformToDevice.M11;
-                dpiScaleY = source.CompositionTarget.TransformToDevice.M22;
-            }
-        }
-        else
-        {
-            using (var g = button.CreateGraphics())
-            {
-                dpiScaleX = g.DpiX / 96.0;
-                dpiScaleY = g.DpiY / 96.0;
-            }
-        }
+        double dpiScaleX = button.DeviceDpi / 96.0;
+        double dpiScaleY = button.DeviceDpi / 96.0;
 
         double physicalWidth = 280 * dpiScaleX;
         double physicalHeight = 360 * dpiScaleY;
 
-        double physicalLeft = screenPt.X + (8 * dpiScaleX);
-        if (physicalLeft + physicalWidth > screen.Bounds.Right)
+        if (!Native.User32.GetWindowRect(button.Handle, out var rect))
         {
-            physicalLeft = button.PointToScreen(new Point(0, 0)).X - physicalWidth - (8 * dpiScaleX);
+            return;
         }
 
-        double physicalTop = screenPt.Y - (100 * dpiScaleY);
-        if (physicalTop + physicalHeight > screen.Bounds.Bottom)
+        var hMonitor = Native.User32.MonitorFromWindow(button.Handle, 2); // MONITOR_DEFAULTTONEAREST = 2
+        var monitorInfo = new Native.User32.MONITORINFO();
+        monitorInfo.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(monitorInfo);
+        Native.User32.GetMonitorInfo(hMonitor, ref monitorInfo);
+        var monitorRect = monitorInfo.rcWork;
+
+        double physicalLeft = rect.Right + (8 * dpiScaleX);
+        if (physicalLeft + physicalWidth > monitorRect.Right)
         {
-            physicalTop = screen.Bounds.Bottom - physicalHeight - (8 * dpiScaleY);
-        }
-        if (physicalTop < screen.Bounds.Top)
-        {
-            physicalTop = screen.Bounds.Top + (8 * dpiScaleY);
+            physicalLeft = rect.Left - physicalWidth - (8 * dpiScaleX);
         }
 
-        double logicalLeft = physicalLeft / dpiScaleX;
-        double logicalTop = physicalTop / dpiScaleY;
+        double physicalTop = rect.Top - (100 * dpiScaleY);
+        if (physicalTop + physicalHeight > monitorRect.Bottom)
+        {
+            physicalTop = monitorRect.Bottom - physicalHeight - (8 * dpiScaleY);
+        }
+        if (physicalTop < monitorRect.Top)
+        {
+            physicalTop = monitorRect.Top + (8 * dpiScaleY);
+        }
 
         System.Windows.Media.Color? initialWpfColor = null;
         if (button.HasCustomColor)
@@ -112,7 +99,7 @@ public sealed partial class EditorForm
             initialWpfColor = System.Windows.Media.Color.FromRgb(c.R, c.G, c.B);
         }
 
-        var flyout = new ColorPickerFlyoutWindow(new System.Windows.Point(logicalLeft, logicalTop), wpfColor =>
+        var flyout = new ColorPickerFlyoutWindow((int)physicalLeft, (int)physicalTop, wpfColor =>
         {
             if (wpfColor is { } c)
             {
