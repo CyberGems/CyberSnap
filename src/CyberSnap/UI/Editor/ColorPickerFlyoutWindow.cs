@@ -19,9 +19,17 @@ internal sealed class ColorPickerFlyoutWindow : System.Windows.Window
 
     private bool _hasColorSet;
     private WpfColor? _selectedColor;
+    private bool _isClosing;
 
     public WpfColor? SelectedColor => _selectedColor;
     public bool HasColorSet => _hasColorSet;
+
+    private void SafeClose()
+    {
+        if (_isClosing) return;
+        _isClosing = true;
+        Close();
+    }
 
     public ColorPickerFlyoutWindow(int physicalX, int physicalY, Action<WpfColor?> onColorChanged, WpfColor? initialColor)
     {
@@ -46,7 +54,7 @@ internal sealed class ColorPickerFlyoutWindow : System.Windows.Window
         picker.CloseRequested += () =>
         {
             _hasColorSet = true;
-            Close();
+            SafeClose();
         };
 
         Content = picker;
@@ -57,12 +65,12 @@ internal sealed class ColorPickerFlyoutWindow : System.Windows.Window
             SetWindowPos(hwnd, IntPtr.Zero, physicalX, physicalY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         };
 
-        Deactivated += (s, e) => Close();
+        Deactivated += (s, e) => SafeClose();
 
         PreviewKeyDown += (s, e) =>
         {
             if (e.Key == Key.Escape)
-                Close();
+                SafeClose();
         };
     }
 }
