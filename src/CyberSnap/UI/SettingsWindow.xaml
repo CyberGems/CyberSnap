@@ -1640,7 +1640,6 @@
                                                 FontSize="14" FontWeight="Bold"
                                                 ToolTip="Reset to default pattern"
                                                 AutomationProperties.Name="Reset file name pattern to default"
-                                                Style="{StaticResource ChromeButton}"
                                                 Click="FileNameTemplateResetBtn_Click"/>
                                         <TextBox x:Name="FileNameTemplateBox" MinWidth="145" MaxWidth="285"
                                                  HorizontalAlignment="Stretch"
