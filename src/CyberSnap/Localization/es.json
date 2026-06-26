@@ -737,6 +737,9 @@
   "Failed to download update automatically:\n{0}\n\nWould you like to open the GitHub release page instead?": "No se pudo descargar la actualización automáticamente:\n{0}\n\n¿Quieres abrir la página de la versión en GitHub?",
   "Open Browser": "Abrir navegador",
   "OK": "Aceptar",
+  "Recently Used": "Usados recientemente",
+  "Standard Palette": "Paleta estándar",
+  "No recent colors": "Sin colores recientes",
   "Pan": "Desplazar",
   "Pan (Hold Space)": "Desplazar (Mantén la tecla Espacio)",
   "Lock Objects": "Bloquear objetos",
@@ -1140,6 +1143,14 @@
   "Select all items": "Seleccionar todos los elementos",
   "Clear selection": "Limpiar selección",
   "Delete {0} selected items?": "¿Eliminar {0} elementos seleccionados?",
-  "This action CANNOT be undone.": "Esta acción NO se puede deshacer.",
-  "{0} selected": "{0} seleccionados"
+  "{0} selected": "{0} seleccionados",
+  "Canvas background color (solid or transparent checkerboard)": "Color de fondo del lienzo (color sólido o cuadrícula transparente)",
+  "Color comparison (Left: original, Right: new color)": "Comparación de colores (Izquierda: original, Derecha: color nuevo)",
+  "Pick color from screen (Press Esc to cancel)": "Seleccionar color de la pantalla (Presiona Esc para cancelar)",
+  "Hexadecimal color code (RRGGBB)": "Código de color hexadecimal (RRGGBB)",
+  "RGB color value (0-255)": "Valor de color RGB (0-255)",
+  "Hue value (0-360 degrees)": "Valor de matiz (0-360 grados)",
+  "Saturation value (0-100%)": "Valor de saturación (0-100%)",
+  "Brightness value (0-100%)": "Valor de brillo (0-100%)",
+  "Adjust brightness": "Ajustar brillo"
 }

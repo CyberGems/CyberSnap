@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Windows;
@@ -8,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;
 using CyberSnap.Capture;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
@@ -21,75 +23,119 @@ using WpfTextBox = System.Windows.Controls.TextBox;
 namespace CyberSnap.UI.Controls;
 
 /// <summary>
-/// A reusable, self-contained RGB color picker panel: preview swatch, R/G/B sliders
-/// with numeric boxes, and a "Pick from screen" button that drives the standalone
-/// color picker tool. Renders its own card chrome so it can be dropped straight into a
-/// <see cref="System.Windows.Controls.Primitives.Popup"/> flyout (New canvas dialog today,
-/// the shape color selector in the tools column next).
+/// A reusable, self-contained advanced color picker panel featuring:
+/// - HSV Color Wheel & Brightness Slider
+/// - Split color preview (Reference vs New)
+/// - HEX input and validation
+/// - Numerical inputs for RGB & HSV
+/// - Recently used colors (loaded/saved from AppSettings)
+/// - Standard annotation palette colors
+/// - Pick from screen gotero tool
 /// </summary>
 internal sealed class ColorPickerPopup : ContentControl
 {
-    /// <summary>Default flyout width; the card sizes its height to content.</summary>
-    public const double FlyoutWidth = 248;
+    public const double FlyoutWidth = 268;
 
+    private double _hue;
+    private double _saturation = 1.0;
+    private double _value = 1.0;
     private WpfColor _currentColor = WpfColor.FromRgb(128, 128, 128);
     private bool _hasColor;
+    private WpfColor _referenceColor;
+    private bool _hasReference;
 
-    private Border _previewBorder = null!;
-    private DrawingVisual _previewSwatch = null!;
-    private Slider _sliderR = null!;
-    private Slider _sliderG = null!;
-    private Slider _sliderB = null!;
+    private HsvColorWheel _colorWheel = null!;
+    private HsvValueSlider _valueSlider = null!;
+    private SplitColorSwatch _previewSwatch = null!;
+    private WpfTextBox _boxHex = null!;
     private WpfTextBox _boxR = null!;
     private WpfTextBox _boxG = null!;
     private WpfTextBox _boxB = null!;
+    private WpfTextBox _boxH = null!;
+    private WpfTextBox _boxS = null!;
+    private WpfTextBox _boxV = null!;
+    private WrapPanel _recentColorsPanel = null!;
     private bool _suppress;
 
-    /// <summary>Raised whenever the selected color changes; null means "no color / checkerboard".</summary>
     public event Action<WpfColor?>? ColorChanged;
-
-    /// <summary>Raised when the host flyout should close (Accept pressed, or a screen pick started).</summary>
     public event Action? CloseRequested;
 
-    /// <summary>The currently selected color, or null when cleared.</summary>
     public WpfColor? SelectedColor => _hasColor ? _currentColor : null;
+
+    private static readonly WpfColor[] PaletteColors =
+    {
+        WpfColor.FromRgb(0, 255, 255),
+        WpfColor.FromRgb(0, 136, 255),
+        WpfColor.FromRgb(168, 85, 247),
+        WpfColor.FromRgb(255, 45, 85),
+        WpfColor.FromRgb(245, 158, 11),
+        WpfColor.FromRgb(234, 179, 8),
+        WpfColor.FromRgb(34, 197, 94),
+        WpfColor.FromRgb(255, 255, 255),
+        WpfColor.FromRgb(15, 23, 42),
+        WpfColor.FromRgb(236, 72, 153),
+        WpfColor.FromRgb(148, 163, 184),
+        WpfColor.FromRgb(0, 0, 0),
+    };
 
     public ColorPickerPopup()
     {
         Theme.Refresh();
         BuildUI();
+        Loaded += OnLoaded;
     }
 
-    /// <summary>Adopt a concrete color (updates sliders, boxes, preview) and notify listeners.</summary>
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_hasColor)
+        {
+            _referenceColor = _currentColor;
+            _hasReference = true;
+        }
+        else
+        {
+            _hasReference = false;
+        }
+        RefreshPreview();
+        PopulateRecentColors();
+    }
+
     public void SetColor(WpfColor color)
     {
         _hasColor = true;
         _currentColor = color;
+        ColorToHsv(color, out _hue, out _saturation, out _value);
+        
         _suppress = true;
-        _sliderR.Value = color.R;
-        _sliderG.Value = color.G;
-        _sliderB.Value = color.B;
-        SetBoxText(_boxR, color.R);
-        SetBoxText(_boxG, color.G);
-        SetBoxText(_boxB, color.B);
+        _colorWheel.Hue = _hue;
+        _colorWheel.Saturation = _saturation;
+        _valueSlider.Hue = _hue;
+        _valueSlider.Saturation = _saturation;
+        _valueSlider.Value = _value;
+        UpdateTextBoxes();
         _suppress = false;
+
         RefreshPreview();
         ColorChanged?.Invoke(_currentColor);
     }
 
-    /// <summary>Clear back to the "no color" (checkerboard) state and notify listeners.</summary>
     public void ClearColor()
     {
         _hasColor = false;
         _currentColor = WpfColor.FromRgb(128, 128, 128);
+        _hue = 0;
+        _saturation = 0;
+        _value = 0.5;
+
         _suppress = true;
-        _sliderR.Value = 128;
-        _sliderG.Value = 128;
-        _sliderB.Value = 128;
-        SetBoxText(_boxR, 128);
-        SetBoxText(_boxG, 128);
-        SetBoxText(_boxB, 128);
+        _colorWheel.Hue = _hue;
+        _colorWheel.Saturation = _saturation;
+        _valueSlider.Hue = _hue;
+        _valueSlider.Saturation = _saturation;
+        _valueSlider.Value = _value;
+        UpdateTextBoxes();
         _suppress = false;
+
         RefreshPreview();
         ColorChanged?.Invoke(null);
     }
@@ -101,40 +147,254 @@ internal sealed class ColorPickerPopup : ContentControl
 
         var stack = new StackPanel();
 
-        _previewSwatch = new DrawingVisual();
-        _previewBorder = new Border
+        // 1. HSV Wheel & Brightness Slider Row
+        var wheelRow = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        wheelRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        wheelRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) }); // Brightness slider
+
+        _colorWheel = new HsvColorWheel { Height = 124, Width = 124, HorizontalAlignment = WpfHorizontalAlignment.Center };
+        _colorWheel.HsvChanged += (h, s) =>
         {
-            Height = 52,
-            CornerRadius = new CornerRadius(8),
+            if (_suppress) return;
+            _hue = h;
+            _saturation = s;
+            _hasColor = true;
+            _currentColor = ColorFromHsv(_hue, _saturation, _value);
+            
+            _suppress = true;
+            _valueSlider.Hue = _hue;
+            _valueSlider.Saturation = _saturation;
+            UpdateTextBoxes();
+            _suppress = false;
+
+            RefreshPreview();
+            ColorChanged?.Invoke(_currentColor);
+        };
+        Grid.SetColumn(_colorWheel, 0);
+        wheelRow.Children.Add(_colorWheel);
+
+        _valueSlider = new HsvValueSlider { Height = 124, Width = 14, Margin = new Thickness(6, 0, 0, 0) };
+        _valueSlider.ValueChanged += v =>
+        {
+            if (_suppress) return;
+            _value = v;
+            _hasColor = true;
+            _currentColor = ColorFromHsv(_hue, _saturation, _value);
+            
+            _suppress = true;
+            UpdateTextBoxes();
+            _suppress = false;
+
+            RefreshPreview();
+            ColorChanged?.Invoke(_currentColor);
+        };
+        ToolTipService.SetToolTip(_valueSlider, LocalizationService.Translate("Adjust brightness"));
+        Grid.SetColumn(_valueSlider, 1);
+        wheelRow.Children.Add(_valueSlider);
+
+        stack.Children.Add(wheelRow);
+
+        // 2. Swatch, Gotero, & HEX Row (Horizontal layout)
+        var hexRow = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+        hexRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(64) }); // Split preview
+        hexRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // spacer
+        hexRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // Gotero & Hex panel
+
+        _previewSwatch = new SplitColorSwatch
+        {
+            Height = 28,
+            HorizontalAlignment = WpfHorizontalAlignment.Stretch
+        };
+        var previewBorder = new Border
+        {
+            CornerRadius = new CornerRadius(6),
+            ClipToBounds = true,
+            Child = _previewSwatch
+        };
+        ToolTipService.SetToolTip(previewBorder, LocalizationService.Translate("Color comparison (Left: original, Right: new color)"));
+        Grid.SetColumn(previewBorder, 0);
+        hexRow.Children.Add(previewBorder);
+
+        var goteroHexPanel = new StackPanel { Orientation = WpfOrientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+
+        var goteroBtn = new Button
+        {
+            Height = 28,
+            Width = 28,
+            Cursor = WpfCursors.Hand,
+            BorderThickness = new Thickness(1),
+            Template = BuildButtonTemplate(),
+            Background = Theme.Brush(SecondaryButtonBg),
+            BorderBrush = Theme.Brush(SecondaryButtonBorder),
+            Content = new System.Windows.Controls.Image
+            {
+                Source = FluentIcons.RenderWpf("picker", System.Drawing.Color.FromArgb(Theme.TextPrimary.R, Theme.TextPrimary.G, Theme.TextPrimary.B), 14),
+                Width = 14,
+                Height = 14,
+                Stretch = Stretch.Uniform
+            }
+        };
+        goteroBtn.Click += (_, _) => { CloseRequested?.Invoke(); PickFromScreen(); };
+        goteroBtn.MouseEnter += (_, _) => goteroBtn.Background = Theme.Brush(Theme.TabHoverBg);
+        goteroBtn.MouseLeave += (_, _) => goteroBtn.Background = Theme.Brush(SecondaryButtonBg);
+        ToolTipService.SetToolTip(goteroBtn, LocalizationService.Translate("Pick color from screen (Press Esc to cancel)"));
+        goteroHexPanel.Children.Add(goteroBtn);
+
+        var hexContainer = new Grid { Margin = new Thickness(8, 0, 0, 0) };
+        hexContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        hexContainer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(85) }); // Hex input
+
+        var hashLabel = new TextBlock
+        {
+            Text = "#",
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = Theme.Brush(Theme.TextSecondary),
+            FontSize = 12,
+            FontWeight = FontWeights.Bold,
+            Margin = new Thickness(0, 0, 4, 0)
+        };
+        
+        _boxHex = new WpfTextBox
+        {
+            FontSize = 12,
+            Height = 28,
+            Padding = new Thickness(6, 0, 6, 0),
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Background = Theme.Brush(FieldBg),
+            Foreground = Theme.Brush(Theme.TextPrimary),
             BorderBrush = accentBrush,
             BorderThickness = new Thickness(1),
-            ClipToBounds = true,
-            Margin = new Thickness(0, 0, 0, 12),
-            Child = new VisualDrawingVisualHost(_previewSwatch),
+            CaretBrush = Theme.Brush(accent)
         };
-        // ActualWidth/Height are 0 until the first layout pass — repaint once we have a real size.
-        // A Border's CornerRadius does NOT clip its child, so also set a rounded Clip to keep the
-        // painted swatch inside the rounded frame instead of poking out square at the corners.
-        _previewBorder.SizeChanged += (_, e) =>
+        ToolTipService.SetToolTip(_boxHex, LocalizationService.Translate("Hexadecimal color code (RRGGBB)"));
+        _boxHex.TextChanged += (s, e) =>
         {
-            _previewBorder.Clip = new RectangleGeometry(new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), 8, 8);
-            RefreshPreview();
+            if (_suppress) return;
+            string txt = _boxHex.Text.Trim();
+            if (txt.StartsWith("#")) txt = txt.Substring(1);
+            if (txt.Length == 6)
+            {
+                try
+                {
+                    byte r = byte.Parse(txt.Substring(0, 2), NumberStyles.HexNumber);
+                    byte g = byte.Parse(txt.Substring(2, 2), NumberStyles.HexNumber);
+                    byte b = byte.Parse(txt.Substring(4, 2), NumberStyles.HexNumber);
+                    
+                    _suppress = true;
+                    _hasColor = true;
+                    _currentColor = WpfColor.FromRgb(r, g, b);
+                    ColorToHsv(_currentColor, out _hue, out _saturation, out _value);
+                    _colorWheel.Hue = _hue;
+                    _colorWheel.Saturation = _saturation;
+                    _valueSlider.Hue = _hue;
+                    _valueSlider.Saturation = _saturation;
+                    _valueSlider.Value = _value;
+                    UpdateTextBoxes();
+                    _suppress = false;
+
+                    RefreshPreview();
+                    ColorChanged?.Invoke(_currentColor);
+                }
+                catch { }
+            }
         };
-        stack.Children.Add(_previewBorder);
+        
+        Grid.SetColumn(hashLabel, 0);
+        Grid.SetColumn(_boxHex, 1);
+        hexContainer.Children.Add(hashLabel);
+        hexContainer.Children.Add(_boxHex);
+        goteroHexPanel.Children.Add(hexContainer);
 
-        stack.Children.Add(MakeSliderRow("R", 128, ChannelR, out _sliderR, out _boxR));
-        stack.Children.Add(MakeSliderRow("G", 128, ChannelG, out _sliderG, out _boxG));
-        stack.Children.Add(MakeSliderRow("B", 128, ChannelB, out _sliderB, out _boxB));
+        Grid.SetColumn(goteroHexPanel, 2);
+        hexRow.Children.Add(goteroHexPanel);
 
-        // Row 1: full-width "Pick from screen" (gives the longer label room to breathe).
-        var pickButton = BuildButton(LocalizationService.Translate("Pick from screen"), isAccent: true,
-            () => { CloseRequested?.Invoke(); PickFromScreen(); }, iconId: "picker");
-        pickButton.HorizontalAlignment = WpfHorizontalAlignment.Stretch;
-        pickButton.MinWidth = 0;
-        pickButton.Margin = new Thickness(0, 12, 0, 8);
-        stack.Children.Add(pickButton);
+        stack.Children.Add(hexRow);
 
-        // Row 2: Clear | Accept, split evenly.
+        // 3. Compact Numerical Grid (RGB & HSV)
+        var numGrid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+        numGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        numGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        numGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6) });
+        numGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        numGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        numGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6) });
+        numGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        numGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        
+        numGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        numGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(6) });
+        numGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        // RGB Controls
+        _boxR = BuildMiniField("R", out var lblR);
+        _boxG = BuildMiniField("G", out var lblG);
+        _boxB = BuildMiniField("B", out var lblB);
+
+        Grid.SetColumn(lblR, 0); Grid.SetColumn(_boxR, 1); Grid.SetRow(lblR, 0); Grid.SetRow(_boxR, 0);
+        Grid.SetColumn(lblG, 3); Grid.SetColumn(_boxG, 4); Grid.SetRow(lblG, 0); Grid.SetRow(_boxG, 0);
+        Grid.SetColumn(lblB, 6); Grid.SetColumn(_boxB, 7); Grid.SetRow(lblB, 0); Grid.SetRow(_boxB, 0);
+
+        numGrid.Children.Add(lblR); numGrid.Children.Add(_boxR);
+        numGrid.Children.Add(lblG); numGrid.Children.Add(_boxG);
+        numGrid.Children.Add(lblB); numGrid.Children.Add(_boxB);
+
+        // HSV Controls
+        _boxH = BuildMiniField("H", out var lblH);
+        _boxS = BuildMiniField("S", out var lblS);
+        _boxV = BuildMiniField("V", out var lblV);
+
+        Grid.SetColumn(lblH, 0); Grid.SetColumn(_boxH, 1); Grid.SetRow(lblH, 2); Grid.SetRow(_boxH, 2);
+        Grid.SetColumn(lblS, 3); Grid.SetColumn(_boxS, 4); Grid.SetRow(lblS, 2); Grid.SetRow(_boxS, 2);
+        Grid.SetColumn(lblV, 6); Grid.SetColumn(_boxV, 7); Grid.SetRow(lblV, 2); Grid.SetRow(_boxV, 2);
+
+        numGrid.Children.Add(lblH); numGrid.Children.Add(_boxH);
+        numGrid.Children.Add(lblS); numGrid.Children.Add(_boxS);
+        numGrid.Children.Add(lblV); numGrid.Children.Add(_boxV);
+
+        // Add Handlers to boxes
+        _boxR.TextChanged += OnRgbBoxChanged;
+        _boxG.TextChanged += OnRgbBoxChanged;
+        _boxB.TextChanged += OnRgbBoxChanged;
+
+        _boxH.TextChanged += OnHsvBoxChanged;
+        _boxS.TextChanged += OnHsvBoxChanged;
+        _boxV.TextChanged += OnHsvBoxChanged;
+
+        stack.Children.Add(numGrid);
+
+        // 4. Recently Used Colors Bar
+        var recentHeader = new TextBlock
+        {
+            Text = LocalizationService.Translate("Recently Used"),
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Theme.Brush(Theme.TextMuted),
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+        stack.Children.Add(recentHeader);
+
+        _recentColorsPanel = new WrapPanel { Margin = new Thickness(0, 0, 0, 4) };
+        stack.Children.Add(_recentColorsPanel);
+
+        // 5. Standard Palette Bar
+        var standardHeader = new TextBlock
+        {
+            Text = LocalizationService.Translate("Standard Palette"),
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Theme.Brush(Theme.TextMuted),
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+        stack.Children.Add(standardHeader);
+
+        var standardPanel = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+        foreach (var col in PaletteColors)
+        {
+            standardPanel.Children.Add(BuildPaletteSwatch(col));
+        }
+        stack.Children.Add(standardPanel);
+
+        // 6. Action Row
         var actionRow = new Grid();
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
@@ -147,7 +407,17 @@ internal sealed class ColorPickerPopup : ContentControl
         Grid.SetColumn(clearButton, 0);
         actionRow.Children.Add(clearButton);
 
-        var acceptButton = BuildButton(LocalizationService.Translate("Accept"), isAccent: true, () => CloseRequested?.Invoke());
+        var acceptButton = BuildButton(LocalizationService.Translate("Accept"), isAccent: true, () =>
+        {
+            if (_hasColor)
+            {
+                if (Application.Current is CyberSnap.App app)
+                {
+                    app.PersistRecentColor(ToHex(_currentColor));
+                }
+            }
+            CloseRequested?.Invoke();
+        });
         acceptButton.HorizontalAlignment = WpfHorizontalAlignment.Stretch;
         acceptButton.MinWidth = 0;
         acceptButton.Margin = new Thickness(0);
@@ -159,11 +429,12 @@ internal sealed class ColorPickerPopup : ContentControl
         var card = new Border
         {
             Width = FlyoutWidth,
+            Margin = new Thickness(6), // Room for drop shadow, prevents bottom buttons from cutting off
             CornerRadius = new CornerRadius(10),
             Background = Theme.Brush(PanelBg),
             BorderBrush = Theme.Brush(WithAlpha(accent, Theme.IsDark ? (byte)70 : (byte)50)),
             BorderThickness = new Thickness(1),
-            Padding = new Thickness(14),
+            Padding = new Thickness(10),
             Effect = new DropShadowEffect
             {
                 Color = Colors.Black,
@@ -175,108 +446,218 @@ internal sealed class ColorPickerPopup : ContentControl
         };
 
         Content = card;
+        UpdateTextBoxes();
         RefreshPreview();
     }
 
-    private FrameworkElement MakeSliderRow(string label, byte defaultValue, WpfColor channelColor,
-        out Slider slider, out WpfTextBox box)
+    private WpfTextBox BuildMiniField(string label, out TextBlock lbl)
     {
-        var accent = Theme.Accent;
-        var accentBrush = Theme.Brush(WithAlpha(accent, 90));
-        var row = new Grid { Margin = new Thickness(0, 0, 0, 8) };
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
-
-        var lbl = new TextBlock
+        lbl = new TextBlock
         {
             Text = label,
-            FontSize = 12,
+            FontSize = 10,
             FontWeight = FontWeights.Bold,
             Foreground = Theme.Brush(Theme.TextSecondary),
             VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 3, 0)
         };
-        Grid.SetColumn(lbl, 0);
-        row.Children.Add(lbl);
 
-        slider = new Slider
+        var box = new WpfTextBox
         {
-            Minimum = 0,
-            Maximum = 255,
-            Value = defaultValue,
-            TickFrequency = 1,
-            IsSnapToTickEnabled = true,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(6, 0, 6, 0),
-            Template = BuildSliderTemplate(channelColor),
-        };
-        slider.ValueChanged += OnSliderChanged;
-        Grid.SetColumn(slider, 1);
-        row.Children.Add(slider);
-
-        box = new WpfTextBox
-        {
-            Text = defaultValue.ToString(CultureInfo.InvariantCulture),
-            FontSize = 11,
-            Height = 24,
-            Padding = new Thickness(4, 0, 4, 0),
+            FontSize = 10.5,
+            Height = 22,
+            Padding = new Thickness(2, 0, 2, 0),
             VerticalContentAlignment = VerticalAlignment.Center,
             HorizontalContentAlignment = WpfHorizontalAlignment.Center,
             Background = Theme.Brush(FieldBg),
             Foreground = Theme.Brush(Theme.TextPrimary),
-            BorderBrush = accentBrush,
+            BorderBrush = Theme.Brush(WithAlpha(Theme.Accent, 90)),
             BorderThickness = new Thickness(1),
-            CaretBrush = Theme.Brush(accent),
-            Tag = label,
+            CaretBrush = Theme.Brush(Theme.Accent),
+            Tag = label
         };
         box.PreviewTextInput += (_, e) => e.Handled = !IsAllDigits(e.Text);
-        box.TextChanged += OnBoxTextChanged;
-        Grid.SetColumn(box, 2);
-        row.Children.Add(box);
 
-        return row;
+        if (label == "R" || label == "G" || label == "B")
+        {
+            ToolTipService.SetToolTip(box, LocalizationService.Translate("RGB color value (0-255)"));
+        }
+        else if (label == "H")
+        {
+            ToolTipService.SetToolTip(box, LocalizationService.Translate("Hue value (0-360 degrees)"));
+        }
+        else if (label == "S")
+        {
+            ToolTipService.SetToolTip(box, LocalizationService.Translate("Saturation value (0-100%)"));
+        }
+        else if (label == "V")
+        {
+            ToolTipService.SetToolTip(box, LocalizationService.Translate("Brightness value (0-100%)"));
+        }
+
+        return box;
     }
 
-    private void OnSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private FrameworkElement BuildPaletteSwatch(WpfColor color)
     {
-        if (_suppress) return;
-        _hasColor = true;
-        _currentColor = WpfColor.FromRgb((byte)_sliderR.Value, (byte)_sliderG.Value, (byte)_sliderB.Value);
-        _suppress = true;
-        SetBoxText(_boxR, _currentColor.R);
-        SetBoxText(_boxG, _currentColor.G);
-        SetBoxText(_boxB, _currentColor.B);
-        _suppress = false;
-        RefreshPreview();
-        ColorChanged?.Invoke(_currentColor);
+        var swatch = new Border
+        {
+            Width = 16,
+            Height = 16,
+            CornerRadius = new CornerRadius(3),
+            Background = Theme.Brush(color),
+            BorderBrush = Theme.Brush(WithAlpha(Colors.Black, 40)),
+            BorderThickness = new Thickness(1),
+            Margin = new Thickness(0, 0, 4, 4),
+            Cursor = WpfCursors.Hand
+        };
+        swatch.MouseLeftButtonDown += (_, e) =>
+        {
+            e.Handled = true;
+            SetColor(color);
+        };
+        return swatch;
     }
 
-    private void OnBoxTextChanged(object sender, TextChangedEventArgs e)
+    private void PopulateRecentColors()
+    {
+        _recentColorsPanel.Children.Clear();
+        var s = SettingsService.LoadStatic();
+        if (s?.RecentColors != null)
+        {
+            foreach (var hex in s.RecentColors)
+            {
+                try
+                {
+                    string clean = hex.StartsWith("#") ? hex.Substring(1) : hex;
+                    byte r = byte.Parse(clean.Substring(0, 2), NumberStyles.HexNumber);
+                    byte g = byte.Parse(clean.Substring(2, 2), NumberStyles.HexNumber);
+                    byte b = byte.Parse(clean.Substring(4, 2), NumberStyles.HexNumber);
+                    var col = WpfColor.FromRgb(r, g, b);
+                    _recentColorsPanel.Children.Add(BuildPaletteSwatch(col));
+                }
+                catch { }
+            }
+        }
+
+        if (_recentColorsPanel.Children.Count == 0)
+        {
+            _recentColorsPanel.Children.Add(new TextBlock
+            {
+                Text = LocalizationService.Translate("No recent colors"),
+                FontSize = 9.5,
+                FontStyle = FontStyles.Italic,
+                Foreground = Theme.Brush(Theme.TextMuted),
+                Margin = new Thickness(0, 2, 0, 6)
+            });
+        }
+    }
+
+    private void OnRgbBoxChanged(object sender, TextChangedEventArgs e)
     {
         if (_suppress) return;
         if (sender is not WpfTextBox box || box.Tag is not string channel) return;
-        if (!int.TryParse(box.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v))
-            return;
+        if (!int.TryParse(box.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v)) return;
+
         v = Math.Clamp(v, 0, 255);
-        _suppress = true;
+        byte r = _currentColor.R;
+        byte g = _currentColor.G;
+        byte b = _currentColor.B;
+
         switch (channel)
         {
-            case "R": _sliderR.Value = v; break;
-            case "G": _sliderG.Value = v; break;
-            case "B": _sliderB.Value = v; break;
+            case "R": r = (byte)v; break;
+            case "G": g = (byte)v; break;
+            case "B": b = (byte)v; break;
         }
-        _suppress = false;
+
+        _currentColor = WpfColor.FromRgb(r, g, b);
         _hasColor = true;
-        _currentColor = WpfColor.FromRgb((byte)_sliderR.Value, (byte)_sliderG.Value, (byte)_sliderB.Value);
+        ColorToHsv(_currentColor, out _hue, out _saturation, out _value);
+
+        _suppress = true;
+        _colorWheel.Hue = _hue;
+        _colorWheel.Saturation = _saturation;
+        _valueSlider.Hue = _hue;
+        _valueSlider.Saturation = _saturation;
+        _valueSlider.Value = _value;
+        UpdateTextBoxes();
+        _suppress = false;
+
         RefreshPreview();
         ColorChanged?.Invoke(_currentColor);
     }
 
-    /// <summary>
-    /// Launch the standalone screen color picker on its own STA thread (matching the hotkey
-    /// path), then adopt the committed color back on the UI thread. Reads the form's
-    /// <see cref="StandaloneColorPickerForm.PickedColor"/> so a cancel leaves the swatch untouched.
-    /// </summary>
+    private void OnHsvBoxChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_suppress) return;
+        if (sender is not WpfTextBox box || box.Tag is not string channel) return;
+        if (!double.TryParse(box.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) return;
+
+        double h = _hue;
+        double s = _saturation;
+        double val = _value;
+
+        switch (channel)
+        {
+            case "H": h = Math.Clamp(v, 0.0, 360.0); break;
+            case "S": s = Math.Clamp(v / 100.0, 0.0, 1.0); break;
+            case "V": val = Math.Clamp(v / 100.0, 0.0, 1.0); break;
+        }
+
+        _hue = h;
+        _saturation = s;
+        _value = val;
+        _currentColor = ColorFromHsv(_hue, _saturation, _value);
+        _hasColor = true;
+
+        _suppress = true;
+        _colorWheel.Hue = _hue;
+        _colorWheel.Saturation = _saturation;
+        _valueSlider.Hue = _hue;
+        _valueSlider.Saturation = _saturation;
+        _valueSlider.Value = _value;
+        UpdateTextBoxes();
+        _suppress = false;
+
+        RefreshPreview();
+        ColorChanged?.Invoke(_currentColor);
+    }
+
+    private void UpdateTextBoxes()
+    {
+        _boxR.Text = _currentColor.R.ToString(CultureInfo.InvariantCulture);
+        _boxG.Text = _currentColor.G.ToString(CultureInfo.InvariantCulture);
+        _boxB.Text = _currentColor.B.ToString(CultureInfo.InvariantCulture);
+
+        _boxH.Text = Math.Round(_hue).ToString(CultureInfo.InvariantCulture);
+        _boxS.Text = Math.Round(_saturation * 100.0).ToString(CultureInfo.InvariantCulture);
+        _boxV.Text = Math.Round(_value * 100.0).ToString(CultureInfo.InvariantCulture);
+
+        _boxHex.Text = ToHex(_currentColor).Substring(1);
+    }
+
+    private void RefreshPreview()
+    {
+        if (_hasColor)
+        {
+            _previewSwatch.NewColor = _currentColor;
+        }
+        else
+        {
+            _previewSwatch.ClearNew();
+        }
+
+        if (_hasReference)
+        {
+            _previewSwatch.ReferenceColor = _referenceColor;
+        }
+        else
+        {
+            _previewSwatch.ClearReference();
+        }
+    }
+
     private void PickFromScreen()
     {
         var dispatcher = Dispatcher;
@@ -303,27 +684,61 @@ internal sealed class ColorPickerPopup : ContentControl
         thread.Start();
     }
 
-    private void RefreshPreview()
+    public static WpfColor ColorFromHsv(double h, double s, double v)
     {
-        var w = Math.Max(1, (int)_previewBorder.ActualWidth);
-        var h = Math.Max(1, (int)_previewBorder.ActualHeight);
+        int hi = Convert.ToInt32(Math.Floor(h / 60.0)) % 6;
+        double f = (h / 60.0) - Math.Floor(h / 60.0);
 
-        using var dc = _previewSwatch.RenderOpen();
-        if (_hasColor)
+        v = v * 255.0;
+        byte vByte = Convert.ToByte(v);
+        byte p = Convert.ToByte(v * (1.0 - s));
+        byte q = Convert.ToByte(v * (1.0 - f * s));
+        byte t = Convert.ToByte(v * (1.0 - (1.0 - f) * s));
+
+        return hi switch
         {
-            dc.DrawRectangle(Theme.Brush(_currentColor), null, new Rect(0, 0, w, h));
-        }
-        else
-        {
-            PaintCheckerboard(dc, w, h);
-        }
+            0 => WpfColor.FromRgb(vByte, t, p),
+            1 => WpfColor.FromRgb(q, vByte, p),
+            2 => WpfColor.FromRgb(p, vByte, t),
+            3 => WpfColor.FromRgb(p, q, vByte),
+            4 => WpfColor.FromRgb(t, p, vByte),
+            _ => WpfColor.FromRgb(vByte, p, q),
+        };
     }
 
-    /// <summary>
-    /// Shared checkerboard fill used for the "no color" preview and the dialog swatch.
-    /// Theme-aware so it previews the actual blank canvas: the same two tones the editor's
-    /// <c>CreateBlankCheckerboard</c> paints (dark pair on Dark, light pair on Light).
-    /// </summary>
+    public static void ColorToHsv(WpfColor color, out double h, out double s, out double v)
+    {
+        double r = color.R / 255.0;
+        double g = color.G / 255.0;
+        double b = color.B / 255.0;
+
+        double max = Math.Max(r, Math.Max(g, b));
+        double min = Math.Min(r, Math.Min(g, b));
+        double delta = max - min;
+
+        h = 0;
+        if (delta > 0)
+        {
+            if (max == r)
+            {
+                h = 60.0 * (((g - b) / delta) % 6.0);
+            }
+            else if (max == g)
+            {
+                h = 60.0 * (((b - r) / delta) + 2.0);
+            }
+            else if (max == b)
+            {
+                h = 60.0 * (((r - g) / delta) + 4.0);
+            }
+            if (h < 0)
+                h += 360.0;
+        }
+
+        s = max == 0.0 ? 0.0 : delta / max;
+        v = max;
+    }
+
     public static void PaintCheckerboard(DrawingContext dc, int w, int h)
     {
         const int size = 8;
@@ -338,7 +753,7 @@ internal sealed class ColorPickerPopup : ContentControl
                     dc.DrawRectangle(altTone, null, new Rect(x, y, size, size));
     }
 
-    private Button BuildButton(string text, bool isAccent, Action click, string? iconId = null)
+    private Button BuildButton(string text, bool isAccent, Action click)
     {
         var accent = Theme.Accent;
 
@@ -349,40 +764,18 @@ internal sealed class ColorPickerPopup : ContentControl
             FontWeight = FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        var icon = iconId is null ? null : new System.Windows.Controls.Image
-        {
-            Width = 14,
-            Height = 14,
-            Stretch = Stretch.Uniform,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 6, 0),
-        };
-        FrameworkElement content = label;
-        if (icon is not null)
-        {
-            var sp = new StackPanel { Orientation = WpfOrientation.Horizontal };
-            sp.Children.Add(icon);
-            sp.Children.Add(label);
-            content = sp;
-        }
 
         var button = new Button
         {
-            Content = content,
+            Content = label,
             Height = 28,
-            MinWidth = isAccent ? 124 : 64,
+            MinWidth = isAccent ? 100 : 64,
             Margin = new Thickness(0, 0, isAccent ? 8 : 0, 0),
             Padding = new Thickness(10, 0, 10, 0),
             Cursor = WpfCursors.Hand,
             BorderThickness = new Thickness(1),
             Template = BuildButtonTemplate(),
         };
-
-        void SetIconColor(WpfColor c)
-        {
-            if (icon is not null)
-                icon.Source = FluentIcons.RenderWpf(iconId!, System.Drawing.Color.FromArgb(c.R, c.G, c.B), 14);
-        }
 
         if (isAccent)
         {
@@ -392,16 +785,14 @@ internal sealed class ColorPickerPopup : ContentControl
             button.Background = Theme.Brush(baseBg);
             button.BorderBrush = Theme.Brush(WithAlpha(accent, 170));
             label.Foreground = Theme.Brush(restText);
-            SetIconColor(restText);
-            button.MouseEnter += (_, _) => { button.Background = Theme.Brush(accent); label.Foreground = Theme.Brush(hoverText); SetIconColor(hoverText); };
-            button.MouseLeave += (_, _) => { button.Background = Theme.Brush(baseBg); label.Foreground = Theme.Brush(restText); SetIconColor(restText); };
+            button.MouseEnter += (_, _) => { button.Background = Theme.Brush(accent); label.Foreground = Theme.Brush(hoverText); };
+            button.MouseLeave += (_, _) => { button.Background = Theme.Brush(baseBg); label.Foreground = Theme.Brush(restText); };
         }
         else
         {
             button.Background = Theme.Brush(SecondaryButtonBg);
             button.BorderBrush = Theme.Brush(SecondaryButtonBorder);
             label.Foreground = Theme.Brush(Theme.TextPrimary);
-            SetIconColor(Theme.TextPrimary);
             button.MouseEnter += (_, _) => button.Background = Theme.Brush(Theme.TabHoverBg);
             button.MouseLeave += (_, _) => button.Background = Theme.Brush(SecondaryButtonBg);
         }
@@ -409,9 +800,6 @@ internal sealed class ColorPickerPopup : ContentControl
         button.Click += (_, _) => click();
         return button;
     }
-
-    private static void SetBoxText(WpfTextBox box, int value) =>
-        box.Text = value.ToString(CultureInfo.InvariantCulture);
 
     private static bool IsAllDigits(string text)
     {
@@ -436,54 +824,7 @@ internal sealed class ColorPickerPopup : ContentControl
     private static WpfColor WithAlpha(WpfColor color, byte alpha) =>
         WpfColor.FromArgb(alpha, color.R, color.G, color.B);
 
-    // Per-channel thumb colors (R/G/B) and slider chrome tones.
-    private static readonly WpfColor ChannelR = WpfColor.FromRgb(224, 67, 67);
-    private static readonly WpfColor ChannelG = WpfColor.FromRgb(54, 178, 74);
-    private static readonly WpfColor ChannelB = WpfColor.FromRgb(59, 130, 246);
-
     private static string ToHex(WpfColor c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
-
-    /// <summary>
-    /// A slim slider template: a rounded rail plus a circular thumb whose center is filled with
-    /// the channel color (red on R, green on G, blue on B), so the control reads as RGB at a glance.
-    /// </summary>
-    private static ControlTemplate BuildSliderTemplate(WpfColor channelColor)
-    {
-        var rail = ToHex(Theme.IsDark ? WpfColor.FromRgb(58, 61, 77) : WpfColor.FromRgb(208, 210, 216));
-        var outer = ToHex(Theme.IsDark ? WpfColor.FromRgb(201, 204, 211) : WpfColor.FromRgb(238, 240, 245));
-        var stroke = ToHex(Theme.IsDark ? WpfColor.FromRgb(20, 22, 33) : WpfColor.FromRgb(176, 179, 186));
-        var channel = ToHex(channelColor);
-
-        string xaml =
-            "<ControlTemplate TargetType=\"Slider\" xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"" +
-              " xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\">" +
-              "<Grid Height=\"18\" VerticalAlignment=\"Center\">" +
-                $"<Border Height=\"4\" CornerRadius=\"2\" Background=\"{rail}\" VerticalAlignment=\"Center\"/>" +
-                "<Track x:Name=\"PART_Track\">" +
-                  "<Track.DecreaseRepeatButton>" +
-                    "<RepeatButton Command=\"Slider.DecreaseLarge\" Focusable=\"False\" Opacity=\"0\"/>" +
-                  "</Track.DecreaseRepeatButton>" +
-                  "<Track.IncreaseRepeatButton>" +
-                    "<RepeatButton Command=\"Slider.IncreaseLarge\" Focusable=\"False\" Opacity=\"0\"/>" +
-                  "</Track.IncreaseRepeatButton>" +
-                  "<Track.Thumb>" +
-                    "<Thumb Width=\"18\" Height=\"18\">" +
-                      "<Thumb.Template>" +
-                        "<ControlTemplate TargetType=\"Thumb\">" +
-                          "<Grid>" +
-                            $"<Ellipse Fill=\"{outer}\" Stroke=\"{stroke}\" StrokeThickness=\"1\"/>" +
-                            $"<Ellipse Margin=\"5\" Fill=\"{channel}\"/>" +
-                          "</Grid>" +
-                        "</ControlTemplate>" +
-                      "</Thumb.Template>" +
-                    "</Thumb>" +
-                  "</Track.Thumb>" +
-                "</Track>" +
-              "</Grid>" +
-            "</ControlTemplate>";
-
-        return (ControlTemplate)XamlReader.Parse(xaml);
-    }
 
     private static ControlTemplate BuildButtonTemplate()
     {
@@ -514,5 +855,300 @@ internal sealed class ColorPickerPopup : ContentControl
         protected override int VisualChildrenCount => 1;
         protected override System.Windows.Size MeasureOverride(System.Windows.Size availableSize) => availableSize;
         protected override System.Windows.Size ArrangeOverride(System.Windows.Size finalSize) => finalSize;
+    }
+
+    // --- Sub-components for HSV Picker ---
+
+    internal sealed class HsvColorWheel : FrameworkElement
+    {
+        private WriteableBitmap? _bitmap;
+        private double _hue;
+        private double _saturation = 1.0;
+
+        public double Hue
+        {
+            get => _hue;
+            set { if (_hue != value) { _hue = value; InvalidateVisual(); } }
+        }
+
+        public double Saturation
+        {
+            get => _saturation;
+            set { if (_saturation != value) { _saturation = value; InvalidateVisual(); } }
+        }
+
+        public event Action<double, double>? HsvChanged;
+
+        public HsvColorWheel()
+        {
+            Cursor = WpfCursors.Hand;
+        }
+
+        protected override void OnRender(DrawingContext dc)
+        {
+            double w = ActualWidth;
+            double h = ActualHeight;
+            if (w <= 0 || h <= 0) return;
+
+            EnsureBitmap((int)w, (int)h);
+            if (_bitmap != null)
+            {
+                dc.DrawImage(_bitmap, new Rect(0, 0, w, h));
+            }
+
+            double centerX = w / 2.0;
+            double centerY = h / 2.0;
+            double radius = Math.Min(centerX, centerY);
+            double angle = _hue * Math.PI / 180.0;
+            double dist = _saturation * radius;
+
+            double tx = centerX + dist * Math.Cos(angle);
+            double ty = centerY - dist * Math.Sin(angle);
+
+            dc.DrawEllipse(null, new System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, 2.5), new System.Windows.Point(tx, ty), 5, 5);
+            dc.DrawEllipse(null, new System.Windows.Media.Pen(System.Windows.Media.Brushes.White, 1.5), new System.Windows.Point(tx, ty), 5, 5);
+        }
+
+        private void EnsureBitmap(int w, int h)
+        {
+            if (_bitmap != null && _bitmap.PixelWidth == w && _bitmap.PixelHeight == h) return;
+
+            _bitmap = new WriteableBitmap(w, h, 96, 96, PixelFormats.Bgra32, null);
+            int[] pixels = new int[w * h];
+            double centerX = w / 2.0;
+            double centerY = h / 2.0;
+            double radius = Math.Min(centerX, centerY) - 1.0; // leave a 1px buffer for anti-aliasing
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    double dx = x - centerX;
+                    double dy = centerY - y;
+                    double dist = Math.Sqrt(dx * dx + dy * dy);
+
+                    if (dist <= radius + 1.0)
+                    {
+                        double angle = Math.Atan2(dy, dx);
+                        if (angle < 0) angle += 2 * Math.PI;
+                        double hue = angle * 180.0 / Math.PI;
+                        double sat = Math.Min(1.0, dist / radius);
+
+                        WpfColor c = ColorFromHsv(hue, sat, 1.0);
+                        
+                        double alphaFactor = 1.0;
+                        if (dist > radius)
+                        {
+                            alphaFactor = 1.0 - (dist - radius);
+                            if (alphaFactor < 0) alphaFactor = 0;
+                            if (alphaFactor > 1) alphaFactor = 1;
+                        }
+                        byte alpha = (byte)(alphaFactor * 255);
+
+                        pixels[y * w + x] = (alpha << 24) | (c.R << 16) | (c.G << 8) | c.B;
+                    }
+                    else
+                    {
+                        pixels[y * w + x] = 0;
+                    }
+                }
+            }
+            _bitmap.WritePixels(new Int32Rect(0, 0, w, h), pixels, w * 4, 0);
+        }
+
+        protected override void OnMouseDown(MouseButtonEventArgs e)
+        {
+            base.OnMouseDown(e);
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                CaptureMouse();
+                UpdateFromPoint(e.GetPosition(this));
+            }
+        }
+
+        protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            if (IsMouseCaptured)
+            {
+                UpdateFromPoint(e.GetPosition(this));
+            }
+        }
+
+        protected override void OnMouseUp(MouseButtonEventArgs e)
+        {
+            base.OnMouseUp(e);
+            if (IsMouseCaptured)
+            {
+                ReleaseMouseCapture();
+            }
+        }
+
+        private void UpdateFromPoint(System.Windows.Point pt)
+        {
+            double w = ActualWidth;
+            double h = ActualHeight;
+            if (w <= 0 || h <= 0) return;
+
+            double centerX = w / 2.0;
+            double centerY = h / 2.0;
+            double radius = Math.Min(centerX, centerY);
+            if (radius <= 0) return;
+
+            double dx = pt.X - centerX;
+            double dy = centerY - pt.Y;
+            double dist = Math.Sqrt(dx * dx + dy * dy);
+
+            double angle = Math.Atan2(dy, dx);
+            if (angle < 0) angle += 2 * Math.PI;
+
+            double hue = angle * 180.0 / Math.PI;
+            double sat = Math.Min(1.0, dist / radius);
+
+            _hue = hue;
+            _saturation = sat;
+
+            InvalidateVisual();
+            HsvChanged?.Invoke(_hue, _saturation);
+        }
+    }
+
+    internal sealed class HsvValueSlider : FrameworkElement
+    {
+        private double _hue;
+        private double _saturation = 1.0;
+        private double _value = 1.0;
+
+        public double Hue
+        {
+            get => _hue;
+            set { if (_hue != value) { _hue = value; InvalidateVisual(); } }
+        }
+
+        public double Saturation
+        {
+            get => _saturation;
+            set { if (_saturation != value) { _saturation = value; InvalidateVisual(); } }
+        }
+
+        public double Value
+        {
+            get => _value;
+            set { if (_value != value) { _value = value; InvalidateVisual(); } }
+        }
+
+        public event Action<double>? ValueChanged;
+
+        public HsvValueSlider()
+        {
+            Cursor = WpfCursors.Hand;
+        }
+
+        protected override void OnRender(DrawingContext dc)
+        {
+            double w = ActualWidth;
+            double h = ActualHeight;
+            if (w <= 0 || h <= 0) return;
+
+            WpfColor pureColor = ColorFromHsv(_hue, _saturation, 1.0);
+            var brush = new LinearGradientBrush(pureColor, Colors.Black, new System.Windows.Point(0, 0), new System.Windows.Point(0, 1));
+            dc.DrawRoundedRectangle(brush, null, new Rect(0, 0, w, h), 4, 4);
+
+            double ty = (1.0 - _value) * h;
+            dc.DrawRectangle(System.Windows.Media.Brushes.White, new System.Windows.Media.Pen(System.Windows.Media.Brushes.Black, 1), new Rect(-2, ty - 2, w + 4, 4));
+        }
+
+        protected override void OnMouseDown(MouseButtonEventArgs e)
+        {
+            base.OnMouseDown(e);
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                CaptureMouse();
+                UpdateFromPoint(e.GetPosition(this));
+            }
+        }
+
+        protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            if (IsMouseCaptured)
+            {
+                UpdateFromPoint(e.GetPosition(this));
+            }
+        }
+
+        protected override void OnMouseUp(MouseButtonEventArgs e)
+        {
+            base.OnMouseUp(e);
+            if (IsMouseCaptured)
+            {
+                ReleaseMouseCapture();
+            }
+        }
+
+        private void UpdateFromPoint(System.Windows.Point pt)
+        {
+            double h = ActualHeight;
+            if (h <= 0) return;
+
+            double val = 1.0 - Math.Clamp(pt.Y / h, 0.0, 1.0);
+            _value = val;
+            InvalidateVisual();
+            ValueChanged?.Invoke(_value);
+        }
+    }
+
+    internal sealed class SplitColorSwatch : FrameworkElement
+    {
+        private WpfColor _referenceColor = Colors.Transparent;
+        private WpfColor _newColor = Colors.Transparent;
+        private bool _hasReferenceColor;
+        private bool _hasNewColor;
+
+        public WpfColor ReferenceColor
+        {
+            get => _referenceColor;
+            set { _referenceColor = value; _hasReferenceColor = true; InvalidateVisual(); }
+        }
+
+        public WpfColor NewColor
+        {
+            get => _newColor;
+            set { _newColor = value; _hasNewColor = true; InvalidateVisual(); }
+        }
+
+        public void ClearReference() { _hasReferenceColor = false; InvalidateVisual(); }
+        public void ClearNew() { _hasNewColor = false; InvalidateVisual(); }
+
+        protected override void OnRender(DrawingContext dc)
+        {
+            double w = ActualWidth;
+            double h = ActualHeight;
+            if (w <= 0 || h <= 0) return;
+
+            ColorPickerPopup.PaintCheckerboard(dc, (int)w, (int)h);
+
+            var clipGeom = new RectangleGeometry(new Rect(0, 0, w, h), 6, 6);
+            dc.PushClip(clipGeom);
+
+            if (_hasReferenceColor)
+            {
+                dc.PushClip(new RectangleGeometry(new Rect(0, 0, w / 2.0, h)));
+                dc.DrawRectangle(Theme.Brush(_referenceColor), null, new Rect(0, 0, w, h));
+                dc.Pop();
+            }
+
+            if (_hasNewColor)
+            {
+                dc.PushClip(new RectangleGeometry(new Rect(w / 2.0, 0, w / 2.0, h)));
+                dc.DrawRectangle(Theme.Brush(_newColor), null, new Rect(0, 0, w, h));
+                dc.Pop();
+            }
+
+            dc.Pop(); // Pop clipGeom
+
+            var borderPen = new System.Windows.Media.Pen(Theme.Brush(WithAlpha(Theme.Accent, 90)), 1);
+            dc.DrawRoundedRectangle(null, borderPen, new Rect(0.5, 0.5, w - 1, h - 1), 6, 6);
+        }
     }
 }
