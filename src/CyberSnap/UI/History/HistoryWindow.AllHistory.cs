@@ -657,14 +657,13 @@ public partial class HistoryWindow
     }
 
     /// <summary>Updates a unified card's selection badge and Tag to match selection state.</summary>
-    private static void UpdateUnifiedCardSelectionVisual(Border card, bool selected)
+    private void UpdateUnifiedCardSelectionVisual(Border card, bool selected)
     {
         if (card.Child is not Grid root) return;
-        // Find the selection badge in the card's visual tree
         var badge = FindUnifiedSelectionBadge(root);
         if (badge is null) return;
         var checkPath = badge.Tag as UIElement;
-        badge.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+        badge.Visibility = (_selectMode || selected) ? Visibility.Visible : Visibility.Collapsed;
         if (checkPath is not null)
             checkPath.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
     }
