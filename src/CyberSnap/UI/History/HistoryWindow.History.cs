@@ -931,6 +931,11 @@ public partial class HistoryWindow
             ? LocalizationService.Translate("Delete selected") + $" ({selectedCount})"
             : LocalizationService.Translate("Delete selected");
 
+        // Selection count label (prominent accent text between buttons)
+        SelectionCountLabel.Visibility = _selectMode && selectedCount > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (selectedCount > 0)
+            SelectionCountLabel.Text = string.Format(LocalizationService.Translate("{0} selected"), selectedCount);
+
         var selectHelp = _selectMode
             ? string.Format(LocalizationService.Translate("Finish selecting {0}"), categoryLabel)
             : string.Format(LocalizationService.Translate("Select {0}"), categoryLabel);
@@ -1384,16 +1389,12 @@ public partial class HistoryWindow
     private bool ConfirmDeleteSelected(int selectedCount, string categoryLabel)
     {
         var del = LocalizationService.Translate("Delete");
-        var sel = LocalizationService.Translate("selected");
-        if (ThemedConfirmDialog.Confirm(
-                this,
-                $"{del} {selectedCount} {sel} {categoryLabel}",
-                $"{del} {selectedCount} {sel} {categoryLabel}? {LocalizationService.Translate("This cannot be undone.")}",
-                del,
-                LocalizationService.Translate("Cancel")))
+        var title = string.Format(LocalizationService.Translate("Delete {0} selected items"), selectedCount);
+        var body = LocalizationService.Translate("This action CANNOT be undone.");
+        if (ThemedConfirmDialog.Confirm(this, title, body, del, LocalizationService.Translate("Cancel")))
             return true;
 
-        SetHistoryDeleteStatus($"{LocalizationService.Translate("Delete canceled")}. {LocalizationService.Translate("Kept")} {selectedCount} {sel} {categoryLabel}.");
+        SetHistoryDeleteStatus($"{LocalizationService.Translate("Delete canceled")}. {LocalizationService.Translate("Kept")} {selectedCount} {LocalizationService.Translate("selected")} {categoryLabel}.");
         UpdateHistoryActionButtons();
         return false;
     }
