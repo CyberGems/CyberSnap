@@ -1113,6 +1113,7 @@ public partial class HistoryWindow
             UpdateSelectModeControls();
 
             LoadCurrentHistoryTab();
+            UpdateCategoryCounts();
             UpdateImageSearchActionButtons();
             UpdateHistoryActionButtons();
             SetHistoryDeleteStatus($"Deleted all {tab}.");
@@ -1197,6 +1198,7 @@ public partial class HistoryWindow
             }
 
             LoadCurrentHistoryTab();
+            UpdateCategoryCounts();
             UpdateImageSearchActionButtons();
             UpdateHistoryActionButtons();
             SetHistoryDeleteStatus($"Deleted {selectedCount} selected {selectedLabel}.");
