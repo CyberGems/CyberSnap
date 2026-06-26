@@ -871,6 +871,12 @@ public partial class HistoryWindow
     {
         card.BorderThickness = new Thickness(selected ? Theme.StrokeThickness : 0);
         card.BorderBrush = selected ? Theme.StrokeBrush() : System.Windows.Media.Brushes.Transparent;
+
+        // Update card tooltip for select mode
+        card.ToolTip = _selectMode
+            ? LocalizationService.Translate("Click to select this item")
+            : null;
+
         badge.Visibility = _selectMode || selected ? Visibility.Visible : Visibility.Collapsed;
         badge.Opacity = selected ? 1 : 0.45;
         if (selected)
