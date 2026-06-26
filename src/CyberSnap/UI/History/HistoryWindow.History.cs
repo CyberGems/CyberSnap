@@ -1158,11 +1158,25 @@ public partial class HistoryWindow
     {
         return HistoryCategoryCombo.SelectedIndex switch
         {
-            2 => OcrStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
-            4 => ColorStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
-            5 => CodeStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
+            3 => OcrStack.Children.OfType<Border>().Where(IsSelectableHistoryCard),
+            4 => GetWrappedSelectableCards(ColorStack),
+            5 => GetWrappedSelectableCards(CodeStack),
             _ => Enumerable.Empty<Border>()
         };
+    }
+
+    private static IEnumerable<Border> GetWrappedSelectableCards(System.Windows.Controls.Panel stack)
+    {
+        foreach (var child in stack.Children)
+        {
+            if (child is Border b && IsSelectableHistoryCard(b))
+                yield return b;
+            if (child is WrapPanel wrap)
+            {
+                foreach (var card in wrap.Children.OfType<Border>().Where(IsSelectableHistoryCard))
+                    yield return card;
+            }
+        }
     }
 
     private static bool IsSelectableHistoryCard(Border card)

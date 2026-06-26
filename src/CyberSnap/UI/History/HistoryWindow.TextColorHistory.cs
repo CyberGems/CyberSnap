@@ -601,30 +601,30 @@ public partial class HistoryWindow
 
         card.Child = root;
 
-        // Hover / focus effects
+        // Hover / focus effects (matching unified card subtlety)
         card.MouseEnter += (_, _) =>
         {
-            hoverBorder.BorderBrush = Theme.Brush(Theme.Accent);
-            hoverBorder.Background = Theme.Brush(Theme.AccentSubtle);
+            card.Background = HistoryCardHoverBrush;
+            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
         };
         card.MouseLeave += (_, _) =>
         {
             if (!card.IsKeyboardFocusWithin)
             {
+                card.Background = Theme.Brush(Theme.BgCard);
                 hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
-                hoverBorder.Background = System.Windows.Media.Brushes.Transparent;
             }
         };
         card.GotKeyboardFocus += (_, _) =>
         {
-            hoverBorder.BorderBrush = Theme.Brush(Theme.Accent);
-            hoverBorder.Background = Theme.Brush(Theme.AccentSubtle);
+            card.Background = HistoryCardHoverBrush;
+            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
         };
         card.LostKeyboardFocus += (_, _) =>
         {
             if (card.IsMouseOver) return;
+            card.Background = Theme.Brush(Theme.BgCard);
             hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
-            hoverBorder.Background = System.Windows.Media.Brushes.Transparent;
         };
 
         // ── Click / keyboard handlers ──
