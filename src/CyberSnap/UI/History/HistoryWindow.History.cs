@@ -1099,12 +1099,18 @@ public partial class HistoryWindow
             {
                 // "All" tab: clear everything across all categories
                 _historyService.ClearImages();
-                DeleteMediaItems(_allGifItems);
+                _historyService.ClearGifs();
                 _historyService.ClearOcr();
                 _historyService.ClearColors();
                 _historyService.ClearCodes();
+                _allGifItems.Clear();
             }
-            else if (HistoryCategoryCombo.SelectedIndex == 2) DeleteMediaItems(_allGifItems);
+            else if (HistoryCategoryCombo.SelectedIndex == 1) _historyService.ClearImages();
+            else if (HistoryCategoryCombo.SelectedIndex == 2)
+            {
+                _historyService.ClearGifs();
+                _allGifItems.Clear();
+            }
             else if (HistoryCategoryCombo.SelectedIndex == 3) _historyService.ClearOcr();
             else if (HistoryCategoryCombo.SelectedIndex == 4) _historyService.ClearColors();
             else if (HistoryCategoryCombo.SelectedIndex == 5) _historyService.ClearCodes();
@@ -1170,6 +1176,11 @@ public partial class HistoryWindow
                     }
                     _unifiedCardEntries.Remove(card);
                 }
+            }
+            else if (HistoryCategoryCombo.SelectedIndex == 1)
+            {
+                var toDelete = GetSelectedEntriesFromVisualTree(HistoryStack);
+                _historyService.RemoveEntries(toDelete);
             }
             else if (HistoryCategoryCombo.SelectedIndex == 2)
             {
