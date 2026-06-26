@@ -581,6 +581,16 @@ public partial class HistoryWindow
 
     private static Border CreateSelectionBadge(bool isSelected)
     {
+        var ringIcon = new System.Windows.Shapes.Ellipse
+        {
+            Width = 20, Height = 20,
+            Stroke = Brushes.White,
+            StrokeThickness = 2.2,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Visibility = isSelected ? Visibility.Hidden : Visibility.Visible
+        };
+
         var checkPath = new System.Windows.Shapes.Path
         {
             Data = System.Windows.Media.Geometry.Parse("M6,14 L11,19 L22,8"),
@@ -593,21 +603,30 @@ public partial class HistoryWindow
             Visibility = isSelected ? Visibility.Visible : Visibility.Hidden
         };
 
+        var iconGrid = new Grid();
+        iconGrid.Children.Add(ringIcon);
+        iconGrid.Children.Add(checkPath);
+
+        var selectedBg = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
+        var unselectedBg = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20));
+        var selectedBorder = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
+        var unselectedBorder = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
+
         var badge = new Border
         {
             Width = 36,
             Height = 36,
             CornerRadius = new CornerRadius(18),
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20)),
-            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
+            Background = isSelected ? selectedBg : unselectedBg,
+            BorderBrush = isSelected ? selectedBorder : unselectedBorder,
+            BorderThickness = new Thickness(1.5),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             IsHitTestVisible = false,
             Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed,
             Opacity = isSelected ? 1 : 0.45,
-            Child = checkPath,
-            Tag = checkPath
+            Child = iconGrid,
+            Tag = (Ring: ringIcon, Check: checkPath)
         };
         UpdateSelectionBadgeAccessibility(badge, isSelected);
         Grid.SetRowSpan(badge, 2);

@@ -775,13 +775,37 @@ public partial class HistoryWindow
         if (vm.Card is null)
             return;
 
-        if (vm.SelectionBadge != null)
+        // Update card tooltip based on select mode
+        if (_selectMode)
+            vm.Card.ToolTip = LocalizationService.Translate("Click to select this item");
+        else
+            vm.Card.ToolTip = LocalizationService.Translate("Open in Editor");
+
+        if (vm.SelectionBadge is Border badge)
         {
-            vm.SelectionBadge.Visibility = _selectMode || vm.IsSelected ? Visibility.Visible : Visibility.Collapsed;
-            vm.SelectionBadge.Opacity = vm.IsSelected ? 1 : 0.45;
-            UpdateSelectionBadgeAccessibility(vm.SelectionBadge, vm.IsSelected);
-            if (vm.SelectionBadge is FrameworkElement { Tag: UIElement check })
+            badge.Visibility = _selectMode || vm.IsSelected ? Visibility.Visible : Visibility.Collapsed;
+            badge.Opacity = vm.IsSelected ? 1 : 0.45;
+            if (vm.IsSelected)
+            {
+                badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
+                badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
+            }
+            else
+            {
+                badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20));
+                badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
+            }
+            UpdateSelectionBadgeAccessibility(badge, vm.IsSelected);
+            if (badge.Tag is ValueTuple<UIElement, UIElement> icons)
+            {
+                icons.Item1.Visibility = vm.IsSelected ? Visibility.Hidden : Visibility.Visible;  // ring
+                icons.Item2.Visibility = vm.IsSelected ? Visibility.Visible : Visibility.Hidden; // check
+            }
+            else if (badge is FrameworkElement { Tag: UIElement check })
+            {
+                // Legacy badge (fallback)
                 check.Visibility = vm.IsSelected ? Visibility.Visible : Visibility.Hidden;
+            }
         }
     }
 
@@ -1046,7 +1070,7 @@ public partial class HistoryWindow
     private static bool IsSelectableHistoryCard(Border card)
     {
         return card.Child is Grid root &&
-               root.Children.OfType<Border>().Any(badge => badge.Tag is UIElement);
+               root.Children.OfType<Border>().Any(badge => badge.Tag is UIElement || badge.Tag is ValueTuple<UIElement, UIElement>);
     }
 
     private void ClearSelectableCardSelection(Border card)
@@ -1066,7 +1090,8 @@ public partial class HistoryWindow
         if (card.Child is not Grid root)
             return;
 
-        var badge = root.Children.OfType<Border>().FirstOrDefault(candidate => candidate.Tag is UIElement);
+        var badge = root.Children.OfType<Border>().FirstOrDefault(candidate =>
+            candidate.Tag is UIElement || candidate.Tag is ValueTuple<UIElement, UIElement>);
         if (badge is null)
             return;
 
