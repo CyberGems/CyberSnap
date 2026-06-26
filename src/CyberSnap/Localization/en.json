@@ -819,5 +819,5 @@
   "Insert {0} token": "Insert {0} token",
   "Reset to default pattern": "Reset to default pattern",
   "File name pattern": "File name pattern",
-  "Use tokens to build capture file names.": "Use tokens to build capture file names."
+  "Use the buttons to build capture file names.": "Use the buttons to build capture file names."
 }

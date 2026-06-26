@@ -1632,7 +1632,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="File name pattern" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Use tokens to build capture file names." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Use the buttons to build capture file names." Style="{StaticResource SettingDescription}"/>
                                     <DockPanel Margin="0,8,0,0">
                                         <Button x:Name="FileNameTemplateResetBtn" Content="↺"
                                                 DockPanel.Dock="Right" Margin="4,0,0,0"
@@ -1644,7 +1644,7 @@
                                         <TextBox x:Name="FileNameTemplateBox" MinWidth="145" MaxWidth="285"
                                                  HorizontalAlignment="Stretch"
                                                  HorizontalScrollBarVisibility="Auto"
-                                                 ToolTip="Use tokens to build capture file names."
+                                                 ToolTip="Use the buttons to build capture file names."
                                                  AutomationProperties.Name="File name pattern"
                                                  PreviewKeyDown="FileNameTemplateBox_PreviewKeyDown"
                                                  TextChanged="FileNameTemplateBox_TextChanged"

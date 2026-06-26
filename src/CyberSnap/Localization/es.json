@@ -1135,6 +1135,6 @@
   "Insert {0} token": "Insertar token {0}",
   "Reset to default pattern": "Restablecer patrón predeterminado",
   "File name pattern": "Patrón de nombre de archivo",
-  "Use tokens to build capture file names.": "Usa tokens para construir los nombres de archivo.",
+  "Use the buttons to build capture file names.": "Usa los botones para formar los nombres de archivo.",
   "Preview": "Vista previa"
 }
