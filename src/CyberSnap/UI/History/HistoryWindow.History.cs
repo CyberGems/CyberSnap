@@ -777,9 +777,24 @@ public partial class HistoryWindow
 
         // Update card tooltip based on select mode
         if (_selectMode)
+        {
             vm.Card.ToolTip = LocalizationService.Translate("Click to select this item");
+            if (vm.ImageContainer is FrameworkElement imgContainer)
+                imgContainer.ToolTip = LocalizationService.Translate("Click to select this item");
+        }
         else
+        {
             vm.Card.ToolTip = LocalizationService.Translate("Open in Editor");
+            if (vm.ImageContainer is FrameworkElement imgContainer)
+            {
+                imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+                {
+                    HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
+                    HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
+                    _ => LocalizationService.Translate("Open in Editor"),
+                };
+            }
+        }
 
         if (vm.SelectionBadge is Border badge)
         {
@@ -789,23 +804,17 @@ public partial class HistoryWindow
             {
                 badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
                 badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
+                badge.BorderThickness = new Thickness(1.5);
             }
             else
             {
-                badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20));
+                badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 20, 20, 20));
                 badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
+                badge.BorderThickness = new Thickness(2);
             }
             UpdateSelectionBadgeAccessibility(badge, vm.IsSelected);
-            if (badge.Tag is ValueTuple<UIElement, UIElement> icons)
-            {
-                icons.Item1.Visibility = vm.IsSelected ? Visibility.Hidden : Visibility.Visible;  // ring
-                icons.Item2.Visibility = vm.IsSelected ? Visibility.Visible : Visibility.Hidden; // check
-            }
-            else if (badge is FrameworkElement { Tag: UIElement check })
-            {
-                // Legacy badge (fallback)
+            if (badge.Tag is UIElement check)
                 check.Visibility = vm.IsSelected ? Visibility.Visible : Visibility.Hidden;
-            }
         }
     }
 
@@ -1070,7 +1079,7 @@ public partial class HistoryWindow
     private static bool IsSelectableHistoryCard(Border card)
     {
         return card.Child is Grid root &&
-               root.Children.OfType<Border>().Any(badge => badge.Tag is UIElement || badge.Tag is ValueTuple<UIElement, UIElement>);
+               root.Children.OfType<Border>().Any(badge => badge.Tag is UIElement);
     }
 
     private void ClearSelectableCardSelection(Border card)
@@ -1091,7 +1100,7 @@ public partial class HistoryWindow
             return;
 
         var badge = root.Children.OfType<Border>().FirstOrDefault(candidate =>
-            candidate.Tag is UIElement || candidate.Tag is ValueTuple<UIElement, UIElement>);
+            candidate.Tag is UIElement);
         if (badge is null)
             return;
 

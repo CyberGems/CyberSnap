@@ -640,16 +640,6 @@ public partial class HistoryWindow
     /// <summary>Creates a centered checkmark badge for select mode (same style as image cards).</summary>
     private static Border CreateUnifiedSelectionBadge()
     {
-        var ringIcon = new System.Windows.Shapes.Ellipse
-        {
-            Width = 20, Height = 20,
-            Stroke = Brushes.White,
-            StrokeThickness = 2.2,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            Visibility = Visibility.Visible
-        };
-
         var checkPath = new System.Windows.Shapes.Path
         {
             Data = System.Windows.Media.Geometry.Parse("M6,14 L11,19 L22,8"),
@@ -662,23 +652,19 @@ public partial class HistoryWindow
             Visibility = Visibility.Hidden
         };
 
-        var iconGrid = new Grid();
-        iconGrid.Children.Add(ringIcon);
-        iconGrid.Children.Add(checkPath);
-
         var badge = new Border
         {
             Width = 36, Height = 36,
             CornerRadius = new CornerRadius(18),
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20)),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 20, 20, 20)),
             BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
+            BorderThickness = new Thickness(2),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             IsHitTestVisible = false,
             Visibility = Visibility.Collapsed,
-            Child = iconGrid,
-            Tag = (Ring: ringIcon, Check: checkPath)
+            Child = checkPath,
+            Tag = (UIElement)checkPath
         };
         System.Windows.Controls.Panel.SetZIndex(badge, 20);
         return badge;
@@ -696,17 +682,16 @@ public partial class HistoryWindow
         {
             badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
             badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
+            badge.BorderThickness = new Thickness(1.5);
         }
         else
         {
-            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20));
+            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(40, 20, 20, 20));
             badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
+            badge.BorderThickness = new Thickness(2);
         }
-        if (badge.Tag is ValueTuple<UIElement, UIElement> icons)
-        {
-            icons.Item1.Visibility = selected ? Visibility.Hidden : Visibility.Visible;  // ring
-            icons.Item2.Visibility = selected ? Visibility.Visible : Visibility.Hidden; // check
-        }
+        if (badge.Tag is UIElement check)
+            check.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
     }
 
     private static Border? FindUnifiedSelectionBadge(Grid root)

@@ -804,5 +804,20 @@
   "Open the file with the system default image viewer.": "Open the file with the system default image viewer.",
   "Opens the saved file using your operating system's default image application.": "Opens the saved file using your operating system's default image application.",
   "Open in Editor": "Open in Editor",
-  "Click to select this item": "Click to select this item"
+  "Click to select this item": "Click to select this item",
+  "Year": "Year",
+  "Month": "Month",
+  "Day": "Day",
+  "Hour": "Hour",
+  "Minute": "Minute",
+  "Second": "Second",
+  "Date": "Date",
+  "Time": "Time",
+  "Date time": "Date time",
+  "Aspect": "Aspect",
+  "Random": "Random",
+  "Insert {0} token": "Insert {0} token",
+  "Reset to default pattern": "Reset to default pattern",
+  "File name pattern": "File name pattern",
+  "Use tokens to build capture file names.": "Use tokens to build capture file names."
 }
