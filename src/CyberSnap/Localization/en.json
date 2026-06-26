@@ -803,5 +803,6 @@
   "Copies the image to the system clipboard without opening any window.": "Copies the image to the system clipboard without opening any window.",
   "Open the file with the system default image viewer.": "Open the file with the system default image viewer.",
   "Opens the saved file using your operating system's default image application.": "Opens the saved file using your operating system's default image application.",
-  "Open in Editor": "Open in Editor"
+  "Open in Editor": "Open in Editor",
+  "Click to select this item": "Click to select this item"
 }

@@ -1119,5 +1119,6 @@
   "Open the file with the system default image viewer.": "Abre el archivo con el visor de imágenes predeterminado del sistema.",
   "Opens the saved file using your operating system's default image application.": "Abre el archivo guardado con la aplicación de imágenes predeterminada de tu sistema.",
   "Open in Editor": "Abrir en editor",
-  "Open in default viewer": "Abrir en visor predeterminado"
+  "Open in default viewer": "Abrir en visor predeterminado",
+  "Click to select this item": "Clic para seleccionar este elemento"
 }

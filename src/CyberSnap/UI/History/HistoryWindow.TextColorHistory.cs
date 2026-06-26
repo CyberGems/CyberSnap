@@ -873,8 +873,21 @@ public partial class HistoryWindow
         card.BorderBrush = selected ? Theme.StrokeBrush() : System.Windows.Media.Brushes.Transparent;
         badge.Visibility = _selectMode || selected ? Visibility.Visible : Visibility.Collapsed;
         badge.Opacity = selected ? 1 : 0.45;
+        if (selected)
+        {
+            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
+            badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 0, 210, 100));
+        }
+        else
+        {
+            badge.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(190, 20, 20, 20));
+            badge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 255, 255, 255));
+        }
         UpdateSelectionBadgeAccessibility(badge, selected);
-        if (badge.Tag is UIElement check)
-            check.Visibility = selected ? Visibility.Visible : Visibility.Hidden;
+        if (badge.Tag is ValueTuple<UIElement, UIElement> icons)
+        {
+            icons.Item1.Visibility = selected ? Visibility.Hidden : Visibility.Visible;  // ring
+            icons.Item2.Visibility = selected ? Visibility.Visible : Visibility.Hidden; // check
+        }
     }
 }
