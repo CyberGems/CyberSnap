@@ -697,15 +697,17 @@ public partial class HistoryWindow
 
         try
         {
+            // UseShellExecute=true with no explicit Verb lets Windows pick the default action.
             using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName = filePath,
-                UseShellExecute = true,
-                Verb = "open"
+                UseShellExecute = true
             });
             if (process is null)
             {
-                ToastWindow.ShowError("Open failed", "Windows did not open the saved file. Try again from Config -> History, or open it from disk manually.", filePath);
+                var body = LocalizationService.Translate(
+                    "Windows could not find a program to open this file type. Set a default app for this format in Windows Settings, or open it from disk manually.");
+                ToastWindow.ShowError(LocalizationService.Translate("Open failed"), body, filePath);
                 return false;
             }
 
@@ -714,8 +716,8 @@ public partial class HistoryWindow
         catch (Exception ex)
         {
             ToastWindow.ShowError(
-                "Open failed",
-                $"CyberSnap could not open the saved file. Try again from Config -> History, or open it from disk manually.\n{ex.Message}",
+                LocalizationService.Translate("Open failed"),
+                LocalizationService.Translate("CyberSnap could not open the saved file. Try again from Config -> History, or open it from disk manually.") + $"\n{ex.Message}",
                 filePath);
             return false;
         }
