@@ -19,7 +19,22 @@ public partial class CyberSnapTitleBar : UserControl
             typeof(CyberSnapTitleBar),
             new PropertyMetadata(string.Empty));
 
+    public static readonly DependencyProperty ShowPinButtonProperty =
+        DependencyProperty.Register(
+            nameof(ShowPinButton),
+            typeof(bool),
+            typeof(CyberSnapTitleBar),
+            new PropertyMetadata(false, OnShowPinButtonChanged));
+
+    public static readonly DependencyProperty IsPinActiveProperty =
+        DependencyProperty.Register(
+            nameof(IsPinActive),
+            typeof(bool),
+            typeof(CyberSnapTitleBar),
+            new PropertyMetadata(false, OnIsPinActiveChanged));
+
     public event EventHandler? CloseRequested;
+    public event EventHandler? PinRequested;
 
     private Window? _subscribedWindow;
 
@@ -64,6 +79,29 @@ public partial class CyberSnapTitleBar : UserControl
         set => SetValue(TitleProperty, value);
     }
 
+    public bool ShowPinButton
+    {
+        get => (bool)GetValue(ShowPinButtonProperty);
+        set => SetValue(ShowPinButtonProperty, value);
+    }
+
+    public bool IsPinActive
+    {
+        get => (bool)GetValue(IsPinActiveProperty);
+        set => SetValue(IsPinActiveProperty, value);
+    }
+
+    private static void OnShowPinButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is CyberSnapTitleBar tb && tb.PinBtn != null)
+            tb.PinBtn.Visibility = (bool)e.NewValue ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static void OnIsPinActiveChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is CyberSnapTitleBar tb) tb.RefreshPinIcon();
+    }
+
     public void RefreshIcons()
     {
         TitleLogo.Source = ThemedLogo.Square(18);
@@ -82,7 +120,17 @@ public partial class CyberSnapTitleBar : UserControl
         AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 18);
         AnnotationIcon.Opacity = 1.0;
 
+        RefreshPinIcon();
+
         InitializeActionBtn(titleIcon);
+    }
+
+    private void RefreshPinIcon()
+    {
+        if (PinIcon == null) return;
+        var titleIcon = System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+        PinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", titleIcon, 18, IsPinActive);
+        PinBtn.ToolTip = LocalizationService.Translate(IsPinActive ? "Unpin" : "Pin");
     }
 
     private void InitializeActionBtn(System.Drawing.Color titleIcon)
@@ -288,6 +336,12 @@ public partial class CyberSnapTitleBar : UserControl
             : WindowState.Maximized;
 
         RefreshIcons();
+    }
+
+    private void PinBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        PinRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void CloseBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

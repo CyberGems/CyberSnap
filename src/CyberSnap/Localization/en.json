@@ -833,5 +833,12 @@
   "Saturation value (0-100%)": "Saturation value (0-100%)",
   "Brightness value (0-100%)": "Brightness value (0-100%)",
   "Adjust brightness": "Adjust brightness",
-  "Custom Color": "Custom Color"
+  "Custom Color": "Custom Color",
+  "Pin": "Pin",
+  "Unpin": "Unpin",
+  "Video recorded": "Video recorded",
+  "GIF recorded": "GIF recorded",
+  "File copied to clipboard": "File copied to clipboard",
+  "Saved; clipboard copy failed": "Saved; clipboard copy failed",
+  "Text copied": "Text copied"
 }

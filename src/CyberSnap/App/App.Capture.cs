@@ -126,8 +126,8 @@ public partial class App
                         {
                             ToastWindow.Show(ToastSpec.ImagePreview(
                                 firstFrame,
-                                isGif ? "GIF recorded" : "Video recorded",
-                                copiedToClipboard ? "File copied to clipboard" : "Saved; clipboard copy failed",
+                                isGif ? LocalizationService.Translate("GIF recorded") : LocalizationService.Translate("Video recorded"),
+                                copiedToClipboard ? LocalizationService.Translate("File copied to clipboard") : LocalizationService.Translate("Saved; clipboard copy failed"),
                                 path,
                                 false,
                                 transparentShell: false,
@@ -141,7 +141,7 @@ public partial class App
                             string size = fi.Length > 1024 * 1024
                                 ? $"{fi.Length / 1024.0 / 1024.0:F1} MB"
                                 : $"{fi.Length / 1024:N0} KB";
-                            var copyStatus = copiedToClipboard ? "File copied to clipboard" : "Saved; clipboard copy failed";
+                            var copyStatus = copiedToClipboard ? LocalizationService.Translate("File copied to clipboard") : LocalizationService.Translate("Saved; clipboard copy failed");
                             ToastWindow.Show(ToastSpec.Standard($"{label} recorded", $"{fi.Name} Â· {size} Â· {copyStatus}", path) with { Celebrate = flourish });
                         }
 

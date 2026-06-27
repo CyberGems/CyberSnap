@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
-        Title="Text capture"
+        Title="Text extraction (OCR)"
         Height="520" Width="580"
         MinHeight="400" MinWidth="420"
         ResizeMode="CanResize"
@@ -275,6 +275,80 @@
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
+
+        <Style x:Key="OcrContextMenuStyle" TargetType="ContextMenu">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ItemsPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="OcrMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <Grid MinWidth="168">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0" ContentSource="Icon"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <ContentPresenter Grid.Column="1" ContentSource="Header"
+                                                  RecognizesAccessKey="True" VerticalAlignment="Center"
+                                                  Margin="8,0,18,0"/>
+                                <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}"
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                           Opacity="0.75" FontSize="11"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="OcrSeparatorStyle" TargetType="Separator">
+            <Setter Property="Margin" Value="4,2"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeSeparatorBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Rectangle Height="1" Fill="{TemplateBinding Background}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border x:Name="RootBorder" CornerRadius="12" ClipToBounds="True">
@@ -291,8 +365,10 @@
             </Grid.RowDefinitions>
 
             <controls:CyberSnapTitleBar x:Name="OcrTitleBar" Grid.Row="0"
-                                      Title="Text capture"
-                                      CloseRequested="TitleBar_CloseRequested"/>
+                                      Title="Text extraction (OCR)"
+                                      ShowPinButton="True"
+                                      CloseRequested="TitleBar_CloseRequested"
+                                      PinRequested="TitleBar_PinRequested"/>
 
             <!-- OCR zone: section header (label + char count + copy) over the text box -->
             <Grid Grid.Row="1" Margin="14,2,14,0">
@@ -302,13 +378,53 @@
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" Margin="2,0,2,5">
-                    <TextBlock Text="Recognized text" Style="{StaticResource OcrSectionHeaderText}"/>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Recognized text" Style="{StaticResource OcrSectionHeaderText}"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Border Width="130" Height="24" CornerRadius="4"
+                                Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                Margin="0,0,6,0">
+                            <Grid>
+                                <TextBox x:Name="SearchTextBox" BorderThickness="0" Background="Transparent"
+                                         Padding="6,0,22,0" VerticalContentAlignment="Center" FontSize="11"
+                                         Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                         CaretBrush="{DynamicResource ThemeTextPrimaryBrush}"
+                                         TextChanged="SearchTextBox_TextChanged"
+                                         PreviewKeyDown="SearchTextBox_PreviewKeyDown"/>
+                                <TextBlock x:Name="SearchPlaceholder" Text="Search..."
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                           VerticalAlignment="Center" Margin="6,0,0,0" IsHitTestVisible="False"
+                                           Opacity="0.5"/>
+                                <TextBlock x:Name="SearchClearBtn" Text="&#x2715;" FontSize="10"
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Width="20" TextAlignment="Center" Cursor="Hand"
+                                           Visibility="Collapsed" ToolTip="Clear search"
+                                           MouseLeftButtonDown="SearchClearBtn_MouseLeftButtonDown"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock x:Name="PrevMatchBtn" Text="&#x25B2;" FontSize="9" Cursor="Hand"
+                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}" Margin="2,0"
+                                   VerticalAlignment="Center"
+                                   MouseLeftButtonDown="PrevMatchBtn_MouseLeftButtonDown"/>
+                        <TextBlock x:Name="NextMatchBtn" Text="&#x25BC;" FontSize="9" Cursor="Hand"
+                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}" Margin="2,0"
+                                   VerticalAlignment="Center"
+                                   MouseLeftButtonDown="NextMatchBtn_MouseLeftButtonDown"/>
+                        <TextBlock x:Name="MatchCountText" VerticalAlignment="Center"
+                                   FontSize="10.5" Opacity="0.4"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                   FontFamily="Segoe UI Variable Text" Margin="4,0,0,0"/>
                         <TextBlock x:Name="CharCountText" VerticalAlignment="Center"
                                    FontSize="10.5" Opacity="0.4"
                                    TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
                                    Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                   FontFamily="Segoe UI Variable Text"/>
+                                   FontFamily="Segoe UI Variable Text" Margin="10,0,0,0"/>
                         <Button x:Name="CopyBtn" Click="CopyBtn_Click"
                                 Style="{StaticResource OcrHeaderActionButton}" Margin="10,0,0,0">
                             <StackPanel Orientation="Horizontal">
@@ -322,21 +438,24 @@
                     </StackPanel>
                 </Grid>
 
-                <Border Grid.Row="1" CornerRadius="8" Padding="2"
+                <Border x:Name="OcrTextBoxBorder" Grid.Row="1" CornerRadius="8" Padding="2"
                         Background="{DynamicResource ThemeInputBackgroundBrush}"
                         BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
-                    <TextBox x:Name="OcrTextBox" AcceptsReturn="True" TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto"
-                             FontSize="15"
-                             Padding="10,8"
-                             Background="Transparent" BorderThickness="0"
-                             Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                             CaretBrush="{DynamicResource ThemeTextPrimaryBrush}"
-                             Style="{StaticResource OcrTextBoxStyle}">
-                        <TextBox.Resources>
-                            <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource OcrScrollBarStyle}"/>
-                        </TextBox.Resources>
-                    </TextBox>
+                    <Grid ClipToBounds="True">
+                        <Canvas x:Name="OcrSearchHighlightCanvas" IsHitTestVisible="False"/>
+                        <TextBox x:Name="OcrTextBox" AcceptsReturn="True" TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 FontSize="15"
+                                 Padding="10,8"
+                                 Background="Transparent" BorderThickness="0"
+                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                 CaretBrush="{DynamicResource ThemeTextPrimaryBrush}"
+                                 Style="{StaticResource OcrTextBoxStyle}">
+                            <TextBox.Resources>
+                                <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource OcrScrollBarStyle}"/>
+                            </TextBox.Resources>
+                        </TextBox>
+                    </Grid>
                 </Border>
             </Grid>
 

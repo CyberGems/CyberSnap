@@ -1,18 +1,23 @@
 ﻿using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using CyberSnap.Services;
 using ComboBox = System.Windows.Controls.ComboBox;
 using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
 namespace CyberSnap.UI;
 
 public partial class OcrResultWindow : Window
 {
+    private const int SearchHighlightMinLength = 2;
+
     private readonly SettingsService _settingsService;
     private readonly OcrResultWindowLifecycle _lifecycle = new();
     private CancellationTokenSource? _translateCts;
@@ -21,6 +26,13 @@ public partial class OcrResultWindow : Window
     private readonly List<ComboBoxItem> _fromLanguageItems = new();
     private readonly List<ComboBoxItem> _toLanguageItems = new();
     private bool _suppressTranslationPreferenceChange;
+    private bool _isPinned;
+    private readonly List<int> _searchMatchStarts = new();
+    private int _currentMatchIndex = -1;
+    private bool _restoreOcrSelectionOnContextMenuClose;
+    private ScrollViewer? _ocrTextScrollViewer;
+    private readonly SolidColorBrush _searchHighlightBrush = new(System.Windows.Media.Color.FromArgb(86, 255, 224, 0));
+    private readonly SolidColorBrush _activeSearchHighlightBrush = new(System.Windows.Media.Color.FromArgb(145, 255, 224, 0));
 
     public OcrResultWindow(string ocrText, SettingsService settingsService)
     {
@@ -40,6 +52,10 @@ public partial class OcrResultWindow : Window
 
         SetupOcrContextMenu();
 
+        OcrTextBoxBorder.PreviewMouseRightButtonDown += OcrTextBoxBorder_PreviewMouseRightButtonDown;
+        OcrTextBox.SizeChanged += (_, _) => RedrawSearchHighlights();
+        OcrSearchHighlightCanvas.SizeChanged += (_, _) => RedrawSearchHighlights();
+
         // Use a composite font family so CJK / Arabic / Cyrillic glyphs render correctly
         var fontFamily = new System.Windows.Media.FontFamily("Segoe UI, Microsoft YaHei UI, Malgun Gothic, Yu Gothic UI, Arial Unicode MS, Segoe UI Symbol");
         OcrTextBox.FontFamily = fontFamily;
@@ -49,11 +65,13 @@ public partial class OcrResultWindow : Window
         SelectTranslationModelCombo(settingsService.Settings.TranslationModel);
         SetTranslationPanelExpanded(settingsService.Settings.OcrTranslationPanelExpanded, animate: false);
         LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
-        OcrTitleBar.Title = LocalizationService.Translate("Text capture");
+        OcrTitleBar.Title = LocalizationService.Translate("Text extraction (OCR)");
 
         Loaded += (_, _) =>
         {
             ApplyMicaBackdrop();
+            HookOcrTextScrollViewer();
+            RedrawSearchHighlights();
             OcrTextBox.Focus();
             OcrTextBox.CaretIndex = OcrTextBox.Text.Length;
         };
@@ -216,6 +234,7 @@ public partial class OcrResultWindow : Window
     private void OcrTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         UpdateCharCount();
+        RefreshSearchMatches(keepCurrentMatch: true);
 
         if (!IsLoaded)
             return;
@@ -256,7 +275,7 @@ public partial class OcrResultWindow : Window
         {
             ClipboardService.CopyTextToClipboard(text);
             SoundService.PlayTextSound();
-            ToastWindow.Show(ToastSpec.Standard("Copied", FormatCopyToastPreview(text)) with { SuppressSound = true });
+            ToastWindow.Show(ToastSpec.Standard(LocalizationService.Translate("Text copied"), FormatCopyToastPreview(text)) with { SuppressSound = true });
         }
         catch (Exception ex)
         {
@@ -318,6 +337,8 @@ public partial class OcrResultWindow : Window
         _translateCts?.Dispose();
         _translateCts = null;
         StopTranslateTimer();
+        if (_ocrTextScrollViewer != null)
+            _ocrTextScrollViewer.ScrollChanged -= OcrTextScrollViewer_ScrollChanged;
         base.OnClosed(e);
     }
 
@@ -791,31 +812,321 @@ public partial class OcrResultWindow : Window
         }
     }
 
-    private static MenuItem CreateOcrMenuItem(string header, string gesture, Action action)
-    {
-        var item = new MenuItem
-        {
-            Header = LocalizationService.Translate(header),
-            InputGestureText = gesture
-        };
-        item.Click += (_, _) => action();
-        return item;
-    }
-
     private void SetupOcrContextMenu()
     {
         var menu = new ContextMenu();
-        menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+        if (TryFindResource("OcrContextMenuStyle") is Style menuStyle)
+            menu.Style = menuStyle;
+        menu.Focusable = false;
 
-        menu.Items.Add(CreateOcrMenuItem("Undo", "Ctrl+Z", () => OcrTextBox.Undo()));
-        menu.Items.Add(new Separator());
-        menu.Items.Add(CreateOcrMenuItem("Cut", "Ctrl+X", () => OcrTextBox.Cut()));
-        menu.Items.Add(CreateOcrMenuItem("Copy", "Ctrl+C", () => OcrTextBox.Copy()));
-        menu.Items.Add(CreateOcrMenuItem("Paste", "Ctrl+V", () => OcrTextBox.Paste()));
-        menu.Items.Add(new Separator());
-        menu.Items.Add(CreateOcrMenuItem("Select All", "Ctrl+A", () => OcrTextBox.SelectAll()));
-        menu.Items.Add(CreateOcrMenuItem("Delete", "Del", () => OcrTextBox.SelectedText = ""));
+        void AddItem(string header, string gesture, string iconId, Action action)
+        {
+            var item = new MenuItem
+            {
+                Header = LocalizationService.Translate(header),
+                InputGestureText = gesture,
+                Focusable = false,
+                Icon = CreateMenuIcon(iconId)
+            };
+            if (TryFindResource("OcrMenuItemStyle") is Style itemStyle)
+                item.Style = itemStyle;
+            item.Click += (_, _) =>
+            {
+                _restoreOcrSelectionOnContextMenuClose = false;
+                action();
+            };
+            menu.Items.Add(item);
+        }
+
+        AddItem("Undo", "Ctrl+Z", "undo", () => OcrTextBox.Undo());
+        menu.Items.Add(new Separator { Style = (TryFindResource("OcrSeparatorStyle") as Style) });
+        AddItem("Cut", "Ctrl+X", "select", () => OcrTextBox.Cut());
+        AddItem("Copy", "Ctrl+C", "copy", () => OcrTextBox.Copy());
+        AddItem("Paste", "Ctrl+V", "paste", () => OcrTextBox.Paste());
+        menu.Items.Add(new Separator { Style = (TryFindResource("OcrSeparatorStyle") as Style) });
+        AddItem("Select All", "Ctrl+A", "select", () => OcrTextBox.SelectAll());
+        AddItem("Delete", "Del", "trash", () => OcrTextBox.SelectedText = "");
 
         OcrTextBox.ContextMenu = menu;
+    }
+
+    private static System.Windows.Controls.Image CreateMenuIcon(string iconId)
+    {
+        var iconColor = Theme.IsDark
+            ? System.Drawing.Color.FromArgb(225, 255, 255, 255)
+            : System.Drawing.Color.FromArgb(225, 24, 24, 24);
+        return new System.Windows.Controls.Image
+        {
+            Source = Helpers.FluentIcons.RenderWpf(iconId, iconColor, 16),
+            Width = 16,
+            Height = 16,
+            Stretch = Stretch.Uniform,
+            Opacity = 0.88
+        };
+    }
+
+    private void TitleBar_PinRequested(object? sender, EventArgs e)
+    {
+        _isPinned = !_isPinned;
+        _lifecycle.SetPinned(_isPinned);
+        OcrTitleBar.IsPinActive = _isPinned;
+    }
+
+    private int _savedOcrSelectionStart;
+    private int _savedOcrSelectionLength;
+
+    private void OcrTextBoxBorder_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        OpenOcrContextMenu();
+    }
+
+    private void OpenOcrContextMenu()
+    {
+        if (OcrTextBox.ContextMenu == null) return;
+
+        _savedOcrSelectionStart = OcrTextBox.SelectionStart;
+        _savedOcrSelectionLength = OcrTextBox.SelectionLength;
+        _restoreOcrSelectionOnContextMenuClose = true;
+
+        var pos = Mouse.GetPosition(OcrTextBox);
+        OcrTextBox.ContextMenu.PlacementTarget = OcrTextBox;
+        OcrTextBox.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.RelativePoint;
+        OcrTextBox.ContextMenu.PlacementRectangle = new Rect(pos, new System.Windows.Size(0, 0));
+        OcrTextBox.ContextMenu.Closed += OnOcrContextMenuClosed;
+        OcrTextBox.ContextMenu.IsOpen = true;
+    }
+
+    private void OnOcrContextMenuClosed(object? sender, RoutedEventArgs e)
+    {
+        if (OcrTextBox.ContextMenu != null)
+            OcrTextBox.ContextMenu.Closed -= OnOcrContextMenuClosed;
+        if (_restoreOcrSelectionOnContextMenuClose)
+            OcrTextBox.Select(_savedOcrSelectionStart, _savedOcrSelectionLength);
+        _restoreOcrSelectionOnContextMenuClose = false;
+        OcrTextBox.Focus();
+    }
+
+    private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var query = SearchTextBox.Text ?? "";
+        SearchPlaceholder.Visibility = string.IsNullOrWhiteSpace(query) ? Visibility.Visible : Visibility.Collapsed;
+        SearchClearBtn.Visibility = string.IsNullOrEmpty(query) ? Visibility.Collapsed : Visibility.Visible;
+        RefreshSearchMatches(keepCurrentMatch: false);
+    }
+
+    private void SearchClearBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        SearchTextBox.Clear();
+        SearchTextBox.Focus();
+    }
+
+    private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            MoveToSearchMatch(Keyboard.Modifiers == ModifierKeys.Shift ? -1 : 1);
+        }
+        else if (e.Key == Key.Escape)
+        {
+            SearchTextBox.Text = "";
+            OcrTextBox.Focus();
+        }
+    }
+
+    private void PrevMatchBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        MoveToSearchMatch(-1);
+    }
+
+    private void NextMatchBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        MoveToSearchMatch(1);
+    }
+
+    private void MoveToSearchMatch(int direction)
+    {
+        if (_searchMatchStarts.Count == 0)
+            return;
+
+        _currentMatchIndex = _currentMatchIndex < 0
+            ? 0
+            : (_currentMatchIndex + direction + _searchMatchStarts.Count) % _searchMatchStarts.Count;
+        ScrollTextBoxToMatch(_currentMatchIndex);
+        UpdateSearchStatus();
+        RedrawSearchHighlights();
+    }
+
+    private void ScrollTextBoxToMatch(int matchIndex)
+    {
+        if (matchIndex < 0 || matchIndex >= _searchMatchStarts.Count)
+            return;
+
+        try
+        {
+            var matchStart = _searchMatchStarts[matchIndex];
+            var lineIndex = OcrTextBox.GetLineIndexFromCharacterIndex(matchStart);
+            OcrTextBox.ScrollToLine(Math.Max(0, lineIndex - 2));
+            OcrTextBox.UpdateLayout();
+
+            var rect = OcrTextBox.GetRectFromCharacterIndex(matchStart);
+            if (rect.IsEmpty) return;
+            var sv = FindVisualChild<ScrollViewer>(OcrTextBox);
+            if (sv != null)
+            {
+                sv.ScrollToVerticalOffset(sv.VerticalOffset + rect.Top - sv.ViewportHeight / 2 + rect.Height / 2);
+            }
+        }
+        catch { }
+    }
+
+    private void RefreshSearchMatches(bool keepCurrentMatch)
+    {
+        var previousStart = keepCurrentMatch && _currentMatchIndex >= 0 && _currentMatchIndex < _searchMatchStarts.Count
+            ? _searchMatchStarts[_currentMatchIndex]
+            : -1;
+
+        _searchMatchStarts.Clear();
+        _currentMatchIndex = -1;
+
+        var query = SearchTextBox.Text ?? "";
+        if (query.Length < SearchHighlightMinLength)
+        {
+            MatchCountText.Text = "";
+            OcrSearchHighlightCanvas.Children.Clear();
+            return;
+        }
+
+        var text = OcrTextBox.Text ?? "";
+        var idx = 0;
+        while (idx <= text.Length - query.Length)
+        {
+            var pos = text.IndexOf(query, idx, StringComparison.CurrentCultureIgnoreCase);
+            if (pos < 0) break;
+            _searchMatchStarts.Add(pos);
+            idx = pos + 1;
+        }
+
+        if (_searchMatchStarts.Count > 0)
+        {
+            _currentMatchIndex = previousStart >= 0
+                ? Math.Max(0, _searchMatchStarts.FindIndex(start => start >= previousStart))
+                : 0;
+            if (_currentMatchIndex >= _searchMatchStarts.Count)
+                _currentMatchIndex = _searchMatchStarts.Count - 1;
+            ScrollTextBoxToMatch(_currentMatchIndex);
+        }
+
+        UpdateSearchStatus();
+        RedrawSearchHighlights();
+    }
+
+    private void UpdateSearchStatus()
+    {
+        MatchCountText.Text = _searchMatchStarts.Count == 0
+            ? (SearchTextBox.Text.Length >= SearchHighlightMinLength ? "0/0" : "")
+            : $"{_currentMatchIndex + 1}/{_searchMatchStarts.Count}";
+    }
+
+    private void HookOcrTextScrollViewer()
+    {
+        if (_ocrTextScrollViewer != null)
+            return;
+
+        _ocrTextScrollViewer = FindVisualChild<ScrollViewer>(OcrTextBox);
+        if (_ocrTextScrollViewer != null)
+            _ocrTextScrollViewer.ScrollChanged += OcrTextScrollViewer_ScrollChanged;
+    }
+
+    private void OcrTextScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        Dispatcher.BeginInvoke(RedrawSearchHighlights, DispatcherPriority.Background);
+    }
+
+    private void RedrawSearchHighlights()
+    {
+        OcrSearchHighlightCanvas.Children.Clear();
+
+        var queryLength = SearchTextBox.Text.Length;
+        if (queryLength < SearchHighlightMinLength || _searchMatchStarts.Count == 0)
+            return;
+
+        OcrTextBox.UpdateLayout();
+        for (var i = 0; i < _searchMatchStarts.Count; i++)
+        {
+            foreach (var rect in GetSearchHighlightRects(_searchMatchStarts[i], queryLength))
+            {
+                var highlight = new System.Windows.Shapes.Rectangle
+                {
+                    Width = rect.Width,
+                    Height = rect.Height,
+                    RadiusX = 2,
+                    RadiusY = 2,
+                    Fill = i == _currentMatchIndex ? _activeSearchHighlightBrush : _searchHighlightBrush
+                };
+                Canvas.SetLeft(highlight, rect.Left);
+                Canvas.SetTop(highlight, rect.Top);
+                OcrSearchHighlightCanvas.Children.Add(highlight);
+            }
+        }
+    }
+
+    private IEnumerable<Rect> GetSearchHighlightRects(int start, int length)
+    {
+        var textLength = OcrTextBox.Text?.Length ?? 0;
+        if (length <= 0 || start < 0 || start >= textLength)
+            yield break;
+
+        var end = Math.Min(start + length, textLength);
+        var segmentStart = start;
+        while (segmentStart < end)
+        {
+            Rect highlightRect;
+            try
+            {
+                var startRect = OcrTextBox.GetRectFromCharacterIndex(segmentStart);
+                var segmentEnd = Math.Min(end, GetLineEndCharacterIndex(segmentStart));
+                var endRect = OcrTextBox.GetRectFromCharacterIndex(segmentEnd - 1, trailingEdge: true);
+                if (startRect.IsEmpty || endRect.IsEmpty)
+                    yield break;
+
+                highlightRect = new Rect(
+                    startRect.Left,
+                    startRect.Top + 1,
+                    Math.Max(2, endRect.Right - startRect.Left),
+                    Math.Max(2, startRect.Height - 2));
+
+                segmentStart = segmentEnd;
+            }
+            catch
+            {
+                yield break;
+            }
+
+            yield return highlightRect;
+        }
+    }
+
+    private int GetLineEndCharacterIndex(int characterIndex)
+    {
+        var lineIndex = OcrTextBox.GetLineIndexFromCharacterIndex(characterIndex);
+        var lineStart = OcrTextBox.GetCharacterIndexFromLineIndex(lineIndex);
+        return Math.Max(characterIndex + 1, lineStart + OcrTextBox.GetLineLength(lineIndex));
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typedChild) return typedChild;
+            var result = FindVisualChild<T>(child);
+            if (result != null) return result;
+        }
+        return null;
     }
 }

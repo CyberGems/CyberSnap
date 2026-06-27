@@ -538,6 +538,7 @@
   "Recognized text": "Texto reconocido",
   "characters": "caracteres",
   "Text capture": "Captura de texto",
+  "Text extraction (OCR)": "Extracción de texto (OCR)",
   "Copy result": "Copiar resultado",
   "Copy text": "Copiar texto",
   "Local model": "Modelo local",  "Google Translate": "Google Translate",
@@ -1153,5 +1154,12 @@
   "Saturation value (0-100%)": "Valor de saturación (0-100%)",
   "Brightness value (0-100%)": "Valor de brillo (0-100%)",
   "Adjust brightness": "Ajustar brillo",
-  "Custom Color": "Color personalizado"
+  "Custom Color": "Color personalizado",
+  "Pin": "Fijar",
+  "Unpin": "Desfijar",
+  "Video recorded": "Vídeo grabado",
+  "GIF recorded": "GIF grabado",
+  "File copied to clipboard": "Archivo copiado al portapapeles",
+  "Saved; clipboard copy failed": "Guardado; falló la copia al portapapeles",
+  "Text copied": "Texto copiado"
 }
