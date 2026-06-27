@@ -139,8 +139,7 @@ public sealed partial class RegionOverlayForm
                     AutoSize = true,
                 };
                 menu.Items.Add(headerLabel);
-                if (hiddenTools.Count > 0)
-                    menu.Items.Add(new ToolStripSeparator());
+                menu.Items.Add(new ToolStripSeparator());
             }
         }
 
@@ -172,8 +171,7 @@ public sealed partial class RegionOverlayForm
                 menu.Items.Add(new ToolStripSeparator());
         }
 
-        // Show annotation bar checkable toggle — created now, added at different positions
-        // depending on whether we're in the tool-specific or general menu.
+        // Show annotation bar checkable toggle — always shown.
         var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
         var showBarText = isSpanish ? "Mostrar barra de anotaciones" : "Show annotation bar";
         var showBarItem = WindowsMenuRenderer.Item(showBarText, iconId: annotationToolsCount > 0 ? "check" : null, iconSize: 24);
@@ -183,16 +181,11 @@ public sealed partial class RegionOverlayForm
                 HideAllAnnotationTools();
             else
                 ShowAllAnnotationTools();
-            // Defer toast to after menu closes — toolbar rebuild can disrupt the menu pump.
             _toolbarContextMenu?.Close();
         };
+        menu.Items.Add(showBarItem);
 
-        if (tool == null)
-        {
-            menu.Items.Add(showBarItem);
-        }
-
-        // 3. Show Hidden — rendered as a flat section, NOT a nested submenu. The capture overlay is a
+        // 3. Show Hidden — rendered as a flat section, NOT a nested submenu.
         // single window that spans every monitor, so on a multi-monitor setup with mixed DPI the
         // WinForms ToolStripDropDown places a second-level submenu on the wrong monitor and swallows
         // its first hover (per-monitor-DPI support for ToolStrip is known to be unreliable). Listing
