@@ -133,17 +133,6 @@ public partial class HistoryWindow
         AutomationProperties.SetName(card, $"{kindLabel} history item");
         AutomationProperties.SetHelpText(card, "Press Enter or Space to open this history item. Press Ctrl+C to copy it. In select mode, press Enter or Space to select it.");
 
-        // Only show the click-action tooltip on image cards; other card types have their
-        // own tooltips and the "Open in Editor" action doesn't apply to them.
-        if (vm.Entry.Kind == HistoryKind.Image)
-        {
-            imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
-            {
-                HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
-                HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
-                _ => LocalizationService.Translate("Open in Editor"),
-            };
-        }
         imgContainer.Cursor = Cursors.Hand;
 
         // Context menu
