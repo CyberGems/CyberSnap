@@ -716,6 +716,14 @@ public sealed partial class RegionOverlayForm
         else
             UpdateCrosshairGuides(_lastCursorPos);
 
+        if (!_isSelecting && !_isMarqueeSelecting && !_isConfirmingSelection && !_isConfirmDragging && !_textResizing && !_textDragging && !_isSelectDragging && !_isSelectResizing && ToolShowsCursorChip(_mode))
+        {
+            if (_moveHoverIndex < 0 && _selectedAnnotationIndex < 0 && _eraserHoverIndex < 0 && !IsPointInOverlayUi(e.Location))
+            {
+                InvalidateLivePreview(GetCursorChipRect(oldCursor), GetCursorChipRect(_lastCursorPos), 0);
+            }
+        }
+
         if (needsRepaint)
             Invalidate();
 

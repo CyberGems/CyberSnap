@@ -75,6 +75,8 @@ public sealed partial class RegionOverlayForm
         // Live tool previews (active drawing in progress)
         PaintAnnotations(g);
 
+        RenderCursorToolPreview(g);
+
         // Move tool: hover highlight
         if (IsDrawingOrMoveMode(_mode) && !IsDraggingAnyAnnotation() && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex && !_multiSelectedIndices.Contains(_moveHoverIndex))
         {
@@ -821,6 +823,193 @@ public sealed partial class RegionOverlayForm
         int g = (int)(c1.G + (c2.G - c1.G) * t);
         int b = (int)(c1.B + (c2.B - c1.B) * t);
         return Color.FromArgb(r, g, b);
+    }
+
+    private void RenderCursorToolPreview(Graphics g)
+    {
+        if (_isSelecting || _isConfirmingSelection || IsDraggingAnyAnnotation() || _isSelectDragging || _isSelectResizing) return;
+        if (_isTyping) return;
+        if (!ToolShowsCursorChip(_mode)) return;
+        if (IsPointInOverlayUi(_lastCursorPos)) return;
+        if (_moveHoverIndex >= 0 || _selectedAnnotationIndex >= 0 || _eraserHoverIndex >= 0) return;
+
+        bool hasStroke = ToolChipHasStroke(_mode);
+        var color = _toolColor;
+
+        var oldSmoothing = g.SmoothingMode;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        try
+        {
+            const int glyphSize = 22;
+            float glyphStroke = Math.Clamp(_strokeWidth * 0.5f, 1.8f, 4.5f);
+            string label = hasStroke ? string.Format(LocalizationService.Translate("Thickness {0}"), (int)Math.Round(_strokeWidth)) : string.Empty;
+
+            using var font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Regular, GraphicsUnit.Point);
+            SizeF textSize = label.Length > 0 ? g.MeasureString(label, font) : SizeF.Empty;
+
+            const int padX = 7, padY = 5, gap = 6;
+            float contentH = Math.Max(glyphSize, textSize.Height);
+            int chipW = padX + glyphSize
+                + (label.Length > 0 ? gap + (int)Math.Ceiling(textSize.Width) : 0) + padX;
+            int chipH = padY + (int)Math.Ceiling(contentH) + padY;
+
+            const int off = 18;
+            int x = _lastCursorPos.X + off;
+            int y = _lastCursorPos.Y + off;
+            if (x + chipW > ClientSize.Width) x = _lastCursorPos.X - off - chipW;
+            if (y + chipH > ClientSize.Height) y = _lastCursorPos.Y - off - chipH;
+            x = Math.Max(0, x);
+            y = Math.Max(0, y);
+            var chipRect = new Rectangle(x, y, chipW, chipH);
+
+            using (var shadowPath = RRect(new RectangleF(chipRect.X + 1, chipRect.Y + 2, chipRect.Width, chipRect.Height), 6))
+            using (var shadow = new SolidBrush(Color.FromArgb(60, 0, 0, 0)))
+                g.FillPath(shadow, shadowPath);
+
+            using (var path = RRect(chipRect, 6))
+            using (var bg = new SolidBrush(Color.FromArgb(235, UiChrome.SurfaceTier2)))
+            using (var border = new Pen(Color.FromArgb(120, UiChrome.AccentColor), 1f))
+            {
+                g.FillPath(bg, path);
+                g.DrawPath(border, path);
+            }
+
+            var glyphBox = new RectangleF(chipRect.X + padX, chipRect.Y + (chipRect.Height - glyphSize) / 2f, glyphSize, glyphSize);
+            DrawToolGlyph(g, _mode, glyphBox, color, glyphStroke);
+
+            if (label.Length > 0)
+            {
+                float tx = glyphBox.Right + gap;
+                float ty = chipRect.Y + (chipRect.Height - textSize.Height) / 2f;
+                using var tb = new SolidBrush(UiChrome.SurfaceTextSecondary);
+                g.DrawString(label, font, tb, tx, ty);
+            }
+        }
+        finally
+        {
+            g.SmoothingMode = oldSmoothing;
+        }
+    }
+
+    private Rectangle GetCursorChipRect(Point cursor)
+    {
+        if (!ToolShowsCursorChip(_mode)) return Rectangle.Empty;
+
+        bool hasStroke = ToolChipHasStroke(_mode);
+        string label = hasStroke ? string.Format(LocalizationService.Translate("Thickness {0}"), (int)Math.Round(_strokeWidth)) : string.Empty;
+
+        int estW = 32 + (label.Length > 0 ? 6 + label.Length * 8 : 0);
+        int estH = 32;
+
+        const int off = 18;
+        int x = cursor.X + off;
+        int y = cursor.Y + off;
+        if (x + estW > ClientSize.Width) x = cursor.X - off - estW;
+        if (y + estH > ClientSize.Height) y = cursor.Y - off - estH;
+        x = Math.Max(0, x);
+        y = Math.Max(0, y);
+
+        return new Rectangle(x - 5, y - 5, estW + 15, estH + 15);
+    }
+
+    private static bool ToolShowsCursorChip(CaptureMode mode) => mode is
+        CaptureMode.Draw or CaptureMode.Arrow or CaptureMode.CurvedArrow or
+        CaptureMode.Line or CaptureMode.RectShape or CaptureMode.CircleShape or CaptureMode.Highlight;
+
+    private static bool ToolChipHasStroke(CaptureMode mode) => mode is
+        CaptureMode.Draw or CaptureMode.Arrow or CaptureMode.CurvedArrow or
+        CaptureMode.Line or CaptureMode.RectShape or CaptureMode.CircleShape;
+
+    private static void DrawToolGlyph(Graphics g, CaptureMode tool, RectangleF box, Color color, float stroke)
+    {
+        const float m = 3.5f;
+        float l = box.Left + m, t = box.Top + m, r = box.Right - m, b = box.Bottom - m;
+
+        using var pen = new Pen(color, stroke)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round
+        };
+
+        switch (tool)
+        {
+            case CaptureMode.Line:
+                g.DrawLine(pen, l, b, r, t);
+                break;
+
+            case CaptureMode.Arrow:
+                g.DrawLine(pen, l, b, r, t);
+                DrawGlyphArrowhead(g, pen, new PointF(l, b), new PointF(r, t));
+                break;
+
+            case CaptureMode.CurvedArrow:
+            {
+                var p0 = new PointF(l, b);
+                var p1 = new PointF(l + (r - l) * 0.1f, t + (b - t) * 0.35f);
+                var p2 = new PointF(r, t);
+                g.DrawCurve(pen, new[] { p0, p1, p2 }, 0.6f);
+                DrawGlyphArrowhead(g, pen, p1, p2);
+                break;
+            }
+
+            case CaptureMode.RectShape:
+                using (var path = RRect(new RectangleF(l, t, r - l, b - t), 3))
+                    g.DrawPath(pen, path);
+                break;
+
+            case CaptureMode.CircleShape:
+                g.DrawEllipse(pen, l, t, r - l, b - t);
+                break;
+
+            case CaptureMode.Draw:
+            {
+                var pts = new[]
+                {
+                    new PointF(l, b - (b - t) * 0.15f),
+                    new PointF(l + (r - l) * 0.34f, t),
+                    new PointF(l + (r - l) * 0.66f, b),
+                    new PointF(r, t + (b - t) * 0.15f),
+                };
+                g.DrawCurve(pen, pts, 0.6f);
+                break;
+            }
+
+            case CaptureMode.Highlight:
+            {
+                using var fill = new SolidBrush(Color.FromArgb(150, color.R, color.G, color.B));
+                float barTop = t + (b - t) * 0.18f;
+                using var path = RRect(new RectangleF(l, barTop, r - l, (b - t) * 0.64f), 2);
+                g.FillPath(fill, path);
+                break;
+            }
+        }
+    }
+
+    private static void DrawGlyphArrowhead(Graphics g, Pen pen, PointF from, PointF to)
+    {
+        float dx = to.X - from.X, dy = to.Y - from.Y;
+        float len = MathF.Sqrt(dx * dx + dy * dy);
+        if (len < 0.1f) return;
+
+        float nx = dx / len, ny = dy / len;
+        float head = Math.Max(5f, len * 0.4f);
+        const float ang = 26f * MathF.PI / 180f;
+
+        var basePt = new PointF(to.X - nx * head, to.Y - ny * head);
+        var left = RotateAround(basePt, to, -ang);
+        var right = RotateAround(basePt, to, ang);
+        g.DrawLine(pen, left, to);
+        g.DrawLine(pen, right, to);
+    }
+
+    private static PointF RotateAround(PointF p, PointF pivot, float radians)
+    {
+        float s = MathF.Sin(radians), c = MathF.Cos(radians);
+        float dx = p.X - pivot.X, dy = p.Y - pivot.Y;
+        return new PointF(
+            pivot.X + dx * c - dy * s,
+            pivot.Y + dx * s + dy * c);
     }
 
 }

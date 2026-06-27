@@ -134,6 +134,11 @@ public sealed partial class RegionOverlayForm
                 : "Cancel capture  (Esc)\nDiscard the selection and close without saving";
         }
 
+        if (button == StrokeWidthButtonIndex)
+        {
+            return string.Format(LocalizationService.Translate("Width: {0} points"), (int)_strokeWidth);
+        }
+
         if (button < _mainBarTools.Length)
         {
             var tool = _mainBarTools[button];
