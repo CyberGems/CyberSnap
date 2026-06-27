@@ -975,7 +975,32 @@ public sealed partial class RegionOverlayForm : Form
         }
 
         // 2. Tooltip delay and auto-hide check
-        if (IsToolbarInteractive())
+        if (_isConfirmingSelection && _hoveredConfirmButton >= 0)
+        {
+            if (!_tooltipVisible && !_tooltipDismissed)
+            {
+                if (_hoverButtonStartTime != DateTime.MinValue)
+                {
+                    // Slow tooltip: 1200ms delay
+                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 1200)
+                    {
+                        ShowConfirmTooltip();
+                    }
+                }
+                else
+                {
+                    _hoverButtonStartTime = DateTime.UtcNow;
+                }
+            }
+            else if (_tooltipVisible)
+            {
+                if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 5000)
+                {
+                    HideToolbarTooltip();
+                }
+            }
+        }
+        else if (IsToolbarInteractive())
         {
             if (_isMouseDownOnCaptureBtn)
             {

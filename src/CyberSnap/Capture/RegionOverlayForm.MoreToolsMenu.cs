@@ -14,6 +14,7 @@ public sealed partial class RegionOverlayForm
     public event Action<List<string>>? EnabledToolsChanged;
 
     private ContextMenuStrip? _toolbarContextMenu;
+    private ContextMenuStrip? _confirmContextMenu;
     private QuickStartGuide? _quickStartGuide;
     private static List<string>? _rememberedAnnotationTools;
 

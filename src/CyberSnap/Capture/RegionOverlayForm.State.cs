@@ -937,6 +937,50 @@ public sealed partial class RegionOverlayForm
         };
     }
 
+    private void ConfirmAndCancelCapture()
+    {
+        if (_undoStack.Count > 0)
+        {
+            var isSpanish = string.Equals(
+                Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
+                "es", StringComparison.OrdinalIgnoreCase);
+
+            var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+            menu.Font = UiChrome.ChromeFont(11.0f);
+            _confirmContextMenu = menu;
+            menu.Closed += (s, e) => {
+                _confirmContextMenu = null;
+            };
+
+            var titleLabel = new ToolStripLabel(isSpanish ? "Se perderán las anotaciones" : "Annotations will be lost")
+            {
+                ForeColor = UiChrome.SurfaceTextMuted,
+                Font = UiChrome.ChromeFont(9f),
+                Padding = new System.Windows.Forms.Padding(10, 8, 0, 2),
+                AutoSize = true,
+            };
+            menu.Items.Add(titleLabel);
+            menu.Items.Add(new ToolStripSeparator());
+
+            var yesLabel = isSpanish ? "Confirmar cancelación" : "Confirm cancellation";
+            var yesItem = WindowsMenuRenderer.Item(yesLabel, iconId: "close", danger: true, iconSize: 24);
+            yesItem.Click += (_, _) => Cancel();
+            menu.Items.Add(yesItem);
+
+            var noLabel = isSpanish ? "Continuar selección" : "Continue selection";
+            var noItem = WindowsMenuRenderer.Item(noLabel, iconId: "check", iconSize: 24);
+            noItem.Click += (_, _) => menu.Close();
+            menu.Items.Add(noItem);
+
+            WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 44);
+            menu.Show(System.Windows.Forms.Cursor.Position);
+        }
+        else
+        {
+            Cancel();
+        }
+    }
+
     private const float ConfirmPressDurationMs = 160f;
 
     /// <summary>
@@ -957,8 +1001,9 @@ public sealed partial class RegionOverlayForm
         _confirmPressAmt = 0f;
         _pressAnimStart = DateTime.UtcNow;
         _confirmPressTimer.Start();
-        var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
-        Invalidate(InflateForRepaint(button == 0 ? confirmBtn : cancelBtn, 24));
+        var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
+        var targetBtn = button switch { 0 => confirmBtn, 1 => cancelBtn, _ => closeBtn };
+        Invalidate(InflateForRepaint(targetBtn, 24));
     }
 
     private void ConfirmPressTick()
@@ -970,8 +1015,9 @@ public sealed partial class RegionOverlayForm
         int button = _pressedConfirmButton;
         if (button >= 0)
         {
-            var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
-            Invalidate(InflateForRepaint(button == 0 ? confirmBtn : cancelBtn, 24));
+            var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
+            var targetBtn = button switch { 0 => confirmBtn, 1 => cancelBtn, _ => closeBtn };
+            Invalidate(InflateForRepaint(targetBtn, 24));
         }
 
         if (phase >= 1f)
@@ -989,6 +1035,7 @@ public sealed partial class RegionOverlayForm
     {
         if (button == 0) CommitConfirmedSelection();
         else if (button == 1) ExitConfirmMode();
+        else if (button == 2) ConfirmAndCancelCapture();
     }
 
     private void ResetConfirmPress()
@@ -1026,9 +1073,10 @@ public sealed partial class RegionOverlayForm
             _shineDup[i] += (targetDup - _shineDup[i]) * 0.22f;
         }
 
-        var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+        var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
         Invalidate(InflateForRepaint(confirmBtn, 24));
         Invalidate(InflateForRepaint(cancelBtn, 24));
+        Invalidate(InflateForRepaint(closeBtn, 24));
     }
 
     private void RecomputeConfirmButtonWidth()
@@ -1043,8 +1091,10 @@ public sealed partial class RegionOverlayForm
             using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
             using var g = CreateGraphics();
             float w = Math.Max(
-                g.MeasureString(LocalizationService.Translate("Confirm").ToUpperInvariant(), font).Width,
-                g.MeasureString(LocalizationService.Translate("Retry").ToUpperInvariant(), font).Width);
+                Math.Max(
+                    g.MeasureString(LocalizationService.Translate("Confirm").ToUpperInvariant(), font).Width,
+                    g.MeasureString(LocalizationService.Translate("Retry").ToUpperInvariant(), font).Width),
+                g.MeasureString(LocalizationService.Translate("Cancel").ToUpperInvariant(), font).Width);
             _confirmButtonWidth = Math.Max(min, badgeZone + (int)Math.Ceiling(w) + rightPad);
         }
         catch
@@ -1053,23 +1103,29 @@ public sealed partial class RegionOverlayForm
         }
     }
 
-    private (Rectangle confirm, Rectangle cancel) GetConfirmButtonRects()
+    private (Rectangle confirm, Rectangle cancel, Rectangle close) GetConfirmButtonRects()
     {
         int bw = _confirmButtonWidth;
         int bh = UiChrome.ScaleInt(ConfirmButtonHeight);
         int gap = UiChrome.ScaleInt(ConfirmButtonGap);
         var r = _confirmRect;
-        int totalW = bw * 2 + gap;
+
+        int closeH = bh / 2;
+        int closeW = bh; // Horizontal pill shape of width = height of other buttons
+
+        int totalW = bw * 2 + closeW + gap * 2;
         int x = r.Left + (r.Width - totalW) / 2;
         int y = r.Bottom + UiChrome.ScaleInt(12);
         // Clamp y so buttons stay inside client area
         if (y + bh > ClientSize.Height - 10)
             y = Math.Max(10, r.Top - bh - UiChrome.ScaleInt(12));
-        // Green "Confirm" sits on the right, red "Cancel" on the left (tuple stays
-        // (confirm, cancel); only the on-screen X positions are swapped).
+
+        int closeY = y + (bh - closeH) / 2; // Center close button vertically with the other two
+
         return (
-            new Rectangle(x + bw + gap, y, bw, bh),
-            new Rectangle(x, y, bw, bh)
+            new Rectangle(x + bw + closeW + gap * 2, y, bw, bh),
+            new Rectangle(x, y, bw, bh),
+            new Rectangle(x + bw + gap, closeY, closeW, closeH)
         );
     }
 
@@ -1083,9 +1139,10 @@ public sealed partial class RegionOverlayForm
 
     private int HitTestConfirmButton(Point p)
     {
-        var (confirm, cancel) = GetConfirmButtonRects();
+        var (confirm, cancel, close) = GetConfirmButtonRects();
         if (confirm.Contains(p)) return 0;
         if (cancel.Contains(p)) return 1;
+        if (close.Contains(p)) return 2;
         return -1;
     }
 

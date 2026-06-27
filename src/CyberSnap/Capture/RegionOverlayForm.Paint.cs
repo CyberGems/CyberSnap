@@ -201,13 +201,17 @@ public sealed partial class RegionOverlayForm
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
             // Draw buttons FIRST (underneath the frame so any overlap is covered)
-            var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+            var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
             using (var btnFont = UiChrome.ChromeFont(11f, FontStyle.Bold))
             {
                 bool confirmHover = _hoveredConfirmButton == 0;
                 bool cancelHover = _hoveredConfirmButton == 1;
+                bool closeHover = _hoveredConfirmButton == 2;
+
                 float confirmPress = _pressedConfirmButton == 0 ? _confirmPressAmt : 0f;
                 float cancelPress = _pressedConfirmButton == 1 ? _confirmPressAmt : 0f;
+                float closePress = _pressedConfirmButton == 2 ? _confirmPressAmt : 0f;
+
                 bool shineOn = _confirmShineTimer.Enabled && !UI.Motion.Disabled;
                 float confirmShine = shineOn ? _shinePhase[0] : -1f;
                 float cancelShine = shineOn ? _shinePhase[1] : -1f;
@@ -225,6 +229,7 @@ public sealed partial class RegionOverlayForm
                 float cancelOpacity = UI.Motion.Disabled
                     ? (_hoveredConfirmButton == 0 ? 0.35f : 1.0f)
                     : (0.35f + 0.65f * _shineMain[1]);
+                float closeOpacity = closeHover ? 1.0f : 0.8f;
 
                 // Deactivated slate colors (solid cool gray, matches dark/light mode background style)
                 Color deactColor = UiChrome.IsDark ? Color.FromArgb(74, 80, 86) : Color.FromArgb(170, 178, 186);
@@ -239,13 +244,16 @@ public sealed partial class RegionOverlayForm
                 Color confirmColor = InterpolateColor(deactConfirmColor, activeConfirmColor, confirmFactor);
                 Color cancelColor = InterpolateColor(deactCancelColor, activeCancelColor, cancelFactor);
 
-                // 3D action buttons: green "Confirm" / red "Cancel", each with a white icon
+                // 3D action buttons: green "Confirm" / red "Cancel" (Retry), each with a white icon
                 // badge, a hover-igniting glow, a click squash, and a glint traveling the
                 // border so they stay readable over any busy capture background.
                 DrawConfirmActionPill(g, confirmBtn, confirmColor,
-                    LocalizationService.Translate("Confirm").ToUpperInvariant(), btnFont, confirmHover, isCheck: true, confirmPress, confirmShine, _shineMain[0], _shineDup[0], confirmOpacity);
+                    LocalizationService.Translate("Confirm").ToUpperInvariant(), btnFont, confirmHover, 0, confirmPress, confirmShine, _shineMain[0], _shineDup[0], confirmOpacity, hasShine: true);
                 DrawConfirmActionPill(g, cancelBtn, cancelColor,
-                    LocalizationService.Translate("Retry").ToUpperInvariant(), btnFont, cancelHover, isCheck: false, cancelPress, cancelShine, _shineMain[1], _shineDup[1], cancelOpacity);
+                    LocalizationService.Translate("Retry").ToUpperInvariant(), btnFont, cancelHover, 1, cancelPress, cancelShine, _shineMain[1], _shineDup[1], cancelOpacity, hasShine: true);
+                // Minimalist button in the middle for canceling completely
+                DrawConfirmActionPill(g, closeBtn, Color.FromArgb(160, 160, 160),
+                    "", btnFont, closeHover, 2, closePress, -1f, 0f, 0f, closeOpacity, hasShine: false);
             }
 
             // Draw selection frame and handles ON TOP of buttons
@@ -273,8 +281,8 @@ public sealed partial class RegionOverlayForm
     /// </summary>
     private static void DrawConfirmActionPill(
         Graphics g, Rectangle rect, Color baseColor, string label, Font font,
-        bool hover, bool isCheck, float pressAmt, float shinePhase, float shineMain, float shineDup,
-        float opacity)
+        bool hover, int iconType, float pressAmt, float shinePhase, float shineMain, float shineDup,
+        float opacity, bool hasShine)
     {
         float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
         float depth = UiChrome.ScaleFloat(5f);   // 3D extrusion thickness
@@ -285,31 +293,44 @@ public sealed partial class RegionOverlayForm
         var baseRect = new RectangleF(rect.X, rect.Y + depth, rect.Width, rect.Height);
 
         // CyberGems premium dark theme background palette
-        Color fillTop = hover ? Color.FromArgb(39, 39, 42) : Color.FromArgb(24, 24, 27);
-        Color fillBottom = hover ? Color.FromArgb(24, 24, 27) : Color.FromArgb(15, 15, 18);
-        Color sideColor = Color.FromArgb(9, 9, 11);
+        Color fillTop, fillBottom, sideColor;
+        if (iconType == 2 && hover)
+        {
+            fillTop = Color.FromArgb(220, 38, 38);       // red-600
+            fillBottom = Color.FromArgb(153, 27, 27);    // red-800
+            sideColor = Color.FromArgb(127, 29, 29);     // red-900
+        }
+        else
+        {
+            fillTop = hover ? Color.FromArgb(39, 39, 42) : Color.FromArgb(24, 24, 27);
+            fillBottom = hover ? Color.FromArgb(24, 24, 27) : Color.FromArgb(15, 15, 18);
+            sideColor = Color.FromArgb(9, 9, 11);
+        }
 
         // ── Soft diffused outer glow — concentric low-alpha rings fade outward so it reads
         //    as a halo, not a hard border. Brightest at the edge, always glowing, flares on hover. ──
-        var glowBounds = RectangleF.FromLTRB(rect.X, face.Y, rect.Right, baseRect.Bottom);
-        float glowSpread = UiChrome.ScaleFloat(hover ? 7.5f : 5.5f);
-        int glowPeak = hover ? 65 : 35;
-        const int glowSteps = 7;
-        Color glowColor = Color.FromArgb(0, 162, 255); // CyberGems neon blue
-        for (int i = glowSteps; i >= 1; i--)
+        if (hasShine)
         {
-            float frac = i / (float)glowSteps;          // 1 (outermost) … ~0.14 (innermost)
-            float inflate = glowSpread * frac;
-            float falloff = 1f - frac;                  // stronger nearer the button edge
-            int a = (int)(glowPeak * falloff * falloff * opacity);
-            if (a <= 0) continue;
-            using var glowPen = new Pen(Color.FromArgb(a, glowColor), glowSpread / glowSteps * 2.4f)
+            var glowBounds = RectangleF.FromLTRB(rect.X, face.Y, rect.Right, baseRect.Bottom);
+            float glowSpread = UiChrome.ScaleFloat(hover ? 3.75f : 2.75f);
+            int glowPeak = hover ? 32 : 17;
+            const int glowSteps = 7;
+            Color glowColor = iconType == 0 ? Color.FromArgb(0, 162, 255) : Color.FromArgb(238, 77, 44);
+            for (int i = glowSteps; i >= 1; i--)
             {
-                LineJoin = LineJoin.Round
-            };
-            using var glowPath = WindowsDockRenderer.RoundedRect(
-                RectangleF.Inflate(glowBounds, inflate, inflate), corner + inflate);
-            g.DrawPath(glowPen, glowPath);
+                float frac = i / (float)glowSteps;          // 1 (outermost) … ~0.14 (innermost)
+                float inflate = glowSpread * frac;
+                float falloff = 1f - frac;                  // stronger nearer the button edge
+                int a = (int)(glowPeak * falloff * falloff * opacity);
+                if (a <= 0) continue;
+                using var glowPen = new Pen(Color.FromArgb(a, glowColor), glowSpread / glowSteps * 2.4f)
+                {
+                    LineJoin = LineJoin.Round
+                };
+                using var glowPath = WindowsDockRenderer.RoundedRect(
+                    RectangleF.Inflate(glowBounds, inflate, inflate), corner + inflate);
+                g.DrawPath(glowPen, glowPath);
+            }
         }
 
         // ── Soft drop shadow under the base ──
@@ -333,8 +354,11 @@ public sealed partial class RegionOverlayForm
                 LinearGradientMode.Vertical))
                 g.FillPath(fill, facePath);
 
-            // Subtle border outline for the face to define it in dark environments
-            using (var borderPen = new Pen(Color.FromArgb(hover ? 80 : 50, 255, 255, 255), UiChrome.ScaleFloat(1f)))
+            // Fino delineado del color del shine por todo el botón para definirlo
+            Color outlineColor = hasShine
+                ? (iconType == 0 ? Color.FromArgb(hover ? 160 : 100, 0, 162, 255) : Color.FromArgb(hover ? 160 : 100, 238, 77, 44))
+                : Color.FromArgb(hover ? 120 : 70, 150, 150, 150);
+            using (var borderPen = new Pen(outlineColor, UiChrome.ScaleFloat(1f)))
                 g.DrawPath(borderPen, facePath);
 
             // Glossy top highlight (fades while pressed)
@@ -347,79 +371,137 @@ public sealed partial class RegionOverlayForm
 
         // ── Traveling glint(s) along the border (off when shinePhase < 0). The hovered
         //    button shows a second comet half a lap behind; the other button fades out. ──
-        if (shinePhase >= 0f)
+        if (hasShine && shinePhase >= 0f)
         {
+            Color shineGlow = iconType == 0 ? Color.FromArgb(0, 162, 255) : Color.FromArgb(238, 77, 44);
+            Color shineCore = iconType == 0 ? Color.FromArgb(0, 217, 255) : Color.FromArgb(255, 140, 50);
+
             if (shineMain > 0.01f)
-                DrawBorderShine(g, face, corner, shinePhase, Color.White, shineMain * opacity);
+                DrawBorderShine(g, face, corner, shinePhase, shineGlow, shineCore, shineMain * opacity);
             if (shineDup > 0.01f)
-                DrawBorderShine(g, face, corner, (shinePhase + 0.5f) % 1f, Color.White, shineDup * opacity);
+                DrawBorderShine(g, face, corner, (shinePhase + 0.5f) % 1f, shineGlow, shineCore, shineDup * opacity);
         }
 
         // ── Label — white, uppercase, centered in the area left of the badge ──
-        using (var sf = new StringFormat(StringFormatFlags.NoWrap)
+        if (!string.IsNullOrEmpty(label))
         {
-            Alignment = StringAlignment.Center,
-            LineAlignment = StringAlignment.Center,
-            Trimming = StringTrimming.None
-        })
-        using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), Color.White)))
-        {
-            var textRect = RectangleF.FromLTRB(
-                face.X + face.Height * 0.18f, face.Y, face.Right - face.Height, face.Bottom);
-            g.DrawString(label, font, textBrush, textRect, sf);
+            using (var sf = new StringFormat(StringFormatFlags.NoWrap)
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center,
+                Trimming = StringTrimming.None
+            })
+            using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), Color.White)))
+            {
+                var textRect = RectangleF.FromLTRB(
+                    face.X + face.Height * 0.18f, face.Y, face.Right - face.Height, face.Bottom);
+                g.DrawString(label, font, textBrush, textRect, sf);
+            }
         }
 
-        // ── White circular icon badge on the right ──
-        float pad = face.Height * 0.13f;
-        float badgeD = face.Height - pad * 2f;
-        float bx = face.Right - face.Height + (face.Height - badgeD) / 2f;
-        float by = face.Y + (face.Height - badgeD) / 2f;
+        // ── Direct white icon (centered if label is empty, otherwise on the right) ──
+        float iconSize = face.Height * 0.46f;
+        float bx, by;
+        if (string.IsNullOrEmpty(label))
+        {
+            iconSize = face.Height * 0.65f;
+            bx = face.X + (face.Width - iconSize) / 2f;
+            by = face.Y + (face.Height - iconSize) / 2f;
+        }
+        else
+        {
+            bx = face.Right - face.Height * 0.85f + (face.Height * 0.85f - iconSize) / 2f;
+            by = face.Y + (face.Height - iconSize) / 2f;
+        }
 
-        using (var badgeShadow = new SolidBrush(Color.FromArgb((int)((UiChrome.IsDark ? 90 : 55) * opacity), 0, 0, 0)))
-            g.FillEllipse(badgeShadow, bx, by + 1.3f, badgeD, badgeD);
-        using (var badgeFill = new SolidBrush(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), Color.White)))
-            g.FillEllipse(badgeFill, bx, by, badgeD, badgeD);
+        float stroke = string.IsNullOrEmpty(label) ? UiChrome.ScaleFloat(1.5f) : UiChrome.ScaleFloat(2f);
+        Color iconColor = Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), Color.White);
 
-        // Icon (check or cross) painted in the pill action color (green/red) to distinguish confirmation/cancellation
-        float stroke = Math.Max(2f, badgeD * 0.12f);
-        using (var iconPen = new Pen(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), baseColor), stroke)
+        // Draw shadow first for contrast
+        using (var shadowPen = new Pen(Color.FromArgb((int)(120 * opacity), 0, 0, 0), stroke + 1f)
         {
             StartCap = LineCap.Round,
             EndCap = LineCap.Round,
             LineJoin = LineJoin.Round
         })
         {
-            if (isCheck)
+            if (iconType == 0) // Check mark
+            {
+                g.DrawLines(shadowPen, new[]
+                {
+                    new PointF(bx + iconSize * 0.2f, by + iconSize * 0.5f + 1f),
+                    new PointF(bx + iconSize * 0.42f, by + iconSize * 0.72f + 1f),
+                    new PointF(bx + iconSize * 0.8f, by + iconSize * 0.3f + 1f),
+                });
+            }
+            else if (iconType == 1) // Retry arrow
+            {
+                float margin = iconSize * 0.1f;
+                var arcRect = new RectangleF(bx + margin, by + margin + 1f, iconSize - margin * 2f, iconSize - margin * 2f);
+                g.DrawArc(shadowPen, arcRect, -45f, 270f);
+
+                float r = (iconSize - margin * 2f) / 2f;
+                float cx = bx + iconSize / 2f;
+                float cy = by + iconSize / 2f;
+                float startX = cx + r * 0.707f;
+                float startY = cy - r * 0.707f + 1f;
+
+                g.DrawLines(shadowPen, new[]
+                {
+                    new PointF(startX - iconSize * 0.05f, startY - iconSize * 0.2f),
+                    new PointF(startX, startY),
+                    new PointF(startX - iconSize * 0.2f, startY - iconSize * 0.05f)
+                });
+            }
+            else // Close / X icon
+            {
+                float margin = iconSize * 0.15f;
+                g.DrawLine(shadowPen, bx + margin, by + margin + 1f, bx + iconSize - margin, by + iconSize - margin + 1f);
+                g.DrawLine(shadowPen, bx + iconSize - margin, by + margin + 1f, bx + margin, by + iconSize - margin + 1f);
+            }
+        }
+
+        // Draw icon main stroke
+        using (var iconPen = new Pen(iconColor, stroke)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+            LineJoin = LineJoin.Round
+        })
+        {
+            if (iconType == 0) // Check mark
             {
                 g.DrawLines(iconPen, new[]
                 {
-                    new PointF(bx + badgeD * 0.27f, by + badgeD * 0.53f),
-                    new PointF(bx + badgeD * 0.43f, by + badgeD * 0.69f),
-                    new PointF(bx + badgeD * 0.75f, by + badgeD * 0.33f),
+                    new PointF(bx + iconSize * 0.2f, by + iconSize * 0.5f),
+                    new PointF(bx + iconSize * 0.42f, by + iconSize * 0.72f),
+                    new PointF(bx + iconSize * 0.8f, by + iconSize * 0.3f),
                 });
             }
-            else
+            else if (iconType == 1) // Retry arrow
             {
-                // Draw a circular retry arrow (refresh/reload style)
-                float margin = badgeD * 0.26f;
-                var arcRect = new RectangleF(bx + margin, by + margin, badgeD - margin * 2f, badgeD - margin * 2f);
-                // 270 degree arc starting from -45 degrees (top right) and sweeping clockwise
+                float margin = iconSize * 0.1f;
+                var arcRect = new RectangleF(bx + margin, by + margin, iconSize - margin * 2f, iconSize - margin * 2f);
                 g.DrawArc(iconPen, arcRect, -45f, 270f);
 
-                // Arrow tip at the start of the arc (-45 degrees, top right)
-                float r = (badgeD - margin * 2f) / 2f;
-                float cx = bx + badgeD / 2f;
-                float cy = by + badgeD / 2f;
+                float r = (iconSize - margin * 2f) / 2f;
+                float cx = bx + iconSize / 2f;
+                float cy = by + iconSize / 2f;
                 float startX = cx + r * 0.707f;
                 float startY = cy - r * 0.707f;
 
-                // Draw arrow tip lines pointing clockwise (inwards/downwards)
                 g.DrawLines(iconPen, new[]
                 {
-                    new PointF(startX - badgeD * 0.04f, startY - badgeD * 0.14f),
+                    new PointF(startX - iconSize * 0.05f, startY - iconSize * 0.2f),
                     new PointF(startX, startY),
-                    new PointF(startX - badgeD * 0.14f, startY - badgeD * 0.04f)
+                    new PointF(startX - iconSize * 0.2f, startY - iconSize * 0.05f)
                 });
+            }
+            else // Close / X icon
+            {
+                float margin = iconSize * 0.15f;
+                g.DrawLine(iconPen, bx + margin, by + margin, bx + iconSize - margin, by + iconSize - margin);
+                g.DrawLine(iconPen, bx + iconSize - margin, by + margin, bx + margin, by + iconSize - margin);
             }
         }
     }
@@ -429,7 +511,7 @@ public sealed partial class RegionOverlayForm
     /// is flattened to a polyline, and a neon blue gradient is painted with multiple passes. The shine
     /// has a symmetric gradient that fades smoothly at both ends.
     /// </summary>
-    private static void DrawBorderShine(Graphics g, RectangleF face, float corner, float phase, Color tint, float intensity)
+    private static void DrawBorderShine(Graphics g, RectangleF face, float corner, float phase, Color glowColor, Color coreColor, float intensity)
     {
         using var path = WindowsDockRenderer.RoundedRect(face, corner);
         path.Flatten();
@@ -470,7 +552,7 @@ public sealed partial class RegionOverlayForm
         float tailLen = total * 0.32f;   // shine length along the perimeter
         const int segments = 64;         // high segment count for ultra-smooth rendering without gaps
         
-        // Pass 1: Wide, soft neon-blue glow stroke (width is scaled by factor to taper at ends)
+        // Pass 1: Wide, soft neon glow stroke (width is scaled by factor to taper at ends)
         using (var glowPen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
         {
             var prev = PointAt(head);
@@ -484,14 +566,14 @@ public sealed partial class RegionOverlayForm
                 if (a > 0)
                 {
                     glowPen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(3.5f) * factor);
-                    glowPen.Color = Color.FromArgb(a, Color.FromArgb(0, 162, 255));
+                    glowPen.Color = Color.FromArgb(a, glowColor);
                     g.DrawLine(glowPen, prev, cur);
                 }
                 prev = cur;
             }
         }
 
-        // Pass 2: Medium, bright cyan core stroke (width is scaled by factor to taper at ends)
+        // Pass 2: Medium, bright core stroke (width is scaled by factor to taper at ends)
         using (var corePen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
         {
             var prev = PointAt(head);
@@ -504,7 +586,7 @@ public sealed partial class RegionOverlayForm
                 if (a > 0)
                 {
                     corePen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(1.8f) * factor);
-                    corePen.Color = Color.FromArgb(a, Color.FromArgb(0, 217, 255));
+                    corePen.Color = Color.FromArgb(a, coreColor);
                     g.DrawLine(corePen, prev, cur);
                 }
                 prev = cur;
