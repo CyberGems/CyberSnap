@@ -372,7 +372,7 @@ public sealed partial class RegionOverlayForm
             int activeHoverIdx = _moveHoverIndex;
             if (activeHoverIdx < 0)
             {
-                activeHoverIdx = HitTestAnnotation(e.Location);
+                activeHoverIdx = HitTestAnnotationSurface(e.Location);
             }
             // Don't let a click grab the annotation we just placed (cursor is still on it);
             // that would turn a second placement into an accidental move.
@@ -462,7 +462,7 @@ public sealed partial class RegionOverlayForm
                 return;
             }
 
-            int hit = HitTestAnnotation(e.Location);
+            int hit = HitTestAnnotationSurface(e.Location);
             if (hit >= 0)
             {
                 if (_multiSelectedIndices.Count > 1 && _multiSelectedIndices.Contains(hit))

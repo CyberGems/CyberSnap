@@ -848,13 +848,11 @@ public sealed partial class AnnotationCanvas
                     return;
                 }
 
-                // Hand cursor only over the object's actual drawn pixels (its surface), never
-                // over the empty interior of its wrap box. Controls are already handled above.
                 int hoverIdx = _moveHoverIndex >= 0 ? _moveHoverIndex : _selectedAnnotationIndex;
                 if (hoverIdx >= 0 && hoverIdx < _annotations.Count
                     && IsOverAnnotationSurface(_annotations[hoverIdx], ScreenToImage(e.Location)))
                 {
-                    Cursor = Cursors.Hand;
+                    Cursor = Cursors.SizeAll;
                     return;
                 }
             }
