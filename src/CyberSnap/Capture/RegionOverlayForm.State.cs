@@ -1044,7 +1044,7 @@ public sealed partial class RegionOverlayForm
             using var g = CreateGraphics();
             float w = Math.Max(
                 g.MeasureString(LocalizationService.Translate("Confirm").ToUpperInvariant(), font).Width,
-                g.MeasureString(LocalizationService.Translate("Cancel").ToUpperInvariant(), font).Width);
+                g.MeasureString(LocalizationService.Translate("Retry").ToUpperInvariant(), font).Width);
             _confirmButtonWidth = Math.Max(min, badgeZone + (int)Math.Ceiling(w) + rightPad);
         }
         catch

@@ -243,7 +243,7 @@ public sealed partial class RegionOverlayForm
                 DrawConfirmActionPill(g, confirmBtn, confirmColor,
                     LocalizationService.Translate("Confirm").ToUpperInvariant(), btnFont, confirmHover, isCheck: true, confirmPress, confirmShine, _shineMain[0], _shineDup[0], confirmOpacity);
                 DrawConfirmActionPill(g, cancelBtn, cancelColor,
-                    LocalizationService.Translate("Cancel").ToUpperInvariant(), btnFont, cancelHover, isCheck: false, cancelPress, cancelShine, _shineMain[1], _shineDup[1], cancelOpacity);
+                    LocalizationService.Translate("Retry").ToUpperInvariant(), btnFont, cancelHover, isCheck: false, cancelPress, cancelShine, _shineMain[1], _shineDup[1], cancelOpacity);
             }
 
             // Draw selection frame and handles ON TOP of buttons
@@ -274,11 +274,6 @@ public sealed partial class RegionOverlayForm
         bool hover, bool isCheck, float pressAmt, float shinePhase, float shineMain, float shineDup,
         float opacity)
     {
-        static Color Lighten(Color c, int amt) => Color.FromArgb(
-            Math.Min(255, c.R + amt), Math.Min(255, c.G + amt), Math.Min(255, c.B + amt));
-        static Color Darken(Color c, float f) => Color.FromArgb(
-            (int)(c.R * f), (int)(c.G * f), (int)(c.B * f));
-
         float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
         float depth = UiChrome.ScaleFloat(5f);   // 3D extrusion thickness
         float press = depth * pressAmt;           // how far the face sinks while pressed
@@ -287,16 +282,18 @@ public sealed partial class RegionOverlayForm
         var face = new RectangleF(rect.X, rect.Y + press, rect.Width, rect.Height);
         var baseRect = new RectangleF(rect.X, rect.Y + depth, rect.Width, rect.Height);
 
-        Color fillTop = hover ? Lighten(baseColor, 42) : Lighten(baseColor, 20);
-        Color fillBottom = hover ? baseColor : Darken(baseColor, 0.88f);
-        Color sideColor = Darken(baseColor, 0.55f);   // the darker extruded side
+        // CyberGems premium dark theme background palette
+        Color fillTop = hover ? Color.FromArgb(39, 39, 42) : Color.FromArgb(24, 24, 27);
+        Color fillBottom = hover ? Color.FromArgb(24, 24, 27) : Color.FromArgb(15, 15, 18);
+        Color sideColor = Color.FromArgb(9, 9, 11);
 
         // ── Soft diffused outer glow — concentric low-alpha rings fade outward so it reads
-        //    as a halo, not a hard border. Brightest at the edge, flares on hover. ──
+        //    as a halo, not a hard border. Brightest at the edge, always glowing, flares on hover. ──
         var glowBounds = RectangleF.FromLTRB(rect.X, face.Y, rect.Right, baseRect.Bottom);
-        float glowSpread = UiChrome.ScaleFloat(hover ? 6f : 3f);
-        int glowPeak = hover ? 60 : 18;
+        float glowSpread = UiChrome.ScaleFloat(hover ? 7.5f : 5.5f);
+        int glowPeak = hover ? 65 : 35;
         const int glowSteps = 7;
+        Color glowColor = Color.FromArgb(0, 162, 255); // CyberGems neon blue
         for (int i = glowSteps; i >= 1; i--)
         {
             float frac = i / (float)glowSteps;          // 1 (outermost) … ~0.14 (innermost)
@@ -304,7 +301,7 @@ public sealed partial class RegionOverlayForm
             float falloff = 1f - frac;                  // stronger nearer the button edge
             int a = (int)(glowPeak * falloff * falloff * opacity);
             if (a <= 0) continue;
-            using var glowPen = new Pen(Color.FromArgb(a, baseColor), glowSpread / glowSteps * 2.4f)
+            using var glowPen = new Pen(Color.FromArgb(a, glowColor), glowSpread / glowSteps * 2.4f)
             {
                 LineJoin = LineJoin.Round
             };
@@ -334,6 +331,10 @@ public sealed partial class RegionOverlayForm
                 LinearGradientMode.Vertical))
                 g.FillPath(fill, facePath);
 
+            // Subtle border outline for the face to define it in dark environments
+            using (var borderPen = new Pen(Color.FromArgb(hover ? 80 : 50, 255, 255, 255), UiChrome.ScaleFloat(1f)))
+                g.DrawPath(borderPen, facePath);
+
             // Glossy top highlight (fades while pressed)
             int glossA = (int)((hover ? 60 : 40) * (1f - 0.5f * pressAmt) * opacity);
             var glossRect = new RectangleF(face.X + 2, face.Y + 1.5f, face.Width - 4, face.Height * 0.46f);
@@ -352,7 +353,7 @@ public sealed partial class RegionOverlayForm
                 DrawBorderShine(g, face, corner, (shinePhase + 0.5f) % 1f, Color.White, shineDup * opacity);
         }
 
-        // ── Label — white, uppercase, centered in the area right of the badge ──
+        // ── Label — white, uppercase, centered in the area left of the badge ──
         using (var sf = new StringFormat(StringFormatFlags.NoWrap)
         {
             Alignment = StringAlignment.Center,
@@ -362,14 +363,14 @@ public sealed partial class RegionOverlayForm
         using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), Color.White)))
         {
             var textRect = RectangleF.FromLTRB(
-                face.X + face.Height, face.Y, face.Right - face.Height * 0.18f, face.Bottom);
+                face.X + face.Height * 0.18f, face.Y, face.Right - face.Height, face.Bottom);
             g.DrawString(label, font, textBrush, textRect, sf);
         }
 
-        // ── White circular icon badge on the left ──
+        // ── White circular icon badge on the right ──
         float pad = face.Height * 0.13f;
         float badgeD = face.Height - pad * 2f;
-        float bx = face.X + (face.Height - badgeD) / 2f;
+        float bx = face.Right - face.Height + (face.Height - badgeD) / 2f;
         float by = face.Y + (face.Height - badgeD) / 2f;
 
         using (var badgeShadow = new SolidBrush(Color.FromArgb((int)((UiChrome.IsDark ? 90 : 55) * opacity), 0, 0, 0)))
@@ -377,7 +378,7 @@ public sealed partial class RegionOverlayForm
         using (var badgeFill = new SolidBrush(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), Color.White)))
             g.FillEllipse(badgeFill, bx, by, badgeD, badgeD);
 
-        // Icon (check or cross) painted in the pill color
+        // Icon (check or cross) painted in the pill action color (green/red) to distinguish confirmation/cancellation
         float stroke = Math.Max(2f, badgeD * 0.12f);
         using (var iconPen = new Pen(Color.FromArgb((int)(255 * (0.4f + 0.6f * opacity)), baseColor), stroke)
         {
@@ -397,17 +398,34 @@ public sealed partial class RegionOverlayForm
             }
             else
             {
-                float m = badgeD * 0.31f;
-                g.DrawLine(iconPen, bx + m, by + m, bx + badgeD - m, by + badgeD - m);
-                g.DrawLine(iconPen, bx + badgeD - m, by + m, bx + m, by + badgeD - m);
+                // Draw a circular retry arrow (refresh/reload style)
+                float margin = badgeD * 0.26f;
+                var arcRect = new RectangleF(bx + margin, by + margin, badgeD - margin * 2f, badgeD - margin * 2f);
+                // 270 degree arc starting from -45 degrees (top right) and sweeping clockwise
+                g.DrawArc(iconPen, arcRect, -45f, 270f);
+
+                // Arrow tip at the start of the arc (-45 degrees, top right)
+                float r = (badgeD - margin * 2f) / 2f;
+                float cx = bx + badgeD / 2f;
+                float cy = by + badgeD / 2f;
+                float startX = cx + r * 0.707f;
+                float startY = cy - r * 0.707f;
+
+                // Draw arrow tip lines pointing clockwise (inwards/downwards)
+                g.DrawLines(iconPen, new[]
+                {
+                    new PointF(startX - badgeD * 0.04f, startY - badgeD * 0.14f),
+                    new PointF(startX, startY),
+                    new PointF(startX - badgeD * 0.14f, startY - badgeD * 0.04f)
+                });
             }
         }
     }
 
     /// <summary>
-    /// Draws a soft "comet" glint that travels along a rounded-rectangle border. The border
-    /// is flattened to a polyline; a bright head with a fading tail is positioned at
-    /// <paramref name="phase"/> (0..1) around the perimeter. Cheap: ~18 short segments.
+    /// Draws a soft glowing "border beam" (shine) that travels along a rounded-rectangle border. The border
+    /// is flattened to a polyline, and a neon blue gradient is painted with multiple passes. The shine
+    /// has a symmetric gradient that fades smoothly at both ends.
     /// </summary>
     private static void DrawBorderShine(Graphics g, RectangleF face, float corner, float phase, Color tint, float intensity)
     {
@@ -447,21 +465,68 @@ public sealed partial class RegionOverlayForm
         }
 
         float head = phase * total;
-        float tailLen = total * 0.16f;   // comet length as a fraction of the perimeter
-        const int segments = 18;
-        using var pen = new Pen(tint, UiChrome.ScaleFloat(2f)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-        var prev = PointAt(head);
-        for (int k = 1; k <= segments; k++)
+        float tailLen = total * 0.32f;   // shine length along the perimeter
+        const int segments = 64;         // high segment count for ultra-smooth rendering without gaps
+        
+        // Pass 1: Wide, soft neon-blue glow stroke (width is scaled by factor to taper at ends)
+        using (var glowPen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
         {
-            float p01 = k / (float)segments;
-            var cur = PointAt(head - tailLen * p01);
-            int a = (int)(170 * intensity * (1f - p01) * (1f - p01)); // bright head → fading tail
-            if (a > 0)
+            var prev = PointAt(head);
+            for (int k = 1; k <= segments; k++)
             {
-                pen.Color = Color.FromArgb(a, tint);
-                g.DrawLine(pen, prev, cur);
+                float p01 = k / (float)segments;
+                var cur = PointAt(head - tailLen * p01);
+                // Symmetric bell curve gradient (fades to 0 at both tail and head, peak in middle)
+                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
+                int a = (int)(95 * intensity * factor * factor);
+                if (a > 0)
+                {
+                    glowPen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(3.5f) * factor);
+                    glowPen.Color = Color.FromArgb(a, Color.FromArgb(0, 162, 255));
+                    g.DrawLine(glowPen, prev, cur);
+                }
+                prev = cur;
             }
-            prev = cur;
+        }
+
+        // Pass 2: Medium, bright cyan core stroke (width is scaled by factor to taper at ends)
+        using (var corePen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+        {
+            var prev = PointAt(head);
+            for (int k = 1; k <= segments; k++)
+            {
+                float p01 = k / (float)segments;
+                var cur = PointAt(head - tailLen * p01);
+                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
+                int a = (int)(200 * intensity * factor * factor);
+                if (a > 0)
+                {
+                    corePen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(1.8f) * factor);
+                    corePen.Color = Color.FromArgb(a, Color.FromArgb(0, 217, 255));
+                    g.DrawLine(corePen, prev, cur);
+                }
+                prev = cur;
+            }
+        }
+
+        // Pass 3: Thin, hot white center (width is scaled by factor to taper at ends)
+        using (var centerPen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+        {
+            var prev = PointAt(head);
+            for (int k = 1; k <= segments; k++)
+            {
+                float p01 = k / (float)segments;
+                var cur = PointAt(head - tailLen * p01);
+                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
+                int a = (int)(255 * intensity * factor * factor * factor);
+                if (a > 0)
+                {
+                    centerPen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(0.8f) * factor);
+                    centerPen.Color = Color.FromArgb(a, Color.White);
+                    g.DrawLine(centerPen, prev, cur);
+                }
+                prev = cur;
+            }
         }
     }
 
