@@ -379,10 +379,18 @@ public sealed partial class RegionOverlayForm
             if (activeHoverIdx == _suppressHoverBoxIndex)
                 activeHoverIdx = -1;
 
-            if (handle < 0 && activeHoverIdx >= 0)
+            if (handle < 0)
             {
-                handle = GetSelectHandle(e.Location, activeHoverIdx);
-                if (handle >= 0) clickedIdx = activeHoverIdx;
+                for (int i = _undoStack.Count - 1; i >= 0; i--)
+                {
+                    int h = GetSelectHandle(e.Location, i);
+                    if (h >= 0)
+                    {
+                        handle = h;
+                        clickedIdx = i;
+                        break;
+                    }
+                }
             }
             if (handle < 0 && activeHoverIdx >= 0)
             {
@@ -440,10 +448,18 @@ public sealed partial class RegionOverlayForm
                 handle = GetSelectHandle(e.Location, _selectedAnnotationIndex);
                 if (handle >= 0) clickedIdx = _selectedAnnotationIndex;
             }
-            if (handle < 0 && _moveHoverIndex >= 0)
+            if (handle < 0)
             {
-                handle = GetSelectHandle(e.Location, _moveHoverIndex);
-                if (handle >= 0) clickedIdx = _moveHoverIndex;
+                for (int i = _undoStack.Count - 1; i >= 0; i--)
+                {
+                    int h = GetSelectHandle(e.Location, i);
+                    if (h >= 0)
+                    {
+                        handle = h;
+                        clickedIdx = i;
+                        break;
+                    }
+                }
             }
 
             if (clickedIdx >= 0 && handle >= 0)

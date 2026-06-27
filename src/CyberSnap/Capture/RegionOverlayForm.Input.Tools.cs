@@ -484,10 +484,10 @@ public sealed partial class RegionOverlayForm
                     if (h != _moveHoverIndex)
                     {
                         if (_moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)
-                            Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[_moveHoverIndex]), 16, 16));
+                            Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[_moveHoverIndex]), 40, 40));
                         _moveHoverIndex = h;
                         if (h >= 0 && h < _undoStack.Count)
-                            Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[h]), 16, 16));
+                            Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[h]), 40, 40));
                     }
                 }
 

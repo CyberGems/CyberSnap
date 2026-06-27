@@ -17,6 +17,7 @@ namespace CyberSnap.UI;
 public partial class OcrResultWindow : Window
 {
     private const int SearchHighlightMinLength = 2;
+    private const double WindowCascadeOffset = 28;
 
     private readonly SettingsService _settingsService;
     private readonly OcrResultWindowLifecycle _lifecycle = new();
@@ -70,6 +71,7 @@ public partial class OcrResultWindow : Window
 
         Loaded += (_, _) =>
         {
+            OffsetFromOpenOcrWindows();
             ApplyMicaBackdrop();
             HookOcrTextScrollViewer();
             RedrawSearchHighlights();
@@ -88,6 +90,21 @@ public partial class OcrResultWindow : Window
         _translateCts?.Cancel();
         StopTranslateTimer();
         Close();
+    }
+
+    private void OffsetFromOpenOcrWindows()
+    {
+        var previousOcrWindows = Application.Current.Windows
+            .OfType<OcrResultWindow>()
+            .Where(window => !ReferenceEquals(window, this) && window.IsVisible)
+            .ToList();
+        if (previousOcrWindows.Count == 0)
+            return;
+
+        var offset = WindowCascadeOffset * previousOcrWindows.Count;
+        var workArea = SystemParameters.WorkArea;
+        Left = Math.Min(Left + offset, Math.Max(workArea.Left, workArea.Right - ActualWidth));
+        Top = Math.Min(Top + offset, Math.Max(workArea.Top, workArea.Bottom - ActualHeight));
     }
 
     private void ApplyTheme()
@@ -879,6 +896,8 @@ public partial class OcrResultWindow : Window
         _isPinned = pinned;
         _lifecycle.SetPinned(_isPinned);
         OcrTitleBar.IsPinActive = _isPinned;
+        _settingsService.Settings.OcrResultWindowPinnedByDefault = pinned;
+        _settingsService.Save();
     }
 
     private int _savedOcrSelectionStart;
@@ -931,6 +950,15 @@ public partial class OcrResultWindow : Window
         SearchTextBox.Focus();
     }
 
+    private void SearchBoxShell_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.OriginalSource == SearchClearBtn)
+            return;
+
+        SearchTextBox.Focus();
+        e.Handled = true;
+    }
+
     private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
@@ -945,13 +973,13 @@ public partial class OcrResultWindow : Window
         }
     }
 
-    private void PrevMatchBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void PrevMatchBtn_Click(object sender, RoutedEventArgs e)
     {
         e.Handled = true;
         MoveToSearchMatch(-1);
     }
 
-    private void NextMatchBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void NextMatchBtn_Click(object sender, RoutedEventArgs e)
     {
         e.Handled = true;
         MoveToSearchMatch(1);
