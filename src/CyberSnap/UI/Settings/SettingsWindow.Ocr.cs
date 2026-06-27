@@ -27,6 +27,8 @@ public partial class SettingsWindow
         {
             LoadOcrLanguageOptions();
             LoadTranslateLanguageCombos();
+            OcrAutoCopyCheck.IsChecked = _settingsService.Settings.OcrAutoCopyToClipboard;
+            OcrPinByDefaultCheck.IsChecked = _settingsService.Settings.OcrResultWindowPinnedByDefault;
             GoogleApiKeyBox.Password = _settingsService.Settings.GoogleTranslateApiKey ?? "";
         }
         finally
@@ -129,6 +131,22 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.OcrAutoCopyToClipboard = value,
             value => OcrAutoCopyCheck.IsChecked = value,
+            SetOcrPreferenceStatus);
+    }
+
+    private void OcrPinByDefaultCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressOcrPreferenceChange) return;
+
+        var previous = _settingsService.Settings.OcrResultWindowPinnedByDefault;
+        var selected = OcrPinByDefaultCheck.IsChecked == true;
+        UpdateOcrPreference(
+            "settings.ocr-pin-by-default",
+            "OCR result window pin",
+            previous,
+            selected,
+            value => _settingsService.Settings.OcrResultWindowPinnedByDefault = value,
+            value => OcrPinByDefaultCheck.IsChecked = value,
             SetOcrPreferenceStatus);
     }
 
