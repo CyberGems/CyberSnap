@@ -1532,28 +1532,28 @@ public sealed partial class AnnotationCanvas
         switch (_activeTool)
         {
             case CanvasTool.Draw when _currentStroke is { Count: >= 2 }:
-                SketchRenderer.DrawFreehandStroke(g, _currentStroke, ToolColor, StrokeWidth, AnnotationStrokeShadow);
+                SketchRenderer.DrawFreehandStroke(g, _currentStroke, ToolColor, GetScaledStrokeWidth(StrokeWidth), AnnotationStrokeShadow);
                 break;
             case CanvasTool.Arrow:
                 SketchRenderer.DrawArrow(g, _dragStartImg, _dragLastImg, ToolColor,
-                    _dragStartImg.GetHashCode(), strokeShadow: AnnotationStrokeShadow, strokeWidth: StrokeWidth);
+                    _dragStartImg.GetHashCode(), strokeShadow: AnnotationStrokeShadow, strokeWidth: GetScaledStrokeWidth(StrokeWidth));
                 break;
             case CanvasTool.Line:
                 SketchRenderer.DrawLine(g, _dragStartImg, _dragLastImg, ToolColor,
-                    _dragStartImg.GetHashCode(), AnnotationStrokeShadow, StrokeWidth);
+                    _dragStartImg.GetHashCode(), AnnotationStrokeShadow, GetScaledStrokeWidth(StrokeWidth));
                 break;
             case CanvasTool.Rect:
                 var rect = NormRect(_dragStartImg, _dragLastImg);
                 if (rect.Width > 0 && rect.Height > 0)
-                    SketchRenderer.DrawRectShape(g, rect, ToolColor, AnnotationStrokeShadow, StrokeWidth);
+                    SketchRenderer.DrawRectShape(g, rect, ToolColor, AnnotationStrokeShadow, GetScaledStrokeWidth(StrokeWidth));
                 break;
             case CanvasTool.Circle:
                 var crect = NormRect(_dragStartImg, _dragLastImg);
                 if (crect.Width > 0 && crect.Height > 0)
-                    SketchRenderer.DrawCircleShape(g, crect, ToolColor, AnnotationStrokeShadow, StrokeWidth);
+                    SketchRenderer.DrawCircleShape(g, crect, ToolColor, AnnotationStrokeShadow, GetScaledStrokeWidth(StrokeWidth));
                 break;
             case CanvasTool.CurvedArrow when _currentStroke is { Count: >= 2 }:
-                SketchRenderer.DrawCurvedArrow(g, _currentStroke, ToolColor, _currentStroke.Count * 7919, AnnotationStrokeShadow, StrokeWidth);
+                SketchRenderer.DrawCurvedArrow(g, _currentStroke, ToolColor, _currentStroke.Count * 7919, AnnotationStrokeShadow, GetScaledStrokeWidth(StrokeWidth));
                 break;
             case CanvasTool.Highlight:
                 var hlPrev = NormRect(_dragStartImg, _dragLastImg);
@@ -1611,7 +1611,7 @@ public sealed partial class AnnotationCanvas
             // it stays legible at any width. The exact width is spelled out by the label.
             const int glyphSize = 22;
             float glyphStroke = Math.Clamp(StrokeWidth * 0.5f, 1.8f, 4.5f);
-            string label = hasStroke ? $"{(int)Math.Round(StrokeWidth)} px" : string.Empty;
+            string label = hasStroke ? $"{(int)Math.Round(StrokeWidth)} {LocalizationService.Translate("points")}" : string.Empty;
 
             using var font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Regular, GraphicsUnit.Point);
             SizeF textSize = label.Length > 0 ? g.MeasureString(label, font) : SizeF.Empty;
@@ -2311,8 +2311,8 @@ public sealed partial class AnnotationCanvas
     {
         return a switch
         {
-            CircleShapeAnnotation cs => IsOnEllipseOutline(cs.Rect, cs.StrokeWidth, pt),
-            RectShapeAnnotation rs   => IsOnRectOutline(rs.Rect, rs.StrokeWidth, pt),
+            CircleShapeAnnotation cs => IsOnEllipseOutline(cs.Rect, GetScaledStrokeWidth(cs.StrokeWidth), pt),
+            RectShapeAnnotation rs   => IsOnRectOutline(rs.Rect, GetScaledStrokeWidth(rs.StrokeWidth), pt),
             _                        => HitTestSingle(a, pt, 10),
         };
     }
@@ -2477,11 +2477,11 @@ public sealed partial class AnnotationCanvas
             RectShapeAnnotation rs => rs.Rect,
             CircleShapeAnnotation cs => cs.Rect,
             EraserFill ef => ef.Rect,
-            ArrowAnnotation arr => GetSegmentBounds(arr.From, arr.To, arr.StrokeWidth),
-            LineAnnotation ln => GetSegmentBounds(ln.From, ln.To, ln.StrokeWidth),
+            ArrowAnnotation arr => GetSegmentBounds(arr.From, arr.To, GetScaledStrokeWidth(arr.StrokeWidth)),
+            LineAnnotation ln => GetSegmentBounds(ln.From, ln.To, GetScaledStrokeWidth(ln.StrokeWidth)),
             RulerAnnotation ru => GetSegmentBounds(ru.From, ru.To, 6f), // Ruler stroke width ~6px
-            CurvedArrowAnnotation ca => GetPointsBounds(ca.Points, ca.StrokeWidth),
-            DrawStroke ds => GetPointsBounds(ds.Points, ds.StrokeWidth),
+            CurvedArrowAnnotation ca => GetPointsBounds(ca.Points, GetScaledStrokeWidth(ca.StrokeWidth)),
+            DrawStroke ds => GetPointsBounds(ds.Points, GetScaledStrokeWidth(ds.StrokeWidth)),
             TextAnnotation ta => MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background),
             StepNumberAnnotation sn => new RectangleF(sn.Pos.X - 16, sn.Pos.Y - 16, 32, 32),
             EmojiAnnotation em => new RectangleF(em.Pos.X - em.Size / 2f, em.Pos.Y - em.Size / 2f, em.Size, em.Size),

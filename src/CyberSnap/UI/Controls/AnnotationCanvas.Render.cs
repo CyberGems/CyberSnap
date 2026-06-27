@@ -365,23 +365,23 @@ public sealed partial class AnnotationCanvas
         switch (a)
         {
             case DrawStroke ds:
-                SketchRenderer.DrawFreehandStroke(g, ds.Points, ds.Color, ds.StrokeWidth, AnnotationStrokeShadow);
+                SketchRenderer.DrawFreehandStroke(g, ds.Points, ds.Color, GetScaledStrokeWidth(ds.StrokeWidth), AnnotationStrokeShadow);
                 break;
             case ArrowAnnotation arr:
                 SketchRenderer.DrawArrow(g, arr.From, arr.To, arr.Color, arr.From.GetHashCode(),
-                    strokeShadow: AnnotationStrokeShadow, strokeWidth: arr.StrokeWidth);
+                    strokeShadow: AnnotationStrokeShadow, strokeWidth: GetScaledStrokeWidth(arr.StrokeWidth));
                 break;
             case CurvedArrowAnnotation ca:
-                SketchRenderer.DrawCurvedArrow(g, ca.Points, ca.Color, ca.Points.Count * 7919, AnnotationStrokeShadow, ca.StrokeWidth);
+                SketchRenderer.DrawCurvedArrow(g, ca.Points, ca.Color, ca.Points.Count * 7919, AnnotationStrokeShadow, GetScaledStrokeWidth(ca.StrokeWidth));
                 break;
             case LineAnnotation ln:
-                SketchRenderer.DrawLine(g, ln.From, ln.To, ln.Color, ln.From.GetHashCode(), AnnotationStrokeShadow, ln.StrokeWidth);
+                SketchRenderer.DrawLine(g, ln.From, ln.To, ln.Color, ln.From.GetHashCode(), AnnotationStrokeShadow, GetScaledStrokeWidth(ln.StrokeWidth));
                 break;
             case RectShapeAnnotation rs:
-                SketchRenderer.DrawRectShape(g, rs.Rect, rs.Color, AnnotationStrokeShadow, rs.StrokeWidth);
+                SketchRenderer.DrawRectShape(g, rs.Rect, rs.Color, AnnotationStrokeShadow, GetScaledStrokeWidth(rs.StrokeWidth));
                 break;
             case CircleShapeAnnotation cs:
-                SketchRenderer.DrawCircleShape(g, cs.Rect, cs.Color, AnnotationStrokeShadow, cs.StrokeWidth);
+                SketchRenderer.DrawCircleShape(g, cs.Rect, cs.Color, AnnotationStrokeShadow, GetScaledStrokeWidth(cs.StrokeWidth));
                 break;
             case HighlightAnnotation hl:
                 using (var path = SketchRenderer.RoundedRect(hl.Rect, 5))

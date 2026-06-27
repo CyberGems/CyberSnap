@@ -521,6 +521,14 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public float StrokeWidth { get; set; } = 6f;
 
+    /// <summary>Calculates proportional stroke thickness based on canvas size relative to 1280px standard width.</summary>
+    public float GetScaledStrokeWidth(float strokeWidth)
+    {
+        if (_baseBitmap == null) return strokeWidth;
+        float scale = Math.Max(1f, _baseBitmap.Width / 1280f);
+        return strokeWidth * scale;
+    }
+
     /// <summary>Current Text-tool font size (pixels). Backed by the toolbar's <c>_textFontSize</c>.</summary>
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public float TextFontSize
