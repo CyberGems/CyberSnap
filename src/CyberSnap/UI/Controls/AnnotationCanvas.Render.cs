@@ -236,16 +236,19 @@ public sealed partial class AnnotationCanvas
         // Alpha values
         int accentAlpha = isSelected ? 255 : 95;
         int shadowAlpha = isSelected ? 100 : 35;
-        int fillAlpha = isSelected ? 15 : 6; // subtle accent tint
+        int fillAlpha = isSelected ? 0 : 6; // subtle accent tint
         int dashAlpha = isSelected ? 180 : 60;
 
         var accentColor = Color.FromArgb(accentAlpha, aR, aG, aB);
         var shadowColor = Color.FromArgb(shadowAlpha, 0, 0, 0);
 
         // Fill and dash
-        using (var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, aR, aG, aB)))
+        if (fillAlpha > 0)
         {
-            g.FillRectangle(fillBrush, rect);
+            using (var fillBrush = new SolidBrush(Color.FromArgb(fillAlpha, aR, aG, aB)))
+            {
+                g.FillRectangle(fillBrush, rect);
+            }
         }
 
         using (var dashPen = new Pen(Color.FromArgb(dashAlpha, aR, aG, aB), 1.5f / z))
