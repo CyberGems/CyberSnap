@@ -421,6 +421,12 @@ public sealed class VideoRecorder : IDisposable
         // Mux audio if we captured any
         bool hasAudioTrack = MuxAudio(outputPath);
         ValidateAndRepairOutput(outputPath, hasAudioTrack);
+
+        // Safety net: verify the file wasn't lost during post-processing.
+        if (!File.Exists(outputPath) || new FileInfo(outputPath).Length == 0)
+            throw new InvalidOperationException(
+                $"Video file was lost during post-processing. FFmpeg output: {_ffmpegStderr}");
+
         LogRecordingStats(outputPath);
 
         return outputPath;
@@ -495,8 +501,20 @@ public sealed class VideoRecorder : IDisposable
 
             if (HasNonEmptyFile(tempOut))
             {
-                File.Delete(videoPath);
-                File.Move(tempOut, videoPath);
+                // Use atomic replace to avoid losing the original if the move fails.
+                string backupPath = videoPath + ".muxbak";
+                try
+                {
+                    File.Replace(tempOut, videoPath, backupPath);
+                    try { File.Delete(backupPath); } catch { }
+                }
+                catch
+                {
+                    // Replace failed — keep original video without audio.
+                    TryDeleteRecordingTempFile(tempOut, "failed mux replace");
+                    TryDeleteRecordingTempFile(backupPath, "mux replace backup");
+                    return false;
+                }
                 return true;
             }
             else
@@ -740,8 +758,21 @@ public sealed class VideoRecorder : IDisposable
                 return;
             }
 
-            File.Delete(outputPath);
-            File.Move(tempOut, outputPath);
+            // Use atomic replace to avoid losing the original if the move fails.
+            string backupPath = outputPath + ".repbak";
+            try
+            {
+                File.Replace(tempOut, outputPath, backupPath);
+                try { File.Delete(backupPath); } catch { }
+            }
+            catch (Exception replaceEx)
+            {
+                AppDiagnostics.LogError("recording.duration-repair",
+                    new Exception($"Replace failed for {Path.GetFileName(outputPath)}.", replaceEx));
+                TryDeleteRecordingTempFile(tempOut, "failed repair replace");
+                TryDeleteRecordingTempFile(backupPath, "repair replace backup");
+                return;
+            }
 
             if (TryGetMediaDurationSeconds(ffmpegPath, outputPath, out double repairedDuration))
             {
