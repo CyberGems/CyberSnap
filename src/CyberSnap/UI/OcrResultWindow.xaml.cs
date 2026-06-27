@@ -68,6 +68,7 @@ public partial class OcrResultWindow : Window
         SetPinned(settingsService.Settings.OcrResultWindowPinnedByDefault);
         LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
         OcrTitleBar.Title = LocalizationService.Translate("Text extraction (OCR)");
+        OcrTitleBar.MinimizeBtn.Visibility = Visibility.Collapsed;
 
         Loaded += (_, _) =>
         {
