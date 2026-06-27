@@ -440,11 +440,101 @@ public sealed partial class RegionOverlayForm
     {
         for (int i = _undoStack.Count - 1; i >= 0; i--)
         {
-            var bounds = GetAnnotationBounds(_undoStack[i]);
-            if (bounds.Contains(p))
+            if (IsOverAnnotationSurface(_undoStack[i], p))
                 return i;
         }
         return -1;
+    }
+
+    private const int SurfaceOutlineTolerance = 6;
+
+    private bool IsOverAnnotationSurface(Annotation a, Point pt)
+    {
+        return a switch
+        {
+            CircleShapeAnnotation cs => IsOnEllipseOutline(cs.Rect, cs.StrokeWidth, pt),
+            RectShapeAnnotation rs   => IsOnRectOutline(rs.Rect, rs.StrokeWidth, pt),
+            _                        => HitTestSingle(a, pt, 10),
+        };
+    }
+
+    private static bool IsOnEllipseOutline(Rectangle rect, float strokeWidth, Point pt)
+    {
+        rect = NormalizeRect(rect);
+        if (rect.Width <= 0 || rect.Height <= 0) return false;
+        float band = strokeWidth / 2f + SurfaceOutlineTolerance;
+        float cx = rect.X + rect.Width / 2f;
+        float cy = rect.Y + rect.Height / 2f;
+
+        bool Inside(float expand)
+        {
+            float rx = rect.Width / 2f + expand;
+            float ry = rect.Height / 2f + expand;
+            if (rx <= 0 || ry <= 0) return false;
+            float nx = (pt.X - cx) / rx;
+            float ny = (pt.Y - cy) / ry;
+            return nx * nx + ny * ny <= 1f;
+        }
+
+        return Inside(band) && !Inside(-band);
+    }
+
+    private static bool IsOnRectOutline(Rectangle rect, float strokeWidth, Point pt)
+    {
+        rect = NormalizeRect(rect);
+        if (rect.Width <= 0 || rect.Height <= 0) return false;
+        int band = (int)(strokeWidth / 2f + SurfaceOutlineTolerance);
+        if (!InflateRect(rect, band, band).Contains(pt)) return false;
+        var inner = InflateRect(rect, -band, -band);
+        return inner.Width <= 0 || inner.Height <= 0 || !inner.Contains(pt);
+    }
+
+    private static Rectangle NormalizeRect(Rectangle r)
+    {
+        int x = Math.Min(r.X, r.X + r.Width);
+        int y = Math.Min(r.Y, r.Y + r.Height);
+        return new Rectangle(x, y, Math.Abs(r.Width), Math.Abs(r.Height));
+    }
+
+    private static Rectangle InflateRect(Rectangle r, int x, int y)
+    {
+        var copy = r;
+        copy.Inflate(x, y);
+        return copy;
+    }
+
+    private static float Distance(Point a, Point b) =>
+        (float)Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
+
+    private static float DistanceToSegment(Point p, Point a, Point b)
+    {
+        float dx = b.X - a.X, dy = b.Y - a.Y;
+        if (Math.Abs(dx) < 0.001f && Math.Abs(dy) < 0.001f) return Distance(p, a);
+        float t = Math.Clamp(((p.X - a.X) * dx + (p.Y - a.Y) * dy) / (dx * dx + dy * dy), 0f, 1f);
+        float projX = a.X + t * dx, projY = a.Y + t * dy;
+        return (float)Math.Sqrt((p.X - projX) * (p.X - projX) + (p.Y - projY) * (p.Y - projY));
+    }
+
+    private bool HitTestSingle(Annotation a, Point pt, int tol)
+    {
+        return a switch
+        {
+            BlurRect br => InflateRect(br.Rect, tol, tol).Contains(pt),
+            HighlightAnnotation hl => InflateRect(hl.Rect, tol, tol).Contains(pt),
+            RectShapeAnnotation rs => InflateRect(rs.Rect, tol, tol).Contains(pt),
+            CircleShapeAnnotation cs => InflateRect(cs.Rect, tol, tol).Contains(pt),
+            EraserFill ef => InflateRect(ef.Rect, tol, tol).Contains(pt),
+            ArrowAnnotation arr => DistanceToSegment(pt, arr.From, arr.To) <= tol * 2,
+            LineAnnotation ln => DistanceToSegment(pt, ln.From, ln.To) <= tol * 2,
+            RulerAnnotation ru => DistanceToSegment(pt, ru.From, ru.To) <= tol * 2,
+            CurvedArrowAnnotation ca => ca.Points.Any(p => Distance(p, pt) <= tol * 2),
+            DrawStroke ds => ds.Points.Any(p => Distance(p, pt) <= tol),
+            TextAnnotation ta => GetTextBounds(ta).Contains(pt),
+            StepNumberAnnotation sn => Distance(sn.Pos, pt) <= tol * 3,
+            EmojiAnnotation em => InflateRect(GetAnnotationBounds(em), tol, tol).Contains(pt),
+            MagnifierAnnotation mg => Distance(mg.Pos, pt) <= tol * 4,
+            _ => false,
+        };
     }
 
     /// <summary>Moves an annotation by a delta. Returns a new annotation with updated position.</summary>
