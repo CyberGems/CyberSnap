@@ -370,18 +370,13 @@ public sealed partial class AnnotationCanvas
                     _selectResizeOriginalAnnotation = _annotations[clickedIdx];
                     _isDragging = true;
                 }
-                else if (handle == 8)
+                else
                 {
-                    // Center move knob → move. Objects are only draggable from this knob,
-                    // not from anywhere in their (often hollow) body.
+                    // Center move knob or plain body click → select and immediately start moving it from its surface!
                     _selectOriginalAnnotation = _annotations[clickedIdx];
                     _selectDragStartImg = img;
                     _isDragging = true;
                 }
-                // else: a plain body click — just select so the controls (incl. the move
-                // knob) appear; the user grabs the knob to actually move it.
-                Invalidate();
-                return;
             }
         }
 
@@ -485,22 +480,14 @@ public sealed partial class AnnotationCanvas
                         _selectedAnnotationIndex = targetIdx;
                         _isDragging = true;
                     }
-                    else if (handle == 8)
+                    else
                     {
-                        // Center move knob → move. A single object is only draggable from this
-                        // knob, not from anywhere in its (often hollow) body.
+                        // Center move knob or plain body click — select and immediately start moving it from its surface!
                         ClearMultiSelection();
                         _selectedAnnotationIndex = targetIdx;
                         _selectOriginalAnnotation = _annotations[targetIdx];
                         _selectDragStartImg = img;
                         _isDragging = true;
-                    }
-                    else
-                    {
-                        // Plain body click — select only so the controls (incl. the move knob)
-                        // appear; the user grabs the knob to actually move it.
-                        ClearMultiSelection();
-                        _selectedAnnotationIndex = targetIdx;
                     }
                 }
                 else

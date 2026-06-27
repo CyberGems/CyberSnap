@@ -400,7 +400,7 @@ public sealed partial class RegionOverlayForm
                 }
 
                 _selectedAnnotationIndex = clickedIdx;
-                if (handle >= 0)
+                if (handle >= 0 && handle != 8)
                 {
                     _isSelectResizing = true;
                     _selectResizeHandle = handle;
@@ -434,7 +434,7 @@ public sealed partial class RegionOverlayForm
         {
             // Check resize handles on already-selected annotation
             int handle = GetSelectHandle(e.Location);
-            if (handle >= 0 && _selectedAnnotationIndex >= 0)
+            if (handle >= 0 && handle != 8 && _selectedAnnotationIndex >= 0)
             {
                 _isSelectResizing = true;
                 _selectResizeHandle = handle;
@@ -442,6 +442,19 @@ public sealed partial class RegionOverlayForm
                 _selectHandleBounds = GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]);
                 _selectResizeOriginalAnnotation = _undoStack[_selectedAnnotationIndex];
                 _selectPreviewAnnotation = _selectResizeOriginalAnnotation;
+                _renderSkipIndex = _selectedAnnotationIndex;
+                MarkCommittedAnnotationsDirty();
+                ClearCrosshairGuides();
+                Invalidate();
+                return;
+            }
+            else if (handle == 8 && _selectedAnnotationIndex >= 0)
+            {
+                _isSelectDragging = true;
+                var bounds = GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]);
+                _selectPreviewAnnotation = _undoStack[_selectedAnnotationIndex];
+                _selectDragStart = e.Location;
+                _selectDragOffset = new Point(e.Location.X - bounds.X, e.Location.Y - bounds.Y);
                 _renderSkipIndex = _selectedAnnotationIndex;
                 MarkCommittedAnnotationsDirty();
                 ClearCrosshairGuides();
