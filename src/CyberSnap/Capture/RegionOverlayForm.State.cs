@@ -440,6 +440,17 @@ public sealed partial class RegionOverlayForm
     {
         for (int i = _undoStack.Count - 1; i >= 0; i--)
         {
+            var bounds = GetAnnotationBounds(_undoStack[i]);
+            if (bounds.Contains(p))
+                return i;
+        }
+        return -1;
+    }
+
+    private int HitTestAnnotationSurface(Point p)
+    {
+        for (int i = _undoStack.Count - 1; i >= 0; i--)
+        {
             if (IsOverAnnotationSurface(_undoStack[i], p))
                 return i;
         }
@@ -623,6 +634,15 @@ public sealed partial class RegionOverlayForm
             var hr = WindowsHandleRenderer.HitRect(handles[i]);
             if (hr.Contains(p)) return i;
         }
+
+        // Handle 8: center move knob — circular hit area sized to cover the 4-way arrow glyph.
+        var center = new Point(selRect.X + selRect.Width / 2, selRect.Y + selRect.Height / 2);
+        const int centerHitRadius = 14;
+        int cdx = p.X - center.X;
+        int cdy = p.Y - center.Y;
+        if (cdx * cdx + cdy * cdy <= centerHitRadius * centerHitRadius)
+            return 8;
+
         return -1;
     }
 
