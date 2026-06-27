@@ -227,10 +227,6 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // Show annotation bar — placed above Confirm before exit for visibility
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(showBarItem);
-
         // Confirm before exit toggle
         menu.Items.Add(new ToolStripSeparator());
         var confirmExitEnabled = settings.ConfirmBeforeExit;
@@ -264,33 +260,6 @@ public sealed partial class RegionOverlayForm
             _toolbarContextMenu?.Close();
         };
         menu.Items.Add(bannersItem);
-
-        // Full-screen capture & cancel — only in the general chevron menu
-        if (tool == null)
-        {
-            menu.Items.Add(new ToolStripSeparator());
-            var fsCaptureLabel = isSpanish ? "Capturar pantalla completa" : "Capture full screen";
-            var fsItem = WindowsMenuRenderer.Item(fsCaptureLabel, iconId: "captureRect", iconSize: 24);
-            fsItem.Click += (s, e) =>
-            {
-                RegionSelected?.Invoke(_virtualBounds);
-            };
-            menu.Items.Add(fsItem);
-
-            var cancelCaptureLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
-            var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", danger: true, iconSize: 24);
-            cancelCapItem.Click += (s, e) => Cancel();
-            menu.Items.Add(cancelCapItem);
-        }
-
-        // Close menu
-        menu.Items.Add(new ToolStripSeparator());
-        var closeMenuText = isSpanish ? "Cerrar menú y continuar" : "Close menu and continue";
-        var closeMenuItem = WindowsMenuRenderer.Item(closeMenuText, iconId: null, iconSize: 24);
-        closeMenuItem.Click += (s, e) => {
-            menu.Close();
-        };
-        menu.Items.Add(closeMenuItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu, 200, itemHeight: 46);
 
