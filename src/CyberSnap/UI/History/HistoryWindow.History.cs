@@ -1576,9 +1576,9 @@ public partial class HistoryWindow
     {
         var fileName = string.IsNullOrWhiteSpace(filePath) ? "" : Path.GetFileName(filePath);
         var detail = string.IsNullOrWhiteSpace(fileName)
-            ? "The saved file is no longer on disk."
-            : $"The saved file is no longer on disk: {fileName}";
-        ToastWindow.ShowError("File missing", $"{detail}\nRestore the file or capture it again from History.", filePath);
+            ? LocalizationService.Translate("The selected file is no longer on the original location.")
+            : $"{LocalizationService.Translate("The selected file is no longer on the original location.")}: {fileName}";
+        ToastWindow.ShowError(LocalizationService.Translate("File missing"), detail, filePath);
     }
 
     private static long TryGetFileLength(string filePath)

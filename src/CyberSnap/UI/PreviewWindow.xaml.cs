@@ -33,6 +33,7 @@ public partial class PreviewWindow : Window
     private bool _mouseIsDown;
     private string? _savedFilePath;
     private readonly bool _isGif;
+    private readonly bool _isVideo;
 
     private static PreviewWindow? _current;
     private static CyberSnap.Models.ToastPosition _position = CyberSnap.Models.ToastPosition.TopCenter;
@@ -71,21 +72,24 @@ public partial class PreviewWindow : Window
         _current = this;
     }
 
-    /// <summary>Constructor for GIF files â€” shows first frame as thumbnail, supports drag-drop of the file.</summary>
-    public PreviewWindow(string gifFilePath)
+    /// <summary>Constructor for GIF/MP4 media files — shows first frame as thumbnail, supports drag-drop of the file.</summary>
+    public PreviewWindow(string mediaFilePath)
     {
         CloseCurrentForReplacement();
 
-        _isGif = true;
-        _savedFilePath = gifFilePath;
+        bool isGif = mediaFilePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
+        bool isVideo = mediaFilePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase);
+        _isGif = isGif;
+        _isVideo = isVideo;
+        _savedFilePath = mediaFilePath;
 
-        TryCopyGifFileToClipboard(gifFilePath);
+        TryCopyMediaFileToClipboard(mediaFilePath);
 
         InitializeComponent();
         CyberSnapWindowChrome.ApplyRoundedCorners(this, 18);
         UiScale.ApplyToWindow(this, ImageBorder, scaleWindowBounds: false);
         ApplyTheme();
-        SetGifThumbnail(gifFilePath);
+        SetGifThumbnail(mediaFilePath);
         FitToImage();
         SizeChanged += (_, _) => UpdatePreviewClip();
         InitCommon();
@@ -104,11 +108,11 @@ public partial class PreviewWindow : Window
             current.Dispatcher.BeginInvoke(current.ForceClose);
     }
 
-    private static bool TryCopyGifFileToClipboard(string gifFilePath)
+    private static bool TryCopyMediaFileToClipboard(string mediaFilePath)
     {
         try
         {
-            var files = new System.Collections.Specialized.StringCollection { gifFilePath };
+            var files = new System.Collections.Specialized.StringCollection { mediaFilePath };
             System.Windows.Clipboard.SetFileDropList(files);
             return true;
         }
@@ -116,8 +120,8 @@ public partial class PreviewWindow : Window
         {
             ToastWindow.ShowError(
                 "Copy failed",
-                $"CyberSnap could not copy the GIF file. The preview will still open; save or drag the GIF manually.\n{ex.Message}",
-                gifFilePath);
+                $"CyberSnap could not copy the media file. The preview will still open; save or drag the file manually.\n{ex.Message}",
+                mediaFilePath);
             return false;
         }
     }
@@ -170,13 +174,13 @@ public partial class PreviewWindow : Window
     private void RefreshPreviewAccessibility()
     {
         RefreshPreviewWindowTooltip();
-        var previewName = _isGif ? "GIF preview" : "Screenshot preview";
+        var previewName = _isVideo ? "Video preview" : (_isGif ? "GIF preview" : "Screenshot preview");
         SetPreviewElementAccessibility(ThumbnailImage, previewName, BuildPreviewImageHelpText());
         RefreshPreviewOverlayButtonAccessibility(CloseBtn, "Close preview", "Close this preview.");
         RefreshPreviewOverlayButtonAccessibility(PinBtn,
             _isPinned ? "Unpin preview" : "Pin preview",
             _isPinned ? "Allow this preview to dismiss automatically." : "Keep this preview open.");
-        RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", "Save this preview image.");
+        RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", GetSaveHelpText());
         RefreshPreviewOverlayButtonAccessibility(EditBtn, "Edit preview", "Open the post-capture editor.");
     }
 
@@ -196,10 +200,12 @@ public partial class PreviewWindow : Window
             ? ""
             : Path.GetFileName(_savedFilePath);
 
-        if (!string.IsNullOrWhiteSpace(fileName))
-            return _isGif ? $"GIF preview for {fileName}." : $"Screenshot preview for {fileName}.";
+        string kind = _isVideo ? "Video" : (_isGif ? "GIF" : "Screenshot");
 
-        return _isGif ? "GIF preview." : "Screenshot preview.";
+        if (!string.IsNullOrWhiteSpace(fileName))
+            return $"{kind} preview for {fileName}.";
+
+        return $"{kind} preview.";
     }
 
     private static void RefreshPreviewOverlayButtonAccessibility(FrameworkElement button, string name, string helpText)
@@ -395,7 +401,7 @@ public partial class PreviewWindow : Window
         CloseBtn.BeginAnimation(OpacityProperty, Motion.To(to, 150, Motion.SmoothOut));
         PinBtn.BeginAnimation(OpacityProperty, Motion.To(_isPinned ? 1 : to, 150, Motion.SmoothOut));
         SaveBtn.BeginAnimation(OpacityProperty, Motion.To(to, 150, Motion.SmoothOut));
-        EditBtn.BeginAnimation(OpacityProperty, Motion.To(_isGif ? 0 : to, 150, Motion.SmoothOut));
+        EditBtn.BeginAnimation(OpacityProperty, Motion.To((_isGif || _isVideo) ? 0 : to, 150, Motion.SmoothOut));
     }
 
 }

@@ -61,7 +61,7 @@ public sealed partial class RecordingForm
             Bitmap? firstFrame = gifRec?.GetFirstFrame();
             try
             {
-                try { System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ToastWindow.Show("Recording", "Encoding, please wait...")); } catch { }
+                try { System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ToastWindow.Show(LocalizationService.Translate("Recording"), LocalizationService.Translate("Encoding, please wait..."))); } catch { }
                 gifRec?.StopAndEncode(_savePath);
                 vidRec?.StopAndEncode(_savePath);
                 _desktopAudioSoundSuppression?.Dispose();
