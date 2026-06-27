@@ -43,9 +43,9 @@ public sealed partial class RegionOverlayForm : Form
     private int _pendingConfirmAction = -1; // action to run when the squash finishes
     private float _confirmPressAmt;          // 0→1→0 squash progress for the pressed button
     private DateTime _pressAnimStart;
-    private readonly float[] _shinePhase = { 0f, 0.5f }; // per-button glint position (0=confirm,1=cancel)
-    private readonly float[] _shineMain = { 1f, 1f }; // primary comet intensity per button (0=confirm,1=cancel)
-    private readonly float[] _shineDup = { 0f, 0f };  // duplicate comet intensity (fades in on hover)
+    private readonly float[] _shinePhase = { 0f, 0.5f, 0.25f }; // per-button glint position (0=confirm,1=retry,2=cancel)
+    private readonly float[] _shineMain = { 1f, 1f, 1f }; // primary comet intensity per button (0=confirm,1=retry,2=cancel)
+    private readonly float[] _shineDup = { 0f, 0f, 0f };  // duplicate comet intensity (fades in on hover)
 
     private CaptureDockSide ActiveDockSide => _isEvading ? GetOppositeDockSide(CaptureDockSide) : CaptureDockSide;
 
@@ -1072,35 +1072,45 @@ public sealed partial class RegionOverlayForm : Form
     }
 
     /// <summary>
-    /// Right-click menu shown while confirming a selection. Contains "Confirm capture" (green ✓)
-    /// and "Cancel capture and exit" (red cancel/close icon), with larger menu text.
+    /// Right-click menu shown while confirming a selection. Mirrors the three on-screen action pills:
+    /// Confirm (green ✓), Retry the selection (neutral arrow), and Cancel &amp; exit (red close).
+    /// Action-only, no branding header — it's a quick contextual fallback for the buttons.
     /// </summary>
     private void ShowConfirmContextMenu(Point clickLocation)
     {
-        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
         menu.Font = UiChrome.ChromeFont(11.0f); // larger text as requested
 
-        // ── App header ──
-        var headerLabel = new ToolStripLabel($"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}")
-        {
-            ForeColor = UiChrome.SurfaceTextMuted,
-            Font = UiChrome.ChromeFont(8.5f),
-            Padding = new System.Windows.Forms.Padding(10, 12, 0, 2),
-            AutoSize = true,
-        };
-        menu.Items.Add(headerLabel);
-        menu.Items.Add(new ToolStripSeparator());
+        var isSpanish = string.Equals(
+            Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
+            "es", StringComparison.OrdinalIgnoreCase);
 
+        // Confirm — primary action (matches the green "Listo / Ready" pill).
         var confirmColor = Color.FromArgb(34, 197, 94); // Premium vibrant success green
-        var confirmItem = WindowsMenuRenderer.Item("Confirm capture", iconId: "check", customColor: confirmColor, iconSize: 24);
+        var confirmItem = WindowsMenuRenderer.Item(
+            isSpanish ? "Confirmar captura" : "Confirm capture",
+            iconId: "check", customColor: confirmColor, iconSize: 24);
         confirmItem.Click += (_, _) => CommitConfirmedSelection();
         menu.Items.Add(confirmItem);
 
-        var cancelItem = WindowsMenuRenderer.Item("Cancel capture and exit", iconId: "close", danger: true, iconSize: 24);
-        cancelItem.Click += (_, _) => Cancel();
+        // Retry — discard this crop and select the area again (matches the Retry pill → ExitConfirmMode).
+        var retryItem = WindowsMenuRenderer.Item(
+            isSpanish ? "Reintentar selección" : "Retry selection",
+            iconId: "redo", iconSize: 24);
+        retryItem.Click += (_, _) => ExitConfirmMode();
+        menu.Items.Add(retryItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        // Cancel everything and close the overlay (matches the red Cancel pill — routes through
+        // ConfirmAndCancelCapture so pending annotations get the same "will be lost" warning).
+        var cancelItem = WindowsMenuRenderer.Item(
+            isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit",
+            iconId: "close", danger: true, iconSize: 24);
+        cancelItem.Click += (_, _) => ConfirmAndCancelCapture();
         menu.Items.Add(cancelItem);
 
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 240, itemHeight: 46);
         menu.Show(PointToScreen(clickLocation));
     }
 

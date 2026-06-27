@@ -853,11 +853,23 @@ public sealed partial class RegionOverlayForm
 
     // ── Region confirmation mode (handles + Confirm/Cancel buttons) ──
 
-    private void EnterConfirmMode(Rectangle rect)
+    private void EnterConfirmMode(Rectangle rect, Point? releaseAnchor = null)
     {
         _isConfirmingSelection = true;
         _confirmRect = rect;
         _confirmHandleDragIndex = -1;
+        // Remember where the drag ended as a fraction of the selection, so the Confirm/Retry
+        // buttons appear near the release point (not forced to the center of a large area).
+        if (releaseAnchor is { } a && rect.Width > 0 && rect.Height > 0)
+        {
+            _confirmButtonAnchorFracX = Math.Clamp((a.X - rect.Left) / (float)rect.Width, 0f, 1f);
+            _confirmButtonAnchorFracY = Math.Clamp((a.Y - rect.Top) / (float)rect.Height, 0f, 1f);
+        }
+        else
+        {
+            _confirmButtonAnchorFracX = 0.5f;
+            _confirmButtonAnchorFracY = 1f;
+        }
         RecomputeConfirmButtonWidth();
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
@@ -867,8 +879,9 @@ public sealed partial class RegionOverlayForm
         RefreshToolbar();
         _shinePhase[0] = 0f;
         _shinePhase[1] = 0.5f;
-        _shineMain[0] = _shineMain[1] = 1f;
-        _shineDup[0] = _shineDup[1] = 0f;
+        _shinePhase[2] = 0.25f;
+        _shineMain[0] = _shineMain[1] = _shineMain[2] = 1f;
+        _shineDup[0] = _shineDup[1] = _shineDup[2] = 0f;
         if (!UI.Motion.Disabled) _confirmShineTimer.Start();
         Invalidate();
     }
@@ -911,11 +924,17 @@ public sealed partial class RegionOverlayForm
 
     private static readonly int ConfirmHandleSize = 16;
     private static readonly int ConfirmButtonHeight = 34;
-    private static readonly int ConfirmButtonGap = 8;
+    private static readonly int ConfirmButtonGap = 14;
 
     // Measured width for the confirm/cancel buttons; recomputed on entering confirm
     // mode so the localized label (e.g. "Confirmar") always fits on a single line.
     private int _confirmButtonWidth = UiChrome.ScaleInt(96);
+
+    // Where the drag ended, as a 0..1 fraction inside the selection rect. Drives the
+    // Confirm/Retry button placement so they sit near the release point and follow that
+    // proportional spot when the selection is moved or resized in confirm mode.
+    private float _confirmButtonAnchorFracX = 0.5f;
+    private float _confirmButtonAnchorFracY = 1f;
 
     private Rectangle[] GetConfirmHandleRects()
     {
@@ -1060,9 +1079,9 @@ public sealed partial class RegionOverlayForm
         }
         // Per button: advance the comet (2× speed while hovered) and ease its intensities.
         // The hovered button gains a second comet (dup→1); the other's comet fades (main→0).
-        int hov = _hoveredConfirmButton; // -1 none, 0 confirm, 1 cancel
+        int hov = _hoveredConfirmButton; // -1 none, 0 confirm, 1 retry, 2 cancel
         float baseDelta = (float)(UiChrome.FrameIntervalMs / 2600.0); // full lap ~2.6s
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 3; i++)
         {
             _shinePhase[i] += baseDelta * (hov == i ? 2f : 1f);
             if (_shinePhase[i] >= 1f) _shinePhase[i] -= 1f;
@@ -1079,23 +1098,56 @@ public sealed partial class RegionOverlayForm
         Invalidate(InflateForRepaint(closeBtn, 24));
     }
 
+    // Label font for the Confirm / Retry pills. Centralized so the width measurement in
+    // RecomputeConfirmButtonWidth() and the drawing in DrawConfirmActionPill() always use the
+    // exact same font.
+    //
+    // GDI+ does NOT throw when a font family is missing — it silently falls back to
+    // Microsoft Sans Serif. The app's default "Segoe UI Variable Text" is a Windows 11-only
+    // family, so on Windows 10 these labels were rendering in Microsoft Sans Serif (cramped
+    // spacing, dated/soft glyphs). We resolve a family that is actually installed instead of
+    // trusting the name blindly.
+    private const string ConfirmButtonFontFamily = "Segoe UI";
+    private const FontStyle ConfirmButtonFontStyle = FontStyle.Bold;
+
+    private static Font CreateConfirmButtonFont()
+    {
+        float size = UiChrome.ScaleFloat(11f);
+        try
+        {
+            // new FontFamily(name) throws if the family is not installed (unlike new Font()).
+            using (new FontFamily(ConfirmButtonFontFamily)) { }
+            return new Font(ConfirmButtonFontFamily, size, ConfirmButtonFontStyle);
+        }
+        catch
+        {
+            return new Font(FontFamily.GenericSansSerif, size, ConfirmButtonFontStyle);
+        }
+    }
+
     private void RecomputeConfirmButtonWidth()
     {
         int min = UiChrome.ScaleInt(112);
-        // Reserve the left badge zone (~one button height) plus right padding so the
-        // uppercase label always fits on a single line to the right of the icon badge.
-        int badgeZone = UiChrome.ScaleInt(ConfirmButtonHeight);
-        int rightPad = UiChrome.ScaleInt(16);
+        // The label + icon are drawn as one centered group: [text][gap][icon]. Size the button
+        // so that group fits with symmetric side padding. These proportions MUST match the
+        // layout math in DrawConfirmActionPill().
+        float h = UiChrome.ScaleInt(ConfirmButtonHeight);
+        float iconSize = h * 0.58f;
+        float gap = h * 0.22f;
+        int sidePad = UiChrome.ScaleInt(16);
         try
         {
-            using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
+            using var font = CreateConfirmButtonFont();
             using var g = CreateGraphics();
-            float w = Math.Max(
-                Math.Max(
-                    g.MeasureString(LocalizationService.Translate("Confirm").ToUpperInvariant(), font).Width,
-                    g.MeasureString(LocalizationService.Translate("Retry").ToUpperInvariant(), font).Width),
-                g.MeasureString(LocalizationService.Translate("Cancel").ToUpperInvariant(), font).Width);
-            _confirmButtonWidth = Math.Max(min, badgeZone + (int)Math.Ceiling(w) + rightPad);
+            using var sf = new StringFormat(StringFormat.GenericTypographic)
+            {
+                FormatFlags = StringFormatFlags.NoWrap,
+                Trimming = StringTrimming.None
+            };
+            var bounds = new SizeF(10000f, h);
+            // Only the Confirm button carries a text label now (Retry is icon-only).
+            float w = g.MeasureString(LocalizationService.Translate("Ready").ToUpperInvariant(), font, bounds, sf).Width;
+            _confirmButtonWidth = Math.Max(min, (int)Math.Ceiling(w + gap + iconSize + sidePad * 2));
         }
         catch
         {
@@ -1110,22 +1162,48 @@ public sealed partial class RegionOverlayForm
         int gap = UiChrome.ScaleInt(ConfirmButtonGap);
         var r = _confirmRect;
 
-        int closeH = bh / 2;
-        int closeW = bh; // Horizontal pill shape of width = height of other buttons
+        int retryW = bh;     // Retry is icon-only (square, full height)
+        int cancelW = bh;    // Cancel is also an icon-only square, matching Retry
 
-        int totalW = bw * 2 + closeW + gap * 2;
-        int x = r.Left + (r.Width - totalW) / 2;
-        int y = r.Bottom + UiChrome.ScaleInt(12);
-        // Clamp y so buttons stay inside client area
-        if (y + bh > ClientSize.Height - 10)
-            y = Math.Max(10, r.Top - bh - UiChrome.ScaleInt(12));
+        int offset = UiChrome.ScaleInt(12);
+        int margin = UiChrome.ScaleInt(10);
 
-        int closeY = y + (bh - closeH) / 2; // Center close button vertically with the other two
+        // Horizontal: put the Confirm button directly under the point where the drag ended (its
+        // proportional position inside the selection). Retry sits to its left, then Cancel, so the
+        // primary action lands under the cursor and large selections don't force the cursor back
+        // to the middle.  Order (left→right): [Cancel] [Retry] [Confirm].
+        float anchorX = r.Left + _confirmButtonAnchorFracX * r.Width;
+        int confirmX = (int)Math.Round(anchorX - bw / 2f);
+        int retryX = confirmX - gap - retryW;
+        int closeX = retryX - gap - cancelW;
+
+        // Shift the whole cluster back on-screen if it spills past either edge.
+        int clusterLeft = closeX;
+        int clusterRight = confirmX + bw;
+        if (clusterLeft < margin)
+        {
+            int s = margin - clusterLeft; confirmX += s; retryX += s; closeX += s;
+        }
+        else if (clusterRight > ClientSize.Width - margin)
+        {
+            int s = (ClientSize.Width - margin) - clusterRight; confirmX += s; retryX += s; closeX += s;
+        }
+
+        // Vertical: park the cluster just outside the selection on the side nearest the release
+        // point (below if released in the lower half, above otherwise), flipping if there's no room.
+        int below = r.Bottom + offset;
+        int above = r.Top - bh - offset;
+        int y;
+        if (_confirmButtonAnchorFracY < 0.5f)
+            y = above >= margin ? above : below;
+        else
+            y = below + bh <= ClientSize.Height - margin ? below : above;
+        y = Math.Clamp(y, margin, Math.Max(margin, ClientSize.Height - bh - margin));
 
         return (
-            new Rectangle(x + bw + closeW + gap * 2, y, bw, bh),
-            new Rectangle(x, y, bw, bh),
-            new Rectangle(x + bw + gap, closeY, closeW, closeH)
+            new Rectangle(confirmX, y, bw, bh),
+            new Rectangle(retryX, y, retryW, bh),
+            new Rectangle(closeX, y, cancelW, bh)
         );
     }
 
