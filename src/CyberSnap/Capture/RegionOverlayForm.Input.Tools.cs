@@ -468,13 +468,9 @@ public sealed partial class RegionOverlayForm
                         1 or 2 => Cursors.SizeNESW,
                         4 or 7 => Cursors.SizeNS,
                         5 or 6 => Cursors.SizeWE,
-                        _ => Cursors.Default
+                        8      => Cursors.SizeAll,  // center move knob
+                        _      => Cursors.Default
                     };
-                    handled = true;
-                }
-                else if (_selectedAnnotationIndex >= 0 && GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]).Contains(e.Location))
-                {
-                    target = Cursors.SizeAll;
                     handled = true;
                 }
                 else
@@ -493,7 +489,13 @@ public sealed partial class RegionOverlayForm
                         if (h >= 0 && h < _undoStack.Count)
                             Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[h]), 16, 16));
                     }
-                    if (h >= 0)
+                }
+
+                if (!handled)
+                {
+                    int hoverIdx = _moveHoverIndex >= 0 ? _moveHoverIndex : _selectedAnnotationIndex;
+                    if (hoverIdx >= 0 && hoverIdx < _undoStack.Count
+                        && IsOverAnnotationSurface(_undoStack[hoverIdx], e.Location))
                     {
                         target = Cursors.SizeAll;
                         handled = true;
