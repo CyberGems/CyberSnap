@@ -736,10 +736,20 @@ public partial class SettingsWindow
 
     private void SetGeneralPreferenceStatus(string message)
     {
-        GeneralPreferenceStatusText.Text = message;
-        GeneralPreferenceStatusText.Visibility = string.IsNullOrWhiteSpace(message)
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        if (GeneralPreferenceStatusText != null)
+        {
+            GeneralPreferenceStatusText.Text = message;
+            GeneralPreferenceStatusText.Visibility = string.IsNullOrWhiteSpace(message)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+        if (SoundsPreferenceStatusText != null)
+        {
+            SoundsPreferenceStatusText.Text = message;
+            SoundsPreferenceStatusText.Visibility = string.IsNullOrWhiteSpace(message)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
     }
 
     private void ShowImageSearchBarCheck_Changed(object sender, RoutedEventArgs e)

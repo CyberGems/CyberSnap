@@ -160,12 +160,17 @@ public partial class SettingsWindow
 
             foreach (var child in SoundCustomizationPanel.Children)
             {
-                if (child is Border card && card.Child is Grid row && row.Children.Count > 2 &&
-                    row.Children[2] is StackPanel controls && controls.Children.Count > 0 &&
-                    controls.Children[^1] is CheckBox cb)
+                if (child is Border card && card.Child is Grid row)
                 {
-                    cb.IsChecked = enableAll;
-                    card.Opacity = enableAll ? 1.0 : 0.4;
+                    foreach (var element in row.Children)
+                    {
+                        if (element is CheckBox cb)
+                        {
+                            cb.IsChecked = enableAll;
+                            card.Opacity = enableAll ? 1.0 : 0.4;
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -318,7 +323,7 @@ public partial class SettingsWindow
             // Browse button
             var browseBtn = new Button
             {
-                Content = "\uE8B7",
+                Content = "\uE70F",
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Margin = new Thickness(0, 0, 6, 0),

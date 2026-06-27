@@ -155,6 +155,7 @@ public partial class SettingsWindow
         var panelDefs = new (ScrollViewer Panel, string PageKey, string PageTitle)[]
         {
             (SettingsPanel,   "general",       "General"),
+            (SoundsPanel,     "sounds",        "Sounds"),
             (WidgetPanel,     "widget",        "Widget"),
             (ToastPanel,      "notifications", "Notifications"),
             (CapturePanel,    "capture",       "Capture"),
@@ -647,6 +648,7 @@ public partial class SettingsWindow
         var tabMap = new Dictionary<string, System.Windows.Controls.RadioButton>
         {
             ["general"]       = SettingsTab,
+            ["sounds"]        = SoundsTab,
             ["widget"]        = WidgetTab,
             ["notifications"] = ToastTab,
             ["capture"]       = CaptureTab,
