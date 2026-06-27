@@ -720,10 +720,6 @@ public partial class HistoryWindow
             AutomationProperties.SetHelpText(vm.TimeStatusTextBlock, timeAndStatus);
         }
 
-        if (vm.Card != null)
-        {
-            vm.Card.ToolTip = LocalizationService.Translate("Open in Editor");
-        }
     }
 
     private static void RefreshCardThumbnail(HistoryItemVM vm)
@@ -786,16 +782,9 @@ public partial class HistoryWindow
         }
         else
         {
-            vm.Card.ToolTip = LocalizationService.Translate("Open in Editor");
+            vm.Card.ToolTip = null;
             if (vm.ImageContainer is FrameworkElement imgContainer)
-            {
-                imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
-                {
-                    HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
-                    HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
-                    _ => LocalizationService.Translate("Open in Editor"),
-                };
-            }
+                imgContainer.ToolTip = null;
         }
 
         if (vm.SelectionBadge is Border badge)
