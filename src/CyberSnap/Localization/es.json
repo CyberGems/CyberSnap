@@ -471,7 +471,7 @@
   "Delete selected": "Eliminar seleccionados",
   "Delete selection": "Borrar seleccionados",
   "Images": "Imágenes",
-  "Text": "Texto OCR",
+  "Text": "Texto",
   "Videos/GIFs": "Videos y GIFs",
   "Colors": "Colores",
   "Codes": "Códigos",
@@ -1186,5 +1186,6 @@
   "Close this notification.": "Cerrar esta notificación.",
   "Open failed": "Error al abrir",
   "Windows could not find a program to open this file type. Set a default app for this format in Windows Settings, or open it from disk manually.": "Windows no encontró un programa para abrir este tipo de archivo. Establece una aplicación predeterminada para este formato en la Configuración de Windows, o ábrelo manualmente desde el disco.",
-  "CyberSnap could not open the saved file. Try again from Config -> History, or open it from disk manually.": "CyberSnap no pudo abrir el archivo guardado. Intenta de nuevo desde Configuración -> Galería, o ábrelo manualmente desde el disco."
+  "CyberSnap could not open the saved file. Try again from Config -> History, or open it from disk manually.": "CyberSnap no pudo abrir el archivo guardado. Intenta de nuevo desde Configuración -> Galería, o ábrelo manualmente desde el disco.",
+  "FreeHand": "Dibujo libre"
 }
