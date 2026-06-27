@@ -711,6 +711,7 @@
   "Gray": "Gray",
   "Black": "Black",
   "Width: {0}px": "Width: {0}px",
+  "Width: {0} points": "Thickness: {0} points",
   "Text Tool": "Text",
   "Step": "Step",
   "Auto-fit to window": "Auto-fit to window",

@@ -973,7 +973,7 @@ public sealed partial class EditorForm
             };
             _strokeWidthButtons.Add(btn);
             float currentWidth = w;
-            RegisterHoverTooltip(btn, () => string.Format(LocalizationService.Translate("Width: {0}px"), currentWidth));
+            RegisterHoverTooltip(btn, () => string.Format(LocalizationService.Translate("Width: {0} points"), currentWidth));
             widthRow.Controls.Add(btn, wIndex, 0);
             wIndex++;
         }
