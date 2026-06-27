@@ -39,7 +39,6 @@ public partial class HistoryWindow
     private string _colorSearchQuery = "";
     private List<ColorHistoryEntry> _filteredColorEntries = new();
     private int _colorRenderCount;
-    private DateTime? _colorLastRenderedDate;
     private readonly Dictionary<OcrHistoryEntry, Border> _ocrHistoryCardCache = new();
     private readonly Dictionary<ColorHistoryEntry, Border> _colorHistoryCardCache = new();
     private readonly System.Windows.Threading.DispatcherTimer _ocrSearchDebounceTimer = new()
@@ -121,7 +120,6 @@ public partial class HistoryWindow
             : $"{entries.Count} {LocalizationService.Translate("of")} {allEntries.Count} {LocalizationService.Translate(allEntries.Count == 1 ? "color" : "colors")}";
         _filteredColorEntries = entries;
         _colorRenderCount = Math.Min(HistoryInitialPageSize, _filteredColorEntries.Count);
-        _colorLastRenderedDate = null;
         AppendColorHistoryEntries(_filteredColorEntries, 0, _colorRenderCount);
         UpdateHistoryActionButtons();
         sw.Stop();

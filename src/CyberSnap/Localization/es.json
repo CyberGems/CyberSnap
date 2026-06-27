@@ -1163,5 +1163,6 @@
   "File copied to clipboard": "Archivo copiado al portapapeles",
   "Saved; clipboard copy failed": "Guardado; falló la copia al portapapeles",
   "Text copied": "Texto copiado",
-  "points": "puntos"
+  "points": "puntos",
+  "Thickness {0}": "Grosor {0}"
 }

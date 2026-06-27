@@ -1611,7 +1611,7 @@ public sealed partial class AnnotationCanvas
             // it stays legible at any width. The exact width is spelled out by the label.
             const int glyphSize = 22;
             float glyphStroke = Math.Clamp(StrokeWidth * 0.5f, 1.8f, 4.5f);
-            string label = hasStroke ? $"{(int)Math.Round(StrokeWidth)} {LocalizationService.Translate("points")}" : string.Empty;
+            string label = hasStroke ? string.Format(LocalizationService.Translate("Thickness {0}"), (int)Math.Round(StrokeWidth)) : string.Empty;
 
             using var font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Regular, GraphicsUnit.Point);
             SizeF textSize = label.Length > 0 ? g.MeasureString(label, font) : SizeF.Empty;

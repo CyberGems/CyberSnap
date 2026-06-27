@@ -842,5 +842,6 @@
   "File copied to clipboard": "File copied to clipboard",
   "Saved; clipboard copy failed": "Saved; clipboard copy failed",
   "Text copied": "Text copied",
-  "points": "points"
+  "points": "points",
+  "Thickness {0}": "Thickness {0}"
 }
