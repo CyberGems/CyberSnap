@@ -1167,5 +1167,18 @@
   "Saved; clipboard copy failed": "Guardado; falló la copia al portapapeles",
   "Text copied": "Texto copiado",
   "points": "puntos",
-  "Thickness {0}": "Grosor {0}"
+  "Thickness {0}": "Grosor {0}",
+  "Encoding, please wait...": "Codificando, por favor espera...",
+  "Encoding GIF...": "Codificando GIF...",
+  "Saving...": "Guardando...",
+  "Save preview": "Guardar vista previa",
+  "Save this preview image.": "Guardar esta vista previa.",
+  "Saving preview": "Guardando vista previa",
+  "Save is already running.": "El guardado ya está en curso.",
+  "File missing": "Archivo no encontrado",
+  "The saved file is no longer on disk.": "El archivo seleccionado ya no está en la ubicación original.",
+  "The selected file is no longer on the original location.": "El archivo seleccionado ya no está en la ubicación original.",
+  "The selected file is no longer on the original location": "El archivo seleccionado ya no está en la ubicación original.",
+  "Save a copy of this GIF": "Guardar una copia de este GIF",
+  "Save a copy of this MP4": "Guardar una copia de este MP4"
 }

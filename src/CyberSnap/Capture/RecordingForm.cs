@@ -693,7 +693,9 @@ public sealed partial class RecordingForm : Form
             float spinY = _toolbarRect.Y + _toolbarRect.Height / 2f - 4;
             g.FillEllipse(_spinBrush, spinX, spinY, 8, 8);
 
-            string encLabel = _format == Models.RecordingFormat.GIF ? "Encoding GIF..." : "Saving...";
+            string encLabel = _format == Models.RecordingFormat.GIF
+                ? LocalizationService.Translate("Encoding GIF...")
+                : LocalizationService.Translate("Saving...");
             var encRect = new RectangleF(spinX + 16, _toolbarRect.Y, _toolbarRect.Width - 30, _toolbarRect.Height);
             using var encFormat = new StringFormat { LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
             g.DrawString(encLabel, _encFont, _encTextBrush, encRect, encFormat);

@@ -70,7 +70,7 @@ public partial class PreviewWindow
                 else
                 {
                     if (!string.IsNullOrWhiteSpace(_savedFilePath))
-                        ShowPreviewDragError("The saved file is no longer on disk.");
+                        ShowPreviewDragError(LocalizationService.Translate("The selected file is no longer on the original location."));
                     else
                         ShowPreviewDragError("No preview file is available to drag.");
 
@@ -165,7 +165,7 @@ public partial class PreviewWindow
             }
             else if (!string.IsNullOrWhiteSpace(_savedFilePath))
             {
-                ShowPreviewOpenError("The saved file is no longer on disk.");
+                ShowPreviewOpenError(LocalizationService.Translate("The selected file is no longer on the original location."));
             }
             else
             {
@@ -383,7 +383,7 @@ public partial class PreviewWindow
 
     private void OpenEditor()
     {
-        if (_isGif || _screenshot is null) return;
+        if (_isGif || _isVideo || _screenshot is null) return;
 
         try
         {
@@ -455,19 +455,21 @@ public partial class PreviewWindow
         try
         {
             PreviewSaveOperationResult saveResult;
-            if (_isGif)
+            if (_isGif || _isVideo)
             {
                 if (!HasSavedPreviewFileOnDisk())
                 {
-                    saveResult = PreviewSaveOperationResult.Failed("The saved file is no longer on disk.");
+                    saveResult = PreviewSaveOperationResult.Failed(LocalizationService.Translate("The selected file is no longer on the original location."));
                 }
                 else
                 {
+                    string ext = _isGif ? ".gif" : ".mp4";
+                    string filter = _isGif ? "GIF|*.gif" : "MP4 Video|*.mp4";
                     var dlg = new SaveFileDialog
                     {
-                        Filter = "GIF|*.gif",
+                        Filter = filter,
                         FileName = Path.GetFileName(_savedFilePath),
-                        DefaultExt = ".gif"
+                        DefaultExt = ext
                     };
                     saveResult = RunPreviewSaveOperation(() => dlg.ShowDialog(this), () => File.Copy(_savedFilePath!, dlg.FileName!, true));
                 }
@@ -509,7 +511,7 @@ public partial class PreviewWindow
             {
                 _isSavingPreview = false;
                 SaveBtn.IsEnabled = true;
-                RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", "Save this preview image.");
+                RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", GetSaveHelpText());
                 ResumePreviewAutoDismiss(remainingAutoDismissSeconds);
             }
         }
@@ -615,7 +617,14 @@ public partial class PreviewWindow
         _isSavingPreview = false;
         _mouseIsDown = false;
         SaveBtn.IsEnabled = true;
-        RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", "Save this preview image.");
+        RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", GetSaveHelpText());
+    }
+
+    private string GetSaveHelpText()
+    {
+        if (_isVideo) return LocalizationService.Translate("Save a copy of this MP4");
+        if (_isGif) return LocalizationService.Translate("Save a copy of this GIF");
+        return LocalizationService.Translate("Save this preview image.");
     }
 
     private static void RunOnClosedCleanup(string diagnosticKey, Action cleanup)

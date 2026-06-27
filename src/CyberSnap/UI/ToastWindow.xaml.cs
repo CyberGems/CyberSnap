@@ -587,7 +587,7 @@ public partial class ToastWindow : Window
                 : ("Pin preview", "Keep this preview open."),
             Helpers.ToastButtonKind.Save => _isSavingPreview
                 ? ("Saving preview", "Save is already running.")
-                : ("Save preview", "Save this preview image."),
+                : GetSaveButtonAccessibility(),
             Helpers.ToastButtonKind.Copy => ("Copy to clipboard", "Copy this preview to the clipboard."),
             Helpers.ToastButtonKind.Office => _isRunningOfficeAction
                 ? ("Send to action running", "Open with or send action is already running.")
@@ -601,6 +601,18 @@ public partial class ToastWindow : Window
             _ => ("Toast action", "Run this toast action.")
         };
         SetToastElementAccessibility(button, name, helpText);
+    }
+
+    private (string name, string helpText) GetSaveButtonAccessibility()
+    {
+        bool isGif = _savedFilePath != null &&
+            _savedFilePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
+        bool isMp4 = _savedFilePath != null &&
+            _savedFilePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase);
+
+        if (isGif) return ("Save preview", LocalizationService.Translate("Save a copy of this GIF"));
+        if (isMp4) return ("Save preview", LocalizationService.Translate("Save a copy of this MP4"));
+        return ("Save preview", LocalizationService.Translate("Save this preview image."));
     }
 
     private static void SetToastElementAccessibility(FrameworkElement element, string name, string helpText)
@@ -787,10 +799,36 @@ public partial class ToastWindow : Window
             ApplyPinnedState(true);
             RegionOverlayForm.CloseTransientUi();
 
+            // Determine if this is a GIF or MP4 recording based on the saved file path.
+            bool isGif = _savedFilePath != null &&
+                _savedFilePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase);
+            bool isMp4 = _savedFilePath != null &&
+                _savedFilePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase);
+            bool isRecording = isGif || isMp4;
+
+            string filter;
+            string defaultExt;
+            if (isGif)
+            {
+                filter = "GIF|*.gif";
+                defaultExt = ".gif";
+            }
+            else if (isMp4)
+            {
+                filter = "MP4 Video|*.mp4";
+                defaultExt = ".mp4";
+            }
+            else
+            {
+                filter = "PNG|*.png|JPEG|*.jpg|BMP|*.bmp";
+                defaultExt = ".png";
+            }
+
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
                 FileName = _savedFilePath != null ? Path.GetFileName(_savedFilePath) : "screenshot.png",
-                Filter = "PNG|*.png|JPEG|*.jpg|BMP|*.bmp"
+                Filter = filter,
+                DefaultExt = defaultExt
             };
             if (dlg.ShowDialog(this) != true)
             {
@@ -799,24 +837,43 @@ public partial class ToastWindow : Window
                 return;
             }
 
-            var format = dlg.FilterIndex switch
+            if (isRecording)
             {
-                2 => Models.CaptureImageFormat.Jpeg,
-                3 => Models.CaptureImageFormat.Bmp,
-                _ => Models.CaptureImageFormat.Png
-            };
-
-            try
-            {
-                CaptureOutputService.SaveBitmap(_previewBitmap, dlg.FileName, format, jpegQuality: 92);
-                Show(ToastSpec.Standard("Saved", Path.GetFileName(dlg.FileName)));
+                // For GIF/MP4 recordings, copy the original file to preserve animation.
+                try
+                {
+                    File.Copy(_savedFilePath!, dlg.FileName, true);
+                    Show(ToastSpec.Standard("Saved", Path.GetFileName(dlg.FileName)));
+                }
+                catch (Exception ex)
+                {
+                    Show(ToastSpec.Error(
+                        "Save failed",
+                        BuildToastActionFailureBody("CyberSnap could not save the recording. Choose another folder or check write permissions.", ex.Message),
+                        GetExistingSavedFilePathOrNull()));
+                }
             }
-            catch (Exception ex)
+            else
             {
-                Show(ToastSpec.Error(
-                    "Save failed",
-                    BuildToastActionFailureBody("CyberSnap could not save the preview. Choose another folder or check write permissions.", ex.Message),
-                    GetExistingSavedFilePathOrNull()));
+                var format = dlg.FilterIndex switch
+                {
+                    2 => Models.CaptureImageFormat.Jpeg,
+                    3 => Models.CaptureImageFormat.Bmp,
+                    _ => Models.CaptureImageFormat.Png
+                };
+
+                try
+                {
+                    CaptureOutputService.SaveBitmap(_previewBitmap, dlg.FileName, format, jpegQuality: 92);
+                    Show(ToastSpec.Standard("Saved", Path.GetFileName(dlg.FileName)));
+                }
+                catch (Exception ex)
+                {
+                    Show(ToastSpec.Error(
+                        "Save failed",
+                        BuildToastActionFailureBody("CyberSnap could not save the preview. Choose another folder or check write permissions.", ex.Message),
+                        GetExistingSavedFilePathOrNull()));
+                }
             }
         }
         finally
@@ -1154,7 +1211,7 @@ public partial class ToastWindow : Window
 
     private void ShowSavedFileMissingError(string? filePath = null)
     {
-        Show(ToastSpec.Error("File missing", "The saved file is no longer on disk.", filePath ?? _savedFilePath));
+        Show(ToastSpec.Error(LocalizationService.Translate("File missing"), LocalizationService.Translate("The selected file is no longer on the original location."), filePath ?? _savedFilePath));
     }
 
     private static bool OpenExternalUrl(string url, string? filePath = null)
