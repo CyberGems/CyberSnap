@@ -132,6 +132,9 @@
                             <Trigger Property="Tag" Value="General">
                                 <Setter TargetName="Icon" Property="Text" Value="&#xE713;"/>
                             </Trigger>
+                            <Trigger Property="Tag" Value="Sounds">
+                                <Setter TargetName="Icon" Property="Text" Value="&#xE767;"/>
+                            </Trigger>
                             <Trigger Property="Tag" Value="Capture">
                                 <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
                                 <Setter TargetName="VectorIcon" Property="Visibility" Value="Visible"/>
@@ -909,6 +912,9 @@
                     <RadioButton x:Name="OcrTab" Content="OCR" Tag="OCR" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="ToastTab" Content="Notifications" Tag="Notifications" GroupName="Main"
+                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
+                    <RadioButton x:Name="SoundsTab" Content="Sounds" Tag="Sounds" GroupName="Main"
+                                 Services:LocalizationService.SourceText="Sounds"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="HotkeysTab" Content="Hotkeys" Tag="Hotkeys" GroupName="Main"
                                  Services:LocalizationService.SourceText="Hotkeys"
@@ -2425,53 +2431,6 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Sounds" Style="{StaticResource SectionLabel}"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE767;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Sound customization" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Preview, enable, or override individual sounds with your own MP3 files." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <Button x:Name="ResetAllSoundsBtn" Grid.Column="2" Content="Reset all" MinWidth="90"
-                                        VerticalAlignment="Center" Cursor="Hand"
-                                        ToolTip="Revert all sounds to their built-in defaults."
-                                        AutomationProperties.Name="Reset all sounds to defaults"
-                                        Click="ResetAllSoundsBtn_Click"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Opacity="0.45" Margin="0,4,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE767;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Enable all sounds" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Master switch for every capture and notification sound. Turn off to silence them all." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="MuteSoundsCheck" Grid.Column="2" Content="" FontSize="13"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Enable all sounds"
-                                          ToolTip="Master switch for every capture and notification sound. Turn off to silence them all."
-                                          Checked="MuteSoundsCheck_Changed" Unchecked="MuteSoundsCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Opacity="0.45" Margin="0,8,0,4"/>
-                            <StackPanel x:Name="SoundCustomizationPanel"/>
-                        </StackPanel>
-                    </Border>
-
                     <TextBlock x:Name="GeneralPreferenceStatusText"
                                Style="{StaticResource SettingsStatusText}"
                                Visibility="Collapsed"
@@ -2578,6 +2537,48 @@
                                AutomationProperties.LiveSetting="Polite"
                                Margin="4,4,0,8"/>
 
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer x:Name="SoundsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,42,18,18">
+                <StackPanel>
+                    <TextBlock Text="Sounds" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE767;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="Enable sound effects" Services:LocalizationService.SourceText="Enable sound effects" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Services:LocalizationService.SourceText="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button x:Name="ResetAllSoundsBtn" Content="Reset all" MinWidth="90" Margin="0,0,12,0"
+                                            VerticalAlignment="Center" Cursor="Hand"
+                                            ToolTip="Revert all sounds to their built-in defaults."
+                                            AutomationProperties.Name="Reset all sounds to defaults"
+                                            Click="ResetAllSoundsBtn_Click"/>
+                                    <CheckBox x:Name="MuteSoundsCheck" Content="" FontSize="13"
+                                              VerticalAlignment="Center"
+                                              AutomationProperties.Name="Enable all sounds"
+                                              ToolTip="Master switch for every capture and notification sound. Turn off to silence them all."
+                                              Checked="MuteSoundsCheck_Changed" Unchecked="MuteSoundsCheck_Changed"/>
+                                </StackPanel>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Opacity="0.45" Margin="0,8,0,8"/>
+                            <StackPanel x:Name="SoundCustomizationPanel"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock x:Name="SoundsPreferenceStatusText"
+                               Style="{StaticResource SettingsStatusText}"
+                               Visibility="Collapsed"
+                               Margin="4,8,0,0"/>
                 </StackPanel>
             </ScrollViewer>
 

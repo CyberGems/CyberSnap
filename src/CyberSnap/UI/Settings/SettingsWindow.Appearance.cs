@@ -52,6 +52,7 @@ public partial class SettingsWindow
         {
             [SettingsTab] = "\uE713", // General
             [ToastTab] = "\uEA8F", // Notifications
+            [SoundsTab] = "\uE767", // Sounds
             [CaptureTab] = "\uE7C2", // Capture
             [RecordingTab] = "\uE768", // Video
             [OcrTab] = "\uE8C8", // OCR
@@ -621,6 +622,7 @@ public partial class SettingsWindow
     private void ApplyMainTabSelection()
     {
         SettingsPanel.Visibility = SettingsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        SoundsPanel.Visibility = SoundsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         ToastPanel.Visibility = ToastTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         HotkeysPanel.Visibility = HotkeysTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         CapturePanel.Visibility = CaptureTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
@@ -665,6 +667,7 @@ public partial class SettingsWindow
     private string GetSelectedSettingsPageTitle()
     {
         if (ToastTab.IsChecked == true) return "Notifications";
+        if (SoundsTab.IsChecked == true) return "Sounds";
         if (CaptureTab.IsChecked == true) return "Capture";
         if (WidgetTab.IsChecked == true) return "Widget";
         if (EditorTab.IsChecked == true) return "Editor";

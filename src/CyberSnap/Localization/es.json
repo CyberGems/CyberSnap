@@ -74,6 +74,8 @@
   "Sounds": "Sonidos",
   "Sound customization": "Personalización de sonido",
   "Preview, enable, or override individual sounds with your own MP3 files.": "Previsualiza, activa o reemplaza sonidos individuales con tus propios archivos MP3.",
+  "Enable sound effects": "Activar efectos de sonido",
+  "Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files.": "Interruptor maestro para todos los sonidos de captura y notificación. Personaliza eventos individuales abajo usando archivos MP3 o WAV.",
   "Reset all": "Restablecer todo",
   "Revert all sounds to their built-in defaults.": "Revertir todos los sonidos a sus valores predeterminados.",
   "Enable all sounds": "Activar todos los sonidos",
