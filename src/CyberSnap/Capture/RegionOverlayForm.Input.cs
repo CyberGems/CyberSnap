@@ -432,33 +432,48 @@ public sealed partial class RegionOverlayForm
         // Select tool: check resize handles first, then hit-test annotations
         if (_mode == CaptureMode.Move)
         {
-            // Check resize handles on already-selected annotation
-            int handle = GetSelectHandle(e.Location);
-            if (handle >= 0 && handle != 8 && _selectedAnnotationIndex >= 0)
+            // Check resize/move handles on either the already-selected or the currently hovered annotation
+            int handle = -1;
+            int clickedIdx = -1;
+            if (_selectedAnnotationIndex >= 0)
             {
-                _isSelectResizing = true;
-                _selectResizeHandle = handle;
-                _selectDragStart = e.Location;
-                _selectHandleBounds = GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]);
-                _selectResizeOriginalAnnotation = _undoStack[_selectedAnnotationIndex];
-                _selectPreviewAnnotation = _selectResizeOriginalAnnotation;
-                _renderSkipIndex = _selectedAnnotationIndex;
-                MarkCommittedAnnotationsDirty();
-                ClearCrosshairGuides();
-                Invalidate();
-                return;
+                handle = GetSelectHandle(e.Location, _selectedAnnotationIndex);
+                if (handle >= 0) clickedIdx = _selectedAnnotationIndex;
             }
-            else if (handle == 8 && _selectedAnnotationIndex >= 0)
+            if (handle < 0 && _moveHoverIndex >= 0)
             {
-                _isSelectDragging = true;
-                var bounds = GetAnnotationBounds(_undoStack[_selectedAnnotationIndex]);
-                _selectPreviewAnnotation = _undoStack[_selectedAnnotationIndex];
-                _selectDragStart = e.Location;
-                _selectDragOffset = new Point(e.Location.X - bounds.X, e.Location.Y - bounds.Y);
-                _renderSkipIndex = _selectedAnnotationIndex;
-                MarkCommittedAnnotationsDirty();
-                ClearCrosshairGuides();
-                Invalidate();
+                handle = GetSelectHandle(e.Location, _moveHoverIndex);
+                if (handle >= 0) clickedIdx = _moveHoverIndex;
+            }
+
+            if (clickedIdx >= 0 && handle >= 0)
+            {
+                _selectedAnnotationIndex = clickedIdx;
+                if (handle != 8)
+                {
+                    _isSelectResizing = true;
+                    _selectResizeHandle = handle;
+                    _selectDragStart = e.Location;
+                    _selectHandleBounds = GetAnnotationBounds(_undoStack[clickedIdx]);
+                    _selectResizeOriginalAnnotation = _undoStack[clickedIdx];
+                    _selectPreviewAnnotation = _selectResizeOriginalAnnotation;
+                    _renderSkipIndex = clickedIdx;
+                    MarkCommittedAnnotationsDirty();
+                    ClearCrosshairGuides();
+                    Invalidate();
+                }
+                else
+                {
+                    _isSelectDragging = true;
+                    var bounds = GetAnnotationBounds(_undoStack[clickedIdx]);
+                    _selectPreviewAnnotation = _undoStack[clickedIdx];
+                    _selectDragStart = e.Location;
+                    _selectDragOffset = new Point(e.Location.X - bounds.X, e.Location.Y - bounds.Y);
+                    _renderSkipIndex = clickedIdx;
+                    MarkCommittedAnnotationsDirty();
+                    ClearCrosshairGuides();
+                    Invalidate();
+                }
                 return;
             }
 
