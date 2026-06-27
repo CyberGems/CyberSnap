@@ -1577,7 +1577,7 @@ public partial class HistoryWindow
         var fileName = string.IsNullOrWhiteSpace(filePath) ? "" : Path.GetFileName(filePath);
         var detail = string.IsNullOrWhiteSpace(fileName)
             ? LocalizationService.Translate("The selected file is no longer on the original location.")
-            : $"{LocalizationService.Translate("The selected file is no longer on the original location.")}: {fileName}";
+            : $"{LocalizationService.Translate("The selected file is no longer on the original location.")}:\n{fileName}";
         ToastWindow.ShowError(LocalizationService.Translate("File missing"), detail, filePath);
     }
 

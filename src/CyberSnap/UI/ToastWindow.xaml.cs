@@ -523,7 +523,7 @@ public partial class ToastWindow : Window
         bool textCloseVisible = _previewBitmap is null &&
                                 Helpers.ToastButtonLayout.IsVisible(_buttonLayout, Helpers.ToastButtonKind.Close) &&
                                 TextContentPanel.Visibility == Visibility.Visible;
-        SetToastElementAccessibility(TextCloseBtn, "Close notification", "Close this notification.");
+        SetToastElementAccessibility(TextCloseBtn, LocalizationService.Translate("Close notification"), LocalizationService.Translate("Close this notification."));
         TextCloseBtn.Visibility = textCloseVisible ? Visibility.Visible : Visibility.Collapsed;
         if (textCloseVisible)
             ApplyTextCloseVisual(active: false);
