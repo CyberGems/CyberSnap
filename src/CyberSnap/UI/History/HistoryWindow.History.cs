@@ -784,7 +784,14 @@ public partial class HistoryWindow
         {
             vm.Card.ToolTip = null;
             if (vm.ImageContainer is FrameworkElement imgContainer)
-                imgContainer.ToolTip = null;
+            {
+                imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+                {
+                    HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
+                    HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
+                    _ => LocalizationService.Translate("Open in Editor"),
+                };
+            }
         }
 
         if (vm.SelectionBadge is Border badge)

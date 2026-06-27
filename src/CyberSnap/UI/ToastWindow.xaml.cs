@@ -586,7 +586,7 @@ public partial class ToastWindow : Window
                 ? ("Unpin preview", "Allow this preview to dismiss automatically.")
                 : ("Pin preview", "Keep this preview open."),
             Helpers.ToastButtonKind.Save => _isSavingPreview
-                ? ("Saving preview", "Save is already running.")
+                ? (LocalizationService.Translate("Saving preview"), LocalizationService.Translate("Save is already running."))
                 : GetSaveButtonAccessibility(),
             Helpers.ToastButtonKind.Copy => ("Copy to clipboard", "Copy this preview to the clipboard."),
             Helpers.ToastButtonKind.Office => _isRunningOfficeAction
