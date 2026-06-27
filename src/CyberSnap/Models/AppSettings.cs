@@ -169,6 +169,7 @@ public sealed class AppSettings
     public string OcrDefaultTranslateFrom { get; set; } = "auto";
     public string OcrDefaultTranslateTo { get; set; } = "auto";
     public bool OcrAutoCopyToClipboard { get; set; }
+    public bool OcrResultWindowPinnedByDefault { get; set; } = true;
     public bool OcrTranslationPanelExpanded { get; set; }
     public string? GoogleTranslateApiKey { get; set; }
     public bool TranslationRuntimeInstalled { get; set; }

@@ -128,8 +128,10 @@ public partial class CyberSnapTitleBar : UserControl
     private void RefreshPinIcon()
     {
         if (PinIcon == null) return;
-        var titleIcon = System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
-        PinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", titleIcon, 18, IsPinActive);
+        var pinColor = IsPinActive
+            ? System.Drawing.Color.FromArgb(230, 220, 92, 92)
+            : System.Drawing.Color.FromArgb(190, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+        PinIcon.Source = Helpers.FluentIcons.RenderWpf("pin", pinColor, 18, active: true);
         PinBtn.ToolTip = LocalizationService.Translate(IsPinActive ? "Unpin" : "Pin");
     }
 

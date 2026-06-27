@@ -52,6 +52,15 @@
                         Visibility="Collapsed">
                     <Image x:Name="ActionIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
                 </Border>
+                <Border x:Name="PinBtn"
+                        Style="{StaticResource CyberSnapTitleButton}"
+                        Margin="8,0,4,0"
+                        MouseLeftButtonDown="PinBtn_MouseLeftButtonDown"
+                        MouseEnter="TitleBtn_MouseEnter"
+                        MouseLeave="TitleBtn_MouseLeave"
+                        Visibility="Collapsed">
+                    <Image x:Name="PinIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
+                </Border>
                 <Border x:Name="MinimizeBtn"
                         Style="{StaticResource CyberSnapTitleButton}"
                         MouseLeftButtonDown="MinimizeBtn_MouseLeftButtonDown"
@@ -67,14 +76,6 @@
                         MouseLeave="TitleBtn_MouseLeave"
                         ToolTip="Maximize">
                     <Image x:Name="MaximizeIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
-                </Border>
-                <Border x:Name="PinBtn"
-                        Style="{StaticResource CyberSnapTitleButton}"
-                        MouseLeftButtonDown="PinBtn_MouseLeftButtonDown"
-                        MouseEnter="TitleBtn_MouseEnter"
-                        MouseLeave="TitleBtn_MouseLeave"
-                        Visibility="Collapsed">
-                    <Image x:Name="PinIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
                 </Border>
                 <Border x:Name="CloseBtn"
                         Style="{StaticResource CyberSnapTitleCloseButton}"

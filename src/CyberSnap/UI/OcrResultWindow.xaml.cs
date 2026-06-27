@@ -64,6 +64,7 @@ public partial class OcrResultWindow : Window
         PopulateLanguageCombos();
         SelectTranslationModelCombo(settingsService.Settings.TranslationModel);
         SetTranslationPanelExpanded(settingsService.Settings.OcrTranslationPanelExpanded, animate: false);
+        SetPinned(settingsService.Settings.OcrResultWindowPinnedByDefault);
         LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
         OcrTitleBar.Title = LocalizationService.Translate("Text extraction (OCR)");
 
@@ -262,7 +263,7 @@ public partial class OcrResultWindow : Window
 
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => CloseWindow();
 
-    private void CopyBtn_Click(object sender, RoutedEventArgs e)
+    private async void CopyBtn_Click(object sender, RoutedEventArgs e)
     {
         var text = OcrTextBox.Text;
         if (string.IsNullOrWhiteSpace(text))
@@ -276,6 +277,9 @@ public partial class OcrResultWindow : Window
             ClipboardService.CopyTextToClipboard(text);
             SoundService.PlayTextSound();
             ToastWindow.Show(ToastSpec.Standard(LocalizationService.Translate("Text copied"), FormatCopyToastPreview(text)) with { SuppressSound = true });
+            CopyBtn.IsHitTestVisible = false;
+            await Task.Delay(120);
+            CloseWindow();
         }
         catch (Exception ex)
         {
@@ -840,7 +844,7 @@ public partial class OcrResultWindow : Window
 
         AddItem("Undo", "Ctrl+Z", "undo", () => OcrTextBox.Undo());
         menu.Items.Add(new Separator { Style = (TryFindResource("OcrSeparatorStyle") as Style) });
-        AddItem("Cut", "Ctrl+X", "select", () => OcrTextBox.Cut());
+        AddItem("Cut", "Ctrl+X", "cut", () => OcrTextBox.Cut());
         AddItem("Copy", "Ctrl+C", "copy", () => OcrTextBox.Copy());
         AddItem("Paste", "Ctrl+V", "paste", () => OcrTextBox.Paste());
         menu.Items.Add(new Separator { Style = (TryFindResource("OcrSeparatorStyle") as Style) });
@@ -867,7 +871,12 @@ public partial class OcrResultWindow : Window
 
     private void TitleBar_PinRequested(object? sender, EventArgs e)
     {
-        _isPinned = !_isPinned;
+        SetPinned(!_isPinned);
+    }
+
+    private void SetPinned(bool pinned)
+    {
+        _isPinned = pinned;
         _lifecycle.SetPinned(_isPinned);
         OcrTitleBar.IsPinActive = _isPinned;
     }
@@ -997,6 +1006,7 @@ public partial class OcrResultWindow : Window
         if (query.Length < SearchHighlightMinLength)
         {
             MatchCountText.Text = "";
+            UpdateSearchNavigationButtons();
             OcrSearchHighlightCanvas.Children.Clear();
             return;
         }
@@ -1030,6 +1040,14 @@ public partial class OcrResultWindow : Window
         MatchCountText.Text = _searchMatchStarts.Count == 0
             ? (SearchTextBox.Text.Length >= SearchHighlightMinLength ? "0/0" : "")
             : $"{_currentMatchIndex + 1}/{_searchMatchStarts.Count}";
+        UpdateSearchNavigationButtons();
+    }
+
+    private void UpdateSearchNavigationButtons()
+    {
+        var visibility = _searchMatchStarts.Count > 1 ? Visibility.Visible : Visibility.Hidden;
+        PrevMatchBtn.Visibility = visibility;
+        NextMatchBtn.Visibility = visibility;
     }
 
     private void HookOcrTextScrollViewer()
