@@ -32,6 +32,14 @@ public sealed partial class RegionOverlayForm
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        if (_isConfirmingSelection && e.KeyCode == Keys.Enter)
+        {
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+            CommitConfirmedSelection();
+            return;
+        }
+
         if (e.KeyCode == Keys.Escape)
         {
             e.SuppressKeyPress = true;

@@ -68,13 +68,14 @@ public sealed partial class RegionOverlayForm
                 if (nb.Width > 5 && nb.Height > 5)
                 {
                     var oldRect = _confirmRect;
-                    var (oldConfirm, oldCancel) = GetConfirmButtonRects();
+                    var (oldConfirm, oldCancel, oldClose) = GetConfirmButtonRects();
                     _confirmRect = nb;
                     InvalidateSelectionChromePart(oldRect, Point.Empty);
                     InvalidateSelectionChromePart(_confirmRect, Point.Empty);
-                    var (confirm, cancel) = GetConfirmButtonRects();
+                    var (confirm, cancel, close) = GetConfirmButtonRects();
                     Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
                     Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
+                    Invalidate(Rectangle.Union(InflateForRepaint(oldClose, 20), InflateForRepaint(close, 20)));
                 }
                 return;
             }
@@ -87,13 +88,14 @@ public sealed partial class RegionOverlayForm
                 int newX = e.Location.X - _confirmDragOffset.X;
                 int newY = e.Location.Y - _confirmDragOffset.Y;
                 var oldRect = _confirmRect;
-                var (oldConfirm, oldCancel) = GetConfirmButtonRects();
+                var (oldConfirm, oldCancel, oldClose) = GetConfirmButtonRects();
                 _confirmRect = new Rectangle(newX, newY, oldRect.Width, oldRect.Height);
                 InvalidateSelectionChromePart(oldRect, Point.Empty);
                 InvalidateSelectionChromePart(_confirmRect, Point.Empty);
-                var (confirm, cancel) = GetConfirmButtonRects();
+                var (confirm, cancel, close) = GetConfirmButtonRects();
                 Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
                 Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
+                Invalidate(Rectangle.Union(InflateForRepaint(oldClose, 20), InflateForRepaint(close, 20)));
                 return;
             }
 
@@ -127,9 +129,14 @@ public sealed partial class RegionOverlayForm
 
             if (_hoveredConfirmButton != prevHoveredConfirm)
             {
-                var (confirmBtn, cancelBtn) = GetConfirmButtonRects();
+                var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
                 Invalidate(InflateForRepaint(confirmBtn, 20));
                 Invalidate(InflateForRepaint(cancelBtn, 20));
+                Invalidate(InflateForRepaint(closeBtn, 20));
+
+                HideToolbarTooltip();
+                _tooltipDismissed = false;
+                _hoverButtonStartTime = DateTime.UtcNow;
             }
             return;
         }

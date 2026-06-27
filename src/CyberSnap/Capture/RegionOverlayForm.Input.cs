@@ -76,6 +76,11 @@ public sealed partial class RegionOverlayForm
                 StartConfirmPress(1); // squash animation, then ExitConfirmMode
                 return;
             }
+            if (confirmBtnHit == 2)
+            {
+                StartConfirmPress(2); // squash animation, then ConfirmAndCancelCapture
+                return;
+            }
             if (_confirmRect.Contains(e.Location))
             {
                 // Start dragging the confirmed region

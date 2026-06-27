@@ -201,4 +201,57 @@ public sealed partial class RegionOverlayForm
 
     private bool IsToolbarInteractive()
         => !_isSelecting && _toolbarForm is { IsDisposed: false, Visible: true };
+
+    private void ShowConfirmTooltip()
+    {
+        if (!_isConfirmingSelection || _hoveredConfirmButton < 0 || (_confirmContextMenu != null && _confirmContextMenu.Visible))
+        {
+            HideToolbarTooltip();
+            return;
+        }
+
+        _tooltipButton = 800 + _hoveredConfirmButton;
+        _toolbarToolTip ??= new WindowsToolTip();
+
+        var settings = Services.SettingsService.LoadStatic();
+        var isSpanish = settings != null && string.Equals(settings.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
+
+        string text = _hoveredConfirmButton switch
+        {
+            0 => isSpanish
+                ? "Confirmar captura  (Enter)\nGuarda o procesa la región seleccionada"
+                : "Confirm capture  (Enter)\nSave or process the selected region",
+            1 => isSpanish
+                ? "Reintentar área  (Clic/Arrastrar)\nDescarta el recorte actual y vuelve a seleccionar"
+                : "Retry area  (Click/Drag)\nDiscard the current crop and select again",
+            2 => isSpanish
+                ? "Cancelar captura completa  (Esc)\nCierra la herramienta de captura descartándolo todo"
+                : "Cancel capture completely  (Esc)\nClose the capture tool and discard everything",
+            _ => ""
+        };
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            HideToolbarTooltip();
+            return;
+        }
+
+        var rects = GetConfirmButtonRects();
+        var anchor = _hoveredConfirmButton switch
+        {
+            0 => rects.confirm,
+            1 => rects.cancel,
+            _ => rects.close
+        };
+
+        var anchorScreen = new Rectangle(
+            _virtualBounds.X + anchor.X,
+            _virtualBounds.Y + anchor.Y,
+            anchor.Width,
+            anchor.Height);
+
+        _toolbarToolTip.ShowNear(this, text, anchorScreen, IsBottomDock);
+        _tooltipVisible = true;
+        _tooltipShowTime = DateTime.UtcNow;
+    }
 }
