@@ -448,7 +448,7 @@ public partial class PreviewWindow
 
         _isSavingPreview = true;
         SaveBtn.IsEnabled = false;
-        RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Saving preview", "Save is already running.");
+        RefreshPreviewOverlayButtonAccessibility(SaveBtn, LocalizationService.Translate("Saving preview"), LocalizationService.Translate("Save is already running."));
         var remainingAutoDismissSeconds = PausePreviewAutoDismiss();
 
         var saved = false;

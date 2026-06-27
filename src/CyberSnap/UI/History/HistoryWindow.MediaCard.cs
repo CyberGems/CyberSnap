@@ -135,6 +135,17 @@ public partial class HistoryWindow
 
         imgContainer.Cursor = Cursors.Hand;
 
+        // Dynamic tooltip for image cards based on the configured click action.
+        if (vm.Entry.Kind == HistoryKind.Image)
+        {
+            imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+            {
+                HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
+                HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
+                _ => LocalizationService.Translate("Open in Editor"),
+            };
+        }
+
         // Context menu
         var actionMenu = CreateCardActionMenu();
         if (HasHistoryFilePath(vm.Entry.FilePath))
