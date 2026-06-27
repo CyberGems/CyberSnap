@@ -133,12 +133,17 @@ public partial class HistoryWindow
         AutomationProperties.SetName(card, $"{kindLabel} history item");
         AutomationProperties.SetHelpText(card, "Press Enter or Space to open this history item. Press Ctrl+C to copy it. In select mode, press Enter or Space to select it.");
 
-        imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+        // Only show the click-action tooltip on image cards; other card types have their
+        // own tooltips and the "Open in Editor" action doesn't apply to them.
+        if (vm.Entry.Kind == HistoryKind.Image)
         {
-            HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
-            HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
-            _ => LocalizationService.Translate("Open in Editor"),
-        };
+            imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+            {
+                HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
+                HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
+                _ => LocalizationService.Translate("Open in Editor"),
+            };
+        }
         imgContainer.Cursor = Cursors.Hand;
 
         // Context menu
@@ -697,19 +702,14 @@ public partial class HistoryWindow
 
         try
         {
-            // UseShellExecute=true with no explicit Verb lets Windows pick the default action.
-            using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            // UseShellExecute=true may return null when the shell reuses an already-running
+            // process (e.g., opening a video in a player that's already open). This is normal
+            // and not an error — the file was opened successfully.
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName = filePath,
                 UseShellExecute = true
-            });
-            if (process is null)
-            {
-                var body = LocalizationService.Translate(
-                    "Windows could not find a program to open this file type. Set a default app for this format in Windows Settings, or open it from disk manually.");
-                ToastWindow.ShowError(LocalizationService.Translate("Open failed"), body, filePath);
-                return false;
-            }
+            })?.Dispose();
 
             return true;
         }
