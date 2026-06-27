@@ -505,12 +505,6 @@ public sealed partial class RegionOverlayForm
 
             if (!handled)
             {
-                if (_moveHoverIndex != -1)
-                {
-                    if (_moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)
-                        Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[_moveHoverIndex]), 16, 16));
-                    _moveHoverIndex = -1;
-                }
 
                 if (_mode == CaptureMode.Text && !_isTyping)
                     target = Cursors.IBeam;
