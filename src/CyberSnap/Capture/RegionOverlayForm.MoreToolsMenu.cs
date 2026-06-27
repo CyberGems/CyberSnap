@@ -167,8 +167,7 @@ public sealed partial class RegionOverlayForm
                 }
             }
             menu.Items.Add(hideItem);
-            if (hiddenTools.Count > 0)
-                menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(new ToolStripSeparator());
         }
 
         // Show annotation bar checkable toggle — always shown.
