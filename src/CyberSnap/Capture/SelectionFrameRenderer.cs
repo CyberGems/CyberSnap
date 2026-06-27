@@ -40,13 +40,21 @@ internal static class SelectionFrameRenderer
 
         // Draw outer premium neon accent line
         using (var outerPen = new Pen(UiChrome.AccentColor, 1.5f))
+        {
+            outerPen.DashStyle = DashStyle.Dash;
+            outerPen.DashPattern = new[] { 6f, 4f };
             g.DrawRectangle(outerPen, outline);
+        }
 
         // Draw inner crisp white line for high contrast
         var innerOutline = outline;
         innerOutline.Inflate(-1, -1);
         using (var innerPen = new Pen(Color.FromArgb(200, 255, 255, 255), 1f))
+        {
+            innerPen.DashStyle = DashStyle.Dash;
+            innerPen.DashPattern = new[] { 6f, 4f };
             g.DrawRectangle(innerPen, innerOutline);
+        }
 
         // Draw tactical HUD-style corner brackets
         const int cornerLen = 12;
