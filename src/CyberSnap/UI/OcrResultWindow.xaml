@@ -276,6 +276,23 @@
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
 
+        <Style x:Key="OcrSearchNavButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="Width" Value="14"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="MinWidth" Value="14"/>
+            <Setter Property="MinHeight" Value="20"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
         <Style x:Key="OcrContextMenuStyle" TargetType="ContextMenu">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
@@ -384,10 +401,12 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="Recognized text" Style="{StaticResource OcrSectionHeaderText}"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Border Width="130" Height="24" CornerRadius="4"
+                        <Border x:Name="SearchBoxShell" Width="130" Height="24" CornerRadius="4"
                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                                Margin="0,0,6,0">
+                                Margin="0,0,6,0" Cursor="IBeam"
+                                ToolTip="Search OCR text. Press Enter to cycle through matches; Shift+Enter goes back."
+                                MouseLeftButtonDown="SearchBoxShell_MouseLeftButtonDown">
                             <Grid>
                                 <TextBox x:Name="SearchTextBox" BorderThickness="0" Background="Transparent"
                                          Padding="6,0,22,0" VerticalContentAlignment="Center" FontSize="11"
@@ -415,20 +434,18 @@
                                            MouseLeftButtonDown="SearchClearBtn_MouseLeftButtonDown"/>
                             </Grid>
                         </Border>
-                        <TextBlock x:Name="PrevMatchBtn" Text="&#x25B2;" FontSize="9" Cursor="Hand"
-                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}" Margin="2,0"
-                                   VerticalAlignment="Center" Visibility="Hidden"
-                                   MouseLeftButtonDown="PrevMatchBtn_MouseLeftButtonDown"/>
-                        <TextBlock x:Name="NextMatchBtn" Text="&#x25BC;" FontSize="9" Cursor="Hand"
-                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}" Margin="2,0"
-                                   VerticalAlignment="Center" Visibility="Hidden"
-                                   MouseLeftButtonDown="NextMatchBtn_MouseLeftButtonDown"/>
+                        <Button x:Name="PrevMatchBtn" Content="&#x25B2;"
+                                Style="{StaticResource OcrSearchNavButton}" Visibility="Hidden"
+                                Click="PrevMatchBtn_Click"/>
+                        <Button x:Name="NextMatchBtn" Content="&#x25BC;"
+                                Style="{StaticResource OcrSearchNavButton}" Visibility="Hidden"
+                                Click="NextMatchBtn_Click"/>
                         <TextBlock x:Name="MatchCountText" VerticalAlignment="Center"
-                                   Width="42" FontSize="10.5" Opacity="0.4"
+                                   Width="36" FontSize="10.5" Opacity="0.4"
                                    TextAlignment="Left"
                                    TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
                                    Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                   FontFamily="Segoe UI Variable Text" Margin="4,0,0,0"/>
+                                   FontFamily="Segoe UI Variable Text" Margin="2,0,0,0"/>
                         <TextBlock x:Name="CharCountText" VerticalAlignment="Center"
                                    FontSize="10.5" Opacity="0.4"
                                    TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"

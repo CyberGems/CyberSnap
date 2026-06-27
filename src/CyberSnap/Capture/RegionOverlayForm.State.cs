@@ -441,7 +441,7 @@ public sealed partial class RegionOverlayForm
         for (int i = _undoStack.Count - 1; i >= 0; i--)
         {
             var bounds = GetAnnotationBounds(_undoStack[i]);
-            var hoverBounds = Rectangle.Inflate(bounds, 16, 16);
+            var hoverBounds = Rectangle.Inflate(bounds, 32, 32);
             if (hoverBounds.Contains(p))
                 return i;
         }
