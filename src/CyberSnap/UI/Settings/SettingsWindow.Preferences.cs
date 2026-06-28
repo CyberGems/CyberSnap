@@ -312,20 +312,7 @@ public partial class SettingsWindow
             value => AnnotationStrokeShadowCheck.IsChecked = value);
     }
 
-    private void AllowHotkeyOverrideCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
-        var previous = _settingsService.Settings.AllowHotkeyOverride;
-        var selected = AllowHotkeyOverrideCheck.IsChecked == true;
-        UpdateCaptureSavePreference(
-            "settings.allow-hotkey-override",
-            "Allow hotkey override",
-            previous,
-            selected,
-            value => _settingsService.Settings.AllowHotkeyOverride = value,
-            value => AllowHotkeyOverrideCheck.IsChecked = value);
-    }
 
     private void ToastPositionBlock_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {

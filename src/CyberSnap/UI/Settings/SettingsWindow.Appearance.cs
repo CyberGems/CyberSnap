@@ -201,7 +201,6 @@ public partial class SettingsWindow
             WindowDetectionCheck.IsChecked = s.WindowDetection != WindowDetectionMode.Off;
             ShowCursorCheck.IsChecked = s.ShowCursor;
             AnnotationStrokeShadowCheck.IsChecked = s.AnnotationStrokeShadow;
-            AllowHotkeyOverrideCheck.IsChecked = s.AllowHotkeyOverride;
             CaptureDelayCombo.SelectedIndex = s.CaptureDelaySeconds switch { 3 => 1, 5 => 2, 10 => 3, _ => 0 };
             AutoPinPreviewsCheck.IsChecked = s.AutoPinPreviews;
             NotificationsEnabledCheck.IsChecked = s.NotificationsEnabled;
