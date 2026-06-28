@@ -206,6 +206,7 @@ public static class ToolListBuilder
         {
             ("rect", "Area Capture", ToolDef.AllTools.First(t => t.Id == "rect").Icon),
             ("_repeatLastArea", "Repeat last area", ToolGlyphs.RepeatLastAreaGlyph),
+            ("_repeatLastScrollArea", "Repeat last scroll area", ToolGlyphs.ScrollCaptureGlyph), // TODO: Consider using a dedicated repeat scroll glyph if available
             ("center", "From Center", ToolDef.AllTools.First(t => t.Id == "center").Icon),
             ("_scrollCapture", "Scrolling Capture", ToolGlyphs.ScrollCaptureGlyph),
             ("ocr", "OCR", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),

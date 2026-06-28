@@ -200,6 +200,8 @@ public sealed class AppSettings
     public uint ActiveWindowHotkeyKey { get; set; }
     public uint RepeatLastAreaHotkeyModifiers { get; set; }
     public uint RepeatLastAreaHotkeyKey { get; set; }
+    public uint RepeatLastScrollAreaHotkeyModifiers { get; set; }
+    public uint RepeatLastScrollAreaHotkeyKey { get; set; }
     public uint RulerHotkeyModifiers { get; set; }
     public uint RulerHotkeyKey { get; set; }
 
@@ -293,6 +295,11 @@ public sealed class AppSettings
     public int LastCaptureRectY { get; set; }
     public int LastCaptureRectWidth { get; set; }
     public int LastCaptureRectHeight { get; set; }
+    public bool HasLastScrollRect { get; set; }
+    public int LastScrollRectX { get; set; }
+    public int LastScrollRectY { get; set; }
+    public int LastScrollRectWidth { get; set; }
+    public int LastScrollRectHeight { get; set; }
     public WindowDetectionMode WindowDetection { get; set; } = WindowDetectionMode.WindowOnly;
     public CaptureDockSide CaptureDockSide { get; set; } = CaptureDockSide.Bottom;
     public ScrollingCaptureMode ScrollingCaptureMode { get; set; } = ScrollingCaptureMode.AssistAutoscroll;
