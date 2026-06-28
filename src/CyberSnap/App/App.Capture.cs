@@ -502,11 +502,12 @@ public partial class App
                     {
                         SoundService.PlayColorSound();
                         string bare = hex.TrimStart('#');
-                        var copySucceeded = TryCopyCaptureTextToClipboard(bare);
+                        string formatted = $"#{bare}";
+                        var copySucceeded = TryCopyCaptureTextToClipboard(formatted);
                         byte r = Convert.ToByte(bare[..2], 16);
                         byte g = Convert.ToByte(bare[2..4], 16);
                         byte b = Convert.ToByte(bare[4..6], 16);
-                        ToastWindow.ShowWithColor(copySucceeded ? "Color copied" : "Color picked", bare,
+                        ToastWindow.ShowWithColor(copySucceeded ? "Color copied" : "Color picked", formatted,
                             System.Windows.Media.Color.FromRgb(r, g, b), suppressSound: true);
 
                         if (_settingsService!.Settings.SaveHistory)
