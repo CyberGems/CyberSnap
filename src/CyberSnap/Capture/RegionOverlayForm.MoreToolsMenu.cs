@@ -29,13 +29,14 @@ public sealed partial class RegionOverlayForm
 
         _quickStartGuide ??= new QuickStartGuide();
 
-        var logoScreen = new Rectangle(
-            _virtualBounds.X + _logoRect.X,
-            _virtualBounds.Y + _logoRect.Y,
-            _logoRect.Width,
-            _logoRect.Height);
+        var anchorLocal = Rectangle.Union(_logoRect, _brandRect);
+        var anchorScreen = new Rectangle(
+            _virtualBounds.X + anchorLocal.X,
+            _virtualBounds.Y + anchorLocal.Y,
+            anchorLocal.Width,
+            anchorLocal.Height);
 
-        _quickStartGuide.ShowNear(this, logoScreen, above: IsBottomDock);
+        _quickStartGuide.ShowNear(this, anchorScreen, above: IsBottomDock);
         _quickStartGuide.FormClosed += (_, _) => _quickStartGuide = null;
     }
 

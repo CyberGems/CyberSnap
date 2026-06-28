@@ -909,17 +909,102 @@ public sealed partial class RegionOverlayForm
         _confirmHandleDragIndex = -1;
         _hoveredConfirmButton = -1;
         ResetConfirmPress();
-        bool isOcr = _mode == CaptureMode.Ocr;
-        bool isScan = _mode == CaptureMode.Scan;
-        bool isSticker = _mode == CaptureMode.Sticker;
-        bool isUpscale = _mode == CaptureMode.Upscale;
-        bool isScroll = _mode == CaptureMode.ScrollCapture;
-        if (isOcr) OcrRegionSelected?.Invoke(rect);
-        else if (isScan) ScanRegionSelected?.Invoke(rect);
-        else if (isSticker) StickerRegionSelected?.Invoke(rect);
-        else if (isUpscale) UpscaleRegionSelected?.Invoke(rect);
-        else if (isScroll) ScrollRegionSelected?.Invoke(rect);
+        InvokeRegionSelected(rect);
+    }
+
+    private void InvokeRegionSelected(Rectangle rect)
+    {
+        if (_mode == CaptureMode.Ocr) OcrRegionSelected?.Invoke(rect);
+        else if (_mode == CaptureMode.Scan) ScanRegionSelected?.Invoke(rect);
+        else if (_mode == CaptureMode.Sticker) StickerRegionSelected?.Invoke(rect);
+        else if (_mode == CaptureMode.Upscale) UpscaleRegionSelected?.Invoke(rect);
+        else if (_mode == CaptureMode.ScrollCapture) ScrollRegionSelected?.Invoke(rect);
         else RegionSelected?.Invoke(rect);
+    }
+
+    private Rectangle GetInstantCaptureRect()
+    {
+        if (_windowDetectionMode != WindowDetectionMode.Off)
+        {
+            var cursor = PointToClient(Cursor.Position);
+            var detected = WindowDetector.GetDetectionRectAtPoint(
+                cursor, _virtualBounds, _windowDetectionMode);
+            if (detected.Width > 0 && detected.Height > 0)
+                return detected;
+        }
+
+        if (_autoDetectRect.Width > 0 && _autoDetectRect.Height > 0)
+            return _autoDetectRect;
+
+        return new Rectangle(0, 0, _screenshot.Width, _screenshot.Height);
+    }
+
+    private void CommitCaptureRect(Rectangle rect, bool directCapture = false)
+    {
+        _autoDetectRect = Rectangle.Empty;
+        _autoDetectActive = false;
+        _hasSelection = false;
+        _selectionRect = Rectangle.Empty;
+        _selectionEnd = Point.Empty;
+
+        if (_mode == CaptureMode.Center && (rect.Width <= 2 || rect.Height <= 2))
+        {
+            Invalidate();
+            return;
+        }
+
+        if (!directCapture && ConfirmRegionBeforeCapture && _mode != CaptureMode.ScrollCapture)
+            EnterConfirmMode(rect);
+        else
+            InvokeRegionSelected(rect);
+    }
+
+    private bool TryCommitCaptureViaEnter()
+    {
+        if (_quickStartGuide != null && _quickStartGuide.Visible)
+        {
+            DismissQuickStartGuide();
+            return true;
+        }
+
+        if (_isConfirmingSelection)
+        {
+            CommitConfirmedSelection();
+            return true;
+        }
+
+        if (_emojiPickerOpen || _fontPickerOpen || _isTyping)
+            return false;
+        if (_toolbarContextMenu?.Visible == true || _confirmContextMenu?.Visible == true)
+            return false;
+        if (!IsSelectionCaptureMode())
+            return false;
+
+        HideCaptureBanner();
+
+        if (_isSelecting)
+        {
+            _isSelecting = false;
+            ResetEvasion();
+            CloseSelectionAdorner();
+            if (_selectionRect.Width > 2 && _selectionRect.Height > 2)
+                CommitCaptureRect(_selectionRect, directCapture: true);
+            else
+            {
+                _hasSelection = false;
+                Invalidate();
+            }
+            return true;
+        }
+
+        if (_hasSelection && _selectionRect.Width > 2 && _selectionRect.Height > 2)
+        {
+            CommitCaptureRect(_selectionRect, directCapture: true);
+            return true;
+        }
+
+        CommitCaptureRect(GetInstantCaptureRect(), directCapture: true);
+        return true;
     }
 
     private static readonly int ConfirmHandleSize = 16;

@@ -27,19 +27,19 @@ public sealed partial class RegionOverlayForm
             Cancel();
             return true;
         }
+        if ((keyData & Keys.KeyCode) == Keys.Enter
+            && (keyData & Keys.Modifiers) == Keys.None
+            && !_emojiPickerOpen
+            && !_isTyping
+            && TryCommitCaptureViaEnter())
+        {
+            return true;
+        }
         return base.ProcessCmdKey(ref msg, keyData);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
-        if (_isConfirmingSelection && e.KeyCode == Keys.Enter)
-        {
-            e.SuppressKeyPress = true;
-            e.Handled = true;
-            CommitConfirmedSelection();
-            return;
-        }
-
         if (e.KeyCode == Keys.Escape)
         {
             e.SuppressKeyPress = true;
@@ -117,6 +117,13 @@ public sealed partial class RegionOverlayForm
                 return;
             }
             // Printable characters are handled by OnKeyPress
+            return;
+        }
+
+        if (e.KeyCode == Keys.Enter && e.Modifiers == Keys.None && TryCommitCaptureViaEnter())
+        {
+            e.SuppressKeyPress = true;
+            e.Handled = true;
             return;
         }
 
