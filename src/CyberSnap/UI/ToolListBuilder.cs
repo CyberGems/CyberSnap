@@ -35,71 +35,52 @@ public static class ToolListBuilder
         var s = settingsService.Settings;
         // Icon color for rendering Fluent glyphs to bitmaps
         var iconColor = Theme.IsDark ? System.Drawing.Color.FromArgb(225, 255, 255, 255) : System.Drawing.Color.FromArgb(210, 0, 0, 0);
-        var segoe = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName);
 
         void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool showHotkey)
         {
-            var card = new Border
-            {
-                CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(12, 6, 12, 6),
-                Margin = new Thickness(0, 0, 0, 6),
-                MinHeight = 44,
-                BorderThickness = new Thickness(1),
-            };
-            card.SetResourceReference(Border.BackgroundProperty, "ThemeCardBrush");
-            card.SetResourceReference(Border.BorderBrushProperty, "ThemeWindowBorderBrush");
+            var card = new Border { Style = (Style)owner.FindResource("CompactItemCard") };
 
-            var grid = new Grid();
+            var grid = new Grid { VerticalAlignment = VerticalAlignment.Center };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            var left = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-
             if (icon != '\0')
             {
-                var iconFrame = new Border
-                {
-                    Width = 26,
-                    Height = 26,
-                    CornerRadius = new CornerRadius(6),
-                    BorderThickness = new Thickness(1),
-                    Margin = new Thickness(0, 0, 8, 0),
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                iconFrame.SetResourceReference(Border.BackgroundProperty, "ThemeTabActiveBrush");
-                iconFrame.SetResourceReference(Border.BorderBrushProperty, "ThemeInputBorderBrush");
-
+                var iconFrame = new Border { Style = (Style)owner.FindResource("CompactItemIconFrame") };
                 var img = new System.Windows.Controls.Image
                 {
-                    Source = ToolIcons.RenderToolIconWpf(toolId, icon, iconColor, 14),
-                    Width = 14,
-                    Height = 14,
-                    Opacity = 1,
+                    Source = ToolIcons.RenderToolIconWpf(toolId, icon, iconColor, 16),
+                    Width = 16,
+                    Height = 16,
+                    Opacity = 0.9,
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 };
                 System.Windows.Media.RenderOptions.SetBitmapScalingMode(img, System.Windows.Media.BitmapScalingMode.HighQuality);
                 iconFrame.Child = img;
-                left.Children.Add(iconFrame);
+                Grid.SetColumn(iconFrame, 0);
+                grid.Children.Add(iconFrame);
             }
 
             var labelBlock = new TextBlock
             {
                 Text = label,
-                FontSize = 12,
-                FontFamily = segoe,
                 VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(8, 0, 12, 0),
+                Style = (Style)owner.FindResource("SettingTitle"),
             };
-            labelBlock.SetResourceReference(TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
-            left.Children.Add(labelBlock);
-
-            Grid.SetColumn(left, 0);
-            grid.Children.Add(left);
+            Grid.SetColumn(labelBlock, 1);
+            grid.Children.Add(labelBlock);
 
             if (showHotkey)
             {
-                var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+                var right = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+                };
 
                 var hkBox = new TextBox();
                 hkBox.SetResourceReference(TextBox.StyleProperty, "HotkeyBox");
@@ -119,7 +100,6 @@ public static class ToolListBuilder
                 clearBtn.Width = 28;
                 clearBtn.MinWidth = 28;
                 clearBtn.Margin = new Thickness(6, 0, 0, 0);
-                clearBtn.FontSize = 12;
                 var capturedBox = hkBox;
                 var capturedId = toolId;
 
@@ -204,7 +184,7 @@ public static class ToolListBuilder
                 right.Children.Add(hkBox);
                 right.Children.Add(clearBtn);
 
-                Grid.SetColumn(right, 1);
+                Grid.SetColumn(right, 2);
                 grid.Children.Add(right);
             }
 

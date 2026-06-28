@@ -396,7 +396,7 @@ public partial class SettingsWindow
             LocalizationService.SetSourceText(label, "Default");
             label.Text = LocalizationService.Translate("Default");
             label.Foreground = (System.Windows.Media.Brush)FindResource("ThemeTextSecondaryBrush");
-            sourcePill.Background = (System.Windows.Media.Brush)FindResource("ThemeTabActiveBrush");
+            sourcePill.Background = (System.Windows.Media.Brush)FindResource("ThemeInputBackgroundBrush");
             sourcePill.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush");
             resetBtn.Visibility = Visibility.Hidden;
         }

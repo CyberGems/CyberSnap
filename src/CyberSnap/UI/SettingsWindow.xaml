@@ -643,28 +643,22 @@
 
         <SolidColorBrush x:Key="SoundItemCustomSourceBrush" Color="#2600FFFF"/>
 
-        <!-- Sound customization item styles -->
-        <Style x:Key="SoundItemCard" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="6"/>
+        <!-- Compact settings row cards (Sounds, Hotkeys, etc.) -->
+        <Style x:Key="CompactItemCard" TargetType="Border" BasedOn="{StaticResource Card}">
             <Setter Property="Padding" Value="11,8"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
         </Style>
 
-        <Style x:Key="SoundItemIconFrame" TargetType="Border">
+        <Style x:Key="CompactItemIconFrame" TargetType="Border" BasedOn="{StaticResource SettingIconFrame}">
             <Setter Property="Width" Value="26"/>
             <Setter Property="Height" Value="26"/>
-            <Setter Property="CornerRadius" Value="13"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
         </Style>
+
+        <!-- Sound customization item styles (Card look, compact row sizing) -->
+        <Style x:Key="SoundItemCard" TargetType="Border" BasedOn="{StaticResource CompactItemCard}"/>
+
+        <Style x:Key="SoundItemIconFrame" TargetType="Border" BasedOn="{StaticResource CompactItemIconFrame}"/>
 
         <Style x:Key="SoundItemPlayButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="Width" Value="28"/>
@@ -672,7 +666,7 @@
             <Setter Property="MinWidth" Value="28"/>
             <Setter Property="MinHeight" Value="28"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -684,7 +678,7 @@
                         <Border x:Name="Bd" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="14" Padding="{TemplateBinding Padding}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -756,8 +750,8 @@
 
         <Style x:Key="SoundItemSourcePill" TargetType="Border">
             <Setter Property="Padding" Value="8,3"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="MinHeight" Value="22"/>
@@ -1072,49 +1066,56 @@
 
 
             <!-- Hotkeys (unified hotkeys + reset toolbar) -->
-            <ScrollViewer x:Name="HotkeysPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,36,18,18">
+            <ScrollViewer x:Name="HotkeysPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,42,18,18">
                 <StackPanel>
                     <CheckBox x:Name="ShowToolNumberBadgesCheck" Visibility="Collapsed"
                               Checked="ShowToolNumberBadgesCheck_Changed" Unchecked="ShowToolNumberBadgesCheck_Changed"/>
-                    <Border Style="{StaticResource Card}" Margin="0,14,0,12">
-                        <Grid>
+                    <TextBlock Text="Hotkeys" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Hotkeys"/>
+                    <Border Style="{StaticResource Card}">
+                        <Grid Style="{StaticResource SettingRow}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}" Margin="0,0,10,0" VerticalAlignment="Center" Grid.Column="0">
+                            <Border Style="{StaticResource SettingIconFrame}">
                                 <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
                             </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="Hotkey assignments" Services:LocalizationService.SourceText="Hotkey assignments" Style="{StaticResource SettingTitle}"/>
                                 <TextBlock Text="To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it."
-                                           Style="{StaticResource InfoText}"/>
+                                           Services:LocalizationService.SourceText="To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it."
+                                           Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <Button x:Name="ResetHotkeysBtn" Content="Reset to default hotkeys"
-                                    Grid.Column="2" MinWidth="160" Height="28" VerticalAlignment="Center" Click="ResetHotkeysBtn_Click"/>
+                            <Button x:Name="ResetHotkeysBtn" Content="Reset all" Grid.Column="2"
+                                    MinWidth="90" VerticalAlignment="Center" Cursor="Hand"
+                                    ToolTip="Revert all hotkeys to their built-in defaults."
+                                    Services:LocalizationService.SourceToolTip="Revert all hotkeys to their built-in defaults."
+                                    AutomationProperties.Name="Reset all hotkeys to defaults"
+                                    Click="ResetHotkeysBtn_Click"/>
                         </Grid>
                     </Border>
-                    <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                    <Border Style="{StaticResource Card}">
                         <Grid Style="{StaticResource SettingRow}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource SettingIconFrame}">
-                            <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="Allow hotkey override" Style="{StaticResource SettingTitle}"/>
-                            <TextBlock Text="Let CyberSnap reassign hotkeys already in use by another tool." Style="{StaticResource SettingDescription}"/>
-                        </StackPanel>
-                        <CheckBox x:Name="AllowHotkeyOverrideCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                  ToolTip="Let CyberSnap reassign hotkeys already in use by another tool"
-                                  AutomationProperties.Name="Allow hotkey override"
-                                  Checked="AllowHotkeyOverrideCheck_Changed" Unchecked="AllowHotkeyOverrideCheck_Changed"/>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE946;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="Allow hotkey override" Style="{StaticResource SettingTitle}"/>
+                                <TextBlock Text="Let CyberSnap reassign hotkeys already in use by another tool." Style="{StaticResource SettingDescription}"/>
+                            </StackPanel>
+                            <CheckBox x:Name="AllowHotkeyOverrideCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                      ToolTip="Let CyberSnap reassign hotkeys already in use by another tool"
+                                      AutomationProperties.Name="Allow hotkey override"
+                                      Checked="AllowHotkeyOverrideCheck_Changed" Unchecked="AllowHotkeyOverrideCheck_Changed"/>
                         </Grid>
                     </Border>
-                    <Grid>
+                    <Grid Margin="0,6,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="24" />
@@ -2544,37 +2545,34 @@
                 <StackPanel>
                     <TextBlock Text="Sounds" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE767;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Text="Enable sound effects" Services:LocalizationService.SourceText="Enable sound effects" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Services:LocalizationService.SourceText="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button x:Name="ResetAllSoundsBtn" Content="Reset all" MinWidth="90" Margin="0,0,12,0"
-                                            VerticalAlignment="Center" Cursor="Hand"
-                                            ToolTip="Revert all sounds to their built-in defaults."
-                                            AutomationProperties.Name="Reset all sounds to defaults"
-                                            Click="ResetAllSoundsBtn_Click"/>
-                                    <CheckBox x:Name="MuteSoundsCheck" Content="" FontSize="13"
-                                              VerticalAlignment="Center"
-                                              AutomationProperties.Name="Enable all sounds"
-                                              ToolTip="Master switch for every capture and notification sound. Turn off to silence them all."
-                                              Checked="MuteSoundsCheck_Changed" Unchecked="MuteSoundsCheck_Changed"/>
-                                </StackPanel>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Opacity="0.45" Margin="0,8,0,8"/>
-                            <StackPanel x:Name="SoundCustomizationPanel"/>
-                        </StackPanel>
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE767;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="Enable sound effects" Services:LocalizationService.SourceText="Enable sound effects" Style="{StaticResource SettingTitle}"/>
+                                <TextBlock Text="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Services:LocalizationService.SourceText="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="ResetAllSoundsBtn" Content="Reset all" MinWidth="90" Margin="0,0,12,0"
+                                        VerticalAlignment="Center" Cursor="Hand"
+                                        ToolTip="Revert all sounds to their built-in defaults."
+                                        AutomationProperties.Name="Reset all sounds to defaults"
+                                        Click="ResetAllSoundsBtn_Click"/>
+                                <CheckBox x:Name="MuteSoundsCheck" Content="" FontSize="13"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Enable all sounds"
+                                          ToolTip="Master switch for every capture and notification sound. Turn off to silence them all."
+                                          Checked="MuteSoundsCheck_Changed" Unchecked="MuteSoundsCheck_Changed"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
+                    <StackPanel x:Name="SoundCustomizationPanel"/>
                     <TextBlock x:Name="SoundsPreferenceStatusText"
                                Style="{StaticResource SettingsStatusText}"
                                Visibility="Collapsed"
