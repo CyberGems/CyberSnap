@@ -560,10 +560,6 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Upscale:
                 HideToolbarForCaptureTool();
                 HideToolBanner();
-                var previousSelectionRect = _selectionRect;
-                var previousAutoDetectRect = _autoDetectRect;
-                bool previousSelectionVisible = _hasSelection;
-                bool previousAutoDetectVisible = _autoDetectActive;
                 if (_windowDetectionMode == WindowDetectionMode.Off)
                 {
                     _autoDetectRect = Rectangle.Empty;
@@ -581,10 +577,9 @@ public sealed partial class RegionOverlayForm
                 _hasSelection = false;
                 ResetCaptureMagnifierDragPlacement();
                 CloseSelectionAdorner();
-                if (previousSelectionVisible || previousAutoDetectVisible)
-                    Invalidate(Rectangle.Union(
-                        InflateForRepaint(previousSelectionRect),
-                        InflateForRepaint(previousAutoDetectRect)));
+                // Full invalidate: dimming must appear on every monitor immediately.
+                // Partial invalidation around the selection only repaints the drag monitor.
+                Invalidate();
                 break;
             case CaptureMode.Text:
                 HideToolbarForCaptureTool();
