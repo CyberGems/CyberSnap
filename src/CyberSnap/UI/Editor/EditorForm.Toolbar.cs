@@ -577,17 +577,77 @@ public sealed partial class EditorForm
             var g = e.Graphics;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int cy = _titleFileNameLabel.Height / 2;
-            int iconSize = 16;
+
+            // Determine LED status colors
+            Color ledColor;
+            Color ledAuraColor;
+            if (_canvas.IsDirty)
+            {
+                ledColor = Color.FromArgb(245, 158, 11); // Amber/Orange
+                ledAuraColor = Color.FromArgb(50, 245, 158, 11);
+            }
+            else if (string.IsNullOrWhiteSpace(_savedFilePath))
+            {
+                ledColor = Color.FromArgb(14, 165, 233); // Blue
+                ledAuraColor = Color.FromArgb(50, 14, 165, 233);
+            }
+            else
+            {
+                ledColor = Color.FromArgb(34, 197, 94); // Green
+                ledAuraColor = Color.FromArgb(50, 34, 197, 94);
+            }
+
+            int ledSize = 8;
+            int ledAuraSize = 14;
+            int gap = 8;
             using var titleFont = new Font("Consolas", 10.5f, FontStyle.Bold, GraphicsUnit.Point);
-            int iconX = (_titleFileNameLabel.Width - TextRenderer.MeasureText(_titleFileNameText, titleFont).Width - iconSize - 6) / 2;
-            if (iconX < 0) iconX = 4;
-            var iconRect = new RectangleF(iconX, cy - iconSize / 2f, iconSize, iconSize);
-            StreamlineIcons.DrawIcon(g, "document", iconRect, EditorColors.Accent, 0f, false);
+            int textWidth = TextRenderer.MeasureText(_titleFileNameText, titleFont).Width;
+            int totalWidth = ledAuraSize + gap + textWidth;
+
+            int startX = (_titleFileNameLabel.Width - totalWidth) / 2;
+            if (startX < 4) startX = 4;
+
+            // Draw LED with glow effect
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            float ledCenterY = cy;
+            float ledX = startX + (ledAuraSize - ledSize) / 2f;
+            float ledY = cy - ledSize / 2f;
+
+            // Aura
+            float auraX = startX;
+            float auraY = cy - ledAuraSize / 2f;
+            using (var auraBrush = new SolidBrush(ledAuraColor))
+            {
+                g.FillEllipse(auraBrush, auraX, auraY, ledAuraSize, ledAuraSize);
+            }
+            // Core
+            using (var coreBrush = new SolidBrush(ledColor))
+            {
+                g.FillEllipse(coreBrush, ledX, ledY, ledSize, ledSize);
+            }
+            // Specular Highlight
+            using (var whiteBrush = new SolidBrush(Color.FromArgb(200, 255, 255, 255)))
+            {
+                g.FillEllipse(whiteBrush, ledX + 2, ledY + 2, 2.5f, 2.5f);
+            }
+
+            // Draw Text directly after the LED (replaces the blank document icon)
+            int textX = startX + ledAuraSize + gap;
             TextRenderer.DrawText(g, _titleFileNameText, titleFont,
-                new Rectangle(iconX + iconSize + 6, 0, _titleFileNameLabel.Width - iconSize - 6, _titleFileNameLabel.Height),
+                new Rectangle(textX, 0, _titleFileNameLabel.Width - textX, _titleFileNameLabel.Height),
                 EditorColors.TextPrimary,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
         };
+
+        RegisterHoverTooltip(_titleFileNameLabel, () =>
+        {
+            if (_canvas.IsDirty)
+                return LocalizationService.Translate("Unsaved changes");
+            else if (string.IsNullOrWhiteSpace(_savedFilePath))
+                return LocalizationService.Translate("New canvas");
+            else
+                return LocalizationService.Translate("Saved");
+        }, above: false);
 
         _titleBarPanel.Controls.Add(_titleFileNameLabel);
         _titleBarPanel.Controls.Add(brandPanel);
@@ -1307,9 +1367,12 @@ public sealed partial class EditorForm
         
         var titleText = $"{fileName} ({bitmap.Width} x {bitmap.Height} px)";
 
-        if (_titleFileNameLabel != null && _titleFileNameText != titleText)
+        if (_titleFileNameLabel != null)
         {
-            _titleFileNameText = titleText;
+            if (_titleFileNameText != titleText)
+            {
+                _titleFileNameText = titleText;
+            }
             _titleFileNameLabel.Invalidate();
         }
     }

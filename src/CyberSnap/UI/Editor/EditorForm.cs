@@ -113,6 +113,7 @@ public sealed partial class EditorForm : Form
         UpdateCaptureCaption();
         RefreshUi();
         AddRecentFile(filePath);
+        _canvas.ShowToolBanner(LocalizationService.Translate("Project opened"));
     }
 
     /// <summary>Records a file path in the app's recent-files list (persists to settings.json
@@ -588,7 +589,7 @@ public sealed partial class EditorForm : Form
         }
     }
 
-    private void LoadCapture(Bitmap captured, string? savedFilePath, bool autoMaximize = true)
+    private void LoadCapture(Bitmap captured, string? savedFilePath, bool autoMaximize = true, bool showOpenedBanner = true)
     {
         _savedFilePath = savedFilePath;
         _canvas.ResetState(new Bitmap(captured));
@@ -599,6 +600,10 @@ public sealed partial class EditorForm : Form
             MaybeAutoMaximizeForCapture();
         UpdateCaptureCaption();
         RefreshUi();
+        if (!string.IsNullOrEmpty(savedFilePath) && showOpenedBanner)
+        {
+            _canvas.ShowToolBanner(LocalizationService.Translate("Image opened"));
+        }
     }
 
     private void OnCanvasMouseMove(object? sender, MouseEventArgs e)
@@ -723,6 +728,7 @@ public sealed partial class EditorForm : Form
                 : LocalizationService.Translate("Image saved");
             var toastBody = string.Format(LocalizationService.Translate("Saved: {0}"), fileName);
             ToastWindow.Show(toastTitle, toastBody, filePath);
+            _canvas.ShowToolBanner(toastTitle);
             return true;
         }
         catch (Exception ex)
@@ -1017,6 +1023,14 @@ public sealed partial class EditorForm : Form
                 : LocalizationService.Translate("Image saved");
         var toastBody = string.Format(LocalizationService.Translate("Saved: {0}"), fileName);
         ToastWindow.Show(toastTitle, toastBody, filePath);
+
+        // Show native action banner
+        string bannerMsg = isPdf 
+            ? LocalizationService.Translate("PDF exported") 
+            : (filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase) 
+                ? LocalizationService.Translate("Project saved") 
+                : LocalizationService.Translate("Image exported"));
+        _canvas.ShowToolBanner(bannerMsg);
     }
 
     private static void NotifyHistoryEditedCaptureSaved(string filePath, int width, int height)
@@ -1075,13 +1089,14 @@ public sealed partial class EditorForm : Form
         if (result is null) return;
 
         var blank = result.BackgroundColor is { } bg
-            ? CreateSolidBackground(result.Width, result.Height, bg)
-            : CreateBlankCheckerboard(EditorColors.IsDark, result.Width, result.Height);
+             ? CreateSolidBackground(result.Width, result.Height, bg)
+             : CreateBlankCheckerboard(EditorColors.IsDark, result.Width, result.Height);
         LoadCapture(blank, null, autoMaximize: false);
         _canvas.IsDefaultBlank = true;
         _canvas.IsBlankCanvas = true;
         _canvas.ZoomFit();
         _canvas.Invalidate();
+        _canvas.ShowToolBanner(LocalizationService.Translate("New canvas created"));
     }
 
     private void DoOpen()
@@ -1185,7 +1200,8 @@ public sealed partial class EditorForm : Form
                         return;
                     }
 
-                    LoadCapture(captured, dlg.FileName);
+                    LoadCapture(captured, dlg.FileName, showOpenedBanner: false);
+                    _canvas.ShowToolBanner(LocalizationService.Translate("Image imported"));
                 }
                 catch (Exception ex)
                 {

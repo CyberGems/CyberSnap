@@ -341,5 +341,17 @@
   "Bottom Right": "Bottom Right",
   "Annotations Editor": "Annotations Editor",
   "Paste": "Paste",
-  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file"
+  "Paste an image (Ctrl+V) or double-click to open a file": "Paste an image (Ctrl+V) or double-click to open a file",
+  "Project saved": "Projecte desat",
+  "Project opened": "Projecte obert",
+  "Image saved": "Imatge desada",
+  "Image opened": "Imatge oberta",
+  "PDF saved": "PDF desat",
+  "PDF exported": "PDF exportat",
+  "Image exported": "Imatge exportada",
+  "Image imported": "Imatge importada",
+  "New canvas created": "Nou llenç creat",
+  "New canvas": "Nou llenç",
+  "Unsaved changes": "Canvis sense desar",
+  "Saved": "Desat"
 }
