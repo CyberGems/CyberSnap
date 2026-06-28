@@ -212,7 +212,6 @@ public partial class App
                 bool showCursor = false;
                 var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
                 Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
-
                 var form = new ScrollingCaptureForm(selectionScreenshot, bounds, showCursor,
                     _settingsService!.Settings.ShowCaptureMagnifier,
                     _settingsService!.Settings.ScrollingCaptureMode,
