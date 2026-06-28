@@ -206,6 +206,18 @@ public sealed partial class EditorForm
         _hoverToolTip ??= new WindowsToolTip();
         _hoverAnchor = anchor;
         var bounds = anchor.RectangleToScreen(anchor.ClientRectangle);
+
+        if (anchor == _titleFileNameLabel)
+        {
+            using var titleFont = new Font("Consolas", 10.5f, FontStyle.Bold, GraphicsUnit.Point);
+            int textWidth = TextRenderer.MeasureText(_titleFileNameText ?? "", titleFont).Width;
+            int totalWidth = 14 + 8 + textWidth; // ledAuraSize (14) + gap (8) + textWidth
+            int startX = (anchor.Width - totalWidth) / 2;
+            if (startX < 4) startX = 4;
+            var localBounds = new Rectangle(startX, 0, totalWidth, anchor.Height);
+            bounds = anchor.RectangleToScreen(localBounds);
+        }
+
         _hoverToolTip.ShowNear(this, text!, bounds, above);
     }
 
