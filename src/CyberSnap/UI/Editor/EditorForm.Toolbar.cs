@@ -1741,6 +1741,10 @@ public sealed partial class EditorForm
             // opens (paths change as the user opens/saves files in this or another session).
             RebuildOpenRecentSubMenu(openRecentItem);
 
+            // Normalize widths of submenus to prevent truncation and layout gaps (crucial when aligned Left)
+            WindowsMenuRenderer.NormalizeDropDownWidths(viewItem);
+            WindowsMenuRenderer.NormalizeDropDownWidths(openRecentItem);
+
             // Save reflects the current document's save-ability: disabled for a pristine
             // blank canvas, enabled when there's something to save.
             saveItem.Enabled = !(_canvas.IsDefaultBlank && !_canvas.IsDirty);
