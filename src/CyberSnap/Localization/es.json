@@ -1215,5 +1215,6 @@
   "FreeHand": "Dibujo libre",
   "Blocked by another app?": "¿Bloqueado por otra app?",
   "Hotkey reassigned": "Atajo reasignado",
-  "\"{0}\" reassigned from {1}.": "\"{0}\" reasignado desde {1}."
+  "\"{0}\" reassigned from {1}.": "\"{0}\" reasignado desde {1}.",
+  "Taken": "Ocupada"
 }

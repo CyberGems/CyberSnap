@@ -860,5 +860,6 @@
   "Thickness {0}": "Thickness {0}",
   "Blocked by another app?": "Blocked by another app?",
   "Hotkey reassigned": "Hotkey reassigned",
-  "\"{0}\" reassigned from {1}.": "\"{0}\" reassigned from {1}."
+  "\"{0}\" reassigned from {1}.": "\"{0}\" reassigned from {1}.",
+  "Taken": "Taken"
 }
