@@ -19,7 +19,6 @@ public static class ToolIcons
         ["_scrollCapture"] = "scrollCapture",
         ["scroll"] = "scrollCapture",
         ["rect"] = "captureRect",
-        ["_repeatLastArea"] = "captureRect",
         ["_record"] = "record",
     };
 

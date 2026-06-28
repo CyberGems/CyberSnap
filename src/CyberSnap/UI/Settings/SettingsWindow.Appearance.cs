@@ -484,8 +484,6 @@ public partial class SettingsWindow
         // are processed even if the first pass missed them (e.g., due to template timing).
         LocalizationService.ApplyTo(AboutPanel, _settingsService.Settings.InterfaceLanguage);
         RefreshLanguageComboDisplay();
-        PopulateToolToggles();
-        PopulateSoundCustomizationPanel();
         UpdateWindowTitle();
         RefreshAboutLocalization();
     }

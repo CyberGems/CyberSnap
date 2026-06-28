@@ -22,7 +22,6 @@ public static class ToolListBuilder
     {
         ("_fullscreen",    "Fullscreen capture",  ToolGlyphs.FullscreenGlyph),
         ("_activeWindow",  "Active window",       ToolGlyphs.ActiveWindowGlyph),
-        ("_repeatLastArea", "Repeat last area",   ToolGlyphs.RepeatLastAreaGlyph),
         ("_scrollCapture", "Scroll capture",      ToolGlyphs.ScrollCaptureGlyph),
         ("_record",        "Record",              ToolGlyphs.RecordGlyph),
     };
@@ -103,13 +102,6 @@ public static class ToolListBuilder
                 clearBtn.Margin = new Thickness(6, 0, 0, 0);
                 var capturedBox = hkBox;
                 var capturedId = toolId;
-
-                hkBox.GotFocus += (_, _) => capturedBox.Text = LocalizationService.Translate("Press keys...");
-                hkBox.LostFocus += (_, _) =>
-                {
-                    var (m, k) = settingsService.Settings.GetToolHotkey(capturedId);
-                    capturedBox.Text = HotkeyFormatter.Format(m, k);
-                };
 
                 hkBox.PreviewKeyDown += (_, e) =>
                 {
@@ -203,7 +195,6 @@ public static class ToolListBuilder
         var captureItems = new System.Collections.Generic.List<(string id, string label, char icon)>
         {
             ("rect", "Area Capture", ToolDef.AllTools.First(t => t.Id == "rect").Icon),
-            ("_repeatLastArea", "Repeat last area", ToolGlyphs.RepeatLastAreaGlyph),
             ("center", "From Center", ToolDef.AllTools.First(t => t.Id == "center").Icon),
             ("_scrollCapture", "Scrolling Capture", ToolGlyphs.ScrollCaptureGlyph),
             ("ocr", "OCR", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
@@ -243,16 +234,6 @@ public static class ToolListBuilder
             var (existingMod, existingKey) = settings.GetToolHotkey(id);
             if (existingMod == mod && existingKey == key)
                 return new HotkeyConflict(tool.Id, tool.Label);
-        }
-
-        foreach (var (id, label, _) in ExtraTools)
-        {
-            if (string.Equals(id, excludeToolId, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var (existingMod, existingKey) = settings.GetToolHotkey(id);
-            if (existingMod == mod && existingKey == key)
-                return new HotkeyConflict(id, label);
         }
 
         return null;
