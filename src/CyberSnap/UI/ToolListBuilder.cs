@@ -121,10 +121,17 @@ public static class ToolListBuilder
                 var capturedBox = hkBox;
                 var capturedId = toolId;
 
+                System.Windows.Threading.DispatcherTimer? resetWarningTimer = null;
+
                 hkBox.GotFocus += (_, _) =>
                 {
                     capturedBox.Text = LocalizationService.Translate("Press keys...");
                     hkBox.ClearValue(TextBox.BorderBrushProperty);
+                    if (resetWarningTimer != null)
+                    {
+                        resetWarningTimer.Stop();
+                        resetWarningTimer = null;
+                    }
                     if (Application.Current is App app)
                     {
                         app.UnregisterAllHotkeys();
@@ -135,6 +142,11 @@ public static class ToolListBuilder
                     var (m, k) = settingsService.Settings.GetToolHotkey(capturedId);
                     capturedBox.Text = HotkeyFormatter.Format(m, k);
                     hkBox.ClearValue(TextBox.BorderBrushProperty);
+                    if (resetWarningTimer != null)
+                    {
+                        resetWarningTimer.Stop();
+                        resetWarningTimer = null;
+                    }
                     if (BlockedDetectTimers.TryGetValue(hkBox, out var timer))
                     {
                         timer.Stop();
@@ -153,9 +165,17 @@ public static class ToolListBuilder
                     
                     if (IsModifierOnly(key))
                     {
+                        if (resetWarningTimer != null)
+                        {
+                            resetWarningTimer.Stop();
+                            resetWarningTimer = null;
+                            capturedBox.Text = LocalizationService.Translate("Press keys...");
+                            hkBox.ClearValue(TextBox.BorderBrushProperty);
+                        }
+
                         if (!BlockedDetectTimers.TryGetValue(hkBox, out var timer))
                         {
-                            timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
+                            timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
                             timer.Tick += (s, args) =>
                             {
                                 timer.Stop();
@@ -173,6 +193,11 @@ public static class ToolListBuilder
                     {
                         activeTimer.Stop();
                         BlockedDetectTimers.Remove(hkBox);
+                    }
+                    if (resetWarningTimer != null)
+                    {
+                        resetWarningTimer.Stop();
+                        resetWarningTimer = null;
                     }
                     hkBox.ClearValue(TextBox.BorderBrushProperty);
 
@@ -226,10 +251,26 @@ public static class ToolListBuilder
                                 activeTimer.Stop();
                                 BlockedDetectTimers.Remove(hkBox);
                             }
-                            hkBox.ClearValue(TextBox.BorderBrushProperty);
+
                             if (capturedBox.Text == LocalizationService.Translate("Blocked by another app?"))
                             {
-                                capturedBox.Text = LocalizationService.Translate("Press keys...");
+                                if (resetWarningTimer != null) resetWarningTimer.Stop();
+                                resetWarningTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };
+                                resetWarningTimer.Tick += (s, args) =>
+                                {
+                                    resetWarningTimer.Stop();
+                                    resetWarningTimer = null;
+                                    if (hkBox.IsFocused)
+                                    {
+                                        capturedBox.Text = LocalizationService.Translate("Press keys...");
+                                        hkBox.ClearValue(TextBox.BorderBrushProperty);
+                                    }
+                                };
+                                resetWarningTimer.Start();
+                            }
+                            else
+                            {
+                                hkBox.ClearValue(TextBox.BorderBrushProperty);
                             }
                         }
                     }
