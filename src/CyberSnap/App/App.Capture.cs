@@ -4,7 +4,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using CyberSnap.Capture;
-using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Native;
 using CyberSnap.Services;
@@ -336,38 +335,6 @@ public partial class App
         }
     }
 
-    private void CaptureRepeatLastAreaNow()
-    {
-        Bitmap? bmp = null;
-        try
-        {
-            var settings = _settingsService!.Settings;
-            if (!LastCaptureArea.TryGetScreenRect(settings, out var screenRect))
-            {
-                ResetCapturing();
-                ToastWindow.Show(
-                    LocalizationService.Translate("Repeat last area"),
-                    LocalizationService.Translate("No saved capture area yet. Select a region first."));
-                return;
-            }
-
-            UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(screenRect.Right, screenRect.Bottom));
-            bmp = ScreenCapture.CaptureRegion(screenRect, settings.ShowCursor);
-            LastCaptureArea.PersistScreenRect(settings, _settingsService, screenRect);
-            HandleCaptureResult(bmp);
-            bmp = null;
-        }
-        catch (Exception ex)
-        {
-            bmp?.Dispose();
-            ResetCapturing();
-            ShowCaptureProcessingFailed(
-                "Capture error",
-                "CyberSnap could not repeat the last capture area. Try a normal region capture.",
-                ex.Message);
-        }
-    }
-
     private void LaunchOverlay(CaptureMode initialMode)
     {
         LaunchWithDelay(() => LaunchOverlayNow(initialMode));
@@ -386,7 +353,6 @@ public partial class App
                     ? ScreenCapture.CaptureAllScreens(showCursor)
                     : ScreenCapture.CaptureCurrentScreen(showCursor);
                 screenshot = bmp;
-                var captureBounds = bounds;
 
                 Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
                 var overlay = new RegionOverlayForm(
@@ -448,9 +414,6 @@ public partial class App
 
                 overlay.RegionSelected += sel =>
                 {
-                    if (overlay.ActiveMode == CaptureMode.Rectangle)
-                        LastCaptureArea.PersistFromOverlaySelection(_settingsService!.Settings, _settingsService, sel, captureBounds);
-
                     overlay.Hide();
                     UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(sel.Right, sel.Bottom));
                     using var annotated = overlay.RenderAnnotatedBitmap();

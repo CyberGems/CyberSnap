@@ -8,7 +8,7 @@ public sealed class HotkeyService : IDisposable
     // Hotkey ID allocation:
     //   9001–9011  — core capture / tool hotkeys
     //   9012       — standalone ruler
-    //   9013+      — standalone tools; 9016 — repeat last capture area
+    //   9013+      — RESERVED for future standalone tools (color picker, protractor, etc.)
     private const int HOTKEY_CAPTURE = 9001;
     private const int HOTKEY_OCR = 9002;
     private const int HOTKEY_PICKER = 9003;
@@ -23,7 +23,6 @@ public sealed class HotkeyService : IDisposable
     private const int HOTKEY_STANDALONE_COLOR_PICKER = 9013;
     private const int HOTKEY_STANDALONE_OCR = 9014;
     private const int HOTKEY_STANDALONE_SCAN = 9015;
-    private const int HOTKEY_REPEAT_LAST_AREA = 9016;
 
     private bool _captureRegistered;
     private bool _ocrRegistered;
@@ -39,7 +38,6 @@ public sealed class HotkeyService : IDisposable
     private bool _standaloneColorPickerRegistered;
     private bool _standaloneOcrRegistered;
     private bool _standaloneScanRegistered;
-    private bool _repeatLastAreaRegistered;
     private bool _registered;
 
     public event Action? HotkeyPressed;
@@ -56,7 +54,6 @@ public sealed class HotkeyService : IDisposable
     public event Action? StandaloneColorPickerHotkeyPressed;
     public event Action? StandaloneOcrHotkeyPressed;
     public event Action? StandaloneScanHotkeyPressed;
-    public event Action? RepeatLastAreaHotkeyPressed;
 
     private void EnsureMessageHook()
     {
@@ -104,7 +101,6 @@ public sealed class HotkeyService : IDisposable
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_COLOR_PICKER);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_OCR);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_SCAN);
-        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_REPEAT_LAST_AREA);
         _captureRegistered = false;
         _ocrRegistered = false;
         _pickerRegistered = false;
@@ -119,7 +115,6 @@ public sealed class HotkeyService : IDisposable
         _standaloneColorPickerRegistered = false;
         _standaloneOcrRegistered = false;
         _standaloneScanRegistered = false;
-        _repeatLastAreaRegistered = false;
     }
 
     public bool Register(uint modifiers, uint key) => RegisterHotkey(ref _captureRegistered, HOTKEY_CAPTURE, modifiers, key);
@@ -136,7 +131,6 @@ public sealed class HotkeyService : IDisposable
     public bool RegisterStandaloneColorPicker(uint modifiers, uint key) => RegisterHotkey(ref _standaloneColorPickerRegistered, HOTKEY_STANDALONE_COLOR_PICKER, modifiers, key);
     public bool RegisterStandaloneOcr(uint modifiers, uint key) => RegisterHotkey(ref _standaloneOcrRegistered, HOTKEY_STANDALONE_OCR, modifiers, key);
     public bool RegisterStandaloneScan(uint modifiers, uint key) => RegisterHotkey(ref _standaloneScanRegistered, HOTKEY_STANDALONE_SCAN, modifiers, key);
-    public bool RegisterRepeatLastArea(uint modifiers, uint key) => RegisterHotkey(ref _repeatLastAreaRegistered, HOTKEY_REPEAT_LAST_AREA, modifiers, key);
 
     public void Unregister()
     {
@@ -154,7 +148,6 @@ public sealed class HotkeyService : IDisposable
         if (_standaloneColorPickerRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_COLOR_PICKER); _standaloneColorPickerRegistered = false; }
         if (_standaloneOcrRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_OCR); _standaloneOcrRegistered = false; }
         if (_standaloneScanRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_SCAN); _standaloneScanRegistered = false; }
-        if (_repeatLastAreaRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_REPEAT_LAST_AREA); _repeatLastAreaRegistered = false; }
         if (_registered)
         {
             ComponentDispatcher.ThreadPreprocessMessage -= OnMsg;
@@ -180,7 +173,6 @@ public sealed class HotkeyService : IDisposable
         else if (id == HOTKEY_STANDALONE_COLOR_PICKER) { InvokeHandlersSafely(StandaloneColorPickerHotkeyPressed, "hotkey.standalone-colorpicker"); handled = true; }
         else if (id == HOTKEY_STANDALONE_OCR) { InvokeHandlersSafely(StandaloneOcrHotkeyPressed, "hotkey.standalone-ocr"); handled = true; }
         else if (id == HOTKEY_STANDALONE_SCAN) { InvokeHandlersSafely(StandaloneScanHotkeyPressed, "hotkey.standalone-scan"); handled = true; }
-        else if (id == HOTKEY_REPEAT_LAST_AREA) { InvokeHandlersSafely(RepeatLastAreaHotkeyPressed, "hotkey.repeat-last-area"); handled = true; }
     }
 
     private static void InvokeHandlersSafely(Action? handlers, string context)

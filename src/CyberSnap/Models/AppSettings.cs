@@ -198,8 +198,6 @@ public sealed class AppSettings
     public uint FullscreenHotkeyKey { get; set; }
     public uint ActiveWindowHotkeyModifiers { get; set; }
     public uint ActiveWindowHotkeyKey { get; set; }
-    public uint RepeatLastAreaHotkeyModifiers { get; set; }
-    public uint RepeatLastAreaHotkeyKey { get; set; }
     public uint RulerHotkeyModifiers { get; set; }
     public uint RulerHotkeyKey { get; set; }
 
@@ -288,11 +286,6 @@ public sealed class AppSettings
 
     public bool AutoCheckForUpdates { get; set; } = true;
     public CaptureMode LastCaptureMode { get; set; } = CaptureMode.Rectangle;
-    public bool HasLastCaptureRect { get; set; }
-    public int LastCaptureRectX { get; set; }
-    public int LastCaptureRectY { get; set; }
-    public int LastCaptureRectWidth { get; set; }
-    public int LastCaptureRectHeight { get; set; }
     public WindowDetectionMode WindowDetection { get; set; } = WindowDetectionMode.WindowOnly;
     public CaptureDockSide CaptureDockSide { get; set; } = CaptureDockSide.Bottom;
     public ScrollingCaptureMode ScrollingCaptureMode { get; set; } = ScrollingCaptureMode.AssistAutoscroll;
@@ -447,7 +440,6 @@ public sealed class AppSettings
         "recordGif" => (RecordGifHotkeyModifiers, RecordGifHotkeyKey),
         "_fullscreen" => (FullscreenHotkeyModifiers, FullscreenHotkeyKey),
         "_activeWindow" => (ActiveWindowHotkeyModifiers, ActiveWindowHotkeyKey),
-        "_repeatLastArea" => (RepeatLastAreaHotkeyModifiers, RepeatLastAreaHotkeyKey),
         "_scrollCapture" => (ScrollCaptureHotkeyModifiers, ScrollCaptureHotkeyKey),
         "_record" => (GifHotkeyModifiers, GifHotkeyKey),
         // Standalone tools use the convention: "_standalone{Name}" → Standalone{Name}HotkeyModifiers/Key
@@ -489,7 +481,6 @@ public sealed class AppSettings
             // ruler handled by generic path (annotation tool with default key 9)
             case "_fullscreen": FullscreenHotkeyModifiers = mod; FullscreenHotkeyKey = key; break;
             case "_activeWindow": ActiveWindowHotkeyModifiers = mod; ActiveWindowHotkeyKey = key; break;
-            case "_repeatLastArea": RepeatLastAreaHotkeyModifiers = mod; RepeatLastAreaHotkeyKey = key; break;
             case "_scrollCapture": ScrollCaptureHotkeyModifiers = mod; ScrollCaptureHotkeyKey = key; break;
             case "_record": GifHotkeyModifiers = mod; GifHotkeyKey = key; break;
             // Standalone tools: "_standalone{Name}" → Standalone{Name}HotkeyModifiers/Key
@@ -542,8 +533,6 @@ public sealed class AppSettings
         FullscreenHotkeyKey = 0;
         ActiveWindowHotkeyModifiers = 0;
         ActiveWindowHotkeyKey = 0;
-        RepeatLastAreaHotkeyModifiers = 0;
-        RepeatLastAreaHotkeyKey = 0;
         RulerHotkeyModifiers = 0;
         RulerHotkeyKey = 0;
         RecordHotkeyModifiers = 0;
