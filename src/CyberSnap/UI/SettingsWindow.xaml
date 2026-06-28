@@ -1083,8 +1083,8 @@
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
                                 <TextBlock Text="Hotkey assignments" Services:LocalizationService.SourceText="Hotkey assignments" Style="{StaticResource SettingTitle}"/>
-                                <TextBlock Text="To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it."
-                                           Services:LocalizationService.SourceText="To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it."
+                                <TextBlock Text="To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it. (If a combination is not registered, another app on your system may be blocking it.)"
+                                           Services:LocalizationService.SourceText="To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it. (If a combination is not registered, another app on your system may be blocking it.)"
                                            Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <Button x:Name="ResetHotkeysBtn" Content="Reset all" Grid.Column="2"

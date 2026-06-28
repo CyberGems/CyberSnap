@@ -296,4 +296,6 @@ public partial class App
     public void OnStandaloneOcrProxy() => OnStandaloneOcrHotkeyPressed();
     public void OnStandaloneRulerProxy() => OnStandaloneRulerHotkeyPressed();
     public void OnStandaloneScanProxy() => OnStandaloneScanHotkeyPressed();
+
+    public void UnregisterAllHotkeys() => _hotkeyService?.UnregisterAll();
 }

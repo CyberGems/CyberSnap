@@ -105,6 +105,7 @@ public static class ToolListBuilder
                 hkBox.Width = 135;
                 hkBox.MinWidth = 135;
                 hkBox.FontSize = 11;
+                hkBox.ToolTip = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
 
                 var (initMod, initKey) = settingsService.Settings.GetToolHotkey(toolId);
                 hkBox.Text = HotkeyFormatter.Format(initMod, initKey);
@@ -119,11 +120,22 @@ public static class ToolListBuilder
                 var capturedBox = hkBox;
                 var capturedId = toolId;
 
-                hkBox.GotFocus += (_, _) => capturedBox.Text = LocalizationService.Translate("Press keys...");
+                hkBox.GotFocus += (_, _) =>
+                {
+                    capturedBox.Text = LocalizationService.Translate("Press keys...");
+                    if (Application.Current is App app)
+                    {
+                        app.UnregisterAllHotkeys();
+                    }
+                };
                 hkBox.LostFocus += (_, _) =>
                 {
                     var (m, k) = settingsService.Settings.GetToolHotkey(capturedId);
                     capturedBox.Text = HotkeyFormatter.Format(m, k);
+                    if (Application.Current is App app)
+                    {
+                        app.RegisterHotkeys(showReadyNotification: false);
+                    }
                 };
 
                 hkBox.PreviewKeyDown += (_, e) =>
