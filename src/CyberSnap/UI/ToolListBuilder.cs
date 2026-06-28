@@ -103,6 +103,13 @@ public static class ToolListBuilder
                 var capturedBox = hkBox;
                 var capturedId = toolId;
 
+                hkBox.GotFocus += (_, _) => capturedBox.Text = LocalizationService.Translate("Press keys...");
+                hkBox.LostFocus += (_, _) =>
+                {
+                    var (m, k) = settingsService.Settings.GetToolHotkey(capturedId);
+                    capturedBox.Text = HotkeyFormatter.Format(m, k);
+                };
+
                 hkBox.PreviewKeyDown += (_, e) =>
                 {
                     e.Handled = true;
@@ -138,6 +145,7 @@ public static class ToolListBuilder
                         settingsService.Save();
                         capturedBox.Text = HotkeyFormatter.Format(mod, vk);
                         hotkeyChanged?.Invoke();
+                        Keyboard.ClearFocus();
                     }
                     catch (Exception ex)
                     {
@@ -162,6 +170,7 @@ public static class ToolListBuilder
                         settingsService.Save();
                         capturedBox.Text = HotkeyFormatter.Format(0, 0);
                         hotkeyChanged?.Invoke();
+                        Keyboard.ClearFocus();
                     }
                     catch (Exception ex)
                     {
