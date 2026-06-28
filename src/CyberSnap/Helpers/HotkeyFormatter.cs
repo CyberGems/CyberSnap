@@ -1,4 +1,5 @@
 ﻿using System.Windows.Input;
+using CyberSnap.Services;
 
 namespace CyberSnap.Helpers;
 
@@ -6,7 +7,7 @@ public static class HotkeyFormatter
 {
     public static string Format(uint mod, uint key)
     {
-        if (key == 0) return "Not set";
+        if (key == 0) return LocalizationService.Translate("Not set");
         var parts = new List<string>();
         if ((mod & Native.User32.MOD_WIN) != 0) parts.Add("Win");
         if ((mod & Native.User32.MOD_CONTROL) != 0) parts.Add("Ctrl");
