@@ -29,7 +29,6 @@ public partial class App
         _hotkeyService.StandaloneOcrHotkeyPressed += OnStandaloneOcrHotkeyPressed;
         _hotkeyService.StandaloneScanHotkeyPressed += OnStandaloneScanHotkeyPressed;
         _hotkeyService.RepeatLastAreaHotkeyPressed += OnRepeatLastAreaHotkeyPressed;
-        _hotkeyService.RepeatLastScrollAreaHotkeyPressed += OnRepeatLastScrollAreaHotkeyPressed;
 
         var s = _settingsService!.Settings;
         var failed = new List<string>();
@@ -49,7 +48,6 @@ public partial class App
         TryRegister(_hotkeyService.RegisterFullscreen(s.FullscreenHotkeyModifiers, s.FullscreenHotkeyKey), "Fullscreen", s.FullscreenHotkeyModifiers, s.FullscreenHotkeyKey);
         TryRegister(_hotkeyService.RegisterActiveWindow(s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey), "Active Window", s.ActiveWindowHotkeyModifiers, s.ActiveWindowHotkeyKey);
         TryRegister(_hotkeyService.RegisterRepeatLastArea(s.RepeatLastAreaHotkeyModifiers, s.RepeatLastAreaHotkeyKey), "Repeat last area", s.RepeatLastAreaHotkeyModifiers, s.RepeatLastAreaHotkeyKey);
-        TryRegister(_hotkeyService.RegisterRepeatLastScrollArea(s.RepeatLastScrollAreaHotkeyModifiers, s.RepeatLastScrollAreaHotkeyKey), "Repeat last scroll area", s.RepeatLastScrollAreaHotkeyModifiers, s.RepeatLastScrollAreaHotkeyKey);
         TryRegister(_hotkeyService.RegisterScrollCapture(s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey), "Scroll Capture", s.ScrollCaptureHotkeyModifiers, s.ScrollCaptureHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneRuler(s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey), "Standalone Ruler", s.StandaloneRulerHotkeyModifiers, s.StandaloneRulerHotkeyKey);
         TryRegister(_hotkeyService.RegisterStandaloneColorPicker(s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey), "Standalone Color Picker", s.StandaloneColorPickerHotkeyModifiers, s.StandaloneColorPickerHotkeyKey);
@@ -160,23 +158,6 @@ public partial class App
         }
 
         LaunchWithDelay(CaptureRepeatLastAreaNow);
-    }
-
-    private void OnRepeatLastScrollAreaHotkeyPressed()
-    {
-        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
-        HideSettingsForCapture();
-
-        if (!LastScrollArea.TryGetScreenRect(_settingsService!.Settings, out _))
-        {
-            ToastWindow.Show(
-                LocalizationService.Translate("Repeat last scroll area"),
-                LocalizationService.Translate("No saved scroll area yet. Select a scroll capture area first."));
-            LaunchOverlay(CaptureMode.ScrollCapture);
-            return;
-        }
-
-        LaunchWithDelay(LaunchRepeatLastScrollAreaNow);
     }
 
     private void LaunchWithDelay(Action action)
@@ -308,7 +289,6 @@ public partial class App
     public void OnCenterHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Center);
     public void OnPickerHotkeyPressedProxy() => OnPickerHotkeyPressed();
     public void OnRulerHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Ruler);
-    public void OnRepeatLastScrollAreaHotkeyPressedProxy() => OnRepeatLastScrollAreaHotkeyPressed();
 
     // Standalone tool proxies for the Widget (bypass the capture overlay)
     public void OnStandaloneColorPickerProxy() => OnStandaloneColorPickerHotkeyPressed();
