@@ -213,17 +213,10 @@ public partial class App
                 var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
                 Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
 
-                Rectangle? scrollRegion = preSelectedRegion;
-                if (scrollRegion is null &&
-                    LastScrollArea.TryGetScreenRect(_settingsService.Settings, out var fromLast))
-                {
-                    scrollRegion = fromLast;
-                }
-
                 var form = new ScrollingCaptureForm(selectionScreenshot, bounds, showCursor,
                     _settingsService!.Settings.ShowCaptureMagnifier,
                     _settingsService!.Settings.ScrollingCaptureMode,
-                    scrollRegion);
+                    preSelectedRegion);
 
                 form.CaptureCompleted += result =>
                 {
@@ -376,38 +369,6 @@ public partial class App
         }
     }
 
-    private void LaunchRepeatLastScrollAreaNow()
-    {
-        Bitmap? bmp = null;
-        try
-        {
-            var settings = _settingsService!.Settings;
-            if (!LastScrollArea.TryGetScreenRect(settings, out var screenRect))
-            {
-                ResetCapturing();
-                ToastWindow.Show(
-                    LocalizationService.Translate("Repeat last scroll area"),
-                    LocalizationService.Translate("No saved scroll area yet. Select a scroll capture area first."));
-                return;
-            }
-
-            UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(screenRect.Right, screenRect.Bottom));
-            bmp = ScreenCapture.CaptureRegion(screenRect, settings.ShowCursor);
-            LastScrollArea.PersistScreenRect(settings, _settingsService, screenRect);
-            HandleCaptureResult(bmp);
-            bmp = null;
-        }
-        catch (Exception ex)
-        {
-            bmp?.Dispose();
-            ResetCapturing();
-            ShowCaptureProcessingFailed(
-                "Capture error",
-                "CyberSnap could not repeat the last scroll area. Try a normal scroll capture.",
-                ex.Message);
-        }
-    }
-
     private void LaunchOverlay(CaptureMode initialMode)
     {
         LaunchWithDelay(() => LaunchOverlayNow(initialMode));
@@ -514,7 +475,6 @@ public partial class App
 
                 overlay.ScrollRegionSelected += sel =>
                 {
-                    LastScrollArea.PersistFromOverlaySelection(_settingsService!.Settings, _settingsService, sel, captureBounds);
                     overlay.Hide();
                     UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(sel.Right, sel.Bottom));
                     overlay.Close();
