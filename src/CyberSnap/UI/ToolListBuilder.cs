@@ -30,6 +30,26 @@ public static class ToolListBuilder
     private static readonly Dictionary<TextBox, bool> RecordingFlags = new();
     private static readonly Dictionary<TextBox, System.Windows.Threading.DispatcherTimer> BlockedDetectTimers = new();
 
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    private static bool IsAnyNonModifierKeyPhysicallyDown()
+    {
+        for (int vk = 0x41; vk <= 0x5A; vk++) // A-Z
+        {
+            if ((GetAsyncKeyState(vk) & 0x8000) != 0) return true;
+        }
+        for (int vk = 0x30; vk <= 0x39; vk++) // 0-9
+        {
+            if ((GetAsyncKeyState(vk) & 0x8000) != 0) return true;
+        }
+        for (int vk = 0x70; vk <= 0x7B; vk++) // F1-F12
+        {
+            if ((GetAsyncKeyState(vk) & 0x8000) != 0) return true;
+        }
+        return false;
+    }
+
     public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null)
     {
         capturePanel.Children.Clear();
@@ -106,7 +126,11 @@ public static class ToolListBuilder
                 hkBox.Width = 135;
                 hkBox.MinWidth = 135;
                 hkBox.FontSize = 11;
-                hkBox.ToolTip = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                var tooltip = new System.Windows.Controls.ToolTip
+                {
+                    Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.")
+                };
+                hkBox.ToolTip = tooltip;
 
                 var (initMod, initKey) = settingsService.Settings.GetToolHotkey(toolId);
                 hkBox.Text = HotkeyFormatter.Format(initMod, initKey);
@@ -126,8 +150,10 @@ public static class ToolListBuilder
                 hkBox.GotFocus += (_, _) =>
                 {
                     capturedBox.Text = LocalizationService.Translate("Press keys...");
-                    hkBox.ClearValue(TextBox.BackgroundProperty);
                     hkBox.ClearValue(TextBox.ForegroundProperty);
+                    hkBox.ClearValue(TextBox.FontWeightProperty);
+                    tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                    tooltip.IsOpen = false;
                     if (resetWarningTimer != null)
                     {
                         resetWarningTimer.Stop();
@@ -142,8 +168,10 @@ public static class ToolListBuilder
                 {
                     var (m, k) = settingsService.Settings.GetToolHotkey(capturedId);
                     capturedBox.Text = HotkeyFormatter.Format(m, k);
-                    hkBox.ClearValue(TextBox.BackgroundProperty);
                     hkBox.ClearValue(TextBox.ForegroundProperty);
+                    hkBox.ClearValue(TextBox.FontWeightProperty);
+                    tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                    tooltip.IsOpen = false;
                     if (resetWarningTimer != null)
                     {
                         resetWarningTimer.Stop();
@@ -172,8 +200,9 @@ public static class ToolListBuilder
                             resetWarningTimer.Stop();
                             resetWarningTimer = null;
                             capturedBox.Text = LocalizationService.Translate("Press keys...");
-                            hkBox.ClearValue(TextBox.BackgroundProperty);
                             hkBox.ClearValue(TextBox.ForegroundProperty);
+                            hkBox.ClearValue(TextBox.FontWeightProperty);
+                            tooltip.IsOpen = false;
                         }
 
                         if (!BlockedDetectTimers.TryGetValue(hkBox, out var timer))
@@ -181,10 +210,15 @@ public static class ToolListBuilder
                             timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
                             timer.Tick += (s, args) =>
                             {
-                                timer.Stop();
-                                capturedBox.Text = LocalizationService.Translate("Taken");
-                                hkBox.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 40, 40));
-                                hkBox.Foreground = System.Windows.Media.Brushes.White;
+                                if (IsAnyNonModifierKeyPhysicallyDown())
+                                {
+                                    timer.Stop();
+                                    capturedBox.Text = LocalizationService.Translate("Taken");
+                                    hkBox.Foreground = System.Windows.Media.Brushes.Red;
+                                    hkBox.FontWeight = FontWeights.Bold;
+                                    tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
+                                    tooltip.IsOpen = true;
+                                }
                             };
                             BlockedDetectTimers[hkBox] = timer;
                         }
@@ -203,8 +237,9 @@ public static class ToolListBuilder
                         resetWarningTimer.Stop();
                         resetWarningTimer = null;
                     }
-                    hkBox.ClearValue(TextBox.BackgroundProperty);
                     hkBox.ClearValue(TextBox.ForegroundProperty);
+                    hkBox.ClearValue(TextBox.FontWeightProperty);
+                    tooltip.IsOpen = false;
 
                     uint mod = (uint)Keyboard.Modifiers;
                     uint vk = (uint)KeyInterop.VirtualKeyFromKey(key);
@@ -268,16 +303,19 @@ public static class ToolListBuilder
                                     if (hkBox.IsFocused)
                                     {
                                         capturedBox.Text = LocalizationService.Translate("Press keys...");
-                                        hkBox.ClearValue(TextBox.BackgroundProperty);
                                         hkBox.ClearValue(TextBox.ForegroundProperty);
+                                        hkBox.ClearValue(TextBox.FontWeightProperty);
+                                        tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                                        tooltip.IsOpen = false;
                                     }
                                 };
                                 resetWarningTimer.Start();
                             }
                             else
                             {
-                                hkBox.ClearValue(TextBox.BackgroundProperty);
                                 hkBox.ClearValue(TextBox.ForegroundProperty);
+                                hkBox.ClearValue(TextBox.FontWeightProperty);
+                                tooltip.IsOpen = false;
                             }
                         }
                     }

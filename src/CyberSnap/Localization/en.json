@@ -861,5 +861,6 @@
   "Blocked by another app?": "Blocked by another app?",
   "Hotkey reassigned": "Hotkey reassigned",
   "\"{0}\" reassigned from {1}.": "\"{0}\" reassigned from {1}.",
-  "Taken": "Taken"
+  "Taken": "Taken",
+  "This hotkey is registered by another application.": "This hotkey is registered by another application."
 }
