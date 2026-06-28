@@ -369,6 +369,9 @@ public sealed partial class RegionOverlayForm : Form
     public event Action? SelectionCancelled;
     public event Action<Models.RecordingFormat>? RecordingRequested;
 
+    /// <summary>Active capture tool mode on the overlay (may differ from the launch mode).</summary>
+    public CaptureMode ActiveMode => _mode;
+
     public RegionOverlayForm(Bitmap screenshot, Rectangle virtualBounds,
         CaptureMode initialMode = CaptureMode.Rectangle,
         WindowDetectionMode windowDetectionMode = WindowDetectionMode.WindowOnly,

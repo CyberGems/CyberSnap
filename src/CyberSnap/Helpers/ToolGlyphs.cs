@@ -12,4 +12,5 @@ public static class ToolGlyphs
     public const char ActiveWindowGlyph = '\uE7C4';
     public const char ScrollCaptureGlyph = '\uE7F0';
     public const char RecordGlyph = '\uE1A4';
+    public const char RepeatLastAreaGlyph = '\uE72C';
 }
