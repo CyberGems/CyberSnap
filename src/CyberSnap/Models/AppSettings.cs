@@ -261,6 +261,7 @@ public sealed class AppSettings
     public bool EditorShowRulers { get; set; } = true;
     public bool EditorShowFrame { get; set; } = true;
     public bool EditorShowHints { get; set; } = true;
+    public bool EditorShowScrollbars { get; set; }
 
     /// <summary>Most recently opened files (projects and images) shown in the Editor's
     /// burger "Open recent" submenu. Newest first; capped to 6 entries.</summary>

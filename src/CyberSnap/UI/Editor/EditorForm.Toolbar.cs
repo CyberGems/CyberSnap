@@ -1605,6 +1605,8 @@ public sealed partial class EditorForm
         rulersItem.ToolTipText = LocalizationService.Translate("Display measurement rulers in the editor canvas.");
         var hintsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show hints"), iconId: null);
         hintsItem.ToolTipText = LocalizationService.Translate("Display tool hints and shortcuts in the editor status bar.");
+        var scrollbarsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Always show scrollbars"), iconId: null);
+        scrollbarsItem.ToolTipText = LocalizationService.Translate("Keep the scroll position indicators visible at all times.");
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
         var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Exit"), iconId: "close");
         settingsItem.Click += (_, _) =>
@@ -1682,6 +1684,14 @@ public sealed partial class EditorForm
             if (_hintArea != null)
                 _hintArea.Visible = _canvas.ShowHints && ClientSize.Width >= 950;
         };
+        scrollbarsItem.Click += (_, _) =>
+        {
+            _canvas.ShowScrollbarsAlways = !_canvas.ShowScrollbarsAlways;
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorShowScrollbars(_canvas.ShowScrollbarsAlways);
+            }
+        };
 
         // View submenu contents (grouped with separators for readability)
         viewItem.DropDownItems.Add(borderItem);
@@ -1695,6 +1705,7 @@ public sealed partial class EditorForm
         viewItem.DropDownItems.Add(bannersItem);
         viewItem.DropDownItems.Add(rulersItem);
         viewItem.DropDownItems.Add(hintsItem);
+        viewItem.DropDownItems.Add(scrollbarsItem);
 
         // Main menu layout
         menu.Items.Add(newSubmenu);
@@ -1720,7 +1731,7 @@ public sealed partial class EditorForm
 
         menu.Opened += (_, _) =>
         {
-            UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, rulersItem, hintsItem);
+            UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, rulersItem, hintsItem, scrollbarsItem);
             bool hasSelection = _canvas.SelectedAnnotationIndexInternal >= 0 || _canvas.MultiSelectedIndicesInternal.Count > 0;
             bool multi = _canvas.MultiSelectedIndicesInternal.Count > 1;
             pasteItem.Enabled = Clipboard.ContainsImage();
@@ -1814,7 +1825,7 @@ public sealed partial class EditorForm
         openRecentItem.DropDownItems.Add(clearItem);
     }
 
-    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem)
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem, ToolStripMenuItem scrollbarsItem)
     {
         var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
         borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
@@ -1826,6 +1837,7 @@ public sealed partial class EditorForm
         bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         rulersItem.Image = (_topRulerContainer != null && _topRulerContainer.Visible) ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         hintsItem.Image = _canvas.ShowHints ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        scrollbarsItem.Image = _canvas.ShowScrollbarsAlways ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
     }
 }
 

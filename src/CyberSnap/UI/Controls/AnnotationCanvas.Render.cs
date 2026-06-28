@@ -62,6 +62,8 @@ public sealed partial class AnnotationCanvas
 
         if (_inlineTextBox is not null)
             RenderInlineTextToolbar(g);
+
+        RenderScrollbars(g);
     }
 
     // ── Base-image draw cache ──────────────────────────────────────────────
