@@ -484,7 +484,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             OnStateChanged();
         }
     }
-    private CanvasTool _activeTool = CanvasTool.Pan;
+    private CanvasTool _activeTool = CanvasTool.Move;
 
     /// <summary>
     /// Right-click "escape": cancels any in-progress action and returns to the neutral
@@ -494,7 +494,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     /// </summary>
     public bool TryDeselectTool()
     {
-        if (_activeTool == CanvasTool.Pan)
+        if (_activeTool == CanvasTool.Move)
             return false;
 
         // Deselecting the Text tool keeps what was typed (use the Esc key inside the
@@ -503,7 +503,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         CommitOrCancelInlineText(commit: true);
         CancelInProgressTool();
         CancelCropPending();
-        _activeTool = CanvasTool.Pan;
+        _activeTool = CanvasTool.Move;
         _selectedEmoji = null;
         UpdateCursor();
         // CancelCropPending already announced "Crop canceled" when a crop was pending; only
@@ -622,7 +622,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         IsDefaultBlank = false;
         IsBlankCanvas = false;
         CancelInProgressTool();
-        ActiveTool = CanvasTool.Pan;
+        ActiveTool = CanvasTool.Move;
         oldBaseBitmap?.Dispose();
 
         if (EditorAutoCropControls)
@@ -680,7 +680,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         IsDefaultBlank = false;
         IsBlankCanvas = false;
         CancelInProgressTool();
-        ActiveTool = CanvasTool.Pan;
+        ActiveTool = CanvasTool.Move;
         oldBaseBitmap?.Dispose();
 
         if (EditorAutoCropControls)

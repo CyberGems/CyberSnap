@@ -803,8 +803,8 @@ public sealed partial class EditorForm
 
         AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
         AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Move");
-        AddToolButton(nav, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop");
-        AddToolButton(nav, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser");
+        AddToolButton(nav, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop", bottomMargin: 7);
+        AddToolButton(nav, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser", bottomMargin: 7);
 
         var draw = new TableLayoutPanel
         {
@@ -818,9 +818,9 @@ public sealed partial class EditorForm
         for (int r = 0; r < 4; r++)
             draw.RowStyles.Add(new RowStyle(SizeType.Percent, 25f));
 
-        AddToolButton(draw, 0, 0, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw");
-        AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow");
-        AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", LocalizationService.Translate("Curved"));
+        AddToolButton(draw, 0, 0, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw", topMargin: 7);
+        AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow", topMargin: 7);
+        AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", LocalizationService.Translate("Curved"), topMargin: 7);
         AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line", bottomMargin: 7);
         AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box", bottomMargin: 7);
         AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle", bottomMargin: 7);
@@ -2070,7 +2070,18 @@ internal sealed class EditorToolButton : EditorButtonBase
 {
     // Slightly-elevated graphite resting fill so the tool buttons lift off the darker
     // panel instead of blending into it, and read well against their cyan borders.
-    protected override Color IdleFill => EditorColors.IsDark ? Color.FromArgb(0x1C, 0x20, 0x30) : Color.FromArgb(250, 251, 255);
+    protected override Color IdleFill => EditorColors.IsDark ? Color.Transparent : Color.FromArgb(250, 251, 255);
+
+    protected override Color ResolveBorder(bool active)
+    {
+        if (EditorColors.IsDark)
+        {
+            if (active || _hover)
+                return base.ResolveBorder(active);
+            return Color.Transparent;
+        }
+        return base.ResolveBorder(active);
+    }
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Checked
