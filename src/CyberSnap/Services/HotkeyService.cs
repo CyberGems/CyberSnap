@@ -24,6 +24,7 @@ public sealed class HotkeyService : IDisposable
     private const int HOTKEY_STANDALONE_OCR = 9014;
     private const int HOTKEY_STANDALONE_SCAN = 9015;
     private const int HOTKEY_REPEAT_LAST_AREA = 9016;
+    private const int HOTKEY_REPEAT_LAST_SCROLL_AREA = 9017;
 
     private bool _captureRegistered;
     private bool _ocrRegistered;
@@ -40,6 +41,7 @@ public sealed class HotkeyService : IDisposable
     private bool _standaloneOcrRegistered;
     private bool _standaloneScanRegistered;
     private bool _repeatLastAreaRegistered;
+    private bool _repeatLastScrollAreaRegistered;
     private bool _registered;
 
     public event Action? HotkeyPressed;
@@ -57,6 +59,7 @@ public sealed class HotkeyService : IDisposable
     public event Action? StandaloneOcrHotkeyPressed;
     public event Action? StandaloneScanHotkeyPressed;
     public event Action? RepeatLastAreaHotkeyPressed;
+    public event Action? RepeatLastScrollAreaHotkeyPressed;
 
     private void EnsureMessageHook()
     {
@@ -105,6 +108,7 @@ public sealed class HotkeyService : IDisposable
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_OCR);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_SCAN);
         User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_REPEAT_LAST_AREA);
+        User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_REPEAT_LAST_SCROLL_AREA);
         _captureRegistered = false;
         _ocrRegistered = false;
         _pickerRegistered = false;
@@ -120,6 +124,7 @@ public sealed class HotkeyService : IDisposable
         _standaloneOcrRegistered = false;
         _standaloneScanRegistered = false;
         _repeatLastAreaRegistered = false;
+        _repeatLastScrollAreaRegistered = false;
     }
 
     public bool Register(uint modifiers, uint key) => RegisterHotkey(ref _captureRegistered, HOTKEY_CAPTURE, modifiers, key);
@@ -138,6 +143,8 @@ public sealed class HotkeyService : IDisposable
     public bool RegisterStandaloneScan(uint modifiers, uint key) => RegisterHotkey(ref _standaloneScanRegistered, HOTKEY_STANDALONE_SCAN, modifiers, key);
     public bool RegisterRepeatLastArea(uint modifiers, uint key) => RegisterHotkey(ref _repeatLastAreaRegistered, HOTKEY_REPEAT_LAST_AREA, modifiers, key);
 
+    public bool RegisterRepeatLastScrollArea(uint modifiers, uint key) => RegisterHotkey(ref _repeatLastScrollAreaRegistered, HOTKEY_REPEAT_LAST_SCROLL_AREA, modifiers, key);
+
     public void Unregister()
     {
         if (_captureRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_CAPTURE); _captureRegistered = false; }
@@ -155,6 +162,7 @@ public sealed class HotkeyService : IDisposable
         if (_standaloneOcrRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_OCR); _standaloneOcrRegistered = false; }
         if (_standaloneScanRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_STANDALONE_SCAN); _standaloneScanRegistered = false; }
         if (_repeatLastAreaRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_REPEAT_LAST_AREA); _repeatLastAreaRegistered = false; }
+        if (_repeatLastScrollAreaRegistered) { User32.UnregisterHotKey(IntPtr.Zero, HOTKEY_REPEAT_LAST_SCROLL_AREA); _repeatLastScrollAreaRegistered = false; }
         if (_registered)
         {
             ComponentDispatcher.ThreadPreprocessMessage -= OnMsg;
@@ -181,6 +189,7 @@ public sealed class HotkeyService : IDisposable
         else if (id == HOTKEY_STANDALONE_OCR) { InvokeHandlersSafely(StandaloneOcrHotkeyPressed, "hotkey.standalone-ocr"); handled = true; }
         else if (id == HOTKEY_STANDALONE_SCAN) { InvokeHandlersSafely(StandaloneScanHotkeyPressed, "hotkey.standalone-scan"); handled = true; }
         else if (id == HOTKEY_REPEAT_LAST_AREA) { InvokeHandlersSafely(RepeatLastAreaHotkeyPressed, "hotkey.repeat-last-area"); handled = true; }
+        else if (id == HOTKEY_REPEAT_LAST_SCROLL_AREA) { InvokeHandlersSafely(RepeatLastScrollAreaHotkeyPressed, "hotkey.repeat-last-scroll-area"); handled = true; }
     }
 
     private static void InvokeHandlersSafely(Action? handlers, string context)
