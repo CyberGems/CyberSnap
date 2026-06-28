@@ -146,6 +146,7 @@ public static class ToolListBuilder
                         settingsService.Save();
                         capturedBox.Text = HotkeyFormatter.Format(mod, vk);
                         hotkeyChanged?.Invoke();
+                        Keyboard.ClearFocus();
                     }
                     catch (Exception ex)
                     {
@@ -170,6 +171,7 @@ public static class ToolListBuilder
                         settingsService.Save();
                         capturedBox.Text = HotkeyFormatter.Format(0, 0);
                         hotkeyChanged?.Invoke();
+                        Keyboard.ClearFocus();
                     }
                     catch (Exception ex)
                     {
