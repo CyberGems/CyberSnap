@@ -28,6 +28,7 @@ public static class ToolListBuilder
     };
 
     private static readonly Dictionary<TextBox, bool> RecordingFlags = new();
+    private static readonly Dictionary<TextBox, System.Windows.Threading.DispatcherTimer> BlockedDetectTimers = new();
 
     public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null)
     {
@@ -123,6 +124,7 @@ public static class ToolListBuilder
                 hkBox.GotFocus += (_, _) =>
                 {
                     capturedBox.Text = LocalizationService.Translate("Press keys...");
+                    hkBox.ClearValue(TextBox.BorderBrushProperty);
                     if (Application.Current is App app)
                     {
                         app.UnregisterAllHotkeys();
@@ -132,6 +134,12 @@ public static class ToolListBuilder
                 {
                     var (m, k) = settingsService.Settings.GetToolHotkey(capturedId);
                     capturedBox.Text = HotkeyFormatter.Format(m, k);
+                    hkBox.ClearValue(TextBox.BorderBrushProperty);
+                    if (BlockedDetectTimers.TryGetValue(hkBox, out var timer))
+                    {
+                        timer.Stop();
+                        BlockedDetectTimers.Remove(hkBox);
+                    }
                     if (Application.Current is App app)
                     {
                         app.RegisterHotkeys(showReadyNotification: false);
@@ -142,7 +150,31 @@ public static class ToolListBuilder
                 {
                     e.Handled = true;
                     var key = NormalizeHotkeyKey(e);
-                    if (IsModifierOnly(key)) return;
+                    
+                    if (IsModifierOnly(key))
+                    {
+                        if (!BlockedDetectTimers.TryGetValue(hkBox, out var timer))
+                        {
+                            timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
+                            timer.Tick += (s, args) =>
+                            {
+                                timer.Stop();
+                                capturedBox.Text = LocalizationService.Translate("Blocked by another app?");
+                                hkBox.BorderBrush = System.Windows.Media.Brushes.Red;
+                            };
+                            BlockedDetectTimers[hkBox] = timer;
+                        }
+                        timer.Stop();
+                        timer.Start();
+                        return;
+                    }
+
+                    if (BlockedDetectTimers.TryGetValue(hkBox, out var activeTimer))
+                    {
+                        activeTimer.Stop();
+                        BlockedDetectTimers.Remove(hkBox);
+                    }
+                    hkBox.ClearValue(TextBox.BorderBrushProperty);
 
                     uint mod = (uint)Keyboard.Modifiers;
                     uint vk = (uint)KeyInterop.VirtualKeyFromKey(key);
@@ -153,21 +185,16 @@ public static class ToolListBuilder
                     var conflict = FindHotkeyConflict(settingsService.Settings, capturedId, mod, vk);
                     var (prevMod, prevKey) = settingsService.Settings.GetToolHotkey(capturedId);
 
-                    if (conflict is not null && !settingsService.Settings.AllowHotkeyOverride)
-                    {
-                        // Safety: don't auto-override other hotkey assignments
-                        var conflictLabel = LocalizationService.Translate(conflict.Label);
-                        var msg = string.Format(
-                            LocalizationService.Translate("\"{0}\" is already assigned to {1}. Enable \"Allow hotkey override\" to reassign."),
-                            HotkeyFormatter.Format(mod, vk), conflictLabel);
-                        ToastWindow.Show(LocalizationService.Translate("Hotkey conflict"), msg);
-                        return;
-                    }
-
                     try
                     {
                         if (conflict is not null)
+                        {
                             ClearHotkeyConflict(settingsService.Settings, conflict);
+                            var conflictLabel = LocalizationService.Translate(conflict.Label);
+                            ToastWindow.Show(
+                                LocalizationService.Translate("Hotkey reassigned"),
+                                string.Format(LocalizationService.Translate("\"{0}\" reassigned from {1}."), HotkeyFormatter.Format(mod, vk), conflictLabel));
+                        }
 
                         settingsService.Settings.SetToolHotkey(capturedId, mod, vk);
                         settingsService.Save();
@@ -184,6 +211,27 @@ public static class ToolListBuilder
                         try { settingsService.Save(); } catch { }
                         capturedBox.Text = HotkeyFormatter.Format(prevMod, prevKey);
                         ShowToolHotkeySaveFailed("save", conflict is not null, ex);
+                    }
+                };
+
+                hkBox.PreviewKeyUp += (_, e) =>
+                {
+                    var key = NormalizeHotkeyKey(e);
+                    if (IsModifierOnly(key))
+                    {
+                        if (Keyboard.Modifiers == ModifierKeys.None)
+                        {
+                            if (BlockedDetectTimers.TryGetValue(hkBox, out var activeTimer))
+                            {
+                                activeTimer.Stop();
+                                BlockedDetectTimers.Remove(hkBox);
+                            }
+                            hkBox.ClearValue(TextBox.BorderBrushProperty);
+                            if (capturedBox.Text == LocalizationService.Translate("Blocked by another app?"))
+                            {
+                                capturedBox.Text = LocalizationService.Translate("Press keys...");
+                            }
+                        }
                     }
                 };
 
