@@ -37,6 +37,21 @@ public static class ToolListBuilder
         // Icon color for rendering Fluent glyphs to bitmaps
         var iconColor = Theme.IsDark ? System.Drawing.Color.FromArgb(225, 255, 255, 255) : System.Drawing.Color.FromArgb(210, 0, 0, 0);
 
+        void AddSubHeader(StackPanel targetPanel, string textKey)
+        {
+            var header = new TextBlock
+            {
+                Text = LocalizationService.Translate(textKey),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text"),
+                Foreground = (System.Windows.Media.Brush)owner.FindResource("ThemeTextSecondaryBrush"),
+                Margin = new Thickness(4, targetPanel.Children.Count == 0 ? 0 : 16, 0, 8)
+            };
+            LocalizationService.SetSourceText(header, textKey);
+            targetPanel.Children.Add(header);
+        }
+
         void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool showHotkey)
         {
             var card = new Border { Style = (Style)owner.FindResource("CompactItemCard") };
@@ -204,25 +219,45 @@ public static class ToolListBuilder
 
         var captureItems = new System.Collections.Generic.List<(string id, string label, char icon)>
         {
+            // Core Capture Modes
             ("rect", "Area Capture", ToolDef.AllTools.First(t => t.Id == "rect").Icon),
-            ("_repeatLastArea", "Repeat last area", ToolGlyphs.RepeatLastAreaGlyph),
             ("center", "From Center", ToolDef.AllTools.First(t => t.Id == "center").Icon),
+            ("_fullscreen", "Fullscreen capture", ToolGlyphs.FullscreenGlyph),
+            ("_activeWindow", "Active window", ToolGlyphs.ActiveWindowGlyph),
             ("_scrollCapture", "Scrolling Capture", ToolGlyphs.ScrollCaptureGlyph),
+            ("_repeatLastArea", "Repeat last area", ToolGlyphs.RepeatLastAreaGlyph),
+
+            // Video & Recording
+            ("record", "Screen Recorder (MP4)", ToolDef.AllTools.First(t => t.Id == "record").Icon),
+            ("recordGif", "Screen Recorder (GIF)", ToolDef.AllTools.First(t => t.Id == "recordGif").Icon),
+
+            // In-Editor Utilities
             ("ocr", "OCR", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
             ("picker", "Color Picker", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
             ("scan", "QR & Barcodes", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
-            ("record", "Screen Recorder (MP4)", ToolDef.AllTools.First(t => t.Id == "record").Icon),
-            ("recordGif", "Screen Recorder (GIF)", ToolDef.AllTools.First(t => t.Id == "recordGif").Icon),
-            ("_fullscreen", "Fullscreen capture", ToolGlyphs.FullscreenGlyph),
-            ("_activeWindow", "Active window", ToolGlyphs.ActiveWindowGlyph),
-            ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon),
-            ("_standaloneColorPicker", "Color Picker (Standalone)", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
+
+            // Standalone Utilities
             ("_standaloneOcr", "OCR (Standalone)", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
-            ("_standaloneScan", "QR & Barcodes (Standalone)", ToolDef.AllTools.First(t => t.Id == "scan").Icon)
+            ("_standaloneColorPicker", "Color Picker (Standalone)", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
+            ("_standaloneScan", "QR & Barcodes (Standalone)", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
+            ("_standaloneRuler", "Ruler (Standalone)", ToolDef.AllTools.First(t => t.Id == "ruler").Icon)
             // Future standalone tools follow the convention: ("_standalone{name}", "Label", icon)
         };
 
-        foreach (var item in captureItems)
+        AddSubHeader(capturePanel, "Core Captures");
+        foreach (var item in System.Linq.Enumerable.Take(captureItems, 6))
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true);
+
+        AddSubHeader(capturePanel, "Video & Recording");
+        foreach (var item in System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(captureItems, 6), 2))
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true);
+
+        AddSubHeader(capturePanel, "In-Editor Utilities");
+        foreach (var item in System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(captureItems, 8), 3))
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true);
+
+        AddSubHeader(capturePanel, "Standalone Utilities");
+        foreach (var item in System.Linq.Enumerable.Skip(captureItems, 11))
             AddToolRow(capturePanel, item.id, item.label, item.icon, true);
 
         foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
