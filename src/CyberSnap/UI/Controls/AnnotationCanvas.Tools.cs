@@ -197,6 +197,9 @@ public sealed partial class AnnotationCanvas
     {
         base.OnMouseDown(e);
 
+        // Scrollbar overlays consume clicks in their hit zone before any tool.
+        if (ScrollbarMouseDown(e)) return;
+
         // While editing text, the floating toolbar gets first dibs on left clicks so
         // toggling format doesn't steal focus from the text box or commit the text.
         if (e.Button == MouseButtons.Left && HandleTextToolbarMouseDown(e.Location))
@@ -595,6 +598,9 @@ public sealed partial class AnnotationCanvas
         _cursorClient = e.Location;
         _cursorOnCanvas = true;
 
+        // Scrollbar drag takes full priority; hover updates always run.
+        if (ScrollbarMouseMove(e)) return;
+
         UpdateResizeHandlesHover();
 
         if (!_isDragging && !_isPanning && !_cropDragging && !_resizeDragging && _preSpaceTool == null
@@ -731,6 +737,7 @@ public sealed partial class AnnotationCanvas
             _pan = new PointF(
                 _panStartOffset.X + (e.X - _panStart.X),
                 _panStartOffset.Y + (e.Y - _panStart.Y));
+            NotifyScrollbarActivity();
             Invalidate();
             return;
         }
@@ -1003,6 +1010,8 @@ public sealed partial class AnnotationCanvas
     {
         base.OnMouseUp(e);
 
+        if (ScrollbarMouseUp(e)) return;
+
         if (_isMarqueeSelecting)
         {
             _isMarqueeSelecting = false;
@@ -1242,6 +1251,7 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseLeave(EventArgs e)
     {
         base.OnMouseLeave(e);
+        ClearScrollbarHover();
         if (_cursorOnCanvas)
         {
             _cursorOnCanvas = false;
@@ -1308,6 +1318,9 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseWheel(MouseEventArgs e)
     {
         base.OnMouseWheel(e);
+
+        // Flash scrollbars on any wheel action (zoom or tool-specific).
+        NotifyScrollbarActivity();
 
         // While editing text, the wheel adjusts the font size instead of zooming.
         if (_inlineTextBox is not null)

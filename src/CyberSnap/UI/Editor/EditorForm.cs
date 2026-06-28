@@ -253,6 +253,7 @@ public sealed partial class EditorForm : Form
             ResizeHandlesScaleContent = settings?.EditorResizeHandlesScaleContent ?? false,
             PanModeLockObjects = settings?.EditorPanModeLockObjects ?? true,
             UndoLimit = settings?.EditorUndoLimit ?? 100,
+            ShowScrollbarsAlways = settings?.EditorShowScrollbars ?? false,
         };
         _canvas.StateChanged += OnCanvasStateChanged;
         _canvas.BlankBitmapFactory = (w, h) => CreateBlankCheckerboard(EditorColors.IsDark, w, h);

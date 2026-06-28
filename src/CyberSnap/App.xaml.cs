@@ -206,6 +206,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-hints-pref", ex); }
     }
 
+    /// <summary>Persists the annotation editor's "always show scrollbars" preference.</summary>
+    public void PersistEditorShowScrollbars(bool show)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorShowScrollbars == show) return;
+        _settingsService.Settings.EditorShowScrollbars = show;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-scrollbars-pref", ex); }
+    }
+
     /// <summary>Persists the color last chosen for shapes/annotations in the editor.</summary>
     public void PersistEditorToolColor(int argb)
     {

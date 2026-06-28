@@ -861,6 +861,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _viewFitsWindow = false;
         _userPanned = false;
         CenterImage();
+        NotifyScrollbarActivity();
         Invalidate();
         OnStateChanged();
     }
@@ -874,6 +875,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _viewFitsWindow = true;
         _userPanned = false;
         CenterImage();
+        NotifyScrollbarActivity();
         Invalidate();
         OnStateChanged();
     }
@@ -895,6 +897,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             screenAnchor.X - (float)(imageAnchor.X * _zoom),
             screenAnchor.Y - (float)(imageAnchor.Y * _zoom));
         BeginZoomInteraction();
+        NotifyScrollbarActivity();
         Invalidate();
         OnStateChanged();
     }
@@ -1167,6 +1170,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             _zoomSettleTimer?.Dispose();
             _resizeHandlesTimer?.Stop();
             _resizeHandlesTimer?.Dispose();
+            DisposeScrollbarTimers();
             _scaledCache?.Dispose();
             ClearEditHistory();
             _emojiRenderer.Dispose();
