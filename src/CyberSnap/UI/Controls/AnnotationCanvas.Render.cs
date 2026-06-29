@@ -775,15 +775,15 @@ public sealed partial class AnnotationCanvas
     private void DrawCursorIcon(Graphics g, float x, float y, float size, Color color)
     {
         using var brush = new SolidBrush(color);
-        using var pen = new Pen(color, 1.2f) { LineJoin = LineJoin.Round };
+        using var pen = new Pen(color, 1.0f) { LineJoin = LineJoin.Round };
         
         var path = new GraphicsPath();
-        path.AddLine(x, y, x + size, y + (size * 0.5f));
-        path.AddLine(x + size, y + (size * 0.5f), x + (size * 0.5f), y + (size * 0.5f));
-        path.AddLine(x + (size * 0.5f), y + (size * 0.5f), x + (size * 0.8f), y + size);
-        path.AddLine(x + (size * 0.8f), y + size, x + (size * 0.65f), y + (size * 1.1f));
-        path.AddLine(x + (size * 0.65f), y + (size * 1.1f), x + (size * 0.35f), y + (size * 0.6f));
-        path.AddLine(x + (size * 0.35f), y + (size * 0.6f), x, y + size);
+        path.AddLine(x, y, x + size * 0.8f, y + size * 0.8f);
+        path.AddLine(x + size * 0.8f, y + size * 0.8f, x + size * 0.35f, y + size * 0.55f);
+        path.AddLine(x + size * 0.35f, y + size * 0.55f, x + size * 0.65f, y + size * 1.0f);
+        path.AddLine(x + size * 0.65f, y + size * 1.0f, x + size * 0.5f, y + size * 1.1f);
+        path.AddLine(x + size * 0.5f, y + size * 1.1f, x + size * 0.25f, y + size * 0.65f);
+        path.AddLine(x + size * 0.25f, y + size * 0.65f, x, y + size * 0.8f);
         path.CloseAllFigures();
         
         g.FillPath(brush, path);
