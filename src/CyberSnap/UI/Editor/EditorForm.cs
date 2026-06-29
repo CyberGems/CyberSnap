@@ -380,6 +380,22 @@ public sealed partial class EditorForm : Form
         windowFrame.Controls.Add(root);
         Controls.Add(windowFrame);
 
+        AllowDrop = true;
+        DragEnter += OnEditorDragEnter;
+        DragDrop += OnEditorDragDrop;
+
+        windowFrame.AllowDrop = true;
+        windowFrame.DragEnter += OnEditorDragEnter;
+        windowFrame.DragDrop += OnEditorDragDrop;
+
+        root.AllowDrop = true;
+        root.DragEnter += OnEditorDragEnter;
+        root.DragDrop += OnEditorDragDrop;
+
+        _canvas.AllowDrop = true;
+        _canvas.DragEnter += OnEditorDragEnter;
+        _canvas.DragDrop += OnEditorDragDrop;
+
         BuildContextMenus();
 
         ResumeLayout(false);
@@ -1876,5 +1892,115 @@ public sealed partial class EditorForm : Form
         if (_topRuler != null) _topRuler.Visible = show;
         if (_cornerBlock != null) _cornerBlock.Visible = show;
         RefreshLayoutAndRedraw();
+    }
+
+    private void OnEditorDragEnter(object? sender, DragEventArgs e)
+    {
+        if (e.Data is not null && e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            e.Effect = DragDropEffects.Copy;
+        }
+        else
+        {
+            e.Effect = DragDropEffects.None;
+        }
+    }
+
+    private void OnEditorDragDrop(object? sender, DragEventArgs e)
+    {
+        if (e.Data is null || !e.Data.GetDataPresent(DataFormats.FileDrop))
+            return;
+
+        var files = (string[]?)e.Data.GetData(DataFormats.FileDrop);
+        if (files is null || files.Length == 0)
+            return;
+
+        var filePath = files[0];
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            return;
+
+        try
+        {
+            var ext = Path.GetExtension(filePath).ToLowerInvariant();
+            var isProject = ext == ".csnp";
+            var supportedExtensions = new[] { ".csnp", ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff", ".webp" };
+            
+            if (Array.IndexOf(supportedExtensions, ext) < 0)
+            {
+                ThemedConfirmDialog.Alert(Handle,
+                    LocalizationService.Translate("Error importing image"),
+                    LocalizationService.Translate("Unsupported file format. Please drop a .csnp project or a supported image (.png, .jpg, .jpeg, .bmp, .gif, .tiff, .webp)."),
+                    error: true);
+                return;
+            }
+
+            // ── File size check: max 10 MB ──
+            var fileInfo = new FileInfo(filePath);
+            const long maxFileSize = 10 * 1024 * 1024; // 10 MB
+            if (fileInfo.Length > maxFileSize)
+            {
+                ThemedConfirmDialog.Alert(Handle,
+                    LocalizationService.Translate("Error importing image"),
+                    string.Format(LocalizationService.Translate("The file is too large ({0:F1} MB). Maximum allowed is 10 MB."), fileInfo.Length / 1024.0 / 1024.0),
+                    error: true);
+                return;
+            }
+
+            if (isProject)
+            {
+                if (_canvas.IsDirty)
+                {
+                    if (!PromptSaveChanges())
+                        return;
+                }
+
+                var (baseBitmap, projectData) = CanvasProjectService.LoadProject(filePath);
+                LoadCaptureProject(baseBitmap, projectData, filePath);
+            }
+            else
+            {
+                Bitmap captured;
+                if (ext == ".webp")
+                {
+                    captured = DecodeWebP(filePath);
+                }
+                else
+                {
+                    using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                    using (var tempBmp = new Bitmap(stream))
+                    {
+                        captured = new Bitmap(tempBmp);
+                    }
+                }
+
+                // ── Max dimension check: 4K (4096 px on longest side) ──
+                const int maxDimension = 4096;
+                if (captured.Width > maxDimension || captured.Height > maxDimension)
+                {
+                    captured.Dispose();
+                    ThemedConfirmDialog.Alert(Handle,
+                        LocalizationService.Translate("Error importing image"),
+                        string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), captured.Width, captured.Height, maxDimension),
+                        error: true);
+                    return;
+                }
+
+                if (_canvas.IsDirty)
+                {
+                    if (!PromptSaveChanges())
+                    {
+                        captured.Dispose();
+                        return;
+                    }
+                }
+
+                LoadCapture(captured, filePath);
+                AddRecentFile(filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, LocalizationService.Translate("Error importing image"), ex.Message, error: true);
+        }
     }
 }
