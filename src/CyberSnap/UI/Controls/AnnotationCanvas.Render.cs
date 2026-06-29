@@ -747,17 +747,17 @@ public sealed partial class AnnotationCanvas
 
         // Draw sun/moon
         float sunR = size * 0.07f;
-        g.DrawEllipse(pen, cardX + cardW - (sunR * 2.5f), cardY + (sunR * 1.2f), sunR * 2f, sunR * 2f);
+        g.DrawEllipse(pen, cardX + cardW - (sunR * 3.2f), cardY + (sunR * 1.2f), sunR * 2f, sunR * 2f);
 
         // Draw mountains
         var mount1 = new GraphicsPath();
-        mount1.AddLine(cardX + (cardW * 0.1f), cardY + cardH, cardX + (cardW * 0.45f), cardY + (cardH * 0.45f));
-        mount1.AddLine(cardX + (cardW * 0.45f), cardY + (cardH * 0.45f), cardX + (cardW * 0.75f), cardY + cardH);
+        mount1.AddLine(cardX + (cardW * 0.1f), cardY + cardH, cardX + (cardW * 0.43f), cardY + (cardH * 0.45f));
+        mount1.AddLine(cardX + (cardW * 0.43f), cardY + (cardH * 0.45f), cardX + (cardW * 0.48f), cardY + cardH);
         g.DrawPath(pen, mount1);
 
         var mount2 = new GraphicsPath();
-        mount2.AddLine(cardX + (cardW * 0.35f), cardY + cardH, cardX + (cardW * 0.6f), cardY + (cardH * 0.6f));
-        mount2.AddLine(cardX + (cardW * 0.6f), cardY + (cardH * 0.6f), cardX + (cardW * 0.9f), cardY + cardH);
+        mount2.AddLine(cardX + (cardW * 0.52f), cardY + cardH, cardX + (cardW * 0.68f), cardY + (cardH * 0.55f));
+        mount2.AddLine(cardX + (cardW * 0.68f), cardY + (cardH * 0.55f), cardX + (cardW * 0.9f), cardY + cardH);
         g.DrawPath(pen, mount2);
 
         // Draw down arrow
