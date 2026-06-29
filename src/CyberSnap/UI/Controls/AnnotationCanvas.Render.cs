@@ -763,7 +763,7 @@ public sealed partial class AnnotationCanvas
         // Draw down arrow
         float arrowLen = size * 0.22f;
         float arrowX = cx;
-        float arrowY1 = cardY + (cardH * 0.6f);
+        float arrowY1 = cardY + (cardH * 0.85f);
         float arrowY2 = arrowY1 + arrowLen;
         g.DrawLine(pen, arrowX, arrowY1, arrowX, arrowY2);
         
@@ -806,7 +806,7 @@ public sealed partial class AnnotationCanvas
         var mediumSize = g.MeasureString(mediumText, mediumFont);
 
         // Measure small text (with spaces in place of {0})
-        float cursorPlaceholderWidth = 14;
+        float cursorPlaceholderWidth = 16;
         string smallTextForMeasurement = string.Format(smallTextTemplate, "   "); // 3 spaces
         var smallSize = g.MeasureString(smallTextForMeasurement, smallFont);
 
@@ -884,7 +884,7 @@ public sealed partial class AnnotationCanvas
             
             float cursorX = startTextX + sizePart1.Width + 2;
             float cursorY = textY + 2;
-            DrawCursorIcon(g, cursorX, cursorY, 11, EditorColors.TextMuted);
+            DrawCursorIcon(g, cursorX, cursorY, 12, EditorColors.TextMuted);
 
             g.DrawString(part2, smallFont, smallBrush, cursorX + cursorPlaceholderWidth, textY);
         }
