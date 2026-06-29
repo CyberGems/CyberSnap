@@ -300,11 +300,8 @@ public sealed partial class AnnotationCanvas
 
         if (e.Button != MouseButtons.Left) return;
 
-        if (IsDefaultBlank)
-        {
-            IsDefaultBlank = false;
-            Invalidate();
-        }
+        // Do not reset IsDefaultBlank on mouse down so that double click can be detected.
+        // It will be reset when annotations are actually added, or when an image is pasted/opened.
 
         var img = ScreenToImage(e.Location);
 
