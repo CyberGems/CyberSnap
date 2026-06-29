@@ -73,7 +73,7 @@ public sealed class StandaloneRulerForm : Form
 
         RulerRenderer.EnsureChrome(Theme.IsDark);
 
-        Cursor = Cursors.Cross;
+        Cursor = CursorFactory.PrecisionCursor;
 
         // ── Banner ──
         _banner = new StandaloneToolBanner(
@@ -326,7 +326,7 @@ public sealed class StandaloneRulerForm : Form
             {
                 EditState.Moving => Cursors.SizeAll,
                 EditState.ResizingFrom or EditState.ResizingTo => Cursors.SizeNWSE,
-                _ => Cursors.Cross
+                _ => CursorFactory.PrecisionCursor
             };
 
             // Track hover over the close button on the chip — use cached bounds from last paint
@@ -477,7 +477,7 @@ public sealed class StandaloneRulerForm : Form
         _editState = EditState.None;
         _cursorOverCloseButton = false;
         _chipTooltip.SetToolTip(this, "");
-        Cursor = Cursors.Cross;
+        Cursor = CursorFactory.PrecisionCursor;
         Invalidate();
     }
 

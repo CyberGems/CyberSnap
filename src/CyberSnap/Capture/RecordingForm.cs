@@ -134,7 +134,7 @@ public sealed partial class RecordingForm : Form
         TopMost = true;
         StartPosition = FormStartPosition.Manual;
         Bounds = new Rectangle(virtualBounds.X, virtualBounds.Y, virtualBounds.Width, virtualBounds.Height);
-        Cursor = Cursors.Cross;
+        Cursor = CursorFactory.PrecisionCursor;
         BackColor = UiChrome.SurfaceWindowBackground;
         if (screenshot is null)
         {

@@ -47,7 +47,7 @@ public sealed class StandaloneOcrForm : Form
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
         _screenshot = bmp;
 
-        Cursor = Cursors.Cross;
+        Cursor = CursorFactory.PrecisionCursor;
 
         // ── Banner ──
         _banner = new StandaloneToolBanner(

@@ -46,7 +46,7 @@ public sealed class StandaloneScanForm : Form
         var (bmp, _) = ScreenCapture.CaptureAllScreens(includeCursor: false);
         _screenshot = bmp;
 
-        Cursor = Cursors.Cross;
+        Cursor = CursorFactory.PrecisionCursor;
 
         // ── Banner ──
         _banner = new StandaloneToolBanner(
