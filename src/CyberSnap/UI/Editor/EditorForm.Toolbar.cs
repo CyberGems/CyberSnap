@@ -811,16 +811,16 @@ public sealed partial class EditorForm
             draw.RowStyles.Add(new RowStyle(SizeType.Percent, 25f));
 
         AddToolButton(draw, 0, 0, AnnotationCanvas.CanvasTool.Draw, "draw", "Draw", topMargin: 7);
-        AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow", topMargin: 7);
-        AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", LocalizationService.Translate("Curved"), topMargin: 7);
+        AddToolButton(draw, 1, 0, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box", topMargin: 7);
+        AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle", topMargin: 7);
         AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line", bottomMargin: 7);
-        AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Rect, "rectShape", "Rectangle", displayKey: "Box", bottomMargin: 7);
-        AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle", bottomMargin: 7);
+        AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow", bottomMargin: 7);
+        AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", LocalizationService.Translate("Curved"), bottomMargin: 7);
         AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text Tool", topMargin: 7);
         AddToolButton(draw, 1, 2, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight", topMargin: 7);
         AddToolButton(draw, 2, 2, AnnotationCanvas.CanvasTool.Blur, "blur", "Blur", topMargin: 7);
         AddToolButton(draw, 0, 3, AnnotationCanvas.CanvasTool.StepNumber, "step", "Step");
-        AddToolButton(draw, 1, 3, AnnotationCanvas.CanvasTool.Magnifier, "magnifier", "Magnifier");
+        AddToolButton(draw, 1, 3, AnnotationCanvas.CanvasTool.Magnifier, "magnifier", "Magnify");
         AddToolButton(draw, 2, 3, AnnotationCanvas.CanvasTool.Emoji, "emoji", "Emoji");
 
         // Second divider inside the drawing group: between the line/shape row (1) and the
@@ -2588,19 +2588,21 @@ internal sealed class EditorColorButton : Button
 
             if (IsCustomButton && HasCustomColor)
             {
+                // Rainbow corner triangle (larger for visibility)
+                int triSize = 14;
                 using (var clipRegion = new Region(innerPath))
                 {
                     g.Clip = clipRegion;
                     var pts = new Point[]
                     {
-                        new Point(inner.Right - 10, inner.Bottom),
-                        new Point(inner.Right, inner.Bottom - 10),
+                        new Point(inner.Right - triSize, inner.Bottom),
+                        new Point(inner.Right, inner.Bottom - triSize),
                         new Point(inner.Right, inner.Bottom)
                     };
                     using (var path = new GraphicsPath())
                     {
                         path.AddPolygon(pts);
-                        using (var brush = new LinearGradientBrush(new Rectangle(inner.Right - 10, inner.Bottom - 10, 10, 10), Color.Red, Color.Blue, 45f))
+                        using (var brush = new LinearGradientBrush(new Rectangle(inner.Right - triSize, inner.Bottom - triSize, triSize, triSize), Color.Red, Color.Blue, 45f))
                         {
                             Color[] colors = { Color.Red, Color.Yellow, Color.Green, Color.Blue, Color.Purple };
                             float[] positions = { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f };
@@ -2611,12 +2613,14 @@ internal sealed class EditorColorButton : Button
                     }
                     using (var sepPen = new Pen(Color.FromArgb(100, 255, 255, 255), 1f))
                     {
-                        g.DrawLine(sepPen, inner.Right - 10, inner.Bottom, inner.Right, inner.Bottom - 10);
+                        g.DrawLine(sepPen, inner.Right - triSize, inner.Bottom, inner.Right, inner.Bottom - triSize);
                     }
                     g.ResetClip();
                 }
             }
         }
+
+        // Standard border for all swatches
         g.DrawPath(swatchPen, innerPath);
     }
 
