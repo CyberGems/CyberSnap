@@ -104,12 +104,13 @@ public sealed partial class EditorForm : Form
         }
     }
 
-    private void LoadCaptureProject(Bitmap baseBitmap, ProjectData data, string filePath)
+    private void LoadCaptureProject(Bitmap baseBitmap, ProjectData data, string filePath, bool autoMaximize = true)
     {
         _savedFilePath = filePath;
         _canvas.LoadProjectState(baseBitmap, data.Annotations, data.HorizontalGuides, data.VerticalGuides);
         _suppressCloseConfirm = false;
-        MaybeAutoMaximizeForCapture();
+        if (autoMaximize)
+            MaybeAutoMaximizeForCapture();
         UpdateCaptureCaption();
         RefreshUi();
         AddRecentFile(filePath);
@@ -1126,7 +1127,7 @@ public sealed partial class EditorForm : Form
 
         using (var dlg = new OpenFileDialog
         {
-            Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tiff|All Files|*.*",
+            Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.webp|All Files|*.*",
             Title = LocalizationService.Translate("Open a project or image")
         })
         {
@@ -1141,13 +1142,22 @@ public sealed partial class EditorForm : Form
                     }
                     else
                     {
-                        using (var stream = new FileStream(dlg.FileName, FileMode.Open, FileAccess.Read))
-                        using (var tempBmp = new Bitmap(stream))
+                        var ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
+                        Bitmap captured;
+                        if (ext == ".webp")
                         {
-                            var captured = new Bitmap(tempBmp);
-                            LoadCapture(captured, dlg.FileName);
-                            AddRecentFile(dlg.FileName);
+                            captured = DecodeWebP(dlg.FileName);
                         }
+                        else
+                        {
+                            using (var stream = new FileStream(dlg.FileName, FileMode.Open, FileAccess.Read))
+                            using (var tempBmp = new Bitmap(stream))
+                            {
+                                captured = new Bitmap(tempBmp);
+                            }
+                        }
+                        LoadCapture(captured, dlg.FileName);
+                        AddRecentFile(dlg.FileName);
                     }
                 }
                 catch (Exception ex)
@@ -1923,13 +1933,13 @@ public sealed partial class EditorForm : Form
         {
             var ext = Path.GetExtension(filePath).ToLowerInvariant();
             var isProject = ext == ".csnp";
-            var supportedExtensions = new[] { ".csnp", ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff", ".webp" };
+            var supportedExtensions = new[] { ".csnp", ".png", ".jpg", ".jpeg", ".bmp", ".webp" };
             
             if (Array.IndexOf(supportedExtensions, ext) < 0)
             {
                 ThemedConfirmDialog.Alert(Handle,
                     LocalizationService.Translate("Error importing image"),
-                    LocalizationService.Translate("Unsupported file format. Please drop a .csnp project or a supported image (.png, .jpg, .jpeg, .bmp, .gif, .tiff, .webp)."),
+                    LocalizationService.Translate("Unsupported file format. Please drop a .csnp project or a supported image (.png, .jpg, .jpeg, .bmp, .webp)."),
                     error: true);
                 return;
             }
@@ -1955,7 +1965,7 @@ public sealed partial class EditorForm : Form
                 }
 
                 var (baseBitmap, projectData) = CanvasProjectService.LoadProject(filePath);
-                LoadCaptureProject(baseBitmap, projectData, filePath);
+                LoadCaptureProject(baseBitmap, projectData, filePath, autoMaximize: false);
             }
             else
             {
@@ -1994,7 +2004,7 @@ public sealed partial class EditorForm : Form
                     }
                 }
 
-                LoadCapture(captured, filePath);
+                LoadCapture(captured, filePath, autoMaximize: false);
                 AddRecentFile(filePath);
             }
         }
