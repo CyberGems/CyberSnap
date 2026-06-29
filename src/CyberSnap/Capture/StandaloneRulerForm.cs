@@ -89,10 +89,43 @@ public sealed class StandaloneRulerForm : Form
             InitialDelay = 400,
             ReshowDelay = 100,
             ShowAlways = true,
-            BackColor = Theme.IsDark ? Color.FromArgb(30, 33, 34) : SystemColors.Info,
-            ForeColor = Theme.IsDark ? Color.FromArgb(240, 240, 245) : SystemColors.InfoText,
+            OwnerDraw = true,
+        };
+        _chipTooltip.Draw += (_, e) =>
+        {
+            var isDark = Theme.IsDark;
+            using var bgBrush = new SolidBrush(isDark ? Color.FromArgb(30, 33, 34) : Color.FromArgb(240, 240, 240));
+            using var borderPen = new Pen(isDark ? Color.FromArgb(60, 255, 255, 255) : Color.FromArgb(40, 0, 0, 0));
+            var fgColor = isDark ? Color.FromArgb(240, 240, 245) : Color.FromArgb(24, 24, 24);
+
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var r = new Rectangle(0, 0, e.Bounds.Width - 1, e.Bounds.Height - 1);
+            using var path = RoundedRect(r, 4f);
+            e.Graphics.FillPath(bgBrush, path);
+            e.Graphics.DrawPath(borderPen, path);
+
+            TextRenderer.DrawText(e.Graphics, e.ToolTipText, e.Font, r, fgColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+        };
+        _chipTooltip.Popup += (_, e) =>
+        {
+            using var g = CreateGraphics();
+            var sz = TextRenderer.MeasureText(g, _chipTooltip.GetToolTip(this), Font);
+            e.ToolTipSize = new Size(sz.Width + 16, sz.Height + 10);
         };
         _chipTooltip.SetToolTip(this, ""); // will be set dynamically in OnMouseMove
+
+        // Helper for rounded rect in tooltip drawing
+        static GraphicsPath RoundedRect(Rectangle r, float rad)
+        {
+            var path = new GraphicsPath();
+            path.AddArc(r.X, r.Y, rad * 2, rad * 2, 180, 90);
+            path.AddArc(r.Right - rad * 2, r.Y, rad * 2, rad * 2, 270, 90);
+            path.AddArc(r.Right - rad * 2, r.Bottom - rad * 2, rad * 2, rad * 2, 0, 90);
+            path.AddArc(r.X, r.Bottom - rad * 2, rad * 2, rad * 2, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
 
         // ── Context menu (shown on right-click over empty area) ──
         _contextMenu = WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
