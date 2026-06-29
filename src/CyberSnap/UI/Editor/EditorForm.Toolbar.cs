@@ -977,7 +977,7 @@ public sealed partial class EditorForm
 
         _customColorButton.Click += (_, _) =>
         {
-            if (!_customColorButton.HasCustomColor || _customColorButton.Checked)
+            if (!_customColorButton.HasCustomColor || _customColorButton.Checked || _canvas.ToolColor.ToArgb() == _customColorButton.SwatchColor.ToArgb())
             {
                 ShowColorPickerPopup(_customColorButton);
             }
