@@ -1239,7 +1239,7 @@ public sealed partial class EditorForm : Form
         // Re-encode to PNG via WPF to normalize the pixel format, then load with GDI+
         var pngEncoder = new PngBitmapEncoder();
         pngEncoder.Frames.Add(BitmapFrame.Create(frame));
-        using var pngStream = new MemoryStream();
+        var pngStream = new MemoryStream();
         pngEncoder.Save(pngStream);
         pngStream.Position = 0;
         return new Bitmap(pngStream);
@@ -1250,28 +1250,13 @@ public sealed partial class EditorForm : Form
         var ext = Path.GetExtension(filePath).ToLowerInvariant();
         if (ext == ".webp")
         {
-            using (var webp = DecodeWebP(filePath))
-            {
-                var bmp = new Bitmap(webp.Width, webp.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                using (var g = Graphics.FromImage(bmp))
-                {
-                    g.DrawImage(webp, 0, 0, webp.Width, webp.Height);
-                }
-                return bmp;
-            }
+            return DecodeWebP(filePath);
         }
         else
         {
-            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-            using (var tempBmp = new Bitmap(stream))
-            {
-                var bmp = new Bitmap(tempBmp.Width, tempBmp.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                using (var g = Graphics.FromImage(bmp))
-                {
-                    g.DrawImage(tempBmp, 0, 0, tempBmp.Width, tempBmp.Height);
-                }
-                return bmp;
-            }
+            var bytes = File.ReadAllBytes(filePath);
+            var ms = new MemoryStream(bytes);
+            return new Bitmap(ms);
         }
     }
 
