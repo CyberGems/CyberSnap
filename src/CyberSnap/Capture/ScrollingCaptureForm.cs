@@ -1339,7 +1339,7 @@ public sealed partial class ScrollingCaptureForm : Form
             float delta = (float)(UiChrome.FrameIntervalMs / 2600.0) * (hovered ? 2f : 1f);
             _startShinePhase += delta;
             if (_startShinePhase >= 1f) _startShinePhase -= 1f;
-            Invalidate(_startBtnRect);
+            InvalidateStartShine();
         }
 
         public void Reposition(Rectangle captureRegion)
@@ -1498,9 +1498,21 @@ public sealed partial class ScrollingCaptureForm : Form
 
             if (withShine && !UI.Motion.Disabled)
             {
+                var clipState = g.Save();
+                g.ResetClip();
                 WindowsDockRenderer.PaintBorderShine(
                     g, rectF, CornerR, shinePhase, StartShineGlow, StartShineCore, 1f, StartShineThicknessScale);
+                g.Restore(clipState);
             }
+        }
+
+        private void InvalidateStartShine()
+        {
+            if (_startBtnRect.IsEmpty)
+                return;
+
+            int pad = UiChrome.ScaleInt(10);
+            Invalidate(Rectangle.Inflate(_startBtnRect, pad, pad));
         }
 
         private void DrawIconBtn(Graphics g, Rectangle r, string iconId, bool hovered, Color iconColor)
