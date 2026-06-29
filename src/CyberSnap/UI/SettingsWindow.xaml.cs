@@ -819,6 +819,13 @@ public partial class SettingsWindow : Window
             $"The previous startup setting was restored. Check Config -> About and try again.\n{ex.Message}");
     }
 
+    private void RulerCaptureAllScreensCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        _settingsService.Settings.RulerCaptureAllScreens = RulerCaptureAllScreensCheck.IsChecked == true;
+        _settingsService.Save();
+    }
+
     private void SetStartupPreferenceStatus(string message)
     {
         StartupPreferenceStatusText.Text = message;
