@@ -76,11 +76,20 @@ public sealed class StandaloneRulerForm : Form
         Cursor = CursorFactory.PrecisionCursor;
 
         // ── Banner ──
+        var rulerLabel = LocalizationService.Translate("Ruler") + ": ";
+        var rulerAction = LocalizationService.Translate("Click & drag to measure")
+            + " · " + LocalizationService.Translate("Right-click or Esc to close")
+            + " · " + LocalizationService.Translate("Hold Shift to constrain");
         _banner = new StandaloneToolBanner(
-            LocalizationService.Translate("Click & drag to measure  ·  Right-click or Esc to close  ·  Hold Shift to constrain"),
+            new BannerSegment[]
+            {
+                new(rulerLabel, Color.White),
+                new(rulerAction, null), // accent
+            },
             _bannerWorkingArea,
             Bounds,
-            onInvalidate: () => Invalidate());
+            onInvalidate: () => Invalidate(),
+            iconId: "ruler");
 
         // ── Chip close-button tooltip ──
         _chipTooltip = new ToolTip
