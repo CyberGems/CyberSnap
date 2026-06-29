@@ -862,5 +862,15 @@
   "Hotkey reassigned": "Hotkey reassigned",
   "\"{0}\" reassigned from {1}.": "\"{0}\" reassigned from {1}.",
   "Taken": "Taken",
-  "This hotkey is registered by another application.": "This hotkey is registered by another application."
+  "This hotkey is registered by another application.": "This hotkey is registered by another application.",
+  "Right-click or Esc to close": "Right-click or Esc to close",
+  "Hold Shift to constrain": "Hold Shift to constrain",
+  "Click & drag to select text region": "Click & drag to select text region",
+  "Click & drag to scan QR or barcodes": "Click & drag to scan QR or barcodes",
+  "Click to pick color & copy HEX": "Click to pick color & copy HEX",
+  "Drag to select scrolling area": "Drag to select scrolling area",
+  "Auto-copy OCR": "Auto-copy OCR",
+  "Copy recognized text without opening the result window": "Copy recognized text without opening the result window",
+  "Close menu & continue": "Close menu & continue",
+  "Exit OCR capture": "Exit OCR capture"
 }

@@ -1217,5 +1217,15 @@
   "Hotkey reassigned": "Atajo reasignado",
   "\"{0}\" reassigned from {1}.": "\"{0}\" reasignado desde {1}.",
   "Taken": "Ocupada",
-  "This hotkey is registered by another application.": "Este atajo de teclado está registrado por otra aplicación."
+  "This hotkey is registered by another application.": "Este atajo de teclado está registrado por otra aplicación.",
+  "Right-click or Esc to close": "Clic derecho o Esc para cerrar",
+  "Hold Shift to constrain": "Mantén Shift para restringir",
+  "Click & drag to select text region": "Haz clic y arrastra para seleccionar región de texto",
+  "Click & drag to scan QR or barcodes": "Haz clic y arrastra para escanear QR o códigos de barras",
+  "Click to pick color & copy HEX": "Haz clic para elegir color y copiar HEX",
+  "Drag to select scrolling area": "Arrastra para seleccionar área de desplazamiento",
+  "Auto-copy OCR": "Auto-copiar OCR",
+  "Copy recognized text without opening the result window": "Copiar texto reconocido sin abrir la ventana de resultados",
+  "Close menu & continue": "Cerrar menú y continuar",
+  "Exit OCR capture": "Salir de captura OCR"
 }
