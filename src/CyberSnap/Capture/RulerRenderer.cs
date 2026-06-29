@@ -89,8 +89,30 @@ public static class RulerRenderer
         g.DrawLine(ShadowPen, from.X + 1, from.Y + 1, to.X + 1, to.Y + 1);
         g.DrawLine(_linePen!, from, to);
 
-        // Endpoint anchor dots — accent-colored circles centered on the exact measurement points.
-        // These replace the old perpendicular tick marks for unambiguous, calibration-safe endpoints.
+        // Perpendicular endpoint ticks in accent color — mark the exact measurement boundary.
+        // Shadow + accent color ensures visibility on any background.
+        float nx = 0, ny = 0;
+        if (dist > 1) { nx = -dy / dist; ny = dx / dist; }
+        const float tickHalf = 6.5f;
+        float tickWidth = 2.2f * dpiScale;
+        using var tickPen = new Pen(_accentBrush!.Color, tickWidth)
+            { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        // Tick shadow
+        g.DrawLine(ShadowPen,
+            from.X - nx * tickHalf + 1, from.Y - ny * tickHalf + 1,
+            from.X + nx * tickHalf + 1, from.Y + ny * tickHalf + 1);
+        g.DrawLine(ShadowPen,
+            to.X - nx * tickHalf + 1, to.Y - ny * tickHalf + 1,
+            to.X + nx * tickHalf + 1, to.Y + ny * tickHalf + 1);
+        // Tick accent
+        g.DrawLine(tickPen,
+            from.X - nx * tickHalf, from.Y - ny * tickHalf,
+            from.X + nx * tickHalf, from.Y + ny * tickHalf);
+        g.DrawLine(tickPen,
+            to.X - nx * tickHalf, to.Y - ny * tickHalf,
+            to.X + nx * tickHalf, to.Y + ny * tickHalf);
+
+        // Endpoint anchor dot on top — marks the exact measurement point
         float dotRadius = 4.5f * dpiScale;
         float dotDiam = dotRadius * 2f;
         using var dotShadowBrush = new SolidBrush(Color.FromArgb(52, 0, 0, 0));
