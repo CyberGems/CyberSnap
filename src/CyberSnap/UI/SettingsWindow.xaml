@@ -2418,6 +2418,31 @@
                                Visibility="Collapsed"
                                Margin="4,8,0,0"/>
 
+                    <TextBlock Text="Standalone tools" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <!-- Ruler: Capture all screens -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE7F3;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Services:LocalizationService.SourceText="Ruler: Capture all screens" Text="Ruler: Capture all screens" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="When using Enter to capture from the standalone ruler, capture every monitor instead of only the current one. Applies only to multi-monitor setups." Text="When using Enter to capture from the standalone ruler, capture every monitor instead of only the current one. Applies only to multi-monitor setups." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="RulerCaptureAllScreensCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Ruler: Capture all screens"
+                                          ToolTip="When enabled, the ruler's Enter capture takes every monitor. Applies only to multi-monitor setups."
+                                          Checked="RulerCaptureAllScreensCheck_Changed" Unchecked="RulerCaptureAllScreensCheck_Changed"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="System" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>

@@ -163,6 +163,7 @@ public partial class SettingsWindow
             SetSaveDirectoryPath(s.SaveDirectory);
             SaveDirPanel.Visibility = s.SaveToFile ? Visibility.Visible : Visibility.Collapsed;
             StartWithWindowsCheck.IsChecked = s.StartWithWindows;
+            RulerCaptureAllScreensCheck.IsChecked = s.RulerCaptureAllScreens;
 
             SaveHistoryCheck.IsChecked = s.SaveHistory;
             SaveStandaloneToHistoryCheck.IsChecked = s.SaveStandaloneToHistory;
