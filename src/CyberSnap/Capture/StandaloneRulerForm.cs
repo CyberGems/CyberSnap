@@ -47,10 +47,19 @@ public sealed class StandaloneRulerForm : Form
     // true = capture all screens; false = capture only the screen where the cursor is
     private readonly Action<bool>? _onCaptureFullscreen;
 
+    // ── Pre-cached screen bounds for multi-monitor detection ──
+    private readonly Rectangle[] _screenBounds;
+
     public StandaloneRulerForm(Action<bool>? onCaptureFullscreen = null)
     {
         _onCaptureFullscreen = onCaptureFullscreen;
         _dpiScale = DeviceDpi / 96f;
+
+        // Pre-cache screen bounds on this STA thread for reliable multi-monitor detection
+        var allScreens = Screen.AllScreens;
+        _screenBounds = new Rectangle[allScreens.Length];
+        for (int i = 0; i < allScreens.Length; i++)
+            _screenBounds[i] = allScreens[i].Bounds;
 
         // Give the tray context menu time to fully dismiss before screenshot
         Thread.Sleep(80);
@@ -148,7 +157,7 @@ public sealed class StandaloneRulerForm : Form
         captureItem.Click += (_, _) =>
         {
             _closed = true;
-            bool captureAll = GetRulerCaptureAllScreensSetting();
+            bool captureAll = ShouldCaptureAllScreens();
             BeginInvoke(() =>
             {
                 _onCaptureFullscreen?.Invoke(captureAll);
@@ -198,7 +207,7 @@ public sealed class StandaloneRulerForm : Form
                 return true;
             case Keys.Enter when (keyData & Keys.Modifiers) == 0:
                 _closed = true;
-                bool captureAll = GetRulerCaptureAllScreensSetting();
+                bool captureAll = ShouldCaptureAllScreens();
                 BeginInvoke(() =>
                 {
                     _onCaptureFullscreen?.Invoke(captureAll);
@@ -500,6 +509,30 @@ public sealed class StandaloneRulerForm : Form
         Cursor = CursorFactory.PrecisionCursor;
         Invalidate();
     }
+    /// <summary>Returns true if Enter should capture all screens.
+    /// True when: the setting is enabled, OR the ruler spans multiple monitors.</summary>
+    private bool ShouldCaptureAllScreens()
+    {
+        if (GetRulerCaptureAllScreensSetting())
+            return true;
+
+        // Check if ruler endpoints are on different screens (using pre-cached bounds)
+        if (_hasLastMeasurement && _screenBounds.Length > 1)
+        {
+            int fromIdx = -1, toIdx = -1;
+            for (int i = 0; i < _screenBounds.Length; i++)
+            {
+                if (fromIdx < 0 && _screenBounds[i].Contains(_lastFrom)) fromIdx = i;
+                if (toIdx < 0 && _screenBounds[i].Contains(_lastTo)) toIdx = i;
+                if (fromIdx >= 0 && toIdx >= 0) break;
+            }
+            if (fromIdx >= 0 && toIdx >= 0 && fromIdx != toIdx)
+                return true; // ruler spans multiple monitors → capture all
+        }
+
+        return false;
+    }
+
     private static bool GetRulerCaptureAllScreensSetting()
     {
         try
