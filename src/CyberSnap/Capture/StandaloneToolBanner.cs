@@ -270,12 +270,15 @@ public sealed class StandaloneToolBanner : IDisposable
         }
     }
 
-    /// <summary>Reset to fully visible (e.g. when cursor re-enters the banner during fade-out).</summary>
+    /// <summary>Reset to fully visible (e.g. when cursor re-enters the banner during fade-out,
+    /// or when the user clicks without completing a drag selection).</summary>
     public void Revive()
     {
         if (_state == State.FadeOut)
         {
             _state = State.FadeIn;
+            _opacity = 0f; // restart fade-in from transparent
+            _timer?.Start();
         }
         else if (_state == State.Hold)
         {

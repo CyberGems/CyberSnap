@@ -362,8 +362,17 @@ public sealed class StandaloneRulerForm : Form
         if (_isDragging && e.Button == MouseButtons.Left)
         {
             _isDragging = false;
+            var end = GetRulerEnd(_cursorPos);
+            // If the user just clicked without a meaningful drag (< 10 px), revive the banner
+            if (DistSq(_rulerStart, end) < 100) // 10² = 100
+            {
+                _banner.Revive();
+                Invalidate();
+                base.OnMouseUp(e);
+                return;
+            }
             _lastFrom = _rulerStart;
-            _lastTo = GetRulerEnd(_cursorPos);
+            _lastTo = end;
             _hasLastMeasurement = true;
             Invalidate();
         }
