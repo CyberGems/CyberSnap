@@ -8,6 +8,7 @@ using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Native;
 using CyberSnap.Services;
+using CyberSnap.UI;
 
 namespace CyberSnap.Capture;
 
@@ -25,13 +26,14 @@ public sealed partial class ScrollingCaptureForm : Form
     public event Action<Bitmap>? CaptureCompleted;
     public event Action? CaptureCancelled;
     public event Action<string>? CaptureFailed;
+    public event Action<ScrollingCaptureMode>? CaptureModeChanged;
 
     private enum State { Selecting, Capturing, Stitching, Done }
 
     private Bitmap? _screenshot;
     private readonly Rectangle _virtualBounds;
     private readonly bool _showCursor;
-    private readonly ScrollingCaptureMode _captureMode;
+    private ScrollingCaptureMode _captureMode;
     private readonly Rectangle? _preSelectedRegion;
     private State _state = State.Selecting;
 
@@ -65,7 +67,8 @@ public sealed partial class ScrollingCaptureForm : Form
     private int _bestIgnoreBottomOffset;
     private int _consecutiveDuplicates;
     private DateTime _lastAcceptedFrameTime;
-    private static readonly TimeSpan NoProgressTimeout = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan AutoscrollNoProgressTimeout = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan ManualScrollNoProgressTimeout = TimeSpan.FromMinutes(2);
     private enum FrameCaptureResult { Accepted, Pending, Duplicate, Rejected, Failed }
 
     // Control bar
@@ -131,6 +134,7 @@ public sealed partial class ScrollingCaptureForm : Form
     {
         base.OnShown(e);
         CaptureWindowExclusion.Apply(this);
+        RegisterCaptureOverlayExclusion();
         User32.SetWindowPos(Handle, User32.HWND_TOPMOST, 0, 0, 0, 0,
             User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_SHOWWINDOW);
         User32.SetForegroundWindow(Handle);
@@ -349,6 +353,44 @@ public sealed partial class ScrollingCaptureForm : Form
 
     private static readonly Color TransKey = Color.FromArgb(1, 2, 3);
 
+    private static void PersistScrollingCaptureMode(ScrollingCaptureMode mode)
+    {
+        try
+        {
+            using var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.ScrollingCaptureMode = mode;
+            svc.Save();
+            svc.FlushPendingWrites();
+        }
+        catch { /* settings may be locked */ }
+    }
+
+    /// <summary>
+    /// Overlay chrome is excluded from capture via WDA_EXCLUDEFROMCAPTURE; never hide/show per frame.
+    /// </summary>
+    private static Rectangle ScrollingCaptureOverlayExclusionBounds() => Rectangle.Empty;
+
+    private void RegisterCaptureOverlayExclusion()
+    {
+        if (!IsHandleCreated)
+            return;
+
+        CaptureWindowExclusion.SetLogicalBounds(Handle, ScrollingCaptureOverlayExclusionBounds);
+    }
+
+    /// <summary>
+    /// Repaint overlay chrome after leaving the frozen screenshot/dim ready phase.
+    /// </summary>
+    private void InvalidateCaptureOverlay()
+    {
+        if (!IsHandleCreated)
+            return;
+
+        Invalidate(true);
+        Update();
+    }
+
     private void ShowControlBar()
     {
         _magHelper?.Close();
@@ -368,6 +410,12 @@ public sealed partial class ScrollingCaptureForm : Form
         Invalidate(); // repaint to show selection border
 
         _controlBar = new CaptureControlBar(_screenRegion, _captureMode);
+        _controlBar.ModeChanged += mode =>
+        {
+            _captureMode = mode;
+            PersistScrollingCaptureMode(mode);
+            CaptureModeChanged?.Invoke(mode);
+        };
         _controlBar.StartClicked += () =>
         {
             // User clicked START — begin capturing now
@@ -375,15 +423,13 @@ public sealed partial class ScrollingCaptureForm : Form
             ReleaseSelectionPreview(); // free screenshot memory now that capture has started
             Services.SoundService.PlayRecordStartSound();
             _controlBar?.TransitionToCapturing();
+            BuildCaptureInputRegion();
+            RegisterCaptureOverlayExclusion();
+            InvalidateCaptureOverlay();
+            FocusScrollTargetWindow();
 
             if (_captureMode == ScrollingCaptureMode.AssistAutoscroll)
             {
-                int centerX = _screenRegion.Left + _screenRegion.Width / 2;
-                int centerY = _screenRegion.Top + _screenRegion.Height / 2;
-                User32.SetCursorPos(centerX, centerY);
-                IntPtr targetHwnd = User32.WindowFromPoint(new User32.POINT(centerX, centerY));
-                if (targetHwnd != IntPtr.Zero)
-                    User32.SetForegroundWindow(targetHwnd);
                 _consecutiveDuplicates = 0;
             }
 
@@ -419,8 +465,10 @@ public sealed partial class ScrollingCaptureForm : Form
 
     private void HandleTimerTick()
     {
-        // Stop if no frame has been accepted for too long (prevents infinite scroll).
-        if (DateTime.UtcNow - _lastAcceptedFrameTime > NoProgressTimeout)
+        var timeout = _captureMode == ScrollingCaptureMode.AssistAutoscroll
+            ? AutoscrollNoProgressTimeout
+            : ManualScrollNoProgressTimeout;
+        if (DateTime.UtcNow - _lastAcceptedFrameTime > timeout)
         {
             StopCapturing();
             return;
@@ -455,16 +503,64 @@ public sealed partial class ScrollingCaptureForm : Form
                 _consecutiveDuplicates = 0;
                 _lastAcceptedFrameTime = DateTime.UtcNow;
             }
-            else if (result == FrameCaptureResult.Duplicate)
-            {
-                _consecutiveDuplicates++;
-                if (_consecutiveDuplicates >= 3)
-                {
-                    StopCapturing();
-                    return;
-                }
-            }
+            // In manual-scroll mode, unchanged frames just mean the user has not scrolled yet.
         }
+    }
+
+    private void FocusScrollTargetWindow()
+    {
+        int centerX = _screenRegion.Left + _screenRegion.Width / 2;
+        int centerY = _screenRegion.Top + _screenRegion.Height / 2;
+        User32.SetCursorPos(centerX, centerY);
+        IntPtr targetHwnd = User32.WindowFromPoint(new User32.POINT(centerX, centerY));
+        if (targetHwnd != IntPtr.Zero)
+            User32.SetForegroundWindow(targetHwnd);
+    }
+
+    /// <summary>
+    /// During capture, use a hollow frame so wheel/click input reaches the scrollable content below.
+    /// </summary>
+    private void BuildCaptureInputRegion()
+    {
+        if (_state != State.Capturing)
+        {
+            var fullRgn = Gdi32.CreateRectRgn(0, 0, Bounds.Width, Bounds.Height);
+            User32.SetWindowRgn(Handle, fullRgn, true);
+            Gdi32.DeleteObject(fullRgn);
+            return;
+        }
+
+        const int RgnOr = 2;
+        const int frameThickness = 15;
+        var rgn = Gdi32.CreateRectRgn(0, 0, 0, 0);
+
+        if (_selection.Width > 0 && _selection.Height > 0)
+        {
+            var topRgn = Gdi32.CreateRectRgn(
+                _selection.Left - frameThickness, _selection.Top - frameThickness,
+                _selection.Right + frameThickness, _selection.Top);
+            var bottomRgn = Gdi32.CreateRectRgn(
+                _selection.Left - frameThickness, _selection.Bottom,
+                _selection.Right + frameThickness, _selection.Bottom + frameThickness);
+            var leftRgn = Gdi32.CreateRectRgn(
+                _selection.Left - frameThickness, _selection.Top,
+                _selection.Left, _selection.Bottom);
+            var rightRgn = Gdi32.CreateRectRgn(
+                _selection.Right, _selection.Top,
+                _selection.Right + frameThickness, _selection.Bottom);
+
+            Gdi32.CombineRgn(rgn, rgn, topRgn, RgnOr);
+            Gdi32.CombineRgn(rgn, rgn, bottomRgn, RgnOr);
+            Gdi32.CombineRgn(rgn, rgn, leftRgn, RgnOr);
+            Gdi32.CombineRgn(rgn, rgn, rightRgn, RgnOr);
+
+            Gdi32.DeleteObject(topRgn);
+            Gdi32.DeleteObject(bottomRgn);
+            Gdi32.DeleteObject(leftRgn);
+            Gdi32.DeleteObject(rightRgn);
+        }
+
+        User32.SetWindowRgn(Handle, rgn, true);
     }
 
     private void StopAutomaticTimer()
@@ -573,7 +669,7 @@ public sealed partial class ScrollingCaptureForm : Form
         ReplacePreviousCapturedFrame(frame);
         _frameCount++;
         if (usedBestGuess)
-            _controlBar?.SetStatus($"Auto: {_frameCount} frames (partial)");
+            _controlBar?.SetPartialFrameCount(_frameCount);
         else
             _controlBar?.SetFrameCount(_frameCount);
         return FrameCaptureResult.Accepted;
@@ -619,7 +715,7 @@ public sealed partial class ScrollingCaptureForm : Form
         Services.SoundService.PlayRecordStopSound();
 
         _state = State.Stitching;
-        _controlBar?.SetStatus("Stitching...");
+        _controlBar?.SetStatus(LocalizationService.Translate("Scroll capture stitching"));
 
         FinishCapture();
     }
@@ -741,15 +837,20 @@ public sealed partial class ScrollingCaptureForm : Form
         }
         else
         {
-            // Capturing phase: transparent overlay, just the border
+            // Capturing phase: live desktop shows through; only draw the frame chrome.
+            g.CompositingMode = CompositingMode.SourceCopy;
             g.Clear(TransKey);
+            g.CompositingMode = CompositingMode.SourceOver;
         }
 
         if (_selection.Width > 2 && _selection.Height > 2)
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var borderRect = Rectangle.Inflate(_selection, 2, 2);
-            SelectionFrameRenderer.DrawRectangle(g, borderRect, fill: false);
+            if (_state == State.Capturing)
+                PaintCapturingFrame(g, borderRect);
+            else
+                SelectionFrameRenderer.DrawRectangle(g, borderRect, fill: false);
 
             // Draw resize handles when in ready phase (not yet capturing)
             if (_state == State.Selecting && _controlBar is not null)
@@ -759,6 +860,32 @@ public sealed partial class ScrollingCaptureForm : Form
                     WindowsHandleRenderer.Paint(g, h);
             }
         }
+    }
+
+    /// <summary>
+    /// Frame during capture: no semi-transparent glow that can trap the ready-phase dim snapshot.
+    /// </summary>
+    private static void PaintCapturingFrame(Graphics g, Rectangle borderRect)
+    {
+        var accent = UiChrome.AccentColor;
+        using var borderPen = new Pen(accent, 1.5f)
+        {
+            DashStyle = DashStyle.Dash,
+            DashPattern = new[] { 6f, 4f }
+        };
+        g.DrawRectangle(borderPen, borderRect);
+
+        const int cornerLen = 12;
+        const int cornerOffset = 3;
+        using var cornerPen = new Pen(accent, 2f) { LineJoin = LineJoin.Miter };
+        g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Y - cornerOffset, borderRect.X - cornerOffset + cornerLen, borderRect.Y - cornerOffset);
+        g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Y - cornerOffset, borderRect.X - cornerOffset, borderRect.Y - cornerOffset + cornerLen);
+        g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Y - cornerOffset, borderRect.Right + cornerOffset - cornerLen, borderRect.Y - cornerOffset);
+        g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Y - cornerOffset, borderRect.Right + cornerOffset, borderRect.Y - cornerOffset + cornerLen);
+        g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Bottom + cornerOffset, borderRect.X - cornerOffset + cornerLen, borderRect.Bottom + cornerOffset);
+        g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Bottom + cornerOffset, borderRect.X - cornerOffset, borderRect.Bottom + cornerOffset - cornerLen);
+        g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset, borderRect.Right + cornerOffset - cornerLen, borderRect.Bottom + cornerOffset);
+        g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset - cornerLen);
     }
 
     // ── Handle resize/move helpers ──
@@ -993,6 +1120,8 @@ public sealed partial class ScrollingCaptureForm : Form
             ReleaseCaptureBitmaps();
             ReleaseSelectionPreview();
             _readoutFont.Dispose();
+            if (IsHandleCreated)
+                CaptureWindowExclusion.Unregister(Handle);
         }
         base.Dispose(disposing);
     }
@@ -1012,41 +1141,86 @@ public sealed partial class ScrollingCaptureForm : Form
         public event Action? StopClicked;
         public event Action? CancelClicked;
         public event Action? ManualFrameClicked;
+        public event Action<ScrollingCaptureMode>? ModeChanged;
 
         private static readonly Color ScrollAccent = Color.FromArgb(255, 0x07, 0x87, 0x88);
+        private static readonly Color DoneAccent = Color.FromArgb(255, 0xBD, 0x70, 0x11);
+        private static readonly Color DoneAccentHover = Color.FromArgb(255, 0xD4, 0x82, 0x18);
+        private static readonly Color StartShineGlow = Color.FromArgb(168, 174, 184);
+        private static readonly Color StartShineCore = Color.FromArgb(210, 215, 222);
+        private const float StartShineThicknessScale = 0.55f;
 
-        private static int BarWidth => UiChrome.ScaleInt(400);
-        private static int BarHeight => WindowsDockRenderer.SurfaceHeight;
-        private static float CornerR => UiChrome.ScaleFloat(5f);
+        private static int BarWidth => UiChrome.ScaleInt(520);
+        private static int BarHeight => UiChrome.ScaleInt(58);
+        private static int PrimaryBtnHeight => UiChrome.ScaleInt(40);
+        private static int SecondaryBtnSize => UiChrome.ScaleInt(38);
+        private static int PrimaryBtnWidth => UiChrome.ScaleInt(76);
+        private static int StartCancelGap => UiChrome.ScaleInt(8);
+        private static int ModeComboWidth => UiChrome.ScaleInt(88);
+        private static int ModeComboHeight => UiChrome.ScaleInt(30);
+        private static int DotSize => UiChrome.ScaleInt(10);
+        private static float CornerR => UiChrome.ScaledToolbarCornerRadius;
 
-        private readonly ScrollingCaptureMode _mode;
+        private ScrollingCaptureMode _mode;
         private int _frameCount;
-        private string _status;
+        private string? _statusOverride;
         private bool _isCapturing;
+        private bool _modeComboHovered;
+        private ContextMenuStrip? _modeMenu;
 
         private Rectangle _startBtnRect;
         private Rectangle _stopBtnRect;
         private Rectangle _cancelBtnRect;
         private Rectangle _manualFrameBtnRect;
-        private Rectangle? _hoveredBtn;
+        private Rectangle _modeComboRect;
+        private Rectangle _phaseLabelRect;
         private Rectangle _statusRect;
         private Rectangle _recDotRect;
+        private Rectangle? _hoveredRect;
 
         private readonly Font _statusFont = UiChrome.ChromeFont(10f, FontStyle.Bold);
-        private readonly Font _dotFont = UiChrome.ChromeFont(8f, FontStyle.Bold);
-        private static readonly StringFormat _statusFmt = new()
+        private readonly Font _hintFont = UiChrome.ChromeFont(8f, FontStyle.Regular);
+        private readonly Font _phaseFont = CreatePhaseFont();
+        private readonly Font _comboFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
+        private readonly Font _startFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
+        private WindowsToolTip? _chromeToolTip;
+        private Rectangle? _tooltipAnchor;
+        private readonly System.Windows.Forms.Timer _startShineTimer;
+        private float _startShinePhase;
+
+        private static readonly StringFormat _singleLineFmt = new()
         {
+            LineAlignment = StringAlignment.Center,
+            Alignment = StringAlignment.Near,
+            Trimming = StringTrimming.EllipsisCharacter,
+            FormatFlags = StringFormatFlags.NoWrap,
+        };
+
+        private static readonly StringFormat _centerFmt = new()
+        {
+            Alignment = StringAlignment.Center,
             LineAlignment = StringAlignment.Center,
             Trimming = StringTrimming.EllipsisCharacter,
             FormatFlags = StringFormatFlags.NoWrap,
         };
 
+        private static Font CreatePhaseFont()
+        {
+            try
+            {
+                return new Font("Segoe UI Variable Display", UiChrome.ScaleFloat(11f), FontStyle.Bold);
+            }
+            catch
+            {
+                return UiChrome.ChromeFont(11f, FontStyle.Bold);
+            }
+        }
+
         public CaptureControlBar(Rectangle captureRegion, ScrollingCaptureMode mode)
         {
-            _mode = mode;
-            _isCapturing = false;
-            _status = mode == ScrollingCaptureMode.AssistAutoscroll ? "Autoscroll  —  ready"
-                : "Manual  —  ready";
+            _mode = mode == ScrollingCaptureMode.AssistAutoscroll
+                ? ScrollingCaptureMode.AssistAutoscroll
+                : ScrollingCaptureMode.Automatic;
 
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
@@ -1059,71 +1233,119 @@ public sealed partial class ScrollingCaptureForm : Form
             DoubleBuffered = true;
             Cursor = Cursors.Default;
 
-            // Position centered above the capture region, same logic as RecordingForm
+            PositionAboveRegion(captureRegion);
+            CalcLayout();
+            ApplyRoundedChromeRegion();
+
+            _startShineTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+            _startShineTimer.Tick += (_, _) => StartShineTick();
+        }
+
+        private void ApplyRoundedChromeRegion()
+        {
+            if (Width <= 0 || Height <= 0)
+                return;
+
+            Region?.Dispose();
+            using var path = WindowsDockRenderer.RoundedRect(new RectangleF(0, 0, Width, Height), CornerR);
+            Region = new Region(path);
+        }
+
+        private void PositionAboveRegion(Rectangle captureRegion)
+        {
             var screen = Screen.FromRectangle(captureRegion);
             int tx = captureRegion.X + captureRegion.Width / 2 - BarWidth / 2;
             int ty = captureRegion.Y - BarHeight - UiChrome.ScaleInt(14);
             var edge = UiChrome.ScaleInt(4);
-            // If bar doesn't fit above, place it just below the region instead
             if (ty < screen.Bounds.Top + edge)
                 ty = captureRegion.Bottom + UiChrome.ScaleInt(14);
             if (tx < screen.Bounds.Left + edge) tx = screen.Bounds.Left + edge;
             if (tx + BarWidth > screen.Bounds.Right - edge) tx = screen.Bounds.Right - edge - BarWidth;
             Location = new Point(tx, ty);
-
-            CalcLayout();
         }
 
         private void CalcLayout()
         {
             int btnPad = WindowsDockRenderer.SurfacePadding;
-            int btnSize = WindowsDockRenderer.IconButtonSize;
             int btnGap = WindowsDockRenderer.ButtonSpacing;
-            int btnY = (BarHeight - btnSize) / 2;
+            int gap = UiChrome.ScaleInt(8);
+            int leftPad = UiChrome.ScaleInt(14);
 
-            _recDotRect = new Rectangle(UiChrome.ScaleInt(16), btnY + 4, 10, 10);
-            _cancelBtnRect = new Rectangle(BarWidth - btnPad - btnSize, btnY, btnSize, btnSize);
+            float centerY = BarHeight / 2f;
+            int dotY = (int)(centerY - DotSize / 2f);
+            _recDotRect = new Rectangle(leftPad, dotY, DotSize, DotSize);
+
+            string phaseTextReady = PhaseLabel(false);
+            string phaseTextCapturing = PhaseLabel(true);
+            int phaseWidth = Math.Max(UiChrome.ScaleInt(96),
+                Math.Max(MeasurePhaseLabelWidth(phaseTextReady), MeasurePhaseLabelWidth(phaseTextCapturing)));
+            int phaseX = _recDotRect.Right + UiChrome.ScaleInt(8);
+            _phaseLabelRect = new Rectangle(phaseX, 0, phaseWidth, BarHeight);
+
+            int comboY = (BarHeight - ModeComboHeight) / 2;
+            _modeComboRect = new Rectangle(_phaseLabelRect.Right + gap, comboY, ModeComboWidth, ModeComboHeight);
+
+            int secY = (BarHeight - SecondaryBtnSize) / 2;
+            int priY = (BarHeight - PrimaryBtnHeight) / 2;
+            _cancelBtnRect = new Rectangle(BarWidth - btnPad - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize);
 
             if (!_isCapturing)
             {
-                _startBtnRect = new Rectangle(_cancelBtnRect.X - btnGap - btnSize, btnY, btnSize, btnSize);
+                _startBtnRect = new Rectangle(
+                    _cancelBtnRect.X - btnGap - StartCancelGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
                 _stopBtnRect = Rectangle.Empty;
                 _manualFrameBtnRect = Rectangle.Empty;
             }
             else
             {
                 _startBtnRect = Rectangle.Empty;
-                _stopBtnRect = new Rectangle(_cancelBtnRect.X - btnGap - btnSize, btnY, btnSize, btnSize);
+                _stopBtnRect = new Rectangle(
+                    _cancelBtnRect.X - btnGap - StartCancelGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
                 _manualFrameBtnRect = _mode == ScrollingCaptureMode.Manual
-                    ? new Rectangle(_stopBtnRect.X - btnGap - btnSize, btnY, btnSize, btnSize)
+                    ? new Rectangle(_stopBtnRect.X - btnGap - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize)
                     : Rectangle.Empty;
             }
 
             int firstBtnX = !_manualFrameBtnRect.IsEmpty ? _manualFrameBtnRect.X
-                : !_startBtnRect.IsEmpty ? _startBtnRect.X : _stopBtnRect.X;
-            _statusRect = new Rectangle(UiChrome.ScaleInt(16), 0, firstBtnX - UiChrome.ScaleInt(24), BarHeight);
+                : !_startBtnRect.IsEmpty ? _startBtnRect.X
+                : _stopBtnRect.X;
+            int statusX = _modeComboRect.Right + gap;
+            _statusRect = new Rectangle(statusX, 0, Math.Max(0, firstBtnX - gap - statusX), BarHeight);
         }
+
+        private int MeasurePhaseLabelWidth(string text) =>
+            TextRenderer.MeasureText(text, _phaseFont, new Size(int.MaxValue, BarHeight),
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width + UiChrome.ScaleInt(8);
 
         public void TransitionToCapturing()
         {
             _isCapturing = true;
+            _frameCount = 0;
+            _statusOverride = null;
+            _startShineTimer.Stop();
             CalcLayout();
             Invalidate();
+        }
+
+        private void StartShineTick()
+        {
+            if (UI.Motion.Disabled || _isCapturing || _startBtnRect.IsEmpty)
+            {
+                _startShineTimer.Stop();
+                return;
+            }
+
+            bool hovered = _hoveredRect == _startBtnRect;
+            float delta = (float)(UiChrome.FrameIntervalMs / 2600.0) * (hovered ? 2f : 1f);
+            _startShinePhase += delta;
+            if (_startShinePhase >= 1f) _startShinePhase -= 1f;
+            Invalidate(_startBtnRect);
         }
 
         public void Reposition(Rectangle captureRegion)
         {
             if (InvokeRequired) { BeginInvoke(() => Reposition(captureRegion)); return; }
-            var screen = Screen.FromRectangle(captureRegion);
-            int tx = captureRegion.X + captureRegion.Width / 2 - BarWidth / 2;
-            int ty = captureRegion.Y - BarHeight - UiChrome.ScaleInt(14);
-            var edge = UiChrome.ScaleInt(4);
-            // If bar doesn't fit above, place it just below the region instead
-            if (ty < screen.Bounds.Top + edge)
-                ty = captureRegion.Bottom + UiChrome.ScaleInt(14);
-            if (tx < screen.Bounds.Left + edge) tx = screen.Bounds.Left + edge;
-            if (tx + BarWidth > screen.Bounds.Right - edge) tx = screen.Bounds.Right - edge - BarWidth;
-            Location = new Point(tx, ty);
+            PositionAboveRegion(captureRegion);
             CalcLayout();
             Invalidate();
         }
@@ -1132,14 +1354,22 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             if (InvokeRequired) { BeginInvoke(() => SetFrameCount(count)); return; }
             _frameCount = count;
-            _status = FormatFrameStatus(count);
+            _statusOverride = null;
+            Invalidate(_statusRect);
+        }
+
+        public void SetPartialFrameCount(int count)
+        {
+            if (InvokeRequired) { BeginInvoke(() => SetPartialFrameCount(count)); return; }
+            _frameCount = count;
+            _statusOverride = FormatPartialFrameStatus(count);
             Invalidate(_statusRect);
         }
 
         public void SetStatus(string text)
         {
             if (InvokeRequired) { BeginInvoke(() => SetStatus(text)); return; }
-            _status = text;
+            _statusOverride = text;
             Invalidate(_statusRect);
         }
 
@@ -1147,74 +1377,130 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-            var barRect = new RectangleF(0, 0, Width, Height);
+            var barRect = new RectangleF(0.5f, 0.5f, Width - 1f, Height - 1f);
             var bgPath = WindowsDockRenderer.RoundedRect(barRect, CornerR);
 
-            // Teal ambient glow (matching RecordingForm style)
             var glowRect = barRect;
             glowRect.Inflate(3f, 3f);
             using (var glowPath = WindowsDockRenderer.RoundedRect(glowRect, CornerR))
             using (var glowBrush = new SolidBrush(Color.FromArgb(25, ScrollAccent)))
                 g.FillPath(glowBrush, glowPath);
 
-            // Mica-black fill
             using (var micaBrush = new SolidBrush(Color.FromArgb(225, 12, 12, 16)))
                 g.FillPath(micaBrush, bgPath);
 
-            // Teal accent border
             using (var bp = new Pen(Color.FromArgb(150, ScrollAccent), 1f))
                 g.DrawPath(bp, bgPath);
 
-            // Shadow
             WindowsDockRenderer.PaintShadow(g, barRect, CornerR);
 
-            // ── REC dot ──
+            float centerY = BarHeight / 2f;
+            float dotX = _recDotRect.X;
+            float dotY = centerY - DotSize / 2f;
+            var dotRect = new RectangleF(dotX, dotY, DotSize, DotSize);
+
             if (!_isCapturing)
             {
-                using (var glowDot = new SolidBrush(Color.FromArgb(30, ScrollAccent)))
-                    g.FillEllipse(glowDot, _recDotRect.X - 4, _recDotRect.Y - 4, 18, 18);
-                using (var dotBrush = new SolidBrush(Color.FromArgb(180, ScrollAccent)))
-                    g.FillEllipse(dotBrush, _recDotRect);
+                using var glowDot = new SolidBrush(Color.FromArgb(30, ScrollAccent));
+                g.FillEllipse(glowDot, dotRect.X - 4, dotRect.Y - 4, DotSize + 8, DotSize + 8);
+                using var dotBrush = new SolidBrush(Color.FromArgb(180, ScrollAccent));
+                g.FillEllipse(dotBrush, dotRect);
             }
             else
             {
                 double pulse = Math.Sin(Environment.TickCount / 250.0);
                 float pa = (float)((pulse + 1.0) / 2.0);
-                using (var glowDot = new SolidBrush(Color.FromArgb((int)(30 + 40 * pa), ScrollAccent)))
-                    g.FillEllipse(glowDot, _recDotRect.X - 4, _recDotRect.Y - 4, 18, 18);
-                using (var dotBrush = new SolidBrush(Color.FromArgb((int)(200 + 55 * pa), ScrollAccent)))
-                    g.FillEllipse(dotBrush, _recDotRect);
+                using var glowDot = new SolidBrush(Color.FromArgb((int)(30 + 40 * pa), ScrollAccent));
+                g.FillEllipse(glowDot, dotRect.X - 4, dotRect.Y - 4, DotSize + 8, DotSize + 8);
+                using var dotBrush = new SolidBrush(Color.FromArgb((int)(200 + 55 * pa), ScrollAccent));
+                g.FillEllipse(dotBrush, dotRect);
             }
 
-            // READY / CAPTURING label
-            var label = _isCapturing ? "CAPTURING" : "READY";
             using (var labelBrush = new SolidBrush(Color.FromArgb(220, ScrollAccent)))
             {
-                var labelRect = new RectangleF(_recDotRect.Right + 8, 0, 105, BarHeight);
-                g.DrawString(label, _dotFont, labelBrush, labelRect,
-                    new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Near });
+                var phaseRect = new RectangleF(_phaseLabelRect.X, centerY - UiChrome.ScaleFloat(8f),
+                    _phaseLabelRect.Width, UiChrome.ScaleFloat(16f));
+                g.DrawString(PhaseLabel(), _phaseFont, labelBrush, phaseRect, _singleLineFmt);
             }
 
-            // Status text
-            var statusX = _recDotRect.Right + UiChrome.ScaleInt(90);
-            var statusRect = new RectangleF(statusX, 0, _statusRect.Width - (statusX - _statusRect.X), BarHeight);
-            using (var statusBrush = new SolidBrush(UiChrome.SurfaceTextPrimary))
-                g.DrawString(_status, _statusFont, statusBrush, statusRect, _statusFmt);
+            DrawModeCombo(g);
 
-            // ── Buttons ──
+            var statusText = StatusDisplayText();
+            if (!string.IsNullOrEmpty(statusText))
+            {
+                bool isHint = IsStatusHint();
+                using var statusBrush = new SolidBrush(isHint ? UiChrome.SurfaceTextMuted : UiChrome.SurfaceTextPrimary);
+                g.DrawString(statusText, isHint ? _hintFont : _statusFont, statusBrush, _statusRect, _singleLineFmt);
+            }
+
             if (!_startBtnRect.IsEmpty)
-                DrawIconBtn(g, _startBtnRect, "play", _hoveredBtn == _startBtnRect, ScrollAccent);
+            {
+                DrawPrimaryTextBtn(g, _startBtnRect, LocalizationService.Translate("Start scrolling capture"),
+                    _hoveredRect == _startBtnRect, ScrollAccent, Color.FromArgb(255, 0x0a, 0x9a, 0x9c),
+                    withShine: true, shinePhase: _startShinePhase);
+            }
             if (!_stopBtnRect.IsEmpty)
             {
-                var sc = _hoveredBtn == _stopBtnRect
-                    ? Color.FromArgb(255, 255, 80, 80) : Color.FromArgb(220, 255, 80, 80);
-                DrawIconBtn(g, _stopBtnRect, "stop", _hoveredBtn == _stopBtnRect, sc);
+                DrawPrimaryTextBtn(g, _stopBtnRect, LocalizationService.Translate("Scroll capture done"),
+                    _hoveredRect == _stopBtnRect, DoneAccent, DoneAccentHover);
             }
             if (!_manualFrameBtnRect.IsEmpty)
-                DrawIconBtn(g, _manualFrameBtnRect, "record", _hoveredBtn == _manualFrameBtnRect, UiChrome.SurfaceTextPrimary);
-            DrawIconBtn(g, _cancelBtnRect, "close", _hoveredBtn == _cancelBtnRect, UiChrome.SurfaceTextPrimary);
+                DrawIconBtn(g, _manualFrameBtnRect, "record", _hoveredRect == _manualFrameBtnRect, UiChrome.SurfaceTextPrimary);
+
+            bool cancelHovered = _hoveredRect == _cancelBtnRect;
+            var cancelColor = cancelHovered
+                ? Color.FromArgb(255, 255, 80, 80)
+                : UiChrome.SurfaceTextPrimary;
+            DrawIconBtn(g, _cancelBtnRect, "close", cancelHovered, cancelColor);
+        }
+
+        private void DrawModeCombo(Graphics g)
+        {
+            var rect = new RectangleF(_modeComboRect.X, _modeComboRect.Y, _modeComboRect.Width, _modeComboRect.Height);
+            bool enabled = !_isCapturing;
+            bool hovered = enabled && _modeComboHovered;
+            WindowsDockRenderer.PaintButton(g, rect, false, hovered, CornerR - 1f, ScrollAccent);
+
+            using (var border = new Pen(Color.FromArgb(enabled ? 90 : 50, ScrollAccent), 1f))
+            using (var path = WindowsDockRenderer.RoundedRect(rect, CornerR - 1f))
+                g.DrawPath(border, path);
+
+            int alpha = enabled ? hovered ? 255 : 220 : 120;
+            using (var textBrush = new SolidBrush(Color.FromArgb(alpha, UiChrome.SurfaceTextPrimary)))
+            {
+                var textRect = new RectangleF(rect.X + UiChrome.ScaleFloat(8f), rect.Y,
+                    rect.Width - UiChrome.ScaleFloat(22f), rect.Height);
+                g.DrawString(ModeComboLabel(_mode), _comboFont, textBrush, textRect, _singleLineFmt);
+            }
+
+            float chevronX = rect.Right - UiChrome.ScaleFloat(14f);
+            float chevronY = rect.Y + rect.Height / 2f;
+            using var chevronPen = new Pen(Color.FromArgb(enabled ? 180 : 90, ScrollAccent), UiChrome.ScaleFloat(1.4f));
+            g.DrawLine(chevronPen, chevronX - 3, chevronY - 2, chevronX, chevronY + 1);
+            g.DrawLine(chevronPen, chevronX, chevronY + 1, chevronX + 3, chevronY - 2);
+        }
+
+        private void DrawPrimaryTextBtn(
+            Graphics g, Rectangle rect, string text, bool hovered,
+            Color normal, Color hoverFill, bool withShine = false, float shinePhase = 0f)
+        {
+            var rectF = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
+            using var path = WindowsDockRenderer.RoundedRect(rectF, CornerR);
+            using (var brush = new SolidBrush(hovered ? hoverFill : normal))
+                g.FillPath(brush, path);
+            using (var border = new Pen(Color.FromArgb(hovered ? 220 : 160, Color.White), 1f))
+                g.DrawPath(border, path);
+
+            using var textBrush = new SolidBrush(Color.White);
+            g.DrawString(text, _startFont, textBrush, rectF, _centerFmt);
+
+            if (withShine && !UI.Motion.Disabled)
+            {
+                WindowsDockRenderer.PaintBorderShine(
+                    g, rectF, CornerR, shinePhase, StartShineGlow, StartShineCore, 1f, StartShineThicknessScale);
+            }
         }
 
         private void DrawIconBtn(Graphics g, Rectangle r, string iconId, bool hovered, Color iconColor)
@@ -1225,31 +1511,160 @@ public sealed partial class ScrollingCaptureForm : Form
             WindowsDockRenderer.PaintIcon(g, iconId, r, Color.FromArgb(alpha, iconColor.R, iconColor.G, iconColor.B), filled);
         }
 
+        private void ShowModeMenu()
+        {
+            if (_isCapturing) return;
+
+            _modeMenu?.Close();
+
+            var menu = WindowsMenuRenderer.Create(showImages: false, minWidth: ModeComboWidth + UiChrome.ScaleInt(24));
+            _modeMenu = menu;
+
+            var manualItem = WindowsMenuRenderer.Item("Manual", active: _mode == ScrollingCaptureMode.Automatic);
+            manualItem.Click += (_, _) => QueueApplyMode(ScrollingCaptureMode.Automatic);
+            var autoItem = WindowsMenuRenderer.Item("Auto", active: _mode == ScrollingCaptureMode.AssistAutoscroll);
+            autoItem.Click += (_, _) => QueueApplyMode(ScrollingCaptureMode.AssistAutoscroll);
+            menu.Items.Add(manualItem);
+            menu.Items.Add(autoItem);
+            menu.Show(this, new Point(_modeComboRect.Left, _modeComboRect.Bottom + UiChrome.ScaleInt(2)));
+        }
+
+        private void QueueApplyMode(ScrollingCaptureMode mode)
+        {
+            if (IsDisposed) return;
+            BeginInvoke(new Action(() =>
+            {
+                _modeMenu?.Close();
+                ApplyMode(mode);
+            }));
+        }
+
+        private void ApplyMode(ScrollingCaptureMode mode)
+        {
+            if (_mode == mode) return;
+            _mode = mode;
+            ModeChanged?.Invoke(mode);
+            CalcLayout();
+            Invalidate();
+            Invalidate(_statusRect);
+        }
+
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
-            Rectangle? prev = _hoveredBtn;
-            _hoveredBtn = !_startBtnRect.IsEmpty && _startBtnRect.Contains(e.Location) ? _startBtnRect
-                : !_stopBtnRect.IsEmpty && _stopBtnRect.Contains(e.Location) ? _stopBtnRect
-                : !_manualFrameBtnRect.IsEmpty && _manualFrameBtnRect.Contains(e.Location) ? _manualFrameBtnRect
-                : _cancelBtnRect.Contains(e.Location) ? _cancelBtnRect : null;
-            Cursor = _hoveredBtn != null ? Cursors.Hand : Cursors.Default;
-            if (_hoveredBtn != prev)
+            var prev = _hoveredRect;
+            bool prevCombo = _modeComboHovered;
+
+            _hoveredRect = HitTestInteractive(e.Location);
+            _modeComboHovered = !_isCapturing && _modeComboRect.Contains(e.Location);
+
+            Cursor = _hoveredRect != null || _modeComboHovered ? Cursors.Hand : Cursors.Default;
+
+            if (_hoveredRect != prev)
             {
                 if (prev.HasValue) Invalidate(prev.Value);
-                if (_hoveredBtn.HasValue) Invalidate(_hoveredBtn.Value);
+                if (_hoveredRect.HasValue) Invalidate(_hoveredRect.Value);
             }
+            if (_modeComboHovered != prevCombo)
+                Invalidate(_modeComboRect);
+
+            UpdateToolTip(e.Location);
+        }
+
+        private Rectangle? HitTestInteractive(Point p)
+        {
+            if (!_startBtnRect.IsEmpty && _startBtnRect.Contains(p)) return _startBtnRect;
+            if (!_stopBtnRect.IsEmpty && _stopBtnRect.Contains(p)) return _stopBtnRect;
+            if (!_manualFrameBtnRect.IsEmpty && _manualFrameBtnRect.Contains(p)) return _manualFrameBtnRect;
+            if (_cancelBtnRect.Contains(p)) return _cancelBtnRect;
+            return null;
+        }
+
+        private void UpdateToolTip(Point location)
+        {
+            string? tip = null;
+            Rectangle? anchor = null;
+
+            if (!_isCapturing && _modeComboRect.Contains(location))
+            {
+                tip = _mode == ScrollingCaptureMode.AssistAutoscroll
+                    ? LocalizationService.Translate("Automatically scroll and capture the window content.")
+                    : LocalizationService.Translate("You scroll the content yourself. CyberSnap collects frames as they appear while you scroll.");
+                anchor = _modeComboRect;
+            }
+            else if (!_startBtnRect.IsEmpty && _startBtnRect.Contains(location))
+            {
+                tip = LocalizationService.Translate("Scroll capture start tooltip");
+                anchor = _startBtnRect;
+            }
+            else if (!_stopBtnRect.IsEmpty && _stopBtnRect.Contains(location))
+            {
+                tip = LocalizationService.Translate("Scroll capture stop tooltip");
+                anchor = _stopBtnRect;
+            }
+            else if (!_manualFrameBtnRect.IsEmpty && _manualFrameBtnRect.Contains(location))
+            {
+                tip = LocalizationService.Translate("Scroll capture manual frame");
+                anchor = _manualFrameBtnRect;
+            }
+            else if (_cancelBtnRect.Contains(location))
+            {
+                tip = LocalizationService.Translate("Scroll capture cancel tooltip");
+                anchor = _cancelBtnRect;
+            }
+
+            if (tip == null || anchor == null)
+            {
+                HideChromeToolTip();
+                return;
+            }
+
+            if (_tooltipAnchor == anchor && _chromeToolTip?.Visible == true)
+                return;
+
+            _tooltipAnchor = anchor;
+            _chromeToolTip ??= new WindowsToolTip();
+            var screenAnchor = GetScreenBounds(anchor.Value);
+            _chromeToolTip.ShowNear(this, tip, screenAnchor, above: true);
+        }
+
+        private Rectangle GetScreenBounds(Rectangle clientRect)
+        {
+            var origin = PointToScreen(Point.Empty);
+            return new Rectangle(origin.X + clientRect.X, origin.Y + clientRect.Y, clientRect.Width, clientRect.Height);
+        }
+
+        private void HideChromeToolTip()
+        {
+            _tooltipAnchor = null;
+            _chromeToolTip?.Hide();
         }
 
         protected override void OnMouseLeave(EventArgs e)
         {
             base.OnMouseLeave(e);
-            if (_hoveredBtn != null) { var p = _hoveredBtn.Value; _hoveredBtn = null; Invalidate(p); }
+            if (_hoveredRect != null)
+            {
+                var p = _hoveredRect.Value;
+                _hoveredRect = null;
+                Invalidate(p);
+            }
+            if (_modeComboHovered)
+            {
+                _modeComboHovered = false;
+                Invalidate(_modeComboRect);
+            }
+            HideChromeToolTip();
         }
 
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
+            if (!_isCapturing && _modeComboRect.Contains(e.Location))
+            {
+                ShowModeMenu();
+                return;
+            }
             if (!_startBtnRect.IsEmpty && _startBtnRect.Contains(e.Location))
                 StartClicked?.Invoke();
             else if (!_stopBtnRect.IsEmpty && _stopBtnRect.Contains(e.Location))
@@ -1269,6 +1684,11 @@ public sealed partial class ScrollingCaptureForm : Form
                 else StopClicked?.Invoke();
                 return true;
             }
+            if (!_isCapturing && key == Keys.Enter)
+            {
+                StartClicked?.Invoke();
+                return true;
+            }
             if (_isCapturing && _mode == ScrollingCaptureMode.Manual && (key == Keys.Space || key == Keys.Enter))
             {
                 ManualFrameClicked?.Invoke();
@@ -1286,19 +1706,87 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             base.OnHandleCreated(e);
             CaptureWindowExclusion.Apply(this);
+            CaptureWindowExclusion.SetLogicalBounds(Handle, static () => Rectangle.Empty);
+            ApplyRoundedChromeRegion();
+            try
+            {
+                Dwm.TrySetWindowCornerPreference(Handle, Dwm.DWMWCP_ROUND);
+                Dwm.TrySetImmersiveDarkMode(Handle, UiChrome.IsDark);
+            }
+            catch { /* optional DWM polish */ }
+
+            if (!UI.Motion.Disabled && !_isCapturing)
+                _startShineTimer.Start();
+        }
+
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            base.OnVisibleChanged(e);
+            if (!IsHandleCreated)
+                return;
+
+            if (Visible && !UI.Motion.Disabled && !_isCapturing)
+                _startShineTimer.Start();
+            else
+                _startShineTimer.Stop();
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { _statusFont.Dispose(); _dotFont.Dispose(); }
+            if (disposing)
+            {
+                _startShineTimer.Stop();
+                _startShineTimer.Dispose();
+                _modeMenu?.Dispose();
+                _modeMenu = null;
+                _chromeToolTip?.Dispose();
+                _chromeToolTip = null;
+                _statusFont.Dispose();
+                _hintFont.Dispose();
+                _phaseFont.Dispose();
+                _comboFont.Dispose();
+                _startFont.Dispose();
+            }
             base.Dispose(disposing);
         }
 
-        private string FormatFrameStatus(int count)
+        private string StatusDisplayText()
         {
-            string label = count == 1 ? "frame" : "frames";
-            return _mode == ScrollingCaptureMode.AssistAutoscroll ? $"Autoscroll: {count} {label}"
-                : $"Manual: {count} {label}";
+            if (!string.IsNullOrEmpty(_statusOverride))
+                return _statusOverride;
+            if (_isCapturing && _frameCount > 0)
+                return FormatFrameStatus(_frameCount);
+            if (!_isCapturing)
+            {
+                return _mode == ScrollingCaptureMode.AssistAutoscroll
+                    ? LocalizationService.Translate("Scroll capture ready hint auto")
+                    : LocalizationService.Translate("Scroll capture ready hint manual");
+            }
+
+            return string.Empty;
         }
+
+        private bool IsStatusHint() =>
+            string.IsNullOrEmpty(_statusOverride) && !_isCapturing;
+
+        private static string PhaseLabel(bool capturing) =>
+            capturing
+                ? LocalizationService.Translate("Scroll capture capturing")
+                : LocalizationService.Translate("Scroll capture ready");
+
+        private string PhaseLabel() => PhaseLabel(_isCapturing);
+
+        private static string ModeComboLabel(ScrollingCaptureMode mode) =>
+            mode == ScrollingCaptureMode.AssistAutoscroll
+                ? LocalizationService.Translate("Auto")
+                : LocalizationService.Translate("Manual");
+
+        private static string FormatFrameStatus(int count) =>
+            count == 1
+                ? LocalizationService.Translate("1 frame")
+                : string.Format(LocalizationService.Translate("{0} frames"), count);
+
+        private static string FormatPartialFrameStatus(int count) =>
+            string.Format(LocalizationService.Translate("Scroll capture partial frames"), count);
     }
 }

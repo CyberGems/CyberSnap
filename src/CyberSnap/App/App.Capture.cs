@@ -210,12 +210,15 @@ public partial class App
             {
                 Theme.Refresh();
                 bool showCursor = false;
+                _settingsService!.Load();
+                var captureMode = _settingsService.Settings.ScrollingCaptureMode;
                 var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
-                Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
+                Capture.SelectionSizeReadout.ShowDimensions = _settingsService.Settings.ShowSelectionSize;
                 var form = new ScrollingCaptureForm(selectionScreenshot, bounds, showCursor,
-                    _settingsService!.Settings.ShowCaptureMagnifier,
-                    _settingsService!.Settings.ScrollingCaptureMode,
+                    _settingsService.Settings.ShowCaptureMagnifier,
+                    captureMode,
                     preSelectedRegion);
+                form.CaptureModeChanged += mode => _settingsService.Settings.ScrollingCaptureMode = mode;
 
                 form.CaptureCompleted += result =>
                 {
@@ -234,8 +237,8 @@ public partial class App
                     {
                         ResetCapturing();
                         ShowCaptureProcessingFailed(
-                            "Scroll capture error",
-                            "CyberSnap could not finish the scrolling capture. Try a smaller scroll area or a visible scrollable window.",
+                            LocalizationService.Translate("Scroll capture error"),
+                            LocalizationService.Translate("CyberSnap could not finish the scrolling capture. Try a smaller scroll area or a visible scrollable window."),
                             message);
                         ScheduleIdleMemoryTrim();
                     });
@@ -253,9 +256,9 @@ public partial class App
                 {
                     ResetCapturing();
                     ShowCaptureProcessingFailed(
-                        "Scroll capture error",
-                        "CyberSnap could not start scrolling capture. Try again with a visible scrollable window.",
-                        "Scrolling capture failed.");
+                        LocalizationService.Translate("Scroll capture error"),
+                        LocalizationService.Translate("CyberSnap could not start scrolling capture. Try again with a visible scrollable window."),
+                        LocalizationService.Translate("Scrolling capture failed."));
                 });
             }
         });
