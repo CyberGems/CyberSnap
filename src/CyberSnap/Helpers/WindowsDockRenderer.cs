@@ -162,103 +162,157 @@ public static class WindowsDockRenderer
         Graphics g, RectangleF face, float corner, float phase,
         Color glowColor, Color coreColor, float intensity, float thicknessScale = 1f)
     {
-        using var path = RoundedRect(face, corner);
-        path.Flatten();
-        var pts = path.PathPoints;
-        int n = pts.Length;
-        if (n < 2) return;
+        var (total, pointAt) = CreateRoundedRectPerimeter(face, corner);
+        if (total <= 0f)
+            return;
 
-        var seg = new float[n];
-        float total = 0f;
-        for (int i = 0; i < n; i++)
+        float head = phase * total;
+        float tailLen = total * (0.32f * Math.Clamp(thicknessScale, 0.35f, 1.25f));
+        const int segments = 96;
+        float glowWidth = UiChrome.ScaleFloat(3.5f * thicknessScale);
+        float coreWidth = UiChrome.ScaleFloat(1.8f * thicknessScale);
+        float centerWidth = UiChrome.ScaleFloat(0.8f * thicknessScale);
+        float tailStart = head - tailLen;
+        float step = tailLen / segments;
+        float maxChord = step * 2.75f;
+
+        void DrawShinePass(float penWidth, Color color, int alphaPower)
         {
-            var a = pts[i];
-            var b = pts[(i + 1) % n];
-            float d = (float)Math.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y));
-            seg[i] = d;
-            total += d;
+            using var pen = new Pen(Color.Transparent, 1f)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round
+            };
+
+            var prev = pointAt(tailStart);
+            for (int k = 1; k <= segments; k++)
+            {
+                float p01 = k / (float)segments;
+                var cur = pointAt(tailStart + step * k);
+                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
+                int alphaBase = alphaPower switch
+                {
+                    3 => 255,
+                    2 => 200,
+                    _ => 95
+                };
+                int a = alphaPower switch
+                {
+                    3 => (int)(alphaBase * intensity * factor * factor * factor),
+                    2 => (int)(alphaBase * intensity * factor * factor),
+                    _ => (int)(alphaBase * intensity * factor * factor)
+                };
+                if (a > 0)
+                {
+                    float dx = cur.X - prev.X;
+                    float dy = cur.Y - prev.Y;
+                    if (dx * dx + dy * dy <= maxChord * maxChord)
+                    {
+                        pen.Width = Math.Max(0.5f, penWidth * factor);
+                        pen.Color = Color.FromArgb(a, color);
+                        g.DrawLine(pen, prev, cur);
+                    }
+                }
+
+                prev = cur;
+            }
         }
-        if (total <= 0f) return;
+
+        DrawShinePass(glowWidth, glowColor, 1);
+        DrawShinePass(coreWidth, coreColor, 2);
+        DrawShinePass(centerWidth, Color.White, 3);
+    }
+
+    private readonly record struct PerimeterSegment(float Length, Func<float, PointF> Evaluate);
+
+    /// <summary>
+    /// Uniform clockwise perimeter (top-left → top → …) without GDI+ flatten seams.
+    /// </summary>
+    private static (float Total, Func<float, PointF> PointAt) CreateRoundedRectPerimeter(RectangleF rect, float radius)
+    {
+        float r = Math.Clamp(radius, 0f, Math.Min(rect.Width, rect.Height) * 0.5f);
+        float left = rect.X;
+        float top = rect.Y;
+        float right = rect.Right;
+        float bottom = rect.Bottom;
+
+        float straightTop = Math.Max(0f, rect.Width - 2f * r);
+        float straightSide = Math.Max(0f, rect.Height - 2f * r);
+        float arcQuarter = MathF.PI * r * 0.5f;
+
+        var segments = new List<PerimeterSegment>(8);
+
+        void AddLine(float length, Func<float, PointF> eval)
+        {
+            if (length > 0.0001f)
+                segments.Add(new PerimeterSegment(length, eval));
+        }
+
+        AddLine(straightTop, t => new PointF(left + r + straightTop * t, top));
+
+        float trCx = right - r;
+        float trCy = top + r;
+        AddLine(arcQuarter, t =>
+        {
+            float a = -MathF.PI * 0.5f + MathF.PI * 0.5f * t;
+            return new PointF(trCx + r * MathF.Cos(a), trCy + r * MathF.Sin(a));
+        });
+
+        AddLine(straightSide, t => new PointF(right, top + r + straightSide * t));
+
+        float brCx = right - r;
+        float brCy = bottom - r;
+        AddLine(arcQuarter, t =>
+        {
+            float a = MathF.PI * 0.5f * t;
+            return new PointF(brCx + r * MathF.Cos(a), brCy + r * MathF.Sin(a));
+        });
+
+        AddLine(straightTop, t => new PointF(right - r - straightTop * t, bottom));
+
+        float blCx = left + r;
+        float blCy = bottom - r;
+        AddLine(arcQuarter, t =>
+        {
+            float a = MathF.PI * 0.5f + MathF.PI * 0.5f * t;
+            return new PointF(blCx + r * MathF.Cos(a), blCy + r * MathF.Sin(a));
+        });
+
+        AddLine(straightSide, t => new PointF(left, bottom - r - straightSide * t));
+
+        float tlCx = left + r;
+        float tlCy = top + r;
+        AddLine(arcQuarter, t =>
+        {
+            float a = MathF.PI + MathF.PI * 0.5f * t;
+            return new PointF(tlCx + r * MathF.Cos(a), tlCy + r * MathF.Sin(a));
+        });
+
+        float total = 0f;
+        foreach (var seg in segments)
+            total += seg.Length;
+
+        if (total <= 0f)
+            return (0f, _ => new PointF(left, top));
 
         PointF PointAt(float dist)
         {
             dist = ((dist % total) + total) % total;
-            for (int i = 0; i < n; i++)
+            foreach (var seg in segments)
             {
-                if (dist <= seg[i] || i == n - 1)
+                if (dist <= seg.Length + 0.0001f)
                 {
-                    float t = seg[i] > 0 ? dist / seg[i] : 0f;
-                    var a = pts[i];
-                    var b = pts[(i + 1) % n];
-                    return new PointF(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t);
+                    float u = seg.Length > 0f ? dist / seg.Length : 0f;
+                    return seg.Evaluate(u);
                 }
-                dist -= seg[i];
+
+                dist -= seg.Length;
             }
-            return pts[0];
+
+            return segments[0].Evaluate(0f);
         }
 
-        float head = phase * total;
-        float tailLen = total * (0.32f * Math.Clamp(thicknessScale, 0.35f, 1.25f));
-        const int segments = 64;
-        float glowWidth = UiChrome.ScaleFloat(3.5f * thicknessScale);
-        float coreWidth = UiChrome.ScaleFloat(1.8f * thicknessScale);
-        float centerWidth = UiChrome.ScaleFloat(0.8f * thicknessScale);
-
-        using (var glowPen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
-        {
-            var prev = PointAt(head);
-            for (int k = 1; k <= segments; k++)
-            {
-                float p01 = k / (float)segments;
-                var cur = PointAt(head - tailLen * p01);
-                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
-                int a = (int)(95 * intensity * factor * factor);
-                if (a > 0)
-                {
-                    glowPen.Width = Math.Max(0.5f, glowWidth * factor);
-                    glowPen.Color = Color.FromArgb(a, glowColor);
-                    g.DrawLine(glowPen, prev, cur);
-                }
-                prev = cur;
-            }
-        }
-
-        using (var corePen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
-        {
-            var prev = PointAt(head);
-            for (int k = 1; k <= segments; k++)
-            {
-                float p01 = k / (float)segments;
-                var cur = PointAt(head - tailLen * p01);
-                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
-                int a = (int)(200 * intensity * factor * factor);
-                if (a > 0)
-                {
-                    corePen.Width = Math.Max(0.5f, coreWidth * factor);
-                    corePen.Color = Color.FromArgb(a, coreColor);
-                    g.DrawLine(corePen, prev, cur);
-                }
-                prev = cur;
-            }
-        }
-
-        using (var centerPen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
-        {
-            var prev = PointAt(head);
-            for (int k = 1; k <= segments; k++)
-            {
-                float p01 = k / (float)segments;
-                var cur = PointAt(head - tailLen * p01);
-                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
-                int a = (int)(255 * intensity * factor * factor * factor);
-                if (a > 0)
-                {
-                    centerPen.Width = Math.Max(0.5f, centerWidth * factor);
-                    centerPen.Color = Color.FromArgb(a, Color.White);
-                    g.DrawLine(centerPen, prev, cur);
-                }
-                prev = cur;
-            }
-        }
+        return (total, PointAt);
     }
 }
