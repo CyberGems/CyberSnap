@@ -86,7 +86,7 @@ public sealed class StandaloneColorPickerForm : Form
         _magBitmap = new Bitmap(PW, PH, PixelFormat.Format32bppArgb);
         _magPixels = new int[PW * PH];
 
-        Cursor = Cursors.Cross;
+        Cursor = CursorFactory.PrecisionCursor;
 
         // ── Banner ──
         _banner = new StandaloneToolBanner(
