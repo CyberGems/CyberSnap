@@ -431,6 +431,8 @@ public sealed partial class RecordingForm : Form
             }
             else
             {
+                // Click without meaningful selection — revive instruction banner
+                _banner?.Revive();
                 Invalidate();
             }
         }
