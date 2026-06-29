@@ -224,7 +224,7 @@ public sealed partial class EditorForm : Form
         {
             // Fallback: app may not have an associated icon in all deployment modes
         }
-        Text = LocalizationService.Translate("Annotations Editor");
+        Text = LocalizationService.Translate("Editor");
         FormBorderStyle = FormBorderStyle.None;
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint |

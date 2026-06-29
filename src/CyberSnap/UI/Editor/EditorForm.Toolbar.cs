@@ -505,7 +505,7 @@ public sealed partial class EditorForm
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
             using var font2 = new Font("Consolas", 10.5f, FontStyle.Bold, GraphicsUnit.Point);
-            TextRenderer.DrawText(g, LocalizationService.Translate("Annotations Editor"), font2,
+            TextRenderer.DrawText(g, LocalizationService.Translate("Editor"), font2,
                 new Rectangle(26 + size1.Width + 12, 0, 280, brandPanel.Height),
                 EditorColors.TextPrimary,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
