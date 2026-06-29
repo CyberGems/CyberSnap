@@ -2271,7 +2271,7 @@ public sealed partial class AnnotationCanvas
         OnStateChanged();
     }
 
-    private static bool HitTestSingle(Annotation a, Point pt, int tol)
+    private bool HitTestSingle(Annotation a, Point pt, int tol)
     {
         return a switch
         {
@@ -2282,7 +2282,8 @@ public sealed partial class AnnotationCanvas
             EraserFill ef => InflateRect(ef.Rect, tol, tol).Contains(pt),
             ArrowAnnotation arr => DistanceToSegment(pt, arr.From, arr.To) <= tol * 2,
             LineAnnotation ln => DistanceToSegment(pt, ln.From, ln.To) <= tol * 2,
-            RulerAnnotation ru => DistanceToSegment(pt, ru.From, ru.To) <= tol * 2,
+            RulerAnnotation ru => DistanceToSegment(pt, ru.From, ru.To) <= tol * 2
+                || RulerRenderer.GetLabelBounds(ru.From, ru.To, ClientRectangle).Contains(pt),
             CurvedArrowAnnotation ca => ca.Points.Any(p => Distance(p, pt) <= tol * 2),
             DrawStroke ds => ds.Points.Any(p => Distance(p, pt) <= tol),
             TextAnnotation ta => MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background).Contains(pt),

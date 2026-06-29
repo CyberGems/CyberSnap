@@ -284,6 +284,28 @@ public partial class App
         }
     }
 
+    /// <summary>Captures only the screen that currently contains the cursor.
+    /// Used by standalone tools (ruler, color picker, etc.) for targeted captures.</summary>
+    private void CaptureCurrentScreenNow()
+    {
+        Bitmap? bmp = null;
+        try
+        {
+            (bmp, _) = ScreenCapture.CaptureCurrentScreen(_settingsService!.Settings.ShowCursor);
+            HandleCaptureResult(bmp);
+            bmp = null;
+        }
+        catch (Exception ex)
+        {
+            bmp?.Dispose();
+            ResetCapturing();
+            ShowCaptureProcessingFailed(
+                "Capture error",
+                "CyberSnap could not capture the screen. Try again, or choose another capture mode.",
+                ex.Message);
+        }
+    }
+
     private void CaptureActiveWindowNow()
     {
         Bitmap? bmp = null;

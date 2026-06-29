@@ -538,7 +538,8 @@ public sealed partial class RegionOverlayForm
             EraserFill ef => InflateRect(ef.Rect, tol, tol).Contains(pt),
             ArrowAnnotation arr => DistanceToSegment(pt, arr.From, arr.To) <= tol * 2,
             LineAnnotation ln => DistanceToSegment(pt, ln.From, ln.To) <= tol * 2,
-            RulerAnnotation ru => DistanceToSegment(pt, ru.From, ru.To) <= tol * 2,
+            RulerAnnotation ru => DistanceToSegment(pt, ru.From, ru.To) <= tol * 2
+                || RulerRenderer.GetLabelBounds(ru.From, ru.To, ClientRectangle).Contains(pt),
             CurvedArrowAnnotation ca => ca.Points.Any(p => Distance(p, pt) <= tol * 2),
             DrawStroke ds => ds.Points.Any(p => Distance(p, pt) <= tol),
             TextAnnotation ta => GetTextBounds(ta).Contains(pt),

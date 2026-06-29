@@ -35,8 +35,22 @@ public sealed class StandaloneRulerForm : Form
     // ── Banner (reusable animated instruction overlay) ──
     private readonly StandaloneToolBanner _banner;
 
-    public StandaloneRulerForm()
+    // ── Close button on the measurement chip ──
+    private readonly ToolTip _chipTooltip;
+    private bool _cursorOverCloseButton;
+    private readonly float _dpiScale;
+
+    // ── Context menu (empty-area right-click) ──
+    private readonly ContextMenuStrip _contextMenu;
+
+    // ── Callback to trigger a fullscreen capture from the main App thread ──
+    private readonly Action? _onCaptureFullscreen;
+
+    public StandaloneRulerForm(Action? onCaptureFullscreen = null)
     {
+        _onCaptureFullscreen = onCaptureFullscreen;
+        _dpiScale = DeviceDpi / 96f;
+
         // Give the tray context menu time to fully dismiss before screenshot
         Thread.Sleep(80);
 
@@ -48,6 +62,7 @@ public sealed class StandaloneRulerForm : Form
         StartPosition = FormStartPosition.Manual;
         DoubleBuffered = false;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        KeyPreview = true;
 
         // Capture which screen the cursor is on now (STA thread, right after menu click)
         _bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
@@ -66,12 +81,53 @@ public sealed class StandaloneRulerForm : Form
             _bannerWorkingArea,
             Bounds,
             onInvalidate: () => Invalidate());
+
+        // ── Chip close-button tooltip ──
+        _chipTooltip = new ToolTip
+        {
+            AutoPopDelay = 3000,
+            InitialDelay = 400,
+            ReshowDelay = 100,
+            ShowAlways = true,
+            BackColor = Theme.IsDark ? Color.FromArgb(30, 33, 34) : SystemColors.Info,
+            ForeColor = Theme.IsDark ? Color.FromArgb(240, 240, 245) : SystemColors.InfoText,
+        };
+        _chipTooltip.SetToolTip(this, ""); // will be set dynamically in OnMouseMove
+
+        // ── Context menu (shown on right-click over empty area) ──
+        _contextMenu = WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
+
+        var newRulerItem = WindowsMenuRenderer.Item("Nueva regla", "+", iconId: "ruler");
+        newRulerItem.Click += (_, _) => ClearMeasurement();
+        _contextMenu.Items.Add(newRulerItem);
+
+        var captureItem = WindowsMenuRenderer.Item("Capturar pantalla", "Enter", iconId: "captureRect");
+        captureItem.Click += (_, _) =>
+        {
+            _closed = true;
+            BeginInvoke(() =>
+            {
+                _onCaptureFullscreen?.Invoke();
+                Close();
+            });
+        };
+        _contextMenu.Items.Add(captureItem);
+
+        _contextMenu.Items.Add(new ToolStripSeparator());
+
+        var exitItem = WindowsMenuRenderer.Item("Salir", "Esc", iconId: "close", danger: true);
+        exitItem.Click += (_, _) => Close();
+        _contextMenu.Items.Add(exitItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(_contextMenu, minWidth: 240);
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
+            _chipTooltip?.Dispose();
+            _contextMenu?.Dispose();
             _banner.Dispose();
             _screenshot?.Dispose();
         }
@@ -86,10 +142,25 @@ public sealed class StandaloneRulerForm : Form
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
-        if ((keyData & Keys.KeyCode) == Keys.Escape)
+        var key = keyData & Keys.KeyCode;
+        switch (key)
         {
-            Close();
-            return true;
+            case Keys.Escape:
+                Close();
+                return true;
+            case Keys.Oemplus or Keys.Add when (keyData & Keys.Modifiers) == 0:
+                // "+" → clear measurement, ready for new ruler
+                ClearMeasurement();
+                return true;
+            case Keys.Enter when (keyData & Keys.Modifiers) == 0:
+                // "Enter" → capture the screen where the cursor is
+                _closed = true;
+                BeginInvoke(() =>
+                {
+                    _onCaptureFullscreen?.Invoke();
+                    Close();
+                });
+                return true;
         }
         return base.ProcessCmdKey(ref msg, keyData);
     }
@@ -100,12 +171,32 @@ public sealed class StandaloneRulerForm : Form
     {
         if (e.Button == MouseButtons.Right)
         {
-            Close();
+            // If cursor is over the ruler or its chip, close immediately (existing behavior)
+            if (_hasLastMeasurement && IsOverRulerOrChip(e.Location))
+            {
+                Close();
+                return;
+            }
+            // Otherwise show context menu on empty area
+            _contextMenu.Show(this, e.Location);
             return;
         }
 
         if (e.Button == MouseButtons.Left)
         {
+            // Check if clicking the close button on the measurement chip
+            if (_hasLastMeasurement)
+            {
+                var closeRect = RulerRenderer.LastCloseButtonBounds;
+                var hitRect = Rectangle.Round(closeRect);
+                hitRect.Inflate(4, 4);
+                if (hitRect.Contains(e.Location))
+                {
+                    ClearMeasurement();
+                    return;
+                }
+            }
+
             // If there's a committed ruler, check if we're editing it
             if (_hasLastMeasurement && _editState == EditState.None)
             {
@@ -204,6 +295,30 @@ public sealed class StandaloneRulerForm : Form
                 EditState.ResizingFrom or EditState.ResizingTo => Cursors.SizeNWSE,
                 _ => Cursors.Cross
             };
+
+            // Track hover over the close button on the chip — use cached bounds from last paint
+            var closeRect = RulerRenderer.LastCloseButtonBounds;
+            if (closeRect.IsEmpty) { _cursorOverCloseButton = false; }
+            else
+            {
+                var hitRect = Rectangle.Round(closeRect);
+                hitRect.Inflate(4, 4);
+                bool overClose = hitRect.Contains(e.Location);
+                if (overClose)
+                {
+                    if (!_cursorOverCloseButton)
+                    {
+                        _cursorOverCloseButton = true;
+                        _chipTooltip.SetToolTip(this, LocalizationService.Translate("Borrar medición — sigue en modo regla"));
+                    }
+                    Cursor = Cursors.Hand; // override every frame — HitTestRuler may have set Cross
+                }
+                else if (_cursorOverCloseButton)
+                {
+                    _cursorOverCloseButton = false;
+                    _chipTooltip.SetToolTip(this, "");
+                }
+            }
         }
 
         base.OnMouseMove(e);
@@ -245,7 +360,7 @@ public sealed class StandaloneRulerForm : Form
         }
         else if (_hasLastMeasurement)
         {
-            RulerRenderer.Paint(g, _lastFrom, _lastTo, ClientRectangle, Theme.IsDark);
+            RulerRenderer.Paint(g, _lastFrom, _lastTo, ClientRectangle, Theme.IsDark, showCloseButton: true, dpiScale: _dpiScale);
         }
 
         // Draw banner (handled by reusable StandaloneToolBanner)
@@ -284,7 +399,8 @@ public sealed class StandaloneRulerForm : Form
         return new Point(anchor.X, current.Y);
     }
 
-    /// <summary>Hit-test the committed ruler: returns which part the cursor is near.</summary>
+    /// <summary>Hit-test the committed ruler: returns which part the cursor is near.
+    /// Also checks the label chip so the ruler can be dragged from the measurement box.</summary>
     private EditState HitTestRuler(Point p)
     {
         if (!_hasLastMeasurement) return EditState.None;
@@ -305,7 +421,31 @@ public sealed class StandaloneRulerForm : Form
         if (lineDist <= lineThreshold * lineThreshold)
             return EditState.Moving;
 
+        // Check if inside the label chip — allows dragging from the measurement box
+        var labelBounds = RulerRenderer.GetLabelBounds(_lastFrom, _lastTo, ClientRectangle);
+        labelBounds.Inflate(4, 4);
+        if (labelBounds.Contains(p))
+            return EditState.Moving;
+
         return EditState.None;
+    }
+
+    /// <summary>Returns true if the cursor is over the ruler line, its endpoints, or the measurement chip.</summary>
+    private bool IsOverRulerOrChip(Point p)
+    {
+        // HitTestRuler now checks the chip too, so this is all we need
+        return _hasLastMeasurement && HitTestRuler(p) != EditState.None;
+    }
+
+    /// <summary>Clear the current measurement and reset state for a fresh ruler drag.</summary>
+    private void ClearMeasurement()
+    {
+        _hasLastMeasurement = false;
+        _editState = EditState.None;
+        _cursorOverCloseButton = false;
+        _chipTooltip.SetToolTip(this, "");
+        Cursor = Cursors.Cross;
+        Invalidate();
     }
 
     private static int DistSq(Point a, Point b)

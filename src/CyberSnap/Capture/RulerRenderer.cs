@@ -27,6 +27,13 @@ public static class RulerRenderer
     private const float LabelPadH = 14;
     private const float LabelPadV = 8;
 
+    // Close button (standalone ruler)
+    private const float CloseButtonSize = 20f;
+    private const float CloseButtonPad = 6f; // extra space between text and close button
+
+    /// <summary>Last painted close-button bounds (cached during Paint for accurate hit-testing).</summary>
+    public static RectangleF LastCloseButtonBounds { get; private set; }
+
     /// <summary>Create the (theme-independent) label fonts if not already created.
     /// Safe to call outside a paint pass — needed for bounds computation during drag.</summary>
     private static void EnsureFonts()
@@ -70,7 +77,7 @@ public static class RulerRenderer
     }
 
     /// <summary>Paint the ruler line, ticks, and floating distance/angle label.</summary>
-    public static void Paint(Graphics g, Point from, Point to, Rectangle clientBounds, bool isDark)
+    public static void Paint(Graphics g, Point from, Point to, Rectangle clientBounds, bool isDark, bool showCloseButton = false, float dpiScale = 1f)
     {
         EnsureChrome(isDark);
 
@@ -100,7 +107,10 @@ public static class RulerRenderer
         var restSz = TextRenderer.MeasureText(g, restText, _font!);
         float maxH = Math.Max(distSz.Height, restSz.Height);
 
-        var label = ComputeLabelRect(from, to, clientBounds, distSz, restSz);
+        float scaledCloseBtn = CloseButtonSize * dpiScale;
+        float scaledClosePad = CloseButtonPad * dpiScale;
+        float extraWidth = showCloseButton ? scaledCloseBtn + scaledClosePad : 0;
+        var label = ComputeLabelRect(from, to, clientBounds, distSz, restSz, extraWidth);
 
         PaintLabelShadow(g, label, 8f, 48, 1f);
         using var path = RoundedRect(label, 8f);
@@ -114,6 +124,34 @@ public static class RulerRenderer
             TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         TextRenderer.DrawText(g, restText, _font!, restRect, _fgBrush!.Color,
             TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+
+        // Draw close button (standalone ruler mode)
+        if (showCloseButton)
+        {
+            var closeRect = new RectangleF(
+                label.Right - LabelPadH - scaledCloseBtn,
+                label.Y + (label.Height - scaledCloseBtn) / 2f,
+                scaledCloseBtn, scaledCloseBtn);
+
+            LastCloseButtonBounds = closeRect;
+
+            using var closePath = RoundedRect(closeRect, scaledCloseBtn / 2f);
+            g.FillPath(_bgBrush!, closePath);
+            g.DrawPath(_borderPen!, closePath);
+
+            // Draw "×" centered
+            float crossInset = scaledCloseBtn * 0.28f;
+            float cx = closeRect.X + scaledCloseBtn / 2f;
+            float cy = closeRect.Y + scaledCloseBtn / 2f;
+            float half = scaledCloseBtn / 2f - crossInset;
+            using var crossPen = new Pen(_fgBrush!.Color, 1.5f * dpiScale) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            g.DrawLine(crossPen, cx - half, cy - half, cx + half, cy + half);
+            g.DrawLine(crossPen, cx + half, cy - half, cx - half, cy + half);
+        }
+        else
+        {
+            LastCloseButtonBounds = RectangleF.Empty;
+        }
 
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SystemDefault;
         g.SmoothingMode = SmoothingMode.Default;
@@ -194,15 +232,42 @@ public static class RulerRenderer
         return Rectangle.Union(lineRect, labelRect);
     }
 
+    /// <summary>Returns the floating label chip bounds for a ruler (for hit-testing drag-from-chip).</summary>
+    public static RectangleF GetLabelBounds(Point from, Point to, Rectangle clientBounds, float dpiScale = 1f)
+    {
+        EnsureFonts();
+        float dx = to.X - from.X;
+        float dy = to.Y - from.Y;
+        float dist = MathF.Sqrt(dx * dx + dy * dy);
+        float angle = MathF.Atan2(dy, dx) * 180f / MathF.PI;
+        string distText = $"{(int)dist}px";
+        string restText = $"  •  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  •  {angle:0.0}°";
+        var distSz = TextRenderer.MeasureText(distText, _distFont!);
+        var restSz = TextRenderer.MeasureText(restText, _font!);
+        float extraWidth = (CloseButtonSize + CloseButtonPad) * dpiScale;
+        return ComputeLabelRect(from, to, clientBounds, distSz, restSz, extraWidth);
+    }
+
+    /// <summary>Returns the close (×) button bounds inside the ruler label chip (for standalone mode).</summary>
+    public static RectangleF GetCloseButtonBounds(Point from, Point to, Rectangle clientBounds, float dpiScale = 1f)
+    {
+        var label = GetLabelBounds(from, to, clientBounds, dpiScale);
+        float scaledSize = CloseButtonSize * dpiScale;
+        return new RectangleF(
+            label.Right - LabelPadH - scaledSize,
+            label.Y + (label.Height - scaledSize) / 2f,
+            scaledSize, scaledSize);
+    }
+
     /// <summary>Computes the floating label rectangle for the given ruler, matching Paint()'s layout
     /// exactly. Factored out so live-drag invalidation can target the label's true position.</summary>
-    private static RectangleF ComputeLabelRect(Point from, Point to, Rectangle clientBounds, Size distSz, Size restSz)
+    private static RectangleF ComputeLabelRect(Point from, Point to, Rectangle clientBounds, Size distSz, Size restSz, float extraWidth = 0)
     {
         float dx = to.X - from.X;
         float dy = to.Y - from.Y;
         float dist = MathF.Sqrt(dx * dx + dy * dy);
 
-        float totalW = distSz.Width + restSz.Width;
+        float totalW = distSz.Width + restSz.Width + extraWidth;
         float maxH = Math.Max(distSz.Height, restSz.Height);
         var mid = new PointF((from.X + to.X) / 2f, (from.Y + to.Y) / 2f);
 
