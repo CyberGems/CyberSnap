@@ -95,10 +95,27 @@ public static class RulerRenderer
 
         g.DrawLine(ShadowPen, from.X + 1, from.Y + 1, to.X + 1, to.Y + 1);
         g.DrawLine(_linePen!, from, to);
+
+        // Endpoint ticks with subtle shadow for visibility on any background
+        g.DrawLine(ShadowPen,
+            from.X - nx * tickHalf + 1, from.Y - ny * tickHalf + 1,
+            from.X + nx * tickHalf + 1, from.Y + ny * tickHalf + 1);
+        g.DrawLine(ShadowPen,
+            to.X - nx * tickHalf + 1, to.Y - ny * tickHalf + 1,
+            to.X + nx * tickHalf + 1, to.Y + ny * tickHalf + 1);
         g.DrawLine(_tickPen!, from.X - nx * tickHalf, from.Y - ny * tickHalf,
                             from.X + nx * tickHalf, from.Y + ny * tickHalf);
         g.DrawLine(_tickPen!, to.X - nx * tickHalf, to.Y - ny * tickHalf,
                             to.X + nx * tickHalf, to.Y + ny * tickHalf);
+
+        // Endpoint anchor dots — accent-colored, visible on any background, centered on exact measurement point
+        float dotRadius = 4f * dpiScale;
+        float dotDiam = dotRadius * 2f;
+        using var dotShadowBrush = new SolidBrush(Color.FromArgb(52, 0, 0, 0));
+        g.FillEllipse(dotShadowBrush, from.X - dotRadius + 1, from.Y - dotRadius + 1, dotDiam, dotDiam);
+        g.FillEllipse(dotShadowBrush, to.X - dotRadius + 1, to.Y - dotRadius + 1, dotDiam, dotDiam);
+        g.FillEllipse(_accentBrush!, from.X - dotRadius, from.Y - dotRadius, dotDiam, dotDiam);
+        g.FillEllipse(_accentBrush!, to.X - dotRadius, to.Y - dotRadius, dotDiam, dotDiam);
 
         // Build label text in two parts: distance (larger, accent) + rest (normal)
         string distText = $"{(int)dist}px";
