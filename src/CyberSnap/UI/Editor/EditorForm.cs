@@ -1198,22 +1198,7 @@ public sealed partial class EditorForm : Form
                         return;
                     }
 
-                    Bitmap captured;
-                    var ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
-
-                    if (ext == ".webp")
-                    {
-                        // Decode WebP via WIC (available on Windows 10 19041+)
-                        captured = DecodeWebP(dlg.FileName);
-                    }
-                    else
-                    {
-                        using (var stream = new FileStream(dlg.FileName, FileMode.Open, FileAccess.Read))
-                        using (var tempBmp = new Bitmap(stream))
-                        {
-                            captured = new Bitmap(tempBmp);
-                        }
-                    }
+                    Bitmap captured = LoadDecoupledBitmap(dlg.FileName);
 
                     // ── Max dimension check: 4K (4096 px on longest side) ──
                     const int maxDimension = 4096;
@@ -1258,6 +1243,36 @@ public sealed partial class EditorForm : Form
         pngEncoder.Save(pngStream);
         pngStream.Position = 0;
         return new Bitmap(pngStream);
+    }
+
+    private static Bitmap LoadDecoupledBitmap(string filePath)
+    {
+        var ext = Path.GetExtension(filePath).ToLowerInvariant();
+        if (ext == ".webp")
+        {
+            using (var webp = DecodeWebP(filePath))
+            {
+                var bmp = new Bitmap(webp.Width, webp.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    g.DrawImage(webp, 0, 0, webp.Width, webp.Height);
+                }
+                return bmp;
+            }
+        }
+        else
+        {
+            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            using (var tempBmp = new Bitmap(stream))
+            {
+                var bmp = new Bitmap(tempBmp.Width, tempBmp.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    g.DrawImage(tempBmp, 0, 0, tempBmp.Width, tempBmp.Height);
+                }
+                return bmp;
+            }
+        }
     }
 
     private void DoCopy()
@@ -1969,19 +1984,7 @@ public sealed partial class EditorForm : Form
             }
             else
             {
-                Bitmap captured;
-                if (ext == ".webp")
-                {
-                    captured = DecodeWebP(filePath);
-                }
-                else
-                {
-                    using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-                    using (var tempBmp = new Bitmap(stream))
-                    {
-                        captured = new Bitmap(tempBmp);
-                    }
-                }
+                Bitmap captured = LoadDecoupledBitmap(filePath);
 
                 // ── Max dimension check: 4K (4096 px on longest side) ──
                 const int maxDimension = 4096;

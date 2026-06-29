@@ -78,31 +78,18 @@ internal sealed class ThemedConfirmDialog : Window
                     var helper = new WindowInteropHelper(this);
                     if (helper.Owner == editor.Handle)
                     {
-                        var rect = new CyberSnap.Native.User32.RECT();
-                        if (CyberSnap.Native.User32.GetWindowRect(editor.Handle, out rect))
-                        {
-                            double editorLeft = rect.Left;
-                            double editorTop = rect.Top;
-                            double editorWidth = rect.Right - rect.Left;
-                            double editorHeight = rect.Bottom - rect.Top;
+                        double editorLeft = editor.Left;
+                        double editorTop = editor.Top;
+                        double editorWidth = editor.Width;
+                        double editorHeight = editor.Height;
 
-                            double dpiScaleX = 1.0;
-                            double dpiScaleY = 1.0;
-                            var source = PresentationSource.FromVisual(this);
-                            if (source?.CompositionTarget != null)
-                            {
-                                dpiScaleX = source.CompositionTarget.TransformToDevice.M11;
-                                dpiScaleY = source.CompositionTarget.TransformToDevice.M22;
-                            }
+                        double sidebarWidth = 332;
+                        double canvasAreaCenterX = editorLeft + sidebarWidth + (editorWidth - sidebarWidth) / 2;
+                        double canvasAreaCenterY = editorTop + (editorHeight / 2);
 
-                            double sidebarWidthPx = 332 * dpiScaleX;
-                            double canvasAreaCenterX = editorLeft + sidebarWidthPx + (editorWidth - sidebarWidthPx) / 2;
-                            double canvasAreaCenterY = editorTop + (editorHeight / 2);
-
-                            WindowStartupLocation = WindowStartupLocation.Manual;
-                            Left = (canvasAreaCenterX / dpiScaleX) - (ActualWidth / 2);
-                            Top = (canvasAreaCenterY / dpiScaleY) - (ActualHeight / 2);
-                        }
+                        WindowStartupLocation = WindowStartupLocation.Manual;
+                        Left = canvasAreaCenterX - (ActualWidth / 2);
+                        Top = canvasAreaCenterY - (ActualHeight / 2);
                     }
                 }
             }
