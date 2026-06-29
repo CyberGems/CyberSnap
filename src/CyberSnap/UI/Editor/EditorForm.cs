@@ -1142,20 +1142,32 @@ public sealed partial class EditorForm : Form
                     }
                     else
                     {
-                        var ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
-                        Bitmap captured;
-                        if (ext == ".webp")
+                        var fileInfo = new FileInfo(dlg.FileName);
+                        const long maxFileSize = 10 * 1024 * 1024; // 10 MB
+                        if (fileInfo.Length > maxFileSize)
                         {
-                            captured = DecodeWebP(dlg.FileName);
+                            ThemedConfirmDialog.Alert(Handle,
+                                LocalizationService.Translate("Error importing image"),
+                                string.Format(LocalizationService.Translate("The file is too large ({0:F1} MB). Maximum allowed is 10 MB."), fileInfo.Length / 1024.0 / 1024.0),
+                                error: true);
+                            return;
                         }
-                        else
+
+                        Bitmap captured = LoadDecoupledBitmap(dlg.FileName);
+
+                        const int maxDimension = 4096;
+                        int width = captured.Width;
+                        int height = captured.Height;
+                        if (width > maxDimension || height > maxDimension)
                         {
-                            using (var stream = new FileStream(dlg.FileName, FileMode.Open, FileAccess.Read))
-                            using (var tempBmp = new Bitmap(stream))
-                            {
-                                captured = new Bitmap(tempBmp);
-                            }
+                            captured.Dispose();
+                            ThemedConfirmDialog.Alert(Handle,
+                                LocalizationService.Translate("Error importing image"),
+                                string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), width, height, maxDimension),
+                                error: true);
+                            return;
                         }
+
                         LoadCapture(captured, dlg.FileName);
                         AddRecentFile(dlg.FileName);
                     }
@@ -1202,12 +1214,14 @@ public sealed partial class EditorForm : Form
 
                     // ── Max dimension check: 4K (4096 px on longest side) ──
                     const int maxDimension = 4096;
-                    if (captured.Width > maxDimension || captured.Height > maxDimension)
+                    int width = captured.Width;
+                    int height = captured.Height;
+                    if (width > maxDimension || height > maxDimension)
                     {
                         captured.Dispose();
                         ThemedConfirmDialog.Alert(Handle,
                             LocalizationService.Translate("Error importing image"),
-                            string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), captured.Width, captured.Height, maxDimension),
+                            string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), width, height, maxDimension),
                             error: true);
                         return;
                     }

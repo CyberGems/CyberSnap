@@ -727,49 +727,167 @@ public sealed partial class AnnotationCanvas
         }
     }
 
+    private void DrawWelcomeIcon(Graphics g, float cx, float cy, float size, Color color)
+    {
+        using var pen = new Pen(color, 2f) { LineJoin = LineJoin.Round, StartCap = LineCap.Round, EndCap = LineCap.Round };
+        
+        float cardW = size * 0.7f;
+        float cardH = size * 0.5f;
+        float cardX = cx - (cardW / 2);
+        float cardY = cy - (size / 2) + (size * 0.12f);
+
+        // Draw stacked background cards
+        g.DrawRectangle(pen, cardX + (size * 0.08f), cardY - (size * 0.08f), cardW, cardH);
+        g.DrawRectangle(pen, cardX + (size * 0.04f), cardY - (size * 0.04f), cardW, cardH);
+
+        // Fill and draw front card
+        using var bgBrush = new SolidBrush(Color.FromArgb(220, EditorColors.BgCard));
+        g.FillRectangle(bgBrush, cardX, cardY, cardW, cardH);
+        g.DrawRectangle(pen, cardX, cardY, cardW, cardH);
+
+        // Draw sun/moon
+        float sunR = size * 0.07f;
+        g.DrawEllipse(pen, cardX + cardW - (sunR * 2.5f), cardY + (sunR * 1.2f), sunR * 2f, sunR * 2f);
+
+        // Draw mountains
+        var mount1 = new GraphicsPath();
+        mount1.AddLine(cardX + (cardW * 0.1f), cardY + cardH, cardX + (cardW * 0.45f), cardY + (cardH * 0.45f));
+        mount1.AddLine(cardX + (cardW * 0.45f), cardY + (cardH * 0.45f), cardX + (cardW * 0.75f), cardY + cardH);
+        g.DrawPath(pen, mount1);
+
+        var mount2 = new GraphicsPath();
+        mount2.AddLine(cardX + (cardW * 0.35f), cardY + cardH, cardX + (cardW * 0.6f), cardY + (cardH * 0.6f));
+        mount2.AddLine(cardX + (cardW * 0.6f), cardY + (cardH * 0.6f), cardX + (cardW * 0.9f), cardY + cardH);
+        g.DrawPath(pen, mount2);
+
+        // Draw down arrow
+        float arrowLen = size * 0.22f;
+        float arrowX = cx;
+        float arrowY1 = cardY + (cardH * 0.6f);
+        float arrowY2 = arrowY1 + arrowLen;
+        g.DrawLine(pen, arrowX, arrowY1, arrowX, arrowY2);
+        
+        float wing = size * 0.06f;
+        g.DrawLine(pen, arrowX, arrowY2, arrowX - wing, arrowY2 - wing);
+        g.DrawLine(pen, arrowX, arrowY2, arrowX + wing, arrowY2 - wing);
+    }
+
+    private void DrawCursorIcon(Graphics g, float x, float y, float size, Color color)
+    {
+        using var brush = new SolidBrush(color);
+        using var pen = new Pen(color, 1.2f) { LineJoin = LineJoin.Round };
+        
+        var path = new GraphicsPath();
+        path.AddLine(x, y, x + size, y + (size * 0.5f));
+        path.AddLine(x + size, y + (size * 0.5f), x + (size * 0.5f), y + (size * 0.5f));
+        path.AddLine(x + (size * 0.5f), y + (size * 0.5f), x + (size * 0.8f), y + size);
+        path.AddLine(x + (size * 0.8f), y + size, x + (size * 0.65f), y + (size * 1.1f));
+        path.AddLine(x + (size * 0.65f), y + (size * 1.1f), x + (size * 0.35f), y + (size * 0.6f));
+        path.AddLine(x + (size * 0.35f), y + (size * 0.6f), x, y + size);
+        path.CloseAllFigures();
+        
+        g.FillPath(brush, path);
+        g.DrawPath(pen, path);
+    }
+
     private void RenderWelcomeText(Graphics g)
     {
         g.SmoothingMode = SmoothingMode.AntiAlias;
         using var titleFont = new Font("Segoe UI Variable Display", 15f, FontStyle.Bold, GraphicsUnit.Point);
-        using var descFont = new Font("Segoe UI Variable Text", 10.5f, FontStyle.Regular, GraphicsUnit.Point);
+        using var mediumFont = new Font("Segoe UI Variable Text", 11.5f, FontStyle.Bold, GraphicsUnit.Point);
+        using var smallFont = new Font("Segoe UI Variable Text", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
 
         var titleText = LocalizationService.Translate("Annotations Editor");
-        var descText = LocalizationService.Translate("Paste an image (Ctrl+V) or double-click to open a file");
+        var mediumText = LocalizationService.Translate("Drag & drop a file");
+        var smallTextTemplate = LocalizationService.Translate("Paste an image (Ctrl+V) or double-click {0} to browse");
 
+        // Measure strings
         var titleSize = g.MeasureString(titleText, titleFont);
-        var descSize = g.MeasureString(descText, descFont);
+        var mediumSize = g.MeasureString(mediumText, mediumFont);
+
+        // Measure small text (with spaces in place of {0})
+        float cursorPlaceholderWidth = 14;
+        string smallTextForMeasurement = string.Format(smallTextTemplate, "   "); // 3 spaces
+        var smallSize = g.MeasureString(smallTextForMeasurement, smallFont);
 
         float paddingH = 32;
-        float paddingV = 24;
-        float spacing = 8;
+        float paddingV = 28;
+        float spacing = 12;
+        float iconSize = 80;
 
-        float width = Math.Max(titleSize.Width, descSize.Width) + paddingH * 2;
-        float height = titleSize.Height + descSize.Height + paddingV * 2 + spacing;
+        float width = Math.Max(titleSize.Width, Math.Max(mediumSize.Width, smallSize.Width)) + paddingH * 2;
+        float height = iconSize + titleSize.Height + mediumSize.Height + smallSize.Height + paddingV * 2 + spacing * 3;
+
+        // Make sure the width is at least 340 to look premium
+        width = Math.Max(width, 340);
 
         float x = (ClientSize.Width - width) / 2;
         float y = (ClientSize.Height - height) / 2;
 
         var rect = new Rectangle((int)x, (int)y, (int)width, (int)height);
         using var path = EditorPaint.RoundedRect(rect, 12);
-        using var bgBrush = new SolidBrush(Color.FromArgb(200, EditorColors.BgCard));
+        using var bgBrush = new SolidBrush(Color.FromArgb(220, EditorColors.BgCard));
         using var borderPen = new Pen(EditorColors.BorderSubtle, 1.5f);
-        using var titleBrush = new SolidBrush(EditorColors.TextSecondary);
-        using var descBrush = new SolidBrush(EditorColors.TextMuted);
 
         g.FillPath(bgBrush, path);
         g.DrawPath(borderPen, path);
 
-        using var sf = new StringFormat
-        {
-            Alignment = StringAlignment.Center,
-            LineAlignment = StringAlignment.Center
-        };
+        // 1. Draw Icon
+        float iconCx = x + width / 2;
+        float iconCy = y + paddingV + iconSize / 2;
+        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, EditorColors.TextMuted);
 
-        var titleRect = new RectangleF(x, y + paddingV, width, titleSize.Height);
-        var descRect = new RectangleF(x, y + paddingV + titleSize.Height + spacing, width, descSize.Height);
-
+        // 2. Draw Title
+        using var titleBrush = new SolidBrush(EditorColors.TextSecondary);
+        using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        var titleRect = new RectangleF(x, y + paddingV + iconSize + spacing, width, titleSize.Height);
         g.DrawString(titleText, titleFont, titleBrush, titleRect, sf);
-        g.DrawString(descText, descFont, descBrush, descRect, sf);
+
+        // 3. Draw Medium Text
+        using var mediumBrush = new SolidBrush(EditorColors.TextSecondary);
+        var mediumRect = new RectangleF(x, y + paddingV + iconSize + titleSize.Height + spacing * 2, width, mediumSize.Height);
+        g.DrawString(mediumText, mediumFont, mediumBrush, mediumRect, sf);
+
+        // 4. Draw Small Text (with inline cursor)
+        using var smallBrush = new SolidBrush(EditorColors.TextMuted);
+        var smallRect = new RectangleF(x, y + paddingV + iconSize + titleSize.Height + mediumSize.Height + spacing * 3, width, smallSize.Height);
+
+        string part1 = "";
+        string part2 = "";
+        if (smallTextTemplate.Contains("{0}"))
+        {
+            var idx = smallTextTemplate.IndexOf("{0}");
+            part1 = smallTextTemplate.Substring(0, idx);
+            part2 = smallTextTemplate.Substring(idx + 3);
+        }
+        else
+        {
+            part1 = smallTextTemplate;
+        }
+
+        if (string.IsNullOrEmpty(part2))
+        {
+            // Draw normally if no {0} template matches
+            g.DrawString(smallTextTemplate, smallFont, smallBrush, smallRect, sf);
+        }
+        else
+        {
+            // Draw part1, cursor, and part2 inline.
+            var sizePart1 = g.MeasureString(part1, smallFont);
+            var sizePart2 = g.MeasureString(part2, smallFont);
+            float totalTextW = sizePart1.Width + cursorPlaceholderWidth + sizePart2.Width;
+            
+            float startTextX = x + (width - totalTextW) / 2;
+            float textY = smallRect.Y + (smallRect.Height - Math.Max(sizePart1.Height, sizePart2.Height)) / 2;
+
+            g.DrawString(part1, smallFont, smallBrush, startTextX, textY);
+            
+            float cursorX = startTextX + sizePart1.Width + 2;
+            float cursorY = textY + 2;
+            DrawCursorIcon(g, cursorX, cursorY, 11, EditorColors.TextMuted);
+
+            g.DrawString(part2, smallFont, smallBrush, cursorX + cursorPlaceholderWidth, textY);
+        }
     }
 
     private void RenderGuides(Graphics g)
