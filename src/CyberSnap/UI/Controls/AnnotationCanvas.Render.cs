@@ -727,49 +727,78 @@ public sealed partial class AnnotationCanvas
         }
     }
 
+    private static GraphicsPath RoundedRectPath(float x, float y, float w, float h, float r)
+    {
+        var p = new GraphicsPath();
+        float d = r * 2;
+        p.AddArc(x, y, d, d, 180, 90);
+        p.AddArc(x + w - d, y, d, d, 270, 90);
+        p.AddArc(x + w - d, y + h - d, d, d, 0, 90);
+        p.AddArc(x, y + h - d, d, d, 90, 90);
+        p.CloseFigure();
+        return p;
+    }
+
     private void DrawWelcomeIcon(Graphics g, float cx, float cy, float size, Color color)
     {
-        using var pen = new Pen(color, 2f) { LineJoin = LineJoin.Round, StartCap = LineCap.Round, EndCap = LineCap.Round };
-        
-        float cardW = size * 0.7f;
-        float cardH = size * 0.5f;
-        float cardX = cx - (cardW / 2);
-        float cardY = cy - (size / 2) + (size * 0.12f);
-
-        // Draw stacked background cards
-        g.DrawRectangle(pen, cardX + (size * 0.08f), cardY - (size * 0.08f), cardW, cardH);
-        g.DrawRectangle(pen, cardX + (size * 0.04f), cardY - (size * 0.04f), cardW, cardH);
-
-        // Fill and draw front card
+        float strokeW = Math.Max(2f, size * 0.03f);
+        using var pen = new Pen(color, strokeW) { LineJoin = LineJoin.Round, StartCap = LineCap.Round, EndCap = LineCap.Round };
         using var bgBrush = new SolidBrush(Color.FromArgb(220, EditorColors.BgCard));
-        g.FillRectangle(bgBrush, cardX, cardY, cardW, cardH);
-        g.DrawRectangle(pen, cardX, cardY, cardW, cardH);
 
-        // Draw sun/moon
-        float sunR = size * 0.07f;
-        g.DrawEllipse(pen, cardX + cardW - (sunR * 3.2f), cardY + (sunR * 1.2f), sunR * 2f, sunR * 2f);
+        // --- Layout: total icon spans from cy-size/2 to cy+size/2 ---
+        float top = cy - size * 0.50f;
 
-        // Draw mountains
-        var mount1 = new GraphicsPath();
-        mount1.AddLine(cardX + (cardW * 0.1f), cardY + cardH, cardX + (cardW * 0.43f), cardY + (cardH * 0.45f));
-        mount1.AddLine(cardX + (cardW * 0.43f), cardY + (cardH * 0.45f), cardX + (cardW * 0.48f), cardY + cardH);
-        g.DrawPath(pen, mount1);
+        // --- Pre-compute all layer positions ---
+        float tabGap = size * 0.05f;       // vertical gap between tab tops
+        float tabThick = size * 0.06f;      // how tall each tab strip is
+        float cornerR = size * 0.055f;
 
-        var mount2 = new GraphicsPath();
-        mount2.AddLine(cardX + (cardW * 0.52f), cardY + cardH, cardX + (cardW * 0.68f), cardY + (cardH * 0.55f));
-        mount2.AddLine(cardX + (cardW * 0.68f), cardY + (cardH * 0.55f), cardX + (cardW * 0.9f), cardY + cardH);
-        g.DrawPath(pen, mount2);
+        float tab2Y = top;
+        float tab1Y = top + tabGap;
+        float cardY = top + tabGap * 2;
+        float cardW = size * 0.72f;
+        float cardH = size * 0.55f;
+        float cardX = cx - cardW / 2;
 
-        // Draw down arrow
-        float arrowLen = size * 0.22f;
-        float arrowX = cx;
-        float arrowY1 = cardY + (cardH * 0.85f);
-        float arrowY2 = arrowY1 + arrowLen;
-        g.DrawLine(pen, arrowX, arrowY1, arrowX, arrowY2);
-        
-        float wing = size * 0.06f;
-        g.DrawLine(pen, arrowX, arrowY2, arrowX - wing, arrowY2 - wing);
-        g.DrawLine(pen, arrowX, arrowY2, arrowX + wing, arrowY2 - wing);
+        // --- Back tab (narrowest, highest) — clip to only show above middle tab ---
+        float tab2W = size * 0.50f;
+        float tab2X = cx - tab2W / 2;
+        using var tab2Path = RoundedRectPath(tab2X, tab2Y, tab2W, tabThick + cornerR, cornerR);
+        var savedClip = g.Clip.Clone();
+        g.SetClip(new RectangleF(tab2X - strokeW, tab2Y - strokeW, tab2W + strokeW * 2, (tab1Y - tab2Y) + strokeW * 2), CombineMode.Intersect);
+        g.FillPath(bgBrush, tab2Path);
+        g.DrawPath(pen, tab2Path);
+        g.Clip = savedClip;
+
+        // --- Middle tab (wider, slightly lower) — clip to only show above front card ---
+        float tab1W = size * 0.60f;
+        float tab1X = cx - tab1W / 2;
+        using var tab1Path = RoundedRectPath(tab1X, tab1Y, tab1W, tabThick + cornerR, cornerR);
+        var savedClip2 = g.Clip.Clone();
+        g.SetClip(new RectangleF(tab1X - strokeW, tab1Y - strokeW, tab1W + strokeW * 2, (cardY - tab1Y) + strokeW * 2), CombineMode.Intersect);
+        g.FillPath(bgBrush, tab1Path);
+        g.DrawPath(pen, tab1Path);
+        g.Clip = savedClip2;
+
+        // --- Front card ---
+        using var cardPath = RoundedRectPath(cardX, cardY, cardW, cardH, cornerR);
+        g.FillPath(bgBrush, cardPath);
+        g.DrawPath(pen, cardPath);
+
+        // --- Large centered download arrow inside card ---
+        float arrowCx = cx;
+        float arrowCy = cardY + cardH * 0.48f;
+        float shaftLen = cardH * 0.55f;
+        float arrowTop = arrowCy - shaftLen * 0.35f;
+        float arrowBot = arrowCy + shaftLen * 0.65f;
+        float wingSpan = size * 0.14f;
+
+        // Vertical shaft
+        g.DrawLine(pen, arrowCx, arrowTop, arrowCx, arrowBot);
+
+        // Chevron arrowhead
+        g.DrawLine(pen, arrowCx - wingSpan, arrowBot - wingSpan, arrowCx, arrowBot);
+        g.DrawLine(pen, arrowCx + wingSpan, arrowBot - wingSpan, arrowCx, arrowBot);
     }
 
     private void DrawCursorIcon(Graphics g, float x, float y, float size, Color color)
@@ -777,13 +806,14 @@ public sealed partial class AnnotationCanvas
         using var brush = new SolidBrush(color);
         using var pen = new Pen(color, 1.0f) { LineJoin = LineJoin.Round };
         
+        // Arrow cursor with visible handle/tail
         var path = new GraphicsPath();
-        path.AddLine(x, y, x, y + size);
-        path.AddLine(x, y + size, x + size * 0.28f, y + size * 0.72f);
-        path.AddLine(x + size * 0.28f, y + size * 0.72f, x + size * 0.56f, y + size * 1.12f);
-        path.AddLine(x + size * 0.56f, y + size * 1.12f, x + size * 0.70f, y + size * 1.02f);
-        path.AddLine(x + size * 0.70f, y + size * 1.02f, x + size * 0.42f, y + size * 0.62f);
-        path.AddLine(x + size * 0.42f, y + size * 0.62f, x + size * 0.70f, y + size * 0.70f);
+        path.AddLine(x, y, x, y + size);                                         // left edge down
+        path.AddLine(x, y + size, x + size * 0.24f, y + size * 0.74f);           // bottom-left diagonal
+        path.AddLine(x + size * 0.24f, y + size * 0.74f, x + size * 0.46f, y + size * 1.10f); // handle left
+        path.AddLine(x + size * 0.46f, y + size * 1.10f, x + size * 0.60f, y + size * 1.00f); // handle bottom
+        path.AddLine(x + size * 0.60f, y + size * 1.00f, x + size * 0.38f, y + size * 0.64f); // handle right
+        path.AddLine(x + size * 0.38f, y + size * 0.64f, x + size * 0.62f, y + size * 0.62f); // right wing
         path.CloseAllFigures();
         
         g.FillPath(brush, path);
@@ -811,12 +841,12 @@ public sealed partial class AnnotationCanvas
         var smallSize = g.MeasureString(smallTextForMeasurement, smallFont);
 
         float paddingH = 32;
-        float paddingV = 28;
-        float spacing = 12;
-        float iconSize = 80;
+        float paddingV = 20;
+        float spacing = 8;
+        float iconSize = 72;
 
         float width = Math.Max(titleSize.Width, Math.Max(mediumSize.Width, smallSize.Width)) + paddingH * 2;
-        float height = iconSize + titleSize.Height + mediumSize.Height + smallSize.Height + paddingV * 2 + spacing * 3;
+        float height = iconSize + titleSize.Height + mediumSize.Height + smallSize.Height + paddingV * 2 + spacing * 2 + 2;
 
         // Make sure the width is at least 340 to look premium
         width = Math.Max(width, 340);
@@ -832,25 +862,31 @@ public sealed partial class AnnotationCanvas
         g.FillPath(bgBrush, path);
         g.DrawPath(borderPen, path);
 
-        // 1. Draw Icon
-        float iconCx = x + width / 2;
-        float iconCy = y + paddingV + iconSize / 2;
-        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, EditorColors.TextMuted);
+        // Layout order: Title → Icon → Subheader → Small text
+        float curY = y + paddingV;
 
-        // 2. Draw Title
+        // 1. Draw Title (header first)
         using var titleBrush = new SolidBrush(EditorColors.TextSecondary);
         using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-        var titleRect = new RectangleF(x, y + paddingV + iconSize + spacing, width, titleSize.Height);
+        var titleRect = new RectangleF(x, curY, width, titleSize.Height);
         g.DrawString(titleText, titleFont, titleBrush, titleRect, sf);
+        curY += titleSize.Height + spacing;
 
-        // 3. Draw Medium Text
+        // 2. Draw Icon
+        float iconCx = x + width / 2;
+        float iconCy = curY + iconSize / 2 + iconSize * 0.09f;  // offset down to visually center (tabs shorter than arrow)
+        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, EditorColors.TextMuted);
+        curY += iconSize + 2;  // tight gap below icon
+
+        // 3. Draw Subheader
         using var mediumBrush = new SolidBrush(EditorColors.TextSecondary);
-        var mediumRect = new RectangleF(x, y + paddingV + iconSize + titleSize.Height + spacing * 2, width, mediumSize.Height);
+        var mediumRect = new RectangleF(x, curY, width, mediumSize.Height);
         g.DrawString(mediumText, mediumFont, mediumBrush, mediumRect, sf);
+        curY += mediumSize.Height + spacing;
 
         // 4. Draw Small Text (with inline cursor)
         using var smallBrush = new SolidBrush(EditorColors.TextMuted);
-        var smallRect = new RectangleF(x, y + paddingV + iconSize + titleSize.Height + mediumSize.Height + spacing * 3, width, smallSize.Height);
+        var smallRect = new RectangleF(x, curY, width, smallSize.Height);
 
         string part1 = "";
         string part2 = "";
