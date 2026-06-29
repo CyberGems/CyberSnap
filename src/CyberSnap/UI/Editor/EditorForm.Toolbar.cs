@@ -738,12 +738,7 @@ public sealed partial class EditorForm
 
         commandActions.Controls.Add(MakeSeparator());
 
-        // Import & Export (Flat image I/O)
-        var importButton = MakeCommandButton("import", LocalizationService.Translate("Import"), false);
-        importButton.Click += (_, _) => DoImport();
-        RegisterHoverTooltip(importButton, () => WithShortcut(LocalizationService.Translate("Import an image"), "Ctrl+I"), above: false);
-        commandActions.Controls.Add(importButton);
-
+        // Export (Flat image I/O)
         var exportButton = MakeCommandButton("export", LocalizationService.Translate("Export"), false);
         exportButton.Click += (_, _) => DoSaveAs();
         RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png, .jpg or .pdf format"), "Ctrl+Shift+S"), above: false);
@@ -1544,9 +1539,6 @@ public sealed partial class EditorForm
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project as..."), iconId: "save");
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
 
-        var importItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Import"), shortcut: "Ctrl+I", iconId: "import");
-        importItem.Click += (_, _) => DoImport();
-
         var exportItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export"), shortcut: "Ctrl+Shift+S", iconId: "export");
         exportItem.Click += (_, _) => DoSaveAs();
 
@@ -1710,7 +1702,6 @@ public sealed partial class EditorForm
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(resizeCanvasItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(importItem);
         menu.Items.Add(exportItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(copyItem);

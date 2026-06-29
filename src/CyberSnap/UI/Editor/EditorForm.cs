@@ -1127,8 +1127,11 @@ public sealed partial class EditorForm : Form
 
         using (var dlg = new OpenFileDialog
         {
-            Filter = $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.webp|All Files|*.*",
-            Title = LocalizationService.Translate("Open a project or image")
+            Filter = $"{LocalizationService.Translate("All Supported Files")} (*.csnp, *.png, *.jpg...)|*.csnp;*.png;*.jpg;*.jpeg;*.bmp;*.webp|" +
+                     $"{LocalizationService.Translate("CyberSnap Project")} (*.csnp)|*.csnp|" +
+                     $"{LocalizationService.Translate("Image Files")}|*.png;*.jpg;*.jpeg;*.bmp;*.webp|" +
+                     $"{LocalizationService.Translate("All Files")} (*.*)|*.*",
+            Title = LocalizationService.Translate("Open a CyberSnap project or image")
         })
         {
             if (dlg.ShowDialog(this) == DialogResult.OK)
@@ -1180,62 +1183,6 @@ public sealed partial class EditorForm : Form
         }
     }
 
-    private void DoImport()
-    {
-        if (_canvas.IsDirty)
-        {
-            if (!PromptSaveChanges())
-                return;
-        }
-
-        using (var dlg = new OpenFileDialog
-        {
-            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.webp|All Files|*.*",
-            Title = LocalizationService.Translate("Import Image")
-        })
-        {
-            if (dlg.ShowDialog(this) == DialogResult.OK)
-            {
-                try
-                {
-                    // ── File size check: max 10 MB ──
-                    var fileInfo = new FileInfo(dlg.FileName);
-                    const long maxFileSize = 10 * 1024 * 1024; // 10 MB
-                    if (fileInfo.Length > maxFileSize)
-                    {
-                        ThemedConfirmDialog.Alert(Handle,
-                            LocalizationService.Translate("Error importing image"),
-                            string.Format(LocalizationService.Translate("The file is too large ({0:F1} MB). Maximum allowed is 10 MB."), fileInfo.Length / 1024.0 / 1024.0),
-                            error: true);
-                        return;
-                    }
-
-                    Bitmap captured = LoadDecoupledBitmap(dlg.FileName);
-
-                    // ── Max dimension check: 4K (4096 px on longest side) ──
-                    const int maxDimension = 4096;
-                    int width = captured.Width;
-                    int height = captured.Height;
-                    if (width > maxDimension || height > maxDimension)
-                    {
-                        captured.Dispose();
-                        ThemedConfirmDialog.Alert(Handle,
-                            LocalizationService.Translate("Error importing image"),
-                            string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), width, height, maxDimension),
-                            error: true);
-                        return;
-                    }
-
-                    LoadCapture(captured, dlg.FileName, showOpenedBanner: false);
-                    _canvas.ShowToolBanner(LocalizationService.Translate("Image imported"));
-                }
-                catch (Exception ex)
-                {
-                    ThemedConfirmDialog.Alert(Handle, LocalizationService.Translate("Error importing image"), ex.Message, error: true);
-                }
-            }
-        }
-    }
 
     /// <summary>Decodes a WebP image using Windows Imaging Component (WIC),
     /// re-encodes to PNG in memory, then loads as a GDI+ Bitmap to avoid
@@ -1353,7 +1300,6 @@ public sealed partial class EditorForm : Form
     {
         if (keyData == (Keys.Control | Keys.N)) { DoNewCanvas(); return true; }
         if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
-        if (keyData == (Keys.Control | Keys.I)) { DoImport(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
@@ -1391,7 +1337,6 @@ public sealed partial class EditorForm : Form
             // File / clipboard operations
             if (mod == Keys.Control && key is Keys.N) { DoNewCanvas(); return true; }
             if (mod == Keys.Control && key is Keys.O) { DoOpen(); return true; }
-            if (mod == Keys.Control && key is Keys.I) { DoImport(); return true; }
             if (mod == Keys.Control && key is Keys.S) { DoSave(); return true; }
             if (mod == (Keys.Control | Keys.Shift) && key is Keys.S) { DoSaveAs(); return true; }
             if (mod == Keys.Control && key is Keys.C) { DoCopy(); return true; }
