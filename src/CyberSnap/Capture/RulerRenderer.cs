@@ -89,37 +89,19 @@ public static class RulerRenderer
         g.DrawLine(ShadowPen, from.X + 1, from.Y + 1, to.X + 1, to.Y + 1);
         g.DrawLine(_linePen!, from, to);
 
-        // Perpendicular endpoint ticks in accent color — mark the exact measurement boundary.
-        // Shadow + accent color ensures visibility on any background.
+        // Endpoint arrowheads — triangles pointing inward along the ruler line.
+        // The tip IS the exact measurement point. The base gives a perpendicular reference.
+        // Works at any scale: from tiny 5px measures to full-screen spans.
         float nx = 0, ny = 0;
         if (dist > 1) { nx = -dy / dist; ny = dx / dist; }
-        const float tickHalf = 6.5f;
-        float tickWidth = 2.2f * dpiScale;
-        using var tickPen = new Pen(_accentBrush!.Color, tickWidth)
-            { StartCap = LineCap.Round, EndCap = LineCap.Round };
-        // Tick shadow
-        g.DrawLine(ShadowPen,
-            from.X - nx * tickHalf + 1, from.Y - ny * tickHalf + 1,
-            from.X + nx * tickHalf + 1, from.Y + ny * tickHalf + 1);
-        g.DrawLine(ShadowPen,
-            to.X - nx * tickHalf + 1, to.Y - ny * tickHalf + 1,
-            to.X + nx * tickHalf + 1, to.Y + ny * tickHalf + 1);
-        // Tick accent
-        g.DrawLine(tickPen,
-            from.X - nx * tickHalf, from.Y - ny * tickHalf,
-            from.X + nx * tickHalf, from.Y + ny * tickHalf);
-        g.DrawLine(tickPen,
-            to.X - nx * tickHalf, to.Y - ny * tickHalf,
-            to.X + nx * tickHalf, to.Y + ny * tickHalf);
+        float arrowH = 9f * dpiScale;   // height along ruler direction
+        float arrowHW = 4.5f * dpiScale; // half-width perpendicular
+        // Direction from→to: (dx/dist, dy/dist). Arrow at 'from' points toward 'to'.
+        float dirX = dist > 1 ? dx / dist : 0;
+        float dirY = dist > 1 ? dy / dist : 0;
 
-        // Endpoint anchor dot on top — marks the exact measurement point
-        float dotRadius = 4.5f * dpiScale;
-        float dotDiam = dotRadius * 2f;
-        using var dotShadowBrush = new SolidBrush(Color.FromArgb(52, 0, 0, 0));
-        g.FillEllipse(dotShadowBrush, from.X - dotRadius + 1, from.Y - dotRadius + 1, dotDiam, dotDiam);
-        g.FillEllipse(dotShadowBrush, to.X - dotRadius + 1, to.Y - dotRadius + 1, dotDiam, dotDiam);
-        g.FillEllipse(_accentBrush!, from.X - dotRadius, from.Y - dotRadius, dotDiam, dotDiam);
-        g.FillEllipse(_accentBrush!, to.X - dotRadius, to.Y - dotRadius, dotDiam, dotDiam);
+        DrawArrowhead(g, from, dirX, dirY, nx, ny, arrowH, arrowHW);
+        DrawArrowhead(g, to, -dirX, -dirY, nx, ny, arrowH, arrowHW);
 
         // Build label text in two parts: distance (larger, accent) + rest (normal)
         string distText = $"{(int)dist}px";
@@ -278,6 +260,38 @@ public static class RulerRenderer
             label.Right - LabelPadH - scaledSize,
             label.Y + (label.Height - scaledSize) / 2f,
             scaledSize, scaledSize);
+    }
+
+    /// <summary>Draws a filled triangular arrowhead. Tip is at (x,y), pointing in (dirX,dirY).
+    /// (nx,ny) is the perpendicular normal for the base width.</summary>
+    private static void DrawArrowhead(Graphics g, Point tip, float dirX, float dirY,
+        float nx, float ny, float height, float halfWidth)
+    {
+        // Tip of the arrow = exact measurement point
+        float tx = tip.X;
+        float ty = tip.Y;
+        // Base corners
+        float bx1 = tx + dirX * height + nx * halfWidth;
+        float by1 = ty + dirY * height + ny * halfWidth;
+        float bx2 = tx + dirX * height - nx * halfWidth;
+        float by2 = ty + dirY * height - ny * halfWidth;
+
+        // Shadow
+        using var shadowBrush = new SolidBrush(Color.FromArgb(48, 0, 0, 0));
+        g.FillPolygon(shadowBrush, new PointF[]
+        {
+            new(tx + 1, ty + 1),
+            new(bx1 + 1, by1 + 1),
+            new(bx2 + 1, by2 + 1),
+        });
+
+        // Accent fill
+        g.FillPolygon(_accentBrush!, new PointF[]
+        {
+            new(tx, ty),
+            new(bx1, by1),
+            new(bx2, by2),
+        });
     }
 
     /// <summary>Computes the floating label rectangle for the given ruler, matching Paint()'s layout
