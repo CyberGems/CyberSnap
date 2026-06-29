@@ -202,7 +202,16 @@ public partial class App
             try
             {
                 Theme.Refresh();
-                using var form = new StandaloneRulerForm();
+                using var form = new StandaloneRulerForm(onCaptureFullscreen: () =>
+                {
+                    // Dispatch back to main thread for capture
+                    Dispatcher.BeginInvoke(() =>
+                    {
+                        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+                        HideSettingsForCapture();
+                        LaunchWithDelay(CaptureCurrentScreenNow);
+                    });
+                });
                 System.Windows.Forms.Application.Run(form);
             }
             catch (Exception ex)
