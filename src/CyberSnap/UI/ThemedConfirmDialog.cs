@@ -78,18 +78,28 @@ internal sealed class ThemedConfirmDialog : Window
                     var helper = new WindowInteropHelper(this);
                     if (helper.Owner == editor.Handle)
                     {
-                        double editorLeftPhys = editor.Left;
-                        double editorTopPhys = editor.Top;
-                        double editorWidthPhys = editor.Width;
-                        double editorHeightPhys = editor.Height;
+                        var clientPoint = editor.PointToScreen(System.Drawing.Point.Empty);
+                        double clientLeftPhys = clientPoint.X;
+                        double clientTopPhys = clientPoint.Y;
+                        double clientWidthPhys = editor.ClientSize.Width;
+                        double clientHeightPhys = editor.ClientSize.Height;
+
+                        double sidebarWidthPhys = 332;
+                        foreach (System.Windows.Forms.Control ctrl in editor.Controls)
+                        {
+                            if (ctrl.Dock == System.Windows.Forms.DockStyle.Left)
+                            {
+                                sidebarWidthPhys = ctrl.Width;
+                                break;
+                            }
+                        }
 
                         var dpi = VisualTreeHelper.GetDpi(this);
                         double dpiScaleX = dpi.DpiScaleX;
                         double dpiScaleY = dpi.DpiScaleY;
 
-                        double sidebarWidthPhys = 332 * dpiScaleX;
-                        double canvasAreaCenterXPhys = editorLeftPhys + sidebarWidthPhys + (editorWidthPhys - sidebarWidthPhys) / 2;
-                        double canvasAreaCenterYPhys = editorTopPhys + (editorHeightPhys / 2);
+                        double canvasAreaCenterXPhys = clientLeftPhys + sidebarWidthPhys + (clientWidthPhys - sidebarWidthPhys) / 2;
+                        double canvasAreaCenterYPhys = clientTopPhys + (clientHeightPhys / 2);
 
                         WindowStartupLocation = WindowStartupLocation.Manual;
                         Left = (canvasAreaCenterXPhys / dpiScaleX) - (ActualWidth / 2);
