@@ -215,6 +215,12 @@ public sealed class StandaloneRulerForm : Form
     {
         if (e.Button == MouseButtons.Right)
         {
+            // If context menu is disabled, right-click exits immediately
+            if (!IsContextMenuEnabled())
+            {
+                Close();
+                return;
+            }
             // If cursor is over the ruler or its chip, close immediately (existing behavior)
             if (_hasLastMeasurement && IsOverRulerOrChip(e.Location))
             {
@@ -508,6 +514,15 @@ public sealed class StandaloneRulerForm : Form
             return SettingsService.LoadStatic()?.RulerCaptureAllScreens ?? false;
         }
         catch { return false; }
+    }
+
+    private static bool IsContextMenuEnabled()
+    {
+        try
+        {
+            return SettingsService.LoadStatic()?.RulerContextMenuEnabled ?? true;
+        }
+        catch { return true; }
     }
 
     private static int DistSq(Point a, Point b)

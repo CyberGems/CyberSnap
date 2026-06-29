@@ -875,5 +875,8 @@
   "Exit OCR capture": "Exit OCR capture",
   "Standalone tools": "Standalone tools",
   "Ruler: Capture all screens": "Ruler: Capture all screens",
-  "When ON, Enter captures every monitor. When OFF, only the current screen.": "When ON, Enter captures every monitor. When OFF, only the current screen."
+  "When ON, Enter captures every monitor. When OFF, only the current screen.": "When ON, Enter captures every monitor. When OFF, only the current screen.",
+  "Ruler: Enable context menu": "Ruler: Enable context menu",
+  "When disabled, right-click exits the ruler instead of showing the context menu.": "When disabled, right-click exits the ruler instead of showing the context menu.",
+  "When enabled, the ruler's Enter capture takes every monitor. Applies only to multi-monitor setups.": "When enabled, the ruler's Enter capture takes every monitor. Applies only to multi-monitor setups."
 }

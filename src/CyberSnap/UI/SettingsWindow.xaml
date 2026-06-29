@@ -2437,8 +2437,30 @@
                                 </StackPanel>
                                 <CheckBox x:Name="RulerCaptureAllScreensCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Ruler: Capture all screens"
+                                          Services:LocalizationService.SourceToolTip="When enabled, the ruler's Enter capture takes every monitor. Applies only to multi-monitor setups."
                                           ToolTip="When enabled, the ruler's Enter capture takes every monitor. Applies only to multi-monitor setups."
                                           Checked="RulerCaptureAllScreensCheck_Changed" Unchecked="RulerCaptureAllScreensCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <!-- Ruler: Enable context menu -->
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE700;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Services:LocalizationService.SourceText="Ruler: Enable context menu" Text="Ruler: Enable context menu" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="When disabled, right-click exits the ruler instead of showing the context menu." Text="When disabled, right-click exits the ruler instead of showing the context menu." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="RulerContextMenuEnabledCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Ruler: Enable context menu"
+                                          Services:LocalizationService.SourceToolTip="When disabled, right-click exits the ruler instead of showing the context menu."
+                                          ToolTip="When disabled, right-click exits the ruler instead of showing the context menu."
+                                          Checked="RulerContextMenuEnabledCheck_Changed" Unchecked="RulerContextMenuEnabledCheck_Changed"/>
                             </Grid>
                         </StackPanel>
                     </Border>

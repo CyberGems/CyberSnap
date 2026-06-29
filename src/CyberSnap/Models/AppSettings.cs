@@ -231,6 +231,10 @@ public sealed class AppSettings
     /// When false (default), only the screen(s) the ruler occupies are captured.</summary>
     public bool RulerCaptureAllScreens { get; set; }
 
+    /// <summary>When true (default), right-click on the standalone ruler shows a context menu.
+    /// When false, right-click exits the tool immediately.</summary>
+    public bool RulerContextMenuEnabled { get; set; } = true;
+
     // Standalone color picker hotkey: unbound by default
     public uint StandaloneColorPickerHotkeyModifiers { get; set; }
     public uint StandaloneColorPickerHotkeyKey { get; set; }

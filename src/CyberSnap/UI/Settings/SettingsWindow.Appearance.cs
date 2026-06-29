@@ -164,6 +164,7 @@ public partial class SettingsWindow
             SaveDirPanel.Visibility = s.SaveToFile ? Visibility.Visible : Visibility.Collapsed;
             StartWithWindowsCheck.IsChecked = s.StartWithWindows;
             RulerCaptureAllScreensCheck.IsChecked = s.RulerCaptureAllScreens;
+            RulerContextMenuEnabledCheck.IsChecked = s.RulerContextMenuEnabled;
 
             SaveHistoryCheck.IsChecked = s.SaveHistory;
             SaveStandaloneToHistoryCheck.IsChecked = s.SaveStandaloneToHistory;

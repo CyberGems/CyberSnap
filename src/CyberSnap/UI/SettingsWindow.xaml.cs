@@ -826,6 +826,13 @@ public partial class SettingsWindow : Window
         _settingsService.Save();
     }
 
+    private void RulerContextMenuEnabledCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        _settingsService.Settings.RulerContextMenuEnabled = RulerContextMenuEnabledCheck.IsChecked == true;
+        _settingsService.Save();
+    }
+
     private void SetStartupPreferenceStatus(string message)
     {
         StartupPreferenceStatusText.Text = message;

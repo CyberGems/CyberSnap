@@ -40,6 +40,7 @@ public static class SettingsSchemaCatalog
                     "Behavior of the standalone ruler tool.",
                     [
                         new SettingDefinition("ruler_capture_all", "Capture all screens", SettingsValueKind.Toggle, "When enabled, the ruler's Enter capture takes all screens. When disabled, only the screen(s) the ruler occupies are captured. Applies only to multi-monitor setups.", "RulerCaptureAllScreens"),
+                        new SettingDefinition("ruler_context_menu", "Enable context menu", SettingsValueKind.Toggle, "When disabled, right-click exits the ruler instead of showing the context menu.", "RulerContextMenuEnabled"),
                     ]),
             ]),
         new(
