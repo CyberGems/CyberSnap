@@ -202,17 +202,17 @@ public partial class App
             try
             {
                 Theme.Refresh();
-                using var form = new StandaloneRulerForm(onCaptureFullscreen: (captureRect) =>
+                using var form = new StandaloneRulerForm(onCaptureFullscreen: (captureAll) =>
                 {
                     // Dispatch back to main thread for capture
                     Dispatcher.BeginInvoke(() =>
                     {
                         if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
                         HideSettingsForCapture();
-                        if (captureRect.HasValue)
-                            LaunchWithDelay(() => CaptureRegionNow(captureRect.Value));
-                        else
+                        if (captureAll)
                             LaunchWithDelay(CaptureFullscreenNow);
+                        else
+                            LaunchWithDelay(CaptureCurrentScreenNow);
                     });
                 });
                 System.Windows.Forms.Application.Run(form);

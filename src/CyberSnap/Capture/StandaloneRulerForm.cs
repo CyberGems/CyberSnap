@@ -44,10 +44,10 @@ public sealed class StandaloneRulerForm : Form
     private readonly ContextMenuStrip _contextMenu;
 
     // ── Callback to trigger a screen capture from the main App thread ──
-    // Rectangle = capture region; null = all screens
-    private readonly Action<Rectangle?>? _onCaptureFullscreen;
+    // true = capture all screens; false = capture only the screen where the cursor is
+    private readonly Action<bool>? _onCaptureFullscreen;
 
-    public StandaloneRulerForm(Action<Rectangle?>? onCaptureFullscreen = null)
+    public StandaloneRulerForm(Action<bool>? onCaptureFullscreen = null)
     {
         _onCaptureFullscreen = onCaptureFullscreen;
         _dpiScale = DeviceDpi / 96f;
@@ -148,10 +148,10 @@ public sealed class StandaloneRulerForm : Form
         captureItem.Click += (_, _) =>
         {
             _closed = true;
-            var captureRect = GetCaptureRegion();
+            bool captureAll = GetRulerCaptureAllScreensSetting();
             BeginInvoke(() =>
             {
-                _onCaptureFullscreen?.Invoke(captureRect);
+                _onCaptureFullscreen?.Invoke(captureAll);
                 Close();
             });
         };
@@ -197,12 +197,11 @@ public sealed class StandaloneRulerForm : Form
                 ClearMeasurement();
                 return true;
             case Keys.Enter when (keyData & Keys.Modifiers) == 0:
-                // "Enter" → capture (respects ruler capture mode setting)
                 _closed = true;
-                var captureRect = GetCaptureRegion();
+                bool captureAll = GetRulerCaptureAllScreensSetting();
                 BeginInvoke(() =>
                 {
-                    _onCaptureFullscreen?.Invoke(captureRect);
+                    _onCaptureFullscreen?.Invoke(captureAll);
                     Close();
                 });
                 return true;
@@ -501,39 +500,6 @@ public sealed class StandaloneRulerForm : Form
         Cursor = CursorFactory.PrecisionCursor;
         Invalidate();
     }
-    /// <summary>Returns the capture region based on the ruler capture mode setting.
-    /// null = all screens; a Rectangle = the union of screens touched by the ruler.</summary>
-    private Rectangle? GetCaptureRegion()
-    {
-        // Check if user wants all screens
-        if (GetRulerCaptureAllScreensSetting())
-            return null;
-
-        // Determine which screens the ruler endpoints are on
-        if (_hasLastMeasurement)
-        {
-            var screens = Screen.AllScreens;
-            Screen? fromScreen = null, toScreen = null;
-            foreach (var s in screens)
-            {
-                if (fromScreen == null && s.Bounds.Contains(_lastFrom)) fromScreen = s;
-                if (toScreen == null && s.Bounds.Contains(_lastTo)) toScreen = s;
-                if (fromScreen != null && toScreen != null) break;
-            }
-
-            if (fromScreen != null && toScreen != null)
-            {
-                if (fromScreen.DeviceName == toScreen.DeviceName)
-                    return fromScreen.Bounds;
-                return Rectangle.Union(fromScreen.Bounds, toScreen.Bounds);
-            }
-        }
-
-        // Fallback: capture the screen where the cursor is
-        try { return Screen.FromPoint(Cursor.Position).Bounds; }
-        catch { return null; }
-    }
-
     private static bool GetRulerCaptureAllScreensSetting()
     {
         try
