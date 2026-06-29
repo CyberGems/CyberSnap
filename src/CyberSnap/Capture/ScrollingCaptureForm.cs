@@ -329,7 +329,11 @@ public sealed partial class ScrollingCaptureForm : Form
             if (_selection.Width > 20 && _selection.Height > 20)
                 ShowControlBar();
             else
+            {
+                // Click without meaningful selection — revive instruction banner
+                _hintBanner?.Revive();
                 Invalidate();
+            }
         }
     }
 

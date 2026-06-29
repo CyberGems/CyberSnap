@@ -27,6 +27,10 @@ public sealed class StandaloneOcrForm : Form
     private Rectangle _selectionRect;
     private bool _hasSelection;
 
+    // ── Context menu ──
+    private readonly ContextMenuStrip _contextMenu;
+    private readonly ToolStripMenuItem _autoCopyToggle;
+
     public StandaloneOcrForm()
     {
         // Give the tray context menu time to fully dismiss before screenshot
@@ -40,6 +44,7 @@ public sealed class StandaloneOcrForm : Form
         StartPosition = FormStartPosition.Manual;
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        KeyPreview = true;
 
         _bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
 
@@ -55,12 +60,42 @@ public sealed class StandaloneOcrForm : Form
             _bannerWorkingArea,
             Bounds,
             onInvalidate: () => Invalidate());
+
+        // ── Context menu (shown on right-click) ──
+        _contextMenu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
+
+        bool autoCopy = GetOcrAutoCopySetting();
+        _autoCopyToggle = WindowsMenuRenderer.Item("Auto-copiar OCR");
+        _autoCopyToggle.ToolTipText = LocalizationService.Translate("Copy recognized text without opening the result window");
+        _autoCopyToggle.Image = autoCopy ? FluentIcons.RenderBitmap("check",
+            UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
+        _autoCopyToggle.Click += (_, _) =>
+        {
+            bool current = GetOcrAutoCopySetting();
+            SetOcrAutoCopySetting(!current);
+            _autoCopyToggle.Image = !current ? FluentIcons.RenderBitmap("check",
+                UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
+        };
+        _contextMenu.Items.Add(_autoCopyToggle);
+
+        _contextMenu.Items.Add(new ToolStripSeparator());
+
+        var closeMenuAndContinue = WindowsMenuRenderer.Item("Close menu & continue", iconId: "undo");
+        closeMenuAndContinue.Click += (_, _) => { /* just close the menu */ };
+        _contextMenu.Items.Add(closeMenuAndContinue);
+
+        var exitItem = WindowsMenuRenderer.Item("Exit OCR capture", iconId: "close", danger: true);
+        exitItem.Click += (_, _) => Close();
+        _contextMenu.Items.Add(exitItem);
+
+        WindowsMenuRenderer.NormalizeItemWidths(_contextMenu, minWidth: 260);
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
+            _contextMenu?.Dispose();
             _banner.Dispose();
             _screenshot?.Dispose();
         }
@@ -85,7 +120,7 @@ public sealed class StandaloneOcrForm : Form
     {
         if (e.Button == MouseButtons.Right)
         {
-            Close();
+            _contextMenu.Show(this, e.Location);
             return;
         }
 
@@ -317,6 +352,18 @@ public sealed class StandaloneOcrForm : Form
         {
             return false;
         }
+    }
+
+    private static void SetOcrAutoCopySetting(bool value)
+    {
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.OcrAutoCopyToClipboard = value;
+            svc.Save();
+        }
+        catch { /* settings may be locked; silently ignore */ }
     }
 
     private static SettingsService GetSettingsService()
