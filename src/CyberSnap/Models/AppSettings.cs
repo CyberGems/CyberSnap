@@ -227,6 +227,10 @@ public sealed class AppSettings
     public uint StandaloneRulerHotkeyModifiers { get; set; }
     public uint StandaloneRulerHotkeyKey { get; set; }
 
+    /// <summary>When true, the standalone ruler's screen capture (Enter) captures all screens.
+    /// When false (default), only the screen(s) the ruler occupies are captured.</summary>
+    public bool RulerCaptureAllScreens { get; set; }
+
     // Standalone color picker hotkey: unbound by default
     public uint StandaloneColorPickerHotkeyModifiers { get; set; }
     public uint StandaloneColorPickerHotkeyKey { get; set; }

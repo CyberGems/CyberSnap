@@ -75,7 +75,7 @@ public sealed class StandaloneOcrForm : Form
 
         bool autoCopy = GetOcrAutoCopySetting();
         _autoCopyToggle = WindowsMenuRenderer.Item("Auto-copy OCR");
-        _autoCopyToggle.ToolTipText = "Copy recognized text without opening the result window";
+        _autoCopyToggle.ToolTipText = LocalizationService.Translate("Copy recognized text without opening the result window");
         _autoCopyToggle.Image = autoCopy ? FluentIcons.RenderBitmap("check",
             UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
         _autoCopyToggle.Click += (_, _) =>

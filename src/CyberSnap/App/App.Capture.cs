@@ -306,6 +306,27 @@ public partial class App
         }
     }
 
+    /// <summary>Captures an arbitrary screen region in VirtualScreen coordinates.</summary>
+    private void CaptureRegionNow(Rectangle region)
+    {
+        Bitmap? bmp = null;
+        try
+        {
+            bmp = ScreenCapture.CaptureRegion(region, _settingsService!.Settings.ShowCursor);
+            HandleCaptureResult(bmp);
+            bmp = null;
+        }
+        catch (Exception ex)
+        {
+            bmp?.Dispose();
+            ResetCapturing();
+            ShowCaptureProcessingFailed(
+                "Capture error",
+                "CyberSnap could not capture the screen. Try again, or choose another capture mode.",
+                ex.Message);
+        }
+    }
+
     private void CaptureActiveWindowNow()
     {
         Bitmap? bmp = null;
