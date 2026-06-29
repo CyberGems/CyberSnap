@@ -2418,7 +2418,7 @@
                                Visibility="Collapsed"
                                Margin="4,8,0,0"/>
 
-                    <TextBlock Text="Standalone tools" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Services:LocalizationService.SourceText="Standalone tools" Text="Standalone tools" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <!-- Ruler: Capture all screens -->
@@ -2433,7 +2433,7 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Services:LocalizationService.SourceText="Ruler: Capture all screens" Text="Ruler: Capture all screens" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Services:LocalizationService.SourceText="When using Enter to capture from the standalone ruler, capture every monitor instead of only the current one. Applies only to multi-monitor setups." Text="When using Enter to capture from the standalone ruler, capture every monitor instead of only the current one. Applies only to multi-monitor setups." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="When ON, Enter captures every monitor. When OFF, only the current screen." Text="When ON, Enter captures every monitor. When OFF, only the current screen." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="RulerCaptureAllScreensCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Ruler: Capture all screens"

@@ -1227,5 +1227,8 @@
   "Auto-copy OCR": "Auto-copiar OCR",
   "Copy recognized text without opening the result window": "Copiar texto reconocido sin abrir la ventana de resultados",
   "Close menu & continue": "Cerrar menú y continuar",
-  "Exit OCR capture": "Salir de captura OCR"
+  "Exit OCR capture": "Salir de captura OCR",
+  "Standalone tools": "Herramientas independientes",
+  "Ruler: Capture all screens": "Regla: Capturar todas las pantallas",
+  "When ON, Enter captures every monitor. When OFF, only the current screen.": "Al activar, Enter captura todos los monitores. Al desactivar, solo la pantalla actual."
 }
