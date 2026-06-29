@@ -55,18 +55,27 @@ public sealed class StandaloneOcrForm : Form
         Cursor = CursorFactory.PrecisionCursor;
 
         // ── Banner ──
+        var ocrLabel = LocalizationService.Translate("OCR") + ": ";
+        var ocrAction = LocalizationService.Translate("Click & drag to select text region")
+            + " · " + LocalizationService.Translate("Right-click or Esc to close");
         _banner = new StandaloneToolBanner(
-            LocalizationService.Translate("Click & drag to select text region  ·  Right-click or Esc to close"),
+            new BannerSegment[]
+            {
+                new(ocrLabel, Color.White),
+                new(ocrAction, null), // accent
+            },
             _bannerWorkingArea,
             Bounds,
-            onInvalidate: () => Invalidate());
+            onInvalidate: () => Invalidate(),
+            iconId: "ocr");
 
         // ── Context menu (shown on right-click) ──
         _contextMenu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
+        _contextMenu.ShowItemToolTips = true;
 
         bool autoCopy = GetOcrAutoCopySetting();
-        _autoCopyToggle = WindowsMenuRenderer.Item("Auto-copiar OCR");
-        _autoCopyToggle.ToolTipText = LocalizationService.Translate("Copy recognized text without opening the result window");
+        _autoCopyToggle = WindowsMenuRenderer.Item("Auto-copy OCR");
+        _autoCopyToggle.ToolTipText = "Copy recognized text without opening the result window";
         _autoCopyToggle.Image = autoCopy ? FluentIcons.RenderBitmap("check",
             UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
         _autoCopyToggle.Click += (_, _) =>

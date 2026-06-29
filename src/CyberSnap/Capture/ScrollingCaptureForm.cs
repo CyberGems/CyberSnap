@@ -145,12 +145,20 @@ public sealed partial class ScrollingCaptureForm : Form
         }
         else if (_screenshot is not null)
         {
+            var scrollLabel = LocalizationService.Translate("Scrolling capture") + ": ";
+            var scrollAction = LocalizationService.Translate("Drag to select scrolling area")
+                + " · " + LocalizationService.Translate("Right-click or Esc to cancel");
             _hintBanner = new StandaloneToolBanner(
-                "Drag to select scrolling area · Right-click or Esc to cancel",
+                new BannerSegment[]
+                {
+                    new(scrollLabel, Color.White),
+                    new(scrollAction, null), // accent
+                },
                 Screen.FromPoint(Cursor.Position).WorkingArea,
                 Bounds,
                 onInvalidate: () => Invalidate(),
-                persistent: true);
+                persistent: true,
+                iconId: "scrollCapture");
         }
         else
         {

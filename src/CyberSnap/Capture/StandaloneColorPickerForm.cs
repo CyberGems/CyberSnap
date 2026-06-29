@@ -89,11 +89,19 @@ public sealed class StandaloneColorPickerForm : Form
         Cursor = CursorFactory.PrecisionCursor;
 
         // ── Banner ──
+        var pickerLabel = LocalizationService.Translate("Color picker") + ": ";
+        var pickerAction = LocalizationService.Translate("Click to pick color & copy HEX")
+            + " · " + LocalizationService.Translate("Right-click or Esc to close");
         _banner = new StandaloneToolBanner(
-            LocalizationService.Translate("Click to pick color & copy HEX  ·  Right-click or Esc to close"),
+            new BannerSegment[]
+            {
+                new(pickerLabel, Color.White),
+                new(pickerAction, null), // accent
+            },
             _bannerWorkingArea,
             Bounds,
-            onInvalidate: () => Invalidate());
+            onInvalidate: () => Invalidate(),
+            iconId: "picker");
 
         // Initial magnifier at cursor position
         UpdateMagnifierAtCursor();

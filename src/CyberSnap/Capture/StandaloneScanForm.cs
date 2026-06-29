@@ -49,11 +49,19 @@ public sealed class StandaloneScanForm : Form
         Cursor = CursorFactory.PrecisionCursor;
 
         // ── Banner ──
+        var scanLabel = LocalizationService.Translate("QR & Barcodes") + ": ";
+        var scanAction = LocalizationService.Translate("Click & drag to scan QR or barcodes")
+            + " · " + LocalizationService.Translate("Right-click or Esc to close");
         _banner = new StandaloneToolBanner(
-            LocalizationService.Translate("Click & drag to scan QR or barcodes  ·  Right-click or Esc to close"),
+            new BannerSegment[]
+            {
+                new(scanLabel, Color.White),
+                new(scanAction, null), // accent
+            },
             _bannerWorkingArea,
             Bounds,
-            onInvalidate: () => Invalidate());
+            onInvalidate: () => Invalidate(),
+            iconId: "scan");
     }
 
     protected override void Dispose(bool disposing)
