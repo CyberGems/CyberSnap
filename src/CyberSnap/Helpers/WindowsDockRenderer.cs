@@ -154,4 +154,111 @@ public static class WindowsDockRenderer
     {
         FluentIcons.DrawIcon(g, iconId, bounds, color, UiChrome.ScaleFloat(active ? 5.5f : 6.5f), active);
     }
+
+    /// <summary>
+    /// Traveling border glint for pill buttons. <paramref name="thicknessScale"/> &lt; 1 draws a finer beam.
+    /// </summary>
+    public static void PaintBorderShine(
+        Graphics g, RectangleF face, float corner, float phase,
+        Color glowColor, Color coreColor, float intensity, float thicknessScale = 1f)
+    {
+        using var path = RoundedRect(face, corner);
+        path.Flatten();
+        var pts = path.PathPoints;
+        int n = pts.Length;
+        if (n < 2) return;
+
+        var seg = new float[n];
+        float total = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            var a = pts[i];
+            var b = pts[(i + 1) % n];
+            float d = (float)Math.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y));
+            seg[i] = d;
+            total += d;
+        }
+        if (total <= 0f) return;
+
+        PointF PointAt(float dist)
+        {
+            dist = ((dist % total) + total) % total;
+            for (int i = 0; i < n; i++)
+            {
+                if (dist <= seg[i] || i == n - 1)
+                {
+                    float t = seg[i] > 0 ? dist / seg[i] : 0f;
+                    var a = pts[i];
+                    var b = pts[(i + 1) % n];
+                    return new PointF(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t);
+                }
+                dist -= seg[i];
+            }
+            return pts[0];
+        }
+
+        float head = phase * total;
+        float tailLen = total * (0.32f * Math.Clamp(thicknessScale, 0.35f, 1.25f));
+        const int segments = 64;
+        float glowWidth = UiChrome.ScaleFloat(3.5f * thicknessScale);
+        float coreWidth = UiChrome.ScaleFloat(1.8f * thicknessScale);
+        float centerWidth = UiChrome.ScaleFloat(0.8f * thicknessScale);
+
+        using (var glowPen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+        {
+            var prev = PointAt(head);
+            for (int k = 1; k <= segments; k++)
+            {
+                float p01 = k / (float)segments;
+                var cur = PointAt(head - tailLen * p01);
+                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
+                int a = (int)(95 * intensity * factor * factor);
+                if (a > 0)
+                {
+                    glowPen.Width = Math.Max(0.5f, glowWidth * factor);
+                    glowPen.Color = Color.FromArgb(a, glowColor);
+                    g.DrawLine(glowPen, prev, cur);
+                }
+                prev = cur;
+            }
+        }
+
+        using (var corePen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+        {
+            var prev = PointAt(head);
+            for (int k = 1; k <= segments; k++)
+            {
+                float p01 = k / (float)segments;
+                var cur = PointAt(head - tailLen * p01);
+                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
+                int a = (int)(200 * intensity * factor * factor);
+                if (a > 0)
+                {
+                    corePen.Width = Math.Max(0.5f, coreWidth * factor);
+                    corePen.Color = Color.FromArgb(a, coreColor);
+                    g.DrawLine(corePen, prev, cur);
+                }
+                prev = cur;
+            }
+        }
+
+        using (var centerPen = new Pen(Color.Transparent, 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+        {
+            var prev = PointAt(head);
+            for (int k = 1; k <= segments; k++)
+            {
+                float p01 = k / (float)segments;
+                var cur = PointAt(head - tailLen * p01);
+                float factor = 1f - Math.Abs(0.5f - p01) * 2f;
+                int a = (int)(255 * intensity * factor * factor * factor);
+                if (a > 0)
+                {
+                    centerPen.Width = Math.Max(0.5f, centerWidth * factor);
+                    centerPen.Color = Color.FromArgb(a, Color.White);
+                    g.DrawLine(centerPen, prev, cur);
+                }
+                prev = cur;
+            }
+        }
+    }
 }
