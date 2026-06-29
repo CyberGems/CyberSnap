@@ -132,6 +132,8 @@ public sealed class StandaloneScanForm : Form
 
         if (!_hasSelection || _selectionRect.Width < 5 || _selectionRect.Height < 5)
         {
+            // Just a click without meaningful selection — revive the instruction banner
+            _banner.Revive();
             Invalidate();
             base.OnMouseUp(e);
             return;
