@@ -1973,12 +1973,14 @@ public sealed partial class EditorForm : Form
 
                 // ── Max dimension check: 4K (4096 px on longest side) ──
                 const int maxDimension = 4096;
-                if (captured.Width > maxDimension || captured.Height > maxDimension)
+                int width = captured.Width;
+                int height = captured.Height;
+                if (width > maxDimension || height > maxDimension)
                 {
                     captured.Dispose();
                     ThemedConfirmDialog.Alert(Handle,
                         LocalizationService.Translate("Error importing image"),
-                        string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), captured.Width, captured.Height, maxDimension),
+                        string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), width, height, maxDimension),
                         error: true);
                     return;
                 }
