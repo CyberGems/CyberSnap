@@ -14,7 +14,6 @@ public static class RulerRenderer
         { StartCap = LineCap.Flat, EndCap = LineCap.Flat };
 
     private static Pen? _linePen;
-    private static Pen? _tickPen;
     private static SolidBrush? _bgBrush;
     private static Pen? _borderPen;
     private static SolidBrush? _fgBrush;
@@ -57,7 +56,6 @@ public static class RulerRenderer
         if (_linePen != null && _themeKey == key) return;
 
         _linePen?.Dispose();
-        _tickPen?.Dispose();
         _bgBrush?.Dispose();
         _borderPen?.Dispose();
         _fgBrush?.Dispose();
@@ -67,7 +65,6 @@ public static class RulerRenderer
             ? Color.FromArgb(0, 200, 215)
             : Color.FromArgb(0, 110, 205);
         _linePen = new Pen(text, 1.8f) { StartCap = LineCap.Flat, EndCap = LineCap.Flat };
-        _tickPen = new Pen(text, 1.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
         _bgBrush = new SolidBrush(pill);
         _borderPen = new Pen(border, 1.0f);
         _fgBrush = new SolidBrush(text);
@@ -89,27 +86,12 @@ public static class RulerRenderer
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
 
-        float nx = 0, ny = 0;
-        if (dist > 1) { nx = -dy / dist; ny = dx / dist; }
-        const float tickHalf = 6f;
-
         g.DrawLine(ShadowPen, from.X + 1, from.Y + 1, to.X + 1, to.Y + 1);
         g.DrawLine(_linePen!, from, to);
 
-        // Endpoint ticks with subtle shadow for visibility on any background
-        g.DrawLine(ShadowPen,
-            from.X - nx * tickHalf + 1, from.Y - ny * tickHalf + 1,
-            from.X + nx * tickHalf + 1, from.Y + ny * tickHalf + 1);
-        g.DrawLine(ShadowPen,
-            to.X - nx * tickHalf + 1, to.Y - ny * tickHalf + 1,
-            to.X + nx * tickHalf + 1, to.Y + ny * tickHalf + 1);
-        g.DrawLine(_tickPen!, from.X - nx * tickHalf, from.Y - ny * tickHalf,
-                            from.X + nx * tickHalf, from.Y + ny * tickHalf);
-        g.DrawLine(_tickPen!, to.X - nx * tickHalf, to.Y - ny * tickHalf,
-                            to.X + nx * tickHalf, to.Y + ny * tickHalf);
-
-        // Endpoint anchor dots — accent-colored, visible on any background, centered on exact measurement point
-        float dotRadius = 4f * dpiScale;
+        // Endpoint anchor dots — accent-colored circles centered on the exact measurement points.
+        // These replace the old perpendicular tick marks for unambiguous, calibration-safe endpoints.
+        float dotRadius = 4.5f * dpiScale;
         float dotDiam = dotRadius * 2f;
         using var dotShadowBrush = new SolidBrush(Color.FromArgb(52, 0, 0, 0));
         g.FillEllipse(dotShadowBrush, from.X - dotRadius + 1, from.Y - dotRadius + 1, dotDiam, dotDiam);
