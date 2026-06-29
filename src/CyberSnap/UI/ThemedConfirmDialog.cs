@@ -78,18 +78,22 @@ internal sealed class ThemedConfirmDialog : Window
                     var helper = new WindowInteropHelper(this);
                     if (helper.Owner == editor.Handle)
                     {
-                        double editorLeft = editor.Left;
-                        double editorTop = editor.Top;
-                        double editorWidth = editor.Width;
-                        double editorHeight = editor.Height;
+                        double editorLeftPhys = editor.Left;
+                        double editorTopPhys = editor.Top;
+                        double editorWidthPhys = editor.Width;
+                        double editorHeightPhys = editor.Height;
 
-                        double sidebarWidth = 332;
-                        double canvasAreaCenterX = editorLeft + sidebarWidth + (editorWidth - sidebarWidth) / 2;
-                        double canvasAreaCenterY = editorTop + (editorHeight / 2);
+                        var dpi = VisualTreeHelper.GetDpi(this);
+                        double dpiScaleX = dpi.DpiScaleX;
+                        double dpiScaleY = dpi.DpiScaleY;
+
+                        double sidebarWidthPhys = 332 * dpiScaleX;
+                        double canvasAreaCenterXPhys = editorLeftPhys + sidebarWidthPhys + (editorWidthPhys - sidebarWidthPhys) / 2;
+                        double canvasAreaCenterYPhys = editorTopPhys + (editorHeightPhys / 2);
 
                         WindowStartupLocation = WindowStartupLocation.Manual;
-                        Left = canvasAreaCenterX - (ActualWidth / 2);
-                        Top = canvasAreaCenterY - (ActualHeight / 2);
+                        Left = (canvasAreaCenterXPhys / dpiScaleX) - (ActualWidth / 2);
+                        Top = (canvasAreaCenterYPhys / dpiScaleY) - (ActualHeight / 2);
                     }
                 }
             }
