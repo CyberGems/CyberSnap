@@ -189,11 +189,7 @@ public sealed partial class EditorForm
             BackColor = EditorColors.TitleBar,
             Padding = new Padding(18, 8, 18, 8),
         };
-        _statusBarPanel.Paint += (_, e) =>
-        {
-            using var pen = new Pen(EditorColors.BorderSubtle);
-            e.Graphics.DrawLine(pen, 0, 0, _statusBarPanel.Width, 0);
-        };
+        // Seamless status bar matching Settings window (no top border)
 
         // BORDER switch (off-screen, instantiated for burger menu synchronization)
         _toggleFrameSwitch = new EditorToggleSwitch
@@ -452,11 +448,7 @@ public sealed partial class EditorForm
             Height = 108,
             BackColor = EditorColors.TitleBar,
         };
-        _topBarPanel.Paint += (_, e) =>
-        {
-            using var pen = new Pen(EditorColors.BorderSubtle);
-            e.Graphics.DrawLine(pen, 0, _topBarPanel.Height - 1, _topBarPanel.Width, _topBarPanel.Height - 1);
-        };
+        // Seamless top bar matching Settings window (no bottom border)
         _topBarPanel.MouseDown += BeginWindowDrag;
 
         // Row 1: Title Bar Panel
@@ -1850,7 +1842,7 @@ internal static class EditorColors
     public static Color BgCard => IsDark ? Color.FromArgb(23, 26, 40) : Color.FromArgb(232, 238, 247);
     public static Color BgHover => IsDark ? Color.FromArgb(33, 38, 58) : Color.FromArgb(214, 218, 229);
     public static Color CanvasBg => IsDark ? Color.FromArgb(8, 10, 16) : Color.FromArgb(240, 242, 248);
-    public static Color TitleBar => IsDark ? Color.FromArgb(6, 12, 20) : Color.FromArgb(220, 223, 232);
+    public static Color TitleBar => BgPrimary;
     public static Color TextPrimary => IsDark ? Color.FromArgb(230, 240, 255) : Color.FromArgb(26, 26, 26);
     public static Color TextSecondary => IsDark ? Color.FromArgb(160, 180, 210) : Color.FromArgb(96, 96, 96);
     public static Color TextMuted => IsDark ? Color.FromArgb(110, 130, 160) : Color.FromArgb(128, 128, 128);
