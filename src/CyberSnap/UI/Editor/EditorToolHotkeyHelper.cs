@@ -7,6 +7,24 @@ namespace CyberSnap.UI.Editor;
 
 internal static class EditorToolHotkeyHelper
 {
+    /// <summary>Key-up shorter than this counts as a tap when Space is Pan's hotkey.</summary>
+    public const int SpacePanTapThresholdMs = 200;
+
+    public static bool IsBareSpaceKey(Keys keyData)
+    {
+        var key = keyData & Keys.KeyCode;
+        var mod = keyData & Keys.Modifiers;
+        return key == Keys.Space && mod == Keys.None;
+    }
+
+    public static bool IsSpaceAssignedAsPanHotkey()
+    {
+        var settings = SettingsService.LoadStatic();
+        if (settings is null)
+            return false;
+        var (mod, key) = settings.GetEditorToolHotkey("editorPan");
+        return mod == 0 && key == Native.User32.VK_SPACE;
+    }
     public static AnnotationCanvas.CanvasTool? ToCanvasTool(string editorToolId) => editorToolId switch
     {
         "editorPan" => AnnotationCanvas.CanvasTool.Pan,
@@ -83,6 +101,9 @@ internal static class EditorToolHotkeyHelper
     /// <summary>Activates an editor tool from a keyboard shortcut. Returns true when handled.</summary>
     public static bool TryActivateTool(AnnotationCanvas canvas, Keys keyData)
     {
+        if (IsBareSpaceKey(keyData))
+            return false;
+
         var settings = SettingsService.LoadStatic();
         if (settings is null)
             return false;

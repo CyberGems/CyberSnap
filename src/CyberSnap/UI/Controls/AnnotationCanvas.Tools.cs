@@ -1364,15 +1364,34 @@ public sealed partial class AnnotationCanvas
             Invalidate();
         }
 
-        if (e.KeyCode == Keys.Space && _preSpaceTool != null)
+        if (e.KeyCode == Keys.Space)
+            EndSpacePanGesture(e);
+    }
+
+    private void EndSpacePanGesture(KeyEventArgs e)
+    {
+        _isPanning = false;
+
+        if (_preSpaceTool is null)
+            return;
+
+        var elapsedMs = (DateTime.UtcNow - _spaceKeyDownUtc).TotalMilliseconds;
+        if (elapsedMs < EditorToolHotkeyHelper.SpacePanTapThresholdMs
+            && EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
         {
-            _isPanning = false;
-
-            ActiveTool = _preSpaceTool.Value;
             _preSpaceTool = null;
-
-            e.Handled = true;
+            ShowToolBanner(GetToolName(CanvasTool.Pan));
+            UpdateCursor();
+            OnStateChanged();
         }
+        else
+        {
+            var restore = _preSpaceTool.Value;
+            _preSpaceTool = null;
+            ActiveTool = restore;
+        }
+
+        e.Handled = true;
     }
 
     public void StartTemporarySpacePan()
@@ -1428,6 +1447,7 @@ public sealed partial class AnnotationCanvas
 
         if (e.KeyCode == Keys.Space && _inlineTextBox is null)
         {
+            _spaceKeyDownUtc = DateTime.UtcNow;
             StartTemporarySpacePan();
             e.Handled = true;
             return;

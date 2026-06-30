@@ -453,6 +453,7 @@ public sealed class AppSettings
     private Dictionary<string, uint> GetEditorToolDefaults() =>
         new(StringComparer.OrdinalIgnoreCase)
         {
+            ["editorPan"] = 0x20,         // Space
             ["editorMove"] = 0x31,        // 1
             ["editorEraser"] = 0x32,      // 2
             ["editorText"] = 0x33,        // 3

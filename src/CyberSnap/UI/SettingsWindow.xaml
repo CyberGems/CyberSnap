@@ -1097,21 +1097,33 @@
                     </Border>
 
                     <Grid Margin="0,6,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="24" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
+                        <StackPanel Grid.Row="0" Grid.Column="0">
                             <TextBlock Text="Capture &amp; Global" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
                             <StackPanel x:Name="CaptureToolsPanel"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="Floating Annotation Toolbar" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"/>
+                        <StackPanel Grid.Row="0" Grid.Column="2">
+                            <TextBlock Text="Capture Toolbar" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"
+                                       Services:LocalizationService.SourceText="Capture Toolbar"/>
                             <StackPanel x:Name="AnnotationToolsPanel"/>
                         </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,16,0,0">
+                            <TextBlock Text="Annotations Editor" Style="{StaticResource SectionLabel}" Margin="4,0,0,10"
+                                       Services:LocalizationService.SourceText="Annotations Editor"/>
+                            <StackPanel x:Name="EditorToolsPanel"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,16,0,0">
+                            <StackPanel x:Name="ToolbarUtilitiesPanel"/>
+                        </StackPanel>
                     </Grid>
-                    <StackPanel x:Name="EditorToolsPanel" Margin="0,16,0,0"/>
                 </StackPanel>
             </ScrollViewer>
 
