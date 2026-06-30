@@ -420,6 +420,9 @@ public sealed class AppSettings
     // Editor toolbar hotkeys (Settings → Hotkeys → Annotations Editor). Key = editor tool id, Value = [mod, vk].
     public Dictionary<string, uint[]>? EditorToolHotkeys { get; set; }
 
+    // Editor view/zoom hotkeys (Settings → Hotkeys → Annotations Editor → View). Key = view id, Value = [mod, vk].
+    public Dictionary<string, uint[]>? EditorViewHotkeys { get; set; }
+
     // Virtual key codes for in-capture annotation shortcuts: 1-9, H, R, S, M, B, E
     private static readonly uint[] AnnotationKeyVks =
     {
@@ -485,6 +488,30 @@ public sealed class AppSettings
     {
         EditorToolHotkeys ??= new();
         EditorToolHotkeys[toolId] = new[] { mod, key };
+    }
+
+    private Dictionary<string, uint> GetEditorViewDefaults() =>
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["editorZoomIn"] = 0xBB,    // =
+            ["editorZoomOut"] = 0xBD,   // -
+            ["editorZoomReset"] = 0x30, // 0
+            ["editorZoomFit"] = 0x71,   // F2
+        };
+
+    public (uint mod, uint key) GetEditorViewHotkey(string viewId)
+    {
+        if (EditorViewHotkeys != null && EditorViewHotkeys.TryGetValue(viewId, out var v) && v.Length >= 2)
+            return (v[0], v[1]);
+        if (GetEditorViewDefaults().TryGetValue(viewId, out var defKey))
+            return (0u, defKey);
+        return (0u, 0u);
+    }
+
+    public void SetEditorViewHotkey(string viewId, uint mod, uint key)
+    {
+        EditorViewHotkeys ??= new();
+        EditorViewHotkeys[viewId] = new[] { mod, key };
     }
 
     public string? FindEditorToolId(uint mod, uint key)
@@ -627,8 +654,11 @@ public sealed class AppSettings
         StandaloneColorPickerHotkeyKey = 0;
         StandaloneOcrHotkeyModifiers = 0;
         StandaloneOcrHotkeyKey = 0;
+        StandaloneScanHotkeyModifiers = 0;
+        StandaloneScanHotkeyKey = 0;
         ToolHotkeys?.Clear();
         EditorToolHotkeys?.Clear();
+        EditorViewHotkeys?.Clear();
     }
 }
 
