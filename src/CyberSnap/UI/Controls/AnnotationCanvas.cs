@@ -60,6 +60,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private System.Windows.Forms.Timer? _zoomSettleTimer;
     private bool _viewFitsWindow = true; // image auto-fits the canvas until the user zooms
     private bool _userPanned;            // user has manually dragged the image
+    private bool _welcomeDismissed;      // welcome overlay hidden after first meaningful interaction
     private bool _isPanning;
     private Point _panStart;
     private PointF _panStartOffset;
@@ -281,6 +282,9 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         }
     }
 
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool ShowWelcomeBanner { get; set; } = true;
+
     private float _bannerOpacity = 0f;
     private string _bannerText = "";
     private System.Windows.Forms.Timer? _bannerTimer;
@@ -480,8 +484,20 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             ShowToolBanner(cropApplied
                 ? LocalizationService.Translate("Crop applied")
                 : GetToolName(value));
+            if (IsDefaultBlank)
+                DismissWelcomeOverlay();
             Invalidate();
             OnStateChanged();
+        }
+    }
+
+    /// <summary>Hides the blank-canvas welcome overlay until the next pristine blank document.</summary>
+    public void DismissWelcomeOverlay()
+    {
+        if (!_welcomeDismissed)
+        {
+            _welcomeDismissed = true;
+            Invalidate();
         }
     }
     private CanvasTool _activeTool = CanvasTool.Move;
@@ -612,6 +628,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _pan = PointF.Empty;
         _viewFitsWindow = true;
         _userPanned = false;
+        _welcomeDismissed = false;
         _isPanning = false;
         _selectedAnnotationIndex = -1;
         _selectOriginalAnnotation = null;
@@ -670,6 +687,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _pan = PointF.Empty;
         _viewFitsWindow = true;
         _userPanned = false;
+        _welcomeDismissed = false;
         _isPanning = false;
         _selectedAnnotationIndex = -1;
         _selectOriginalAnnotation = null;
@@ -881,7 +899,11 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     }
 
     public void ZoomBy(double factor, Point screenAnchor)
-        => ZoomTo(_zoom * factor, screenAnchor);
+    {
+        if (IsDefaultBlank)
+            DismissWelcomeOverlay();
+        ZoomTo(_zoom * factor, screenAnchor);
+    }
 
     public void ZoomTo(double zoom, Point screenAnchor)
     {
@@ -1087,7 +1109,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             Push(command);
 
         HideToolBanner();
-        _userPanned = true; // Dismiss the welcome banner on first resize (like zoom does).
+        DismissWelcomeOverlay();
+        _userPanned = true;
         Invalidate();
     }
 

@@ -253,6 +253,8 @@ public sealed class AppSettings
     public bool EditorFitToWindowOnOpen { get; set; } = true;
     public bool EditorPanModeLockObjects { get; set; } = true;
     public bool EditorShowBanners { get; set; } = true;
+    /// <summary>Show the welcome overlay on a pristine blank canvas in the editor.</summary>
+    public bool EditorShowWelcomeBanner { get; set; } = true;
     public bool EditorAutoCropControls { get; set; } = true;
     public bool EditorShowResizeHandles { get; set; } = true;
     // When dragging the canvas resize handles: false = extend/trim the canvas area only
@@ -272,6 +274,8 @@ public sealed class AppSettings
     public bool EditorShowFrame { get; set; } = true;
     public bool EditorShowHints { get; set; } = true;
     public bool EditorShowScrollbars { get; set; }
+    /// <summary>Last solid fill chosen in the New Canvas dialog; 0 = transparent checkerboard.</summary>
+    public int EditorNewCanvasBackgroundColorArgb { get; set; }
 
     /// <summary>Most recently opened files (projects and images) shown in the Editor's
     /// burger "Open recent" submenu. Newest first; capped to 6 entries.</summary>
@@ -413,6 +417,9 @@ public sealed class AppSettings
     // Tools with dedicated properties (rect, ocr, picker, etc.) are mapped to those properties instead.
     public Dictionary<string, uint[]>? ToolHotkeys { get; set; }
 
+    // Editor toolbar hotkeys (Settings → Hotkeys → Annotations Editor). Key = editor tool id, Value = [mod, vk].
+    public Dictionary<string, uint[]>? EditorToolHotkeys { get; set; }
+
     // Virtual key codes for in-capture annotation shortcuts: 1-9, H, R, S, M, B, E
     private static readonly uint[] AnnotationKeyVks =
     {
@@ -441,6 +448,56 @@ public sealed class AppSettings
             ["emoji"] = 0x45,       // E (Emoji)
         };
         return result;
+    }
+
+    private Dictionary<string, uint> GetEditorToolDefaults() =>
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["editorMove"] = 0x31,        // 1
+            ["editorEraser"] = 0x32,      // 2
+            ["editorText"] = 0x33,        // 3
+            ["editorArrow"] = 0x34,       // 4
+            ["editorLine"] = 0x35,        // 5
+            ["editorDraw"] = 0x36,        // 6
+            ["editorCurvedArrow"] = 0x37, // 7
+            ["editorCircle"] = 0x38,      // 8
+            ["editorRect"] = 0x39,        // 9
+            ["editorHighlight"] = 0x48,   // H
+            ["editorStep"] = 0x53,        // S
+            ["editorMagnifier"] = 0x4D,   // M
+            ["editorBlur"] = 0x42,        // B
+            ["editorEmoji"] = 0x45,       // E
+        };
+
+    /// <summary>Get hotkey (mod, key) for an editor toolbar tool.</summary>
+    public (uint mod, uint key) GetEditorToolHotkey(string toolId)
+    {
+        if (EditorToolHotkeys != null && EditorToolHotkeys.TryGetValue(toolId, out var v) && v.Length >= 2)
+            return (v[0], v[1]);
+        if (GetEditorToolDefaults().TryGetValue(toolId, out var defKey))
+            return (0u, defKey);
+        return (0u, 0u);
+    }
+
+    public void SetEditorToolHotkey(string toolId, uint mod, uint key)
+    {
+        EditorToolHotkeys ??= new();
+        EditorToolHotkeys[toolId] = new[] { mod, key };
+    }
+
+    public string? FindEditorToolId(uint mod, uint key)
+    {
+        if (key == 0)
+            return null;
+
+        foreach (var (id, _, _) in EditorToolHotkeyDef.Tools)
+        {
+            var hotkey = GetEditorToolHotkey(id);
+            if (hotkey.mod == mod && hotkey.key == key)
+                return id;
+        }
+
+        return null;
     }
 
     /// <summary>Get hotkey (mod, key) for a tool ID, checking named properties first then dictionary.</summary>
@@ -569,6 +626,7 @@ public sealed class AppSettings
         StandaloneOcrHotkeyModifiers = 0;
         StandaloneOcrHotkeyKey = 0;
         ToolHotkeys?.Clear();
+        EditorToolHotkeys?.Clear();
     }
 }
 

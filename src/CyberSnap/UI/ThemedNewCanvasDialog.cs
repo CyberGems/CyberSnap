@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using CyberSnap.Helpers;
+using CyberSnap.Services;
 using CyberSnap.UI.Controls;
 using Button = System.Windows.Controls.Button;
 using WpfBrushes = System.Windows.Media.Brushes;
@@ -78,6 +79,10 @@ internal sealed class ThemedNewCanvasDialog : Window
         // Default canvas size
         _width = 1024;
         _height = 768;
+
+        var savedBg = SettingsService.LoadStatic()?.EditorNewCanvasBackgroundColorArgb ?? 0;
+        if (savedBg != 0)
+            _backgroundColor = System.Drawing.Color.FromArgb(savedBg);
 
         Title = Services.LocalizationService.Translate("New canvas");
         Width = PanelWidth + (GlowMargin * 2);
@@ -433,12 +438,15 @@ internal sealed class ThemedNewCanvasDialog : Window
 
         // Reusable color-picker flyout, hosted in a Popup anchored to the dropdown.
         _colorPicker = new ColorPickerPopup();
+        if (_backgroundColor is { } savedBg)
+            _colorPicker.SetColor(WpfColor.FromArgb(savedBg.A, savedBg.R, savedBg.G, savedBg.B));
         _colorPicker.ColorChanged += color =>
         {
             _backgroundColor = color is { } c
                 ? System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B)
                 : (System.Drawing.Color?)null;
             RefreshSwatch();
+            PersistBackgroundColorChoice();
         };
         
         // Accept pressed, or a screen pick started → close the flyout instantly to prevent fade capturing.
@@ -497,6 +505,7 @@ internal sealed class ThemedNewCanvasDialog : Window
             _backgroundColor = null;
             _colorPicker.ClearColor();
             RefreshSwatch();
+            PersistBackgroundColorChoice();
         };
         ToolTipService.SetToolTip(resetBtn, Services.LocalizationService.Translate("Clear"));
         Grid.SetColumn(resetBtn, 1);
@@ -541,6 +550,16 @@ internal sealed class ThemedNewCanvasDialog : Window
     }
 
     // â”€â”€ UI builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    private void PersistBackgroundColorChoice() =>
+        PersistBackgroundColorChoice(_backgroundColor);
+
+    private static void PersistBackgroundColorChoice(System.Drawing.Color? color)
+    {
+        int argb = color?.ToArgb() ?? 0;
+        if (System.Windows.Application.Current is CyberSnap.App app)
+            app.PersistEditorNewCanvasBackgroundColor(argb);
+    }
 
     private FrameworkElement SectionLabel(string text, double topMargin) => new TextBlock
     {

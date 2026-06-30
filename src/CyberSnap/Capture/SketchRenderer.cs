@@ -141,10 +141,9 @@ public static partial class SketchRenderer
         var tip = curvePts[^1];
         GetCurveTipTangent(curvePts, tip, Math.Max(headSize, 16f), out float nx, out float ny);
 
-        // Match straight arrows: shaft ends at 0.38×headSize; shadow stops earlier to avoid
-        // a dark blob in the small gap before the arrowhead wings.
+        // Match straight arrows: round end cap fills the wedge before the arrowhead wings.
         const float shaftMainInset = 0.38f;
-        const float shaftShadowInset = 0.24f;
+        const float shaftShadowInset = 0.36f;
 
         var shaftEnd = new PointF(tip.X - nx * headSize * shaftMainInset, tip.Y - ny * headSize * shaftMainInset);
         var shadowEnd = new PointF(tip.X - nx * headSize * shaftShadowInset, tip.Y - ny * headSize * shaftShadowInset);
@@ -163,7 +162,7 @@ public static partial class SketchRenderer
             DrawSoftArrowheadShadow(g, tip, nx, ny, len, thickness + 0.5f, clipTip: tip);
         }
 
-        var mainPen = GetFlatEndCapPen(color, thickness);
+        var mainPen = GetRoundCapPen(color, thickness);
         if (curvePts.Length >= 4)
             g.DrawCurve(mainPen, curvePts, 0.45f);
         else

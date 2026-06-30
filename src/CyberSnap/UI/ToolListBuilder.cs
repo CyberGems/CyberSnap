@@ -50,10 +50,11 @@ public static class ToolListBuilder
         return false;
     }
 
-    public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null)
+    public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null, StackPanel? editorToolsPanel = null)
     {
         capturePanel.Children.Clear();
         annotationPanel.Children.Clear();
+        editorToolsPanel?.Children.Clear();
         var s = settingsService.Settings;
         // Icon color for rendering Fluent glyphs to bitmaps
         var iconColor = Theme.IsDark ? System.Drawing.Color.FromArgb(225, 255, 255, 255) : System.Drawing.Color.FromArgb(210, 0, 0, 0);
@@ -73,7 +74,9 @@ public static class ToolListBuilder
             targetPanel.Children.Add(header);
         }
 
-        void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool showHotkey)
+        void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool showHotkey,
+            Func<string, (uint mod, uint key)> getHotkey,
+            Action<string, uint, uint> setHotkey)
         {
             var card = new Border { Style = (Style)owner.FindResource("CompactItemCard") };
 
@@ -132,7 +135,7 @@ public static class ToolListBuilder
                 };
                 hkBox.ToolTip = tooltip;
 
-                var (initMod, initKey) = settingsService.Settings.GetToolHotkey(toolId);
+                var (initMod, initKey) = getHotkey(toolId);
                 hkBox.Text = HotkeyFormatter.Format(initMod, initKey);
 
                 var clearBtn = new Button { Content = "×" };
@@ -166,7 +169,7 @@ public static class ToolListBuilder
                 };
                 hkBox.LostFocus += (_, _) =>
                 {
-                    var (m, k) = settingsService.Settings.GetToolHotkey(capturedId);
+                    var (m, k) = getHotkey(capturedId);
                     capturedBox.Text = HotkeyFormatter.Format(m, k);
                     hkBox.ClearValue(TextBox.ForegroundProperty);
                     hkBox.ClearValue(TextBox.FontWeightProperty);
@@ -248,7 +251,7 @@ public static class ToolListBuilder
                     if (IsUnsafeModifierlessHotkey(mod, vk)) return;
 
                     var conflict = FindHotkeyConflict(settingsService.Settings, capturedId, mod, vk);
-                    var (prevMod, prevKey) = settingsService.Settings.GetToolHotkey(capturedId);
+                    var (prevMod, prevKey) = getHotkey(capturedId);
 
                     try
                     {
@@ -261,7 +264,7 @@ public static class ToolListBuilder
                                 string.Format(LocalizationService.Translate("\"{0}\" reassigned from {1}."), HotkeyFormatter.Format(mod, vk), conflictLabel));
                         }
 
-                        settingsService.Settings.SetToolHotkey(capturedId, mod, vk);
+                        setHotkey(capturedId, mod, vk);
                         settingsService.Save();
                         capturedBox.Text = HotkeyFormatter.Format(mod, vk);
                         hotkeyChanged?.Invoke();
@@ -270,7 +273,7 @@ public static class ToolListBuilder
                     catch (Exception ex)
                     {
                         AppDiagnostics.LogError("settings.tool-hotkey-save", ex);
-                        settingsService.Settings.SetToolHotkey(capturedId, prevMod, prevKey);
+                        setHotkey(capturedId, prevMod, prevKey);
                         if (conflict is not null) RestoreHotkeyConflict(settingsService.Settings, conflict, (prevMod, prevKey));
 
                         try { settingsService.Save(); } catch { }
@@ -325,10 +328,10 @@ public static class ToolListBuilder
 
                 clearBtn.Click += (_, _) =>
                 {
-                    var (previousMod, previousKey) = settingsService.Settings.GetToolHotkey(capturedId);
+                    var (previousMod, previousKey) = getHotkey(capturedId);
                     try
                     {
-                        settingsService.Settings.SetToolHotkey(capturedId, 0, 0);
+                        setHotkey(capturedId, 0, 0);
                         settingsService.Save();
                         capturedBox.Text = HotkeyFormatter.Format(0, 0);
                         hotkeyChanged?.Invoke();
@@ -337,7 +340,7 @@ public static class ToolListBuilder
                     catch (Exception ex)
                     {
                         AppDiagnostics.LogError("settings.tool-hotkey-clear", ex);
-                        settingsService.Settings.SetToolHotkey(capturedId, previousMod, previousKey);
+                        setHotkey(capturedId, previousMod, previousKey);
                         try
                         {
                             settingsService.Save();
@@ -390,30 +393,43 @@ public static class ToolListBuilder
             // Future standalone tools follow the convention: ("_standalone{name}", "Label", icon)
         };
 
+        (uint mod, uint key) GetCaptureHotkey(string id) => settingsService.Settings.GetToolHotkey(id);
+        void SetCaptureHotkey(string id, uint mod, uint key) => settingsService.Settings.SetToolHotkey(id, mod, key);
+        (uint mod, uint key) GetEditorHotkey(string id) => settingsService.Settings.GetEditorToolHotkey(id);
+        void SetEditorHotkey(string id, uint mod, uint key) => settingsService.Settings.SetEditorToolHotkey(id, mod, key);
+
         AddSubHeader(capturePanel, "Core Captures");
         foreach (var item in System.Linq.Enumerable.Take(captureItems, 6))
-            AddToolRow(capturePanel, item.id, item.label, item.icon, true);
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
         AddSubHeader(capturePanel, "Video & Recording");
         foreach (var item in System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(captureItems, 6), 2))
-            AddToolRow(capturePanel, item.id, item.label, item.icon, true);
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
         AddSubHeader(capturePanel, "In-Editor Utilities");
         foreach (var item in System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(captureItems, 8), 3))
-            AddToolRow(capturePanel, item.id, item.label, item.icon, true);
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
         AddSubHeader(capturePanel, "Standalone Utilities");
         foreach (var item in System.Linq.Enumerable.Skip(captureItems, 11))
-            AddToolRow(capturePanel, item.id, item.label, item.icon, true);
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
         foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
-            AddToolRow(annotationPanel, t.Id, t.Label, t.Icon, true);
+            AddToolRow(annotationPanel, t.Id, t.Label, t.Icon, true, GetCaptureHotkey, SetCaptureHotkey);
+
+        if (editorToolsPanel is not null)
+        {
+            AddSubHeader(editorToolsPanel, "Annotations Editor");
+            foreach (var t in EditorToolHotkeyDef.Tools)
+                AddToolRow(editorToolsPanel, t.Id, t.Label, t.Icon, true, GetEditorHotkey, SetEditorHotkey);
+            LocalizationService.ApplyTo(editorToolsPanel, settingsService.Settings.InterfaceLanguage);
+        }
 
         LocalizationService.ApplyTo(capturePanel, settingsService.Settings.InterfaceLanguage);
         LocalizationService.ApplyTo(annotationPanel, settingsService.Settings.InterfaceLanguage);
     }
 
-    public sealed record HotkeyConflict(string ToolId, string Label);
+    public sealed record HotkeyConflict(string ToolId, string Label, bool IsEditor = false);
 
     public static HotkeyConflict? FindHotkeyConflict(AppSettings settings, string? excludeToolId, uint mod, uint key)
     {
@@ -436,6 +452,16 @@ public static class ToolListBuilder
             var (existingMod, existingKey) = settings.GetToolHotkey(id);
             if (existingMod == mod && existingKey == key)
                 return new HotkeyConflict(id, label);
+        }
+
+        foreach (var (id, label, _) in EditorToolHotkeyDef.Tools)
+        {
+            if (string.Equals(id, excludeToolId, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var (existingMod, existingKey) = settings.GetEditorToolHotkey(id);
+            if (existingMod == mod && existingKey == key)
+                return new HotkeyConflict(id, label, IsEditor: true);
         }
 
         return null;
@@ -470,9 +496,16 @@ public static class ToolListBuilder
 
     private static (uint Modifiers, uint Key) ClearHotkeyConflict(AppSettings settings, HotkeyConflict conflict)
     {
-        var old = settings.GetToolHotkey(conflict.ToolId);
+        if (conflict.IsEditor)
+        {
+            var old = settings.GetEditorToolHotkey(conflict.ToolId);
+            settings.SetEditorToolHotkey(conflict.ToolId, 0, 0);
+            return old;
+        }
+
+        var captureOld = settings.GetToolHotkey(conflict.ToolId);
         settings.SetToolHotkey(conflict.ToolId, 0, 0);
-        return old;
+        return captureOld;
     }
 
     private static void RestoreHotkeyConflict(AppSettings settings, HotkeyConflict conflict, (uint Modifiers, uint Key)? previous)
@@ -480,6 +513,9 @@ public static class ToolListBuilder
         if (previous is null)
             return;
 
-        settings.SetToolHotkey(conflict.ToolId, previous.Value.Modifiers, previous.Value.Key);
+        if (conflict.IsEditor)
+            settings.SetEditorToolHotkey(conflict.ToolId, previous.Value.Modifiers, previous.Value.Key);
+        else
+            settings.SetToolHotkey(conflict.ToolId, previous.Value.Modifiers, previous.Value.Key);
     }
 }

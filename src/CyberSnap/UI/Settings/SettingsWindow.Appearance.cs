@@ -222,6 +222,7 @@ public partial class SettingsWindow
             EditorFitCheck.IsChecked = s.EditorFitToWindowOnOpen;
             EditorShowFrameCheck.IsChecked = s.EditorShowFrame;
             EditorShowBannersCheck.IsChecked = s.EditorShowBanners;
+            EditorShowWelcomeBannerCheck.IsChecked = s.EditorShowWelcomeBanner;
             EditorShowHintsCheck.IsChecked = s.EditorShowHints;
             EditorShowRulersCheck.IsChecked = s.EditorShowRulers;
             EditorAutoCropCheck.IsChecked = s.EditorAutoCropControls;
@@ -274,7 +275,7 @@ public partial class SettingsWindow
         ToolListBuilder.ExtraTools;
 
     private void PopulateToolToggles() =>
-        ToolListBuilder.Build(CaptureToolsPanel, AnnotationToolsPanel, _settingsService, this, () => HotkeyChanged?.Invoke());
+        ToolListBuilder.Build(CaptureToolsPanel, AnnotationToolsPanel, _settingsService, this, () => HotkeyChanged?.Invoke(), EditorToolsPanel);
 
     private void PopulateInterfaceLanguageOptions()
     {
@@ -723,6 +724,21 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.EditorShowBanners = value,
             value => EditorShowBannersCheck.IsChecked = value);
+    }
+
+    private void EditorShowWelcomeBannerCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorShowWelcomeBanner;
+        var selected = EditorShowWelcomeBannerCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-show-welcome-banner",
+            "Editor show welcome banner",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorShowWelcomeBanner = value,
+            value => EditorShowWelcomeBannerCheck.IsChecked = value,
+            applyRuntime: value => CyberSnap.UI.Editor.EditorForm.ActiveInstance?.SetShowWelcomeBanner(value));
     }
 
     private void EditorShowHintsCheck_Changed(object sender, RoutedEventArgs e)

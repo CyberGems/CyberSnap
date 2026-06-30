@@ -109,6 +109,9 @@ public static partial class SketchRenderer
         }
     }
 
+    /// <summary>
+    /// Filled, tip-truncated arrowhead shadow — avoids dark cap overlap at the convergent vertex.
+    /// </summary>
     private static void DrawSoftArrowheadShadow(Graphics g, PointF tip, float nx, float ny, float shaftLen, float thickness, PointF? clipTip = null)
     {
         float headSize = GetArrowheadSize(shaftLen);
@@ -117,36 +120,37 @@ public static partial class SketchRenderer
         var left = RotatePoint(new PointF(bx, by), tip, -angle);
         var right = RotatePoint(new PointF(bx, by), tip, angle);
 
-        // Pull wing roots slightly toward the tip so shadow does not fill the shaft/head gap.
-        const float wingBaseInset = 0.14f;
+        // Keep shadow wings flush with the shaft end — minimal inset avoids a visible gap.
+        const float wingBaseInset = 0.05f;
         left = InsetToward(left, tip, headSize * wingBaseInset);
         right = InsetToward(right, tip, headSize * wingBaseInset);
 
-        const float tipInset = 3.5f;
+        float tipCut = Math.Max(5.5f, thickness * 1.05f);
 
-        foreach (var step in SoftShadowSteps)
+        for (int i = 0; i < SoftShadowSteps.Length; i++)
         {
+            var step = SoftShadowSteps[i];
             if (step.dx == 0 && step.dy == 0)
                 continue;
 
-            var offsetTip = new PointF(tip.X + step.dx, tip.Y + step.dy);
-            var offsetLeft = new PointF(left.X + step.dx, left.Y + step.dy);
-            var offsetRight = new PointF(right.X + step.dx, right.Y + step.dy);
-            // Outer shadow layers sit further out — pull wing ends back a bit more.
-            float stepInset = tipInset + step.dx * 0.55f;
-            var wingLeftEnd = InsetToward(offsetLeft, offsetTip, stepInset);
-            var wingRightEnd = InsetToward(offsetRight, offsetTip, stepInset);
+            float stepTipCut = tipCut + step.dx * 0.45f;
+            var leftNear = InsetToward(left, tip, headSize - stepTipCut);
+            var rightNear = InsetToward(right, tip, headSize - stepTipCut);
 
             if (clipTip is PointF clip)
             {
-                wingLeftEnd = ClampNotBeyondTip(wingLeftEnd, clip, nx, ny);
-                wingRightEnd = ClampNotBeyondTip(wingRightEnd, clip, nx, ny);
+                leftNear = ClampNotBeyondTip(leftNear, clip, nx, ny);
+                rightNear = ClampNotBeyondTip(rightNear, clip, nx, ny);
             }
 
-            float w = (thickness + (step.dx > 0 ? 1.2f : 0.5f)) * 0.92f;
-            var pen = GetShadowPenFlatEnd(step.alpha, w);
-            g.DrawLine(pen, offsetLeft, wingLeftEnd);
-            g.DrawLine(pen, offsetRight, wingRightEnd);
+            var ol = new PointF(left.X + step.dx, left.Y + step.dy);
+            var or = new PointF(right.X + step.dx, right.Y + step.dy);
+            var oln = new PointF(leftNear.X + step.dx, leftNear.Y + step.dy);
+            var orn = new PointF(rightNear.X + step.dx, rightNear.Y + step.dy);
+
+            using var path = new GraphicsPath();
+            path.AddPolygon(new[] { ol, or, orn, oln });
+            g.FillPath(SoftShadowBrushes[i], path);
         }
     }
 

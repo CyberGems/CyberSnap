@@ -8,6 +8,7 @@ using System.Windows.Media.Imaging;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 using CyberSnap.UI.Controls;
+using CyberSnap.UI.Editor;
 
 namespace CyberSnap.UI.Editor;
 
@@ -248,6 +249,7 @@ public sealed partial class EditorForm : Form
             TextFontSize = settings?.EditorTextFontSize ?? 24f,
             FitToWindowOnLoad = settings?.EditorFitToWindowOnOpen ?? true,
             ShowBanners = settings?.EditorShowBanners ?? true,
+            ShowWelcomeBanner = settings?.EditorShowWelcomeBanner ?? true,
             ShowHints = settings?.EditorShowHints ?? true,
             EditorAutoCropControls = settings?.EditorAutoCropControls ?? true,
             EditorShowResizeHandles = settings?.EditorShowResizeHandles ?? true,
@@ -470,6 +472,13 @@ public sealed partial class EditorForm : Form
         ResumeLayout(true);
         Invalidate(true);
         Update();
+    }
+
+    public void SetShowWelcomeBanner(bool show)
+    {
+        if (_canvas is null) return;
+        _canvas.ShowWelcomeBanner = show;
+        _canvas.Invalidate();
     }
 
     public void ApplyTheme()
@@ -1080,6 +1089,7 @@ public sealed partial class EditorForm : Form
         // to fit the window regardless of the user's auto-fit preference. Without this, the
         // crop handles would sit off-screen when auto-fit is disabled (we no longer maximize).
         _canvas.ZoomFit();
+        _canvas.DismissWelcomeOverlay();
         _canvas.Invalidate();
     }
 
@@ -1113,12 +1123,16 @@ public sealed partial class EditorForm : Form
         _canvas.IsDefaultBlank = true;
         _canvas.IsBlankCanvas = true;
         _canvas.ZoomFit();
+        _canvas.DismissWelcomeOverlay();
         _canvas.Invalidate();
         _canvas.ShowToolBanner(LocalizationService.Translate("New canvas created"));
     }
 
     private void DoOpen()
     {
+        if (_canvas.IsDefaultBlank)
+            _canvas.DismissWelcomeOverlay();
+
         if (_canvas.IsDirty)
         {
             if (!PromptSaveChanges())
@@ -1246,6 +1260,9 @@ public sealed partial class EditorForm : Form
         {
             if (Clipboard.ContainsImage())
             {
+                if (_canvas.IsDefaultBlank)
+                    _canvas.DismissWelcomeOverlay();
+
                 if (!_canvas.IsDefaultBlank)
                 {
                     var s = Services.SettingsService.LoadStatic();
@@ -1292,6 +1309,7 @@ public sealed partial class EditorForm : Form
     {
         if (_canvas.IsDefaultBlank)
         {
+            _canvas.DismissWelcomeOverlay();
             DoOpen();
         }
     }
@@ -1351,6 +1369,10 @@ public sealed partial class EditorForm : Form
             if (mod == Keys.Control && key is Keys.Y) { _canvas.Redo(); return true; }
             if (mod == Keys.Control && key is Keys.D) { _canvas.DuplicateSelectionInternal(); return true; }
             if (mod == Keys.Control && key is Keys.A) { _canvas.SelectAll(); return true; }
+
+            if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod)
+                && EditorToolHotkeyHelper.TryActivateTool(_canvas, key | mod))
+                return true;
 
             // Single-key shortcuts — ensure canvas has focus
             if (key is Keys.Space && !_canvas.Focused) { _canvas.Focus(); return false; }
@@ -1879,6 +1901,9 @@ public sealed partial class EditorForm : Form
     {
         if (e.Data is null || !e.Data.GetDataPresent(DataFormats.FileDrop))
             return;
+
+        if (_canvas.IsDefaultBlank)
+            _canvas.DismissWelcomeOverlay();
 
         var files = (string[]?)e.Data.GetData(DataFormats.FileDrop);
         if (files is null || files.Length == 0)
