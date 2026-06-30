@@ -448,6 +448,18 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", LocalizationService.Translate("key 0")));
         RegisterHoverTooltip(_fitZoomBtn, () => WithShortcut("Zoom to fit the image in the window", "F2"));
         RegisterHoverTooltip(_zoomSlider, () => WithShortcut("Drag to zoom in or out", "+ / -"));
+
+        RegisterHoverTooltip(_liveStatusLabel, () =>
+        {
+            var measured = TextRenderer.MeasureText(
+                _liveStatusLabel.Text,
+                _liveStatusLabel.Font,
+                new Size(int.MaxValue, _liveStatusLabel.Height),
+                TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+            return measured.Width > _liveStatusLabel.ClientSize.Width
+                ? _liveStatusLabel.Text
+                : null;
+        });
     }
 
     private Panel BuildTopBar()
@@ -1106,6 +1118,15 @@ public sealed partial class EditorForm
             if (tool == AnnotationCanvas.CanvasTool.Emoji)
                 OpenEmojiPicker(button);
         };
+        if (tool == AnnotationCanvas.CanvasTool.Move)
+        {
+            button.DoubleClickAction = () =>
+            {
+                _canvas.ActiveTool = AnnotationCanvas.CanvasTool.Move;
+                _canvas.Focus();
+                _canvas.SelectAllFromDoubleClick();
+            };
+        }
         _toolButtons[tool] = button;
         _toolButtonLabels[tool] = (labelKey, displayKey);
 
@@ -1129,6 +1150,8 @@ public sealed partial class EditorForm
             return FormatPanToolTooltip();
 
         var text = LocalizationService.Translate(labelKey);
+        if (tool == AnnotationCanvas.CanvasTool.Move)
+            text += $"  ·  {LocalizationService.Translate("Double-click Pick to select all")}";
         var hotkey = EditorToolHotkeyHelper.GetHotkeyLabel(tool);
         return hotkey is not null ? $"{text}  ({hotkey})" : text;
     }
@@ -1412,7 +1435,11 @@ public sealed partial class EditorForm
 
         string hint = LocalizationService.Translate(GetToolStatusLabelKey(_canvas.ActiveTool));
 
-        if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Pan)
+        if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Move)
+        {
+            hint += $"  ·  {LocalizationService.Translate("Click to select · Drag to move · Double-click Pick or canvas to select all")}";
+        }
+        else if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Pan)
         {
             if (EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
                 hint += $"  ·  {LocalizationService.Translate("Tap to select · hold for temporary pan")}";
@@ -2057,6 +2084,13 @@ internal sealed class EditorZoomHostPanel : TableLayoutPanel
 
 internal sealed class EditorToolButton : EditorButtonBase
 {
+    private int _lastClickTick;
+    private Point _lastClickLocation;
+
+    /// <summary>Invoked on double-click (WinForms DoubleClick is unreliable on UserPaint buttons).</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Action? DoubleClickAction { get; set; }
+
     // Slightly-elevated graphite resting fill so the tool buttons lift off the darker
     // panel instead of blending into it, and read well against their cyan borders.
     protected override Color IdleFill => EditorColors.IsDark ? Color.Transparent : Color.FromArgb(250, 251, 255);
@@ -2077,6 +2111,28 @@ internal sealed class EditorToolButton : EditorButtonBase
     {
         get => IsSelected;
         set => IsSelected = value;
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left && DoubleClickAction is not null)
+        {
+            int now = Environment.TickCount;
+            var slop = SystemInformation.DoubleClickSize;
+            bool isDoubleClick = e.Clicks >= 2
+                || (_lastClickTick != 0
+                    && unchecked(now - _lastClickTick) <= SystemInformation.DoubleClickTime
+                    && Math.Abs(e.Location.X - _lastClickLocation.X) <= slop.Width
+                    && Math.Abs(e.Location.Y - _lastClickLocation.Y) <= slop.Height);
+
+            _lastClickTick = now;
+            _lastClickLocation = e.Location;
+
+            if (isDoubleClick)
+                DoubleClickAction();
+        }
+
+        base.OnMouseDown(e);
     }
 
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
@@ -2316,6 +2372,8 @@ internal abstract class EditorButtonBase : Button
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.UserPaint |
+                 ControlStyles.StandardClick |
+                 ControlStyles.StandardDoubleClick |
                  ControlStyles.OptimizedDoubleBuffer |
                  ControlStyles.ResizeRedraw, true);
         FlatStyle = FlatStyle.Flat;

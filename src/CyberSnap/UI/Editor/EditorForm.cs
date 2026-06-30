@@ -18,13 +18,14 @@ namespace CyberSnap.UI.Editor;
 /// open this directly after a screenshot (when the setting is enabled) or surface
 /// it via the PreviewWindow "Edit" button.
 /// </summary>
-public sealed partial class EditorForm : Form
+public sealed partial class EditorForm : Form, IMessageFilter
 {
     private const int WS_EX_COMPOSITED = 0x02000000;
     private const int WM_NCHITTEST = 0x0084;
     private const int WM_NCLBUTTONDOWN = 0x00A1;
     private const int WM_ENTERSIZEMOVE = 0x0231;
     private const int WM_EXITSIZEMOVE = 0x0232;
+    private const int WM_LBUTTONDBLCLK = 0x0203;
     private const int HTCLIENT = 1;
     private const int HTCAPTION = 2;
     private const int HTLEFT = 10;
@@ -52,6 +53,7 @@ public sealed partial class EditorForm : Form
     private Rectangle _restoreBounds;
     private FormWindowState _lastWindowState = FormWindowState.Normal;
     private bool _enableComposited = true;
+    private bool _messageFilterRegistered;
     private readonly System.Windows.Forms.Timer _saveStatusTimer = new() { Interval = 2200 };
     private readonly System.Windows.Forms.Timer _clipboardMonitorTimer = new() { Interval = 1000 };
 
@@ -286,6 +288,7 @@ public sealed partial class EditorForm : Form
         _canvas.MouseUp += OnCanvasMouseUp;
         _canvas.DoubleClick += OnCanvasDoubleClick;
         _canvas.EmojiPlacementRequested += (_, _) => OpenEmojiPicker(GetEmojiToolButton());
+        RegisterCanvasMessageFilter();
         _saveStatusTimer.Tick += (_, _) =>
         {
             _saveStatusTimer.Stop();
@@ -420,6 +423,7 @@ public sealed partial class EditorForm : Form
             _imageMenu?.Dispose();
             _burgerMenu?.Dispose();
             if (ReferenceEquals(_instance, this)) _instance = null;
+            UnregisterCanvasMessageFilter();
         };
         Resize += (_, _) =>
         {
@@ -1312,6 +1316,34 @@ public sealed partial class EditorForm : Form
             _canvas.DismissWelcomeOverlay();
             DoOpen();
         }
+    }
+
+    private void RegisterCanvasMessageFilter()
+    {
+        if (_messageFilterRegistered) return;
+        System.Windows.Forms.Application.AddMessageFilter(this);
+        _messageFilterRegistered = true;
+    }
+
+    private void UnregisterCanvasMessageFilter()
+    {
+        if (!_messageFilterRegistered) return;
+        System.Windows.Forms.Application.RemoveMessageFilter(this);
+        _messageFilterRegistered = false;
+    }
+
+    /// <summary>
+    /// Intercepts canvas double-clicks before WinForms routes them through nested panels.
+    /// Pick uses the same SelectAll contract as capture Move mode.
+    /// </summary>
+    bool IMessageFilter.PreFilterMessage(ref Message m)
+    {
+        if (m.Msg != WM_LBUTTONDBLCLK || IsDisposed || _canvas.IsDisposed) return false;
+        if (m.HWnd != _canvas.Handle) return false;
+        if (_canvas.ActiveTool != AnnotationCanvas.CanvasTool.Move) return false;
+
+        _canvas.SelectAllFromDoubleClick();
+        return true;
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)

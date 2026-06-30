@@ -787,6 +787,18 @@ public sealed partial class RegionOverlayForm
         _selectResizeHandle = -1;
     }
 
+    private void SelectAll()
+    {
+        if (_undoStack.Count == 0) return;
+        _multiSelectedIndices.Clear();
+        for (int i = 0; i < _undoStack.Count; i++)
+            _multiSelectedIndices.Add(i);
+        _selectedAnnotationIndex = _undoStack.Count - 1;
+        var msg = string.Format(LocalizationService.Translate("{0} objects selected"), _multiSelectedIndices.Count);
+        ShowToolBanner(msg, persistent: true);
+        Invalidate();
+    }
+
     /// <summary>Duplicates the current selection (single or multi) as a single undo-able
     /// operation. Clones are offset by (20,20) client-space pixels, clamped to stay inside
     /// the overlay's client area. The selection moves to the new clones.</summary>

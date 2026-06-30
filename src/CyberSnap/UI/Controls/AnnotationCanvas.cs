@@ -131,6 +131,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         BackColor = Color.FromArgb(30, 30, 30);
         SetStyle(ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.UserPaint |
+                 ControlStyles.StandardClick |
+                 ControlStyles.StandardDoubleClick |
                  ControlStyles.OptimizedDoubleBuffer |
                  ControlStyles.ResizeRedraw, true);
         TabStop = true;
@@ -496,6 +498,8 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         }
     }
     private CanvasTool _activeTool = CanvasTool.Move;
+    private int _lastClickTick;
+    private Point _lastClickLocation;
 
     /// <summary>
     /// Right-click "escape": cancels any in-progress action and returns to the neutral
@@ -593,6 +597,14 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         ShowToolBanner(msg, sticky: true);
         Invalidate();
         OnStateChanged();
+    }
+
+    /// <summary>Pick-tool double-click entry point (mirrors capture overlay Move mode).</summary>
+    internal void SelectAllFromDoubleClick()
+    {
+        if (_activeTool != CanvasTool.Move || _preSpaceTool != null) return;
+        CancelSelectAllDoubleClickSideEffects();
+        SelectAll();
     }
 
     /// <summary>Clears all multi-selection state and hides the sticky banner.</summary>
@@ -1196,5 +1208,21 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             _baseBitmap?.Dispose();
         }
         base.Dispose(disposing);
+    }
+
+    private const int WM_LBUTTONDBLCLK = 0x0203;
+
+    protected override void WndProc(ref Message m)
+    {
+        // Handle double-click at the message level — UserControl + manual mouse routing can
+        // prevent OnMouseDoubleClick from firing even when the OS sends WM_LBUTTONDBLCLK.
+        if (m.Msg == WM_LBUTTONDBLCLK && _activeTool == CanvasTool.Move && _preSpaceTool == null)
+        {
+            SelectAllFromDoubleClick();
+            m.Result = IntPtr.Zero;
+            return;
+        }
+
+        base.WndProc(ref m);
     }
 }

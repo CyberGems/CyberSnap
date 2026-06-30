@@ -313,6 +313,11 @@ public sealed partial class AnnotationCanvas
 
     protected override void OnMouseDown(MouseEventArgs e)
     {
+        // Handle Pick double-click before base.OnMouseDown — base can start marquee/drag on
+        // the same click that should select all (capture overlay never has this conflict).
+        if (TryHandleSelectAllDoubleClick(e))
+            return;
+
         base.OnMouseDown(e);
 
         // Scrollbar overlays consume clicks in their hit zone before any tool.
@@ -604,7 +609,7 @@ public sealed partial class AnnotationCanvas
                 }
                 else
                 {
-                    // Click on empty space: clear everything.
+                    // Single click on empty space: clear everything, start marquee selection.
                     ClearMultiSelection();
                     _selectedAnnotationIndex = -1;
                     _selectOriginalAnnotation = null;
@@ -612,7 +617,6 @@ public sealed partial class AnnotationCanvas
                     _isMarqueeSelecting = true;
                     _marqueeStartImg = img;
                     _marqueeEndImg = img;
-                    Capture = true;
                 }
                 Invalidate();
                 break;
@@ -2510,17 +2514,60 @@ public sealed partial class AnnotationCanvas
         };
     }
 
-    protected override void OnDoubleClick(EventArgs e)
+    private bool IsPickToolActiveForSelectAll()
+        => _activeTool == CanvasTool.Move && _preSpaceTool == null;
+
+    private void CancelSelectAllDoubleClickSideEffects()
     {
-        base.OnDoubleClick(e);
+        _isMarqueeSelecting = false;
+        _isDragging = false;
+        _isSelectResizing = false;
+        _selectResizeHandle = -1;
+        _selectOriginalAnnotation = null;
+        _multiDragOriginals = null;
+        Capture = false;
+    }
+
+    /// <summary>
+    /// Manual double-click fallback for Pick. Records timing on every left click; fires
+    /// SelectAll when Pick is active — same contract as capture overlay Move mode.
+    /// </summary>
+    private bool TryHandleSelectAllDoubleClick(MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left) return false;
+
+        int now = Environment.TickCount;
+        var doubleClickSize = SystemInformation.DoubleClickSize;
+        bool isDoubleClick = e.Clicks >= 2
+            || (_lastClickTick != 0
+                && unchecked(now - _lastClickTick) <= SystemInformation.DoubleClickTime
+                && Math.Abs(e.Location.X - _lastClickLocation.X) <= doubleClickSize.Width
+                && Math.Abs(e.Location.Y - _lastClickLocation.Y) <= doubleClickSize.Height);
+
+        _lastClickTick = now;
+        _lastClickLocation = e.Location;
+
+        if (!isDoubleClick || !IsPickToolActiveForSelectAll()) return false;
+
+        SelectAllFromDoubleClick();
+        return true;
+    }
+
+    protected override void OnMouseDoubleClick(MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left) return;
+
+        if (_activeTool == CanvasTool.Move)
+        {
+            SelectAllFromDoubleClick();
+            return;
+        }
+
         if (_activeTool == CanvasTool.Crop && _cropHasRect)
         {
-            var screenPt = PointToClient(Cursor.Position);
-            var imgPt = ScreenToImage(screenPt);
+            var imgPt = ScreenToImage(e.Location);
             if (_cropRect.Contains(imgPt))
-            {
                 TryConfirmCrop();
-            }
         }
     }
 

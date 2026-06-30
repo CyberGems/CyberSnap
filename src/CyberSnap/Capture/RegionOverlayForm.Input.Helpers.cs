@@ -283,7 +283,7 @@ public sealed partial class RegionOverlayForm
         else if (m == CaptureMode.RecordGif)
             action = LocalizationService.Translate("Click & drag to select area");
         else if (m == CaptureMode.Move)
-            action = LocalizationService.Translate("Click & drag to move or resize");
+            action = LocalizationService.Translate("Click to select · Drag to move · Double-click Pick to select all");
         else if (m == CaptureMode.Eraser)
             action = LocalizationService.Translate("Click or drag to erase objects");
         else if (m == CaptureMode.Highlight)
