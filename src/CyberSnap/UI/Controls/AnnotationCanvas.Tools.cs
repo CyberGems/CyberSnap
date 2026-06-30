@@ -318,21 +318,12 @@ public sealed partial class AnnotationCanvas
                 handle = GetSelectHandle(e.Location, _selectedAnnotationIndex);
                 if (handle >= 0) clickedIdx = _selectedAnnotationIndex;
             }
-            
-            int activeHoverIdx = _moveHoverIndex;
-            if (activeHoverIdx < 0)
-            {
-                activeHoverIdx = HitTestAnnotation(img);
-            }
-            // Don't let a click grab the annotation we just placed (cursor is still on it);
-            // that would turn a second placement into an accidental move.
-            if (activeHoverIdx == _suppressHoverIndex)
-                activeHoverIdx = -1;
 
-            if (handle < 0 && activeHoverIdx >= 0)
+            // Control hit on the hovered item only (handles may sit outside the stroke).
+            if (handle < 0 && _moveHoverIndex >= 0 && _moveHoverIndex != _suppressHoverIndex)
             {
-                handle = GetSelectHandle(e.Location, activeHoverIdx);
-                if (handle >= 0) clickedIdx = activeHoverIdx;
+                handle = GetSelectHandle(e.Location, _moveHoverIndex);
+                if (handle >= 0) clickedIdx = _moveHoverIndex;
             }
             // No control hit → select only when the click lands on the object's actual drawn
             // pixels (its surface), never on the empty interior of its wrap box. Clicking the
@@ -377,6 +368,8 @@ public sealed partial class AnnotationCanvas
                     _selectDragStartImg = img;
                     _isDragging = true;
                 }
+                Invalidate();
+                return;
             }
         }
 
@@ -1291,7 +1284,16 @@ public sealed partial class AnnotationCanvas
 
     private void UpdateMoveHover(Point img)
     {
-        int hitIdx = HitTestAnnotation(img);
+        int hitIdx = HitTestAnnotationSurface(img);
+
+        // Keep hover active while the cursor stays inside the wrap box so corner/edge
+        // handles remain reachable after moving off the stroke.
+        if (hitIdx < 0 && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count
+            && HitTestSingle(_annotations[_moveHoverIndex], img, 10))
+        {
+            hitIdx = _moveHoverIndex;
+        }
+
         if (_suppressHoverIndex >= 0)
         {
             if (hitIdx == _suppressHoverIndex) hitIdx = -1;   // still on the just-placed item: stay inert

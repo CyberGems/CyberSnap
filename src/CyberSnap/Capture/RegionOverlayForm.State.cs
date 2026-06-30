@@ -448,6 +448,33 @@ public sealed partial class RegionOverlayForm
         return -1;
     }
 
+    private void UpdateMoveHoverIndex(Point p)
+    {
+        int hitIdx = HitTestAnnotationSurface(p);
+
+        // Keep hover active while the cursor stays inside the wrap box so corner/edge
+        // handles remain reachable after moving off the stroke.
+        if (hitIdx < 0 && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)
+        {
+            var bounds = GetAnnotationBounds(_undoStack[_moveHoverIndex]);
+            if (Rectangle.Inflate(bounds, 32, 32).Contains(p))
+                hitIdx = _moveHoverIndex;
+        }
+
+        if (_suppressHoverBoxIndex >= 0)
+        {
+            if (hitIdx == _suppressHoverBoxIndex) hitIdx = -1;
+            else _suppressHoverBoxIndex = -1;
+        }
+        if (hitIdx == _moveHoverIndex) return;
+
+        if (_moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count)
+            Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[_moveHoverIndex]), 40, 40));
+        _moveHoverIndex = hitIdx;
+        if (hitIdx >= 0 && hitIdx < _undoStack.Count)
+            Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[hitIdx]), 40, 40));
+    }
+
     private int HitTestAnnotationSurface(Point p)
     {
         for (int i = _undoStack.Count - 1; i >= 0; i--)
