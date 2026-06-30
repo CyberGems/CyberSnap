@@ -37,6 +37,17 @@ public sealed partial class EditorForm
     private EditorToggleSwitch _toggleFitSwitch = null!;
     private EditorToggleSwitch _togglePanLockSwitch = null!;
     private readonly Dictionary<AnnotationCanvas.CanvasTool, EditorToolButton> _toolButtons = new();
+    private readonly Dictionary<AnnotationCanvas.CanvasTool, (string labelKey, string? displayKey)> _toolButtonLabels = new();
+    private readonly List<(EditorCommandButton Button, string LabelKey)> _localizedCommandButtons = new();
+    private EditorChromeButton? _closeButton;
+    private EditorChromeButton? _minimizeButton;
+    private EditorChromeButton? _menuButton;
+    private Panel? _brandPanel;
+    private EditorCommandButton _galleryButton = null!;
+    private EditorCommandButton _captureButton = null!;
+    private EditorCommandButton _newCommandButton = null!;
+    private EditorCommandButton _openCommandButton = null!;
+    private EditorCommandButton _exportButton = null!;
     private EmojiPickerPopup? _emojiPicker;
     private readonly Dictionary<Color, EditorColorButton> _colorButtons = new();
     private EditorColorButton _customColorButton = null!;
@@ -468,6 +479,7 @@ public sealed partial class EditorForm
             Width = 380,
             BackColor = Color.Transparent,
         };
+        _brandPanel = brandPanel;
         brandPanel.MouseDown += BeginWindowDrag;
 
         // Load logo bitmap
@@ -524,20 +536,20 @@ public sealed partial class EditorForm
         };
         windowActions.MouseDown += BeginWindowDrag;
 
-        var closeButton = MakeChromeButton("close", LocalizationService.Translate("Close"));
-        closeButton.Click += (_, _) => Close();
-        windowActions.Controls.Add(closeButton);
+        _closeButton = MakeChromeButton("close", LocalizationService.Translate("Close"));
+        _closeButton.Click += (_, _) => Close();
+        windowActions.Controls.Add(_closeButton);
 
         _windowStateButton = MakeChromeButton("maximize", LocalizationService.Translate("Maximize"));
         _windowStateButton.Click += (_, _) => ToggleWindowState();
         windowActions.Controls.Add(_windowStateButton);
 
-        var minimizeButton = MakeChromeButton("minimize", LocalizationService.Translate("Minimize"));
-        minimizeButton.Click += (_, _) => WindowState = FormWindowState.Minimized;
-        windowActions.Controls.Add(minimizeButton);
+        _minimizeButton = MakeChromeButton("minimize", LocalizationService.Translate("Minimize"));
+        _minimizeButton.Click += (_, _) => WindowState = FormWindowState.Minimized;
+        windowActions.Controls.Add(_minimizeButton);
 
-        var menuButton = MakeChromeButton("menu", LocalizationService.Translate("Menu"));
-        menuButton.Click += (s, _) =>
+        _menuButton = MakeChromeButton("menu", LocalizationService.Translate("Menu"));
+        _menuButton.Click += (s, _) =>
         {
             if (DateTime.UtcNow - _burgerMenuLastClosed < TimeSpan.FromMilliseconds(200))
             {
@@ -546,7 +558,7 @@ public sealed partial class EditorForm
             _burgerMenu ??= BuildBurgerMenu();
             // Use absolute screen coordinates so the menu stays on the correct monitor
             // even when the button is near the edge (maximized window on multi-monitor).
-            var screenPt = menuButton.PointToScreen(new Point(0, menuButton.Height));
+            var screenPt = _menuButton.PointToScreen(new Point(0, _menuButton.Height));
             var scr = Screen.FromPoint(screenPt);
             bool nearRight = screenPt.X > scr.Bounds.Left + scr.Bounds.Width * 0.65;
             _burgerMenuNearRight = nearRight;
@@ -554,7 +566,7 @@ public sealed partial class EditorForm
                 ? ToolStripDropDownDirection.BelowLeft
                 : ToolStripDropDownDirection.BelowRight);
         };
-        windowActions.Controls.Add(menuButton);
+        windowActions.Controls.Add(_menuButton);
 
         // Filename Label in the middle
         _titleFileNameText = LocalizationService.Translate("Untitled");
@@ -675,12 +687,12 @@ public sealed partial class EditorForm
         commandActions.MouseDown += BeginWindowDrag;
 
         // Undo & Redo
-        _undoButton = MakeCommandButton("undo", LocalizationService.Translate("Undo"), false);
+        _undoButton = RegisterLocalizedCommand("undo", "Undo", false);
         _undoButton.Click += (_, _) => _canvas.Undo();
         RegisterHoverTooltip(_undoButton, () => WithShortcut("Undo the last change", "Ctrl+Z"), above: false);
         commandActions.Controls.Add(_undoButton);
 
-        _redoButton = MakeCommandButton("redo", LocalizationService.Translate("Redo"), false);
+        _redoButton = RegisterLocalizedCommand("redo", "Redo", false);
         _redoButton.Click += (_, _) => _canvas.Redo();
         RegisterHoverTooltip(_redoButton, () => WithShortcut("Redo the last undone change", "Ctrl+Y"), above: false);
         commandActions.Controls.Add(_redoButton);
@@ -689,36 +701,36 @@ public sealed partial class EditorForm
         commandActions.Controls.Add(MakeSeparator());
 
         // Gallery
-        var galleryButton = MakeCommandButton("history", LocalizationService.Translate("Gallery"), false);
-        galleryButton.Click += (_, _) => OpenHistoryWindow();
-        RegisterHoverTooltip(galleryButton, "Open Capture Gallery", above: false);
-        commandActions.Controls.Add(galleryButton);
+        _galleryButton = RegisterLocalizedCommand("history", "Gallery", false);
+        _galleryButton.Click += (_, _) => OpenHistoryWindow();
+        RegisterHoverTooltip(_galleryButton, "Open Capture Gallery", above: false);
+        commandActions.Controls.Add(_galleryButton);
 
         // Capture
-        var captureButton = MakeCommandButton("captureRect", LocalizationService.Translate("Capture"), false);
-        captureButton.Click += (_, _) =>
+        _captureButton = RegisterLocalizedCommand("captureRect", "Capture", false);
+        _captureButton.Click += (_, _) =>
         {
             if (System.Windows.Application.Current is CyberSnap.App app)
                 app.OnHotkeyPressedProxy();
         };
-        RegisterHoverTooltip(captureButton, () => WithShortcut(LocalizationService.Translate("Take a new screenshot"), "F1"), above: false);
-        commandActions.Controls.Add(captureButton);
+        RegisterHoverTooltip(_captureButton, () => WithShortcut(LocalizationService.Translate("Take a new screenshot"), "F1"), above: false);
+        commandActions.Controls.Add(_captureButton);
 
         // Spacer between gallery/capture and file actions
         commandActions.Controls.Add(MakeSeparator());
 
         // New, Open & Save (Project operations)
-        var newButton = MakeCommandButton("document", LocalizationService.Translate("New"), false);
-        newButton.Click += (_, _) => DoNewCanvas();
-        RegisterHoverTooltip(newButton, () => WithShortcut("Start a new document", "Ctrl+N"), above: false);
-        commandActions.Controls.Add(newButton);
+        _newCommandButton = RegisterLocalizedCommand("document", "New", false);
+        _newCommandButton.Click += (_, _) => DoNewCanvas();
+        RegisterHoverTooltip(_newCommandButton, () => WithShortcut("Start a new document", "Ctrl+N"), above: false);
+        commandActions.Controls.Add(_newCommandButton);
 
-        var openButton = MakeCommandButton("folder", LocalizationService.Translate("Open"), false);
-        openButton.Click += (_, _) => DoOpen();
-        RegisterHoverTooltip(openButton, () => WithShortcut(LocalizationService.Translate("Open a CyberSnap project file"), "Ctrl+O"), above: false);
-        commandActions.Controls.Add(openButton);
+        _openCommandButton = RegisterLocalizedCommand("folder", "Open", false);
+        _openCommandButton.Click += (_, _) => DoOpen();
+        RegisterHoverTooltip(_openCommandButton, () => WithShortcut(LocalizationService.Translate("Open a CyberSnap project file"), "Ctrl+O"), above: false);
+        commandActions.Controls.Add(_openCommandButton);
 
-        _saveButton = MakeCommandButton("save", LocalizationService.Translate("Save"), false);
+        _saveButton = RegisterLocalizedCommand("save", "Save", false);
         _saveButton.Click += (_, _) => DoSave();
         RegisterHoverTooltip(_saveButton, () => WithShortcut(LocalizationService.Translate("Save as CyberSnap project file"), "Ctrl+S"), above: false);
         commandActions.Controls.Add(_saveButton);
@@ -726,12 +738,12 @@ public sealed partial class EditorForm
         commandActions.Controls.Add(MakeSeparator());
 
         // Clipboard actions: Copy & Paste
-        _copyButton = MakeCommandButton("copy", LocalizationService.Translate("Copy"), false);
+        _copyButton = RegisterLocalizedCommand("copy", "Copy", false);
         _copyButton.Click += (_, _) => DoCopy();
         RegisterHoverTooltip(_copyButton, () => WithShortcut("Copy entire canvas to clipboard", "Ctrl+C"), above: false);
         commandActions.Controls.Add(_copyButton);
 
-        _pasteButton = MakeCommandButton("paste", LocalizationService.Translate("Paste"), false);
+        _pasteButton = RegisterLocalizedCommand("paste", "Paste", false);
         _pasteButton.Click += (_, _) => DoPaste();
         RegisterHoverTooltip(_pasteButton, () => WithShortcut("Paste image from clipboard", "Ctrl+V"), above: false);
         commandActions.Controls.Add(_pasteButton);
@@ -739,10 +751,10 @@ public sealed partial class EditorForm
         commandActions.Controls.Add(MakeSeparator());
 
         // Export (Flat image I/O)
-        var exportButton = MakeCommandButton("export", LocalizationService.Translate("Export"), false);
-        exportButton.Click += (_, _) => DoSaveAs();
-        RegisterHoverTooltip(exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png, .jpg or .pdf format"), "Ctrl+Shift+S"), above: false);
-        commandActions.Controls.Add(exportButton);
+        _exportButton = RegisterLocalizedCommand("export", "Export", false);
+        _exportButton.Click += (_, _) => DoSaveAs();
+        RegisterHoverTooltip(_exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png, .jpg or .pdf format"), "Ctrl+Shift+S"), above: false);
+        commandActions.Controls.Add(_exportButton);
 
         commandBarPanel.Controls.Add(commandActions, 1, 0);
 
@@ -789,7 +801,7 @@ public sealed partial class EditorForm
         nav.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
         AddToolButton(nav, 0, 0, AnnotationCanvas.CanvasTool.Pan, "pan", "Pan");
-        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Move");
+        AddToolButton(nav, 1, 0, AnnotationCanvas.CanvasTool.Move, "select", "Pick");
         AddToolButton(nav, 0, 1, AnnotationCanvas.CanvasTool.Crop, "rect", "Crop", bottomMargin: 7);
         AddToolButton(nav, 1, 1, AnnotationCanvas.CanvasTool.Eraser, "eraser", "Eraser", bottomMargin: 7);
 
@@ -810,7 +822,7 @@ public sealed partial class EditorForm
         AddToolButton(draw, 2, 0, AnnotationCanvas.CanvasTool.Circle, "circleShape", "Circle", topMargin: 7);
         AddToolButton(draw, 0, 1, AnnotationCanvas.CanvasTool.Line, "line", "Line", bottomMargin: 7);
         AddToolButton(draw, 1, 1, AnnotationCanvas.CanvasTool.Arrow, "arrow", "Arrow", bottomMargin: 7);
-        AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", LocalizationService.Translate("Curved"), bottomMargin: 7);
+        AddToolButton(draw, 2, 1, AnnotationCanvas.CanvasTool.CurvedArrow, "curvedArrow", "Curved", bottomMargin: 7);
         AddToolButton(draw, 0, 2, AnnotationCanvas.CanvasTool.Text, "text", "Text Tool", topMargin: 7);
         AddToolButton(draw, 1, 2, AnnotationCanvas.CanvasTool.Highlight, "highlight", "Highlight", topMargin: 7);
         AddToolButton(draw, 2, 2, AnnotationCanvas.CanvasTool.Blur, "blur", "Blur", topMargin: 7);
@@ -1095,6 +1107,7 @@ public sealed partial class EditorForm
                 OpenEmojiPicker(button);
         };
         _toolButtons[tool] = button;
+        _toolButtonLabels[tool] = (labelKey, displayKey);
 
         RegisterHoverTooltip(button, () => FormatToolTooltip(tool, labelKey));
 
@@ -1115,15 +1128,16 @@ public sealed partial class EditorForm
         if (tool == AnnotationCanvas.CanvasTool.Pan)
             return FormatPanToolTooltip();
 
-        var text = tool switch
-        {
-            AnnotationCanvas.CanvasTool.Move => LocalizationService.Translate("Move & Resize"),
-            AnnotationCanvas.CanvasTool.Emoji => LocalizationService.Translate("Emoji (Scroll Wheel to Resize)"),
-            AnnotationCanvas.CanvasTool.CurvedArrow => LocalizationService.Translate("Curved Arrow"),
-            _ => LocalizationService.Translate(labelKey),
-        };
+        var text = LocalizationService.Translate(labelKey);
         var hotkey = EditorToolHotkeyHelper.GetHotkeyLabel(tool);
         return hotkey is not null ? $"{text}  ({hotkey})" : text;
+    }
+
+    private EditorCommandButton RegisterLocalizedCommand(string iconId, string labelKey, bool primary)
+    {
+        var button = MakeCommandButton(iconId, LocalizationService.Translate(labelKey), primary);
+        _localizedCommandButtons.Add((button, labelKey));
+        return button;
     }
 
     private EditorCommandButton MakeCommandButton(string iconId, string text, bool primary)
@@ -1381,109 +1395,54 @@ public sealed partial class EditorForm
     {
         if (_liveStatusLabel is null) return;
 
-        var isSpanish = string.Equals(Services.SettingsService.LoadStatic()?.InterfaceLanguage, "es", StringComparison.OrdinalIgnoreCase);
-        var spacePanSuffix = isSpanish
-            ? "  ·  Mantén Espacio para desplazar"
-            : "  ·  Hold Space to pan";
-
         // While dragging a canvas resize handle, take over the hint with the live size + mode.
         if (_canvas.IsResizingCanvas)
         {
             var sz = _canvas.ResizePreviewSize;
             string mode = _canvas.ResizeHandlesScaleContent
-                ? (isSpanish ? "escalando contenido" : "scaling content")
-                : (isSpanish ? "extendiendo área" : "extending area");
-            string resizeHint = isSpanish
-                ? $"Redimensionando lienzo: {sz.Width} × {sz.Height} px  ·  {mode}"
-                : $"Resizing canvas: {sz.Width} × {sz.Height} px  ·  {mode}";
+                ? LocalizationService.Translate("scaling content")
+                : LocalizationService.Translate("extending area");
+            string resizeHint = string.Format(
+                LocalizationService.Translate("Resizing canvas: {0} × {1} px · {2}"),
+                sz.Width, sz.Height, mode);
             if (_liveStatusLabel.Text != resizeHint)
                 _liveStatusLabel.Text = resizeHint;
             return;
         }
 
-        string hint = _canvas.ActiveTool switch
-        {
-            AnnotationCanvas.CanvasTool.Pan => isSpanish
-                ? "Desplazar: Click izquierdo y arrastrar para moverse, Rueda para zoom"
-                : "Pan: Left click & drag to scroll, Scroll wheel to zoom",
-            AnnotationCanvas.CanvasTool.Move => isSpanish
-                ? "Seleccionar: Click para seleccionar/mover/redimensionar, Del para borrar, Ctrl+A seleccionar todo"
-                : "Select: Click to select/move/resize, Del to delete, Ctrl+A to select all",
-            AnnotationCanvas.CanvasTool.Crop => isSpanish
-                ? "Recortar: Click y arrastrar para recortar, Doble click o Enter para confirmar"
-                : "Crop: Click & drag to crop, Double click or Enter to confirm",
-            AnnotationCanvas.CanvasTool.Text => isSpanish
-                ? "Texto: Click para colocar caja de texto, escribe para añadir texto"
-                : "Text: Click to place text box, type to add text",
-            AnnotationCanvas.CanvasTool.Draw => isSpanish
-                ? "Dibujo libre: Click y arrastrar para dibujar"
-                : "Freehand: Click & drag to draw",
-            AnnotationCanvas.CanvasTool.Arrow => isSpanish
-                ? "Flecha: Click y arrastrar para dibujar una flecha"
-                : "Arrow: Click & drag to draw an arrow",
-            AnnotationCanvas.CanvasTool.CurvedArrow => isSpanish
-                ? "Flecha curva: Click y arrastrar para definir la curva"
-                : "Curved Arrow: Click & drag to define the curve",
-            AnnotationCanvas.CanvasTool.Line => isSpanish
-                ? "Línea: Click y arrastrar para dibujar línea (Shift para restringir)"
-                : "Line: Click & drag to draw a line (Shift to constrain)",
-            AnnotationCanvas.CanvasTool.Rect => isSpanish
-                ? "Rectángulo: Click y arrastrar para dibujar rectángulo (Shift para cuadrado)"
-                : "Rectangle: Click & drag to draw rectangle (Shift for square)",
-            AnnotationCanvas.CanvasTool.Circle => isSpanish
-                ? "Círculo: Click y arrastrar para dibujar círculo (Shift para círculo perfecto)"
-                : "Circle: Click & drag to draw circle (Shift for perfect circle)",
-            AnnotationCanvas.CanvasTool.Eraser => isSpanish
-                ? "Borrador: Click en los objetos para eliminarlos"
-                : "Eraser: Click on annotations to delete them",
-            AnnotationCanvas.CanvasTool.Highlight => isSpanish
-                ? "Resaltador: Click y arrastrar para resaltar un área"
-                : "Highlight: Click & drag to highlight area",
-            AnnotationCanvas.CanvasTool.Blur => isSpanish
-                ? "Difuminar: Click y arrastrar para difuminar región"
-                : "Blur: Click & drag to blur region",
-            AnnotationCanvas.CanvasTool.StepNumber => isSpanish
-                ? "Paso: Click para estampar insignias de número secuenciales"
-                : "Step: Click to stamp sequential step badges",
-            AnnotationCanvas.CanvasTool.Magnifier => isSpanish
-                ? "Lupa: Click para estampar lente de aumento"
-                : "Magnifier: Click to stamp magnifying lens",
-            AnnotationCanvas.CanvasTool.Emoji => isSpanish
-                ? "Emoji: Click para estampar el emoji seleccionado"
-                : "Emoji: Click to stamp selected emoji",
-            _ => isSpanish ? "Listo" : "Ready"
-        };
+        string hint = LocalizationService.Translate(GetToolStatusLabelKey(_canvas.ActiveTool));
 
-        // Append Space-to-pan hint to all tools except Pan itself
         if (_canvas.ActiveTool != AnnotationCanvas.CanvasTool.Pan)
-            hint += spacePanSuffix;
+            hint += $"  ·  {LocalizationService.Translate("Hold Space to pan")}";
 
         if (_liveStatusLabel.Text != hint)
             _liveStatusLabel.Text = hint;
     }
 
+    private static string GetToolStatusLabelKey(AnnotationCanvas.CanvasTool tool) => tool switch
+    {
+        AnnotationCanvas.CanvasTool.Pan => "Pan",
+        AnnotationCanvas.CanvasTool.Move => "Pick",
+        AnnotationCanvas.CanvasTool.Crop => "Crop",
+        AnnotationCanvas.CanvasTool.Text => "Text Tool",
+        AnnotationCanvas.CanvasTool.Draw => "Draw",
+        AnnotationCanvas.CanvasTool.Arrow => "Arrow",
+        AnnotationCanvas.CanvasTool.CurvedArrow => "Curved",
+        AnnotationCanvas.CanvasTool.Line => "Line",
+        AnnotationCanvas.CanvasTool.Rect => "Rectangle",
+        AnnotationCanvas.CanvasTool.Circle => "Circle",
+        AnnotationCanvas.CanvasTool.Eraser => "Eraser",
+        AnnotationCanvas.CanvasTool.Highlight => "Highlight",
+        AnnotationCanvas.CanvasTool.Blur => "Blur",
+        AnnotationCanvas.CanvasTool.StepNumber => "Step",
+        AnnotationCanvas.CanvasTool.Magnifier => "Magnify",
+        AnnotationCanvas.CanvasTool.Emoji => "Emoji",
+        _ => "Ready",
+    };
+
     private string GetCurrentHint()
     {
-        return _canvas.ActiveTool switch
-        {
-            AnnotationCanvas.CanvasTool.Pan => "Pan",
-            AnnotationCanvas.CanvasTool.Move => "Move & Resize",
-            AnnotationCanvas.CanvasTool.Crop => "Crop",
-            AnnotationCanvas.CanvasTool.Text => "Text",
-            AnnotationCanvas.CanvasTool.Draw => "Draw",
-            AnnotationCanvas.CanvasTool.Arrow => "Arrow",
-            AnnotationCanvas.CanvasTool.CurvedArrow => "Curved arrow",
-            AnnotationCanvas.CanvasTool.Line => "Line",
-            AnnotationCanvas.CanvasTool.Rect => "Rectangle",
-            AnnotationCanvas.CanvasTool.Circle => "Circle",
-            AnnotationCanvas.CanvasTool.Eraser => "Eraser",
-            AnnotationCanvas.CanvasTool.Highlight => "Highlight",
-            AnnotationCanvas.CanvasTool.Blur => "Blur",
-            AnnotationCanvas.CanvasTool.StepNumber => "Step Number",
-            AnnotationCanvas.CanvasTool.Magnifier => "Magnifier",
-            AnnotationCanvas.CanvasTool.Emoji => "Emoji",
-            _ => "Ready",
-        };
+        return LocalizationService.Translate(GetToolStatusLabelKey(_canvas.ActiveTool));
     }
 
     private static GraphicsPath RoundedRect(Rectangle rect, int radius)

@@ -140,6 +140,7 @@ public partial class App
         {
             _trayIcon?.RefreshLocalization();
             _widgetWindow?.RefreshLocalization();
+            UI.Editor.EditorForm.ActiveInstance?.RefreshLocalization();
         };
         win.HotkeyChanged += hotkeyHandler;
         win.LocalizationChanged += localizationHandler;

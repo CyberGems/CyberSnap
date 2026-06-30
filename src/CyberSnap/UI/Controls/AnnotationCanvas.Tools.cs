@@ -133,6 +133,21 @@ public sealed partial class AnnotationCanvas
         }
     }
 
+    /// <summary>Apply or discard a pending crop when leaving the Crop tool for another.</summary>
+    /// <returns><c>true</c> when the crop was applied.</returns>
+    private bool FinalizeLeavingCrop()
+    {
+        bool cropApplied = false;
+        if (HasAdjustedPendingCrop)
+            cropApplied = TryConfirmCrop();
+        if (!cropApplied)
+            ClearCropPending();
+        return cropApplied;
+    }
+
+    private bool IsCropOverlayActive =>
+        _activeTool == CanvasTool.Crop || _preSpaceTool == CanvasTool.Crop;
+
     private void CancelInProgressTool()
     {
         if (_isDragging || _currentStroke is not null)
@@ -164,11 +179,7 @@ public sealed partial class AnnotationCanvas
             Invalidate();
         }
         CommitOrCancelInlineText(commit: false);
-        if (_isTempMoveFromPan)
-        {
-            _isTempMoveFromPan = false;
-            _activeTool = CanvasTool.Pan;
-        }
+        FinishTempMoveFromPanIfNeeded();
     }
 
     private void UpdateCursor()
@@ -189,6 +200,107 @@ public sealed partial class AnnotationCanvas
             CanvasTool.StepNumber => CursorFactory.HiddenCursor,
             _ => CursorFactory.PrecisionCursor,
         };
+    }
+
+    private void FinishTempMoveFromPanIfNeeded()
+    {
+        if (!_isTempMoveFromPan)
+            return;
+        _isTempMoveFromPan = false;
+        if (_activeTool != CanvasTool.Pan)
+            ActiveTool = CanvasTool.Pan;
+    }
+
+    private bool ProcessSelectionDragMove(Point img)
+    {
+        if (_isSelectResizing && _selectedAnnotationIndex >= 0 && _selectResizeOriginalAnnotation is not null)
+        {
+            int rdx = img.X - _selectDragStartImg.X;
+            int rdy = img.Y - _selectDragStartImg.Y;
+            var ob = _selectHandleBounds;
+            Rectangle nb = _selectResizeHandle switch
+            {
+                0 => Rectangle.FromLTRB(ob.Left + rdx, ob.Top + rdy, ob.Right, ob.Bottom),
+                1 => Rectangle.FromLTRB(ob.Left, ob.Top + rdy, ob.Right + rdx, ob.Bottom),
+                2 => Rectangle.FromLTRB(ob.Left + rdx, ob.Top, ob.Right, ob.Bottom + rdy),
+                3 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + rdx, ob.Bottom + rdy),
+                4 => Rectangle.FromLTRB(ob.Left, ob.Top + rdy, ob.Right, ob.Bottom),
+                5 => Rectangle.FromLTRB(ob.Left + rdx, ob.Top, ob.Right, ob.Bottom),
+                6 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + rdx, ob.Bottom),
+                7 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right, ob.Bottom + rdy),
+                _ => ob
+            };
+            if (nb.Width > 5 && nb.Height > 5)
+                _annotations[_selectedAnnotationIndex] = AnnotationTransforms.Scale(_selectResizeOriginalAnnotation, ob, nb);
+            Invalidate();
+            return true;
+        }
+
+        if (_multiDragOriginals is not null && _multiSelectedIndices.Count > 1)
+        {
+            int mdx = img.X - _multiDragStartImg.X;
+            int mdy = img.Y - _multiDragStartImg.Y;
+            foreach (var (mi, orig) in _multiDragOriginals)
+            {
+                if (mi >= 0 && mi < _annotations.Count)
+                    _annotations[mi] = AnnotationTransforms.Translate(orig, mdx, mdy);
+            }
+            Invalidate();
+            return true;
+        }
+
+        if (_selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null)
+        {
+            int dx = img.X - _selectDragStartImg.X;
+            int dy = img.Y - _selectDragStartImg.Y;
+            _annotations[_selectedAnnotationIndex] = AnnotationTransforms.Translate(_selectOriginalAnnotation, dx, dy);
+            Invalidate();
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool CommitSelectionDrag()
+    {
+        if (_isSelectResizing && _selectedAnnotationIndex >= 0 && _selectResizeOriginalAnnotation is not null)
+        {
+            var scaled = _annotations[_selectedAnnotationIndex];
+            if (!Equals(_selectResizeOriginalAnnotation, scaled))
+                Push(new ReplaceAnnotationCommand(_selectedAnnotationIndex, _selectResizeOriginalAnnotation, scaled));
+            _isSelectResizing = false;
+            _selectResizeHandle = -1;
+            _selectResizeOriginalAnnotation = null;
+            Invalidate();
+            return true;
+        }
+
+        if (_multiDragOriginals is not null && _multiSelectedIndices.Count > 1)
+        {
+            int mtdx = 0, mtdy = 0;
+            if (_multiDragOriginals.Count > 0)
+            {
+                var (firstIdx, firstOrig) = _multiDragOriginals[0];
+                if (firstIdx >= 0 && firstIdx < _annotations.Count)
+                    (mtdx, mtdy) = ComputeTranslationDelta(firstOrig, _annotations[firstIdx]);
+            }
+            if (mtdx != 0 || mtdy != 0)
+                Push(new TransformMultipleAnnotationsCommand(_multiDragOriginals, mtdx, mtdy));
+            _multiDragOriginals = null;
+            return true;
+        }
+
+        if (_selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null)
+        {
+            var moved = _annotations[_selectedAnnotationIndex];
+            var (tdx, tdy) = ComputeTranslationDelta(_selectOriginalAnnotation, moved);
+            if (tdx != 0 || tdy != 0)
+                Push(new TransformAnnotationCommand(_selectOriginalAnnotation, _selectedAnnotationIndex, tdx, tdy));
+            _selectOriginalAnnotation = null;
+            return true;
+        }
+
+        return false;
     }
 
     // ── Mouse routing ──────────────────────────────────────────────────────
@@ -340,10 +452,8 @@ public sealed partial class AnnotationCanvas
             if (clickedIdx >= 0)
             {
                 if (_activeTool == CanvasTool.Pan)
-                {
                     _isTempMoveFromPan = true;
-                }
-                ActiveTool = CanvasTool.Move;
+
                 // Ctrl+Click: toggle multi-selection
                 if (ModifierKeys.HasFlag(Keys.Control))
                 {
@@ -938,46 +1048,11 @@ public sealed partial class AnnotationCanvas
             return;
         }
 
+        if (ProcessSelectionDragMove(img))
+            return;
+
         switch (_activeTool)
         {
-            case CanvasTool.Move when _isSelectResizing && _selectedAnnotationIndex >= 0 && _selectResizeOriginalAnnotation is not null:
-                int rdx = img.X - _selectDragStartImg.X;
-                int rdy = img.Y - _selectDragStartImg.Y;
-                var ob = _selectHandleBounds;
-                Rectangle nb = _selectResizeHandle switch
-                {
-                    0 => Rectangle.FromLTRB(ob.Left + rdx, ob.Top + rdy, ob.Right, ob.Bottom),  // TL
-                    1 => Rectangle.FromLTRB(ob.Left, ob.Top + rdy, ob.Right + rdx, ob.Bottom),  // TR
-                    2 => Rectangle.FromLTRB(ob.Left + rdx, ob.Top, ob.Right, ob.Bottom + rdy),  // BL
-                    3 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + rdx, ob.Bottom + rdy),  // BR
-                    4 => Rectangle.FromLTRB(ob.Left, ob.Top + rdy, ob.Right, ob.Bottom),       // Top
-                    5 => Rectangle.FromLTRB(ob.Left + rdx, ob.Top, ob.Right, ob.Bottom),       // Left
-                    6 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + rdx, ob.Bottom),       // Right
-                    7 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right, ob.Bottom + rdy),       // Bottom
-                    _ => ob
-                };
-                if (nb.Width > 5 && nb.Height > 5)
-                {
-                    _annotations[_selectedAnnotationIndex] = AnnotationTransforms.Scale(_selectResizeOriginalAnnotation, ob, nb);
-                }
-                Invalidate();
-                break;
-            case CanvasTool.Move when _multiDragOriginals is not null && _multiSelectedIndices.Count > 1:
-                int mdx = img.X - _multiDragStartImg.X;
-                int mdy = img.Y - _multiDragStartImg.Y;
-                foreach (var (mi, orig) in _multiDragOriginals)
-                {
-                    if (mi >= 0 && mi < _annotations.Count)
-                        _annotations[mi] = AnnotationTransforms.Translate(orig, mdx, mdy);
-                }
-                Invalidate();
-                break;
-            case CanvasTool.Move when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
-                int dx = img.X - _selectDragStartImg.X;
-                int dy = img.Y - _selectDragStartImg.Y;
-                _annotations[_selectedAnnotationIndex] = AnnotationTransforms.Translate(_selectOriginalAnnotation, dx, dy);
-                Invalidate();
-                break;
             case CanvasTool.Draw:
             case CanvasTool.CurvedArrow:
                 if (_currentStroke is not null && (img != _currentStroke[^1]))
@@ -1142,46 +1217,14 @@ public sealed partial class AnnotationCanvas
         if (!_isDragging) return;
         _isDragging = false;
 
+        if (CommitSelectionDrag())
+        {
+            FinishTempMoveFromPanIfNeeded();
+            return;
+        }
+
         switch (_activeTool)
         {
-            case CanvasTool.Move when _isSelectResizing && _selectedAnnotationIndex >= 0 && _selectResizeOriginalAnnotation is not null:
-                var scaled = _annotations[_selectedAnnotationIndex];
-                if (!Equals(_selectResizeOriginalAnnotation, scaled))
-                {
-                    Push(new ReplaceAnnotationCommand(_selectedAnnotationIndex, _selectResizeOriginalAnnotation, scaled));
-                }
-                _isSelectResizing = false;
-                _selectResizeHandle = -1;
-                _selectResizeOriginalAnnotation = null;
-                Invalidate();
-                break;
-            case CanvasTool.Move when _multiDragOriginals is not null && _multiSelectedIndices.Count > 1:
-                int mtdx = 0, mtdy = 0;
-                // Compute delta from any of the originals.
-                if (_multiDragOriginals.Count > 0)
-                {
-                    var (firstIdx, firstOrig) = _multiDragOriginals[0];
-                    if (firstIdx >= 0 && firstIdx < _annotations.Count)
-                        (mtdx, mtdy) = ComputeTranslationDelta(firstOrig, _annotations[firstIdx]);
-                }
-                if (mtdx != 0 || mtdy != 0)
-                {
-                    Push(new TransformMultipleAnnotationsCommand(_multiDragOriginals, mtdx, mtdy));
-                }
-                _multiDragOriginals = null;
-                break;
-            case CanvasTool.Move when _selectedAnnotationIndex >= 0 && _selectOriginalAnnotation is not null:
-                var moved = _annotations[_selectedAnnotationIndex];
-                int tdx = 0, tdy = 0;
-                // Compute the actual translation by diffing the moved annotation against the original.
-                // For rect-based annotations we diff the Rect location; for point-based we diff the first point.
-                (tdx, tdy) = ComputeTranslationDelta(_selectOriginalAnnotation, moved);
-                if (tdx != 0 || tdy != 0)
-                {
-                    Push(new TransformAnnotationCommand(_selectOriginalAnnotation, _selectedAnnotationIndex, tdx, tdy));
-                }
-                _selectOriginalAnnotation = null; // command now owns the original reference
-                break;
             case CanvasTool.Draw when _currentStroke is { Count: >= 2 }:
                 Push(new AddAnnotationCommand(new DrawStroke(_currentStroke, ToolColor, StrokeWidth)));
                 _currentStroke = null;
@@ -1241,11 +1284,7 @@ public sealed partial class AnnotationCanvas
                 break;
         }
 
-        if (_isTempMoveFromPan)
-        {
-            _isTempMoveFromPan = false;
-            ActiveTool = CanvasTool.Pan;
-        }
+        FinishTempMoveFromPanIfNeeded();
     }
 
     protected override void OnMouseLeave(EventArgs e)
@@ -1379,10 +1418,14 @@ public sealed partial class AnnotationCanvas
         if (elapsedMs < EditorToolHotkeyHelper.SpacePanTapThresholdMs
             && EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
         {
+            var sourceTool = _preSpaceTool.Value;
             _preSpaceTool = null;
+            if (sourceTool == CanvasTool.Crop)
+                FinalizeLeavingCrop();
             ShowToolBanner(GetToolName(CanvasTool.Pan));
             UpdateCursor();
             OnStateChanged();
+            Invalidate();
         }
         else
         {
@@ -1447,7 +1490,10 @@ public sealed partial class AnnotationCanvas
 
         if (e.KeyCode == Keys.Space && _inlineTextBox is null)
         {
-            _spaceKeyDownUtc = DateTime.UtcNow;
+            // Only stamp the initial press — key-repeat would reset the timer and turn
+            // a long hold into a false "tap" that commits Pan instead of restoring.
+            if (_preSpaceTool is null && _activeTool != CanvasTool.Pan)
+                _spaceKeyDownUtc = DateTime.UtcNow;
             StartTemporarySpacePan();
             e.Handled = true;
             return;
@@ -1822,15 +1868,16 @@ public sealed partial class AnnotationCanvas
 
     private void RenderCropOverlay(Graphics g)
     {
-        bool showDefaultControls = EditorAutoCropControls && _cropHasRect;
-        if (_activeTool != CanvasTool.Crop && !showDefaultControls) return;
+        bool cropToolMode = IsCropOverlayActive;
+        bool showDefaultControls = EditorAutoCropControls && _cropHasRect && !cropToolMode;
+        if (!cropToolMode && !showDefaultControls) return;
         if (!_cropDragging && !_cropHasRect) return;
         if (_cropRect.Width <= 0 || _cropRect.Height <= 0) return;
 
         var imgRect = ImageToScreenRect(new RectangleF(0, 0, _baseBitmap.Width, _baseBitmap.Height));
         var cropScreen = ImageToScreenRect(_cropRect);
 
-        if (_activeTool == CanvasTool.Crop)
+        if (cropToolMode)
         {
             using (var dark = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
             using (var region = new Region(imgRect))
@@ -1840,7 +1887,7 @@ public sealed partial class AnnotationCanvas
             }
         }
 
-        if (_activeTool == CanvasTool.Crop)
+        if (cropToolMode)
         {
             using (var shadowPen = new Pen(Color.FromArgb(120, 0, 0, 0), 1.5f))
             using (var borderPen = new Pen(Color.FromArgb(255, 0, 255, 255), 1.5f) { DashStyle = DashStyle.Dash })
@@ -1850,7 +1897,8 @@ public sealed partial class AnnotationCanvas
             }
         }
 
-        if (_cropHasRect && _preSpaceTool == null)
+        bool showHandles = _cropHasRect && (_preSpaceTool == null || _preSpaceTool == CanvasTool.Crop);
+        if (showHandles)
             DrawCropHandles(g, cropScreen);
     }
 
