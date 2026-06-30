@@ -6,7 +6,7 @@ public static class EditorToolHotkeyDef
     public static readonly (string Id, string Label, char Icon)[] Tools =
     {
         ("editorPan",         "Pan",              '\uE1E3'),
-        ("editorMove",        "Move & Resize",    '\uE1E3'),
+        ("editorMove",        "Pick",             '\uE1E3'),
         ("editorDraw",        "FreeHand",         '\uE70F'),
         ("editorArrow",       "Arrow",            '\uE051'),
         ("editorCurvedArrow", "Curved Arrow",     '\uE146'),

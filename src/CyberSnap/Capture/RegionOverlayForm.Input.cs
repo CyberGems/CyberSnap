@@ -392,14 +392,6 @@ public sealed partial class RegionOverlayForm
 
             if (clickedIdx >= 0)
             {
-                var targetTool = ToolDef.AllTools.FirstOrDefault(t => t.Mode == CaptureMode.Move);
-                if (targetTool != null)
-                {
-                    SetTool(targetTool);
-                    CalcToolbar();
-                    InvalidateToolbarArea();
-                }
-
                 _selectedAnnotationIndex = clickedIdx;
                 if (handle >= 0 && handle != 8)
                 {

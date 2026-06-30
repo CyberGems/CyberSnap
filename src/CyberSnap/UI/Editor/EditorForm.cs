@@ -1734,11 +1734,6 @@ public sealed partial class EditorForm : Form
         int hit = _canvas.HitTestAnnotationInternal(imgPt);
         if (hit >= 0)
         {
-            if (_canvas.ActiveTool != AnnotationCanvas.CanvasTool.Move)
-            {
-                _canvas.ActiveTool = AnnotationCanvas.CanvasTool.Move;
-            }
-
             if (!_canvas.MultiSelectedIndicesInternal.Contains(hit))
             {
                 _canvas.SelectedAnnotationIndexInternal = hit;

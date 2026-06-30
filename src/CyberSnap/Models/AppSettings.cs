@@ -463,6 +463,7 @@ public sealed class AppSettings
             ["editorCurvedArrow"] = 0x37, // 7
             ["editorCircle"] = 0x38,      // 8
             ["editorRect"] = 0x39,        // 9
+            ["editorCrop"] = 0x43,        // C
             ["editorHighlight"] = 0x48,   // H
             ["editorStep"] = 0x53,        // S
             ["editorMagnifier"] = 0x4D,   // M
@@ -646,7 +647,7 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("scan",        "QR & Barcodes",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
         new("picker",      "Color Picker", '\uE2B1', CaptureMode.ColorPicker, 0), // eyedropper
         new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       0), // ruler (annotation, but kept in capture row)
-        new("select",      "Move & Resize",        '\uE1E3', CaptureMode.Move,        1), // cursor-click   → 0x31
+        new("select",      "Pick",                 '\uE1E3', CaptureMode.Move,        1), // cursor-click   → 0x31
         new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser         → 0x33
         new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1), // highlighter
         new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type           → 0x37

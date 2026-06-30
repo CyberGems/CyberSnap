@@ -423,7 +423,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         var key = tool switch
         {
             CanvasTool.Pan => "Pan",
-            CanvasTool.Move => "Move & Resize",
+            CanvasTool.Move => "Pick",
             CanvasTool.Crop => "Crop",
             CanvasTool.Text => "Text",
             CanvasTool.Draw => "Draw",
@@ -461,16 +461,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             // so it's just discarded. The active tool is switched first so TryConfirmCrop won't
             // re-arm a fresh full-image crop whose handles would then linger under the new tool.
             bool leavingCrop = _activeTool == CanvasTool.Crop && value != CanvasTool.Crop && _preSpaceTool == null;
-            bool applyCrop = leavingCrop && HasAdjustedPendingCrop;
             _activeTool = value;
             bool cropApplied = false;
             if (leavingCrop)
-            {
-                if (applyCrop)
-                    cropApplied = TryConfirmCrop();
-                if (!cropApplied)
-                    ClearCropPending();
-            }
+                cropApplied = FinalizeLeavingCrop();
 
             if (value == CanvasTool.Crop)
             {
