@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 
@@ -352,16 +353,12 @@ public sealed partial class RegionOverlayForm
     private static bool IsOverlaySwitchableMode(CaptureMode mode) =>
         ToolDef.AllTools.Any(tool => tool.Mode == mode);
 
-    private Point GetRulerEnd(Point current)
-    {
-        if ((ModifierKeys & Keys.Shift) == 0) return current;
+    private Point GetRulerEnd(Point current) => GetConstrainedLineEnd(_rulerStart, current);
 
-        int dx = current.X - _rulerStart.X;
-        int dy = current.Y - _rulerStart.Y;
-        if (Math.Abs(dx) >= Math.Abs(dy))
-            return new Point(current.X, _rulerStart.Y);
-        return new Point(_rulerStart.X, current.Y);
-    }
+    private Point GetConstrainedLineEnd(Point start, Point current) =>
+        (ModifierKeys & Keys.Shift) != 0
+            ? LineSnapHelper.SnapEndTo45Degrees(start, current)
+            : current;
 
     private Point GetConstrainedDrawPoint(Point current)
     {

@@ -11,7 +11,7 @@ namespace CyberSnap.Capture;
 /// Standalone on-screen ruler activated via global hotkey or tray menu.
 /// Overlays a screenshot of all monitors and lets the user drag to measure
 /// distances and angles without entering the full capture overlay.
-/// Right-click or Escape to close. Shift constrains to horizontal/vertical.
+/// Right-click or Escape to close. Shift constrains to 45° increments.
 /// </summary>
 public sealed class StandaloneRulerForm : Form
 {
@@ -304,33 +304,32 @@ public sealed class StandaloneRulerForm : Form
             switch (_editState)
             {
                 case EditState.Moving:
-                    int dx = e.Location.X - _editOffset.X;
-                    int dy = e.Location.Y - _editOffset.Y;
+                {
+                    int newFromX = e.Location.X - _editOffset.X;
+                    int newFromY = e.Location.Y - _editOffset.Y;
+                    int moveDx = newFromX - _lastFrom.X;
+                    int moveDy = newFromY - _lastFrom.Y;
                     if ((ModifierKeys & Keys.Shift) != 0)
                     {
-                        int rawDx = dx - _lastFrom.X;
-                        int rawDy = dy - _lastFrom.Y;
-                        if (Math.Abs(rawDx) >= Math.Abs(rawDy))
-                            dy = _lastFrom.Y;
-                        else
-                            dx = _lastFrom.X;
+                        var snapped = LineSnapHelper.SnapEndTo45Degrees(Point.Empty, new Point(moveDx, moveDy));
+                        moveDx = snapped.X;
+                        moveDy = snapped.Y;
+                        newFromX = _lastFrom.X + moveDx;
+                        newFromY = _lastFrom.Y + moveDy;
                     }
-                    int moveDx = dx - _lastFrom.X;
-                    int moveDy = dy - _lastFrom.Y;
-                    _lastFrom = new Point(dx, dy);
+                    _lastFrom = new Point(newFromX, newFromY);
                     _lastTo = new Point(_lastTo.X + moveDx, _lastTo.Y + moveDy);
                     break;
+                }
                 case EditState.ResizingFrom:
-                    if ((ModifierKeys & Keys.Shift) != 0)
-                        _lastFrom = ConstrainPoint(e.Location, _lastTo);
-                    else
-                        _lastFrom = e.Location;
+                    _lastFrom = (ModifierKeys & Keys.Shift) != 0
+                        ? LineSnapHelper.SnapEndTo45Degrees(_lastTo, e.Location)
+                        : e.Location;
                     break;
                 case EditState.ResizingTo:
-                    if ((ModifierKeys & Keys.Shift) != 0)
-                        _lastTo = ConstrainPoint(e.Location, _lastFrom);
-                    else
-                        _lastTo = e.Location;
+                    _lastTo = (ModifierKeys & Keys.Shift) != 0
+                        ? LineSnapHelper.SnapEndTo45Degrees(_lastFrom, e.Location)
+                        : e.Location;
                     break;
             }
             Invalidate(SweepBounds(oldFrom, oldTo, _lastFrom, _lastTo));
@@ -444,18 +443,7 @@ public sealed class StandaloneRulerForm : Form
     private Point GetRulerEnd(Point current)
     {
         if ((ModifierKeys & Keys.Shift) == 0) return current;
-
-        return ConstrainPoint(current, _rulerStart);
-    }
-
-    /// <summary>Constrain a point to horizontal or vertical axis from an anchor.</summary>
-    private static Point ConstrainPoint(Point current, Point anchor)
-    {
-        int dx = current.X - anchor.X;
-        int dy = current.Y - anchor.Y;
-        if (Math.Abs(dx) >= Math.Abs(dy))
-            return new Point(current.X, anchor.Y);
-        return new Point(anchor.X, current.Y);
+        return LineSnapHelper.SnapEndTo45Degrees(_rulerStart, current);
     }
 
     /// <summary>Hit-test the committed ruler: returns which part the cursor is near.

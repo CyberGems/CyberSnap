@@ -46,7 +46,8 @@ public sealed partial class RegionOverlayForm
         }
         if (_mode == CaptureMode.Line && _isLineDragging)
         {
-            SketchRenderer.DrawLine(g, _lineStart, cursorPoint, _toolColor, _lineStart.GetHashCode(), AnnotationStrokeShadow, _strokeWidth);
+            var lineEnd = GetConstrainedLineEnd(_lineStart, cursorPoint);
+            SketchRenderer.DrawLine(g, _lineStart, lineEnd, _toolColor, _lineStart.GetHashCode(), AnnotationStrokeShadow, _strokeWidth);
         }
         if (_mode == CaptureMode.Ruler && _isRulerDragging)
         {
@@ -55,7 +56,8 @@ public sealed partial class RegionOverlayForm
         }
         if (_mode == CaptureMode.Arrow && _isArrowDragging)
         {
-            SketchRenderer.DrawArrow(g, _arrowStart, cursorPoint, _toolColor, _arrowStart.GetHashCode(), strokeShadow: AnnotationStrokeShadow, strokeWidth: _strokeWidth);
+            var arrowEnd = GetConstrainedLineEnd(_arrowStart, cursorPoint);
+            SketchRenderer.DrawArrow(g, _arrowStart, arrowEnd, _toolColor, _arrowStart.GetHashCode(), strokeShadow: AnnotationStrokeShadow, strokeWidth: _strokeWidth);
         }
         if (_mode == CaptureMode.CurvedArrow && _isCurvedArrowDragging && _currentCurvedArrow is { Count: >= 2 })
             SketchRenderer.DrawCurvedArrow(g, _currentCurvedArrow, _toolColor, 42, AnnotationStrokeShadow, _strokeWidth);
@@ -207,11 +209,11 @@ public sealed partial class RegionOverlayForm
         if (_mode == CaptureMode.CircleShape && _isCircleShapeDragging)
             r = U(r, GetShapeRect(cursorPoint));
         if (_mode == CaptureMode.Line && _isLineDragging)
-            r = U(r, RectFromPoints(_lineStart, cursorPoint, 8));
+            r = U(r, RectFromPoints(_lineStart, GetConstrainedLineEnd(_lineStart, cursorPoint), 8));
         if (_mode == CaptureMode.Ruler && _isRulerDragging)
             r = U(r, RulerRenderer.GetLivePreviewBounds(_rulerStart, GetRulerEnd(cursorPoint), ClientRectangle));
         if (_mode == CaptureMode.Arrow && _isArrowDragging)
-            r = U(r, RectFromPoints(_arrowStart, cursorPoint, 28));
+            r = U(r, RectFromPoints(_arrowStart, GetConstrainedLineEnd(_arrowStart, cursorPoint), 28));
         if (_mode == CaptureMode.CurvedArrow && _isCurvedArrowDragging && _currentCurvedArrow is { Count: >= 2 })
             r = U(r, BoundsOfPoints(_currentCurvedArrow, 18));
         if (_mode == CaptureMode.Draw && _isSelecting)

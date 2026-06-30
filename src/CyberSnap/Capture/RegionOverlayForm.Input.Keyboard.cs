@@ -199,6 +199,23 @@ public sealed partial class RegionOverlayForm
                 return;
             }
         }
+
+        if (e.KeyCode is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey
+            && (_isLineDragging || _isArrowDragging || _isRulerDragging || _isRectShapeDragging || _isCircleShapeDragging))
+        {
+            Invalidate();
+        }
+    }
+
+    protected override void OnKeyUp(KeyEventArgs e)
+    {
+        base.OnKeyUp(e);
+
+        if (e.KeyCode is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey
+            && (_isLineDragging || _isArrowDragging || _isRulerDragging || _isRectShapeDragging || _isCircleShapeDragging))
+        {
+            Invalidate();
+        }
     }
 
     protected override void OnKeyPress(KeyPressEventArgs e)
