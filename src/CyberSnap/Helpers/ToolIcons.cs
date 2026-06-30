@@ -21,6 +21,36 @@ public static class ToolIcons
         ["rect"] = "captureRect",
         ["_repeatLastArea"] = "captureRect",
         ["_record"] = "record",
+
+        // Editor toolbar tools (Settings → Hotkeys → Annotations Editor)
+        ["editorPan"] = "pan",
+        ["editorMove"] = "select",
+        ["editorDraw"] = "draw",
+        ["editorArrow"] = "arrow",
+        ["editorCurvedArrow"] = "curvedArrow",
+        ["editorLine"] = "line",
+        ["editorRect"] = "rectShape",
+        ["editorCircle"] = "circleShape",
+        ["editorText"] = "text",
+        ["editorCrop"] = "crop",
+        ["editorEraser"] = "eraser",
+        ["editorHighlight"] = "highlight",
+        ["editorBlur"] = "blur",
+        ["editorStep"] = "step",
+        ["editorMagnifier"] = "magnifier",
+        ["editorEmoji"] = "emoji",
+
+        // Editor view/zoom shortcuts
+        ["editorZoomIn"] = "zoomIn",
+        ["editorZoomOut"] = "zoomOut",
+        ["editorZoomReset"] = "zoomReset",
+        ["editorZoomFit"] = "zoomFit",
+
+        // Standalone utilities (Settings → Hotkeys → Standalone Utilities)
+        ["_standaloneOcr"] = "ocr",
+        ["_standaloneColorPicker"] = "picker",
+        ["_standaloneScan"] = "scan",
+        ["_standaloneRuler"] = "ruler",
     };
 
     public static BitmapSource RenderToolIconWpf(string toolId, char glyph, Color color, int size, bool active = false)
