@@ -211,6 +211,12 @@ public sealed partial class AnnotationCanvas
             ActiveTool = CanvasTool.Pan;
     }
 
+    /// <summary>True while dragging/resizing an existing annotation (not drawing a new shape).</summary>
+    private bool IsManipulatingExistingAnnotation =>
+        _selectOriginalAnnotation is not null
+        || _isSelectResizing
+        || _multiDragOriginals is not null;
+
     private bool ProcessSelectionDragMove(Point img)
     {
         if (_isSelectResizing && _selectedAnnotationIndex >= 0 && _selectResizeOriginalAnnotation is not null)
@@ -480,6 +486,7 @@ public sealed partial class AnnotationCanvas
                     _selectDragStartImg = img;
                     _isDragging = true;
                 }
+                _currentStroke = null;
                 Invalidate();
                 return;
             }
@@ -1603,6 +1610,12 @@ public sealed partial class AnnotationCanvas
             PaintStepNumber(g, _hoverImg, NextStepNumber(), ToolColor, 0.6f);
 
         if (!_isDragging) return;
+
+        // Shape-tool drag preview uses _dragStartImg/_dragLastImg from the last draw. When
+        // moving/resizing an existing object those coords are stale and would ghost the
+        // original shape at its creation position on top of the live annotation.
+        if (IsManipulatingExistingAnnotation)
+            return;
 
         switch (_activeTool)
         {
