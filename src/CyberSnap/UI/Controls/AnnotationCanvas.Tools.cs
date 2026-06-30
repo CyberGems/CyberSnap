@@ -219,7 +219,8 @@ public sealed partial class AnnotationCanvas
             if (hit >= 0)
             {
                 _resizeDragging = true;
-                _userPanned = true; // Dismiss the welcome banner on first resize drag.
+                _userPanned = true;
+                DismissWelcomeOverlay();
                 _activeResizeHandle = hit;
                 _resizeStartImg = ScreenToImage(e.Location);
                 _resizeStartSize = new Size(_baseBitmap.Width, _baseBitmap.Height);
@@ -292,6 +293,7 @@ public sealed partial class AnnotationCanvas
         {
             _isPanning = true;
             _userPanned = true;
+            DismissWelcomeOverlay();
             _viewFitsWindow = false;
             _panStart = e.Location;
             _panStartOffset = _pan;
@@ -1398,6 +1400,7 @@ public sealed partial class AnnotationCanvas
             {
                 _isPanning = true;
                 _userPanned = true;
+                DismissWelcomeOverlay();
                 _viewFitsWindow = false;
                 _panStart = PointToClient(Cursor.Position);
                 _panStartOffset = _pan;
@@ -1408,6 +1411,14 @@ public sealed partial class AnnotationCanvas
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+
+        if (_inlineTextBox is null
+            && !EditorToolHotkeyHelper.IsReservedEditorChord(e.KeyData)
+            && EditorToolHotkeyHelper.TryActivateTool(this, e.KeyData))
+        {
+            e.Handled = true;
+            return;
+        }
 
         if (e.KeyCode is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey
             && _isDragging && _activeTool is CanvasTool.Rect or CanvasTool.Circle or CanvasTool.Line or CanvasTool.Arrow)
@@ -1480,24 +1491,28 @@ public sealed partial class AnnotationCanvas
         }
         if (e.KeyCode is Keys.Oemplus or Keys.Add)
         {
+            DismissWelcomeOverlay();
             ZoomBy(1.15, new Point(ClientSize.Width / 2, ClientSize.Height / 2));
             e.Handled = true;
             return;
         }
         if (e.KeyCode is Keys.OemMinus or Keys.Subtract)
         {
+            DismissWelcomeOverlay();
             ZoomBy(1.0 / 1.15, new Point(ClientSize.Width / 2, ClientSize.Height / 2));
             e.Handled = true;
             return;
         }
         if (e.KeyCode == Keys.D0 || e.KeyCode == Keys.NumPad0)
         {
+            DismissWelcomeOverlay();
             ZoomReset();
             e.Handled = true;
             return;
         }
         if (e.KeyCode == Keys.F2)
         {
+            DismissWelcomeOverlay();
             ZoomFit();
             e.Handled = true;
             return;

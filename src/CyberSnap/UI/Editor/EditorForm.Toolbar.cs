@@ -1096,21 +1096,23 @@ public sealed partial class EditorForm
         };
         _toolButtons[tool] = button;
 
-        // The 3-column drawing grid truncates the longest names; surface the full
-        // label on hover for those so nothing is lost.
-        if (tool is AnnotationCanvas.CanvasTool.Magnifier
-                or AnnotationCanvas.CanvasTool.Rect
-                or AnnotationCanvas.CanvasTool.Highlight
-                or AnnotationCanvas.CanvasTool.Blur)
-            RegisterHoverTooltip(button, labelKey);
-        else if (tool is AnnotationCanvas.CanvasTool.Move)
-            RegisterHoverTooltip(button, "Move & Resize");
-        else if (tool is AnnotationCanvas.CanvasTool.Pan)
-            RegisterHoverTooltip(button, "Pan (Hold Space)");
-        else if (tool is AnnotationCanvas.CanvasTool.Emoji)
-            RegisterHoverTooltip(button, "Emoji (Scroll Wheel to Resize)");
+        RegisterHoverTooltip(button, () => FormatToolTooltip(tool, labelKey));
 
         parent.Controls.Add(button, column, row);
+    }
+
+    private static string FormatToolTooltip(AnnotationCanvas.CanvasTool tool, string labelKey)
+    {
+        var text = tool switch
+        {
+            AnnotationCanvas.CanvasTool.Move => LocalizationService.Translate("Move & Resize"),
+            AnnotationCanvas.CanvasTool.Pan => LocalizationService.Translate("Pan (Hold Space)"),
+            AnnotationCanvas.CanvasTool.Emoji => LocalizationService.Translate("Emoji (Scroll Wheel to Resize)"),
+            AnnotationCanvas.CanvasTool.CurvedArrow => LocalizationService.Translate("Curved Arrow"),
+            _ => LocalizationService.Translate(labelKey),
+        };
+        var hotkey = EditorToolHotkeyHelper.GetHotkeyLabel(tool);
+        return hotkey is not null ? $"{text}  ({hotkey})" : text;
     }
 
     private EditorCommandButton MakeCommandButton(string iconId, string text, bool primary)
@@ -1507,6 +1509,8 @@ public sealed partial class EditorForm
         {
             if (!Clipboard.ContainsImage()) return;
             if (_canvas.IsDirty && !PromptSaveChanges()) return;
+            if (_canvas.IsDefaultBlank)
+                _canvas.DismissWelcomeOverlay();
             using (var img = Clipboard.GetImage())
             {
                 if (img != null)
@@ -1585,6 +1589,8 @@ public sealed partial class EditorForm
         resizeScaleItem.ToolTipText = LocalizationService.Translate("When on, dragging the handles stretches the image. When off, it extends or trims the canvas area only.");
         var bannersItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show instruction banners"), iconId: null);
         bannersItem.ToolTipText = LocalizationService.Translate("Display tool instruction banners in the editor.");
+        var welcomeBannerItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show welcome banner"), iconId: null);
+        welcomeBannerItem.ToolTipText = LocalizationService.Translate("Show the welcome banner on a blank canvas in the editor.");
         var rulersItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show measurement rulers"), iconId: null);
         rulersItem.ToolTipText = LocalizationService.Translate("Display measurement rulers in the editor canvas.");
         var hintsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show hints"), iconId: null);
@@ -1649,6 +1655,15 @@ public sealed partial class EditorForm
                 app.PersistEditorShowBanners(_canvas.ShowBanners);
             }
         };
+        welcomeBannerItem.Click += (_, _) =>
+        {
+            _canvas.ShowWelcomeBanner = !_canvas.ShowWelcomeBanner;
+            _canvas.Invalidate();
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorShowWelcomeBanner(_canvas.ShowWelcomeBanner);
+            }
+        };
         rulersItem.Click += (_, _) =>
         {
             bool nextState = !(_topRulerContainer != null && _topRulerContainer.Visible);
@@ -1677,30 +1692,31 @@ public sealed partial class EditorForm
             }
         };
 
-        // View submenu contents (grouped with separators for readability)
-        viewItem.DropDownItems.Add(borderItem);
+        // View submenu: behavior toggles, then all "show …" visibility toggles, then canvas resize mode.
         viewItem.DropDownItems.Add(fitItem);
         viewItem.DropDownItems.Add(lockObjectsItem);
         viewItem.DropDownItems.Add(new ToolStripSeparator());
-        viewItem.DropDownItems.Add(cropHandlesItem);
-        viewItem.DropDownItems.Add(resizeHandlesItem);
-        viewItem.DropDownItems.Add(resizeScaleItem);
-        viewItem.DropDownItems.Add(new ToolStripSeparator());
-        viewItem.DropDownItems.Add(bannersItem);
+        viewItem.DropDownItems.Add(borderItem);
         viewItem.DropDownItems.Add(rulersItem);
-        viewItem.DropDownItems.Add(hintsItem);
+        viewItem.DropDownItems.Add(resizeHandlesItem);
+        viewItem.DropDownItems.Add(cropHandlesItem);
         viewItem.DropDownItems.Add(scrollbarsItem);
+        viewItem.DropDownItems.Add(bannersItem);
+        viewItem.DropDownItems.Add(welcomeBannerItem);
+        viewItem.DropDownItems.Add(hintsItem);
+        viewItem.DropDownItems.Add(new ToolStripSeparator());
+        viewItem.DropDownItems.Add(resizeScaleItem);
 
-        // Main menu layout
+        // Main menu layout — View sits after file operations (New / Open / Save) and before export.
         menu.Items.Add(newSubmenu);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(viewItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(openItem);
         menu.Items.Add(openRecentItem);
         menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(resizeCanvasItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(viewItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exportItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -1714,7 +1730,7 @@ public sealed partial class EditorForm
 
         menu.Opened += (_, _) =>
         {
-            UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, rulersItem, hintsItem, scrollbarsItem);
+            UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, welcomeBannerItem, rulersItem, hintsItem, scrollbarsItem);
             bool hasSelection = _canvas.SelectedAnnotationIndexInternal >= 0 || _canvas.MultiSelectedIndicesInternal.Count > 0;
             bool multi = _canvas.MultiSelectedIndicesInternal.Count > 1;
             pasteItem.Enabled = Clipboard.ContainsImage();
@@ -1808,7 +1824,7 @@ public sealed partial class EditorForm
         openRecentItem.DropDownItems.Add(clearItem);
     }
 
-    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem, ToolStripMenuItem scrollbarsItem)
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem welcomeBannerItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem, ToolStripMenuItem scrollbarsItem)
     {
         var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
         borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
@@ -1818,6 +1834,7 @@ public sealed partial class EditorForm
         resizeScaleItem.Image = _canvas.ResizeHandlesScaleContent ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         resizeHandlesItem.Image = _canvas.EditorShowResizeHandles ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         bannersItem.Image = _canvas.ShowBanners ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        welcomeBannerItem.Image = _canvas.ShowWelcomeBanner ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         rulersItem.Image = (_topRulerContainer != null && _topRulerContainer.Visible) ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         hintsItem.Image = _canvas.ShowHints ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         scrollbarsItem.Image = _canvas.ShowScrollbarsAlways ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;

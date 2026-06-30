@@ -390,6 +390,7 @@ public sealed partial class AnnotationCanvas
         _pan = new PointF(newPanX, _pan.Y);
         _viewFitsWindow = false;
         _userPanned = true;
+        DismissWelcomeOverlay();
         Invalidate();
         OnStateChanged();
     }
@@ -414,6 +415,7 @@ public sealed partial class AnnotationCanvas
         _pan = new PointF(_pan.X, newPanY);
         _viewFitsWindow = false;
         _userPanned = true;
+        DismissWelcomeOverlay();
         Invalidate();
         OnStateChanged();
     }
@@ -432,6 +434,7 @@ public sealed partial class AnnotationCanvas
         _pan = new PointF(newPanX, _pan.Y);
         _viewFitsWindow = false;
         _userPanned = true;
+        DismissWelcomeOverlay();
         NotifyScrollbarActivity();
         Invalidate();
         OnStateChanged();
@@ -451,6 +454,7 @@ public sealed partial class AnnotationCanvas
         _pan = new PointF(_pan.X, newPanY);
         _viewFitsWindow = false;
         _userPanned = true;
+        DismissWelcomeOverlay();
         NotifyScrollbarActivity();
         Invalidate();
         OnStateChanged();

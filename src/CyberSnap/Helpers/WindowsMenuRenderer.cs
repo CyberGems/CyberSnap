@@ -17,7 +17,7 @@ public static class WindowsMenuRenderer
             ShowImageMargin = showImages,
             ShowCheckMargin = false,
             Padding = new Padding(5, 6, 5, 6),
-            Font = UiChrome.ChromeFont(9.0f),
+            Font = UiChrome.ChromeFont(9.0f, FontStyle.Bold),
             DropShadowEnabled = false, // legacy CS_DROPSHADOW is faint and suppresses DWM's softer shadow
             MinimumSize = new Size(minWidth, 0),
         };
@@ -60,6 +60,7 @@ public static class WindowsMenuRenderer
 
         dd.BackColor = bg;
         dd.ForeColor = fg;
+        dd.Font = UiChrome.ChromeFont(9.0f, FontStyle.Bold);
         dd.Renderer = new Renderer(bg, fg, hover, active, muted, sep, border, accent, showImages);
 
         dd.HandleCreated += (s, _) =>
@@ -303,6 +304,7 @@ public static class WindowsMenuRenderer
             }
 
             e.Graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             string shortcut = item.ShortcutKeyDisplayString ?? string.Empty;
             int indent = item.Padding.Left;
             int left = (_showImages ? 43 : 14) + indent;
@@ -326,7 +328,7 @@ public static class WindowsMenuRenderer
                 item.Font,
                 labelRect,
                 textColor,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
 
             if (shortcut.Length == 0)
                 return;
@@ -338,7 +340,7 @@ public static class WindowsMenuRenderer
                 item.Font,
                 shortcutRect,
                 _muted,
-                TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
         }
 
         protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)

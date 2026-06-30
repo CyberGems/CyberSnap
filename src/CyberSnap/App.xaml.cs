@@ -115,6 +115,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-banners-pref", ex); }
     }
 
+    /// <summary>Persists the annotation editor's blank-canvas welcome banner preference.</summary>
+    public void PersistEditorShowWelcomeBanner(bool showWelcomeBanner)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorShowWelcomeBanner == showWelcomeBanner) return;
+        _settingsService.Settings.EditorShowWelcomeBanner = showWelcomeBanner;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-welcome-banner-pref", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "auto crop controls" preference.</summary>
     public void PersistEditorAutoCropControls(bool autoCropControls)
     {
@@ -254,6 +264,16 @@ public partial class App : Application
         _settingsService.Settings.EditorTextFontSize = size;
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-text-font-size", ex); }
+    }
+
+    /// <summary>Persists the canvas background color last chosen in the New Canvas dialog (0 = checkerboard).</summary>
+    public void PersistEditorNewCanvasBackgroundColor(int argb)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorNewCanvasBackgroundColorArgb == argb) return;
+        _settingsService.Settings.EditorNewCanvasBackgroundColorArgb = argb;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-new-canvas-bg-color", ex); }
     }
 
     public void EnsureWidgetWindowCreated()

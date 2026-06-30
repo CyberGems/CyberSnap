@@ -57,7 +57,7 @@ public sealed partial class AnnotationCanvas
         RenderToolBanner(g);
         RenderCursorToolPreview(g);
 
-        if (IsDefaultBlank && !_userPanned)
+        if (IsDefaultBlank && !_welcomeDismissed && ShowWelcomeBanner)
             RenderWelcomeText(g);
 
         if (_inlineTextBox is not null)
