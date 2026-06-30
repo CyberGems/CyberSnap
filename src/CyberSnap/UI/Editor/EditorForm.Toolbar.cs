@@ -1412,8 +1412,15 @@ public sealed partial class EditorForm
 
         string hint = LocalizationService.Translate(GetToolStatusLabelKey(_canvas.ActiveTool));
 
-        if (_canvas.ActiveTool != AnnotationCanvas.CanvasTool.Pan)
+        if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Pan)
+        {
+            if (EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
+                hint += $"  ·  {LocalizationService.Translate("Tap to select · hold for temporary pan")}";
+        }
+        else
+        {
             hint += $"  ·  {LocalizationService.Translate("Hold Space to pan")}";
+        }
 
         if (_liveStatusLabel.Text != hint)
             _liveStatusLabel.Text = hint;

@@ -1555,31 +1555,8 @@ public sealed partial class AnnotationCanvas
             e.Handled = true;
             return;
         }
-        if (e.KeyCode is Keys.Oemplus or Keys.Add)
+        if (EditorViewHotkeyHelper.TryHandleViewHotkeys(this, e))
         {
-            DismissWelcomeOverlay();
-            ZoomBy(1.15, new Point(ClientSize.Width / 2, ClientSize.Height / 2));
-            e.Handled = true;
-            return;
-        }
-        if (e.KeyCode is Keys.OemMinus or Keys.Subtract)
-        {
-            DismissWelcomeOverlay();
-            ZoomBy(1.0 / 1.15, new Point(ClientSize.Width / 2, ClientSize.Height / 2));
-            e.Handled = true;
-            return;
-        }
-        if (e.KeyCode == Keys.D0 || e.KeyCode == Keys.NumPad0)
-        {
-            DismissWelcomeOverlay();
-            ZoomReset();
-            e.Handled = true;
-            return;
-        }
-        if (e.KeyCode == Keys.F2)
-        {
-            DismissWelcomeOverlay();
-            ZoomFit();
             e.Handled = true;
             return;
         }

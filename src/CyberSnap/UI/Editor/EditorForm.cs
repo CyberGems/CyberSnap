@@ -1332,9 +1332,8 @@ public sealed partial class EditorForm : Form
         if (keyData == (Keys.Control | Keys.D)) { _canvas.DuplicateSelectionInternal(); return true; }
 
         // Ensure canvas gets focus for single-key shortcuts.
-        if (!_canvas.Focused && keyData is Keys.Space or Keys.Delete or Keys.Escape
-            or Keys.Oemplus or Keys.Add or Keys.OemMinus or Keys.Subtract
-            or Keys.D0 or Keys.NumPad0 or Keys.F2)
+        if (!_canvas.Focused && (keyData == Keys.Space || keyData == Keys.Delete || keyData == Keys.Escape
+            || EditorViewHotkeyHelper.IsAnyViewHotkey(keyData)))
         {
             _canvas.Focus();
         }
@@ -1376,9 +1375,10 @@ public sealed partial class EditorForm : Form
 
             // Single-key shortcuts — ensure canvas has focus
             if (key is Keys.Space && !_canvas.Focused) { _canvas.Focus(); return false; }
-            if (key is Keys.Delete or Keys.Escape or Keys.F2 or Keys.Oemplus or Keys.Add or Keys.OemMinus or Keys.Subtract or Keys.D0 or Keys.NumPad0)
+            if ((key is Keys.Delete or Keys.Escape || EditorViewHotkeyHelper.IsAnyViewHotkey(key | mod))
+                && !_canvas.Focused)
             {
-                if (!_canvas.Focused) _canvas.Focus();
+                _canvas.Focus();
             }
         }
         return base.ProcessKeyPreview(ref m);
