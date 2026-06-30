@@ -374,32 +374,20 @@ public sealed partial class RegionOverlayForm
                 if (handle >= 0) clickedIdx = _selectedAnnotationIndex;
             }
 
-            int activeHoverIdx = _moveHoverIndex;
-            if (activeHoverIdx < 0)
+            // Control hit on the hovered item only (handles may sit outside the stroke).
+            if (handle < 0 && _moveHoverIndex >= 0 && _moveHoverIndex != _suppressHoverBoxIndex)
             {
-                activeHoverIdx = HitTestAnnotationSurface(e.Location);
+                handle = GetSelectHandle(e.Location, _moveHoverIndex);
+                if (handle >= 0) clickedIdx = _moveHoverIndex;
             }
-            // Don't let a click grab the annotation we just placed (cursor is still on it);
-            // that would turn a second placement into an accidental move.
-            if (activeHoverIdx == _suppressHoverBoxIndex)
-                activeHoverIdx = -1;
 
+            // No control hit → select only when the click lands on the object's actual drawn
+            // pixels (its surface), never on the empty interior of its wrap box.
             if (handle < 0)
             {
-                for (int i = _undoStack.Count - 1; i >= 0; i--)
-                {
-                    int h = GetSelectHandle(e.Location, i);
-                    if (h >= 0)
-                    {
-                        handle = h;
-                        clickedIdx = i;
-                        break;
-                    }
-                }
-            }
-            if (handle < 0 && activeHoverIdx >= 0)
-            {
-                clickedIdx = activeHoverIdx;
+                int surfIdx = HitTestAnnotationSurface(e.Location);
+                if (surfIdx == _suppressHoverBoxIndex) surfIdx = -1;
+                if (surfIdx >= 0) clickedIdx = surfIdx;
             }
 
             if (clickedIdx >= 0)
