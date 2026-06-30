@@ -1268,6 +1268,22 @@ public sealed partial class RegionOverlayForm
         }
     }
 
+    private Rectangle GetConfirmButtonMonitorClientBounds(Point anchorClient)
+    {
+        var screenPoint = new Point(_virtualBounds.X + anchorClient.X, _virtualBounds.Y + anchorClient.Y);
+        var monitorBounds = Rectangle.Intersect(Screen.FromPoint(screenPoint).Bounds, _virtualBounds);
+        if (monitorBounds.IsEmpty)
+            return new Rectangle(0, 0, ClientSize.Width, ClientSize.Height);
+
+        var clientBounds = new Rectangle(
+            monitorBounds.X - _virtualBounds.X,
+            monitorBounds.Y - _virtualBounds.Y,
+            monitorBounds.Width,
+            monitorBounds.Height);
+        clientBounds.Intersect(new Rectangle(0, 0, ClientSize.Width, ClientSize.Height));
+        return clientBounds.IsEmpty ? new Rectangle(0, 0, ClientSize.Width, ClientSize.Height) : clientBounds;
+    }
+
     private (Rectangle confirm, Rectangle cancel, Rectangle close) GetConfirmButtonRects()
     {
         int bw = _confirmButtonWidth;
@@ -1286,20 +1302,38 @@ public sealed partial class RegionOverlayForm
         // primary action lands under the cursor and large selections don't force the cursor back
         // to the middle.  Order (left→right): [Cancel] [Retry] [Confirm].
         float anchorX = r.Left + _confirmButtonAnchorFracX * r.Width;
-        int confirmX = (int)Math.Round(anchorX - bw / 2f);
+        float anchorY = r.Top + _confirmButtonAnchorFracY * r.Height;
+        var monitor = GetConfirmButtonMonitorClientBounds(new Point((int)Math.Round(anchorX), (int)Math.Round(anchorY)));
+        int minX = monitor.Left + margin;
+        int maxX = monitor.Right - margin;
+        int minY = monitor.Top + margin;
+        int maxY = monitor.Bottom - margin;
+
+        int confirmXCenter = (int)Math.Round(anchorX - bw / 2f);
+        int clusterLeftCenter = confirmXCenter - gap - retryW - gap - cancelW;
+        int clusterRightCenter = confirmXCenter + bw;
+
+        int confirmX;
+        if (clusterRightCenter > maxX)
+            confirmX = (int)Math.Round(anchorX - bw); // right edge of Listo at release point
+        else if (clusterLeftCenter < minX)
+            confirmX = (int)Math.Round(anchorX); // left edge of Listo at release point
+        else
+            confirmX = confirmXCenter;
+
         int retryX = confirmX - gap - retryW;
         int closeX = retryX - gap - cancelW;
 
-        // Shift the whole cluster back on-screen if it spills past either edge.
+        // Shift the whole cluster back inside the current monitor if it still spills.
         int clusterLeft = closeX;
         int clusterRight = confirmX + bw;
-        if (clusterLeft < margin)
+        if (clusterLeft < minX)
         {
-            int s = margin - clusterLeft; confirmX += s; retryX += s; closeX += s;
+            int s = minX - clusterLeft; confirmX += s; retryX += s; closeX += s;
         }
-        else if (clusterRight > ClientSize.Width - margin)
+        else if (clusterRight > maxX)
         {
-            int s = (ClientSize.Width - margin) - clusterRight; confirmX += s; retryX += s; closeX += s;
+            int s = maxX - clusterRight; confirmX += s; retryX += s; closeX += s;
         }
 
         // Vertical: park the cluster just outside the selection on the side nearest the release
@@ -1308,10 +1342,10 @@ public sealed partial class RegionOverlayForm
         int above = r.Top - bh - offset;
         int y;
         if (_confirmButtonAnchorFracY < 0.5f)
-            y = above >= margin ? above : below;
+            y = above >= minY ? above : below;
         else
-            y = below + bh <= ClientSize.Height - margin ? below : above;
-        y = Math.Clamp(y, margin, Math.Max(margin, ClientSize.Height - bh - margin));
+            y = below + bh <= maxY ? below : above;
+        y = Math.Clamp(y, minY, Math.Max(minY, maxY - bh));
 
         return (
             new Rectangle(confirmX, y, bw, bh),
