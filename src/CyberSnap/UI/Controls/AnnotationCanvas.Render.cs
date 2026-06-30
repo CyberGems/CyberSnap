@@ -866,7 +866,13 @@ public sealed partial class AnnotationCanvas
         float curY = y + paddingV;
 
         // 1. Draw Title (header first)
-        using var titleBrush = new SolidBrush(EditorColors.TextSecondary);
+        Color titleColor = EditorColors.IsDark ? EditorColors.TextSecondary : Color.FromArgb(45, 65, 95);
+        Color mediumColor = EditorColors.IsDark ? EditorColors.TextSecondary : Color.FromArgb(50, 75, 110);
+        Color iconColor = EditorColors.IsDark ? EditorColors.TextMuted : Color.FromArgb(70, 110, 175);
+        Color smallColor = EditorColors.IsDark ? EditorColors.TextMuted : Color.FromArgb(100, 120, 150);
+        Color cursorColor = EditorColors.IsDark ? EditorColors.TextMuted : Color.FromArgb(100, 120, 150);
+
+        using var titleBrush = new SolidBrush(titleColor);
         using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
         var titleRect = new RectangleF(x, curY, width, titleSize.Height);
         g.DrawString(titleText, titleFont, titleBrush, titleRect, sf);
@@ -875,17 +881,17 @@ public sealed partial class AnnotationCanvas
         // 2. Draw Icon
         float iconCx = x + width / 2;
         float iconCy = curY + iconSize / 2 + iconSize * 0.09f;  // offset down to visually center (tabs shorter than arrow)
-        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, EditorColors.TextMuted);
+        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, iconColor);
         curY += iconSize + 2;  // tight gap below icon
 
         // 3. Draw Subheader
-        using var mediumBrush = new SolidBrush(EditorColors.TextSecondary);
+        using var mediumBrush = new SolidBrush(mediumColor);
         var mediumRect = new RectangleF(x, curY, width, mediumSize.Height);
         g.DrawString(mediumText, mediumFont, mediumBrush, mediumRect, sf);
         curY += mediumSize.Height + spacing;
 
         // 4. Draw Small Text (with inline cursor)
-        using var smallBrush = new SolidBrush(EditorColors.TextMuted);
+        using var smallBrush = new SolidBrush(smallColor);
         var smallRect = new RectangleF(x, curY, width, smallSize.Height);
 
         string part1 = "";
@@ -920,7 +926,7 @@ public sealed partial class AnnotationCanvas
             
             float cursorX = startTextX + sizePart1.Width + 2;
             float cursorY = textY + 2;
-            DrawCursorIcon(g, cursorX, cursorY, 12, EditorColors.TextMuted);
+            DrawCursorIcon(g, cursorX, cursorY, 12, cursorColor);
 
             g.DrawString(part2, smallFont, smallBrush, cursorX + cursorPlaceholderWidth, textY);
         }
