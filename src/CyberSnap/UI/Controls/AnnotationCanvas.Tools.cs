@@ -1195,20 +1195,28 @@ public sealed partial class AnnotationCanvas
                 _currentStroke = null;
                 Invalidate();
                 break;
-            case CanvasTool.Arrow when _dragStartImg != _dragLastImg:
-                Push(new AddAnnotationCommand(new ArrowAnnotation(_dragStartImg, _dragLastImg, ToolColor, StrokeWidth)));
+            case CanvasTool.Arrow:
+            {
+                var arrowEnd = GetDragLineEnd(_dragLastImg);
+                if (_dragStartImg != arrowEnd)
+                    Push(new AddAnnotationCommand(new ArrowAnnotation(_dragStartImg, arrowEnd, ToolColor, StrokeWidth)));
                 break;
-            case CanvasTool.Line when _dragStartImg != _dragLastImg:
-                Push(new AddAnnotationCommand(new LineAnnotation(_dragStartImg, _dragLastImg, ToolColor, StrokeWidth)));
+            }
+            case CanvasTool.Line:
+            {
+                var lineEnd = GetDragLineEnd(_dragLastImg);
+                if (_dragStartImg != lineEnd)
+                    Push(new AddAnnotationCommand(new LineAnnotation(_dragStartImg, lineEnd, ToolColor, StrokeWidth)));
                 break;
+            }
             case CanvasTool.Rect:
-                var rect = NormRect(_dragStartImg, _dragLastImg);
+                var rect = GetDragShapeRect(_dragLastImg);
                 if (rect.Width >= 4 && rect.Height >= 4)
                     Push(new AddAnnotationCommand(new RectShapeAnnotation(rect, ToolColor, StrokeWidth)));
                 Invalidate();
                 break;
             case CanvasTool.Circle:
-                var crect = NormRect(_dragStartImg, _dragLastImg);
+                var crect = GetDragShapeRect(_dragLastImg);
                 if (crect.Width >= 4 && crect.Height >= 4)
                     Push(new AddAnnotationCommand(new CircleShapeAnnotation(crect, ToolColor, StrokeWidth)));
                 Invalidate();
@@ -1346,6 +1354,12 @@ public sealed partial class AnnotationCanvas
     {
         base.OnKeyUp(e);
 
+        if (e.KeyCode is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey
+            && _isDragging && _activeTool is CanvasTool.Rect or CanvasTool.Circle or CanvasTool.Line or CanvasTool.Arrow)
+        {
+            Invalidate();
+        }
+
         if (e.KeyCode == Keys.Space && _preSpaceTool != null)
         {
             _isPanning = false;
@@ -1392,6 +1406,12 @@ public sealed partial class AnnotationCanvas
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+
+        if (e.KeyCode is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey
+            && _isDragging && _activeTool is CanvasTool.Rect or CanvasTool.Circle or CanvasTool.Line or CanvasTool.Arrow)
+        {
+            Invalidate();
+        }
 
         if (e.KeyCode == Keys.Space && _inlineTextBox is null)
         {
@@ -1530,20 +1550,26 @@ public sealed partial class AnnotationCanvas
                 SketchRenderer.DrawFreehandStroke(g, _currentStroke, ToolColor, GetScaledStrokeWidth(StrokeWidth), AnnotationStrokeShadow);
                 break;
             case CanvasTool.Arrow:
-                SketchRenderer.DrawArrow(g, _dragStartImg, _dragLastImg, ToolColor,
+            {
+                var arrowEnd = GetDragLineEnd(_dragLastImg);
+                SketchRenderer.DrawArrow(g, _dragStartImg, arrowEnd, ToolColor,
                     _dragStartImg.GetHashCode(), strokeShadow: AnnotationStrokeShadow, strokeWidth: GetScaledStrokeWidth(StrokeWidth));
                 break;
+            }
             case CanvasTool.Line:
-                SketchRenderer.DrawLine(g, _dragStartImg, _dragLastImg, ToolColor,
+            {
+                var lineEnd = GetDragLineEnd(_dragLastImg);
+                SketchRenderer.DrawLine(g, _dragStartImg, lineEnd, ToolColor,
                     _dragStartImg.GetHashCode(), AnnotationStrokeShadow, GetScaledStrokeWidth(StrokeWidth));
                 break;
+            }
             case CanvasTool.Rect:
-                var rect = NormRect(_dragStartImg, _dragLastImg);
+                var rect = GetDragShapeRect(_dragLastImg);
                 if (rect.Width > 0 && rect.Height > 0)
                     SketchRenderer.DrawRectShape(g, rect, ToolColor, AnnotationStrokeShadow, GetScaledStrokeWidth(StrokeWidth));
                 break;
             case CanvasTool.Circle:
-                var crect = NormRect(_dragStartImg, _dragLastImg);
+                var crect = GetDragShapeRect(_dragLastImg);
                 if (crect.Width > 0 && crect.Height > 0)
                     SketchRenderer.DrawCircleShape(g, crect, ToolColor, AnnotationStrokeShadow, GetScaledStrokeWidth(StrokeWidth));
                 break;
@@ -2021,6 +2047,26 @@ public sealed partial class AnnotationCanvas
 
     private static Rectangle NormRect(Point a, Point b) =>
         new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
+
+    /// <summary>Square-bounding drag rect when Shift is held (matches capture overlay).</summary>
+    private Rectangle GetDragShapeRect(Point current)
+    {
+        if (!ModifierKeys.HasFlag(Keys.Shift))
+            return NormRect(_dragStartImg, current);
+
+        int dx = current.X - _dragStartImg.X;
+        int dy = current.Y - _dragStartImg.Y;
+        int size = Math.Max(Math.Abs(dx), Math.Abs(dy));
+        int x2 = _dragStartImg.X + Math.Sign(dx == 0 ? 1 : dx) * size;
+        int y2 = _dragStartImg.Y + Math.Sign(dy == 0 ? 1 : dy) * size;
+        return NormRect(_dragStartImg, new Point(x2, y2));
+    }
+
+    /// <summary>45° snap when Shift is held (matches capture overlay).</summary>
+    private Point GetDragLineEnd(Point current) =>
+        ModifierKeys.HasFlag(Keys.Shift)
+            ? LineSnapHelper.SnapEndTo45Degrees(_dragStartImg, current)
+            : current;
 
     // ── Inline text editor ─────────────────────────────────────────────────
 

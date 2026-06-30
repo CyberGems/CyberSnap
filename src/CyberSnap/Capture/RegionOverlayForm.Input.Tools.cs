@@ -633,8 +633,12 @@ public sealed partial class RegionOverlayForm
                 InvalidateLivePreview(GetShapeRect(oldCursor), GetShapeRect(e.Location), 18);
                 break;
             case CaptureMode.Line when _isLineDragging:
-                InvalidateLivePreview(RectFromPoints(_lineStart, oldCursor, 1), RectFromPoints(_lineStart, e.Location, 1), 18);
+            {
+                var oldEnd = GetConstrainedLineEnd(_lineStart, oldCursor);
+                var newEnd = GetConstrainedLineEnd(_lineStart, e.Location);
+                InvalidateLivePreview(RectFromPoints(_lineStart, oldEnd, 1), RectFromPoints(_lineStart, newEnd, 1), 18);
                 break;
+            }
             case CaptureMode.Ruler when _isRulerDragging:
                 // Invalidate the precise paint extent (line + the label's *actual* rect) at both the
                 // old and new positions. Tight bounds clear the old label without ghosting, yet keep
@@ -646,8 +650,12 @@ public sealed partial class RegionOverlayForm
                 Update();
                 break;
             case CaptureMode.Arrow when _isArrowDragging:
-                InvalidateLivePreview(RectFromPoints(_arrowStart, oldCursor, 1), RectFromPoints(_arrowStart, e.Location, 1), 32);
+            {
+                var oldEnd = GetConstrainedLineEnd(_arrowStart, oldCursor);
+                var newEnd = GetConstrainedLineEnd(_arrowStart, e.Location);
+                InvalidateLivePreview(RectFromPoints(_arrowStart, oldEnd, 1), RectFromPoints(_arrowStart, newEnd, 1), 32);
                 break;
+            }
             case CaptureMode.Blur when _isBlurring:
                 InvalidateLivePreview(NormRect(_blurStart, oldCursor), NormRect(_blurStart, e.Location), 18);
                 break;
@@ -917,7 +925,7 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Line when _isLineDragging:
                 _isLineDragging = false;
-                var lineEnd = e.Location;
+                var lineEnd = GetConstrainedLineEnd(_lineStart, e.Location);
                 float ldx = lineEnd.X - _lineStart.X;
                 float ldy = lineEnd.Y - _lineStart.Y;
                 if (MathF.Sqrt(ldx * ldx + ldy * ldy) > 5)
@@ -936,7 +944,7 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Arrow when _isArrowDragging:
                 _isArrowDragging = false;
-                var end = e.Location;
+                var end = GetConstrainedLineEnd(_arrowStart, e.Location);
                 float dx = end.X - _arrowStart.X;
                 float dy = end.Y - _arrowStart.Y;
                 if (MathF.Sqrt(dx * dx + dy * dy) > 5)
