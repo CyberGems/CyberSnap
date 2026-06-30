@@ -1261,5 +1261,6 @@
   "Ruler: Enable context menu": "Regla: Activar menú contextual",
   "When disabled, right-click exits the ruler instead of showing the context menu.": "Al desactivar, el clic derecho sale de la regla en lugar de mostrar el menú contextual.",
   "When enabled, the ruler's Enter capture takes every monitor. Applies only to multi-monitor setups.": "Al activar, la captura con Enter de la regla toma todos los monitores. Aplica solo a configuraciones multi-monitor.",
-  "Always show scrollbars": "Mostrar siempre barras de desplazamiento"
+  "Always show scrollbars": "Mostrar siempre barras de desplazamiento",
+  "Magnify": "Lupa"
 }
