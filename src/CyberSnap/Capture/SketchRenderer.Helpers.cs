@@ -28,6 +28,7 @@ public static partial class SketchRenderer
     // Shadow pens are black with one of 4 fixed alphas; thickness varies by caller's annotation width.
     // Cache keyed on (alpha, width-quantized) â€” bounded since thicknesses come from a small set.
     private static readonly Dictionary<long, Pen> _shadowPens = new();
+    private static readonly Dictionary<long, Pen> _shadowPensFlatEnd = new();
 
     private static Pen GetShadowPen(int alpha, float width)
     {
@@ -40,6 +41,21 @@ public static partial class SketchRenderer
             LineJoin = LineJoin.Round
         };
         _shadowPens[key] = pen;
+        return pen;
+    }
+
+    /// <summary>Shadow pen with a flat end so curve shafts stop cleanly before the arrowhead.</summary>
+    private static Pen GetShadowPenFlatEnd(int alpha, float width)
+    {
+        long key = ((long)alpha << 32) | (uint)(int)Math.Round(width * 16f);
+        if (_shadowPensFlatEnd.TryGetValue(key, out var pen)) return pen;
+        pen = new Pen(Color.FromArgb(alpha, 0, 0, 0), width)
+        {
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Flat,
+            LineJoin = LineJoin.Round
+        };
+        _shadowPensFlatEnd[key] = pen;
         return pen;
     }
 
@@ -56,9 +72,27 @@ public static partial class SketchRenderer
 
     [ThreadStatic] private static PointF[]? _curveShadowBuffer;
 
-    private static void DrawSoftCurveShadow(Graphics g, PointF[] points, float thickness, bool asCurve)
+    /// <summary>Flatten a curve/lines path into a dense polyline (matches visible DrawCurve geometry).</summary>
+    private static PointF[] FlattenPathPoints(PointF[] points, float tension)
     {
-        // Reuse a thread-static buffer (grow-only) â€” avoids 4Ã— LINQ allocations per call.
+        if (points.Length < 2)
+            return points;
+
+        using var path = new GraphicsPath();
+        if (points.Length >= 4)
+            path.AddCurve(points, tension);
+        else
+            path.AddLines(points);
+
+        path.Flatten(null, 0.25f);
+        return path.PathPoints;
+    }
+
+    private static void DrawSoftPolylineShadow(Graphics g, PointF[] points, float thickness)
+    {
+        if (points.Length < 2)
+            return;
+
         if (_curveShadowBuffer == null || _curveShadowBuffer.Length < points.Length)
             _curveShadowBuffer = new PointF[points.Length];
         var buffer = _curveShadowBuffer;
@@ -70,18 +104,105 @@ public static partial class SketchRenderer
                 buffer[i] = new PointF(points[i].X + step.dx, points[i].Y + step.dy);
 
             float w = thickness + (step.dx > 0 ? 1.2f : 0.5f);
-            var pen = GetShadowPen(step.alpha, w);
-            if (asCurve && n >= 4)
-                g.DrawCurve(pen, buffer, 0, n - 1, 0.45f);
-            else if (buffer.Length == n)
-                g.DrawLines(pen, buffer);
-            else
-            {
-                var slice = new PointF[n];
-                Array.Copy(buffer, slice, n);
-                g.DrawLines(pen, slice);
-            }
+            var pen = GetShadowPenFlatEnd(step.alpha, w);
+            g.DrawLines(pen, buffer.AsSpan(0, n));
         }
+    }
+
+    private static void DrawSoftArrowheadShadow(Graphics g, PointF tip, float nx, float ny, float shaftLen, float thickness, PointF? clipTip = null)
+    {
+        float headSize = GetArrowheadSize(shaftLen);
+        float angle = 25f * MathF.PI / 180f;
+        float bx = tip.X - nx * headSize, by = tip.Y - ny * headSize;
+        var left = RotatePoint(new PointF(bx, by), tip, -angle);
+        var right = RotatePoint(new PointF(bx, by), tip, angle);
+
+        // Pull wing roots slightly toward the tip so shadow does not fill the shaft/head gap.
+        const float wingBaseInset = 0.14f;
+        left = InsetToward(left, tip, headSize * wingBaseInset);
+        right = InsetToward(right, tip, headSize * wingBaseInset);
+
+        const float tipInset = 3.5f;
+
+        foreach (var step in SoftShadowSteps)
+        {
+            if (step.dx == 0 && step.dy == 0)
+                continue;
+
+            var offsetTip = new PointF(tip.X + step.dx, tip.Y + step.dy);
+            var offsetLeft = new PointF(left.X + step.dx, left.Y + step.dy);
+            var offsetRight = new PointF(right.X + step.dx, right.Y + step.dy);
+            // Outer shadow layers sit further out — pull wing ends back a bit more.
+            float stepInset = tipInset + step.dx * 0.55f;
+            var wingLeftEnd = InsetToward(offsetLeft, offsetTip, stepInset);
+            var wingRightEnd = InsetToward(offsetRight, offsetTip, stepInset);
+
+            if (clipTip is PointF clip)
+            {
+                wingLeftEnd = ClampNotBeyondTip(wingLeftEnd, clip, nx, ny);
+                wingRightEnd = ClampNotBeyondTip(wingRightEnd, clip, nx, ny);
+            }
+
+            float w = (thickness + (step.dx > 0 ? 1.2f : 0.5f)) * 0.92f;
+            var pen = GetShadowPenFlatEnd(step.alpha, w);
+            g.DrawLine(pen, offsetLeft, wingLeftEnd);
+            g.DrawLine(pen, offsetRight, wingRightEnd);
+        }
+    }
+
+    /// <summary>Drop trailing polyline points that sit forward of the arrow tip (curve flatten overshoot).</summary>
+    private static PointF[] TrimPolylineBeyondTip(PointF[] pts, PointF tip, float nx, float ny, float maxAhead = 0f)
+    {
+        if (pts.Length < 2)
+            return pts;
+
+        int last = pts.Length - 1;
+        while (last > 0 && IsBeyondClipBounds(pts[last], tip, nx, ny, maxAhead))
+            last--;
+
+        return last == pts.Length - 1 ? pts : pts[..(last + 1)];
+    }
+
+    private static float AheadOfTip(PointF p, PointF tip, float nx, float ny) =>
+        (p.X - tip.X) * nx + (p.Y - tip.Y) * ny;
+
+    private static bool IsBeyondClipBounds(PointF p, PointF tip, float nx, float ny, float maxAhead)
+    {
+        if (AheadOfTip(p, tip, nx, ny) > maxAhead)
+            return true;
+
+        // Shadow falls down-right; when the head opens toward +X/+Y, trim screen-space bleed
+        // (right/down protrusion) without affecting heads that open left/up.
+        float maxScreen = maxAhead + 1.25f;
+        if (nx > 0.25f && p.X > tip.X + maxScreen)
+            return true;
+        if (ny > 0.25f && p.Y > tip.Y + maxScreen)
+            return true;
+        return false;
+    }
+
+    private static PointF ClampNotBeyondTip(PointF p, PointF tip, float nx, float ny, float maxAhead = 0f)
+    {
+        float ahead = AheadOfTip(p, tip, nx, ny);
+        if (ahead > maxAhead)
+            p = new PointF(p.X - nx * (ahead - maxAhead), p.Y - ny * (ahead - maxAhead));
+
+        float maxScreen = maxAhead + 1.25f;
+        if (nx > 0.25f)
+            p = new PointF(Math.Min(p.X, tip.X + maxScreen), p.Y);
+        if (ny > 0.25f)
+            p = new PointF(p.X, Math.Min(p.Y, tip.Y + maxScreen));
+        return p;
+    }
+
+    private static PointF InsetToward(PointF from, PointF toward, float inset)
+    {
+        float dx = toward.X - from.X, dy = toward.Y - from.Y;
+        float len = MathF.Sqrt(dx * dx + dy * dy);
+        if (len <= inset)
+            return from;
+        float t = (len - inset) / len;
+        return new PointF(from.X + dx * t, from.Y + dy * t);
     }
 
     public static void DrawSoftPathShadow(Graphics g, GraphicsPath path, float extraSpread = 0f)

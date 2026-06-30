@@ -137,36 +137,30 @@ public static partial class SketchRenderer
         float headSize = Math.Clamp(12f + len / 15f, 12f, 28f);
         headSize = Math.Min(headSize, len * 0.4f);
 
-        // Walk backward along the polyline to find a point ~headSize away from tip
-        // This gives a stable tangent that matches where the curve is actually going
+        // Walk backward along the polyline for a stable tangent at the tip.
         var tip = curvePts[^1];
-        float walkTarget = Math.Max(headSize, 20f);
-        float walked = 0;
-        PointF dirFrom = curvePts[^2];
-        for (int i = curvePts.Length - 1; i > 0; i--)
-        {
-            float seg = MathF.Sqrt((curvePts[i].X - curvePts[i - 1].X) * (curvePts[i].X - curvePts[i - 1].X) +
-                                    (curvePts[i].Y - curvePts[i - 1].Y) * (curvePts[i].Y - curvePts[i - 1].Y));
-            walked += seg;
-            if (walked >= walkTarget) { dirFrom = curvePts[i - 1]; break; }
-        }
-        float dx = tip.X - dirFrom.X, dy = tip.Y - dirFrom.Y;
-        float l = MathF.Sqrt(dx * dx + dy * dy);
-        if (l < 1) return;
-        float nx = dx / l, ny = dy / l;
+        GetCurveTipTangent(curvePts, tip, Math.Max(headSize, 16f), out float nx, out float ny);
 
-        // Shorten the curve: pull the last point back so the line doesn't poke through the arrowhead.
-        // curvePts is local to this call â€” patch in place rather than cloning.
-        curvePts[^1] = new PointF(
-            tip.X - nx * headSize * 0.55f,
-            tip.Y - ny * headSize * 0.55f);
+        // Match straight arrows: shaft ends at 0.38×headSize; shadow stops earlier to avoid
+        // a dark blob in the small gap before the arrowhead wings.
+        const float shaftMainInset = 0.38f;
+        const float shaftShadowInset = 0.24f;
+
+        var shaftEnd = new PointF(tip.X - nx * headSize * shaftMainInset, tip.Y - ny * headSize * shaftMainInset);
+        var shadowEnd = new PointF(tip.X - nx * headSize * shaftShadowInset, tip.Y - ny * headSize * shaftShadowInset);
+        curvePts[^1] = shaftEnd;
 
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
         if (strokeShadow)
         {
-            DrawSoftCurveShadow(g, curvePts, thickness, curvePts.Length >= 4);
-            DrawArrowhead(g, new PointF(tip.X + 2, tip.Y + 2), nx, ny, len, Color.FromArgb(62, 0, 0, 0), thickness + 0.5f, seed + 4000);
+            var shadowPts = (PointF[])curvePts.Clone();
+            shadowPts[^1] = shadowEnd;
+            var flatShadow = shadowPts.Length >= 4
+                ? FlattenPathPoints(shadowPts, 0.45f)
+                : shadowPts;
+            DrawSoftPolylineShadow(g, TrimPolylineBeyondTip(flatShadow, tip, nx, ny), thickness);
+            DrawSoftArrowheadShadow(g, tip, nx, ny, len, thickness + 0.5f, clipTip: tip);
         }
 
         var mainPen = GetFlatEndCapPen(color, thickness);
@@ -204,6 +198,47 @@ public static partial class SketchRenderer
 
     private static float GetArrowheadSize(float shaftLen)
         => Math.Min(Math.Clamp(12f + shaftLen / 15f, 12f, 28f), shaftLen * 0.4f);
+
+    /// <summary>Tangent at the curve tip: prefer the last segment; walk back only when it is very short.</summary>
+    private static void GetCurveTipTangent(PointF[] pts, PointF tip, float minWalk, out float nx, out float ny)
+    {
+        if (pts.Length < 2)
+        {
+            nx = 1f;
+            ny = 0f;
+            return;
+        }
+
+        PointF dirFrom = pts[^2];
+        float lastSegLen = Distance(dirFrom, tip);
+
+        if (lastSegLen < minWalk * 0.6f && pts.Length >= 3)
+        {
+            float walked = lastSegLen;
+            for (int i = pts.Length - 2; i > 0; i--)
+            {
+                float seg = Distance(pts[i], pts[i - 1]);
+                walked += seg;
+                if (walked >= minWalk)
+                {
+                    dirFrom = pts[i - 1];
+                    break;
+                }
+            }
+        }
+
+        float dx = tip.X - dirFrom.X, dy = tip.Y - dirFrom.Y;
+        float len = MathF.Sqrt(dx * dx + dy * dy);
+        if (len < 0.001f)
+        {
+            nx = 1f;
+            ny = 0f;
+            return;
+        }
+
+        nx = dx / len;
+        ny = dy / len;
+    }
 
     private static void DrawRoughStrokeLine(Graphics g, PointF from, PointF to, Color color, int seed, float width, float roughness)
     {
