@@ -12,6 +12,13 @@ public sealed partial class RegionOverlayForm
     protected override void OnMouseDoubleClick(MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Left) return;
+
+        if (_mode == CaptureMode.Move)
+        {
+            SelectAll();
+            return;
+        }
+
         // Double-click on any committed text to edit it (works in any mode)
         int hitIdx = HitTestText(e.Location);
         if (hitIdx >= 0)
