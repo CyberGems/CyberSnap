@@ -173,7 +173,7 @@ public partial class SettingsWindow
             ShowImageSearchBarCheck.IsChecked = s.ShowImageSearchBar;
             AutoIndexImagesCheck.IsChecked = s.AutoIndexImages;
             UpdateImageIndexVisibility(s.AutoIndexImages);
-            DisableAnimationsCheck.IsChecked = s.DisableAnimations;
+            DisableAnimationsCheck.IsChecked = !s.DisableAnimations; // inverted: checked = enabled
             ShowToolBannersCheck.IsChecked = s.ShowToolBanners;
             ConfirmBeforeExitCheck.IsChecked = s.ConfirmBeforeExit;
             SelectAppTheme(s.ThemeMode);

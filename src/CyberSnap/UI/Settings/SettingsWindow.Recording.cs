@@ -216,14 +216,14 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressGeneralPreferenceChange) return;
 
         var previous = _settingsService.Settings.DisableAnimations;
-        var selected = DisableAnimationsCheck.IsChecked == true;
+        var selected = DisableAnimationsCheck.IsChecked != true; // inverted: checked = enabled = !disabled
         UpdateGeneralPreference(
             "settings.disable-animations",
-            "Disable animated effects",
+            "Enable animated effects",
             previous,
             selected,
             value => _settingsService.Settings.DisableAnimations = value,
-            value => DisableAnimationsCheck.IsChecked = value,
+            value => DisableAnimationsCheck.IsChecked = !value,
             value => Motion.Disabled = value);
     }
 
