@@ -50,11 +50,12 @@ public static class ToolListBuilder
         return false;
     }
 
-    public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null, StackPanel? editorToolsPanel = null)
+    public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null, StackPanel? editorToolsPanel = null, StackPanel? toolbarUtilitiesPanel = null)
     {
         capturePanel.Children.Clear();
         annotationPanel.Children.Clear();
         editorToolsPanel?.Children.Clear();
+        toolbarUtilitiesPanel?.Children.Clear();
         var s = settingsService.Settings;
         // Icon color for rendering Fluent glyphs to bitmaps
         var iconColor = Theme.IsDark ? System.Drawing.Color.FromArgb(225, 255, 255, 255) : System.Drawing.Color.FromArgb(210, 0, 0, 0);
@@ -69,6 +70,18 @@ public static class ToolListBuilder
                 FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text"),
                 Foreground = (System.Windows.Media.Brush)owner.FindResource("ThemeTextSecondaryBrush"),
                 Margin = new Thickness(4, targetPanel.Children.Count == 0 ? 0 : 16, 0, 8)
+            };
+            LocalizationService.SetSourceText(header, textKey);
+            targetPanel.Children.Add(header);
+        }
+
+        void AddSectionHeader(StackPanel targetPanel, string textKey)
+        {
+            var header = new TextBlock
+            {
+                Text = LocalizationService.Translate(textKey),
+                Style = (Style)owner.FindResource("SectionLabel"),
+                Margin = new Thickness(4, targetPanel.Children.Count == 0 ? 0 : 16, 0, 10)
             };
             LocalizationService.SetSourceText(header, textKey);
             targetPanel.Children.Add(header);
@@ -380,7 +393,7 @@ public static class ToolListBuilder
             ("record", "Screen Recorder (MP4)", ToolDef.AllTools.First(t => t.Id == "record").Icon),
             ("recordGif", "Screen Recorder (GIF)", ToolDef.AllTools.First(t => t.Id == "recordGif").Icon),
 
-            // In-Editor Utilities
+            // Toolbar utilities (capture overlay toolbar: OCR, picker, scan)
             ("ocr", "OCR", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
             ("picker", "Color Picker", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
             ("scan", "QR & Barcodes", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
@@ -406,20 +419,24 @@ public static class ToolListBuilder
         foreach (var item in System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(captureItems, 6), 2))
             AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
-        AddSubHeader(capturePanel, "In-Editor Utilities");
-        foreach (var item in System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(captureItems, 8), 3))
-            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
-
-        AddSubHeader(capturePanel, "Standalone Utilities");
+        AddSectionHeader(capturePanel, "Standalone Utilities");
         foreach (var item in System.Linq.Enumerable.Skip(captureItems, 11))
             AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
+        if (toolbarUtilitiesPanel is not null)
+        {
+            AddSubHeader(toolbarUtilitiesPanel, "Toolbar utilities");
+            foreach (var item in System.Linq.Enumerable.Skip(captureItems, 8).Take(3))
+                AddToolRow(toolbarUtilitiesPanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
+            LocalizationService.ApplyTo(toolbarUtilitiesPanel, settingsService.Settings.InterfaceLanguage);
+        }
+
+        AddSubHeader(annotationPanel, "Annotation tools");
         foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
             AddToolRow(annotationPanel, t.Id, t.Label, t.Icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
         if (editorToolsPanel is not null)
         {
-            AddSubHeader(editorToolsPanel, "Annotations Editor");
             foreach (var t in EditorToolHotkeyDef.Tools)
                 AddToolRow(editorToolsPanel, t.Id, t.Label, t.Icon, true, GetEditorHotkey, SetEditorHotkey);
             LocalizationService.ApplyTo(editorToolsPanel, settingsService.Settings.InterfaceLanguage);

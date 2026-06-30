@@ -65,6 +65,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private Point _panStart;
     private PointF _panStartOffset;
     private CanvasTool? _preSpaceTool;
+    private DateTime _spaceKeyDownUtc;
     private bool _isTempMoveFromPan;
 
     // Selection state (Move tool)

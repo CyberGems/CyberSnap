@@ -1101,12 +1101,23 @@ public sealed partial class EditorForm
         parent.Controls.Add(button, column, row);
     }
 
+    private static string FormatPanToolTooltip()
+    {
+        var text = LocalizationService.Translate("Pan");
+        if (EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
+            text += $"  ·  {LocalizationService.Translate("Tap to select · hold for temporary pan")}";
+        var hotkey = EditorToolHotkeyHelper.GetHotkeyLabel(AnnotationCanvas.CanvasTool.Pan);
+        return hotkey is not null ? $"{text}  ({hotkey})" : text;
+    }
+
     private static string FormatToolTooltip(AnnotationCanvas.CanvasTool tool, string labelKey)
     {
+        if (tool == AnnotationCanvas.CanvasTool.Pan)
+            return FormatPanToolTooltip();
+
         var text = tool switch
         {
             AnnotationCanvas.CanvasTool.Move => LocalizationService.Translate("Move & Resize"),
-            AnnotationCanvas.CanvasTool.Pan => LocalizationService.Translate("Pan (Hold Space)"),
             AnnotationCanvas.CanvasTool.Emoji => LocalizationService.Translate("Emoji (Scroll Wheel to Resize)"),
             AnnotationCanvas.CanvasTool.CurvedArrow => LocalizationService.Translate("Curved Arrow"),
             _ => LocalizationService.Translate(labelKey),
