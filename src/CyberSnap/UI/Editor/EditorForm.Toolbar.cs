@@ -445,9 +445,9 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(_togglePanLockSwitch, "Lock object editing in Pan mode");
         RegisterHoverTooltip(coordsPanel, "Cursor position over the image (X, Y)");
 
-        RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", LocalizationService.Translate("key 0")));
-        RegisterHoverTooltip(_fitZoomBtn, () => WithShortcut("Zoom to fit the image in the window", "F2"));
-        RegisterHoverTooltip(_zoomSlider, () => WithShortcut("Drag to zoom in or out", "+ / -"));
+        RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomReset") ?? "0"));
+        RegisterHoverTooltip(_fitZoomBtn, () => WithShortcut("Zoom to fit the image in the window", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomFit") ?? "9"));
+        RegisterHoverTooltip(_zoomSlider, () => WithShortcut("Drag to zoom in or out", $"{EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomIn") ?? "8"} / {EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomOut") ?? "7"}"));
 
         RegisterHoverTooltip(_liveStatusLabel, () =>
         {
@@ -725,7 +725,7 @@ public sealed partial class EditorForm
             if (System.Windows.Application.Current is CyberSnap.App app)
                 app.OnHotkeyPressedProxy();
         };
-        RegisterHoverTooltip(_captureButton, () => WithShortcut(LocalizationService.Translate("Take a new screenshot"), "F1"), above: false);
+        RegisterHoverTooltip(_captureButton, () => WithShortcut(LocalizationService.Translate("Take a new screenshot"), EditorToolHotkeyHelper.GetCaptureHotkeyLabel() ?? "Alt+Shift+A"), above: false);
         commandActions.Controls.Add(_captureButton);
 
         // Spacer between gallery/capture and file actions

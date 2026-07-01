@@ -1405,6 +1405,15 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 && EditorToolHotkeyHelper.TryActivateTool(_canvas, key | mod))
                 return true;
 
+            // View/zoom shortcuts — handle here so they work even when the canvas
+            // doesn't have keyboard focus (WPF-hosted WinForms focus quirk).
+            if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod))
+            {
+                var e = new KeyEventArgs(key | mod);
+                if (EditorViewHotkeyHelper.TryHandleViewHotkeys(_canvas, e))
+                    return true;
+            }
+
             // Single-key shortcuts — ensure canvas has focus
             if (key is Keys.Space && !_canvas.Focused) { _canvas.Focus(); return false; }
             if ((key is Keys.Delete or Keys.Escape || EditorViewHotkeyHelper.IsAnyViewHotkey(key | mod))
