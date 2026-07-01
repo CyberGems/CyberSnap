@@ -448,6 +448,10 @@ public sealed class AppSettings
             ["magnifier"] = 0x7B,   // F12 (Magnifier)
             ["blur"] = 0x31,        // 1 (Blur)
             ["emoji"] = 0x32,       // 2 (Emoji)
+            ["ocr"] = 0x4F,         // O (OCR)
+            ["picker"] = 0x43,      // C (Color Picker)
+            ["scan"] = 0x51,        // Q (QR & Barcodes)
+            ["ruler"] = 0x52,       // R (Ruler)
         };
         return result;
     }
