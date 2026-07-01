@@ -423,32 +423,31 @@ public sealed class AppSettings
     // Editor view/zoom hotkeys (Settings → Hotkeys → Annotations Editor → View). Key = view id, Value = [mod, vk].
     public Dictionary<string, uint[]>? EditorViewHotkeys { get; set; }
 
-    // Virtual key codes for in-capture annotation shortcuts: 1-9, H, R, S, M, B, E
+    // Virtual key codes for in-capture annotation shortcuts: F1-F12, 1, 2, 3
     private static readonly uint[] AnnotationKeyVks =
     {
-        0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, // 1-9
-        0x48, 0x52, 0x53, 0x4D, 0x42, 0x45 // H, R, S, M, B, E
+        0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x7B, // F1-F12
+        0x31, 0x32, 0x33 // 1, 2, 3
     };
 
     private Dictionary<string, uint> GetAnnotationDefaults()
     {
         var result = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
         {
-            ["select"] = 0x31,      // 1 (Move & Resize)
-            ["eraser"] = 0x32,      // 2 (Eraser)
-            ["text"] = 0x33,        // 3 (Text)
-            ["arrow"] = 0x34,       // 4 (Arrow)
-            ["line"] = 0x35,        // 5 (Line)
-            ["draw"] = 0x36,        // 6 (FreeHand)
-            ["curvedArrow"] = 0x37, // 7 (Curved Arrow)
-            ["circleShape"] = 0x38, // 8 (Circle)
-            ["rectShape"] = 0x39,   // 9 (Rectangle)
-            ["highlight"] = 0x48,   // H (Highlight)
-            ["ruler"] = 0x52,       // R (Ruler)
-            ["step"] = 0x53,        // S (Step Number)
-            ["magnifier"] = 0x4D,   // M (Magnifier)
-            ["blur"] = 0x42,        // B (Blur)
-            ["emoji"] = 0x45,       // E (Emoji)
+            ["select"] = 0x70,      // F1 (Move & Resize)
+            ["eraser"] = 0x71,      // F2 (Eraser)
+            ["text"] = 0x72,        // F3 (Text)
+            ["arrow"] = 0x73,       // F4 (Arrow)
+            ["line"] = 0x74,        // F5 (Line)
+            ["draw"] = 0x75,        // F6 (FreeHand)
+            ["curvedArrow"] = 0x76, // F7 (Curved Arrow)
+            ["circleShape"] = 0x77, // F8 (Circle)
+            ["rectShape"] = 0x78,   // F9 (Rectangle)
+            ["highlight"] = 0x79,   // F10 (Highlight)
+            ["step"] = 0x7A,        // F11 (Step Number)
+            ["magnifier"] = 0x7B,   // F12 (Magnifier)
+            ["blur"] = 0x31,        // 1 (Blur)
+            ["emoji"] = 0x32,       // 2 (Emoji)
         };
         return result;
     }
@@ -457,21 +456,21 @@ public sealed class AppSettings
         new(StringComparer.OrdinalIgnoreCase)
         {
             ["editorPan"] = 0x20,         // Space
-            ["editorMove"] = 0x31,        // 1
-            ["editorEraser"] = 0x32,      // 2
-            ["editorText"] = 0x33,        // 3
-            ["editorArrow"] = 0x34,       // 4
-            ["editorLine"] = 0x35,        // 5
-            ["editorDraw"] = 0x36,        // 6
-            ["editorCurvedArrow"] = 0x37, // 7
-            ["editorCircle"] = 0x38,      // 8
-            ["editorRect"] = 0x39,        // 9
-            ["editorCrop"] = 0x43,        // C
-            ["editorHighlight"] = 0x48,   // H
-            ["editorStep"] = 0x53,        // S
-            ["editorMagnifier"] = 0x4D,   // M
-            ["editorBlur"] = 0x42,        // B
-            ["editorEmoji"] = 0x45,       // E
+            ["editorMove"] = 0x70,        // F1
+            ["editorEraser"] = 0x71,      // F2
+            ["editorText"] = 0x72,        // F3
+            ["editorArrow"] = 0x73,       // F4
+            ["editorLine"] = 0x74,        // F5
+            ["editorDraw"] = 0x75,        // F6
+            ["editorCurvedArrow"] = 0x76, // F7
+            ["editorCircle"] = 0x77,      // F8
+            ["editorRect"] = 0x78,        // F9
+            ["editorCrop"] = 0x33,        // 3
+            ["editorHighlight"] = 0x79,   // F10
+            ["editorStep"] = 0x7A,        // F11
+            ["editorMagnifier"] = 0x7B,   // F12
+            ["editorBlur"] = 0x31,        // 1
+            ["editorEmoji"] = 0x32,       // 2
         };
 
     /// <summary>Get hotkey (mod, key) for an editor toolbar tool.</summary>
@@ -493,10 +492,10 @@ public sealed class AppSettings
     private Dictionary<string, uint> GetEditorViewDefaults() =>
         new(StringComparer.OrdinalIgnoreCase)
         {
-            ["editorZoomIn"] = 0xBB,    // =
-            ["editorZoomOut"] = 0xBD,   // -
+            ["editorZoomIn"] = 0x38,    // 8
+            ["editorZoomOut"] = 0x37,   // 7
             ["editorZoomReset"] = 0x30, // 0
-            ["editorZoomFit"] = 0x71,   // F2
+            ["editorZoomFit"] = 0x39,   // 9
         };
 
     public (uint mod, uint key) GetEditorViewHotkey(string viewId)
@@ -580,7 +579,7 @@ public sealed class AppSettings
             case "center": CenterHotkeyModifiers = mod; CenterHotkeyKey = key; break;
             case "record": RecordHotkeyModifiers = mod; RecordHotkeyKey = key; break;
             case "recordGif": RecordGifHotkeyModifiers = mod; RecordGifHotkeyKey = key; break;
-            // ruler handled by generic path (annotation tool with default key 9)
+            // ruler handled by generic path (annotation tool, no default hotkey)
             case "_fullscreen": FullscreenHotkeyModifiers = mod; FullscreenHotkeyKey = key; break;
             case "_activeWindow": ActiveWindowHotkeyModifiers = mod; ActiveWindowHotkeyKey = key; break;
             case "_repeatLastArea": RepeatLastAreaHotkeyModifiers = mod; RepeatLastAreaHotkeyKey = key; break;
@@ -607,7 +606,7 @@ public sealed class AppSettings
             ? new HashSet<string>(visibleToolIds, StringComparer.OrdinalIgnoreCase)
             : null;
 
-        foreach (var tool in ToolDef.AllTools.Where(t => t.Group == 1))
+        foreach (var tool in ToolDef.AllTools.Where(t => t.Group is 0 or 1))
         {
             if (visible != null && !visible.Contains(tool.Id))
                 continue;
@@ -677,20 +676,20 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("scan",        "QR & Barcodes",   '\uE1DE', CaptureMode.Scan,        0), // qr-code
         new("picker",      "Color Picker", '\uE2B1', CaptureMode.ColorPicker, 0), // eyedropper
         new("ruler",       "Ruler",        '\uE14E', CaptureMode.Ruler,       0), // ruler (annotation, but kept in capture row)
-        new("select",      "Pick",                 '\uE1E3', CaptureMode.Move,        1), // cursor-click   → 0x31
-        new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1), // eraser         → 0x33
-        new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1), // highlighter
-        new("text",        "Text",         '\uE197', CaptureMode.Text,        1), // type           → 0x37
-        new("arrow",       "Arrow",        '\uE051', CaptureMode.Arrow,       1), // arrow-up-right → 0x32
-        new("line",        "Line",         '\uE11F', CaptureMode.Line,        1), // minus          → 0x36
-        new("draw",        "FreeHand",     '\uE70F', CaptureMode.Draw,        1), // edit           → 0x34
-        new("curvedArrow", "Curved Arrow", '\uE146', CaptureMode.CurvedArrow, 1), // redo           → 0x35
-        new("circleShape", "Circle",       '\uE07A', CaptureMode.CircleShape, 1), // circle         → 0x38
-        new("rectShape",   "Rectangle",    '\uE16A', CaptureMode.RectShape,   1), // square         → 0x39
-        new("step",        "Steps",       '\uE1D0', CaptureMode.StepNumber,  1), // list-ordered   → 0x3A
+        new("select",      "Pick",                 '\uE1E3', CaptureMode.Move,        1),
+        new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1),
+        new("text",        "Text",         '\uE197', CaptureMode.Text,        1),
+        new("arrow",       "Arrow",        '\uE051', CaptureMode.Arrow,       1),
+        new("line",        "Line",         '\uE11F', CaptureMode.Line,        1),
+        new("draw",        "FreeHand",     '\uE70F', CaptureMode.Draw,        1),
+        new("curvedArrow", "Curved Arrow", '\uE146', CaptureMode.CurvedArrow, 1),
+        new("circleShape", "Circle",       '\uE07A', CaptureMode.CircleShape, 1),
+        new("rectShape",   "Rectangle",    '\uE16A', CaptureMode.RectShape,   1),
+        new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1),
+        new("step",        "Steps",       '\uE1D0', CaptureMode.StepNumber,  1),
         new("magnifier",   "Magnifier",    '\uE721', CaptureMode.Magnifier,   1),
-        new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1), // blend
-        new("emoji",       "Emoji",        '\uE167', CaptureMode.Emoji,       1), // smile
+        new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1),
+        new("emoji",       "Emoji",        '\uE167', CaptureMode.Emoji,       1),
     };
 
     public static bool IsCaptureTool(CaptureMode mode) =>

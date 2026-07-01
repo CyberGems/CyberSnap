@@ -246,7 +246,7 @@ public sealed partial class RegionOverlayForm
         if ((ModifierKeys & Keys.Shift) != 0) mod |= Native.User32.MOD_SHIFT;
         uint vk = unchecked((uint)(keyCode & Keys.KeyCode));
 
-        var toolId = settings.FindAnnotationToolId(mod, vk, _visibleTools.Where(t => t.Group == 1).Select(t => t.Id));
+        var toolId = settings.FindAnnotationToolId(mod, vk, _visibleTools.Select(t => t.Id));
         if (toolId is null)
             return false;
 

@@ -396,10 +396,11 @@ public static class ToolListBuilder
             ("record", "Screen Recorder (MP4)", ToolDef.AllTools.First(t => t.Id == "record").Icon),
             ("recordGif", "Screen Recorder (GIF)", ToolDef.AllTools.First(t => t.Id == "recordGif").Icon),
 
-            // Toolbar utilities (capture overlay toolbar: OCR, picker, scan)
+            // Toolbar utilities (capture overlay toolbar)
             ("ocr", "OCR", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
             ("picker", "Color Picker", ToolDef.AllTools.First(t => t.Id == "picker").Icon),
             ("scan", "QR & Barcodes", ToolDef.AllTools.First(t => t.Id == "scan").Icon),
+            ("ruler", "Ruler", ToolDef.AllTools.First(t => t.Id == "ruler").Icon),
 
             // Standalone Utilities
             ("_standaloneOcr", "OCR (Standalone)", ToolDef.AllTools.First(t => t.Id == "ocr").Icon),
@@ -425,14 +426,14 @@ public static class ToolListBuilder
             AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
 
         AddSectionHeader(capturePanel, "Standalone Utilities");
-        foreach (var item in System.Linq.Enumerable.Skip(captureItems, 11))
-            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
+        foreach (var item in System.Linq.Enumerable.Skip(captureItems, 12))
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey, allowSingleKeyHotkeys: true);
 
         if (toolbarUtilitiesPanel is not null)
         {
             AddSubHeader(toolbarUtilitiesPanel, "Toolbar utilities");
-            foreach (var item in System.Linq.Enumerable.Skip(captureItems, 8).Take(3))
-                AddToolRow(toolbarUtilitiesPanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
+            foreach (var item in System.Linq.Enumerable.Skip(captureItems, 8).Take(4))
+                AddToolRow(toolbarUtilitiesPanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey, allowSingleKeyHotkeys: true);
             LocalizationService.ApplyTo(toolbarUtilitiesPanel, settingsService.Settings.InterfaceLanguage);
         }
 

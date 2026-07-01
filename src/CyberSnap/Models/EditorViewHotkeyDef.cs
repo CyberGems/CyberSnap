@@ -5,9 +5,9 @@ public static class EditorViewHotkeyDef
 {
     public static readonly (string Id, string Label, char Icon)[] Shortcuts =
     {
-        ("editorZoomIn",    "Zoom in",     '\uE710'),
         ("editorZoomOut",   "Zoom out",    '\uE711'),
-        ("editorZoomReset", "Reset zoom",  '\uE72C'),
+        ("editorZoomIn",    "Zoom in",     '\uE710'),
         ("editorZoomFit",   "Zoom to fit", '\uE740'),
+        ("editorZoomReset", "Reset zoom",  '\uE72C'),
     };
 }
