@@ -14,6 +14,7 @@ x64/
 x86/
 [Bb]uild/
 bld/
+artifacts/
 
 ## NuGet
 *.nupkg
