@@ -408,7 +408,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         PerformLayout();
 
         FormClosing += OnFormClosing;
-        Activated += (s, e) => RefreshUi();
+        Activated += (_, _) => RefreshUi();
         FormClosed += (_, _) =>
         {
             _saveStatusTimer.Stop();
@@ -427,6 +427,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
         };
         Resize += (_, _) =>
         {
+            if (WindowState == FormWindowState.Minimized
+                || _lastWindowState == FormWindowState.Minimized)
+            {
+                DismissVisibleHoverTooltips();
+            }
+
             UpdateWindowStateButton();
             UpdateWindowChromeRegion();
             if (WindowState != FormWindowState.Minimized)
@@ -1338,6 +1344,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
     /// </summary>
     bool IMessageFilter.PreFilterMessage(ref Message m)
     {
+        if (!IsDisposed && m.Msg is 0x100 or 0x104
+            && _hoverToolTip is { Visible: true, IsDisposed: false })
+        {
+            return HandleKeyPressedWithTooltipVisible(ref m);
+        }
+
         if (m.Msg != WM_LBUTTONDBLCLK || IsDisposed || _canvas.IsDisposed) return false;
         if (m.HWnd != _canvas.Handle) return false;
         if (_canvas.ActiveTool != AnnotationCanvas.CanvasTool.Move) return false;
@@ -1375,54 +1387,97 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     protected override bool ProcessKeyPreview(ref Message m)
     {
-        // Route all key messages to the canvas even when it doesn't have focus.
-        // This is the reliable fallback for WPF-hosted WinForms where ProcessCmdKey
-        // may not be invoked and the canvas can lose focus unexpectedly.
-        if (m.Msg is 0x100 or 0x104) // WM_KEYDOWN / WM_SYSKEYDOWN
-        {
-            var key = (Keys)(int)m.WParam;
-            var mod = Control.ModifierKeys;
-
-            // File / clipboard operations
-            if (mod == Keys.Control && key is Keys.N) { DoNewCanvas(); return true; }
-            if (mod == Keys.Control && key is Keys.O) { DoOpen(); return true; }
-            if (mod == Keys.Control && key is Keys.S) { DoSave(); return true; }
-            if (mod == (Keys.Control | Keys.Shift) && key is Keys.S) { DoSaveAs(); return true; }
-            if (mod == Keys.Control && key is Keys.C) { DoCopy(); return true; }
-            if (mod == Keys.Control && key is Keys.V) { DoPaste(); return true; }
-
-            // Canvas operations
-            if (mod == Keys.Control && key is Keys.Z)
-            {
-                if (mod.HasFlag(Keys.Shift)) _canvas.Redo(); else _canvas.Undo();
-                return true;
-            }
-            if (mod == Keys.Control && key is Keys.Y) { _canvas.Redo(); return true; }
-            if (mod == Keys.Control && key is Keys.D) { _canvas.DuplicateSelectionInternal(); return true; }
-            if (mod == Keys.Control && key is Keys.A) { _canvas.SelectAll(); return true; }
-
-            if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod)
-                && EditorToolHotkeyHelper.TryActivateTool(_canvas, key | mod))
-                return true;
-
-            // View/zoom shortcuts — handle here so they work even when the canvas
-            // doesn't have keyboard focus (WPF-hosted WinForms focus quirk).
-            if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod))
-            {
-                var e = new KeyEventArgs(key | mod);
-                if (EditorViewHotkeyHelper.TryHandleViewHotkeys(_canvas, e))
-                    return true;
-            }
-
-            // Single-key shortcuts — ensure canvas has focus
-            if (key is Keys.Space && !_canvas.Focused) { _canvas.Focus(); return false; }
-            if ((key is Keys.Delete or Keys.Escape || EditorViewHotkeyHelper.IsAnyViewHotkey(key | mod))
-                && !_canvas.Focused)
-            {
-                _canvas.Focus();
-            }
-        }
+        if (TryProcessEditorKeyPreview(ref m))
+            return true;
+        if (TryForwardKeyDownToCanvas(ref m))
+            return true;
         return base.ProcessKeyPreview(ref m);
+    }
+
+    /// <summary>
+    /// When a TopMost tooltip steals keyboard input, dismiss it and route the key on this press.
+    /// </summary>
+    private bool HandleKeyPressedWithTooltipVisible(ref Message m)
+    {
+        DismissVisibleHoverTooltips();
+        Activate();
+        _canvas.Focus();
+        if (TryProcessEditorKeyPreview(ref m))
+            return true;
+        if (TryForwardKeyDownToCanvas(ref m))
+            return true;
+        // Tooltip owned the key target — consume so it is not lost to a hidden hwnd.
+        return true;
+    }
+
+    /// <summary>
+    /// Delivers keys handled in <see cref="AnnotationCanvas.OnKeyDown"/> when only focus
+    /// was restored in <see cref="TryProcessEditorKeyPreview"/> (Space pan, Delete, Esc).
+    /// </summary>
+    private bool TryForwardKeyDownToCanvas(ref Message m)
+    {
+        if (m.Msg is not (0x100 or 0x104))
+            return false;
+
+        var key = (Keys)(int)m.WParam;
+        var mod = Control.ModifierKeys;
+        bool needsCanvas = key is Keys.Space or Keys.Delete or Keys.Escape && mod == Keys.None;
+        if (!needsCanvas)
+            return false;
+        if (_canvas.IsDisposed || !_canvas.IsHandleCreated)
+            return false;
+
+        CyberSnap.Native.User32.SendMessage(_canvas.Handle, m.Msg, m.WParam, m.LParam);
+        return true;
+    }
+
+    /// <summary>
+    /// Shared editor shortcut routing for <see cref="ProcessKeyPreview"/> and
+    /// <see cref="IMessageFilter.PreFilterMessage"/> (tooltip was blocking the first keypress).
+    /// </summary>
+    private bool TryProcessEditorKeyPreview(ref Message m)
+    {
+        if (m.Msg is not (0x100 or 0x104))
+            return false;
+
+        var key = (Keys)(int)m.WParam;
+        var mod = Control.ModifierKeys;
+
+        if (mod == Keys.Control && key is Keys.N) { DoNewCanvas(); return true; }
+        if (mod == Keys.Control && key is Keys.O) { DoOpen(); return true; }
+        if (mod == Keys.Control && key is Keys.S) { DoSave(); return true; }
+        if (mod == (Keys.Control | Keys.Shift) && key is Keys.S) { DoSaveAs(); return true; }
+        if (mod == Keys.Control && key is Keys.C) { DoCopy(); return true; }
+        if (mod == Keys.Control && key is Keys.V) { DoPaste(); return true; }
+
+        if (mod == Keys.Control && key is Keys.Z)
+        {
+            if (mod.HasFlag(Keys.Shift)) _canvas.Redo(); else _canvas.Undo();
+            return true;
+        }
+        if (mod == Keys.Control && key is Keys.Y) { _canvas.Redo(); return true; }
+        if (mod == Keys.Control && key is Keys.D) { _canvas.DuplicateSelectionInternal(); return true; }
+        if (mod == Keys.Control && key is Keys.A) { _canvas.SelectAll(); return true; }
+
+        if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod)
+            && EditorToolHotkeyHelper.TryActivateTool(_canvas, key | mod))
+            return true;
+
+        if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod))
+        {
+            var e = new KeyEventArgs(key | mod);
+            if (EditorViewHotkeyHelper.TryHandleViewHotkeys(_canvas, e))
+                return true;
+        }
+
+        if (key is Keys.Space && !_canvas.Focused) { _canvas.Focus(); return false; }
+        if ((key is Keys.Delete or Keys.Escape || EditorViewHotkeyHelper.IsAnyViewHotkey(key | mod))
+            && !_canvas.Focused)
+        {
+            _canvas.Focus();
+        }
+
+        return false;
     }
 
 

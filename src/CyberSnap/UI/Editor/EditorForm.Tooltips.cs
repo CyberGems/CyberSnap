@@ -67,8 +67,17 @@ public sealed partial class EditorForm
             return;
         }
 
+        if (WindowState == FormWindowState.Minimized)
+        {
+            DismissVisibleHoverTooltips();
+            return;
+        }
+
         var fg = GetForegroundWindow();
-        bool isWindowActive = fg == Handle || (_hoverToolTip != null && fg == _hoverToolTip.Handle);
+        // Keep the tooltip visible while it is the foreground window (TopMost quirk); otherwise
+        // the timer would hide and re-show it every tick. Minimize/restore is handled explicitly.
+        bool isWindowActive = fg == Handle
+            || (_hoverToolTip is { Visible: true } tip && fg == tip.Handle);
         bool isAnyMenuOpen = (_burgerMenu != null && _burgerMenu.Visible)
             || (_canvasMenu != null && _canvasMenu.Visible)
             || (_imageMenu != null && _imageMenu.Visible)
@@ -227,6 +236,22 @@ public sealed partial class EditorForm
             return;
         _hoverAnchor = null;
         try { _hoverToolTip?.Hide(); } catch { }
+    }
+
+    /// <summary>
+    /// Hides any visible hover tooltip and resets dwell state (keyboard, minimize, etc.).
+    /// </summary>
+    private void DismissVisibleHoverTooltips()
+    {
+        _pendingHover = null;
+        _pendingHoverTicks = 0;
+        HideResizeTip();
+        if (_hoverAnchor is { } anchor)
+            HideHoverTooltip(anchor);
+        else if (_hoverToolTip is { Visible: true, IsDisposed: false })
+        {
+            try { _hoverToolTip.Hide(); } catch { }
+        }
     }
 
     // Convenience: appends a keyboard-shortcut hint (language-neutral) to a localized label,

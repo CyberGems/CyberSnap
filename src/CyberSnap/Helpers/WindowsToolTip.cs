@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using CyberSnap.Native;
 
 namespace CyberSnap.Helpers;
 
@@ -39,6 +40,21 @@ public sealed class WindowsToolTip : Form
             m.Result = HTTRANSPARENT;
             return;
         }
+
+        // The tooltip is a separate top-level window and can become the keyboard target
+        // despite WS_EX_NOACTIVATE. Forward key-down messages to the owner synchronously
+        // so hotkeys fire on the same keypress (PostMessage was one frame too late).
+        if (m.Msg is User32.WM_KEYDOWN or User32.WM_SYSKEYDOWN)
+        {
+            var owner = Owner;
+            Hide();
+            if (owner is { IsDisposed: false } && owner.IsHandleCreated)
+            {
+                User32.SendMessage(owner.Handle, m.Msg, m.WParam, m.LParam);
+            }
+            return;
+        }
+
         base.WndProc(ref m);
     }
 
