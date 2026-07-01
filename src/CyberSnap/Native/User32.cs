@@ -366,8 +366,12 @@ internal static partial class User32
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool ReleaseCapture();
 
+    [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
+    public static partial IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
     [LibraryImport("user32.dll")]
-    public static partial IntPtr SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool PostMessageW(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
     [LibraryImport("user32.dll")]
     public static partial void keybd_event(byte bVk, byte bScan, uint dwFlags, nuint dwExtraInfo);

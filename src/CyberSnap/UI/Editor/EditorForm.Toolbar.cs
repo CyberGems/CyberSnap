@@ -557,7 +557,11 @@ public sealed partial class EditorForm
         windowActions.Controls.Add(_windowStateButton);
 
         _minimizeButton = MakeChromeButton("minimize", LocalizationService.Translate("Minimize"));
-        _minimizeButton.Click += (_, _) => WindowState = FormWindowState.Minimized;
+        _minimizeButton.Click += (_, _) =>
+        {
+            DismissVisibleHoverTooltips();
+            WindowState = FormWindowState.Minimized;
+        };
         windowActions.Controls.Add(_minimizeButton);
 
         _menuButton = MakeChromeButton("menu", LocalizationService.Translate("Menu"));
@@ -1219,6 +1223,7 @@ public sealed partial class EditorForm
 
     private void ToggleWindowState()
     {
+        DismissVisibleHoverTooltips();
         if (_isManualMaximized)
             RestoreManualMaximize();
         else
