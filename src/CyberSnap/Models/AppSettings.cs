@@ -628,11 +628,11 @@ public sealed class AppSettings
         HotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
         HotkeyKey = 0x41;
         OcrHotkeyModifiers = 0;
-        OcrHotkeyKey = 0;
+        OcrHotkeyKey = 0x4F;        // O
         PickerHotkeyModifiers = 0;
-        PickerHotkeyKey = 0;
+        PickerHotkeyKey = 0x43;     // C
         ScanHotkeyModifiers = 0;
-        ScanHotkeyKey = 0;
+        ScanHotkeyKey = 0x51;       // Q
         CenterHotkeyModifiers = 0;
         CenterHotkeyKey = 0;
         FullscreenHotkeyModifiers = 0;
@@ -642,7 +642,7 @@ public sealed class AppSettings
         RepeatLastAreaHotkeyModifiers = 0;
         RepeatLastAreaHotkeyKey = 0;
         RulerHotkeyModifiers = 0;
-        RulerHotkeyKey = 0;
+        RulerHotkeyKey = 0x52;      // R
         RecordHotkeyModifiers = 0;
         RecordHotkeyKey = 0;
         RecordGifHotkeyModifiers = 0;
