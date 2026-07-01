@@ -82,6 +82,30 @@ internal static class EditorToolHotkeyHelper
         return Helpers.HotkeyFormatter.Format(mod, key);
     }
 
+    /// <summary>Formatted hotkey for an editor view/zoom shortcut, or null when unassigned.</summary>
+    public static string? GetViewHotkeyLabel(string viewId)
+    {
+        var settings = SettingsService.LoadStatic();
+        if (settings is null)
+            return null;
+        var (mod, key) = settings.GetEditorViewHotkey(viewId);
+        if (key == 0)
+            return null;
+        return Helpers.HotkeyFormatter.Format(mod, key);
+    }
+
+    /// <summary>Formatted hotkey for the global capture shortcut, or null when unassigned.</summary>
+    public static string? GetCaptureHotkeyLabel()
+    {
+        var settings = SettingsService.LoadStatic();
+        if (settings is null)
+            return null;
+        var (mod, key) = (settings.HotkeyModifiers, settings.HotkeyKey);
+        if (key == 0)
+            return null;
+        return Helpers.HotkeyFormatter.Format(mod, key);
+    }
+
     /// <summary>File/edit chords that must not be intercepted as tool-selection hotkeys.</summary>
     public static bool IsReservedEditorChord(Keys keyData)
     {

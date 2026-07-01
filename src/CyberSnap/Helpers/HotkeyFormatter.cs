@@ -16,7 +16,7 @@ public static class HotkeyFormatter
         var k = KeyInterop.KeyFromVirtualKey((int)key);
         var keyStr = k switch
         {
-            Key.Space => "Espacio",
+            Key.Space => LocalizationService.Translate("Space"),
             Key.D0 => "0", Key.D1 => "1", Key.D2 => "2", Key.D3 => "3", Key.D4 => "4",
             Key.D5 => "5", Key.D6 => "6", Key.D7 => "7", Key.D8 => "8", Key.D9 => "9",
             Key.OemMinus => "-", Key.OemPlus => "=", Key.Oem3 => "`",

@@ -659,9 +659,9 @@ public sealed class AppSettings
         StandaloneOcrHotkeyKey = 0;
         StandaloneScanHotkeyModifiers = 0;
         StandaloneScanHotkeyKey = 0;
-        ToolHotkeys?.Clear();
-        EditorToolHotkeys?.Clear();
-        EditorViewHotkeys?.Clear();
+        ToolHotkeys = null;
+        EditorToolHotkeys = null;
+        EditorViewHotkeys = null;
     }
 }
 
