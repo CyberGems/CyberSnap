@@ -515,6 +515,8 @@ public sealed partial class RegionOverlayForm
                     // The step badge ghost is centered on the cursor and acts as the pointer,
                     // so hide the crosshair (it would sit on top of the number).
                     target = _blankCursor;
+                else if (_mode == CaptureMode.ColorPicker)
+                    target = CursorFactory.EyedropperCursor;
                 else
                     target = CursorFactory.PrecisionCursor;
             }
@@ -532,6 +534,8 @@ public sealed partial class RegionOverlayForm
             }
             target = CursorFactory.EraserCursor;
         }
+        else if (_mode == CaptureMode.ColorPicker)
+            target = CursorFactory.EyedropperCursor;
         else
             target = CursorFactory.PrecisionCursor;
 

@@ -86,7 +86,7 @@ public sealed class StandaloneColorPickerForm : Form
         _magBitmap = new Bitmap(PW, PH, PixelFormat.Format32bppArgb);
         _magPixels = new int[PW * PH];
 
-        Cursor = CursorFactory.PrecisionCursor;
+        Cursor = CursorFactory.EyedropperCursor;
 
         // ── Banner ──
         var pickerLabel = LocalizationService.Translate("Color picker") + ": ";
