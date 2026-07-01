@@ -192,6 +192,7 @@ public sealed partial class RegionOverlayForm
         {
             _pickerTimer.Stop();
             _pickerReady = false;
+            Cursor = CursorFactory.EyedropperCursor;
         }
         else
         {

@@ -349,7 +349,7 @@ public sealed partial class RegionOverlayForm
 
     private (int, int) MagPos(Point c, bool showInfo = true, Rectangle avoidRect = default)
     {
-        int formW = PickerMagnifierForm.TotalW;
+        int formW = PickerMagnifierForm.MinFormW;
         int formH = PickerMagnifierForm.GetTotalHeight(showInfo);
         int margin = 12;
         int preferredIndex = _captureMagnifierPlacementIndex;

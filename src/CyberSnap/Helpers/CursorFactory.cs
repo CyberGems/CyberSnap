@@ -8,6 +8,7 @@ namespace CyberSnap.Helpers;
 internal static class CursorFactory
 {
     private static Cursor? _eraserCursor;
+    private static Cursor? _eyedropperCursor;
     private static Cursor? _panCursor;
     private static Cursor? _precisionCursor;
     private static Cursor? _hiddenCursor;
@@ -187,6 +188,83 @@ internal static class CursorFactory
         }
 
         return Cursors.Default;
+    }
+
+    /// <summary>
+    /// Eyedropper cursor for screen color picking. Hotspot sits at the dropper tip so the
+    /// sampled pixel aligns with where the user is pointing.
+    /// </summary>
+    public static Cursor EyedropperCursor
+    {
+        get
+        {
+            if (_eyedropperCursor is null)
+                _eyedropperCursor = CreateEyedropperCursor();
+            return _eyedropperCursor;
+        }
+    }
+
+    private static Cursor CreateEyedropperCursor()
+    {
+        const int size = 50;
+        const int iconSize = 36;
+        int offset = (size - iconSize) / 2;
+
+        // Fluent eyedropper tip ≈ (3.4, 12.85) in a 20×20 viewBox — nudge Y down so the
+        // hotspot aligns with the visible tip (rendered icon tip sits lower than path coords).
+        int hotspotX = offset + (int)Math.Round(3.4 / 20.0 * iconSize);
+        int hotspotY = offset + (int)Math.Round(12.85 / 20.0 * iconSize) + 6;
+
+        using var bmp = new Bitmap(size, size);
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(Color.Transparent);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+        var shadow = StreamlineIcons.RenderBitmap("picker", Color.FromArgb(160, 0, 0, 0), iconSize, active: true);
+        if (shadow != null)
+        {
+            g.DrawImage(shadow, offset + 1, offset + 1, iconSize, iconSize);
+            shadow.Dispose();
+        }
+
+        var icon = StreamlineIcons.RenderBitmap("picker", Color.FromArgb(245, 255, 255, 255), iconSize, active: true);
+        if (icon != null)
+        {
+            g.DrawImage(icon, offset, offset, iconSize, iconSize);
+            icon.Dispose();
+        }
+
+        IntPtr hIcon = bmp.GetHicon();
+        try
+        {
+            var iconInfo = new IconInfo();
+            if (GetIconInfo(hIcon, ref iconInfo))
+            {
+                iconInfo.fIcon = false;
+                iconInfo.xHotspot = hotspotX;
+                iconInfo.yHotspot = hotspotY;
+
+                IntPtr hCursor = CreateIconIndirect(ref iconInfo);
+
+                if (iconInfo.hbmMask != IntPtr.Zero)
+                    DeleteObject(iconInfo.hbmMask);
+                if (iconInfo.hbmColor != IntPtr.Zero)
+                    DeleteObject(iconInfo.hbmColor);
+
+                if (hCursor != IntPtr.Zero)
+                {
+                    DestroyIcon(hIcon);
+                    return new Cursor(hCursor);
+                }
+            }
+        }
+        catch
+        {
+            DestroyIcon(hIcon);
+        }
+
+        return Cursors.Cross;
     }
 
     /// <summary>
