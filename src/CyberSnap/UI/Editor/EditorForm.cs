@@ -26,6 +26,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private const int WM_ENTERSIZEMOVE = 0x0231;
     private const int WM_EXITSIZEMOVE = 0x0232;
     private const int WM_LBUTTONDBLCLK = 0x0203;
+    private const int DefaultEditorWidth = 1400;
+    private const int DefaultEditorHeight = 920;
+    private const int RestoredWindowMargin = 80;
     private const int HTCLIENT = 1;
     private const int HTCAPTION = 2;
     private const int HTLEFT = 10;
@@ -50,7 +53,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private string? _savedFilePath;
     private bool _suppressCloseConfirm;
     private bool _isManualMaximized;
+    private bool _userRestoredWindow;
     private Rectangle _restoreBounds;
+    private DateTime _windowStateToggleGuardUntilUtc;
+    private bool _windowStateToggleInProgress;
     private FormWindowState _lastWindowState = FormWindowState.Normal;
     private bool _enableComposited = true;
     private bool _messageFilterRegistered;
@@ -1563,7 +1569,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
     /// </summary>
     private void MaybeAutoMaximizeForCapture()
     {
-        if (_isManualMaximized || _canvas is null)
+        if (_isManualMaximized || _userRestoredWindow || _canvas is null)
             return;
 
         var bmp = _canvas.BaseBitmap;
@@ -1578,10 +1584,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (area.Width <= Width && area.Height <= Height)
             return; // already as big as the screen allows
 
-        ApplyManualMaximize();
+        ApplyManualMaximize(userInitiated: false);
     }
 
-    private void ApplyManualMaximize()
+    private void ApplyManualMaximize(bool userInitiated = true)
     {
         if (_isManualMaximized)
             return;
@@ -1589,6 +1595,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
         _restoreBounds = Bounds;
         var area = Screen.FromControl(this).WorkingArea;
         _isManualMaximized = true;
+        if (userInitiated)
+            _userRestoredWindow = false;
 
         _enableComposited = true;
         UpdateStyles();
@@ -1614,17 +1622,19 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (!_isManualMaximized)
             return;
 
-        var restoreBounds = _restoreBounds;
+        var restoreArea = Screen.FromRectangle(_restoreBounds).WorkingArea;
+        var restoreBounds = NormalizeRestoredBounds(_restoreBounds, restoreArea, MinimumSize);
         if (restoreBounds.Width < MinimumSize.Width || restoreBounds.Height < MinimumSize.Height)
         {
             restoreBounds = new Rectangle(
                 Left + 80,
                 Top + 60,
-                Math.Max(MinimumSize.Width, 1400),
-                Math.Max(MinimumSize.Height, 920));
+                Math.Max(MinimumSize.Width, DefaultEditorWidth),
+                Math.Max(MinimumSize.Height, DefaultEditorHeight));
         }
 
         _isManualMaximized = false;
+        _userRestoredWindow = true;
 
         _enableComposited = true;
         UpdateStyles();
@@ -1643,6 +1653,35 @@ public sealed partial class EditorForm : Form, IMessageFilter
             UpdateStyles();
             RefreshLayoutAndRedraw();
         }
+    }
+
+    private static Size GetEditorRestoredSize(Rectangle workingArea, Size minimumSize)
+    {
+        int width = Math.Min(DefaultEditorWidth, Math.Max(minimumSize.Width, workingArea.Width - RestoredWindowMargin));
+        int height = Math.Min(DefaultEditorHeight, Math.Max(minimumSize.Height, workingArea.Height - RestoredWindowMargin));
+        return new Size(width, height);
+    }
+
+    private static Rectangle NormalizeRestoredBounds(Rectangle bounds, Rectangle workingArea, Size minimumSize)
+    {
+        bool tooSmall = bounds.Width < minimumSize.Width || bounds.Height < minimumSize.Height;
+        bool tooLarge = bounds.Width >= workingArea.Width - 8 || bounds.Height >= workingArea.Height - 8;
+        bool offscreen = !workingArea.IntersectsWith(bounds);
+        if (tooSmall || tooLarge || offscreen)
+        {
+            var size = GetEditorRestoredSize(workingArea, minimumSize);
+            return new Rectangle(
+                workingArea.Left + Math.Max(0, (workingArea.Width - size.Width) / 2),
+                workingArea.Top + Math.Max(0, (workingArea.Height - size.Height) / 2),
+                size.Width,
+                size.Height);
+        }
+
+        int width = Math.Min(bounds.Width, workingArea.Width);
+        int height = Math.Min(bounds.Height, workingArea.Height);
+        int x = Math.Clamp(bounds.X, workingArea.Left, Math.Max(workingArea.Left, workingArea.Right - width));
+        int y = Math.Clamp(bounds.Y, workingArea.Top, Math.Max(workingArea.Top, workingArea.Bottom - height));
+        return new Rectangle(x, y, width, height);
     }
 
     private void UpdateWindowChromeRegion()

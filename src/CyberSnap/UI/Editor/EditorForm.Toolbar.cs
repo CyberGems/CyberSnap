@@ -1221,15 +1221,32 @@ public sealed partial class EditorForm
         return separator;
     }
 
+    // WinForms title-bar buttons can fire a spurious second Click after a synchronous resize
+    // (the icon swaps under the still-pressed cursor). Ignore duplicate toggles briefly after.
+    private const int WindowStateToggleCooldownMs = 300;
+
     private void ToggleWindowState()
     {
-        DismissVisibleHoverTooltips();
-        if (_isManualMaximized)
-            RestoreManualMaximize();
-        else
-            ApplyManualMaximize();
+        var now = DateTime.UtcNow;
+        if (_windowStateToggleInProgress || now < _windowStateToggleGuardUntilUtc)
+            return;
 
-        UpdateWindowStateButton();
+        DismissVisibleHoverTooltips();
+        _windowStateToggleInProgress = true;
+        try
+        {
+            if (_isManualMaximized)
+                RestoreManualMaximize();
+            else
+                ApplyManualMaximize();
+
+            UpdateWindowStateButton();
+        }
+        finally
+        {
+            _windowStateToggleInProgress = false;
+            _windowStateToggleGuardUntilUtc = DateTime.UtcNow.AddMilliseconds(WindowStateToggleCooldownMs);
+        }
     }
 
     private void UpdateWindowStateButton()
@@ -2343,6 +2360,13 @@ internal sealed class EditorCommandButton : Button
 
 internal sealed class EditorChromeButton : EditorButtonBase
 {
+    public EditorChromeButton()
+    {
+        // Title-bar chrome has no double-click action; suppress StandardDoubleClick so WinForms
+        // does not synthesize extra click pairs on the maximize/restore control.
+        SetStyle(ControlStyles.StandardDoubleClick, false);
+    }
+
     protected override Color DefaultTransparentBackColor => EditorColors.TitleBar;
 
     protected override Color IdleFill => Color.Transparent;
