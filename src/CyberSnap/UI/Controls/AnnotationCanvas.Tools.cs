@@ -460,6 +460,23 @@ public sealed partial class AnnotationCanvas
                 if (surfIdx >= 0) clickedIdx = surfIdx;
             }
 
+            // Click on empty area with a drawing tool: clear any active selection before
+            // starting to draw (same as Pick/Move behaviour). Emoji and Magnifier are
+            // excluded because they place objects on click, not draw shapes.
+            // Text tool returns early: commit + deselect only, no new text instance.
+            if (clickedIdx < 0 && (_selectedAnnotationIndex >= 0 || _inlineTextBox is not null)
+                && _activeTool != CanvasTool.Magnifier && _activeTool != CanvasTool.Emoji)
+            {
+                _selectedAnnotationIndex = -1;
+                ClearMultiSelection();
+                if (_activeTool == CanvasTool.Text)
+                {
+                    CommitOrCancelInlineText(commit: true);
+                    return;
+                }
+                Invalidate();
+            }
+
             if (clickedIdx >= 0)
             {
                 if (_activeTool == CanvasTool.Pan)
@@ -1530,14 +1547,7 @@ public sealed partial class AnnotationCanvas
         }
         if (e.KeyCode == Keys.Escape)
         {
-            // Esc mirrors the right-click escape: cancel any in-progress action and
-            // deselect the active tool back to neutral Pan. When already neutral, just
-            // clear any stray in-progress/crop state.
-            if (!TryDeselectTool())
-            {
-                CancelInProgressTool();
-                CancelCropPending();
-            }
+            ProcessEscapeKey();
             e.Handled = true;
             return;
         }
@@ -2173,11 +2183,39 @@ public sealed partial class AnnotationCanvas
         Invalidate();               // show the floating toolbar
     }
 
+    /// <summary>
+    /// Escape routing for the editor keyboard forwarder (ProcessKeyPreview / ProcessCmdKey).
+    /// Must be called directly — SendMessage re-enters ProcessKeyPreview and never reaches
+    /// <see cref="OnKeyDown"/>.
+    /// </summary>
+    public void ProcessEscapeKey()
+    {
+        if (TryFinishInlineTextFromEscape())
+            return;
+
+        if (_activeTool == CanvasTool.Text)
+            return;
+
+        if (!TryDeselectTool())
+        {
+            CancelInProgressTool();
+            CancelCropPending();
+        }
+    }
+
+    private bool TryFinishInlineTextFromEscape()
+    {
+        if (_inlineTextBox is null) return false;
+        bool hasText = !string.IsNullOrWhiteSpace(_inlineTextBox.Text);
+        CommitOrCancelInlineText(commit: hasText);
+        return true;
+    }
+
     private void InlineTextBox_KeyDown(object? sender, KeyEventArgs e)
     {
         if (e.KeyCode == Keys.Escape)
         {
-            CommitOrCancelInlineText(commit: false);
+            ProcessEscapeKey();
             e.Handled = true;
             e.SuppressKeyPress = true;
         }
@@ -2194,6 +2232,7 @@ public sealed partial class AnnotationCanvas
         if (_inlineTextBox is null) return;
         var text = _inlineTextBox.Text;
         var origin = _inlineTextOrigin;
+        var dirty = GetInlineTextEditingRepaintBounds();
 
         Controls.Remove(_inlineTextBox);
         _inlineTextBox.Dispose();
@@ -2217,7 +2256,26 @@ public sealed partial class AnnotationCanvas
         _hoveredTextBtn = -1;
         _textGripDragging = false;
         Focus();
-        Invalidate();
+        if (dirty != Rectangle.Empty)
+            Invalidate(dirty);
+        else
+            Invalidate();
+    }
+
+    private Rectangle GetInlineTextEditingRepaintBounds()
+    {
+        var textBounds = Rectangle.Round(GetInlineTextScreenBounds());
+        if (textBounds.IsEmpty)
+            return Rectangle.Empty;
+
+        textBounds.Inflate(24, 24);
+        if (!_textToolbarRect.IsEmpty)
+        {
+            var toolbar = Rectangle.Round(_textToolbarRect);
+            toolbar.Inflate(8, 8);
+            textBounds = Rectangle.Union(textBounds, toolbar);
+        }
+        return textBounds;
     }
 
     // ── Hit-testing & selection helpers ────────────────────────────────────
