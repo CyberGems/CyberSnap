@@ -34,7 +34,7 @@ public sealed partial class RegionOverlayForm
             Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_SHOWWINDOW);
         Activate();
         Focus();
-        _escapeHook = CaptureEscapeKeyHook.Install(this, Cancel);
+        _escapeHook = CaptureEscapeKeyHook.Install(this, HandleEscapeKey);
         EnsureToolbarReady();
         Invalidate();
         Update();
@@ -169,7 +169,8 @@ public sealed partial class RegionOverlayForm
                 {
                     e.SuppressKeyPress = true;
                     e.Handled = true;
-                    Cancel();
+                    bool hasText = !string.IsNullOrWhiteSpace(_textBox?.Text);
+                    CommitOrCancelInlineText(commit: hasText);
                 }
             };
             _textBox.TextChanged += (_, _) =>

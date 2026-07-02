@@ -6,25 +6,42 @@ namespace CyberSnap.Capture;
 
 public sealed partial class RegionOverlayForm
 {
+    /// <summary>
+    /// Central Escape routing: inline text commit/cancel, dismiss overlays, then cancel capture.
+    /// </summary>
+    private void HandleEscapeKey()
+    {
+        if (_isTyping)
+        {
+            bool hasText = !string.IsNullOrWhiteSpace(_textBox?.Text ?? _textBuffer);
+            CommitOrCancelInlineText(commit: hasText);
+            return;
+        }
+
+        if (_quickStartGuide != null && _quickStartGuide.Visible)
+        {
+            DismissQuickStartGuide();
+            return;
+        }
+
+        if (_emojiPickerOpen)
+        {
+            _emojiPickerOpen = false;
+            HideEmojiSearchBox();
+            RefreshToolbar();
+            Invalidate();
+            return;
+        }
+
+        Cancel();
+    }
+
     // ProcessCmdKey always receives ESC (OnKeyDown sometimes doesn't)
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
         if ((keyData & Keys.KeyCode) == Keys.Escape)
         {
-            if (_quickStartGuide != null && _quickStartGuide.Visible)
-            {
-                DismissQuickStartGuide();
-                return true;
-            }
-            if (_emojiPickerOpen)
-            {
-                _emojiPickerOpen = false;
-                HideEmojiSearchBox();
-                RefreshToolbar();
-                Invalidate();
-                return true;
-            }
-            Cancel();
+            HandleEscapeKey();
             return true;
         }
         if ((keyData & Keys.KeyCode) == Keys.Enter
@@ -44,20 +61,7 @@ public sealed partial class RegionOverlayForm
         {
             e.SuppressKeyPress = true;
             e.Handled = true;
-            if (_quickStartGuide != null && _quickStartGuide.Visible)
-            {
-                DismissQuickStartGuide();
-                return;
-            }
-            if (_emojiPickerOpen)
-            {
-                _emojiPickerOpen = false;
-                HideEmojiSearchBox();
-                RefreshToolbar();
-                Invalidate();
-                return;
-            }
-            Cancel();
+            HandleEscapeKey();
             return;
         }
 

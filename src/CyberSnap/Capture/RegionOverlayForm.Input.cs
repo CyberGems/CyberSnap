@@ -390,6 +390,19 @@ public sealed partial class RegionOverlayForm
                 if (surfIdx >= 0) clickedIdx = surfIdx;
             }
 
+            // Click on empty area with a drawing tool: clear any active selection before
+            // starting to draw (same as Move mode behaviour). Emoji and Magnifier are
+            // excluded because they place objects on click, not draw shapes.
+            // Text mode returns early: deselect only, no new text instance.
+            if (clickedIdx < 0 && _selectedAnnotationIndex >= 0
+                && _mode != CaptureMode.Magnifier && _mode != CaptureMode.Emoji)
+            {
+                _selectedAnnotationIndex = -1;
+                _multiSelectedIndices.Clear();
+                Invalidate();
+                if (_mode == CaptureMode.Text) return;
+            }
+
             if (clickedIdx >= 0)
             {
                 _selectedAnnotationIndex = clickedIdx;

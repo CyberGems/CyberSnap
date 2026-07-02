@@ -1381,8 +1381,16 @@ public sealed partial class EditorForm : Form, IMessageFilter
         { _canvas.Redo(); return true; }
         if (keyData == (Keys.Control | Keys.D)) { _canvas.DuplicateSelectionInternal(); return true; }
 
+        // Inline text Esc must commit/cancel directly — do not rely on SendMessage, which
+        // re-enters ProcessKeyPreview and never reaches AnnotationCanvas.OnKeyDown.
+        if (keyData == Keys.Escape)
+        {
+            _canvas.ProcessEscapeKey();
+            return true;
+        }
+
         // Ensure canvas gets focus for single-key shortcuts.
-        if (!_canvas.Focused && (keyData == Keys.Space || keyData == Keys.Delete || keyData == Keys.Escape
+        if (!_canvas.Focused && (keyData == Keys.Space || keyData == Keys.Delete
             || EditorViewHotkeyHelper.IsAnyViewHotkey(keyData)))
         {
             _canvas.Focus();
@@ -1418,7 +1426,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     /// <summary>
     /// Delivers keys handled in <see cref="AnnotationCanvas.OnKeyDown"/> when only focus
-    /// was restored in <see cref="TryProcessEditorKeyPreview"/> (Space pan, Delete, Esc).
+    /// was restored in <see cref="TryProcessEditorKeyPreview"/> (Space pan, Delete).
+    /// Escape is routed via <see cref="AnnotationCanvas.ProcessEscapeKey"/> directly.
     /// </summary>
     private bool TryForwardKeyDownToCanvas(ref Message m)
     {
@@ -1427,10 +1436,18 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         var key = (Keys)(int)m.WParam;
         var mod = Control.ModifierKeys;
-        bool needsCanvas = key is Keys.Space or Keys.Delete or Keys.Escape && mod == Keys.None;
-        if (!needsCanvas)
+        if (mod != Keys.None)
             return false;
         if (_canvas.IsDisposed || !_canvas.IsHandleCreated)
+            return false;
+
+        if (key == Keys.Escape)
+        {
+            _canvas.ProcessEscapeKey();
+            return true;
+        }
+
+        if (key is not (Keys.Space or Keys.Delete))
             return false;
 
         CyberSnap.Native.User32.SendMessage(_canvas.Handle, m.Msg, m.WParam, m.LParam);
@@ -1477,7 +1494,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
 
         if (key is Keys.Space && !_canvas.Focused) { _canvas.Focus(); return false; }
-        if ((key is Keys.Delete or Keys.Escape || EditorViewHotkeyHelper.IsAnyViewHotkey(key | mod))
+        if ((key is Keys.Delete || EditorViewHotkeyHelper.IsAnyViewHotkey(key | mod))
             && !_canvas.Focused)
         {
             _canvas.Focus();

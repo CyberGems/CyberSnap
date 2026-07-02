@@ -11,13 +11,22 @@ public sealed partial class RegionOverlayForm
 {
     // All text input is handled by off-screen TextBox controls
 
-    private void CommitText()
+    private void CommitText() => CommitOrCancelInlineText(commit: true);
+
+    /// <summary>
+    /// Ends inline text editing. Commits the annotation when <paramref name="commit"/> is true
+    /// and there is non-whitespace text; otherwise discards. Stays in Text tool either way.
+    /// </summary>
+    private void CommitOrCancelInlineText(bool commit)
     {
-        // Sync from TextBox before committing
+        if (!_isTyping) return;
+
         if (_textBox != null && _textBox.Visible)
             _textBuffer = _textBox.Text;
-        if (_isTyping && _textBuffer.Length > 0)
+
+        if (commit && !string.IsNullOrWhiteSpace(_textBuffer))
             AddAnnotation(new TextAnnotation(_textPos, _textBuffer, _textFontSize, _toolColor, _textBold, _textItalic, _textStroke, _textShadow, _textBackground, _textFontFamily));
+
         _isTyping = false;
         _hoveredTextBtn = -1;
         HideToolbarTooltip();
