@@ -414,7 +414,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
         PerformLayout();
 
         FormClosing += OnFormClosing;
-        Activated += (_, _) => RefreshUi();
+        Activated += (_, _) =>
+        {
+            if (IsDisposed || Disposing || !Visible || _canvas.IsDisposed)
+                return;
+            RefreshUi();
+        };
         FormClosed += (_, _) =>
         {
             _saveStatusTimer.Stop();
@@ -671,6 +676,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     private void RefreshUi()
     {
+        if (IsDisposed || Disposing || _canvas.IsDisposed)
+            return;
+
         UpdateZoomStatus();
         UpdateToolButtonState();
         UpdateCaptureCaption();
@@ -693,6 +701,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
     /// </summary>
     private bool PromptSaveChanges()
     {
+        if (WindowState == FormWindowState.Minimized)
+            WindowState = FormWindowState.Normal;
+
         var docName = string.IsNullOrWhiteSpace(_savedFilePath)
             ? LocalizationService.Translate("Untitled")
             : TruncateDocName(Path.GetFileName(_savedFilePath), 36);
