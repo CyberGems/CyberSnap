@@ -1420,11 +1420,24 @@ public sealed partial class EditorForm
         var bitmap = _canvas.BaseBitmap;
         if (bitmap is null) return;
 
+        int width;
+        int height;
+        try
+        {
+            width = bitmap.Width;
+            height = bitmap.Height;
+        }
+        catch (ArgumentException)
+        {
+            // BaseBitmap can still be referenced after the canvas disposes it during close.
+            return;
+        }
+
         var fileName = string.IsNullOrWhiteSpace(_savedFilePath)
             ? LocalizationService.Translate("Untitled")
             : Path.GetFileName(_savedFilePath);
         
-        var titleText = $"{fileName} ({bitmap.Width} x {bitmap.Height} px)";
+        var titleText = $"{fileName} ({width} x {height} px)";
 
         if (_titleFileNameLabel != null)
         {

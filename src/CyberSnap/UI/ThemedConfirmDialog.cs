@@ -7,6 +7,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using CyberSnap.Helpers;
+using CyberSnap.Native;
 using Button = System.Windows.Controls.Button;
 using CheckBox = System.Windows.Controls.CheckBox;
 using WpfBrushes = System.Windows.Media.Brushes;
@@ -73,7 +74,8 @@ internal sealed class ThemedConfirmDialog : Window
             try
             {
                 var editor = CyberSnap.UI.Editor.EditorForm.ActiveInstance;
-                if (editor != null && !editor.IsDisposed && editor.Visible)
+                if (editor != null && !editor.IsDisposed && editor.Visible
+                    && editor.WindowState != System.Windows.Forms.FormWindowState.Minimized)
                 {
                     var helper = new WindowInteropHelper(this);
                     if (helper.Owner == editor.Handle)
@@ -173,17 +175,7 @@ internal sealed class ThemedConfirmDialog : Window
         string message)
     {
         var dialog = new ThemedConfirmDialog(title, message, "Yes", null, Kind.SavePrompt);
-        if (owner is { IsVisible: true })
-        {
-            dialog.Owner = owner;
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
-        else if (ownerHandle != IntPtr.Zero)
-        {
-            new WindowInteropHelper(dialog).Owner = ownerHandle;
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
-
+        AssignDialogOwner(dialog, owner, ownerHandle);
         dialog.ShowDialog();
         return dialog._saveResult;
     }
@@ -215,16 +207,7 @@ internal sealed class ThemedConfirmDialog : Window
     {
         dontShowAgain = false;
         var dialog = new ThemedConfirmDialog(title, message, primaryText, secondaryText, kind, iconId, showSuppressCheck);
-        if (owner is { IsVisible: true })
-        {
-            dialog.Owner = owner;
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
-        else if (ownerHandle != IntPtr.Zero)
-        {
-            new WindowInteropHelper(dialog).Owner = ownerHandle;
-            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        }
+        AssignDialogOwner(dialog, owner, ownerHandle);
 
         bool result = dialog.ShowDialog() == true && dialog._confirmed;
         dontShowAgain = dialog._suppress;
@@ -569,6 +552,34 @@ internal sealed class ThemedConfirmDialog : Window
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Restores a minimized owner HWND before assigning it so modal dialogs stay visible
+    /// (WinForms editors can be minimized when the user closes from the taskbar).
+    /// </summary>
+    private static void AssignDialogOwner(ThemedConfirmDialog dialog, Window? owner, IntPtr ownerHandle)
+    {
+        if (owner is { IsVisible: true })
+        {
+            if (owner.WindowState == WindowState.Minimized)
+                owner.WindowState = WindowState.Normal;
+            dialog.Owner = owner;
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            return;
+        }
+
+        if (ownerHandle == IntPtr.Zero)
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            return;
+        }
+
+        if (User32.IsIconic(ownerHandle))
+            User32.ShowWindow(ownerHandle, User32.SW_RESTORE);
+
+        new WindowInteropHelper(dialog).Owner = ownerHandle;
+        dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+    }
 
     private static DropShadowEffect Glow(WpfColor color, double blur, double opacity) => new()
     {
