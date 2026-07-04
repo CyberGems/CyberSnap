@@ -39,6 +39,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <Grid x:Name="ImageArea" Grid.Row="0" Visibility="Collapsed" MaxHeight="176" HorizontalAlignment="Stretch">
@@ -48,21 +49,9 @@
                                SnapsToDevicePixels="True"
                                RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
+                </Grid>
 
-                    <Border x:Name="CloseBtn" Width="32" Height="32" CornerRadius="8"
-                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                            ToolTip="Close preview"
-                            AutomationProperties.Name="Close preview"
-                            AutomationProperties.HelpText="Close this preview."
-                            Cursor="Hand"
-                            Focusable="True"
-                            KeyDown="CloseBtn_KeyDown"
-                            HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Margin="0,8,8,0" Opacity="0" Visibility="Collapsed">
-                        <Image x:Name="CloseIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
-                               RenderOptions.BitmapScalingMode="HighQuality"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                <WrapPanel x:Name="ActionsPanel" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10,4,10,10" Visibility="Collapsed">
                     <Border x:Name="PinBtn" Width="32" Height="32" CornerRadius="8"
                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                             ToolTip="Pin preview"
@@ -71,9 +60,21 @@
                             Cursor="Hand"
                             Focusable="True"
                             KeyDown="PinBtn_KeyDown"
-                            HorizontalAlignment="Left" VerticalAlignment="Top"
-                            Margin="8,8,0,0" Opacity="0" Visibility="Collapsed">
+                            Opacity="1" Visibility="Collapsed">
                         <Image x:Name="PinIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border x:Name="CloseBtn" Width="32" Height="32" CornerRadius="8"
+                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                            ToolTip="Close preview"
+                            AutomationProperties.Name="Close preview"
+                            AutomationProperties.HelpText="Close this preview."
+                            Cursor="Hand"
+                            Focusable="True"
+                            KeyDown="CloseBtn_KeyDown"
+                            Opacity="1" Visibility="Collapsed">
+                        <Image x:Name="CloseIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
@@ -85,8 +86,7 @@
                             Cursor="Hand"
                             Focusable="True"
                             KeyDown="SaveBtn_KeyDown"
-                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                            Margin="0,0,8,8" Opacity="0" Visibility="Collapsed">
+                            Opacity="1" Visibility="Collapsed">
                         <Image x:Name="SaveIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -99,8 +99,7 @@
                             Cursor="Hand"
                             Focusable="True"
                             KeyDown="CopyBtn_KeyDown"
-                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                            Margin="0,0,48,8" Opacity="0" Visibility="Collapsed">
+                            Opacity="1" Visibility="Collapsed">
                         <Image x:Name="CopyIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -113,8 +112,7 @@
                             Cursor="Hand"
                             Focusable="True"
                             KeyDown="OfficeBtn_KeyDown"
-                            HorizontalAlignment="Left" VerticalAlignment="Top"
-                            Margin="48,8,0,0" Opacity="0" Visibility="Collapsed">
+                            Opacity="1" Visibility="Collapsed">
                         <Image x:Name="OfficeIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -127,8 +125,7 @@
                             Cursor="Hand"
                             Focusable="True"
                             KeyDown="DeleteBtn_KeyDown"
-                            HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                            Margin="8,0,0,8" Opacity="0" Visibility="Collapsed">
+                            Opacity="1" Visibility="Collapsed">
                         <Image x:Name="DeleteIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -141,8 +138,7 @@
                             Cursor="Hand"
                             Focusable="True"
                             KeyDown="HistoryBtn_KeyDown"
-                            HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Margin="0,8,48,0" Opacity="0" Visibility="Collapsed">
+                            Opacity="1" Visibility="Collapsed">
                         <Image x:Name="HistoryIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -155,13 +151,12 @@
                             Cursor="Hand"
                             Focusable="True"
                             KeyDown="EditBtn_KeyDown"
-                            HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                            Margin="48,0,0,8" Opacity="0" Visibility="Collapsed">
+                            Opacity="1" Visibility="Collapsed">
                         <Image x:Name="EditIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                </Grid>
+                </WrapPanel>
 
                 <Grid x:Name="TextContentPanel" Grid.Row="1" Margin="14,11,14,11">
                     <Grid.ColumnDefinitions>
