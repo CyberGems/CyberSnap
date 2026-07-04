@@ -51,10 +51,12 @@
                     </Border>
                 </Grid>
 
-                <Grid x:Name="ActionsPanel" Grid.Row="2" Margin="10,4,10,10" Visibility="Collapsed">
+                <StackPanel x:Name="ActionsHost" Grid.Row="2" Visibility="Collapsed">
+                    <Border x:Name="PreviewActionsDivider" Height="1" Margin="10,0,10,6" Opacity="1"/>
+                    <Grid x:Name="ActionsPanel" Margin="10,0,10,10">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="40"/>
+                        <RowDefinition Height="0"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -167,6 +169,7 @@
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                 </Grid>
+                </StackPanel>
 
                 <Grid x:Name="TextContentPanel" Grid.Row="1" Margin="14,11,14,11">
                     <Grid.ColumnDefinitions>

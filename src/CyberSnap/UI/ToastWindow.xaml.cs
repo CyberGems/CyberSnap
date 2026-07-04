@@ -80,7 +80,11 @@ public partial class ToastWindow : Window
             if (aspect < 0.85)
                 return (188, 220, true);
 
-            return (280, 176, true);
+            const int frameWidth = 280;
+            const int maxFrameHeight = 176;
+            const int minFrameHeight = 44;
+            int frameHeight = (int)Math.Round(Math.Clamp(frameWidth / aspect, minFrameHeight, maxFrameHeight));
+            return (frameWidth, frameHeight, true);
         }
 
         const int targetHeight = 188;
@@ -187,6 +191,9 @@ public partial class ToastWindow : Window
         InlinePreviewHost.BorderBrush = Theme.Brush(Theme.IsDark
             ? Color.FromArgb(34, 255, 255, 255)
             : Color.FromArgb(20, 0, 0, 0));
+        PreviewActionsDivider.Background = Theme.Brush(Theme.IsDark
+            ? Color.FromArgb(36, 255, 255, 255)
+            : Color.FromArgb(28, 0, 0, 0));
 
     }
 
@@ -340,10 +347,10 @@ public partial class ToastWindow : Window
             ImageArea.Width = toastW;
             ImageArea.Height = toastH;
             ImageArea.MaxHeight = toastH;
-            System.Windows.Controls.Grid.SetRowSpan(ImageArea, 2);
+            System.Windows.Controls.Grid.SetRowSpan(ImageArea, 1);
             Root.Background = Theme.Brush(Theme.ToastBg);
             ImageFrame.Background = Theme.Brush(Theme.ToastBg);
-            ImageFrame.CornerRadius = new CornerRadius(10);
+            ImageFrame.CornerRadius = new CornerRadius(10, 10, 0, 0);
             ImageFrame.BorderThickness = new Thickness(0);
         }
         else
@@ -527,7 +534,8 @@ public partial class ToastWindow : Window
                                    DeleteBtn.Visibility == Visibility.Visible ||
                                    HistoryBtn.Visibility == Visibility.Visible ||
                                    EditBtn.Visibility == Visibility.Visible;
-        ActionsPanel.Visibility = anyActionBtnVisible ? Visibility.Visible : Visibility.Collapsed;
+        ActionsHost.Visibility = anyActionBtnVisible ? Visibility.Visible : Visibility.Collapsed;
+        RefreshActionsPanelMetrics();
 
         // Every text-only toast gets an X — Scan/Error/Color/Standard alike.
         bool textCloseVisible = _previewBitmap is null &&
@@ -560,6 +568,27 @@ public partial class ToastWindow : Window
         button.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
         button.VerticalAlignment = System.Windows.VerticalAlignment.Center;
         button.Margin = new Thickness(4);
+    }
+
+    private void RefreshActionsPanelMetrics()
+    {
+        int maxRow = 0;
+        foreach (var button in new[] { CloseBtn, PinBtn, SaveBtn, CopyBtn, OfficeBtn, DeleteBtn, HistoryBtn, EditBtn })
+        {
+            if (button.Visibility != Visibility.Visible)
+                continue;
+
+            maxRow = Math.Max(maxRow, System.Windows.Controls.Grid.GetRow(button) + 1);
+        }
+
+        const double rowHeight = 40;
+        ActionsPanel.RowDefinitions[0].Height = maxRow >= 1 ? new GridLength(rowHeight) : new GridLength(0);
+        ActionsPanel.RowDefinitions[1].Height = maxRow >= 2 ? new GridLength(rowHeight) : new GridLength(0);
+        ActionsPanel.Height = maxRow * rowHeight;
+
+        bool showDivider = maxRow > 0 &&
+                           (ImageArea.Visibility == Visibility.Visible || TextContentPanel.Visibility == Visibility.Visible);
+        PreviewActionsDivider.Visibility = showDivider ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void RefreshToastContentAccessibility(ToastSpec spec)
