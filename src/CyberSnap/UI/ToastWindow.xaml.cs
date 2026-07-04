@@ -519,7 +519,17 @@ public partial class ToastWindow : Window
         ApplyOverlayButton(HistoryBtn, Helpers.ToastButtonKind.History);
         ApplyOverlayButton(EditBtn, Helpers.ToastButtonKind.Edit);
 
-        // Every text-only toast gets an X â€” Scan/Error/Color/Standard alike.
+        bool anyActionBtnVisible = CloseBtn.Visibility == Visibility.Visible ||
+                                   PinBtn.Visibility == Visibility.Visible ||
+                                   SaveBtn.Visibility == Visibility.Visible ||
+                                   CopyBtn.Visibility == Visibility.Visible ||
+                                   OfficeBtn.Visibility == Visibility.Visible ||
+                                   DeleteBtn.Visibility == Visibility.Visible ||
+                                   HistoryBtn.Visibility == Visibility.Visible ||
+                                   EditBtn.Visibility == Visibility.Visible;
+        ActionsPanel.Visibility = anyActionBtnVisible ? Visibility.Visible : Visibility.Collapsed;
+
+        // Every text-only toast gets an X — Scan/Error/Color/Standard alike.
         bool textCloseVisible = _previewBitmap is null &&
                                 Helpers.ToastButtonLayout.IsVisible(_buttonLayout, Helpers.ToastButtonKind.Close) &&
                                 TextContentPanel.Visibility == Visibility.Visible;
@@ -544,10 +554,9 @@ public partial class ToastWindow : Window
         if (!visible)
             return;
 
-        var placement = Helpers.ToastButtonLayout.ToPlacement(Helpers.ToastButtonLayout.GetSlot(_buttonLayout, kind));
-        button.HorizontalAlignment = placement.horizontal;
-        button.VerticalAlignment = placement.vertical;
-        button.Margin = placement.margin;
+        button.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+        button.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+        button.Margin = new Thickness(4);
     }
 
     private void RefreshToastContentAccessibility(ToastSpec spec)
@@ -1346,14 +1355,14 @@ public partial class ToastWindow : Window
 
     private void AnimateOverlayButtons(double targetOpacity, double pinnedOpacity)
     {
-        CloseBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
-        SaveBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
-        CopyBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
-        OfficeBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
-        DeleteBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
-        HistoryBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
-        EditBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity, 150, Motion.SmoothOut));
-        PinBtn.BeginAnimation(OpacityProperty, Motion.To(targetOpacity == 0 ? pinnedOpacity : targetOpacity, 150, Motion.SmoothOut));
+        CloseBtn.Opacity = 1;
+        SaveBtn.Opacity = 1;
+        CopyBtn.Opacity = 1;
+        OfficeBtn.Opacity = 1;
+        DeleteBtn.Opacity = 1;
+        HistoryBtn.Opacity = 1;
+        EditBtn.Opacity = 1;
+        PinBtn.Opacity = 1;
     }
 
     private void UpdateRootClip()
