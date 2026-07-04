@@ -514,6 +514,9 @@ public sealed partial class EditorForm
         {
             var g = e.Graphics;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
             int cy = brandPanel.Height / 2;
 
             if (_brandBitmap != null)
@@ -528,10 +531,10 @@ public sealed partial class EditorForm
                 EditorColors.Accent,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
-            using var font2 = new Font("Consolas", 10.5f, FontStyle.Bold, GraphicsUnit.Point);
+            using var font2 = new Font("Segoe UI Variable Text", 10f, FontStyle.Regular, GraphicsUnit.Point);
             TextRenderer.DrawText(g, LocalizationService.Translate("Editor"), font2,
-                new Rectangle(26 + size1.Width + 12, 0, 280, brandPanel.Height),
-                EditorColors.TextPrimary,
+                new Rectangle(26 + size1.Width + 8, 0, 280, brandPanel.Height),
+                EditorColors.TextSecondary,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         };
 
