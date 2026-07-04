@@ -40,7 +40,6 @@
     <Page Include="App.xaml" />
     <Resource Include="CyberSnap.ico" />
     <Resource Include="Assets\CyberSnap_square.png" />
-    <Resource Include="Assets\CyberSnap_wordmark.png" />
   </ItemGroup>
 
   <ItemGroup>
