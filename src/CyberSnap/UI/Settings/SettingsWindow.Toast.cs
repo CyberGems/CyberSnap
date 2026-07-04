@@ -654,6 +654,25 @@ public partial class SettingsWindow
         UpdateToastPreviewButton(ToastLayoutDeleteBtn, ToastLayoutDeleteIcon, "trash", ToastButtonKind.Delete);
         UpdateToastPreviewButton(ToastLayoutAiRedirectBtn, ToastLayoutAiRedirectIcon, "history", ToastButtonKind.History);
         UpdateToastPreviewButton(ToastLayoutEditBtn, ToastLayoutEditIcon, "draw", ToastButtonKind.Edit);
+        RefreshToastActionsPanelMetrics();
+    }
+
+    private void RefreshToastActionsPanelMetrics()
+    {
+        int maxRow = 0;
+        foreach (var btn in ToastButtonLayout.AllButtons)
+        {
+            if (!ToastButtonLayout.IsVisible(ToastButtons, btn))
+                continue;
+
+            var (row, _) = ToastButtonLayout.ToGridCell(ToastButtonLayout.GetSlot(ToastButtons, btn));
+            maxRow = Math.Max(maxRow, row + 1);
+        }
+
+        const double rowHeight = 36;
+        ToastLayoutActionsPanel.RowDefinitions[0].Height = maxRow >= 1 ? new GridLength(rowHeight) : new GridLength(0);
+        ToastLayoutActionsPanel.RowDefinitions[1].Height = maxRow >= 2 ? new GridLength(rowHeight) : new GridLength(0);
+        ToastLayoutActionsPanel.Height = maxRow > 0 ? maxRow * rowHeight : 0;
     }
 
     private void CollapseAllToastPreviewButtons()

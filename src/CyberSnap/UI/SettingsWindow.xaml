@@ -3388,10 +3388,13 @@
                                                 </Grid>
                                             </Border>
 
-                                            <Grid x:Name="ToastLayoutActionsPanel" Grid.Row="1" Height="72" Margin="10,6,10,6">
+                                            <StackPanel Grid.Row="1">
+                                                <Border Height="1" Margin="10,0,10,6" Opacity="0.15"
+                                                        Background="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                                <Grid x:Name="ToastLayoutActionsPanel" Height="36" Margin="10,0,10,6">
                                                 <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*"/>
-                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="36"/>
+                                                    <RowDefinition Height="0"/>
                                                 </Grid.RowDefinitions>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -3563,6 +3566,7 @@
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                             </Grid>
+                                            </StackPanel>
 
                                             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="14,10,14,8" Visibility="Collapsed">
                                                 <Border Width="30" Height="30" CornerRadius="9" Background="#12FFFFFF" Margin="0,0,12,0"/>
