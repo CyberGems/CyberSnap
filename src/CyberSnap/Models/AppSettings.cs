@@ -143,15 +143,15 @@ public sealed class AppSettings
         public bool ShowPin { get; set; } = true;
         public ToastButtonSlot PinSlot { get; set; } = ToastButtonSlot.TopLeft;
         public bool ShowSave { get; set; } = true;
-        public ToastButtonSlot SaveSlot { get; set; } = ToastButtonSlot.BottomRight;
+        public ToastButtonSlot SaveSlot { get; set; } = ToastButtonSlot.TopInnerRight;
         public bool ShowCopy { get; set; }
         public ToastButtonSlot CopySlot { get; set; } = ToastButtonSlot.BottomInnerRight;
         public bool ShowOffice { get; set; }
-        public ToastButtonSlot OfficeSlot { get; set; } = ToastButtonSlot.TopInnerLeft;
+        public ToastButtonSlot OfficeSlot { get; set; } = ToastButtonSlot.BottomLeft;
         public bool ShowDelete { get; set; }
         public ToastButtonSlot DeleteSlot { get; set; } = ToastButtonSlot.BottomLeft;
         public bool ShowHistory { get; set; } = true;
-        public ToastButtonSlot HistorySlot { get; set; } = ToastButtonSlot.BottomLeft;
+        public ToastButtonSlot HistorySlot { get; set; } = ToastButtonSlot.TopInnerLeft;
         public bool ShowEdit { get; set; }
         public ToastButtonSlot EditSlot { get; set; } = ToastButtonSlot.BottomInnerLeft;
     }
