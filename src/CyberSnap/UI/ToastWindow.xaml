@@ -51,7 +51,17 @@
                     </Border>
                 </Grid>
 
-                <WrapPanel x:Name="ActionsPanel" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10,4,10,10" Visibility="Collapsed">
+                <Grid x:Name="ActionsPanel" Grid.Row="2" Margin="10,4,10,10" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
                     <Border x:Name="PinBtn" Width="32" Height="32" CornerRadius="8"
                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
                             ToolTip="Pin preview"
@@ -156,7 +166,7 @@
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                </WrapPanel>
+                </Grid>
 
                 <Grid x:Name="TextContentPanel" Grid.Row="1" Margin="14,11,14,11">
                     <Grid.ColumnDefinitions>

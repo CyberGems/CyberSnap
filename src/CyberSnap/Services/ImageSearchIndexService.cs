@@ -255,6 +255,9 @@ public static class ImageSearchQueryMatcher
 
 public sealed partial class ImageSearchIndexService : IDisposable
 {
+    /// <summary>Primary index service owned by the WPF App (set during startup).</summary>
+    public static ImageSearchIndexService? PrimaryInstance { get; set; }
+
     private const int SearchDatabaseSchemaVersion = 3;
     private const int MaxOcrRetryCount = 4;
     private const int MaxConcurrentIndexTasks = 3;
@@ -422,6 +425,23 @@ public sealed partial class ImageSearchIndexService : IDisposable
 
         NotifyChanged();
         RequestSync(filteredEntries, ocrLanguageTag);
+    }
+
+    public void RemoveFile(string filePath)
+    {
+        if (_disposed || string.IsNullOrWhiteSpace(filePath))
+            return;
+
+        lock (_gate)
+        {
+            _records.Remove(filePath);
+            DeleteFromDatabase_NoLock(filePath);
+            InvalidateSearchCaches_NoLock();
+            Persist_NoLock();
+            _version++;
+        }
+
+        NotifyChanged();
     }
 
     public void RequestSync(IReadOnlyList<HistoryEntry> entries, string? ocrLanguageTag)

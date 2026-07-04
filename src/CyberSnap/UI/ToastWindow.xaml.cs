@@ -554,6 +554,9 @@ public partial class ToastWindow : Window
         if (!visible)
             return;
 
+        var (row, col) = Helpers.ToastButtonLayout.ToGridCell(Helpers.ToastButtonLayout.GetSlot(_buttonLayout, kind));
+        System.Windows.Controls.Grid.SetRow(button, row);
+        System.Windows.Controls.Grid.SetColumn(button, col);
         button.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
         button.VerticalAlignment = System.Windows.VerticalAlignment.Center;
         button.Margin = new Thickness(4);
@@ -590,27 +593,28 @@ public partial class ToastWindow : Window
     {
         var (name, helpText) = kind switch
         {
-            Helpers.ToastButtonKind.Close => ("Close preview", "Close this preview."),
+            Helpers.ToastButtonKind.Close => (T("Close preview"), T("Close this preview.")),
             Helpers.ToastButtonKind.Pin => _isPinned
-                ? ("Unpin preview", "Allow this preview to dismiss automatically.")
-                : ("Pin preview", "Keep this preview open."),
+                ? (T("Unpin preview"), T("Allow this preview to dismiss automatically."))
+                : (T("Pin preview"), T("Keep this preview open.")),
             Helpers.ToastButtonKind.Save => _isSavingPreview
-                ? (LocalizationService.Translate("Saving preview"), LocalizationService.Translate("Save is already running."))
+                ? (T("Saving preview"), T("Save is already running."))
                 : GetSaveButtonAccessibility(),
-            Helpers.ToastButtonKind.Copy => ("Copy to clipboard", "Copy this preview to the clipboard."),
+            Helpers.ToastButtonKind.Copy => (T("Copy to clipboard"), T("Copy capture to the clipboard.")),
             Helpers.ToastButtonKind.Office => _isRunningOfficeAction
-                ? ("Send to action running", "Open with or send action is already running.")
-                : ("Send to", "Open the screenshot with another app."),
-            Helpers.ToastButtonKind.Edit => ("Edit preview", "Open this preview in the post-capture editor."),
-
+                ? (T("Send to action running"), T("Open with or send action is already running."))
+                : (T("Send to"), T("Open the screenshot with another app.")),
+            Helpers.ToastButtonKind.Edit => (T("Edit preview"), T("Open this capture in the Annotations Editor.")),
             Helpers.ToastButtonKind.Delete => _isDeletingSavedFile
-                ? ("Deleting file", "Delete is already running.")
-                : ("Delete file", "Delete the saved file for this preview."),
-            Helpers.ToastButtonKind.History => ("Open the Gallery Window", "Open the Gallery Window."),
-            _ => ("Toast action", "Run this toast action.")
+                ? (T("Deleting file"), T("Delete is already running."))
+                : (T("Delete capture"), T("Delete capture")),
+            Helpers.ToastButtonKind.History => (T("Open capture in Gallery"), T("Open capture in Gallery.")),
+            _ => (T("Toast action"), T("Run this toast action."))
         };
         SetToastElementAccessibility(button, name, helpText);
     }
+
+    private static string T(string text) => LocalizationService.Translate(text);
 
     private (string name, string helpText) GetSaveButtonAccessibility()
     {
@@ -619,9 +623,10 @@ public partial class ToastWindow : Window
         bool isMp4 = _savedFilePath != null &&
             _savedFilePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase);
 
-        if (isGif) return ("Save preview", LocalizationService.Translate("Save a copy of this GIF"));
-        if (isMp4) return ("Save preview", LocalizationService.Translate("Save a copy of this MP4"));
-        return ("Save preview", LocalizationService.Translate("Save this preview image."));
+        var saveLabel = T("Save capture as...");
+        if (isGif) return (saveLabel, T("Save a copy of this GIF"));
+        if (isMp4) return (saveLabel, T("Save a copy of this MP4"));
+        return (saveLabel, saveLabel);
     }
 
     private static void SetToastElementAccessibility(FrameworkElement element, string name, string helpText)
@@ -1303,7 +1308,10 @@ public partial class ToastWindow : Window
                 return;
             }
 
-            File.Delete(deletePath);
+            if (!HistoryService.TryDeleteSavedCapture(deletePath))
+                throw new IOException($"Could not delete {deletePath}");
+
+            _savedFilePath = null;
             _isDeletingSavedFile = false;
             DeleteBtn.IsEnabled = true;
             RefreshOverlayButtonAccessibility(DeleteBtn, Helpers.ToastButtonKind.Delete);

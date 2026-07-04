@@ -86,8 +86,10 @@ public partial class SettingsWindow
                     border.ContextMenu.PlacementTarget = border;
             };
 
-            string help = $"Drag to move the {FormatToastButtonLabel(kind)} button. Double-click to remove it, or right-click (or press the Menu key) for placement options.";
-            border.ToolTip = help;
+            string label = FormatToastButtonLabel(kind);
+            string help = string.Format(
+                Services.LocalizationService.Translate("Drag to move the {0} button. Double-click to remove it, or right-click (or press the Menu key) for placement options."),
+                label);
             ToolTipService.SetInitialShowDelay(border, 300);
             AutomationProperties.SetHelpText(border, help);
         }
@@ -153,6 +155,7 @@ public partial class SettingsWindow
         // The whole row is a drag handle for adding this button to the preview (the icon stays in
         // the list; a ghost follows the cursor). Right-click / Menu key opens the same placement
         // menu as the preview buttons so the layout stays fully keyboard-accessible.
+        var rowTooltip = Services.LocalizationService.Translate("Drag onto the preview to add this button, or right-click (Menu key) to place it by keyboard.");
         var row = new Border
         {
             Child = grid,
@@ -160,11 +163,13 @@ public partial class SettingsWindow
             Cursor = System.Windows.Input.Cursors.Hand,
             Background = System.Windows.Media.Brushes.Transparent,
             Focusable = true,
-            ToolTip = "Drag onto the preview to add this button, or right-click (Menu key) to place it by keyboard."
+            ToolTip = rowTooltip
         };
         ToolTipService.SetInitialShowDelay(row, 300);
         AutomationProperties.SetName(row, $"{ToTitleCase(label)} button");
-        AutomationProperties.SetHelpText(row, $"Drag onto the preview to add the {label} button, or right-click (or press the Menu key) to place it in a corner.");
+        AutomationProperties.SetHelpText(row, string.Format(
+            Services.LocalizationService.Translate("Drag onto the preview to add the {0} button, or right-click (or press the Menu key) to place it in a corner."),
+            label));
         row.PreviewMouseLeftButtonDown += ToastRow_PreviewMouseLeftButtonDown;
         row.PreviewMouseMove += ToastRow_PreviewMouseMove;
         row.ContextMenuOpening += (_, _) =>
@@ -237,7 +242,9 @@ public partial class SettingsWindow
             return;
         }
 
-        _toastLayoutHint = $"The {FormatCornerLabel(corner)} corner is full (2 buttons max). Move another button out first.";
+        _toastLayoutHint = string.Format(
+            Services.LocalizationService.Translate("The {0} corner is full (2 buttons max). Move another button out first."),
+            FormatCornerMenuLabel(corner));
         PersistToastButtonLayout();
     }
 
@@ -561,7 +568,9 @@ public partial class SettingsWindow
             // pushing any occupant to the free partner slot, or reject when the corner is full.
             if (!ToastButtonLayout.PlaceFromHidden(ToastButtons, kind, targetSlot))
             {
-                _toastLayoutHint = $"The {FormatCornerLabel(ToastButtonLayout.SlotToCorner(targetSlot))} corner is full (2 buttons max). Remove a button first.";
+                _toastLayoutHint = string.Format(
+                    Services.LocalizationService.Translate("The {0} corner is full (2 buttons max). Remove a button first."),
+                    FormatCornerMenuLabel(ToastButtonLayout.SlotToCorner(targetSlot)));
                 PersistToastButtonLayout();
                 return;
             }
@@ -667,18 +676,9 @@ public partial class SettingsWindow
             return;
 
         var slot = ToastButtonLayout.GetSlot(ToastButtons, kind);
-        int col = slot switch
-        {
-            ToastButtonSlot.TopLeft => 0,
-            ToastButtonSlot.TopInnerLeft => 1,
-            ToastButtonSlot.TopInnerRight => 2,
-            ToastButtonSlot.TopRight => 3,
-            ToastButtonSlot.BottomLeft => 4,
-            ToastButtonSlot.BottomInnerLeft => 5,
-            ToastButtonSlot.BottomInnerRight => 6,
-            _ => 7 // ToastButtonSlot.BottomRight
-        };
+        var (row, col) = ToastButtonLayout.ToGridCell(slot);
         Grid.SetColumn(border, col);
+        Grid.SetRow(border, row);
         border.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
         border.VerticalAlignment = System.Windows.VerticalAlignment.Center;
         border.Margin = new Thickness(0);
@@ -887,14 +887,14 @@ public partial class SettingsWindow
 
     private static string? GetToastButtonDescription(ToastButtonKind button) => button switch
     {
-        ToastButtonKind.Close => "Close the notification preview.",
-        ToastButtonKind.Pin => "Keep the preview open until you dismiss it manually.",
-        ToastButtonKind.Save => "Save the captured image to a file.",
-        ToastButtonKind.Copy => "Copy the captured image to the clipboard.",
-        ToastButtonKind.Office => "Open the screenshot with another app (Word, PowerPoint, etc.).",
-        ToastButtonKind.Delete => "Delete the saved file for this preview.",
-        ToastButtonKind.History => "Open the capture gallery window.",
-        ToastButtonKind.Edit => "Open the preview in the post-capture editor.",
+        ToastButtonKind.Close => Services.LocalizationService.Translate("Close the notification preview."),
+        ToastButtonKind.Pin => Services.LocalizationService.Translate("Keep the preview open until you dismiss it manually."),
+        ToastButtonKind.Save => Services.LocalizationService.Translate("Save the captured image to a file."),
+        ToastButtonKind.Copy => Services.LocalizationService.Translate("Copy capture to the clipboard."),
+        ToastButtonKind.Office => Services.LocalizationService.Translate("Open the screenshot with another app (Word, PowerPoint, etc.)."),
+        ToastButtonKind.Delete => Services.LocalizationService.Translate("Delete capture"),
+        ToastButtonKind.History => Services.LocalizationService.Translate("Open capture in Gallery."),
+        ToastButtonKind.Edit => Services.LocalizationService.Translate("Open this capture in the Annotations Editor."),
         _ => null
     };
 
@@ -911,16 +911,6 @@ public partial class SettingsWindow
         _ => Services.LocalizationService.Translate("notification")
     };
 
-    private static string FormatCornerLabel(ToastCorner corner) => corner switch
-    {
-        ToastCorner.TopLeft => "top-left",
-        ToastCorner.TopRight => "top-right",
-        ToastCorner.BottomLeft => "bottom-left",
-        _ => "bottom-right"
-    };
-
-    // Localized, title-cased corner label for the context menu (the dashed corner-label form
-    // above is reserved for the lowercase "the … corner is full" sentence).
     private static string FormatCornerMenuLabel(ToastCorner corner) => corner switch
     {
         ToastCorner.TopLeft => Services.LocalizationService.Translate("Top Left"),

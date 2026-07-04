@@ -310,6 +310,7 @@ public partial class App
             if (_imageSearchIndexService is null)
             {
                 _imageSearchIndexService = new ImageSearchIndexService();
+                ImageSearchIndexService.PrimaryInstance = _imageSearchIndexService;
                 _imageSearchIndexService.Load();
                 if (_historyService is not null && _settingsService!.Settings.AutoIndexImages)
                     _imageSearchIndexService.RequestSync(_historyService.ImageEntries, _settingsService!.Settings.OcrLanguageTag);

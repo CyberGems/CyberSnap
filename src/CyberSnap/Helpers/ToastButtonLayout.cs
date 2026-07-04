@@ -32,6 +32,19 @@ public enum ToastButtonPreset
 
 public static class ToastButtonLayout
 {
+    /// <summary>Map a slot to a 2×4 designer / toast action grid (row 0 = top, column 0 = left).</summary>
+    public static (int row, int column) ToGridCell(ToastButtonSlot slot) => slot switch
+    {
+        ToastButtonSlot.TopLeft => (0, 0),
+        ToastButtonSlot.TopInnerLeft => (0, 1),
+        ToastButtonSlot.TopInnerRight => (0, 2),
+        ToastButtonSlot.TopRight => (0, 3),
+        ToastButtonSlot.BottomLeft => (1, 0),
+        ToastButtonSlot.BottomInnerLeft => (1, 1),
+        ToastButtonSlot.BottomInnerRight => (1, 2),
+        _ => (1, 3)
+    };
+
     public static (System.Windows.HorizontalAlignment horizontal, System.Windows.VerticalAlignment vertical, Thickness margin) ToPlacement(
         ToastButtonSlot slot,
         double inset = 8)
