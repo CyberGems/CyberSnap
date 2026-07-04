@@ -666,10 +666,22 @@ public partial class SettingsWindow
         if (!visible)
             return;
 
-        var placement = ToastButtonLayout.ToPlacement(ToastButtonLayout.GetSlot(ToastButtons, kind));
-        border.HorizontalAlignment = placement.horizontal;
-        border.VerticalAlignment = placement.vertical;
-        border.Margin = placement.margin;
+        var slot = ToastButtonLayout.GetSlot(ToastButtons, kind);
+        int col = slot switch
+        {
+            ToastButtonSlot.TopLeft => 0,
+            ToastButtonSlot.TopInnerLeft => 1,
+            ToastButtonSlot.TopInnerRight => 2,
+            ToastButtonSlot.TopRight => 3,
+            ToastButtonSlot.BottomLeft => 4,
+            ToastButtonSlot.BottomInnerLeft => 5,
+            ToastButtonSlot.BottomInnerRight => 6,
+            _ => 7 // ToastButtonSlot.BottomRight
+        };
+        Grid.SetColumn(border, col);
+        border.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+        border.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+        border.Margin = new Thickness(0);
         // Always reset opacity: a drag may have left this button dimmed (drag source at 0.30,
         // or an eviction-preview occupant at 0.20 that ended up not evicted). Without this,
         // the stale transparency persists across refreshes and presets.
