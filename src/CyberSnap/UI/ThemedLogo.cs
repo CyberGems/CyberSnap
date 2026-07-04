@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using MediaColor = System.Windows.Media.Color;
@@ -8,11 +8,8 @@ namespace CyberSnap.UI;
 public static class ThemedLogo
 {
     private const string SquarePath = "pack://application:,,,/Assets/CyberSnap_square.png";
-    private const string WordmarkPath = "pack://application:,,,/Assets/CyberSnap_wordmark.png";
 
     public static ImageSource Square(int size) => Render(SquarePath, size, size, Theme.TextPrimary);
-
-    public static ImageSource Wordmark(int width, int height) => Render(WordmarkPath, width, height, Theme.TextPrimary);
 
     private static ImageSource Render(string resourcePath, int width, int height, MediaColor color)
     {
