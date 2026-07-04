@@ -874,34 +874,29 @@ public sealed partial class EditorForm
         return section;
     }
 
-    // Cyan hairline with a soft glow, fading out toward both ends so it reads as an
-    // elegant group separator rather than a hard rule. Matches the accent glow used
-    // on the status bar and toolbar borders.
+    // Subtle, low-contrast neutral hairline fading out toward both ends so it reads as an
+    // elegant group separator rather than a hard rule, without calling too much attention.
     private static void DrawToolGroupDivider(Graphics g, int width, int y)
     {
         if (width <= 0) return;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        var area = new Rectangle(0, y - 2, width, 4);
-        DrawFadedAccentLine(g, area, y, width, 26, 3f);   // soft glow underneath
-        DrawFadedAccentLine(g, area, y, width, 80, 1f);   // crisp hairline on top
-    }
 
-    private static void DrawFadedAccentLine(Graphics g, Rectangle area, int y, int width, int peakAlpha, float thickness)
-    {
+        Color neutralColor = EditorColors.IsDark ? Color.FromArgb(24, Color.White) : Color.FromArgb(24, Color.Black);
+        var area = new Rectangle(0, y, width, 1);
         using var brush = new LinearGradientBrush(area, Color.Empty, Color.Empty, LinearGradientMode.Horizontal)
         {
             InterpolationColors = new ColorBlend(3)
             {
                 Colors = new[]
                 {
-                    Color.FromArgb(0, EditorColors.Accent),
-                    Color.FromArgb(peakAlpha, EditorColors.Accent),
-                    Color.FromArgb(0, EditorColors.Accent),
+                    Color.FromArgb(0, neutralColor),
+                    neutralColor,
+                    Color.FromArgb(0, neutralColor),
                 },
                 Positions = new[] { 0f, 0.5f, 1f },
             },
         };
-        using var pen = new Pen(brush, thickness);
+        using var pen = new Pen(brush, 1f);
         g.DrawLine(pen, 0, y, width, y);
     }
 
