@@ -118,7 +118,7 @@ public partial class App
 
         if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
         HideSettingsForCapture();
-        LaunchGifRecording();
+        LaunchGifRecording(RecordingFormat.GIF);
     }
 
     private void OnScrollCaptureHotkeyPressed()
@@ -295,7 +295,18 @@ public partial class App
 
     public void OnHotkeyPressedProxy() => OnHotkeyPressed();
     public void OnOcrHotkeyPressedProxy() => OnOcrHotkeyPressed();
-    public void OnGifHotkeyPressedProxy() => OnGifHotkeyPressed();
+    public void OnGifHotkeyPressedProxy()
+    {
+        if (RecordingForm.Current != null)
+        {
+            RecordingForm.Current.RequestStop();
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _isCapturing, 1, 0) != 0) return;
+        HideSettingsForCapture();
+        LaunchGifRecording();
+    }
     public void OnScrollCaptureHotkeyPressedProxy() => OnScrollCaptureHotkeyPressed();
     public void OnScanHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Scan);
     public void OnCenterHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Center);

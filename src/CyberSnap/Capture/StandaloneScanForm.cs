@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 using CyberSnap.UI;
+using CyberSnap.Models;
 
 namespace CyberSnap.Capture;
 
@@ -25,6 +26,8 @@ public sealed class StandaloneScanForm : Form
     // Selection rectangle (normalized)
     private Rectangle _selectionRect;
     private bool _hasSelection;
+    private Rectangle _autoDetectRect;
+    private bool _autoDetectActive;
 
     public StandaloneScanForm()
     {
@@ -48,6 +51,21 @@ public sealed class StandaloneScanForm : Form
 
         Cursor = CursorFactory.PrecisionCursor;
 
+        bool isDetectEnabled = false;
+        try
+        {
+            var settings = SettingsService.LoadStatic();
+            isDetectEnabled = settings != null && settings.WindowDetection != WindowDetectionMode.Off;
+        }
+        catch { }
+
+        if (isDetectEnabled)
+        {
+            WindowDetector.RegisterIgnoredWindow(Handle);
+            WindowDetector.ClearSnapshot();
+            Task.Run(() => WindowDetector.SnapshotWindows(Bounds));
+        }
+
         // ── Banner ──
         var scanLabel = LocalizationService.Translate("QR & Barcodes") + ": ";
         var scanAction = LocalizationService.Translate("Click & drag to scan QR or barcodes")
@@ -68,6 +86,8 @@ public sealed class StandaloneScanForm : Form
     {
         if (disposing)
         {
+            WindowDetector.UnregisterIgnoredWindow(Handle);
+            WindowDetector.ClearSnapshot();
             _banner.Dispose();
             _screenshot?.Dispose();
         }
@@ -100,8 +120,16 @@ public sealed class StandaloneScanForm : Form
         {
             _isDragging = true;
             _dragStart = e.Location;
-            _hasSelection = false;
-            _selectionRect = Rectangle.Empty;
+            if (_autoDetectActive && !_autoDetectRect.IsEmpty)
+            {
+                _selectionRect = _autoDetectRect;
+                _hasSelection = true;
+            }
+            else
+            {
+                _hasSelection = false;
+                _selectionRect = Rectangle.Empty;
+            }
             _banner.Dismiss();
             Invalidate();
         }
@@ -124,6 +152,39 @@ public sealed class StandaloneScanForm : Form
             // Full invalidate to avoid ghost trails when shrinking the selection
             Invalidate();
         }
+        else
+        {
+            bool isDetectEnabled = false;
+            try
+            {
+                var settings = SettingsService.LoadStatic();
+                isDetectEnabled = settings != null && settings.WindowDetection != WindowDetectionMode.Off;
+            }
+            catch { }
+
+            if (isDetectEnabled)
+            {
+                var rect = WindowDetector.GetDetectionRectAtPoint(_cursorPos, Bounds, WindowDetectionMode.WindowOnly);
+                if (rect.Width > 0 && rect.Height > 0)
+                {
+                    if (rect != _autoDetectRect)
+                    {
+                        _autoDetectRect = rect;
+                        _autoDetectActive = true;
+                        Invalidate();
+                    }
+                }
+                else
+                {
+                    if (_autoDetectActive)
+                    {
+                        _autoDetectRect = Rectangle.Empty;
+                        _autoDetectActive = false;
+                        Invalidate();
+                    }
+                }
+            }
+        }
 
         base.OnMouseMove(e);
     }
@@ -140,11 +201,19 @@ public sealed class StandaloneScanForm : Form
 
         if (!_hasSelection || _selectionRect.Width < 5 || _selectionRect.Height < 5)
         {
-            // Just a click without meaningful selection — revive the instruction banner
-            _banner.Revive();
-            Invalidate();
-            base.OnMouseUp(e);
-            return;
+            if (_autoDetectActive && !_autoDetectRect.IsEmpty)
+            {
+                _selectionRect = _autoDetectRect;
+                _hasSelection = true;
+            }
+            else
+            {
+                // Just a click without meaningful selection — revive the instruction banner
+                _banner.Revive();
+                Invalidate();
+                base.OnMouseUp(e);
+                return;
+            }
         }
 
         // Decode barcode from the selected region
@@ -218,6 +287,10 @@ public sealed class StandaloneScanForm : Form
         if (_hasSelection && !_selectionRect.IsEmpty)
         {
             SelectionFrameRenderer.DrawRectangle(g, _selectionRect);
+        }
+        else if (_autoDetectActive && !_autoDetectRect.IsEmpty)
+        {
+            SelectionFrameRenderer.DrawAutoDetectRectangle(g, _autoDetectRect);
         }
 
         // Draw banner

@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using CyberSnap.Models;
 using CyberSnap.Native;
 
@@ -17,14 +17,29 @@ public static class WindowDetector
         Blocked
     }
 
+    private sealed class SimpleWindowInfo
+    {
+        public IntPtr Handle { get; }
+        public Rectangle Rectangle { get; }
+        public bool IsWindow { get; }
+
+        public SimpleWindowInfo(IntPtr handle, Rectangle rect, bool isWindow)
+        {
+            Handle = handle;
+            Rectangle = rect;
+            IsWindow = isWindow;
+        }
+    }
+
+    private static readonly List<SimpleWindowInfo> CachedWindows = new();
+    private static readonly object CacheLock = new();
+
     private static readonly HashSet<IntPtr> IgnoredHandles = new();
     private static readonly object IgnoredHandleLock = new();
     private static readonly string[] IgnoredWindowClasses =
     {
         "Progman",
         "WorkerW",
-        "Shell_TrayWnd",
-        "Shell_SecondaryTrayWnd",
         "NotifyIconOverflowWindow",
         "tooltips_class32",
         "#32768"
@@ -44,12 +59,91 @@ public static class WindowDetector
     public static Rectangle GetWindowRectAtPoint(Point screenPoint, Rectangle virtualBounds)
         => GetDetectionRectAtPoint(screenPoint, virtualBounds, WindowDetectionMode.WindowOnly);
 
-    /// <summary>
-    /// <summary>Legacy no-op kept so overlay startup callers do not need special casing.</summary>
-    public static void SnapshotWindows(Rectangle virtualBounds) { }
+    /// <summary>Populates the window bounds cache on a background thread.</summary>
+    public static void SnapshotWindows(Rectangle virtualBounds)
+    {
+        var tempWindows = new List<SimpleWindowInfo>();
+        var seen = new HashSet<IntPtr>();
 
-    /// <summary>Legacy no-op kept so overlay shutdown callers do not need special casing.</summary>
-    public static void ClearSnapshot() { }
+        User32.EnumWindows((hwnd, _) =>
+        {
+            if (hwnd == IntPtr.Zero || !seen.Add(hwnd))
+                return true;
+
+            if (IsIgnoredWindowHandle(hwnd) || !User32.IsWindowVisible(hwnd) || Dwm.IsWindowCloaked(hwnd))
+                return true;
+
+            int style = User32.GetWindowLongA(hwnd, User32.GWL_STYLE);
+            int exStyle = User32.GetWindowLongA(hwnd, User32.GWL_EXSTYLE);
+            string className = GetClassName(hwnd);
+            string title = GetWindowTitle(hwnd);
+
+            // Skip overlays (Nvidia GeForce Overlay, etc.)
+            if (!string.IsNullOrEmpty(className) &&
+                (string.Equals(className, "CEF-OSC-WIDGET", StringComparison.OrdinalIgnoreCase) ||
+                 IgnoredWindowClasses.Any(ignored => string.Equals(ignored, className, StringComparison.OrdinalIgnoreCase))))
+            {
+                return true;
+            }
+
+            // Skip non-activatable tool windows
+            if ((exStyle & User32.WS_EX_TOOLWINDOW) != 0 && (exStyle & User32.WS_EX_NOACTIVATE) != 0)
+            {
+                return true;
+            }
+
+            if (!IsSnappableWindowCandidate(style, exStyle, className, title))
+            {
+                return true;
+            }
+
+            var screenRect = GetSnappableBounds(hwnd);
+            if (screenRect.Width <= 2 || screenRect.Height <= 2)
+                return true;
+
+            // Save the client area if it differs significantly from the main window rect (helps capture inside content cleanly)
+            var clientScreenRect = GetClientRect(hwnd);
+            if (clientScreenRect.Width > 2 && clientScreenRect.Height > 2)
+            {
+                Rectangle clientVirtual = new Rectangle(
+                    clientScreenRect.X - virtualBounds.X,
+                    clientScreenRect.Y - virtualBounds.Y,
+                    clientScreenRect.Width,
+                    clientScreenRect.Height);
+
+                // Add client area first (top in Z-order selection precedence)
+                if (clientVirtual != new Rectangle(screenRect.Left - virtualBounds.X, screenRect.Top - virtualBounds.Y, screenRect.Width, screenRect.Height))
+                {
+                    tempWindows.Add(new SimpleWindowInfo(hwnd, clientVirtual, false));
+                }
+            }
+
+            Rectangle rect = new Rectangle(
+                screenRect.Left - virtualBounds.X,
+                screenRect.Top - virtualBounds.Y,
+                screenRect.Width,
+                screenRect.Height);
+
+            tempWindows.Add(new SimpleWindowInfo(hwnd, rect, true));
+
+            return true;
+        }, IntPtr.Zero);
+
+        lock (CacheLock)
+        {
+            CachedWindows.Clear();
+            CachedWindows.AddRange(tempWindows);
+        }
+    }
+
+    /// <summary>Clears the cached snapshot of window bounds.</summary>
+    public static void ClearSnapshot()
+    {
+        lock (CacheLock)
+        {
+            CachedWindows.Clear();
+        }
+    }
 
     public static void RegisterIgnoredWindow(IntPtr hwnd)
     {
@@ -67,8 +161,28 @@ public static class WindowDetector
 
     private static Rectangle GetTopLevelWindowRectAtPoint(Point screenPoint, Rectangle virtualBounds)
     {
-        var pt = ToScreenPoint(screenPoint, virtualBounds);
+        // Try the cached snapshot first (very fast memory lookup)
+        lock (CacheLock)
+        {
+            if (CachedWindows.Count > 0)
+            {
+                var found = CachedWindows.FirstOrDefault(w => w.Rectangle.Contains(screenPoint));
+                if (found != null)
+                {
+                    // Check if there is a more specific child control/window under the cursor
+                    var childRect = GetControlRectAtPoint(found.Handle, screenPoint, virtualBounds);
+                    if (childRect.Width > 0 && childRect.Height > 0)
+                    {
+                        return childRect;
+                    }
+                    return found.Rectangle;
+                }
+                return Rectangle.Empty;
+            }
+        }
 
+        // Live fallback
+        var pt = ToScreenPoint(screenPoint, virtualBounds);
         Rectangle detected = Rectangle.Empty;
         bool blockedByRealWindow = false;
         var seen = new HashSet<IntPtr>();
@@ -94,7 +208,6 @@ public static class WindowDetector
             : detected;
     }
 
-    /// <summary>Secondary live fallback when z-order enumeration doesn't resolve a hit.</summary>
     private static Rectangle GetTopLevelWindowRectFallbackFromPoint(User32.POINT pt, Rectangle virtualBounds)
     {
         IntPtr rawHwnd = User32.WindowFromPoint(pt);
@@ -175,11 +288,17 @@ public static class WindowDetector
         if ((exStyle & User32.WS_EX_TRANSPARENT) != 0)
             return false;
 
-        if ((exStyle & User32.WS_EX_NOACTIVATE) != 0 && (exStyle & User32.WS_EX_APPWINDOW) == 0)
-            return false;
+        bool isTaskbar = string.Equals(className, "Shell_TrayWnd", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(className, "Shell_SecondaryTrayWnd", StringComparison.OrdinalIgnoreCase);
 
-        if ((exStyle & User32.WS_EX_TOOLWINDOW) != 0 && (exStyle & User32.WS_EX_APPWINDOW) == 0)
-            return false;
+        if (!isTaskbar)
+        {
+            if ((exStyle & User32.WS_EX_NOACTIVATE) != 0 && (exStyle & User32.WS_EX_APPWINDOW) == 0)
+                return false;
+
+            if ((exStyle & User32.WS_EX_TOOLWINDOW) != 0 && (exStyle & User32.WS_EX_APPWINDOW) == 0)
+                return false;
+        }
 
         if (IgnoredWindowClasses.Any(ignored => string.Equals(ignored, className, StringComparison.OrdinalIgnoreCase)))
             return false;
@@ -234,6 +353,60 @@ public static class WindowDetector
             return dwmRect;
 
         return ChoosePreferredBounds(dwmRect, rawRect.ToRectangle());
+    }
+
+    private static Rectangle GetControlRectAtPoint(IntPtr parentHwnd, Point screenPoint, Rectangle virtualBounds)
+    {
+        var pt = ToScreenPoint(screenPoint, virtualBounds);
+        IntPtr bestChild = IntPtr.Zero;
+        Rectangle bestRect = Rectangle.Empty;
+        int bestArea = int.MaxValue;
+
+        User32.EnumChildWindows(parentHwnd, (hwnd, _) =>
+        {
+            if (hwnd == IntPtr.Zero || !User32.IsWindowVisible(hwnd))
+                return true;
+
+            // Get window rect
+            if (!User32.GetWindowRect(hwnd, out var rawRect))
+                return true;
+
+            var rect = rawRect.ToRectangle();
+            if (rect.Width <= 2 || rect.Height <= 2)
+                return true;
+
+            if (rect.Contains(pt.X, pt.Y))
+            {
+                int area = rect.Width * rect.Height;
+                // We seek the most specific (smallest) child control containing the point
+                if (area < bestArea)
+                {
+                    bestArea = area;
+                    bestChild = hwnd;
+                    bestRect = new Rectangle(
+                        rect.Left - virtualBounds.X,
+                        rect.Top - virtualBounds.Y,
+                        rect.Width,
+                        rect.Height);
+                }
+            }
+            return true;
+        }, IntPtr.Zero);
+
+        return bestChild != IntPtr.Zero ? bestRect : Rectangle.Empty;
+    }
+
+    private static Rectangle GetClientRect(IntPtr hwnd)
+    {
+        if (!User32.GetClientRect(hwnd, out var rect))
+            return Rectangle.Empty;
+
+        var clientRect = rect.ToRectangle();
+        var clientLeftTop = new User32.POINT(0, 0);
+        if (!User32.ClientToScreen(hwnd, ref clientLeftTop))
+            return Rectangle.Empty;
+
+        return new Rectangle(clientLeftTop.X, clientLeftTop.Y, clientRect.Width, clientRect.Height);
     }
 
     private static string GetWindowTitle(IntPtr hwnd)
