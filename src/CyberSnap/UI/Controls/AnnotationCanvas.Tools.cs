@@ -1410,7 +1410,7 @@ public sealed partial class AnnotationCanvas
         if (_activeTool == CanvasTool.Emoji)
         {
             EmojiPlaceSize = _emojiPlaceSize + (e.Delta > 0 ? 4f : -4f);
-            ShowToolBanner($"Emoji size: {(int)_emojiPlaceSize}px");
+            ShowToolBanner($"{CyberSnap.Services.LocalizationService.Translate("Emoji size")}: {(int)_emojiPlaceSize}px");
             Invalidate();
             return;
         }
