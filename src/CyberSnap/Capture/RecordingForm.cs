@@ -7,6 +7,7 @@ using CyberSnap.Native;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 using CyberSnap.UI;
+using CyberSnap.Models;
 
 namespace CyberSnap.Capture;
 
@@ -66,6 +67,8 @@ public sealed partial class RecordingForm : Form
     private readonly bool _showMagnifier;
     private readonly CaptureMagnifierHelper? _magHelper;
     private LiveSelectionAdornerForm? _selectionAdorner;
+    private Rectangle _autoDetectRect;
+    private bool _autoDetectActive;
     private StandaloneToolBanner? _banner;
     private CaptureEscapeKeyHook? _escapeHook;
     private System.Windows.Forms.Timer? _tickTimer;
@@ -193,6 +196,24 @@ public sealed partial class RecordingForm : Form
         Focus();
         _escapeHook = CaptureEscapeKeyHook.Install(this, CancelFromEscape);
         _selectionAdorner?.Show(this);
+
+        bool isDetectEnabled = false;
+        try
+        {
+            var settings = SettingsService.LoadStatic();
+            isDetectEnabled = settings != null && settings.WindowDetection != WindowDetectionMode.Off;
+        }
+        catch { }
+
+        if (isDetectEnabled)
+        {
+            WindowDetector.RegisterIgnoredWindow(Handle);
+            if (_selectionAdorner != null)
+                WindowDetector.RegisterIgnoredWindow(_selectionAdorner.Handle);
+
+            WindowDetector.ClearSnapshot();
+            Task.Run(() => WindowDetector.SnapshotWindows(new Rectangle(_virtualBounds.X, _virtualBounds.Y, _virtualBounds.Width, _virtualBounds.Height)));
+        }
     }
 
     // â”€â”€â”€ Selection phase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -287,13 +308,30 @@ public sealed partial class RecordingForm : Form
             _isDragging = true;
             _dragStart = e.Location;
             _selectionCursor = e.Location;
-            _selection = Rectangle.Empty;
+            if (_autoDetectActive && !_autoDetectRect.IsEmpty)
+            {
+                _selection = _autoDetectRect;
+            }
+            else
+            {
+                _selection = Rectangle.Empty;
+            }
             _banner?.Dismiss();
             UpdateLiveSelectionAdorner();
         }
         else if (_state == State.PreRecording && e.Button == MouseButtons.Left)
         {
-            // Handle resize/move takes priority over buttons
+            if (_toolbarRect.Contains(e.Location))
+            {
+                if (_startBtn.Contains(e.Location))
+                    StartActualRecording();
+                else if (_fpsBtn.Contains(e.Location))
+                    ToggleFps();
+                else if (_discardBtn.Contains(e.Location))
+                    DiscardRecording();
+                return;
+            }
+
             int hit = HitTestHandle(e.Location);
             if (hit >= 0)
             {
@@ -311,12 +349,6 @@ public sealed partial class RecordingForm : Form
                 _handleDragStartRect = _recordRegion;
                 return;
             }
-            if (_startBtn.Contains(e.Location))
-                StartActualRecording();
-            else if (_fpsBtn.Contains(e.Location))
-                ToggleFps();
-            else if (_discardBtn.Contains(e.Location))
-                DiscardRecording();
         }
         else if (_state == State.Recording && e.Button == MouseButtons.Left)
         {
@@ -352,18 +384,45 @@ public sealed partial class RecordingForm : Form
                 UpdateLiveSelectionAdorner();
                 Invalidate(); // full repaint for correct dim overlay
             }
+            else
+            {
+                bool isDetectEnabled = false;
+                try
+                {
+                    var settings = SettingsService.LoadStatic();
+                    isDetectEnabled = settings != null && settings.WindowDetection != WindowDetectionMode.Off;
+                }
+                catch { }
+
+                if (isDetectEnabled)
+                {
+                    var rect = WindowDetector.GetDetectionRectAtPoint(e.Location, _virtualBounds, WindowDetectionMode.WindowOnly);
+                    if (rect.Width > 0 && rect.Height > 0)
+                    {
+                        if (rect != _autoDetectRect)
+                        {
+                            _autoDetectRect = rect;
+                            _autoDetectActive = true;
+                            Invalidate();
+                        }
+                    }
+                    else
+                    {
+                        if (_autoDetectActive)
+                        {
+                            _autoDetectRect = Rectangle.Empty;
+                            _autoDetectActive = false;
+                            Invalidate();
+                        }
+                    }
+                }
+            }
             _magHelper?.Update(e.Location, this, _virtualBounds, _isDragging ? GetMagnifierAvoidBounds() : Rectangle.Empty);
             return;
         }
         if (_state == State.PreRecording)
         {
-            // Handle hover feedback takes priority over button hover
-            int hit = HitTestHandle(e.Location);
-            if (hit >= 0)
-                Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
-            else if (_recordRegion.Contains(e.Location))
-                Cursor = Cursors.SizeAll;
-            else
+            if (_toolbarRect.Contains(e.Location))
             {
                 int prev = _hoveredBtn;
                 _hoveredBtn = _startBtn.Contains(e.Location) ? 0
@@ -372,6 +431,17 @@ public sealed partial class RecordingForm : Form
                             : -1;
                 Cursor = _hoveredBtn >= 0 ? Cursors.Hand : Cursors.Default;
                 if (_hoveredBtn != prev) Invalidate(_toolbarRect);
+            }
+            else
+            {
+                _hoveredBtn = -1;
+                int hit = HitTestHandle(e.Location);
+                if (hit >= 0)
+                    Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
+                else if (_recordRegion.Contains(e.Location))
+                    Cursor = Cursors.SizeAll;
+                else
+                    Cursor = Cursors.Default;
             }
 
             string tip = _hoveredBtn switch
@@ -422,11 +492,19 @@ public sealed partial class RecordingForm : Form
         if (_state == State.Selecting && _isDragging && e.Button == MouseButtons.Left)
         {
             _isDragging = false;
-            _selection = NormRect(_dragStart, e.Location);
-            _selectionCursor = e.Location;
-            UpdateLiveSelectionAdorner();
-            if (_selection.Width > 10 && _selection.Height > 10)
+            var dragSelection = NormRect(_dragStart, e.Location);
+            if (dragSelection.Width > 10 && dragSelection.Height > 10)
             {
+                _selection = dragSelection;
+                _selectionCursor = e.Location;
+                UpdateLiveSelectionAdorner();
+                PrepareRecording();
+            }
+            else if (_autoDetectActive && !_autoDetectRect.IsEmpty)
+            {
+                _selection = _autoDetectRect;
+                _selectionCursor = e.Location;
+                UpdateLiveSelectionAdorner();
                 PrepareRecording();
             }
             else
@@ -487,6 +565,10 @@ public sealed partial class RecordingForm : Form
         }
         else
         {
+            if (_autoDetectActive && !_autoDetectRect.IsEmpty)
+            {
+                SelectionFrameRenderer.DrawAutoDetectRectangle(g, _autoDetectRect);
+            }
             _banner?.Render(g);
         }
 
@@ -924,6 +1006,11 @@ public sealed partial class RecordingForm : Form
         if (disposing)
         {
             Current = null;
+            WindowDetector.UnregisterIgnoredWindow(Handle);
+            if (_selectionAdorner != null)
+                WindowDetector.UnregisterIgnoredWindow(_selectionAdorner.Handle);
+            WindowDetector.ClearSnapshot();
+
             CaptureWindowExclusion.Unregister(Handle);
             _escapeHook?.Dispose();
             _escapeHook = null;

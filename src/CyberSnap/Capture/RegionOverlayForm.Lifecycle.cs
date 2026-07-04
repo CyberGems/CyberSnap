@@ -46,7 +46,7 @@ public sealed partial class RegionOverlayForm
             {
                 try
                 {
-                    await Task.Delay(220).ConfigureAwait(false);
+                    await Task.Delay(40).ConfigureAwait(false);
                     if (IsDisposed || Disposing || !Visible)
                         return;
 
