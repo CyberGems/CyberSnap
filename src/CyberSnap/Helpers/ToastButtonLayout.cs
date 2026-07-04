@@ -271,21 +271,22 @@ public static class ToastButtonLayout
                 break;
 
             case ToastButtonPreset.Full:
+                // Top row matches Standard: Pin, Gallery, Save, Close.
                 Place(ToastButtonKind.Pin, ToastButtonSlot.TopLeft);
-                Place(ToastButtonKind.Office, ToastButtonSlot.TopInnerLeft);
+                Place(ToastButtonKind.History, ToastButtonSlot.TopInnerLeft);
+                Place(ToastButtonKind.Save, ToastButtonSlot.TopInnerRight);
                 Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
-                Place(ToastButtonKind.History, ToastButtonSlot.TopInnerRight);
-                Place(ToastButtonKind.Delete, ToastButtonSlot.BottomLeft);
-                Place(ToastButtonKind.Edit, ToastButtonSlot.BottomInnerLeft);
-                Place(ToastButtonKind.Save, ToastButtonSlot.BottomRight);
-                Place(ToastButtonKind.Copy, ToastButtonSlot.BottomInnerRight);
+                Place(ToastButtonKind.Copy, ToastButtonSlot.BottomLeft);
+                Place(ToastButtonKind.Office, ToastButtonSlot.BottomInnerLeft);
+                Place(ToastButtonKind.Delete, ToastButtonSlot.BottomInnerRight);
+                Place(ToastButtonKind.Edit, ToastButtonSlot.BottomRight);
                 break;
 
-            default: // Standard — matches the default ToastButtonLayoutSettings layout; one button per corner.
+            default: // Standard — single top row: Pin, Gallery, Save, Close.
                 Place(ToastButtonKind.Pin, ToastButtonSlot.TopLeft);
+                Place(ToastButtonKind.History, ToastButtonSlot.TopInnerLeft);
+                Place(ToastButtonKind.Save, ToastButtonSlot.TopInnerRight);
                 Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
-                Place(ToastButtonKind.History, ToastButtonSlot.BottomLeft);
-                Place(ToastButtonKind.Save, ToastButtonSlot.BottomRight);
                 break;
         }
 
