@@ -404,6 +404,65 @@ public sealed partial class HistoryService : IDisposable
             ScheduleFlush_NoLock();
         }
         NotifyChanged();
+        ImageSearchIndexService.PrimaryInstance?.RemoveFile(entry.FilePath);
+    }
+
+    /// <summary>Delete a saved capture from disk and remove every trace from history, thumbnails, and search.</summary>
+    public bool DeleteCaptureByPath(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return false;
+
+        HistoryEntry? entry;
+        lock (_gate)
+        {
+            _entriesByPath.TryGetValue(filePath, out entry);
+        }
+
+        if (entry is not null)
+        {
+            DeleteEntry(entry);
+            return !File.Exists(filePath);
+        }
+
+        lock (_gate)
+        {
+            TryDeleteHistoryFile_NoLock(filePath, "toast delete");
+            TryDeleteManagedThumbnail_NoLock(filePath);
+        }
+
+        NotifyChanged();
+        ImageSearchIndexService.PrimaryInstance?.RemoveFile(filePath);
+        return !File.Exists(filePath);
+    }
+
+    /// <summary>Delete a saved capture file from the toast (or any caller without a HistoryService reference).</summary>
+    public static bool TryDeleteSavedCapture(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return false;
+
+        try
+        {
+            var primary = PrimaryInstance;
+            if (primary is not null)
+                return primary.DeleteCaptureByPath(filePath);
+
+            if (!File.Exists(filePath))
+                return false;
+
+            File.Delete(filePath);
+            ImageSearchIndexService.PrimaryInstance?.RemoveFile(filePath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning(
+                "history.toast-delete",
+                $"Failed to delete saved capture {Path.GetFileName(filePath)}: {ex.Message}",
+                ex);
+            return false;
+        }
     }
 
     public void DeleteEntries(IEnumerable<HistoryEntry> entries)
