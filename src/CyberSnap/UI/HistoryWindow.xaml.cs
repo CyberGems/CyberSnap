@@ -64,6 +64,7 @@ public partial class HistoryWindow : Window
     private bool _historyTabLoadPreserveTransientState;
     private bool _suppressPrunePreferenceChange;
     private string? _pendingNavigateToPath;
+    private WindowState _lastNonMinimizedState = WindowState.Normal;
 
     public HistoryWindow(SettingsService settingsService, HistoryService historyService, ImageSearchIndexService imageSearchIndexService)
     {
@@ -94,7 +95,14 @@ public partial class HistoryWindow : Window
             }
             ApplyMicaBackdrop();
         };
-        StateChanged += (_, _) => SettingsTitleBar.RefreshIcons();
+        StateChanged += (_, _) =>
+        {
+            SettingsTitleBar.RefreshIcons();
+            if (WindowState != WindowState.Minimized)
+            {
+                _lastNonMinimizedState = WindowState;
+            }
+        };
 
         _historyService.Changed += HistoryService_Changed;
         _imageSearchIndexService.Changed += ImageSearchIndexService_Changed;
@@ -363,6 +371,35 @@ public partial class HistoryWindow : Window
         {
             WmGetMinMaxInfo(hwnd, lParam);
             handled = true;
+        }
+        else if (msg == 0x0112) // WM_SYSCOMMAND
+        {
+            int command = wParam.ToInt32() & 0xFFF0;
+            if (command == 0xF120) // SC_RESTORE
+            {
+                if (WindowState == WindowState.Minimized)
+                {
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
+                    {
+                        WindowState = _lastNonMinimizedState;
+                        Activate();
+                    }));
+                    handled = true;
+                }
+            }
+        }
+        else if (msg == 0x0006) // WM_ACTIVATE
+        {
+            int activateState = wParam.ToInt32() & 0xFFFF;
+            if (activateState != 0 && WindowState == WindowState.Minimized)
+            {
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
+                {
+                    WindowState = _lastNonMinimizedState;
+                    Activate();
+                }));
+                handled = true;
+            }
         }
         return IntPtr.Zero;
     }
