@@ -778,6 +778,7 @@
   "Cancel crop": "Cancelar recorte",
   "Discard changes?": "¿Descartar cambios?",
   "Unsaved changes": "Cambios sin guardar",
+  "You have unsaved changes. Are you sure you want to discard them?": "Tienes cambios sin guardar. ¿Seguro que quieres descartarlos?",
   "Discard": "Descartar",
   "Keep editing": "Seguir editando",
   "Zoom": "Zoom",

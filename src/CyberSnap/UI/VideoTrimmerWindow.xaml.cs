@@ -809,6 +809,25 @@ namespace CyberSnap.UI
         
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            // Prompt if there are unsaved changes
+            bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
+            if (isModified)
+            {
+                bool discard = ThemedConfirmDialog.Confirm(
+                    this,
+                    "Discard changes?",
+                    "You have unsaved changes. Are you sure you want to discard them?",
+                    "Discard",
+                    "Keep editing",
+                    danger: true);
+
+                if (!discard)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
+
             CompositionTarget.Rendering -= OnRendering;
             _audioPersistTimer.Stop();
             if (_audioPersistPending && Application.Current is App app)
