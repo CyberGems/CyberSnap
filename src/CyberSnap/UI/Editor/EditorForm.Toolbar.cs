@@ -1960,7 +1960,7 @@ internal sealed class EditorCanvasFrame : Panel
             Math.Max(1, Width - Padding.Horizontal + 16),
             Math.Max(1, Height - Padding.Vertical + 16));
 
-        using var glow = new Pen(Color.FromArgb(34, EditorColors.Accent), 5f);
+        using var glow = new Pen(Color.FromArgb(34, EditorColors.Accent), 2f);
         using var border = new Pen(EditorColors.Border);
         using var path = EditorPaint.RoundedRect(rect, 8);
         e.Graphics.DrawPath(glow, path);
@@ -2301,7 +2301,7 @@ internal sealed class EditorCommandButton : Button
             }
         }
 
-        if (Enabled && (Primary || _pressed))
+        if (Enabled && _pressed)
         {
             using var underlineBrush = new SolidBrush(EditorColors.Accent);
             g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
