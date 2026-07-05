@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
@@ -39,8 +39,8 @@ public sealed class PickerMagnifierForm : Form
     private string _lastRgb = "";
     private int _lastPickedArgb;
 
-    private readonly Font _hexFont = new("Segoe UI Variable Display", 11f, FontStyle.Bold, GraphicsUnit.Point);
-    private readonly Font _rgbFont = new(UiChrome.PreferredFamilyName, 9f, FontStyle.Regular, GraphicsUnit.Point);
+    private readonly Font _hexFont = UiChrome.ChromeFont(11f, FontStyle.Bold);
+    private readonly Font _rgbFont = UiChrome.ChromeFont(9f, FontStyle.Regular);
     private readonly SolidBrush _labelBrush = new(UiChrome.SurfaceTextPrimary);
     private readonly SolidBrush _bgBrush = new(UiChrome.SurfaceTier1);
     private readonly Pen _lensBorderPen = new(Color.FromArgb(160, UiChrome.AccentColor), 1.2f);

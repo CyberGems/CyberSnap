@@ -61,11 +61,15 @@ public static class UiChrome
     public static int ScaledPopupGap => ScaleInt(PopupGap);
     public static int ScaledPopupRadius => ScaleInt(PopupRadius);
 
+    private static FontFamily? _fontFamily;
+    public static FontFamily FontFamily =>
+        _fontFamily ??= TryCreateFontFamily(PreferredFamilyName) ?? TryCreateFontFamily(FallbackFamilyName) ?? SystemFonts.DefaultFont.FontFamily;
+
     public static Font ChromeFont(float size = ChromeBodySize, FontStyle style = FontStyle.Regular)
     {
         try
         {
-            return new Font(PreferredFamilyName, ScaleFloat(size), style);
+            return new Font(FontFamily.Name, ScaleFloat(size), style);
         }
         catch
         {
@@ -76,9 +80,6 @@ public static class UiChrome
     public static bool IsDark => CyberSnap.UI.Theme.IsDark;
     public static string PreferredFamilyName => "Segoe UI Variable Text";
     public static string FallbackFamilyName => "Segoe UI";
-
-    public static FontFamily FontFamily =>
-        TryCreateFontFamily(PreferredFamilyName) ?? TryCreateFontFamily(FallbackFamilyName) ?? SystemFonts.DefaultFont.FontFamily;
 
     public static System.Drawing.Color SurfaceWindowBackground => IsDark ? System.Drawing.Color.FromArgb(28, 28, 28) : System.Drawing.Color.FromArgb(223, 226, 234);
     public static System.Drawing.Color SurfaceBackground => IsDark ? System.Drawing.Color.FromArgb(40, 43, 44) : System.Drawing.Color.FromArgb(230, 233, 241);
