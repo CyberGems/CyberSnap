@@ -94,10 +94,55 @@ public partial class CaptureWidgetWindow : Window
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
     }
 
+    private void ApplyTheme()
+    {
+        Theme.Refresh();
+        
+        // Define colors/brushes for widget based on IsDark
+        var bg = Theme.IsDark ? System.Windows.Media.Color.FromArgb(242, 13, 15, 26) : System.Windows.Media.Color.FromArgb(242, 223, 226, 234);
+        var accent = Theme.IsDark ? System.Windows.Media.Color.FromRgb(0, 255, 255) : System.Windows.Media.Color.FromRgb(0, 120, 215);
+        var accentHover = Theme.IsDark ? System.Windows.Media.Color.FromRgb(128, 255, 255) : System.Windows.Media.Color.FromRgb(50, 150, 240);
+        var text = Theme.IsDark ? System.Windows.Media.Color.FromRgb(230, 240, 255) : System.Windows.Media.Color.FromRgb(26, 26, 26);
+        var textMuted = Theme.IsDark ? System.Windows.Media.Color.FromRgb(160, 180, 210) : System.Windows.Media.Color.FromRgb(96, 96, 96);
+        var border = Theme.IsDark ? System.Windows.Media.Color.FromArgb(32, 0, 255, 255) : System.Windows.Media.Color.FromArgb(22, 0, 0, 0);
+        var borderActive = Theme.IsDark ? System.Windows.Media.Color.FromArgb(128, 0, 255, 255) : System.Windows.Media.Color.FromArgb(80, 0, 120, 215);
+        var peekGripBg = Theme.IsDark ? System.Windows.Media.Color.FromArgb(38, 0, 255, 255) : System.Windows.Media.Color.FromArgb(38, 0, 120, 215);
+        var hoverBg = Theme.IsDark ? System.Windows.Media.Color.FromArgb(21, 0, 255, 255) : System.Windows.Media.Color.FromArgb(21, 0, 120, 215);
+        var pressedBg = Theme.IsDark ? System.Windows.Media.Color.FromArgb(48, 0, 255, 255) : System.Windows.Media.Color.FromArgb(48, 0, 120, 215);
+
+        // Toggle Switch colors
+        var toggleTrackBg = Theme.IsDark ? System.Windows.Media.Color.FromRgb(42, 42, 42) : System.Windows.Media.Color.FromRgb(224, 224, 224);
+        var toggleTrackBorder = Theme.IsDark ? System.Windows.Media.Color.FromRgb(68, 68, 68) : System.Windows.Media.Color.FromRgb(204, 204, 204);
+        var toggleThumbBg = Theme.IsDark ? System.Windows.Media.Color.FromRgb(136, 136, 136) : System.Windows.Media.Color.FromRgb(136, 136, 136);
+        var toggleThumbHoverBg = Theme.IsDark ? System.Windows.Media.Color.FromRgb(170, 170, 170) : System.Windows.Media.Color.FromRgb(85, 85, 85);
+
+        Resources["WidgetBg"] = new SolidColorBrush(bg);
+        Resources["WidgetAccent"] = new SolidColorBrush(accent);
+        Resources["WidgetAccentHover"] = new SolidColorBrush(accentHover);
+        Resources["WidgetText"] = new SolidColorBrush(text);
+        Resources["WidgetTextMuted"] = new SolidColorBrush(textMuted);
+        Resources["WidgetBorder"] = new SolidColorBrush(border);
+        Resources["WidgetBorderActive"] = new SolidColorBrush(borderActive);
+        Resources["WidgetPeekGripBg"] = new SolidColorBrush(peekGripBg);
+        Resources["WidgetButtonHoverBg"] = new SolidColorBrush(hoverBg);
+        Resources["WidgetButtonPressedBg"] = new SolidColorBrush(pressedBg);
+        Resources["WidgetToggleTrackBg"] = new SolidColorBrush(toggleTrackBg);
+        Resources["WidgetToggleTrackBorder"] = new SolidColorBrush(toggleTrackBorder);
+        Resources["WidgetToggleThumbBg"] = new SolidColorBrush(toggleThumbBg);
+        Resources["WidgetToggleThumbHoverBg"] = new SolidColorBrush(toggleThumbHoverBg);
+        Resources["WidgetAccentColor"] = accent;
+        Resources["WidgetGlowOpacity"] = Theme.IsDark ? 0.6 : 0.35;
+    }
+
     private void LoadIcons()
     {
-        var accentColor = System.Drawing.Color.FromArgb(0, 255, 255); // Neon Cyan for CyberGems aesthetics
-        var normalIconColor = System.Drawing.Color.FromArgb(230, 240, 255); // TextPrimary white-blue
+        Theme.Refresh();
+        var accentColor = Theme.IsDark 
+            ? System.Drawing.Color.FromArgb(0, 255, 255) 
+            : System.Drawing.Color.FromArgb(0, 120, 215);
+        var normalIconColor = Theme.IsDark 
+            ? System.Drawing.Color.FromArgb(230, 240, 255) 
+            : System.Drawing.Color.FromArgb(26, 26, 26);
 
         string captureIconId = (_settings.DefaultCaptureMode == Models.CaptureMode.Center) ? "center" : "captureRect";
         BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf(captureIconId, accentColor, 20);
@@ -132,6 +177,7 @@ public partial class CaptureWidgetWindow : Window
             return;
         }
 
+        ApplyTheme();
         UpdateEnableEditorState();
         LoadIcons();
 

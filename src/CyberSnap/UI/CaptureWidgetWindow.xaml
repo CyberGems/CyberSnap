@@ -1,6 +1,7 @@
 <Window x:Class="CyberSnap.UI.CaptureWidgetWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         Title="CyberSnap Quick Panel"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -22,10 +23,19 @@
         <SolidColorBrush x:Key="WidgetTextMuted" Color="#A0B4D2"/>
         <SolidColorBrush x:Key="WidgetBorder" Color="#2000FFFF"/>
         <SolidColorBrush x:Key="WidgetBorderActive" Color="#8000FFFF"/>
+        <SolidColorBrush x:Key="WidgetPeekGripBg" Color="#2600FFFF"/>
+        <SolidColorBrush x:Key="WidgetButtonHoverBg" Color="#1500FFFF"/>
+        <SolidColorBrush x:Key="WidgetButtonPressedBg" Color="#3000FFFF"/>
+        <SolidColorBrush x:Key="WidgetToggleTrackBg" Color="#2A2A2A"/>
+        <SolidColorBrush x:Key="WidgetToggleTrackBorder" Color="#444444"/>
+        <SolidColorBrush x:Key="WidgetToggleThumbBg" Color="#888888"/>
+        <SolidColorBrush x:Key="WidgetToggleThumbHoverBg" Color="#AAAAAA"/>
+        <Color x:Key="WidgetAccentColor">#00FFFF</Color>
+        <sys:Double x:Key="WidgetGlowOpacity">0.6</sys:Double>
         <SolidColorBrush x:Key="CaptureBtnRed" Color="#FF3B30"/>
         
         <!-- Glow Effect -->
-        <DropShadowEffect x:Key="CyanGlow" Color="#00FFFF" BlurRadius="10" ShadowDepth="0" Opacity="0.6"/>
+        <DropShadowEffect x:Key="CyanGlow" Color="{DynamicResource WidgetAccentColor}" BlurRadius="10" ShadowDepth="0" Opacity="{DynamicResource WidgetGlowOpacity}"/>
         <DropShadowEffect x:Key="RedGlow" Color="#FF3B30" BlurRadius="12" ShadowDepth="0" Opacity="0.7"/>
 
         <!-- Action Button Style (Larger buttons/margins) -->
@@ -33,7 +43,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource WidgetText}"/>
+            <Setter Property="Foreground" Value="{DynamicResource WidgetText}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Width" Value="36"/>
@@ -47,10 +57,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1500FFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WidgetButtonHoverBg}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#3000FFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WidgetButtonPressedBg}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -69,20 +79,20 @@
                     <ControlTemplate TargetType="ToggleButton">
                         <Grid>
                             <Border x:Name="Track" Width="32" Height="18" CornerRadius="9"
-                                    Background="#2A2A2A" BorderBrush="#444" BorderThickness="1"/>
+                                    Background="{DynamicResource WidgetToggleTrackBg}" BorderBrush="{DynamicResource WidgetToggleTrackBorder}" BorderThickness="1"/>
                             <Border x:Name="Thumb" Width="14" Height="14" CornerRadius="7"
-                                    Background="#888" HorizontalAlignment="Left" Margin="2,0,0,0"/>
+                                    Background="{DynamicResource WidgetToggleThumbBg}" HorizontalAlignment="Left" Margin="2,0,0,0"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Track" Property="Background" Value="{StaticResource WidgetAccent}"/>
-                                <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource WidgetAccent}"/>
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource WidgetAccent}"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource WidgetAccent}"/>
                                 <Setter TargetName="Thumb" Property="Background" Value="White"/>
                                 <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
                                 <Setter TargetName="Thumb" Property="Margin" Value="0,0,2,0"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Thumb" Property="Background" Value="#AAA"/>
+                                <Setter TargetName="Thumb" Property="Background" Value="{DynamicResource WidgetToggleThumbHoverBg}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -101,8 +111,8 @@
         <!-- The widget is one piece; it peeks from the selected screen edge when collapsed. -->
         <Grid x:Name="LayoutGrid">
             <!-- Main Panel Border -->
-            <Border x:Name="MainPanelBorder" Background="{StaticResource WidgetBg}"
-                    BorderBrush="{StaticResource WidgetBorderActive}" BorderThickness="1" CornerRadius="8"
+            <Border x:Name="MainPanelBorder" Background="{DynamicResource WidgetBg}"
+                    BorderBrush="{DynamicResource WidgetBorderActive}" BorderThickness="1" CornerRadius="8"
                     Visibility="Visible">
                 <Border.Effect>
                     <!-- Soft neutral drop shadow (SnagIt-like). Needs the transparent halo from
@@ -111,15 +121,15 @@
                 </Border.Effect>
 
                 <Grid>
-                    <Border x:Name="PeekGrip" Background="#2600FFFF" BorderBrush="{StaticResource WidgetAccent}"
+                    <Border x:Name="PeekGrip" Background="{DynamicResource WidgetPeekGripBg}" BorderBrush="{DynamicResource WidgetAccent}"
                             BorderThickness="0" Panel.ZIndex="2" IsHitTestVisible="False">
                         <!-- No own glow: the panel's drop shadow covers the peek. Its own effect
                              (clipped before the shadow margin existed) now rendered as a corner ghost. -->
                         <StackPanel x:Name="GripPanel" Orientation="Horizontal"
                                     HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Rectangle x:Name="GripRect1" Width="2" Height="6" Fill="{StaticResource WidgetTextMuted}" Margin="1,0"/>
-                            <Rectangle x:Name="GripRect2" Width="2" Height="6" Fill="{StaticResource WidgetTextMuted}" Margin="1,0"/>
-                            <Rectangle x:Name="GripRect3" Width="2" Height="6" Fill="{StaticResource WidgetTextMuted}" Margin="1,0"/>
+                            <Rectangle x:Name="GripRect1" Width="2" Height="6" Fill="{DynamicResource WidgetTextMuted}" Margin="1,0"/>
+                            <Rectangle x:Name="GripRect2" Width="2" Height="6" Fill="{DynamicResource WidgetTextMuted}" Margin="1,0"/>
+                            <Rectangle x:Name="GripRect3" Width="2" Height="6" Fill="{DynamicResource WidgetTextMuted}" Margin="1,0"/>
                         </StackPanel>
                     </Border>
 
@@ -138,7 +148,7 @@
                                 <ControlTemplate TargetType="Button">
                                     <Grid Background="Transparent">
                                         <!-- Glow/Outer Ring -->
-                                        <Path x:Name="OuterRing" Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2" Fill="{StaticResource WidgetAccent}" Stretch="Uniform" Width="54" Height="54"/>
+                                        <Path x:Name="OuterRing" Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2" Fill="{DynamicResource WidgetAccent}" Stretch="Uniform" Width="54" Height="54"/>
                                         <!-- Center content: scales (A) + glow intensifies (B) on hover -->
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                                           RenderTransformOrigin="0.5,0.5">
@@ -146,13 +156,13 @@
                                                 <ScaleTransform x:Name="CenterScale" ScaleX="1" ScaleY="1"/>
                                             </ContentPresenter.RenderTransform>
                                             <ContentPresenter.Effect>
-                                                <DropShadowEffect x:Name="CenterGlow" Color="#00FFFF" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/>
+                                                <DropShadowEffect x:Name="CenterGlow" Color="{DynamicResource WidgetAccentColor}" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/>
                                             </ContentPresenter.Effect>
                                         </ContentPresenter>
                                     </Grid>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="OuterRing" Property="Effect" Value="{StaticResource CyanGlow}"/>
+                                            <Setter TargetName="OuterRing" Property="Effect" Value="{DynamicResource CyanGlow}"/>
                                             <Trigger.EnterActions>
                                                 <BeginStoryboard>
                                                     <Storyboard>
@@ -244,7 +254,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Enable editor" FontSize="11" Foreground="{StaticResource WidgetTextMuted}" FontFamily="Segoe UI Variable Text"
+                            <TextBlock Text="Enable editor" FontSize="11" Foreground="{DynamicResource WidgetTextMuted}" FontFamily="Segoe UI Variable Text"
                                        Margin="0,0,8,0" VerticalAlignment="Center"
                                        ToolTip="Open the post-capture editor for annotations after capturing."/>
                             <ToggleButton x:Name="EnableEditorToggle" Grid.Column="1" Style="{StaticResource WidgetToggleSwitch}"
@@ -261,7 +271,7 @@
                                 <Image Width="10" Height="10" Margin="0,0,4,0" VerticalAlignment="Center"
                                        Source="pack://application:,,,/Assets/CyberSnap_square.png"/>
                                 <TextBlock Text="CyberSnap widget" FontSize="9.5" FontWeight="SemiBold"
-                                           Foreground="{StaticResource WidgetTextMuted}" Opacity="0.65"
+                                           Foreground="{DynamicResource WidgetTextMuted}" Opacity="0.65"
                                            VerticalAlignment="Center"
                                            FontFamily="Segoe UI Variable Display"/>
                             </StackPanel>

@@ -598,6 +598,9 @@ public partial class SettingsWindow
 
                         if (w is HistoryWindow hw && hw.IsLoaded)
                             hw.ApplyThemeColors();
+
+                        if (w is CaptureWidgetWindow cww && cww.IsLoaded)
+                            cww.RefreshLayout();
                     }
                     catch (Exception ex)
                     {
