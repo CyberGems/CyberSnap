@@ -20,19 +20,36 @@ namespace CyberSnap.UI
         private bool _isSliderDragging;
         private double _videoDurationSeconds;
         private bool _isPinned = false;
-        
+
         private double _startTimeSeconds;
         private double _endTimeSeconds;
         private double _fps = 30.0;
         private double _lastTargetSeekSeconds = -1;
-        
+        private bool _hasAudioTrack;
+        private readonly bool _isGif;
+        private readonly DispatcherTimer _audioPersistTimer;
+        private bool _audioPersistPending;
+
         public VideoTrimmerWindow(string filePath, SettingsService settingsService)
         {
             _mediaFilePath = filePath;
             _settingsService = settingsService;
+            _isGif = string.Equals(Path.GetExtension(filePath), ".gif", StringComparison.OrdinalIgnoreCase);
+
+            _audioPersistTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _audioPersistTimer.Tick += (_, _) =>
+            {
+                _audioPersistTimer.Stop();
+                if (!_audioPersistPending)
+                    return;
+
+                _audioPersistPending = false;
+                if (Application.Current is App app)
+                    app.PersistVideoTrimmerAudio(VolumeControl.Volume, VolumeControl.IsExportMuted);
+            };
             
             InitializeComponent();
-            
+
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
             UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
@@ -47,9 +64,10 @@ namespace CyberSnap.UI
             CompositionTarget.Rendering += OnRendering;
             
             // Determine FPS from settings
-            bool isGif = string.Equals(Path.GetExtension(filePath), ".gif", StringComparison.OrdinalIgnoreCase);
-            _fps = isGif ? settingsService.Settings.GifFps : settingsService.Settings.RecordingFps;
+            _fps = _isGif ? settingsService.Settings.GifFps : settingsService.Settings.RecordingFps;
             if (_fps <= 0) _fps = 30.0;
+
+            InitializeVolumeControl();
 
             // Set up Pin/Topmost state (default is Off)
             TrimmerTitleBar.IsPinActive = _isPinned;
@@ -73,6 +91,7 @@ namespace CyberSnap.UI
             Resources["ThemeWindowBorderBrush"] = Theme.Brush(Theme.WindowBorder);
             Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
             Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
+            VolumeControl.RefreshThemeBrushes();
             Icon = ThemedLogo.Square(32);
         }
         
@@ -160,6 +179,115 @@ namespace CyberSnap.UI
             PlayPauseBtn.ToolTip = PlayPauseIconText.Text == "\uE768"
                 ? LocalizationService.Translate(lang, "Play")
                 : LocalizationService.Translate(lang, "Pause");
+        }
+
+        private void InitializeVolumeControl()
+        {
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            VolumeControl.InterfaceLanguage = lang;
+            VolumeControl.Volume = Math.Clamp(_settingsService.Settings.VideoTrimmerVolume, 0.0, 1.0);
+            VolumeControl.IsExportMuted = _settingsService.Settings.VideoTrimmerExportMuted;
+            VolumeControl.UpdateTooltips();
+
+            if (_isGif)
+            {
+                VolumeControl.SetGifMode();
+                return;
+            }
+
+            _hasAudioTrack = MediaHasAudioTrack(_mediaFilePath);
+            if (!_hasAudioTrack)
+            {
+                VolumeControl.SetNoAudioMode();
+                return;
+            }
+
+            VolumeControl.HasAudioTrack = true;
+            SyncMediaAudio();
+        }
+
+        private void SyncMediaAudio()
+        {
+            if (!_hasAudioTrack)
+                return;
+
+            MediaPlayer.Volume = VolumeControl.Volume;
+            MediaPlayer.IsMuted = VolumeControl.IsExportMuted || VolumeControl.Volume <= 0.001;
+        }
+
+        private void ScheduleAudioPersist()
+        {
+            _audioPersistPending = true;
+            _audioPersistTimer.Stop();
+            _audioPersistTimer.Start();
+        }
+
+        private void VolumeControl_VolumeChanged(object sender, RoutedEventArgs e)
+        {
+            SyncMediaAudio();
+            ScheduleAudioPersist();
+        }
+
+        private void VolumeControl_ExportMuteChanged(object sender, RoutedEventArgs e)
+        {
+            SyncMediaAudio();
+            ScheduleAudioPersist();
+        }
+
+        private static bool MediaHasAudioTrack(string mediaPath)
+        {
+            string? ffmpeg = VideoRecorder.FindFfmpeg();
+            if (ffmpeg == null)
+                return false;
+
+            try
+            {
+                using var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = ffmpeg,
+                    Arguments = $"-hide_banner -i \"{mediaPath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true
+                });
+
+                if (process == null)
+                    return false;
+
+                string stderr = process.StandardError.ReadToEnd();
+                process.WaitForExit(5000);
+                return stderr.Contains("Audio:", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static string BuildTrimArguments(
+            string input,
+            string output,
+            double start,
+            double end,
+            bool isGif,
+            bool hasAudio,
+            double volume,
+            bool exportMuted)
+        {
+            string cultureStart = start.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
+            string cultureEnd = end.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
+
+            if (isGif)
+                return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" \"{output}\"";
+
+            if (!hasAudio || exportMuted || volume <= 0.001)
+                return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -c:v copy -an \"{output}\"";
+
+            if (Math.Abs(volume - 1.0) < 0.001)
+                return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -c copy \"{output}\"";
+
+            string cultureVolume = volume.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+            return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -map 0:v -map 0:a? -c:v copy -af \"volume={cultureVolume}\" -c:a aac -b:a 192k \"{output}\"";
         }
 
         private void StepBackBtn_Click(object sender, RoutedEventArgs e)
@@ -355,6 +483,9 @@ namespace CyberSnap.UI
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             CompositionTarget.Rendering -= OnRendering;
+            _audioPersistTimer.Stop();
+            if (_audioPersistPending && Application.Current is App app)
+                app.PersistVideoTrimmerAudio(VolumeControl.Volume, VolumeControl.IsExportMuted);
             MediaPlayer.Close();
         }
         
@@ -445,18 +576,11 @@ namespace CyberSnap.UI
             }
             
             ProgressOverlay.Visibility = Visibility.Visible;
-            
-            string cultureStart = start.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
-            string cultureEnd = end.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
-            
+
             bool isGif = string.Equals(Path.GetExtension(input), ".gif", StringComparison.OrdinalIgnoreCase);
-            
-            // Prepare arguments
-            // For MP4, copy streams (c:v copy, c:a copy) to cut instantly without re-encoding
-            // For GIF, let FFmpeg re-encode since copy isn't reliable on animated GIFs
-            string args = isGif
-                ? $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" \"{output}\""
-                : $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -c copy \"{output}\"";
+            double exportVolume = VolumeControl.Volume;
+            bool exportMuted = VolumeControl.IsExportMuted;
+            string args = BuildTrimArguments(input, output, start, end, isGif, _hasAudioTrack, exportVolume, exportMuted);
                 
             try
             {

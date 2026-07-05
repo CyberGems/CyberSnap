@@ -250,6 +250,10 @@ public sealed class AppSettings
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
     public bool OpenEditorAfterCapture { get; set; }
     public bool OpenVideoTrimmerAfterCapture { get; set; }
+    /// <summary>Last volume level used in the video trimmer (0.0–1.0).</summary>
+    public double VideoTrimmerVolume { get; set; } = 1.0;
+    /// <summary>When true, exported trimmer output excludes the audio track.</summary>
+    public bool VideoTrimmerExportMuted { get; set; }
     // Editor: when a capture loads, auto-fit it to the canvas (true) or show it at real 100% size (false).
     public bool EditorFitToWindowOnOpen { get; set; } = true;
     public bool EditorPanModeLockObjects { get; set; } = true;
