@@ -66,6 +66,15 @@ namespace CyberSnap.UI
             
             InitializeComponent();
 
+            // Register with handledEventsToo=true so these handlers fire even
+            // when the Slider's IsMoveToPointEnabled class handler marks the
+            // tunneling PreviewMouseDown event as Handled (which suppresses
+            // normal XAML-registered instance handlers).
+            TimeSlider.AddHandler(UIElement.PreviewMouseDownEvent,
+                new MouseButtonEventHandler(TimeSlider_PreviewMouseDown), true);
+            TimeSlider.AddHandler(UIElement.PreviewMouseUpEvent,
+                new MouseButtonEventHandler(TimeSlider_PreviewMouseUp), true);
+
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
             UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
@@ -429,21 +438,14 @@ namespace CyberSnap.UI
             _isSliderDragging = true;
             PausePlayback();
 
-            if (sender is Slider slider && slider.ActualWidth > 0)
-            {
-                var pos = e.GetPosition(slider);
-                double percent = pos.X / slider.ActualWidth;
-                if (percent < 0) percent = 0;
-                if (percent > 1) percent = 1;
-
-                double targetValue = slider.Minimum + percent * (slider.Maximum - slider.Minimum);
-                slider.Value = targetValue;
-
-                MediaPlayer.Position = TimeSpan.FromSeconds(targetValue);
-                _userTargetSeconds = targetValue;
-                _lastUserDragTime = DateTime.UtcNow;
-                UpdateTimeStatus();
-            }
+            // IsMoveToPointEnabled="True" causes the Slider's class handler
+            // (OnPreviewMouseLeftButtonDown) to position the Thumb via
+            // Track.ValueFromPoint BEFORE this instance handler fires.
+            // Just seek the media to the already-correct slider value.
+            MediaPlayer.Position = TimeSpan.FromSeconds(TimeSlider.Value);
+            _userTargetSeconds = TimeSlider.Value;
+            _lastUserDragTime = DateTime.UtcNow;
+            UpdateTimeStatus();
         }
         
         private void TimeSlider_PreviewMouseUp(object sender, MouseButtonEventArgs e)

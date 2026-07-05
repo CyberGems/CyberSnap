@@ -500,9 +500,7 @@
                             Minimum="0"
                             Maximum="1"
                             Value="0"
-                            IsMoveToPointEnabled="False"
-                            PreviewMouseDown="TimeSlider_PreviewMouseDown"
-                            PreviewMouseUp="TimeSlider_PreviewMouseUp"
+                            IsMoveToPointEnabled="True"
                             LostMouseCapture="TimeSlider_LostMouseCapture"
                             ValueChanged="TimeSlider_ValueChanged"
                             Cursor="Hand"/>
