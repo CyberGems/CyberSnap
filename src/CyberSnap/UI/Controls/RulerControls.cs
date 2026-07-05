@@ -146,7 +146,7 @@ public sealed class HorizontalRuler : EditorRuler
         if (_canvas.BaseBitmap == null) return;
 
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
         double zoom = _canvas.Zoom;
         float panX = _canvas.Pan.X;
@@ -182,7 +182,7 @@ public sealed class HorizontalRuler : EditorRuler
 
             if (isMajor)
             {
-                tickLen = 10f;
+                tickLen = 8f;
                 // Draw label
                 string text = ((int)Math.Round(val)).ToString();
                 var size = g.MeasureString(text, font);
@@ -288,7 +288,7 @@ public sealed class VerticalRuler : EditorRuler
         if (_canvas.BaseBitmap == null) return;
 
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
         double zoom = _canvas.Zoom;
         float panY = _canvas.Pan.Y;
@@ -324,13 +324,13 @@ public sealed class VerticalRuler : EditorRuler
 
             if (isMajor)
             {
-                tickLen = 10f;
+                tickLen = 8f;
                 string text = ((int)Math.Round(val)).ToString();
                 var size = g.MeasureString(text, font);
                 
                 // Draw numbers rotated 270 degrees (pointing vertically up)
                 var state = g.Save();
-                g.TranslateTransform(Width - tickLen - size.Height / 2f - 3, y);
+                g.TranslateTransform(Width - tickLen - size.Height / 2f - 1f, y);
                 g.RotateTransform(-90);
                 g.DrawString(text, font, textBrush, -size.Width / 2f, -size.Height / 2f);
                 g.Restore(state);
