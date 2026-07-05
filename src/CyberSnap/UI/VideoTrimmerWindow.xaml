@@ -79,6 +79,70 @@
             <Setter Property="FontSize" Value="12"/>
         </Style>
 
+        <Style x:Key="TrimmerMarkerToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Background" Value="#01000000"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="MinWidth" Value="44"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
+                                BorderBrush="Transparent"
+                                BorderThickness="1">
+                            <ContentPresenter x:Name="Content"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#18FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#24FFFFFF"/>
+                                <Setter TargetName="Content" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#55000000"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#20FFFFFF"/>
+                                <Setter TargetName="Content" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <TranslateTransform Y="1"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Bd" Property="Background" Value="#70000000"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="TrimmerSeekButtonStyle" TargetType="Button" BasedOn="{StaticResource TrimmerChipButtonStyle}">
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="11.5"/>
@@ -326,12 +390,12 @@
                                 Background="{DynamicResource ThemeSeparatorBrush}"
                                 Margin="2,0"
                                 VerticalAlignment="Center"/>
-                        <Button x:Name="SetStartBtn"
-                                Grid.Column="2"
-                                Content="Set Start"
-                                Click="SetStartBtn_Click"
-                                ToolTip="Set the current time as the crop start position"
-                                Style="{StaticResource TrimmerMarkerButtonStyle}"/>
+                        <ToggleButton x:Name="SetStartBtn"
+                                      Grid.Column="2"
+                                      Content="Set Start"
+                                      Click="SetStartBtn_Click"
+                                      ToolTip="Set the current time as the crop start position"
+                                      Style="{StaticResource TrimmerMarkerToggleButtonStyle}"/>
                     </Grid>
                 </Border>
 
@@ -378,12 +442,12 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <Button x:Name="SetEndBtn"
-                                Grid.Column="0"
-                                Content="Set End"
-                                Click="SetEndBtn_Click"
-                                ToolTip="Set the current time as the crop end position"
-                                Style="{StaticResource TrimmerMarkerButtonStyle}"/>
+                        <ToggleButton x:Name="SetEndBtn"
+                                      Grid.Column="0"
+                                      Content="Set End"
+                                      Click="SetEndBtn_Click"
+                                      ToolTip="Set the current time as the crop end position"
+                                      Style="{StaticResource TrimmerMarkerToggleButtonStyle}"/>
                         <Border Grid.Column="1"
                                 Width="1"
                                 Height="16"

@@ -1343,6 +1343,8 @@
   "Error running FFmpeg: ": "Error al ejecutar FFmpeg: ",
   "Set the current time as the crop start position": "Establecer el tiempo actual como posición de inicio del corte",
   "Set the current time as the crop end position": "Establecer el tiempo actual como posición de fin del corte",
+  "Clear crop start position": "Limpiar posición de inicio del corte",
+  "Clear crop end position": "Limpiar posición de fin del corte",
   "Reset crop range": "Restablecer el rango de recorte",
   "Save the trimmed video as a new file": "Guardar el video recortado como un archivo nuevo",
   "Overwrite the original file with the trimmed version": "Sobrescribir el archivo original con la versión recortada",

@@ -10,12 +10,13 @@ using System.Windows.Threading;
 using CyberSnap.Services;
 using CyberSnap.Helpers;
 using CyberSnap.Capture;
+using System.Windows.Controls.Primitives;
 
 namespace CyberSnap.UI
 {
     public partial class VideoTrimmerWindow : Window
     {
-        private readonly string _mediaFilePath;
+        private string _mediaFilePath;
         private readonly SettingsService _settingsService;
         private DateTime _lastPlaybackUpdate;
         private bool _isSliderDragging;
@@ -145,6 +146,9 @@ namespace CyberSnap.UI
                 _startTimeSeconds = 0;
                 _endTimeSeconds = _videoDurationSeconds;
                 
+                SetStartBtn.IsChecked = false;
+                SetEndBtn.IsChecked = false;
+
                 RefreshTimeDisplay();
                 UpdateMarkerLabels();
                 EvaluateCropState();
@@ -421,31 +425,61 @@ namespace CyberSnap.UI
         private void SetStartBtn_Click(object sender, RoutedEventArgs e)
         {
             PausePlayback();
-            double current = MediaPlayer.Position.TotalSeconds;
-            if (current < _endTimeSeconds)
+            if (SetStartBtn.IsChecked == true)
             {
-                _startTimeSeconds = current;
-                UpdateMarkerLabels();
-                EvaluateCropState();
+                double current = MediaPlayer.Position.TotalSeconds;
+                if (current < _endTimeSeconds)
+                {
+                    _startTimeSeconds = current;
+                }
+                else
+                {
+                    SetStartBtn.IsChecked = false;
+                }
             }
+            else
+            {
+                _startTimeSeconds = 0;
+            }
+            UpdateMarkerLabels();
+            EvaluateCropState();
         }
         
         private void SetEndBtn_Click(object sender, RoutedEventArgs e)
         {
             PausePlayback();
-            double current = MediaPlayer.Position.TotalSeconds;
-            if (current > _startTimeSeconds)
+            if (SetEndBtn.IsChecked == true)
             {
-                _endTimeSeconds = current;
-                UpdateMarkerLabels();
-                EvaluateCropState();
+                double current = MediaPlayer.Position.TotalSeconds;
+                if (current > _startTimeSeconds)
+                {
+                    _endTimeSeconds = current;
+                }
+                else
+                {
+                    SetEndBtn.IsChecked = false;
+                }
             }
+            else
+            {
+                _endTimeSeconds = _videoDurationSeconds;
+            }
+            UpdateMarkerLabels();
+            EvaluateCropState();
         }
         
         private void UpdateMarkerLabels()
         {
             StartPointText.Text = FormatTime(_startTimeSeconds);
             EndPointText.Text = FormatTime(_endTimeSeconds);
+
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            SetStartBtn.ToolTip = SetStartBtn.IsChecked == true
+                ? LocalizationService.Translate(lang, "Clear crop start position")
+                : LocalizationService.Translate(lang, "Set the current time as the crop start position");
+            SetEndBtn.ToolTip = SetEndBtn.IsChecked == true
+                ? LocalizationService.Translate(lang, "Clear crop end position")
+                : LocalizationService.Translate(lang, "Set the current time as the crop end position");
 
             UpdateRangeBarDisplay();
         }
@@ -592,10 +626,7 @@ namespace CyberSnap.UI
                     File.Move(tempOut, _mediaFilePath);
                     
                     // Reload original path
-                    MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
-                    MediaPlayer.Play();
-                    PlayPauseIconText.Text = "\uE769"; // Reset to Pause glyph as it plays immediately
-                    UpdatePlayPauseToolTip();
+                    LoadMediaFile(_mediaFilePath);
                     CompositionTarget.Rendering += OnRendering;
                     
                     string lang = _settingsService.Settings.InterfaceLanguage;
@@ -620,15 +651,21 @@ namespace CyberSnap.UI
             string dir = Path.GetDirectoryName(_mediaFilePath) ?? string.Empty;
             string nameWithoutExt = Path.GetFileNameWithoutExtension(_mediaFilePath);
             string ext = Path.GetExtension(_mediaFilePath);
-            string newPath = Path.Combine(dir, $"{nameWithoutExt}_edited{ext}");
-            
-            // Resolve conflict if file exists
-            int counter = 1;
-            while (File.Exists(newPath))
+
+            var sfd = new Microsoft.Win32.SaveFileDialog
             {
-                newPath = Path.Combine(dir, $"{nameWithoutExt}_edited_{counter}{ext}");
-                counter++;
-            }
+                InitialDirectory = dir,
+                FileName = $"{nameWithoutExt}_edited{ext}",
+                DefaultExt = ext
+            };
+
+            string filterName = string.Equals(ext, ".gif", StringComparison.OrdinalIgnoreCase) ? "GIF Files" : "Video Files";
+            sfd.Filter = $"{filterName} (*{ext})|*{ext}|All Files (*.*)|*.*";
+
+            if (sfd.ShowDialog(this) != true)
+                return;
+
+            string newPath = sfd.FileName;
             
             bool success = await RunFfmpegTrimAsync(_mediaFilePath, newPath, _startTimeSeconds, _endTimeSeconds);
             if (success)
@@ -639,7 +676,47 @@ namespace CyberSnap.UI
                     LocalizationService.Translate(lang, "Trimmed copy saved successfully."),
                     newPath
                 );
+
+                // Auto-load the new copy in the editor
+                CompositionTarget.Rendering -= OnRendering;
+                MediaPlayer.Close();
+
+                // Give player time to release lock
+                System.Threading.Thread.Sleep(200);
+
+                LoadMediaFile(newPath);
+                CompositionTarget.Rendering += OnRendering;
             }
+        }
+
+        private void LoadMediaFile(string newPath)
+        {
+            _mediaFilePath = newPath;
+
+            // Re-evaluate audio track
+            if (_isGif)
+            {
+                VolumeControl.SetGifMode();
+            }
+            else
+            {
+                _hasAudioTrack = MediaHasAudioTrack(_mediaFilePath);
+                if (!_hasAudioTrack)
+                {
+                    VolumeControl.SetNoAudioMode();
+                }
+                else
+                {
+                    VolumeControl.HasAudioTrack = true;
+                    SyncMediaAudio();
+                }
+            }
+
+            // Reload path
+            MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
+            MediaPlayer.Play();
+            PlayPauseIconText.Text = "\uE769"; // Reset to Pause glyph as it plays immediately
+            UpdatePlayPauseToolTip();
         }
         
         private async System.Threading.Tasks.Task<bool> RunFfmpegTrimAsync(string input, string output, double start, double end)
