@@ -84,6 +84,7 @@ namespace CyberSnap.UI
             
             LocalizationService.ApplyCurrentCulture(settingsService.Settings.InterfaceLanguage);
             LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
+            TrimmerTitleBar.Title = LocalizationService.Translate("Video & GIF Trimmer");
             
             _lastPlaybackUpdate = DateTime.UtcNow;
             CompositionTarget.Rendering += OnRendering;
