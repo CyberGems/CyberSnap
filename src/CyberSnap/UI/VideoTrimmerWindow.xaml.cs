@@ -476,6 +476,43 @@ namespace CyberSnap.UI
                 UpdateTimeStatus();
             }
         }
+
+        private void TimeSlider_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            TimelineHoverTooltip.Visibility = Visibility.Visible;
+        }
+
+        private void TimeSlider_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            TimelineHoverTooltip.Visibility = Visibility.Hidden;
+        }
+
+        private void TimeSlider_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (_videoDurationSeconds <= 0 || TimeSlider.ActualWidth <= 0)
+                return;
+
+            System.Windows.Point mousePos = e.GetPosition(TimeSlider);
+            double percent = mousePos.X / TimeSlider.ActualWidth;
+            percent = Math.Clamp(percent, 0.0, 1.0);
+
+            double hoverTimeSeconds = percent * _videoDurationSeconds;
+
+            HoverTooltipText.Text = _detailedTimeDisplay 
+                ? FormatTime(hoverTimeSeconds) 
+                : FormatSimpleTime(hoverTimeSeconds);
+
+            // Force layout update so TimelineHoverTooltip.ActualWidth gets calculated correctly based on the new text
+            TimelineHoverTooltip.UpdateLayout();
+
+            double tooltipX = mousePos.X - (TimelineHoverTooltip.ActualWidth / 2);
+            double maxX = TimeSlider.ActualWidth - TimelineHoverTooltip.ActualWidth;
+
+            if (tooltipX < 0) tooltipX = 0;
+            if (tooltipX > maxX) tooltipX = maxX;
+
+            HoverTooltipTransform.X = tooltipX;
+        }
         
         private void UpdateTimeStatus()
         {
