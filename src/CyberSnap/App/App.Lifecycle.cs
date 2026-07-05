@@ -505,6 +505,12 @@ public partial class App
     {
         if (args == null || args.Length == 0) return;
 
+        bool openSettings = args.Any(a => a.Equals("--settings", StringComparison.OrdinalIgnoreCase) || a.Equals("/settings", StringComparison.OrdinalIgnoreCase));
+        if (openSettings)
+        {
+            ShowSettings();
+        }
+
         bool openEditor = args.Any(a => a.Equals("--editor", StringComparison.OrdinalIgnoreCase) || a.Equals("/editor", StringComparison.OrdinalIgnoreCase));
         string? editorFilePath = null;
         foreach (var arg in args)
