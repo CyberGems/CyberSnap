@@ -2301,7 +2301,7 @@ internal sealed class EditorCommandButton : Button
             }
         }
 
-        if (Enabled && (_hover || _pressed || Primary))
+        if (Enabled && (Primary || _pressed))
         {
             using var underlineBrush = new SolidBrush(EditorColors.Accent);
             g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
