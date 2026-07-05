@@ -1356,6 +1356,8 @@
   "Reset crop range": "Restablecer el rango de recorte",
   "Save the trimmed video as a new file": "Guardar el video recortado como un archivo nuevo",
   "Overwrite the original file with the trimmed version": "Sobrescribir el archivo original con la versión recortada",
+  "Are you sure you want to overwrite the original file? This action cannot be undone.": "¿Estás seguro de que deseas sobrescribir el archivo original? Esta acción no se puede deshacer.",
+  "Confirm Overwrite": "Confirmar sobrescritura",
   "Start": "Inicio",
   "End": "Fin",
   "Click to seek to start position": "Haz clic para ir a la posición de inicio",

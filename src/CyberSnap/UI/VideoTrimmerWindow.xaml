@@ -183,6 +183,36 @@
             </Setter>
         </Style>
 
+        <Style x:Key="TrimmerCutButtonStyle" TargetType="Button" BasedOn="{StaticResource TrimmerFlatButtonStyle}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#33D32F2F"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#66D32F2F"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#55D32F2F"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#99D32F2F"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="TrimmerRoundButtonStyle" TargetType="Button" BasedOn="{StaticResource TrimmerFlatButtonStyle}">
             <Setter Property="Template">
                 <Setter.Value>
@@ -470,6 +500,7 @@
                             Minimum="0"
                             Maximum="1"
                             Value="0"
+                            IsMoveToPointEnabled="True"
                             PreviewMouseDown="TimeSlider_PreviewMouseDown"
                             PreviewMouseUp="TimeSlider_PreviewMouseUp"
                             LostMouseCapture="TimeSlider_LostMouseCapture"
@@ -612,7 +643,7 @@
                                 Margin="0,0,12,0"
                                 Click="TrimBtn_Click"
                                 ToolTip="Overwrite the original file with the trimmed version"
-                                Style="{StaticResource TrimmerFlatButtonStyle}"
+                                Style="{StaticResource TrimmerCutButtonStyle}"
                                 FontWeight="Bold"
                                 IsEnabled="False"/>
                     </Border>
