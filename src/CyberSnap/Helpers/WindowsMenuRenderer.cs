@@ -17,7 +17,7 @@ public static class WindowsMenuRenderer
             ShowImageMargin = showImages,
             ShowCheckMargin = false,
             Padding = new Padding(5, 6, 5, 6),
-            Font = UiChrome.ChromeFont(9.0f, FontStyle.Bold),
+            Font = UiChrome.ChromeFont(9.0f, FontStyle.Regular),
             DropShadowEnabled = false, // legacy CS_DROPSHADOW is faint and suppresses DWM's softer shadow
             MinimumSize = new Size(minWidth, 0),
         };
@@ -60,7 +60,7 @@ public static class WindowsMenuRenderer
 
         dd.BackColor = bg;
         dd.ForeColor = fg;
-        dd.Font = UiChrome.ChromeFont(9.0f, FontStyle.Bold);
+        dd.Font = UiChrome.ChromeFont(9.0f, FontStyle.Regular);
         dd.Renderer = new Renderer(bg, fg, hover, active, muted, sep, border, accent, showImages);
 
         dd.HandleCreated += (s, _) =>
