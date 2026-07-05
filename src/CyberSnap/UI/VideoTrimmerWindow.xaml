@@ -37,9 +37,8 @@
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/> <!-- Timeline Row -->
-                <RowDefinition Height="Auto"/> <!-- Playback controls -->
+                <RowDefinition Height="Auto"/> <!-- Playback controls + actions -->
                 <RowDefinition Height="Auto"/> <!-- Crop Range Text -->
-                <RowDefinition Height="Auto"/> <!-- Action Buttons -->
             </Grid.RowDefinitions>
 
             <!-- Custom Title Bar with Pin Button -->
@@ -199,6 +198,44 @@
                                              Margin="12,0,0,0"
                                              VolumeChanged="VolumeControl_VolumeChanged"
                                              ExportMuteChanged="VolumeControl_ExportMuteChanged"/>
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Margin="0,0,12,0">
+                    <Border x:Name="TrimBtnHost"
+                            ClipToBounds="True"
+                            VerticalAlignment="Center"
+                            MaxWidth="0"
+                            Opacity="0">
+                        <Button x:Name="TrimBtn"
+                                Content="Cortar"
+                                Padding="20,8"
+                                Margin="0,0,12,0"
+                                Click="TrimBtn_Click"
+                                ToolTip="Overwrite the original file with the trimmed version"
+                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                BorderThickness="1"
+                                Cursor="Hand"
+                                FontWeight="Bold"
+                                IsEnabled="False"/>
+                    </Border>
+
+                    <Button x:Name="SaveAsNewBtn"
+                            Content="Save As New"
+                            Padding="16,8"
+                            Click="SaveAsNewBtn_Click"
+                            ToolTip="Save the trimmed video as a new file"
+                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                            Background="{DynamicResource ThemeInputBackgroundBrush}"
+                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                            BorderThickness="1"
+                            Cursor="Hand"
+                            FontWeight="SemiBold"/>
+                </StackPanel>
             </Grid>
 
             <!-- Centered Crop Selection Status Text as capsule chips -->
@@ -235,34 +272,6 @@
                     <TextBlock x:Name="EndPointText" Text="End: 00:00.0" Foreground="{DynamicResource ThemeTextSecondaryBrush}" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 </Border>
             </StackPanel>
-
-            <!-- Action Buttons Panel (Visible/Enabled when trimmed) -->
-            <Border Grid.Row="5" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ThemeSeparatorBrush}" Padding="12,12,12,16">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Button x:Name="CancelBtn" Grid.Column="0" Content="Cancelar" Padding="16,8" Click="CancelBtn_Click" Visibility="Collapsed"
-                            ToolTip="Reset crop range"
-                            Foreground="{DynamicResource ThemeTextPrimaryBrush}" Background="Transparent"
-                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1" Cursor="Hand" FontWeight="SemiBold"/>
-
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Visibility="Collapsed" x:Name="SaveActionPanel">
-                        <Button x:Name="SaveAsNewBtn" Content="Save As New" Padding="16,8" Margin="0,0,12,0" Click="SaveAsNewBtn_Click"
-                                ToolTip="Save the trimmed video as a new file"
-                                Foreground="{DynamicResource ThemeTextPrimaryBrush}" Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1" Cursor="Hand" FontWeight="SemiBold"/>
-                        
-                        <Button x:Name="TrimBtn" Content="Cortar" Padding="20,8" Click="TrimBtn_Click"
-                                ToolTip="Overwrite the original file with the trimmed version"
-                                Foreground="{DynamicResource ThemeTextPrimaryBrush}" Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1" Cursor="Hand" FontWeight="Bold"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
         </Grid>
     </Border>
 </Window>

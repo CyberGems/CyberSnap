@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using CyberSnap.Services;
 using CyberSnap.Helpers;
@@ -29,6 +30,8 @@ namespace CyberSnap.UI
         private readonly bool _isGif;
         private readonly DispatcherTimer _audioPersistTimer;
         private bool _audioPersistPending;
+        private bool _trimButtonVisible;
+        private double _trimButtonExpandedWidth;
 
         public VideoTrimmerWindow(string filePath, SettingsService settingsService)
         {
@@ -68,6 +71,8 @@ namespace CyberSnap.UI
             if (_fps <= 0) _fps = 30.0;
 
             InitializeVolumeControl();
+            CacheTrimButtonWidth();
+            SetTrimButtonVisible(false, animate: false);
 
             // Set up Pin/Topmost state (default is Off)
             TrimmerTitleBar.IsPinActive = _isPinned;
@@ -427,24 +432,62 @@ namespace CyberSnap.UI
         private void EvaluateCropState()
         {
             bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
-            if (isModified)
-            {
-                CancelBtn.Visibility = Visibility.Visible;
-                SaveActionPanel.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                CancelBtn.Visibility = Visibility.Collapsed;
-                SaveActionPanel.Visibility = Visibility.Collapsed;
-            }
+            SetTrimButtonVisible(isModified);
         }
-        
-        private void CancelBtn_Click(object sender, RoutedEventArgs e)
+
+        private void CacheTrimButtonWidth()
         {
-            _startTimeSeconds = 0;
-            _endTimeSeconds = _videoDurationSeconds;
-            UpdateMarkerLabels();
-            EvaluateCropState();
+            TrimBtn.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            _trimButtonExpandedWidth = Math.Max(TrimBtn.DesiredSize.Width + TrimBtn.Margin.Right, 96);
+        }
+
+        private void SetTrimButtonVisible(bool visible, bool animate = true)
+        {
+            if (_trimButtonVisible == visible)
+                return;
+
+            _trimButtonVisible = visible;
+
+            if (_trimButtonExpandedWidth <= 0)
+                CacheTrimButtonWidth();
+
+            if (!animate)
+            {
+                TrimBtnHost.BeginAnimation(FrameworkElement.MaxWidthProperty, null);
+                TrimBtnHost.BeginAnimation(UIElement.OpacityProperty, null);
+                TrimBtnHost.MaxWidth = visible ? _trimButtonExpandedWidth : 0;
+                TrimBtnHost.Opacity = visible ? 1 : 0;
+                TrimBtn.IsEnabled = visible;
+                return;
+            }
+
+            TrimBtnHost.BeginAnimation(FrameworkElement.MaxWidthProperty, null);
+            TrimBtnHost.BeginAnimation(UIElement.OpacityProperty, null);
+
+            var easing = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+            var widthAnimation = new DoubleAnimation
+            {
+                From = visible ? 0 : _trimButtonExpandedWidth,
+                To = visible ? _trimButtonExpandedWidth : 0,
+                Duration = TimeSpan.FromMilliseconds(visible ? 200 : 160),
+                EasingFunction = easing,
+                FillBehavior = FillBehavior.Stop
+            };
+            widthAnimation.Completed += (_, _) => TrimBtnHost.MaxWidth = visible ? _trimButtonExpandedWidth : 0;
+
+            var opacityAnimation = new DoubleAnimation
+            {
+                From = visible ? 0 : 1,
+                To = visible ? 1 : 0,
+                Duration = TimeSpan.FromMilliseconds(visible ? 180 : 140),
+                EasingFunction = easing,
+                FillBehavior = FillBehavior.Stop
+            };
+            opacityAnimation.Completed += (_, _) => TrimBtnHost.Opacity = visible ? 1 : 0;
+
+            TrimBtn.IsEnabled = visible;
+            TrimBtnHost.BeginAnimation(FrameworkElement.MaxWidthProperty, widthAnimation);
+            TrimBtnHost.BeginAnimation(UIElement.OpacityProperty, opacityAnimation);
         }
         
         private void TitleBar_CloseRequested(object? sender, EventArgs e)
