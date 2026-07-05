@@ -1003,6 +1003,8 @@
   "Reset crop range": "Reset crop range",
   "Save the trimmed video as a new file": "Save the trimmed video as a new file",
   "Overwrite the original file with the trimmed version": "Overwrite the original file with the trimmed version",
+  "Are you sure you want to overwrite the original file? This action cannot be undone.": "Are you sure you want to overwrite the original file? This action cannot be undone.",
+  "Confirm Overwrite": "Confirm Overwrite",
   "Start": "Start",
   "End": "End",
   "Click to seek to start position": "Click to seek to start position",

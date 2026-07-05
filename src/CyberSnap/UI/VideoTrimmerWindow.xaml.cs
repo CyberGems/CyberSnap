@@ -742,6 +742,15 @@ namespace CyberSnap.UI
         
         private async void TrimBtn_Click(object sender, RoutedEventArgs e)
         {
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            string confirmMsg = LocalizationService.Translate(lang, "Are you sure you want to overwrite the original file? This action cannot be undone.");
+            string confirmTitle = LocalizationService.Translate(lang, "Confirm Overwrite");
+
+            if (MessageBox.Show(this, confirmMsg, confirmTitle, MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
             string ext = Path.GetExtension(_mediaFilePath);
             string tempOut = Path.Combine(Path.GetDirectoryName(_mediaFilePath) ?? string.Empty, 
                                           $"trim_temp_{Guid.NewGuid()}{ext}");
@@ -764,7 +773,6 @@ namespace CyberSnap.UI
                     LoadMediaFile(_mediaFilePath);
                     CompositionTarget.Rendering += OnRendering;
                     
-                    string lang = _settingsService.Settings.InterfaceLanguage;
                     ToastWindow.Show(
                         LocalizationService.Translate(lang, "Video trimmed"),
                         LocalizationService.Translate(lang, "Original file overwritten successfully."),
@@ -774,7 +782,6 @@ namespace CyberSnap.UI
                 catch (Exception ex)
                 {
                     AppDiagnostics.LogError("trim.overwrite", ex);
-                    string lang = _settingsService.Settings.InterfaceLanguage;
                     string errMsg = LocalizationService.Translate(lang, "Failed to overwrite original file: ");
                     MessageBox.Show($"{errMsg}{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
