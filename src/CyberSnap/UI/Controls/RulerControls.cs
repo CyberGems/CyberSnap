@@ -5,6 +5,7 @@ using System.Drawing.Text;
 using System.Windows.Forms;
 using CyberSnap.UI.Editor;
 using CyberSnap.Services;
+using CyberSnap.Helpers;
 
 namespace CyberSnap.UI.Controls;
 
@@ -166,7 +167,7 @@ public sealed class HorizontalRuler : EditorRuler
         double valEnd = Math.Ceiling(imgEnd / minorStep) * minorStep;
 
         using var tickPen = new Pen(EditorColors.TextMuted, 1f);
-        using var font = new Font("Segoe UI Variable Text", 7.5f, FontStyle.Regular);
+        using var font = UiChrome.ChromeFont(7.5f, FontStyle.Regular);
         using var textBrush = new SolidBrush(EditorColors.TextSecondary);
 
         // Draw ticks
@@ -308,7 +309,7 @@ public sealed class VerticalRuler : EditorRuler
         double valEnd = Math.Ceiling(imgEnd / minorStep) * minorStep;
 
         using var tickPen = new Pen(EditorColors.TextMuted, 1f);
-        using var font = new Font("Segoe UI Variable Text", 7.5f, FontStyle.Regular);
+        using var font = UiChrome.ChromeFont(7.5f, FontStyle.Regular);
         using var textBrush = new SolidBrush(EditorColors.TextSecondary);
 
         // Draw ticks

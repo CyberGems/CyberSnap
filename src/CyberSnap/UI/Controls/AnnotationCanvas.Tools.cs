@@ -1721,7 +1721,7 @@ public sealed partial class AnnotationCanvas
             float glyphStroke = Math.Clamp(StrokeWidth * 0.5f, 1.8f, 4.5f);
             string label = hasStroke ? string.Format(LocalizationService.Translate("Thickness {0}"), (int)Math.Round(StrokeWidth)) : string.Empty;
 
-            using var font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Regular, GraphicsUnit.Point);
+            using var font = UiChrome.ChromeFont(8.5f, FontStyle.Regular);
             SizeF textSize = label.Length > 0 ? g.MeasureString(label, font) : SizeF.Empty;
 
             const int padX = 7, padY = 5, gap = 6;

@@ -7,6 +7,7 @@ using CyberSnap.Capture;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using CyberSnap.UI.Editor;
+using CyberSnap.Helpers;
 
 namespace CyberSnap.UI.Controls;
 
@@ -686,7 +687,7 @@ public sealed partial class AnnotationCanvas
             float x = 18;
             float y = 18;
 
-            using var font = new Font("Segoe UI Variable Display", 11f, FontStyle.Bold, GraphicsUnit.Point);
+            using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
             var size = g.MeasureString(_bannerText, font);
             
             int paddingH = 16;
@@ -823,9 +824,9 @@ public sealed partial class AnnotationCanvas
     private void RenderWelcomeText(Graphics g)
     {
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        using var titleFont = new Font("Segoe UI Variable Display", 15f, FontStyle.Bold, GraphicsUnit.Point);
-        using var mediumFont = new Font("Segoe UI Variable Text", 11.5f, FontStyle.Bold, GraphicsUnit.Point);
-        using var smallFont = new Font("Segoe UI Variable Text", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
+        using var titleFont = UiChrome.ChromeFont(15f, FontStyle.Bold);
+        using var mediumFont = UiChrome.ChromeFont(11.5f, FontStyle.Bold);
+        using var smallFont = UiChrome.ChromeFont(9.5f, FontStyle.Regular);
 
         var titleText = LocalizationService.Translate("Annotations Editor");
         var mediumText = LocalizationService.Translate("Drag & drop a file");

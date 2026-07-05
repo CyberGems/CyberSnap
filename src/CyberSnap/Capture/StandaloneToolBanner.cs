@@ -107,7 +107,7 @@ public sealed class StandaloneToolBanner : IDisposable
     {
         using var tmp = new Bitmap(1, 1);
         using var g = Graphics.FromImage(tmp);
-        using var font = new Font("Segoe UI Variable Display", 16f, FontStyle.Regular, GraphicsUnit.Point);
+        using var font = UiChrome.ChromeFont(16f, FontStyle.Regular);
         var size = g.MeasureString(_text, font);
 
         const int paddingH = 28;
@@ -155,7 +155,7 @@ public sealed class StandaloneToolBanner : IDisposable
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            using var font = new Font("Segoe UI Variable Display", 16f, FontStyle.Regular, GraphicsUnit.Point);
+            using var font = UiChrome.ChromeFont(16f, FontStyle.Regular);
             var size = g.MeasureString(_text, font);
 
             const int paddingH = 28;
