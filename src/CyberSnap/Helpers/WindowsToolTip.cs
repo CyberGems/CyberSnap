@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using CyberSnap.Capture;
 using CyberSnap.Native;
 
 namespace CyberSnap.Helpers;
@@ -67,6 +68,18 @@ public sealed class WindowsToolTip : Form
             cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE
             return cp;
         }
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        CaptureWindowExclusion.Apply(this);
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        CaptureWindowExclusion.Unregister(Handle);
+        base.OnHandleDestroyed(e);
     }
 
     public void ShowNear(IWin32Window owner, string text, Rectangle anchorScreenBounds, bool above)

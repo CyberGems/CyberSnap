@@ -249,6 +249,7 @@ public sealed class AppSettings
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
     public bool OpenEditorAfterCapture { get; set; }
+    public bool OpenVideoTrimmerAfterCapture { get; set; }
     // Editor: when a capture loads, auto-fit it to the canvas (true) or show it at real 100% size (false).
     public bool EditorFitToWindowOnOpen { get; set; } = true;
     public bool EditorPanModeLockObjects { get; set; } = true;

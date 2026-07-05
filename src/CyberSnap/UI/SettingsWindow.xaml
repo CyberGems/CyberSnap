@@ -1932,6 +1932,25 @@
                                           ToolTip="Include pointer movement in recorded output."
                                           Checked="RecordShowCursorCheck_Changed" Unchecked="RecordShowCursorCheck_Changed"/>
                             </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Enable editor" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Open the trimmer after each video or GIF recording." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="VideoEnableEditorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Enable editor"
+                                          ToolTip="Open the post-capture trimmer for recordings."
+                                          Checked="VideoEnableEditorCheck_Changed" Unchecked="VideoEnableEditorCheck_Changed"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
                     <TextBlock x:Name="RecordingPreferenceStatusText"

@@ -784,12 +784,24 @@ public partial class ToastWindow : Window
 
     private void OpenEditor()
     {
-        if (_previewBitmap is null)
+        if (_previewBitmap is null && _savedFilePath is null)
             return;
 
         try
         {
-            CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(_previewBitmap), _savedFilePath);
+            bool isVideoOrGif = _savedFilePath != null &&
+                (_savedFilePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
+                 _savedFilePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase));
+
+            if (isVideoOrGif)
+            {
+                var trimmer = new VideoTrimmerWindow(_savedFilePath!, ((App)Application.Current).SettingsService);
+                trimmer.Show();
+            }
+            else if (_previewBitmap is not null)
+            {
+                CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(_previewBitmap), _savedFilePath);
+            }
         }
         catch (Exception ex)
         {

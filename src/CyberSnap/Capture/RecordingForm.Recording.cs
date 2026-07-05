@@ -232,6 +232,7 @@ public sealed partial class RecordingForm
 
     private void TransitionToRecordingSurface()
     {
+        HideChromeToolTip();
         _selectionAdorner?.Hide();
         Opacity = 1;
 

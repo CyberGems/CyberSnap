@@ -846,6 +846,7 @@ public partial class SettingsWindow
             // General / Widgets
             "ShowCaptureWidget"         => ShowCaptureWidgetCheck,
             "WidgetEnableEditor"        => WidgetEnableEditorCheck,
+            "VideoEnableEditor"         => VideoEnableEditorCheck,
             "WidgetDockEdge"            => WidgetDockEdgeCombo,
             "WidgetHoverDelay"          => WidgetHoverDelayCombo,
             "WidgetAlwaysOnTop"         => WidgetAlwaysOnTopCheck,
