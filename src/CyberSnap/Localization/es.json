@@ -1349,5 +1349,12 @@
   "Start": "Inicio",
   "End": "Fin",
   "Click to seek to start position": "Haz clic para ir a la posición de inicio",
-  "Click to seek to end position": "Haz clic para ir a la posición de fin"
+  "Click to seek to end position": "Haz clic para ir a la posición de fin",
+  "Adjust volume. Export will include audio at this level.": "Ajusta el volumen. La exportación incluirá el audio a este nivel.",
+  "Muted. Audio will be excluded from the exported file.": "Silenciado. El audio se excluirá del archivo exportado.",
+  "Mute audio": "Silenciar audio",
+  "Unmute audio": "Activar audio",
+  "Volume": "Volumen",
+  "No audio track in this file": "Este archivo no tiene pista de audio",
+  "GIF files do not contain audio": "Los archivos GIF no contienen audio"
 }

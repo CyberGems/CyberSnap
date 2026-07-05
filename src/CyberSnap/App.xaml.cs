@@ -177,6 +177,23 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-suppress-paste-confirm", ex); }
     }
 
+    /// <summary>Persists the video trimmer preview volume and export-mute preference.</summary>
+    public void PersistVideoTrimmerAudio(double volume, bool exportMuted)
+    {
+        if (_settingsService is null) return;
+
+        volume = Math.Clamp(volume, 0.0, 1.0);
+        var settings = _settingsService.Settings;
+        if (Math.Abs(settings.VideoTrimmerVolume - volume) < 0.001
+            && settings.VideoTrimmerExportMuted == exportMuted)
+            return;
+
+        settings.VideoTrimmerVolume = volume;
+        settings.VideoTrimmerExportMuted = exportMuted;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("trimmer.persist-audio", ex); }
+    }
+
     /// <summary>Persists the editor undo limit (clamped 1–200).</summary>
     public void PersistEditorUndoLimit(int limit)
     {
