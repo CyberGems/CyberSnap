@@ -32,6 +32,7 @@ namespace CyberSnap.UI
         private bool _audioPersistPending;
         private bool _trimButtonVisible;
         private double _trimButtonExpandedWidth;
+        private bool _detailedTimeDisplay = true;
 
         public VideoTrimmerWindow(string filePath, SettingsService settingsService)
         {
@@ -144,7 +145,7 @@ namespace CyberSnap.UI
                 _startTimeSeconds = 0;
                 _endTimeSeconds = _videoDurationSeconds;
                 
-                DurationStatusText.Text = FormatTime(_videoDurationSeconds);
+                RefreshTimeDisplay();
                 UpdateMarkerLabels();
                 EvaluateCropState();
                 
@@ -323,23 +324,39 @@ namespace CyberSnap.UI
             UpdateTimeStatus();
         }
 
-        private void StartPointText_MouseDown(object sender, MouseButtonEventArgs e)
+        private void PausePlayback()
         {
+            MediaPlayer.Pause();
+            PlayPauseIconText.Text = "\uE768";
+            UpdatePlayPauseToolTip();
+        }
+
+        private void StartSeekBtn_Click(object sender, RoutedEventArgs e)
+        {
+            PausePlayback();
             MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
             TimeSlider.Value = _startTimeSeconds;
             UpdateTimeStatus();
         }
 
-        private void EndPointText_MouseDown(object sender, MouseButtonEventArgs e)
+        private void EndSeekBtn_Click(object sender, RoutedEventArgs e)
         {
+            PausePlayback();
             MediaPlayer.Position = TimeSpan.FromSeconds(_endTimeSeconds);
             TimeSlider.Value = _endTimeSeconds;
             UpdateTimeStatus();
+        }
+
+        private void PlaybackTimeBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _detailedTimeDisplay = !_detailedTimeDisplay;
+            RefreshTimeDisplay();
         }
         
         private void TimeSlider_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             _isSliderDragging = true;
+            PausePlayback();
         }
         
         private void TimeSlider_PreviewMouseUp(object sender, MouseButtonEventArgs e)
@@ -369,7 +386,24 @@ namespace CyberSnap.UI
         
         private void UpdateTimeStatus()
         {
-            TimeStatusText.Text = FormatTime(MediaPlayer.Position.TotalSeconds);
+            RefreshTimeDisplay();
+        }
+
+        private void RefreshTimeDisplay()
+        {
+            if (_detailedTimeDisplay)
+            {
+                TimeStatusText.Text = FormatTime(MediaPlayer.Position.TotalSeconds);
+                TimeStatusSeparator.Visibility = Visibility.Visible;
+                DurationStatusText.Visibility = Visibility.Visible;
+                DurationStatusText.Text = FormatTime(_videoDurationSeconds);
+            }
+            else
+            {
+                TimeStatusText.Text = FormatSimpleTime(MediaPlayer.Position.TotalSeconds);
+                TimeStatusSeparator.Visibility = Visibility.Collapsed;
+                DurationStatusText.Visibility = Visibility.Collapsed;
+            }
         }
         
         private string FormatTime(double seconds)
@@ -377,9 +411,16 @@ namespace CyberSnap.UI
             var t = TimeSpan.FromSeconds(seconds);
             return $"{t.Minutes:D2}:{t.Seconds:D2}.{t.Milliseconds / 100:D1}";
         }
+
+        private static string FormatSimpleTime(double seconds)
+        {
+            var t = TimeSpan.FromSeconds(seconds);
+            return $"{t.Minutes:D2}:{t.Seconds:D2}";
+        }
         
         private void SetStartBtn_Click(object sender, RoutedEventArgs e)
         {
+            PausePlayback();
             double current = MediaPlayer.Position.TotalSeconds;
             if (current < _endTimeSeconds)
             {
@@ -391,6 +432,7 @@ namespace CyberSnap.UI
         
         private void SetEndBtn_Click(object sender, RoutedEventArgs e)
         {
+            PausePlayback();
             double current = MediaPlayer.Position.TotalSeconds;
             if (current > _startTimeSeconds)
             {
@@ -402,12 +444,9 @@ namespace CyberSnap.UI
         
         private void UpdateMarkerLabels()
         {
-            string startLabel = LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "Start");
-            string endLabel = LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "End");
-            
-            StartPointText.Text = $"{startLabel}: {FormatTime(_startTimeSeconds)}";
-            EndPointText.Text = $"{endLabel}: {FormatTime(_endTimeSeconds)}";
-            
+            StartPointText.Text = FormatTime(_startTimeSeconds);
+            EndPointText.Text = FormatTime(_endTimeSeconds);
+
             UpdateRangeBarDisplay();
         }
 
