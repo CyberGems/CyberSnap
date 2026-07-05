@@ -2323,29 +2323,27 @@
                                     <TextBlock Text="Choose dark, light, or follow your Windows theme." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <RadioButton x:Name="ThemeDarkRadio" GroupName="AppTheme"
-                                                 Margin="0,0,6,0" VerticalAlignment="Center" Cursor="Hand"
-                                                 AutomationProperties.Name="Dark theme"
-                                                 ToolTip="Always use the dark theme."
-                                                 Checked="AppThemeRadio_Changed">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <TextBlock Text="Dark" VerticalAlignment="Center"/>
-                                            <Border CornerRadius="3" Background="{DynamicResource ThemeTabActiveBrush}" 
-                                                    BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="0.8" 
-                                                    Padding="4,0.5" Margin="6,0,0,0" VerticalAlignment="Center" Opacity="0.85">
-                                                <TextBlock Text="DEFAULT" FontSize="8" FontWeight="SemiBold" 
-                                                           Foreground="{DynamicResource ThemeAccentBrush}" 
-                                                           FontFamily="Segoe UI Variable Display" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </StackPanel>
-                                    </RadioButton>
+                                    <StackPanel Orientation="Vertical" VerticalAlignment="Bottom" Margin="0,0,6,0">
+                                        <Border CornerRadius="3" Background="{DynamicResource ThemeTabActiveBrush}" 
+                                                BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="0.8" 
+                                                Padding="4,0.5" Margin="18,0,0,2" HorizontalAlignment="Left" Opacity="0.85">
+                                            <TextBlock Text="DEFAULT" FontSize="7.5" FontWeight="SemiBold" 
+                                                       Foreground="{DynamicResource ThemeAccentBrush}" 
+                                                       FontFamily="Segoe UI Variable Display" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <RadioButton x:Name="ThemeDarkRadio" Content="Dark" GroupName="AppTheme"
+                                                     VerticalAlignment="Bottom" Cursor="Hand"
+                                                     AutomationProperties.Name="Dark theme"
+                                                     ToolTip="Always use the dark theme."
+                                                     Checked="AppThemeRadio_Changed"/>
+                                    </StackPanel>
                                     <RadioButton x:Name="ThemeLightRadio" Content="Light" GroupName="AppTheme"
-                                                 Margin="0,0,6,0" VerticalAlignment="Center" Cursor="Hand"
+                                                 Margin="0,0,6,0" VerticalAlignment="Bottom" Cursor="Hand"
                                                  AutomationProperties.Name="Light theme"
                                                  ToolTip="Always use the light theme."
                                                  Checked="AppThemeRadio_Changed"/>
                                     <RadioButton x:Name="ThemeSystemRadio" Content="Auto" GroupName="AppTheme"
-                                                 VerticalAlignment="Center" Cursor="Hand"
+                                                 VerticalAlignment="Bottom" Cursor="Hand"
                                                  AutomationProperties.Name="Auto theme"
                                                  ToolTip="Follow the Windows system theme."
                                                  Checked="AppThemeRadio_Changed"/>
