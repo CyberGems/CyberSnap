@@ -43,6 +43,9 @@ namespace CyberSnap.UI
         private DispatcherTimer? _bannerTimer;
         private int _bannerTicks;
 
+        private double _userTargetSeconds = -1;
+        private DateTime _lastUserDragTime = DateTime.MinValue;
+
         public VideoTrimmerWindow(string filePath, SettingsService settingsService)
         {
             _mediaFilePath = filePath;
@@ -151,6 +154,20 @@ namespace CyberSnap.UI
             if (!_isSliderDragging && _videoDurationSeconds > 0)
             {
                 double current = MediaPlayer.Position.TotalSeconds;
+
+                // Prevent jump-back glitches during asynchronous media seek operations
+                if (_userTargetSeconds >= 0)
+                {
+                    if (Math.Abs(current - _userTargetSeconds) < 0.25 || (now - _lastUserDragTime).TotalMilliseconds > 500)
+                    {
+                        _userTargetSeconds = -1;
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+
                 bool isPlaying = PlayPauseIconText.Text == "\uE769";
                 
                 if (isPlaying && _endTimeSeconds > 0 && current >= _endTimeSeconds)
@@ -419,6 +436,8 @@ namespace CyberSnap.UI
             {
                 _isSliderDragging = false;
                 MediaPlayer.Position = TimeSpan.FromSeconds(TimeSlider.Value);
+                _userTargetSeconds = TimeSlider.Value;
+                _lastUserDragTime = DateTime.UtcNow;
             }
         }
 
@@ -434,6 +453,8 @@ namespace CyberSnap.UI
             if (_isSliderDragging)
             {
                 MediaPlayer.Position = TimeSpan.FromSeconds(TimeSlider.Value);
+                _userTargetSeconds = TimeSlider.Value;
+                _lastUserDragTime = DateTime.UtcNow;
                 UpdateTimeStatus();
             }
         }
@@ -743,10 +764,13 @@ namespace CyberSnap.UI
         private async void TrimBtn_Click(object sender, RoutedEventArgs e)
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
-            string confirmMsg = LocalizationService.Translate(lang, "Are you sure you want to overwrite the original file? This action cannot be undone.");
-            string confirmTitle = LocalizationService.Translate(lang, "Confirm Overwrite");
-
-            if (MessageBox.Show(this, confirmMsg, confirmTitle, MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            if (!ThemedConfirmDialog.Confirm(
+                this, 
+                "Confirm Overwrite", 
+                "Are you sure you want to overwrite the original file? This action cannot be undone.",
+                "Yes",
+                "No",
+                danger: true))
             {
                 return;
             }
@@ -783,7 +807,7 @@ namespace CyberSnap.UI
                 {
                     AppDiagnostics.LogError("trim.overwrite", ex);
                     string errMsg = LocalizationService.Translate(lang, "Failed to overwrite original file: ");
-                    MessageBox.Show($"{errMsg}{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    ThemedConfirmDialog.Alert(this, "Error", $"{errMsg}{ex.Message}", error: true);
                 }
             }
         }
