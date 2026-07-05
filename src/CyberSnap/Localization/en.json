@@ -1003,5 +1003,6 @@
   "Unmute audio": "Unmute audio",
   "Volume": "Volume",
   "No audio track in this file": "No audio track in this file",
-  "GIF files do not contain audio": "GIF files do not contain audio"
+  "GIF files do not contain audio": "GIF files do not contain audio",
+  "Click to toggle time display": "Click to toggle time display"
 }
