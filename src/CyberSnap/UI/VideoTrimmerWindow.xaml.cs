@@ -35,6 +35,14 @@ namespace CyberSnap.UI
         private double _trimButtonExpandedWidth;
         private bool _detailedTimeDisplay = true;
 
+        private static readonly SolidColorBrush GreenLedBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(34, 197, 94));
+        private static readonly SolidColorBrush GreenLedAuraBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 34, 197, 94));
+        private static readonly SolidColorBrush OrangeLedBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(245, 158, 11));
+        private static readonly SolidColorBrush OrangeLedAuraBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 245, 158, 11));
+
+        private DispatcherTimer? _bannerTimer;
+        private int _bannerTicks;
+
         public VideoTrimmerWindow(string filePath, SettingsService settingsService)
         {
             _mediaFilePath = filePath;
@@ -153,6 +161,9 @@ namespace CyberSnap.UI
                 UpdateMarkerLabels();
                 EvaluateCropState();
                 
+                string formatKey = _isGif ? "GIF loaded" : "MP4 loaded";
+                ShowBanner(LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, formatKey));
+                
                 // MediaOpened means the decoder graph is ready.  Seek to the
                 // start and play directly — no deferral needed.  Combined with
                 // the 1-second keyframe interval set during encoding (-g), this
@@ -242,6 +253,15 @@ namespace CyberSnap.UI
         {
             SyncMediaAudio();
             ScheduleAudioPersist();
+
+            if (!this.IsLoaded)
+                return;
+
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            string msg = VolumeControl.IsExportMuted
+                ? LocalizationService.Translate(lang, "Muted")
+                : LocalizationService.Translate(lang, "Unmuted");
+            ShowBanner(msg);
         }
 
         private static bool MediaHasAudioTrack(string mediaPath)
@@ -425,12 +445,14 @@ namespace CyberSnap.UI
         private void SetStartBtn_Click(object sender, RoutedEventArgs e)
         {
             PausePlayback();
+            string lang = _settingsService.Settings.InterfaceLanguage;
             if (SetStartBtn.IsChecked == true)
             {
                 double current = MediaPlayer.Position.TotalSeconds;
                 if (current < _endTimeSeconds)
                 {
                     _startTimeSeconds = current;
+                    ShowBanner(LocalizationService.Translate(lang, "Start position set"));
                 }
                 else
                 {
@@ -440,6 +462,7 @@ namespace CyberSnap.UI
             else
             {
                 _startTimeSeconds = 0;
+                ShowBanner(LocalizationService.Translate(lang, "Start position cleared"));
             }
             UpdateMarkerLabels();
             EvaluateCropState();
@@ -448,12 +471,14 @@ namespace CyberSnap.UI
         private void SetEndBtn_Click(object sender, RoutedEventArgs e)
         {
             PausePlayback();
+            string lang = _settingsService.Settings.InterfaceLanguage;
             if (SetEndBtn.IsChecked == true)
             {
                 double current = MediaPlayer.Position.TotalSeconds;
                 if (current > _startTimeSeconds)
                 {
                     _endTimeSeconds = current;
+                    ShowBanner(LocalizationService.Translate(lang, "End position set"));
                 }
                 else
                 {
@@ -463,6 +488,7 @@ namespace CyberSnap.UI
             else
             {
                 _endTimeSeconds = _videoDurationSeconds;
+                ShowBanner(LocalizationService.Translate(lang, "End position cleared"));
             }
             UpdateMarkerLabels();
             EvaluateCropState();
@@ -506,6 +532,82 @@ namespace CyberSnap.UI
         {
             bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
             SetTrimButtonVisible(isModified);
+            UpdateTitleState(isModified);
+        }
+
+        private void UpdateTitleState(bool isModified)
+        {
+            if (LedCore == null || LedAura == null || TitleFileNameText == null)
+                return;
+
+            if (isModified)
+            {
+                LedCore.Fill = OrangeLedBrush;
+                LedAura.Fill = OrangeLedAuraBrush;
+            }
+            else
+            {
+                LedCore.Fill = GreenLedBrush;
+                LedAura.Fill = GreenLedAuraBrush;
+            }
+
+            TitleFileNameText.Text = Path.GetFileName(_mediaFilePath);
+        }
+
+        private void ShowBanner(string text)
+        {
+            if (!_settingsService.Settings.ShowToolBanners)
+                return;
+
+            if (BannerText == null || BannerBorder == null)
+                return;
+
+            BannerText.Text = text;
+            BannerBorder.Visibility = Visibility.Visible;
+
+            if (_bannerTimer == null)
+            {
+                _bannerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+                _bannerTimer.Tick += BannerTimer_Tick;
+            }
+            _bannerTimer.Stop();
+
+            BannerBorder.BeginAnimation(UIElement.OpacityProperty, null);
+
+            var fadeIn = new DoubleAnimation
+            {
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(150),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            BannerBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+
+            _bannerTicks = 0;
+            _bannerTimer.Start();
+        }
+
+        private void BannerTimer_Tick(object? sender, EventArgs e)
+        {
+            _bannerTicks++;
+            if (_bannerTicks >= 40)
+            {
+                _bannerTimer?.Stop();
+
+                var fadeOut = new DoubleAnimation
+                {
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(250),
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+                };
+                fadeOut.Completed += (s, ev) =>
+                {
+                    if (BannerBorder != null && BannerBorder.Opacity == 0.0)
+                    {
+                        BannerBorder.Visibility = Visibility.Collapsed;
+                    }
+                };
+                BannerBorder?.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+            }
         }
 
         private void CacheTrimButtonWidth()

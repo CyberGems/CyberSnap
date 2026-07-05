@@ -336,14 +336,36 @@
                 <RowDefinition Height="Auto"/> <!-- Playback controls + actions -->
             </Grid.RowDefinitions>
 
-            <!-- Custom Title Bar with Pin Button -->
-            <controls:CyberSnapTitleBar x:Name="TrimmerTitleBar" Grid.Row="0"
-                                        Title="Video &amp; GIF Trimmer"
-                                        ShowPinButton="True"
-                                        CloseRequested="TitleBar_CloseRequested"
-                                        PinRequested="TitleBar_PinRequested"/>
+            <Grid Grid.Row="0">
+                <controls:CyberSnapTitleBar x:Name="TrimmerTitleBar"
+                                            Title=""
+                                            ShowPinButton="True"
+                                            CloseRequested="TitleBar_CloseRequested"
+                                            PinRequested="TitleBar_PinRequested"/>
+                <!-- Centered Filename with LED Overlay -->
+                <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Center" 
+                            IsHitTestVisible="False">
+                    <!-- LED Aura & Core Grid -->
+                    <Grid Width="14" Height="14" Margin="0,0,8,0">
+                        <!-- LED Aura (glow) -->
+                        <Ellipse x:Name="LedAura" Width="14" Height="14" Fill="#3222C55E"/>
+                        <!-- LED Core -->
+                        <Ellipse x:Name="LedCore" Width="8" Height="8" Fill="#FF22C55E" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <!-- Specular Highlight -->
+                        <Ellipse Width="2.5" Height="2.5" Fill="#C8FFFFFF" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="-2,-2,0,0"/>
+                    </Grid>
+                    <!-- Filename Text -->
+                    <TextBlock x:Name="TitleFileNameText"
+                               Text="Untitled"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               FontFamily="Segoe UI Variable Text"
+                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                </StackPanel>
+            </Grid>
 
-            <!-- Video Player Area -->
             <Grid Grid.Row="1" Background="#FF000000" Margin="12,4,12,8">
                 <MediaElement x:Name="MediaPlayer" LoadedBehavior="Manual" UnloadedBehavior="Manual" ScrubbingEnabled="True"
                               MediaOpened="MediaPlayer_MediaOpened" MediaEnded="MediaPlayer_MediaEnded"/>
@@ -354,6 +376,29 @@
                         <TextBlock x:Name="ProgressText" Text="Exporting..." Foreground="{DynamicResource ThemeTextPrimaryBrush}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Grid>
+                <!-- Banner Notification Overlay -->
+                <Border x:Name="BannerBorder"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Margin="18,18,0,0"
+                        Background="#CC2D2D2D"
+                        BorderBrush="#80FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,10"
+                        Opacity="0"
+                        Visibility="Collapsed"
+                        IsHitTestVisible="False">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="White" Opacity="0.15"/>
+                    </Border.Effect>
+                    <TextBlock x:Name="BannerText"
+                               Text="Action"
+                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                               FontSize="13.5"
+                               FontWeight="Bold"
+                               FontFamily="Segoe UI Variable Text"/>
+                </Border>
             </Grid>
 
             <!-- Timeline and Seek Row (Integrated Buttons & Slider) -->
