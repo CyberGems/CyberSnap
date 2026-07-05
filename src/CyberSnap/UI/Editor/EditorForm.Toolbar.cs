@@ -2172,8 +2172,8 @@ internal sealed class EditorToolButton : EditorButtonBase
     {
         var iconSize = 40f;
         var iconTop = 6f;
-        var textHeight = 20;
-        var textTop = rect.Bottom - 24;
+        var textHeight = 24;
+        var textTop = rect.Bottom - 26;
 
         var iconRect = new RectangleF(
             rect.Left + (rect.Width - iconSize) / 2f,
@@ -2315,7 +2315,7 @@ internal sealed class EditorCommandButton : Button
             iconSize);
         StreamlineIcons.DrawIcon(g, IconId, iconRect, contentColor, 0f, Enabled && (_hover || _pressed || Primary));
 
-        var textRect = new Rectangle(rect.Left + 2, rect.Top + 40, rect.Width - 4, 20);
+        var textRect = new Rectangle(rect.Left + 2, rect.Top + 38, rect.Width - 4, 22);
         TextRenderer.DrawText(
             g,
             Text,
