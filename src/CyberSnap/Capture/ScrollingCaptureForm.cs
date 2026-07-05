@@ -1206,14 +1206,7 @@ public sealed partial class ScrollingCaptureForm : Form
 
         private static Font CreatePhaseFont()
         {
-            try
-            {
-                return new Font("Segoe UI Variable Display", UiChrome.ScaleFloat(11f), FontStyle.Bold);
-            }
-            catch
-            {
-                return UiChrome.ChromeFont(11f, FontStyle.Bold);
-            }
+            return UiChrome.ChromeFont(11f, FontStyle.Bold);
         }
 
         public CaptureControlBar(Rectangle captureRegion, ScrollingCaptureMode mode)

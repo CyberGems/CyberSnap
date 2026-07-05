@@ -524,14 +524,14 @@ public sealed partial class EditorForm
                 g.DrawImage(_brandBitmap, new Rectangle(0, cy - 10, 20, 20));
             }
 
-            using var font1 = new Font("Segoe UI Variable Display", 11f, FontStyle.Bold, GraphicsUnit.Point);
+            using var font1 = UiChrome.ChromeFont(11f, FontStyle.Bold);
             var size1 = TextRenderer.MeasureText("CyberSnap", font1);
             TextRenderer.DrawText(g, "CyberSnap", font1,
                 new Rectangle(26, 0, size1.Width, brandPanel.Height),
                 EditorColors.Accent,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
-            using var font2 = new Font("Segoe UI Variable Text", 10f, FontStyle.Regular, GraphicsUnit.Point);
+            using var font2 = UiChrome.ChromeFont(10f, FontStyle.Regular);
             TextRenderer.DrawText(g, LocalizationService.Translate("Editor"), font2,
                 new Rectangle(26 + size1.Width + 8, 0, 280, brandPanel.Height),
                 EditorColors.TextSecondary,
@@ -1080,7 +1080,7 @@ public sealed partial class EditorForm
                 Height = 24,
                 Text = title!,
                 ForeColor = EditorColors.Accent,
-                Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Bold, GraphicsUnit.Point),
+                Font = UiChrome.ChromeFont(9f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
             };
             panel.Controls.Add(label, 0, 0);
@@ -1169,7 +1169,7 @@ public sealed partial class EditorForm
     {
         int width = 74;
         using (var g = CreateGraphics())
-        using (var font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold, GraphicsUnit.Point))
+        using (var font = UiChrome.ChromeFont(8.5f, FontStyle.Bold))
         {
             var size = TextRenderer.MeasureText(g, text, font);
             width = Math.Max(74, size.Width + 16);
@@ -2239,7 +2239,7 @@ internal sealed class EditorCommandButton : Button
         FlatAppearance.BorderSize = 0;
         BackColor = Color.Transparent;
         Cursor = Cursors.Hand;
-        Font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold, GraphicsUnit.Point);
+        Font = UiChrome.ChromeFont(8.5f, FontStyle.Bold);
         TabStop = true;
     }
 
@@ -2421,7 +2421,7 @@ internal abstract class EditorButtonBase : Button
         BackColor = Color.Transparent;
         ForeColor = EditorColors.TextPrimary;
         Cursor = Cursors.Hand;
-        Font = new Font("Segoe UI Variable Text", 8.5f, FontStyle.Bold, GraphicsUnit.Point);
+        Font = UiChrome.ChromeFont(8.5f, FontStyle.Bold);
         TabStop = true;
     }
 
@@ -3074,7 +3074,7 @@ internal sealed class EditorZoomBarButton : Button
         BackColor = Color.Transparent;
         ForeColor = EditorColors.Accent;
         Cursor = Cursors.Hand;
-        Font = new Font("Segoe UI Variable Text", 10f, FontStyle.Bold, GraphicsUnit.Point);
+        Font = UiChrome.ChromeFont(10f, FontStyle.Bold);
         TabStop = true;
     }
 
@@ -3242,7 +3242,7 @@ internal sealed class EditorToggleSwitch : Control
         AutoSize = true;
     }
 
-    private Font LabelFont => Font ?? new Font("Segoe UI Variable Text", 9f, FontStyle.Bold);
+    private Font LabelFont => Font ?? UiChrome.ChromeFont(9f, FontStyle.Bold);
 
     public override Size GetPreferredSize(Size proposedSize)
     {

@@ -244,7 +244,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         MinimumSize = new Size(1400, 920);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = EditorColors.BgPrimary;
-        Font = new Font("Segoe UI Variable Text", 9f, FontStyle.Regular, GraphicsUnit.Point);
+        Font = UiChrome.ChromeFont(9f, FontStyle.Regular);
         KeyPreview = true;
 
         var settings = Services.SettingsService.LoadStatic();

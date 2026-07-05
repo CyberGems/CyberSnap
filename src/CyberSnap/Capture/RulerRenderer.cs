@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using CyberSnap.Helpers;
 
 namespace CyberSnap.Capture;
 
@@ -37,8 +38,8 @@ public static class RulerRenderer
     /// Safe to call outside a paint pass — needed for bounds computation during drag.</summary>
     private static void EnsureFonts()
     {
-        _font ??= new Font("Segoe UI Variable Text", 9.5f, FontStyle.Regular, GraphicsUnit.Point);
-        _distFont ??= new Font("Segoe UI Variable Text", 11.5f, FontStyle.Bold, GraphicsUnit.Point);
+        _font ??= UiChrome.ChromeFont(9.5f, FontStyle.Regular);
+        _distFont ??= UiChrome.ChromeFont(11.5f, FontStyle.Bold);
     }
 
     public static void EnsureChrome(bool isDark)

@@ -55,7 +55,7 @@ internal sealed class EmojiPickerPopup : Form
             BorderStyle = BorderStyle.FixedSingle,
             BackColor = EditorColors.BgCard,
             ForeColor = EditorColors.TextPrimary,
-            Font = new Font("Segoe UI Variable Text", 10f, FontStyle.Regular, GraphicsUnit.Point),
+            Font = UiChrome.ChromeFont(10f, FontStyle.Regular),
             Height = 28,
         };
         _search.TextChanged += (_, _) => _grid.SetFilter(_search.Text);
