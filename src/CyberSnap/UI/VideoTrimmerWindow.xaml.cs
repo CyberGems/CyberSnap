@@ -428,6 +428,22 @@ namespace CyberSnap.UI
         {
             _isSliderDragging = true;
             PausePlayback();
+
+            if (sender is Slider slider && slider.ActualWidth > 0)
+            {
+                var pos = e.GetPosition(slider);
+                double percent = pos.X / slider.ActualWidth;
+                if (percent < 0) percent = 0;
+                if (percent > 1) percent = 1;
+
+                double targetValue = slider.Minimum + percent * (slider.Maximum - slider.Minimum);
+                slider.Value = targetValue;
+
+                MediaPlayer.Position = TimeSpan.FromSeconds(targetValue);
+                _userTargetSeconds = targetValue;
+                _lastUserDragTime = DateTime.UtcNow;
+                UpdateTimeStatus();
+            }
         }
         
         private void TimeSlider_PreviewMouseUp(object sender, MouseButtonEventArgs e)
