@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -401,7 +401,7 @@ public partial class PreviewWindow : Window
         CloseBtn.BeginAnimation(OpacityProperty, Motion.To(to, 150, Motion.SmoothOut));
         PinBtn.BeginAnimation(OpacityProperty, Motion.To(_isPinned ? 1 : to, 150, Motion.SmoothOut));
         SaveBtn.BeginAnimation(OpacityProperty, Motion.To(to, 150, Motion.SmoothOut));
-        EditBtn.BeginAnimation(OpacityProperty, Motion.To((_isGif || _isVideo) ? 0 : to, 150, Motion.SmoothOut));
+        EditBtn.BeginAnimation(OpacityProperty, Motion.To(to, 150, Motion.SmoothOut));
     }
 
 }

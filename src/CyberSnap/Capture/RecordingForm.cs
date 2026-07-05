@@ -73,7 +73,8 @@ public sealed partial class RecordingForm : Form
     private CaptureEscapeKeyHook? _escapeHook;
     private System.Windows.Forms.Timer? _tickTimer;
     private readonly string _savePath;
-    private readonly ToolTip _tooltip = new();
+    private WindowsToolTip? _chromeToolTip;
+    private Rectangle? _tooltipAnchor;
 
     // Screen-relative selection (stays valid after phase change)
     private Rectangle _recordRegion; // in form coords, persisted
@@ -147,12 +148,6 @@ public sealed partial class RecordingForm : Form
         KeyPreview = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.Opaque, true);
-
-        _tooltip.InitialDelay = 400;
-        _tooltip.ReshowDelay = 100;
-        _tooltip.AutoPopDelay = 3000;
-        _tooltip.UseAnimation = true;
-        _tooltip.UseFading = true;
 
         // ── Banner (unified style with the capture-overlay tool banners) ──
         // White "MP4/GIF Recording:" label + leading record icon, then the accent-cyan action.
@@ -444,15 +439,7 @@ public sealed partial class RecordingForm : Form
                     Cursor = Cursors.Default;
             }
 
-            string tip = _hoveredBtn switch
-            {
-                0 => "Start recording",
-                1 => $"Toggle FPS (current: {_fps})",
-                2 => "Cancel recording",
-                _ => ""
-            };
-            if (_tooltip.GetToolTip(this) != tip)
-                _tooltip.SetToolTip(this, tip);
+            UpdateChromeToolTip();
             return;
         }
         if (_state == State.Recording)
@@ -465,16 +452,92 @@ public sealed partial class RecordingForm : Form
             Cursor = _hoveredBtn >= 0 ? Cursors.Hand : Cursors.Default;
             if (_hoveredBtn != prev) Invalidate(_toolbarRect);
 
-            string tip = _hoveredBtn switch
-            {
-                0 => _isPaused ? "Resume recording" : "Pause recording",
-                1 => "Stop and save recording",
-                2 => "Discard recording",
-                _ => ""
-            };
-            if (_tooltip.GetToolTip(this) != tip)
-                _tooltip.SetToolTip(this, tip);
+            UpdateChromeToolTip();
         }
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        HideChromeToolTip();
+    }
+
+    private void UpdateChromeToolTip()
+    {
+        if (_state is not (State.PreRecording or State.Recording))
+        {
+            HideChromeToolTip();
+            return;
+        }
+
+        string? tip = null;
+        Rectangle? anchor = null;
+
+        if (_state == State.PreRecording)
+        {
+            switch (_hoveredBtn)
+            {
+                case 0:
+                    tip = "Start recording";
+                    anchor = _startBtn;
+                    break;
+                case 1:
+                    tip = $"Toggle FPS (current: {_fps})";
+                    anchor = _fpsBtn;
+                    break;
+                case 2:
+                    tip = "Cancel recording";
+                    anchor = _discardBtn;
+                    break;
+            }
+        }
+        else
+        {
+            switch (_hoveredBtn)
+            {
+                case 0:
+                    tip = _isPaused ? "Resume recording" : "Pause recording";
+                    anchor = _pauseBtn;
+                    break;
+                case 1:
+                    tip = "Stop and save recording";
+                    anchor = _stopBtn;
+                    break;
+                case 2:
+                    tip = "Discard recording";
+                    anchor = _discardBtn;
+                    break;
+            }
+        }
+
+        if (tip == null || anchor == null || anchor.Value.IsEmpty)
+        {
+            HideChromeToolTip();
+            return;
+        }
+
+        if (_tooltipAnchor == anchor && _chromeToolTip?.Visible == true)
+            return;
+
+        _tooltipAnchor = anchor;
+        _chromeToolTip ??= new WindowsToolTip();
+        var screenAnchor = GetToolbarButtonScreenBounds(anchor.Value);
+        _chromeToolTip.ShowNear(this, tip, screenAnchor, above: true);
+    }
+
+    private Rectangle GetToolbarButtonScreenBounds(Rectangle clientRect)
+    {
+        return new Rectangle(
+            _virtualBounds.X + clientRect.X,
+            _virtualBounds.Y + clientRect.Y,
+            clientRect.Width,
+            clientRect.Height);
+    }
+
+    private void HideChromeToolTip()
+    {
+        _tooltipAnchor = null;
+        _chromeToolTip?.Hide();
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
@@ -1012,6 +1075,8 @@ public sealed partial class RecordingForm : Form
             WindowDetector.ClearSnapshot();
 
             CaptureWindowExclusion.Unregister(Handle);
+            _chromeToolTip?.Dispose();
+            _chromeToolTip = null;
             _escapeHook?.Dispose();
             _escapeHook = null;
             _tickTimer?.Dispose();

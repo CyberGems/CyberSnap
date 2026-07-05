@@ -123,27 +123,39 @@ public partial class App
                         bool flourish = TryRegisterCaptureFlourish(s);
                         MarkFirstTime(s.HasFirstRecording, () => s.HasFirstRecording = true);
 
-                        if (firstFrame != null)
+                        if (s.OpenVideoTrimmerAfterCapture)
                         {
-                            ToastWindow.Show(ToastSpec.ImagePreview(
-                                firstFrame,
-                                isGif ? LocalizationService.Translate("GIF recorded") : LocalizationService.Translate("Video recorded"),
-                                copiedToClipboard ? LocalizationService.Translate("File copied to clipboard") : LocalizationService.Translate("Saved; clipboard copy failed"),
-                                path,
-                                false,
-                                transparentShell: false,
-                                showOverlayButtons: true,
-                                hideEditButton: true) with { Celebrate = flourish });
+                            try
+                            {
+                                // Give the OS file system and Media Foundation a brief moment to fully flush and unlock the new file
+                                Task.Delay(500).ContinueWith(_ =>
+                                {
+                                    Dispatcher.BeginInvoke(() =>
+                                    {
+                                        try
+                                        {
+                                            var trimmer = new VideoTrimmerWindow(path, _settingsService!);
+                                            trimmer.Show();
+                                            firstFrame?.Dispose();
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            AppDiagnostics.LogError("capture.auto-open-trimmer-deferred", ex);
+                                            ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif, flourish);
+                                        }
+                                    });
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                AppDiagnostics.LogError("capture.auto-open-trimmer", ex);
+                                // Fallback to toast
+                                ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif, flourish);
+                            }
                         }
                         else
                         {
-                            var fi = new FileInfo(path);
-                            string label = fi.Extension.TrimStart('.').ToUpper();
-                            string size = fi.Length > 1024 * 1024
-                                ? $"{fi.Length / 1024.0 / 1024.0:F1} MB"
-                                : $"{fi.Length / 1024:N0} KB";
-                            var copyStatus = copiedToClipboard ? LocalizationService.Translate("File copied to clipboard") : LocalizationService.Translate("Saved; clipboard copy failed");
-                            ToastWindow.Show(ToastSpec.Standard($"{label} recorded", $"{fi.Name} Â· {size} Â· {copyStatus}", path) with { Celebrate = flourish });
+                            ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif, flourish);
                         }
 
                         ScheduleIdleMemoryTrim();
@@ -199,6 +211,32 @@ public partial class App
         thread.SetApartmentState(ApartmentState.STA);
         thread.IsBackground = true;
         thread.Start();
+    }
+
+    private void ShowRecordingToast(string path, Bitmap? firstFrame, bool copiedToClipboard, bool isGif, bool flourish)
+    {
+        if (firstFrame != null)
+        {
+            ToastWindow.Show(ToastSpec.ImagePreview(
+                firstFrame,
+                isGif ? LocalizationService.Translate("GIF recorded") : LocalizationService.Translate("Video recorded"),
+                copiedToClipboard ? LocalizationService.Translate("File copied to clipboard") : LocalizationService.Translate("Saved; clipboard copy failed"),
+                path,
+                false,
+                transparentShell: false,
+                showOverlayButtons: true,
+                hideEditButton: false) with { Celebrate = flourish });
+        }
+        else
+        {
+            var fi = new FileInfo(path);
+            string label = fi.Extension.TrimStart('.').ToUpper();
+            string size = fi.Length > 1024 * 1024
+                ? $"{fi.Length / 1024.0 / 1024.0:F1} MB"
+                : $"{fi.Length / 1024:N0} KB";
+            var copyStatus = copiedToClipboard ? LocalizationService.Translate("File copied to clipboard") : LocalizationService.Translate("Saved; clipboard copy failed");
+            ToastWindow.Show(ToastSpec.Standard($"{label} recorded", $"{fi.Name} · {size} · {copyStatus}", path) with { Celebrate = flourish });
+        }
     }
 
     private void LaunchScrollingCapture(Rectangle? preSelectedRegion = null)

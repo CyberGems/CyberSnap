@@ -1007,6 +1007,29 @@ public partial class SettingsWindow
         RefreshEditorPreviewState();
     }
 
+    private void VideoEnableEditorCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.OpenVideoTrimmerAfterCapture;
+        var selected = VideoEnableEditorCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.open-video-trimmer-after-capture",
+            "Enable editor",
+            previous,
+            selected,
+            value => _settingsService.Settings.OpenVideoTrimmerAfterCapture = value,
+            value => {
+                if (VideoEnableEditorCheck != null)
+                    VideoEnableEditorCheck.IsChecked = value;
+            },
+            // Keep the widget's own "Enable editor" toggle in lockstep when it's open.
+            value => ((App)Application.Current).SyncWidgetEnableEditorToggle());
+
+        // Re-emphasise the notification mock-ups so the dual preview tracks the new editor state.
+        RefreshEditorPreviewState();
+    }
+
     // Pulls the "Enable editor" checkbox back into sync after the change originated on the widget's
     // own toggle. Suppressed so reflecting the value doesn't echo back into a save/sync round-trip.
     public void RefreshEnableEditorCheck()
@@ -1014,7 +1037,11 @@ public partial class SettingsWindow
         if (WidgetEnableEditorCheck is null) return;
 
         _suppressGeneralPreferenceChange = true;
-        try { WidgetEnableEditorCheck.IsChecked = _settingsService.Settings.OpenEditorAfterCapture; }
+        try {
+            WidgetEnableEditorCheck.IsChecked = _settingsService.Settings.OpenEditorAfterCapture;
+            if (VideoEnableEditorCheck != null)
+                VideoEnableEditorCheck.IsChecked = _settingsService.Settings.OpenVideoTrimmerAfterCapture;
+        }
         finally { _suppressGeneralPreferenceChange = false; }
 
         // The editor state drives which notification mock-up is emphasised.

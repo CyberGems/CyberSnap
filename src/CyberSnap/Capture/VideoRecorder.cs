@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
@@ -157,7 +157,7 @@ public sealed class VideoRecorder : IDisposable
         outW = outW / 2 * 2;
         outH = outH / 2 * 2;
 
-        string codecArgs = BuildVideoCodecArguments(_format, _region.Width, _region.Height, outW, outH);
+        string codecArgs = BuildVideoCodecArguments(_format, _region.Width, _region.Height, outW, outH, _fps);
 
         var args = $"-y -f rawvideo -pix_fmt bgra -s {_region.Width}x{_region.Height} -r {_fps} -i pipe:0 {codecArgs} \"{outputPath}\"";
 
@@ -836,15 +836,18 @@ public sealed class VideoRecorder : IDisposable
     }
 
     private static string GetRepairVideoCodecArguments(Format format) =>
-        "-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart";
+        "-c:v libx264 -preset fast -crf 18 -g 30 -pix_fmt yuv420p -movflags +faststart";
 
-    internal static string BuildVideoCodecArguments(Format format, int inputWidth, int inputHeight, int outputWidth, int outputHeight)
+    internal static string BuildVideoCodecArguments(Format format, int inputWidth, int inputHeight, int outputWidth, int outputHeight, int fps = 30)
     {
         string scaleFilter = inputWidth == outputWidth && inputHeight == outputHeight
             ? string.Empty
             : $" -vf scale={outputWidth}:{outputHeight}:flags=lanczos";
 
-        return $"-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p{scaleFilter} -movflags +faststart";
+        // Force a keyframe every 1 second (= fps frames) so WPF MediaElement can seek
+        // accurately from the first frame.  Without this, libx264's default keyint of
+        // 250 frames causes the player to skip the beginning on first playback.
+        return $"-c:v libx264 -preset fast -crf 18 -g {fps} -pix_fmt yuv420p{scaleFilter} -movflags +faststart";
     }
 
     private static string GetRepairAudioCodec(Format format) => "aac";

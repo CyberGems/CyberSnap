@@ -37,6 +37,8 @@ public partial class App : Application
     private HistoryWindow? _historyWindow;
     private int _historyWindowOpening;
 
+    internal SettingsService SettingsService => _settingsService ??= new SettingsService();
+
     public void RefreshHistoryWindowIfOpen()
     {
         if (!Dispatcher.CheckAccess())

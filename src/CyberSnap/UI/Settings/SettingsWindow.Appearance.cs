@@ -214,6 +214,8 @@ public partial class SettingsWindow
             PopulateSoundCustomizationPanel();
             ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
             WidgetEnableEditorCheck.IsChecked = s.OpenEditorAfterCapture;
+            if (VideoEnableEditorCheck != null)
+                VideoEnableEditorCheck.IsChecked = s.OpenVideoTrimmerAfterCapture;
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
             PopulateWidgetMonitors();

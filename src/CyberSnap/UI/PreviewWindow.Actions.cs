@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -383,7 +383,27 @@ public partial class PreviewWindow
 
     private void OpenEditor()
     {
-        if (_isGif || _isVideo || _screenshot is null) return;
+        if (_isGif || _isVideo)
+        {
+            if (_savedFilePath is null) return;
+            try
+            {
+                var trimmer = new VideoTrimmerWindow(_savedFilePath, ((App)Application.Current).SettingsService);
+                trimmer.Show();
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("preview.open-trimmer", ex.Message, ex);
+                ToastWindow.ShowError("Trimmer failed",
+                    BuildPreviewFailureBody("CyberSnap could not open the trimmer.", ex.Message),
+                    GetExistingPreviewFilePathOrNull());
+                return;
+            }
+            AnimateDismiss();
+            return;
+        }
+
+        if (_screenshot is null) return;
 
         try
         {

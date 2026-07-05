@@ -247,7 +247,7 @@ public partial class CaptureWidgetWindow : Window
     private void UpdateEnableEditorState()
     {
         _suppressEditorToggle = true;
-        try { EnableEditorToggle.IsChecked = _settings.OpenEditorAfterCapture; }
+        try { EnableEditorToggle.IsChecked = _settings.OpenEditorAfterCapture || _settings.OpenVideoTrimmerAfterCapture; }
         finally { _suppressEditorToggle = false; }
     }
 
@@ -1067,6 +1067,7 @@ public partial class CaptureWidgetWindow : Window
 
         var enabled = EnableEditorToggle.IsChecked == true;
         _settings.OpenEditorAfterCapture = enabled;
+        _settings.OpenVideoTrimmerAfterCapture = enabled;
         _settingsService.Save();
         // Keep the Settings window's "Enable editor" checkbox in lockstep when it's open.
         ((App)System.Windows.Application.Current).SyncSettingsEnableEditorCheck();
