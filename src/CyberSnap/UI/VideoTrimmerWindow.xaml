@@ -503,7 +503,35 @@
                             IsMoveToPointEnabled="True"
                             LostMouseCapture="TimeSlider_LostMouseCapture"
                             ValueChanged="TimeSlider_ValueChanged"
+                            MouseEnter="TimeSlider_MouseEnter"
+                            MouseLeave="TimeSlider_MouseLeave"
+                            MouseMove="TimeSlider_MouseMove"
                             Cursor="Hand"/>
+
+                    <!-- Hover Timestamp Tooltip -->
+                    <Border x:Name="TimelineHoverTooltip"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="0,-28,0,0"
+                            Height="22"
+                            Background="{DynamicResource ThemeInputBackgroundBrush}"
+                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="6,2"
+                            Visibility="Hidden"
+                            IsHitTestVisible="False">
+                        <Border.RenderTransform>
+                            <TranslateTransform x:Name="HoverTooltipTransform"/>
+                        </Border.RenderTransform>
+                        <TextBlock x:Name="HoverTooltipText"
+                                   Text="00:00.0"
+                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"/>
+                    </Border>
                 </Grid>
 
                 <!-- Set End marker -->
