@@ -108,6 +108,36 @@ namespace CyberSnap.UI
             Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
             VolumeControl.RefreshThemeBrushes();
             Icon = ThemedLogo.Square(32);
+
+            // Setup dynamic colors for the action banner overlay to match the Annotation Editor style precisely
+            var accentBrush = Theme.Brush(Theme.Accent) as SolidColorBrush;
+            var cardBrush = Theme.Brush(Theme.BgCard) as SolidColorBrush;
+            if (accentBrush != null && cardBrush != null)
+            {
+                BannerBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(200, cardBrush.Color.R, cardBrush.Color.G, cardBrush.Color.B));
+                BannerBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(150, accentBrush.Color.R, accentBrush.Color.G, accentBrush.Color.B));
+                
+                var shadow = BannerBorder.Effect as System.Windows.Media.Effects.DropShadowEffect;
+                if (shadow != null)
+                {
+                    shadow.Color = accentBrush.Color;
+                }
+            }
+        }
+
+        private void TitleBar_DragWindow(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                if (e.ClickCount == 2)
+                {
+                    this.WindowState = this.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+                }
+                else
+                {
+                    this.DragMove();
+                }
+            }
         }
         
         private void OnRendering(object? sender, EventArgs e)
@@ -537,18 +567,21 @@ namespace CyberSnap.UI
 
         private void UpdateTitleState(bool isModified)
         {
-            if (LedCore == null || LedAura == null || TitleFileNameText == null)
+            if (LedCore == null || LedAura == null || TitleFileNameText == null || TitleContainer == null)
                 return;
 
+            string lang = _settingsService.Settings.InterfaceLanguage;
             if (isModified)
             {
                 LedCore.Fill = OrangeLedBrush;
                 LedAura.Fill = OrangeLedAuraBrush;
+                TitleContainer.ToolTip = LocalizationService.Translate(lang, "Unsaved changes");
             }
             else
             {
                 LedCore.Fill = GreenLedBrush;
                 LedAura.Fill = GreenLedAuraBrush;
+                TitleContainer.ToolTip = LocalizationService.Translate(lang, "Saved");
             }
 
             TitleFileNameText.Text = Path.GetFileName(_mediaFilePath);
