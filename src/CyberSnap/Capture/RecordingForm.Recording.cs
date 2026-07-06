@@ -59,21 +59,12 @@ public sealed partial class RecordingForm
         ThreadPool.QueueUserWorkItem(_ =>
         {
             Bitmap? firstFrame = gifRec?.GetFirstFrame();
-            string tempPath = _savePath + ".tmp";
             try
             {
                 try { System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ToastWindow.Show(LocalizationService.Translate("Recording"), LocalizationService.Translate("Encoding, please wait..."))); } catch { }
                 
-                if (gifRec != null)
-                {
-                    gifRec.StopAndEncode(tempPath);
-                    File.Move(tempPath, _savePath, overwrite: true);
-                }
-                else if (vidRec != null)
-                {
-                    vidRec.StopAndEncode(tempPath);
-                    File.Move(tempPath, _savePath, overwrite: true);
-                }
+                gifRec?.StopAndEncode(_savePath);
+                vidRec?.StopAndEncode(_savePath);
                 _desktopAudioSoundSuppression?.Dispose();
                 _desktopAudioSoundSuppression = null;
                 SoundService.PlayRecordStopSound();
@@ -87,7 +78,6 @@ public sealed partial class RecordingForm
                 AppDiagnostics.LogError("recording.stop-failed", ex, "Exception in StopRecording background task.");
                 firstFrame?.Dispose();
                 TryDeleteZeroByteRecordingOutput(_savePath);
-                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
 
                 RecordingFailed?.Invoke(ex);
             }
@@ -172,7 +162,7 @@ public sealed partial class RecordingForm
         {
             SoundService.PlayRecordStartSound();
             _recorder?.Start(RecordingWarmupDelayMs);
-            _videoRecorder?.Start(_savePath + ".tmp", RecordingWarmupDelayMs);
+            _videoRecorder?.Start(_savePath, RecordingWarmupDelayMs);
         }
         catch (Exception ex)
         {

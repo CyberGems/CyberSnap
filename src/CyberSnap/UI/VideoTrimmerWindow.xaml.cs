@@ -29,6 +29,7 @@ namespace CyberSnap.UI
         private double _lastTargetSeekSeconds = -1;
         private bool _hasAudioTrack;
         private readonly bool _isGif;
+        private bool _suppressLoadBanner;
         private readonly DispatcherTimer _audioPersistTimer;
         private bool _audioPersistPending;
         private bool _trimButtonVisible;
@@ -185,7 +186,20 @@ namespace CyberSnap.UI
                     if (Math.Abs(_lastTargetSeekSeconds - _startTimeSeconds) > 0.01)
                     {
                         _lastTargetSeekSeconds = _startTimeSeconds;
-                        MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                        if (_isGif)
+                        {
+                            _suppressLoadBanner = true;
+                            PlaceholderImage.Visibility = Visibility.Visible;
+                            MediaPlayer.Source = null;
+                            MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
+                            MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                            MediaPlayer.Play();
+                        }
+                        else
+                        {
+                            MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                            Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
+                        }
                     }
                 }
                 else
@@ -202,9 +216,31 @@ namespace CyberSnap.UI
         
         private void MediaPlayer_MediaOpened(object sender, RoutedEventArgs e)
         {
+            PlaceholderImage.Visibility = Visibility.Collapsed;
+            double duration = 0;
+            bool gotDuration = false;
+
             if (MediaPlayer.NaturalDuration.HasTimeSpan)
             {
-                _videoDurationSeconds = MediaPlayer.NaturalDuration.TimeSpan.TotalSeconds;
+                duration = MediaPlayer.NaturalDuration.TimeSpan.TotalSeconds;
+                gotDuration = true;
+            }
+            else if (_isGif)
+            {
+                try
+                {
+                    duration = GetGifDuration(_mediaFilePath);
+                    gotDuration = duration > 0;
+                }
+                catch (Exception ex)
+                {
+                    AppDiagnostics.LogWarning("trimmer.gif-duration", $"Failed to read GIF duration via GDI+: {ex.Message}", ex);
+                }
+            }
+
+            if (gotDuration)
+            {
+                _videoDurationSeconds = duration;
                 TimeSlider.Maximum = _videoDurationSeconds;
                 
                 // Initialize range markers to full duration
@@ -218,22 +254,114 @@ namespace CyberSnap.UI
                 UpdateMarkerLabels();
                 EvaluateCropState();
                 
-                string formatKey = _isGif ? "GIF loaded" : "MP4 loaded";
-                ShowBanner(LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, formatKey));
+                if (!_suppressLoadBanner)
+                {
+                    string formatKey = _isGif ? "GIF loaded" : "MP4 loaded";
+                    ShowBanner(LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, formatKey));
+                }
+                _suppressLoadBanner = false;
                 
                 // MediaOpened means the decoder graph is ready.  Seek to the
-                // start and play directly — no deferral needed.  Combined with
-                // the 1-second keyframe interval set during encoding (-g), this
-                // ensures the very first frame is decoded and displayed.
+                // start and play directly. Combined with the 1-second keyframe
+                // interval set during encoding (-g), this ensures the very first
+                // frame is decoded and displayed. We use Dispatcher.BeginInvoke
+                // to let the async seek to Position = Zero complete before starting
+                // playback, preventing GIF/Video from starting in a paused state.
                 MediaPlayer.Position = TimeSpan.Zero;
-                MediaPlayer.Play();
+                Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
+            }
+            else
+            {
+                // Fallback to start playback anyway
+                Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
+            }
+        }
+
+        private static double GetGifDuration(string filePath)
+        {
+            if (!File.Exists(filePath))
+                return 0;
+
+            try
+            {
+                using var img = System.Drawing.Image.FromFile(filePath);
+                var dimension = new System.Drawing.Imaging.FrameDimension(img.FrameDimensionsList[0]);
+                int frameCount = img.GetFrameCount(dimension);
+                if (frameCount <= 0)
+                    return 0;
+
+                int durationMs = 0;
+                const int PropertyTagFrameDelay = 0x5100;
+                
+                bool hasDelayProp = false;
+                foreach (int id in img.PropertyIdList)
+                {
+                    if (id == PropertyTagFrameDelay)
+                    {
+                        hasDelayProp = true;
+                        break;
+                    }
+                }
+
+                if (hasDelayProp)
+                {
+                    var propItem = img.GetPropertyItem(PropertyTagFrameDelay);
+                    if (propItem != null && propItem.Value != null)
+                    {
+                        byte[] bytes = propItem.Value;
+                        for (int i = 0; i < frameCount; i++)
+                        {
+                            if (i * 4 + 3 < bytes.Length)
+                            {
+                                int delay = BitConverter.ToInt32(bytes, i * 4) * 10; // delay in centiseconds (10ms)
+                                durationMs += delay;
+                            }
+                        }
+                    }
+                }
+
+                if (durationMs <= 0)
+                {
+                    durationMs = frameCount * 100; // default 100ms per frame
+                }
+
+                return durationMs / 1000.0;
+            }
+            catch
+            {
+                return 0;
             }
         }
         
         private void MediaPlayer_MediaEnded(object sender, RoutedEventArgs e)
         {
-            MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
-            MediaPlayer.Play();
+            if (_isGif && MediaPlayer.Position.TotalSeconds > 0)
+            {
+                double actualDuration = MediaPlayer.Position.TotalSeconds;
+                if (Math.Abs(_videoDurationSeconds - actualDuration) > 0.1)
+                {
+                    _videoDurationSeconds = actualDuration;
+                    TimeSlider.Maximum = _videoDurationSeconds;
+                    _endTimeSeconds = _videoDurationSeconds;
+                    RefreshTimeDisplay();
+                    UpdateMarkerLabels();
+                }
+            }
+
+            if (_isGif)
+            {
+                _suppressLoadBanner = true;
+                PlaceholderImage.Visibility = Visibility.Visible;
+                MediaPlayer.Source = null;
+                MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
+                MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                MediaPlayer.Play();
+            }
+            else
+            {
+                MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
+            }
         }
 
         private void MediaPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)
@@ -247,7 +375,27 @@ namespace CyberSnap.UI
         {
             if (PlayPauseIconText.Text == "\uE768") // Play glyph
             {
-                MediaPlayer.Play();
+                if (_videoDurationSeconds > 0 && MediaPlayer.Position.TotalSeconds >= _endTimeSeconds - 0.1)
+                {
+                    if (_isGif)
+                    {
+                        _suppressLoadBanner = true;
+                        PlaceholderImage.Visibility = Visibility.Visible;
+                        MediaPlayer.Source = null;
+                        MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
+                        MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                        MediaPlayer.Play();
+                    }
+                    else
+                    {
+                        MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                        Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
+                    }
+                }
+                else
+                {
+                    MediaPlayer.Play();
+                }
                 PlayPauseIconText.Text = "\uE769"; // Pause glyph
             }
             else
@@ -372,7 +520,7 @@ namespace CyberSnap.UI
             string cultureEnd = end.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
 
             if (isGif)
-                return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" \"{output}\"";
+                return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -loop 0 \"{output}\"";
 
             if (!hasAudio || exportMuted || volume <= 0.001)
                 return $"-y -ss {cultureStart} -to {cultureEnd} -i \"{input}\" -c:v copy -an \"{output}\"";
@@ -952,9 +1100,23 @@ namespace CyberSnap.UI
             if (_isGif)
             {
                 VolumeControl.SetGifMode();
+                try
+                {
+                    var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.UriSource = new Uri(_mediaFilePath, UriKind.Absolute);
+                    bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bitmap.EndInit();
+                    PlaceholderImage.Source = bitmap;
+                }
+                catch (Exception ex)
+                {
+                    AppDiagnostics.LogWarning("trimmer.placeholder-err", $"Failed to load GIF placeholder: {ex.Message}");
+                }
             }
             else
             {
+                PlaceholderImage.Source = null;
                 _hasAudioTrack = MediaHasAudioTrack(_mediaFilePath);
                 if (!_hasAudioTrack)
                 {
