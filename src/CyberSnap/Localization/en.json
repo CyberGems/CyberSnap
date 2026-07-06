@@ -509,6 +509,8 @@
   "Show in folder": "Show in folder",
   "Show this file in File Explorer.": "Show this file in File Explorer.",
   "Delete from disk": "Delete from disk",
+  "Delete from Gallery": "Delete from Gallery",
+  "Delete from Gallery + file": "Delete from Gallery + file",
   "Permanently delete this file from disk and history.": "Permanently delete this file from disk and gallery.",
   "Copy GIF": "Copy GIF",
   "Copy video": "Copy video",

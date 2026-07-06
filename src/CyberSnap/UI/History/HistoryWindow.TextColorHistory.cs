@@ -499,6 +499,12 @@ public partial class HistoryWindow
             ? System.Windows.Media.Color.FromRgb(r, g, b)
             : System.Windows.Media.Color.FromArgb(0, 0, 0, 0);
 
+        var badgeColor = System.Windows.Media.Color.FromRgb(255, 160, 80);
+        var normalBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, badgeColor.R, badgeColor.G, badgeColor.B));
+        var hoverBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(230, badgeColor.R, badgeColor.G, badgeColor.B));
+        normalBorderBrush.Freeze();
+        hoverBorderBrush.Freeze();
+
         // ── Card shell (matching unified style) ──
         var card = new Border
         {
@@ -508,7 +514,7 @@ public partial class HistoryWindow
             Margin = new Thickness(HistoryCardMargin),
             CornerRadius = new CornerRadius(8),
             Background = Theme.Brush(Theme.BgCard),
-            BorderBrush = Theme.Brush(Theme.IsDark ? Theme.BorderSubtle : Theme.Border),
+            BorderBrush = normalBorderBrush,
             BorderThickness = new Thickness(1),
             Focusable = true,
             DataContext = entry
@@ -584,45 +590,39 @@ public partial class HistoryWindow
         var capturedHex = entry.Hex;
         AttachCardMenu(card, root, () => CopyColorToClipboard(capturedHex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(255, 160, 80));
 
-        // Hover overlay
-        var hoverBorder = new Border
-        {
-            BorderThickness = new Thickness(1),
-            BorderBrush = System.Windows.Media.Brushes.Transparent,
-            CornerRadius = new CornerRadius(7),
-            IsHitTestVisible = false,
-            Background = System.Windows.Media.Brushes.Transparent
-        };
-        Grid.SetRow(hoverBorder, 0);
-        Grid.SetRowSpan(hoverBorder, 2);
-        root.Children.Add(hoverBorder);
-
         card.Child = root;
+
+        root.SizeChanged += (s, _) =>
+        {
+            var g = (Grid)s!;
+            g.Clip = new System.Windows.Media.RectangleGeometry(
+                new System.Windows.Rect(0, 0, g.ActualWidth, g.ActualHeight), 7.0, 7.0);
+        };
 
         // Hover / focus effects (matching unified card subtlety)
         card.MouseEnter += (_, _) =>
         {
             card.Background = HistoryCardHoverBrush;
-            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            card.BorderBrush = hoverBorderBrush;
         };
         card.MouseLeave += (_, _) =>
         {
             if (!card.IsKeyboardFocusWithin)
             {
                 card.Background = Theme.Brush(Theme.BgCard);
-                hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                card.BorderBrush = normalBorderBrush;
             }
         };
         card.GotKeyboardFocus += (_, _) =>
         {
             card.Background = HistoryCardHoverBrush;
-            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            card.BorderBrush = hoverBorderBrush;
         };
         card.LostKeyboardFocus += (_, _) =>
         {
             if (card.IsMouseOver) return;
             card.Background = Theme.Brush(Theme.BgCard);
-            hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+            card.BorderBrush = normalBorderBrush;
         };
 
         // ── Click / keyboard handlers ──

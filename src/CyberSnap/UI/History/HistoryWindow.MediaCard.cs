@@ -45,6 +45,13 @@ public partial class HistoryWindow
     {
         bool suppressOpenAction = false;
         var kindLabel = GetHistoryKindLabel(vm.Entry.Kind);
+        var badgeColor = vm.Entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(240, 80, 180)
+            : vm.Entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60) : System.Windows.Media.Color.FromRgb(100, 180, 255);
+        var normalBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, badgeColor.R, badgeColor.G, badgeColor.B));
+        var hoverBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(230, badgeColor.R, badgeColor.G, badgeColor.B));
+        normalBorderBrush.Freeze();
+        hoverBorderBrush.Freeze();
+
         if (vm.ThumbnailLoaded && IsStaleHistoryPlaceholder(vm.ThumbnailSource, vm.Entry.Kind))
         {
             vm.ThumbnailLoaded = false;
@@ -94,18 +101,6 @@ public partial class HistoryWindow
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
 
-        var hoverBorder = new Border
-        {
-            BorderThickness = new Thickness(1),
-            BorderBrush = Brushes.Transparent,
-            CornerRadius = new CornerRadius(7),
-            IsHitTestVisible = false,
-            Background = Brushes.Transparent
-        };
-        Grid.SetRow(hoverBorder, 0);
-        Grid.SetRowSpan(hoverBorder, 2);
-        root.Children.Add(hoverBorder);
-
         var card = new Border
         {
             Width = HistoryCardPreferredWidth,
@@ -114,7 +109,7 @@ public partial class HistoryWindow
             Margin = new Thickness(HistoryCardMargin),
             CornerRadius = new CornerRadius(8),
             Background = Theme.Brush(Theme.BgCard),
-            BorderBrush = Theme.Brush(Theme.IsDark ? Theme.BorderSubtle : Theme.Border),
+            BorderBrush = normalBorderBrush,
             BorderThickness = new Thickness(1),
             Focusable = true,
             Child = root,
@@ -246,25 +241,8 @@ public partial class HistoryWindow
             LoadCurrentHistoryTab();
         }, "Remove this item from the gallery, but keep the file on disk.", "trash");
 
-        // 2. Delete from disk only (keep in gallery)
-        var delDiskItem = CreateCardActionMenuItem("Delete from disk", () =>
-        {
-            suppressOpenAction = true;
-            var title = isSpanish
-                ? $"¿Eliminar {vm.Entry.FileName}?"
-                : $"Delete {vm.Entry.FileName}?";
-            var body = isSpanish
-                ? $"Esto eliminará permanentemente el archivo.\n\n{vm.Entry.FilePath}"
-                : $"This will permanently delete the file.\n\n{vm.Entry.FilePath}";
-            if (!ThemedConfirmDialog.Confirm(this, title, body,
-                    LocalizationService.Translate("Delete"), LocalizationService.Translate("Cancel")))
-                return;
-            try { File.Delete(vm.Entry.FilePath); } catch { }
-        }, "Permanently delete the file from disk, but keep the gallery entry.", "trash", danger: true);
-        delDiskItem.IsEnabled = hasFile;
-
-        // 3. Delete from Gallery + disk
-        var delBothItem = CreateCardActionMenuItem("Delete from Gallery + disk", () =>
+        // 2. Delete from Gallery + file
+        var delBothItem = CreateCardActionMenuItem("Delete from Gallery + file", () =>
         {
             suppressOpenAction = true;
             var title = isSpanish
@@ -282,7 +260,6 @@ public partial class HistoryWindow
         delBothItem.IsEnabled = hasFile;
 
         actionMenu.Items.Add(delGalleryItem);
-        actionMenu.Items.Add(delDiskItem);
         actionMenu.Items.Add(delBothItem);
         actionMenu.PlacementTarget = card;
         card.MouseRightButtonUp += (_, e) =>
@@ -296,7 +273,7 @@ public partial class HistoryWindow
             actionMenu.IsOpen = true;
         };
 
-        var badgeHoverColor = vm.Entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(255, 100, 100)
+        var badgeHoverColor = vm.Entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(240, 80, 180)
             : vm.Entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60)
             : System.Windows.Media.Color.FromRgb(100, 180, 255);
         var badgeHoverBrush = new SolidColorBrush(badgeHoverColor);
@@ -421,24 +398,28 @@ public partial class HistoryWindow
         {
             var b = (Border)s!;
             imageRow.Height = new GridLength(GetHistoryCardImageHeight(b.ActualWidth));
-            b.Clip = new System.Windows.Media.RectangleGeometry(
-                new System.Windows.Rect(0, 0, b.ActualWidth, b.ActualHeight), 8.5, 8.5);
+        };
+        root.SizeChanged += (s, _) =>
+        {
+            var g = (Grid)s!;
+            g.Clip = new System.Windows.Media.RectangleGeometry(
+                new System.Windows.Rect(0, 0, g.ActualWidth, g.ActualHeight), 7.0, 7.0);
         };
 
         card.MouseEnter += (s, _) =>
         {
-            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            card.BorderBrush = hoverBorderBrush;
             UpdateChevronVisibility();
         };
         card.MouseLeave += (s, _) =>
         {
             if (!card.IsKeyboardFocusWithin)
-                hoverBorder.BorderBrush = Brushes.Transparent;
+                card.BorderBrush = normalBorderBrush;
             UpdateChevronVisibility();
         };
         card.GotKeyboardFocus += (_, _) =>
         {
-            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            card.BorderBrush = hoverBorderBrush;
             UpdateChevronVisibility();
         };
         card.LostKeyboardFocus += (_, _) =>
@@ -447,7 +428,7 @@ public partial class HistoryWindow
             if (card.IsKeyboardFocusWithin)
                 return;
 
-            hoverBorder.BorderBrush = Brushes.Transparent;
+            card.BorderBrush = normalBorderBrush;
         };
 
         void ActivateCard(RoutedEventArgs e)
