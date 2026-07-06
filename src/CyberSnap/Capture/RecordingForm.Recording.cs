@@ -61,15 +61,27 @@ public sealed partial class RecordingForm
             Bitmap? firstFrame = null;
             try
             {
-                try { System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ToastWindow.Show(LocalizationService.Translate("Recording"), LocalizationService.Translate("Encoding, please wait..."))); } catch { }
+                try { System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ToastWindow.ShowEncodingWait(LocalizationService.Translate("Recording"), LocalizationService.Translate("Encoding, please wait..."))); } catch { }
                 
                 gifRec?.StopAndEncode(_savePath);
                 vidRec?.StopAndEncode(_savePath);
+
+                if (gifRec != null && _onGifEncodedForTrimmer != null)
+                    _onGifEncodedForTrimmer(_savePath);
+
                 _desktopAudioSoundSuppression?.Dispose();
                 _desktopAudioSoundSuppression = null;
                 SoundService.PlayRecordStopSound();
-                firstFrame = vidRec?.GetFirstFrame();
-                firstFrame ??= TryCreateToastPreviewFrame(_savePath);
+
+                if (!_openVideoTrimmerAfterCapture || gifRec == null)
+                {
+                    firstFrame = vidRec?.GetFirstFrame();
+                    firstFrame ??= TryCreateToastPreviewFrame(_savePath);
+                }
+                else
+                {
+                    firstFrame = vidRec?.GetFirstFrame();
+                }
                 
                 RecordingCompleted?.Invoke(_savePath, firstFrame);
             }

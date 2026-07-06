@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using CyberSnap.Capture;
@@ -88,9 +89,32 @@ public partial class App
                 bool recMic = fmt != RecordingFormat.GIF && s.RecordMicrophone;
                 bool recDesktop = fmt != RecordingFormat.GIF && s.RecordDesktopAudio;
                 Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
+                bool openTrimmer = s.OpenVideoTrimmerAfterCapture;
+                Action<string>? onGifEncodedForTrimmer = null;
+                if (openTrimmer && fmt == RecordingFormat.GIF)
+                {
+                    onGifEncodedForTrimmer = path =>
+                    {
+                        try
+                        {
+                            Dispatcher.Invoke(DispatcherPriority.Send, () =>
+                            {
+                                _trayIcon?.UpdateRecordingState(false);
+                                OpenVideoTrimmerAfterRecording(path, firstFrame: null, isGif: true, onFailure: () => { });
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            AppDiagnostics.LogError("capture.auto-open-trimmer-immediate", ex);
+                        }
+                    };
+                }
+
                 var form = new RecordingForm(selectionScreenshot, bounds, fps, savePath, fmt, maxH,
                     showCursor, recMic, s.MicrophoneDeviceId, recDesktop, s.DesktopAudioDeviceId,
-                    _settingsService!.Settings.ShowCaptureMagnifier);
+                    _settingsService!.Settings.ShowCaptureMagnifier,
+                    openTrimmer,
+                    onGifEncodedForTrimmer);
 
                 form.Shown += (_, _) =>
                 {
@@ -99,9 +123,11 @@ public partial class App
 
                 form.RecordingCompleted += (path, firstFrame) =>
                 {
-                    Dispatcher.BeginInvoke(() =>
+                    Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
                     {
-                        _trayIcon?.UpdateRecordingState(false);
+                        bool isGif = string.Equals(Path.GetExtension(path), ".gif", StringComparison.OrdinalIgnoreCase);
+                        if (!(openTrimmer && isGif))
+                            _trayIcon?.UpdateRecordingState(false);
 
                         Services.HistoryEntry? historyEntry = null;
                         try
@@ -115,42 +141,28 @@ public partial class App
                         }
 
                         var copiedToClipboard = TryCopyRecordingFileToClipboard(path);
-                        bool isGif = string.Equals(Path.GetExtension(path), ".gif", StringComparison.OrdinalIgnoreCase);
 
-                        // Recordings count toward milestones too; when one earns a flourish, its toast
-                        // rides the celebratory sweep while keeping its functional text (file size, copy
-                        // status). The milestone also surfaces afterwards in the Settings rail.
                         bool flourish = TryRegisterCaptureFlourish(s);
                         MarkFirstTime(s.HasFirstRecording, () => s.HasFirstRecording = true);
 
-                        if (s.OpenVideoTrimmerAfterCapture)
+                        if (openTrimmer)
                         {
-                            try
+                            if (isGif)
                             {
-                                // Give the OS file system and Media Foundation a brief moment to fully flush and unlock the new file
-                                Task.Delay(500).ContinueWith(_ =>
-                                {
-                                    Dispatcher.BeginInvoke(() =>
-                                    {
-                                        try
-                                        {
-                                            var trimmer = new VideoTrimmerWindow(path, _settingsService!);
-                                            trimmer.Show();
-                                            firstFrame?.Dispose();
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            AppDiagnostics.LogError("capture.auto-open-trimmer-deferred", ex);
-                                            ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif, flourish);
-                                        }
-                                    });
-                                });
+                                firstFrame?.Dispose();
                             }
-                            catch (Exception ex)
+                            else
                             {
-                                AppDiagnostics.LogError("capture.auto-open-trimmer", ex);
-                                // Fallback to toast
-                                ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif, flourish);
+                                try
+                                {
+                                    OpenVideoTrimmerAfterRecording(path, firstFrame, isGif: false, onFailure: () =>
+                                        ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false, flourish));
+                                }
+                                catch (Exception ex)
+                                {
+                                    AppDiagnostics.LogError("capture.auto-open-trimmer", ex);
+                                    ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false, flourish);
+                                }
                             }
                         }
                         else
@@ -694,6 +706,39 @@ public partial class App
                 $"CyberSnap could not copy this capture result. The result will still be shown and saved when history is enabled.\n{ex.Message}");
             return false;
         }
+    }
+
+    private void OpenVideoTrimmerAfterRecording(
+        string path,
+        Bitmap? firstFrame,
+        bool isGif,
+        Action onFailure)
+    {
+        void ShowTrimmer()
+        {
+            try
+            {
+                ToastWindow.ForceDismissCurrent();
+                var trimmer = new VideoTrimmerWindow(path, _settingsService!);
+                trimmer.Show();
+                trimmer.Activate();
+                firstFrame?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("capture.auto-open-trimmer-deferred", ex);
+                onFailure();
+            }
+        }
+
+        // WMF needs a brief moment to release the new MP4 file; GIF opens immediately with in-window loading UI.
+        if (isGif)
+        {
+            ShowTrimmer();
+            return;
+        }
+
+        Task.Delay(500).ContinueWith(_ => Dispatcher.BeginInvoke(ShowTrimmer));
     }
 
     private static bool TryCopyRecordingFileToClipboard(string path)
