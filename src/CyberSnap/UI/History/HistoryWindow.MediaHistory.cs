@@ -299,7 +299,7 @@ public partial class HistoryWindow
         shell.ImageContainer.Children.Add(playIcon);
 
         AddMediaInfo(shell.InfoPanel, vm.Entry.FileName, vm.TimeAgo, filePath);
-        AddCategoryTint(shell.Root, System.Windows.Media.Color.FromRgb(255, 100, 100));
+        AddCategoryTint(shell.Root, System.Windows.Media.Color.FromRgb(240, 80, 180));
         return shell.Card;
     }
 

@@ -319,7 +319,7 @@ public partial class HistoryWindow
 
         var badgeLabel = entry.Kind == HistoryKind.Video ? "VID"
             : entry.Kind == HistoryKind.Gif ? "GIF" : "IMG";
-        var badgeColor = entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(255, 100, 100)
+        var badgeColor = entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(240, 80, 180)
             : entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60) : System.Windows.Media.Color.FromRgb(100, 180, 255);
 
         // Add play icon overlay for videos (same as CreateVideoCard)
@@ -422,7 +422,7 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
-        SetupUnifiedCardHoverAndClip(card, root, imageRow);
+        SetupUnifiedCardHoverAndClip(card, root, imageRow, System.Windows.Media.Color.FromRgb(80, 190, 180));
         textArea.ToolTip = LocalizationService.Translate("Copy this OCR text");
         textArea.Cursor = Cursors.Hand;
         textArea.MouseLeftButtonDown += (_, e) =>
@@ -512,7 +512,7 @@ public partial class HistoryWindow
         AddCategoryTint(root, System.Windows.Media.Color.FromRgb(255, 160, 80));
 
         card.Child = root;
-        SetupUnifiedCardHoverAndClip(card, root, imageRow);
+        SetupUnifiedCardHoverAndClip(card, root, imageRow, System.Windows.Media.Color.FromRgb(255, 160, 80));
         swatchArea.ToolTip = LocalizationService.Translate("Copy this color");
         swatchArea.Cursor = Cursors.Hand;
         swatchArea.MouseLeftButtonDown += (_, e) =>
@@ -595,7 +595,7 @@ public partial class HistoryWindow
 
         var capturedText = text;
         card.Child = root;
-        SetupUnifiedCardHoverAndClip(card, root, imageRow);
+        SetupUnifiedCardHoverAndClip(card, root, imageRow, System.Windows.Media.Color.FromRgb(176, 136, 240));
         var translatedCodeTooltip = LocalizationService.Translate("Copy this QR & Barcode text");
         previewArea.ToolTip = translatedCodeTooltip;
         previewArea.Cursor = Cursors.Hand;
@@ -761,7 +761,7 @@ public partial class HistoryWindow
             Margin = new Thickness(HistoryCardMargin),
             CornerRadius = new CornerRadius(8),
             Background = Theme.Brush(Theme.BgCard),
-            BorderBrush = Theme.Brush(Theme.IsDark ? Theme.BorderSubtle : Theme.Border),
+            BorderBrush = Theme.Brush(Theme.WindowBorder),
             BorderThickness = new Thickness(1),
             Focusable = true,
         };
@@ -772,52 +772,50 @@ public partial class HistoryWindow
         return card;
     }
 
-    /// <summary>Adds a hover overlay border and rounded-corner clip, matching image card behavior.</summary>
-    private void SetupUnifiedCardHoverAndClip(Border card, Grid root, RowDefinition imageRow)
+    private void SetupUnifiedCardHoverAndClip(Border card, Grid root, RowDefinition imageRow, System.Windows.Media.Color categoryColor)
     {
-        var hoverBorder = new Border
-        {
-            BorderThickness = new Thickness(1),
-            BorderBrush = System.Windows.Media.Brushes.Transparent,
-            CornerRadius = new CornerRadius(7),
-            IsHitTestVisible = false,
-            Background = System.Windows.Media.Brushes.Transparent
-        };
-        Grid.SetRow(hoverBorder, 0);
-        Grid.SetRowSpan(hoverBorder, 2);
-        root.Children.Add(hoverBorder);
+        var normalBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, categoryColor.R, categoryColor.G, categoryColor.B));
+        var hoverBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(230, categoryColor.R, categoryColor.G, categoryColor.B));
+        normalBorderBrush.Freeze();
+        hoverBorderBrush.Freeze();
+
+        card.BorderBrush = normalBorderBrush;
 
         card.SizeChanged += (_, _) =>
         {
             imageRow.Height = new GridLength(GetHistoryCardImageHeight(card.ActualWidth));
-            card.Clip = new System.Windows.Media.RectangleGeometry(
-                new System.Windows.Rect(0, 0, card.ActualWidth, card.ActualHeight), 8.5, 8.5);
+        };
+        root.SizeChanged += (s, _) =>
+        {
+            var g = (Grid)s!;
+            g.Clip = new System.Windows.Media.RectangleGeometry(
+                new System.Windows.Rect(0, 0, g.ActualWidth, g.ActualHeight), 7.0, 7.0);
         };
 
         card.MouseEnter += (_, _) =>
         {
             card.Background = HistoryCardHoverBrush;
-            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            card.BorderBrush = hoverBorderBrush;
         };
         card.MouseLeave += (_, _) =>
         {
             if (!card.IsKeyboardFocusWithin)
             {
                 card.Background = Theme.Brush(Theme.BgCard);
-                hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                card.BorderBrush = normalBorderBrush;
             }
         };
         card.GotKeyboardFocus += (_, _) =>
         {
             card.Background = HistoryCardHoverBrush;
-            hoverBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
+            card.BorderBrush = hoverBorderBrush;
         };
         card.LostKeyboardFocus += (_, _) =>
         {
             if (!card.IsMouseOver)
             {
                 card.Background = Theme.Brush(Theme.BgCard);
-                hoverBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                card.BorderBrush = normalBorderBrush;
             }
         };
     }
