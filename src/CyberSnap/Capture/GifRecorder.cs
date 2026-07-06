@@ -170,6 +170,20 @@ public sealed class GifRecorder : IDisposable
             if (writtenFrameCount == 0)
                 throw new InvalidOperationException("No frames captured.");
 
+            int expectedFrameCount = VideoRecorder.GetExpectedFrameCount(Elapsed, _fps);
+            if (expectedFrameCount > writtenFrameCount)
+            {
+                PadFramesToCount(writtenFrameCount, expectedFrameCount);
+                writtenFrameCount = expectedFrameCount;
+            }
+
+            if (_rawFramePath is null)
+            {
+                frameFiles = Directory.EnumerateFiles(_tempDir, "frame_*.bmp").ToArray();
+                if (frameFiles.Length > 1)
+                    Array.Sort(frameFiles, StringComparer.Ordinal);
+            }
+
             // Try FFmpeg first (much faster GIF encoding with palette optimization).
             // If FFmpeg fails for any reason, fall back to in-process encoding.
             Exception? ffmpegError = null;
@@ -223,6 +237,46 @@ public sealed class GifRecorder : IDisposable
         }
     }
 
+    private void PadFramesToCount(int currentCount, int targetCount)
+    {
+        if (currentCount <= 0 || targetCount <= currentCount)
+            return;
+
+        if (_rawFramePath is not null && File.Exists(_rawFramePath))
+            PadRawFramesToCount(currentCount, targetCount);
+        else
+            PadBmpFramesToCount(currentCount, targetCount);
+    }
+
+    private void PadRawFramesToCount(int currentCount, int targetCount)
+    {
+        int frameBytes = _region.Width * _region.Height * 4;
+        using var stream = new FileStream(_rawFramePath!, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+        long lastFrameOffset = (long)(currentCount - 1) * frameBytes;
+        stream.Seek(lastFrameOffset, SeekOrigin.Begin);
+
+        var lastFrame = new byte[frameBytes];
+        if (stream.Read(lastFrame, 0, frameBytes) != frameBytes)
+            return;
+
+        stream.Seek(0, SeekOrigin.End);
+        for (int i = currentCount; i < targetCount; i++)
+            stream.Write(lastFrame, 0, frameBytes);
+    }
+
+    private void PadBmpFramesToCount(int currentCount, int targetCount)
+    {
+        string source = Path.Combine(_tempDir, $"frame_{currentCount - 1:D6}.bmp");
+        if (!File.Exists(source))
+            return;
+
+        for (int i = currentCount; i < targetCount; i++)
+        {
+            string dest = Path.Combine(_tempDir, $"frame_{i:D6}.bmp");
+            File.Copy(source, dest, overwrite: true);
+        }
+    }
+
     private void EncodeFfmpegGifFromRaw(string ffmpegPath, string outputPath, int frameCount)
     {
         string paletteFile = Path.Combine(_tempDir, "palette.png");
@@ -237,7 +291,7 @@ public sealed class GifRecorder : IDisposable
             throw new InvalidOperationException("FFmpeg palette generation failed — no palette file produced.");
 
         RunFfmpegChecked(ffmpegPath,
-            $"-y {inputArgs} -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" -frames:v {frameCount} -loop 0 -f gif \"{outputPath}\"",
+            $"-y {inputArgs} -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" -frames:v {frameCount} -f gif \"{outputPath}\"",
             timeoutMs: 120_000);
 
         if (!IsValidOutputFile(outputPath))
@@ -260,7 +314,7 @@ public sealed class GifRecorder : IDisposable
 
         // Pass 2: encode using palette
         RunFfmpegChecked(ffmpegPath,
-            $"-y -framerate {_fps} -i \"{inputPattern}\" -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" -loop 0 -f gif \"{outputPath}\"",
+            $"-y -framerate {_fps} -i \"{inputPattern}\" -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" -f gif \"{outputPath}\"",
             timeoutMs: 120_000);
 
         if (!IsValidOutputFile(outputPath))
