@@ -21,6 +21,7 @@ internal sealed class GifFrameSequence : IDisposable
     private readonly int[] _frameDelayMs;
     private readonly double[] _frameStartSeconds;
     private readonly Dictionary<int, BitmapSource> _frameCache = new();
+    private readonly bool _useUniformFrameTiming;
     private bool _disposed;
 
     public int FrameCount => _frameDelayMs.Length;
@@ -45,7 +46,10 @@ internal sealed class GifFrameSequence : IDisposable
             start += _frameDelayMs[i] / 1000.0;
         }
 
-        TotalDurationSeconds = start;
+        double delaySumDuration = start;
+        double uniformDuration = frameCount * (defaultFrameDelayMs / 1000.0);
+        TotalDurationSeconds = Math.Max(delaySumDuration, uniformDuration);
+        _useUniformFrameTiming = uniformDuration > delaySumDuration + 0.05;
     }
 
     public static GifFrameSequence Open(string filePath, int defaultFrameDelayMs)
@@ -67,6 +71,15 @@ internal sealed class GifFrameSequence : IDisposable
 
         if (seconds <= 0)
             return 0;
+
+        if (_useUniformFrameTiming || seconds >= TotalDurationSeconds - 0.0001)
+        {
+            if (seconds >= TotalDurationSeconds - 0.0001)
+                return _frameStartSeconds.Length - 1;
+
+            int uniformIndex = (int)(seconds / TotalDurationSeconds * _frameStartSeconds.Length);
+            return Math.Clamp(uniformIndex, 0, _frameStartSeconds.Length - 1);
+        }
 
         for (int i = _frameStartSeconds.Length - 1; i >= 0; i--)
         {

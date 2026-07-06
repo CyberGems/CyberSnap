@@ -58,7 +58,7 @@ public sealed partial class RecordingForm
         // Finalize the recording in the background after the UI closes.
         ThreadPool.QueueUserWorkItem(_ =>
         {
-            Bitmap? firstFrame = gifRec?.GetFirstFrame();
+            Bitmap? firstFrame = null;
             try
             {
                 try { System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ToastWindow.Show(LocalizationService.Translate("Recording"), LocalizationService.Translate("Encoding, please wait..."))); } catch { }
@@ -68,7 +68,7 @@ public sealed partial class RecordingForm
                 _desktopAudioSoundSuppression?.Dispose();
                 _desktopAudioSoundSuppression = null;
                 SoundService.PlayRecordStopSound();
-                firstFrame ??= vidRec?.GetFirstFrame();
+                firstFrame = vidRec?.GetFirstFrame();
                 firstFrame ??= TryCreateToastPreviewFrame(_savePath);
                 
                 RecordingCompleted?.Invoke(_savePath, firstFrame);
