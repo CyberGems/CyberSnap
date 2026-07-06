@@ -46,6 +46,12 @@ namespace CyberSnap.UI
 
         private double _userTargetSeconds = -1;
         private DateTime _lastUserDragTime = DateTime.MinValue;
+        private DateTime _gifPlayAnchorUtc;
+        private double _gifPlayAnchorPosition;
+        private double _gifPausedTimelineSeconds;
+        private bool _gifTimelinePaused;
+        private GifFrameSequence? _gifSequence;
+        private int _gifDisplayedFrameIndex = -1;
 
         public VideoTrimmerWindow(string filePath, SettingsService settingsService)
         {
@@ -164,6 +170,35 @@ namespace CyberSnap.UI
 
             if (!_isSliderDragging && _videoDurationSeconds > 0)
             {
+                bool isPlaying = PlayPauseIconText.Text == "\uE769";
+
+                if (_isGif)
+                {
+                    if (isPlaying)
+                    {
+                        double timeline = GetGifTimelinePosition();
+
+                        if (timeline >= _endTimeSeconds - 0.02)
+                        {
+                            if (Math.Abs(_lastTargetSeekSeconds - _startTimeSeconds) > 0.01)
+                            {
+                                RestartGifLoop();
+                                return;
+                            }
+                        }
+                        else if (timeline < _endTimeSeconds - 0.2)
+                        {
+                            _lastTargetSeekSeconds = -1;
+                        }
+
+                        UpdateGifFrameDisplay(timeline);
+                        TimeSlider.Value = timeline;
+                        UpdateTimeStatus();
+                    }
+
+                    return;
+                }
+
                 double current = MediaPlayer.Position.TotalSeconds;
 
                 // Prevent jump-back glitches during asynchronous media seek operations
@@ -179,27 +214,13 @@ namespace CyberSnap.UI
                     }
                 }
 
-                bool isPlaying = PlayPauseIconText.Text == "\uE769";
-                
                 if (isPlaying && _endTimeSeconds > 0 && current >= _endTimeSeconds)
                 {
                     if (Math.Abs(_lastTargetSeekSeconds - _startTimeSeconds) > 0.01)
                     {
                         _lastTargetSeekSeconds = _startTimeSeconds;
-                        if (_isGif)
-                        {
-                            _suppressLoadBanner = true;
-                            PlaceholderImage.Visibility = Visibility.Visible;
-                            MediaPlayer.Source = null;
-                            MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
-                            MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
-                            MediaPlayer.Play();
-                        }
-                        else
-                        {
-                            MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
-                            Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
-                        }
+                        MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                        Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
                     }
                 }
                 else
@@ -214,9 +235,275 @@ namespace CyberSnap.UI
             }
         }
         
+        private void DisposeGifSequence()
+        {
+            _gifSequence?.Dispose();
+            _gifSequence = null;
+            _gifDisplayedFrameIndex = -1;
+        }
+
+        private void LoadGifPreview()
+        {
+            DisposeGifSequence();
+
+            try
+            {
+                _gifSequence = GifFrameSequence.Open(_mediaFilePath, Math.Max(1, (int)Math.Round(1000.0 / _fps)));
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("trimmer.gif-load", ex);
+                ToastWindow.ShowError("Media load failed", ex.Message);
+                return;
+            }
+
+            MediaPlayer.Visibility = Visibility.Collapsed;
+            GifPreviewImage.Visibility = Visibility.Visible;
+
+            double duration = _gifSequence.TotalDurationSeconds;
+            if (duration <= 0.05)
+                duration = ResolveGifDuration(0);
+            else
+            {
+                double metadataDuration = ResolveGifDuration(0);
+                if (metadataDuration > duration)
+                    duration = metadataDuration;
+            }
+
+            _videoDurationSeconds = duration;
+            TimeSlider.Maximum = _videoDurationSeconds;
+            _startTimeSeconds = 0;
+            _endTimeSeconds = _videoDurationSeconds;
+
+            SetStartBtn.IsChecked = false;
+            SetEndBtn.IsChecked = false;
+
+            RefreshTimeDisplay();
+            UpdateMarkerLabels();
+            EvaluateCropState();
+
+            ShowBanner(LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "GIF loaded"));
+
+            ResetGifPlayAnchor(0);
+            _gifTimelinePaused = false;
+            UpdateGifFrameDisplay(0, force: true);
+            PlayPauseIconText.Text = "\uE769";
+            UpdatePlayPauseToolTip();
+        }
+
+        private void UpdateGifFrameDisplay(double seconds, bool force = false)
+        {
+            if (_gifSequence == null)
+                return;
+
+            int frameIndex = _gifSequence.GetFrameIndexAt(seconds);
+            if (!force && frameIndex == _gifDisplayedFrameIndex)
+                return;
+
+            GifPreviewImage.Source = _gifSequence.GetFrameSource(frameIndex);
+            _gifDisplayedFrameIndex = frameIndex;
+        }
+
+        private void RestartGifLoop()
+        {
+            _lastTargetSeekSeconds = _startTimeSeconds;
+            ResetGifPlayAnchor(_startTimeSeconds);
+            UpdateGifFrameDisplay(_startTimeSeconds, force: true);
+        }
+
+        private void ResetGifPlayAnchor(double timelineSeconds)
+        {
+            _gifPlayAnchorUtc = DateTime.UtcNow;
+            _gifPlayAnchorPosition = timelineSeconds;
+            _gifPausedTimelineSeconds = timelineSeconds;
+        }
+
+        private double GetGifTimelinePosition()
+        {
+            if (_gifTimelinePaused || PlayPauseIconText.Text == "\uE768")
+                return _gifPausedTimelineSeconds;
+
+            double elapsed = (DateTime.UtcNow - _gifPlayAnchorUtc).TotalSeconds;
+            return Math.Min(_gifPlayAnchorPosition + elapsed, _endTimeSeconds);
+        }
+
+        private double GetCurrentTimelineSeconds()
+        {
+            return _isGif ? GetGifTimelinePosition() : MediaPlayer.Position.TotalSeconds;
+        }
+
+        private void SyncGifTimelineAfterSeek(double timelineSeconds)
+        {
+            timelineSeconds = Math.Clamp(timelineSeconds, 0, _videoDurationSeconds);
+            _gifPausedTimelineSeconds = timelineSeconds;
+            _gifPlayAnchorPosition = timelineSeconds;
+            _gifPlayAnchorUtc = DateTime.UtcNow;
+        }
+
+        private double ResolveGifDuration(double naturalDurationSeconds)
+        {
+            double ffprobeDuration = GetMediaDurationViaFfprobe(_mediaFilePath);
+            if (ffprobeDuration > 0.05)
+                return ffprobeDuration;
+
+            double frameDuration = GetGifDurationFromFrameCount(_mediaFilePath, _fps);
+            if (frameDuration > 0.05)
+                return frameDuration;
+
+            try
+            {
+                double gdiDuration = GetGifDuration(_mediaFilePath);
+                if (gdiDuration > 0.05)
+                    return gdiDuration;
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("trimmer.gif-duration", $"Failed to read GIF duration via GDI+: {ex.Message}", ex);
+            }
+
+            if (naturalDurationSeconds > 0.05)
+                return naturalDurationSeconds;
+
+            return 0;
+        }
+
+        private static double GetGifDurationFromFrameCount(string filePath, double fps)
+        {
+            if (fps <= 0)
+                return 0;
+
+            int frameCount = GetGifFrameCount(filePath);
+            return frameCount > 0 ? frameCount / fps : 0;
+        }
+
+        private static int GetGifFrameCount(string filePath)
+        {
+            if (!File.Exists(filePath))
+                return 0;
+
+            try
+            {
+                using var img = System.Drawing.Image.FromFile(filePath);
+                var dimension = new System.Drawing.Imaging.FrameDimension(img.FrameDimensionsList[0]);
+                return img.GetFrameCount(dimension);
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static double GetMediaDurationViaFfprobe(string mediaPath)
+        {
+            string? ffmpeg = VideoRecorder.FindFfmpeg();
+            if (ffmpeg == null)
+                return 0;
+
+            string? directory = Path.GetDirectoryName(ffmpeg);
+            string ffprobePath = directory == null
+                ? "ffprobe.exe"
+                : Path.Combine(directory, "ffprobe.exe");
+
+            if (!File.Exists(ffprobePath))
+            {
+                if (ffmpeg.EndsWith("ffmpeg.exe", StringComparison.OrdinalIgnoreCase))
+                    ffprobePath = ffmpeg[..^"ffmpeg.exe".Length] + "ffprobe.exe";
+                else if (ffmpeg.EndsWith("ffmpeg", StringComparison.OrdinalIgnoreCase))
+                    ffprobePath = ffmpeg[..^"ffmpeg".Length] + "ffprobe";
+            }
+
+            if (!File.Exists(ffprobePath))
+                return 0;
+
+            try
+            {
+                double fromFrames = TryGetFfprobeFrameDuration(ffprobePath, mediaPath);
+                if (fromFrames > 0.05)
+                    return fromFrames;
+
+                using var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = ffprobePath,
+                    Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{mediaPath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true
+                });
+
+                if (process == null)
+                    return 0;
+
+                string output = process.StandardOutput.ReadToEnd().Trim();
+                process.WaitForExit(5000);
+
+                return double.TryParse(output, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double seconds)
+                    ? seconds
+                    : 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static double TryGetFfprobeFrameDuration(string ffprobePath, string mediaPath)
+        {
+            try
+            {
+                using var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = ffprobePath,
+                    Arguments = $"-v error -select_streams v:0 -show_entries stream=nb_frames,r_frame_rate -of csv=p=0 \"{mediaPath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true
+                });
+
+                if (process == null)
+                    return 0;
+
+                string output = process.StandardOutput.ReadToEnd().Trim();
+                process.WaitForExit(5000);
+                if (string.IsNullOrWhiteSpace(output))
+                    return 0;
+
+                string[] parts = output.Split(',');
+                if (parts.Length < 2)
+                    return 0;
+
+                if (!int.TryParse(parts[0].Trim(), out int frames) || frames <= 0)
+                    return 0;
+
+                double fps = ParseFfprobeFrameRate(parts[1].Trim());
+                return fps > 0 ? frames / fps : 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private static double ParseFfprobeFrameRate(string rate)
+        {
+            string[] segments = rate.Split('/');
+            if (segments.Length == 2
+                && double.TryParse(segments[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double numerator)
+                && double.TryParse(segments[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double denominator)
+                && denominator > 0)
+            {
+                return numerator / denominator;
+            }
+
+            return double.TryParse(rate, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double direct)
+                ? direct
+                : 0;
+        }
+
         private void MediaPlayer_MediaOpened(object sender, RoutedEventArgs e)
         {
-            PlaceholderImage.Visibility = Visibility.Collapsed;
+            if (_isGif)
+                return;
+
             double duration = 0;
             bool gotDuration = false;
 
@@ -224,18 +511,6 @@ namespace CyberSnap.UI
             {
                 duration = MediaPlayer.NaturalDuration.TimeSpan.TotalSeconds;
                 gotDuration = true;
-            }
-            else if (_isGif)
-            {
-                try
-                {
-                    duration = GetGifDuration(_mediaFilePath);
-                    gotDuration = duration > 0;
-                }
-                catch (Exception ex)
-                {
-                    AppDiagnostics.LogWarning("trimmer.gif-duration", $"Failed to read GIF duration via GDI+: {ex.Message}", ex);
-                }
             }
 
             if (gotDuration)
@@ -256,17 +531,10 @@ namespace CyberSnap.UI
                 
                 if (!_suppressLoadBanner)
                 {
-                    string formatKey = _isGif ? "GIF loaded" : "MP4 loaded";
-                    ShowBanner(LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, formatKey));
+                    ShowBanner(LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "MP4 loaded"));
                 }
                 _suppressLoadBanner = false;
                 
-                // MediaOpened means the decoder graph is ready.  Seek to the
-                // start and play directly. Combined with the 1-second keyframe
-                // interval set during encoding (-g), this ensures the very first
-                // frame is decoded and displayed. We use Dispatcher.BeginInvoke
-                // to let the async seek to Position = Zero complete before starting
-                // playback, preventing GIF/Video from starting in a paused state.
                 MediaPlayer.Position = TimeSpan.Zero;
                 Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
             }
@@ -313,7 +581,9 @@ namespace CyberSnap.UI
                         {
                             if (i * 4 + 3 < bytes.Length)
                             {
-                                int delay = BitConverter.ToInt32(bytes, i * 4) * 10; // delay in centiseconds (10ms)
+                                int centiseconds = BitConverter.ToInt32(bytes, i * 4);
+                                // Netscape extension treats 0 as ~10 ms; matches browser/MF timing better.
+                                int delay = centiseconds <= 0 ? 10 : centiseconds * 10;
                                 durationMs += delay;
                             }
                         }
@@ -335,33 +605,11 @@ namespace CyberSnap.UI
         
         private void MediaPlayer_MediaEnded(object sender, RoutedEventArgs e)
         {
-            if (_isGif && MediaPlayer.Position.TotalSeconds > 0)
-            {
-                double actualDuration = MediaPlayer.Position.TotalSeconds;
-                if (Math.Abs(_videoDurationSeconds - actualDuration) > 0.1)
-                {
-                    _videoDurationSeconds = actualDuration;
-                    TimeSlider.Maximum = _videoDurationSeconds;
-                    _endTimeSeconds = _videoDurationSeconds;
-                    RefreshTimeDisplay();
-                    UpdateMarkerLabels();
-                }
-            }
-
             if (_isGif)
-            {
-                _suppressLoadBanner = true;
-                PlaceholderImage.Visibility = Visibility.Visible;
-                MediaPlayer.Source = null;
-                MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
-                MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
-                MediaPlayer.Play();
-            }
-            else
-            {
-                MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
-                Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
-            }
+                return;
+
+            MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+            Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
         }
 
         private void MediaPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)
@@ -375,16 +623,11 @@ namespace CyberSnap.UI
         {
             if (PlayPauseIconText.Text == "\uE768") // Play glyph
             {
-                if (_videoDurationSeconds > 0 && MediaPlayer.Position.TotalSeconds >= _endTimeSeconds - 0.1)
+                if (_videoDurationSeconds > 0 && GetCurrentTimelineSeconds() >= _endTimeSeconds - 0.1)
                 {
                     if (_isGif)
                     {
-                        _suppressLoadBanner = true;
-                        PlaceholderImage.Visibility = Visibility.Visible;
-                        MediaPlayer.Source = null;
-                        MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
-                        MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
-                        MediaPlayer.Play();
+                        RestartGifLoop();
                     }
                     else
                     {
@@ -394,14 +637,22 @@ namespace CyberSnap.UI
                 }
                 else
                 {
-                    MediaPlayer.Play();
+                    if (_isGif)
+                    {
+                        _gifTimelinePaused = false;
+                        _gifPlayAnchorUtc = DateTime.UtcNow;
+                        _gifPlayAnchorPosition = _gifPausedTimelineSeconds;
+                    }
+                    else
+                    {
+                        MediaPlayer.Play();
+                    }
                 }
                 PlayPauseIconText.Text = "\uE769"; // Pause glyph
             }
             else
             {
-                MediaPlayer.Pause();
-                PlayPauseIconText.Text = "\uE768";
+                PausePlayback();
             }
             UpdatePlayPauseToolTip();
         }
@@ -534,43 +785,60 @@ namespace CyberSnap.UI
 
         private void StepBackBtn_Click(object sender, RoutedEventArgs e)
         {
-            MediaPlayer.Pause();
-            PlayPauseIconText.Text = "\uE768";
-            UpdatePlayPauseToolTip();
-            
-            double target = MediaPlayer.Position.TotalSeconds - (1.0 / _fps);
+            PausePlayback();
+
+            double target = GetCurrentTimelineSeconds() - (1.0 / _fps);
             if (target < 0) target = 0;
-            
-            MediaPlayer.Position = TimeSpan.FromSeconds(target);
+
+            SeekMediaTo(target);
             TimeSlider.Value = target;
             UpdateTimeStatus();
         }
 
         private void StepForwardBtn_Click(object sender, RoutedEventArgs e)
         {
-            MediaPlayer.Pause();
-            PlayPauseIconText.Text = "\uE768";
-            UpdatePlayPauseToolTip();
-            
-            double target = MediaPlayer.Position.TotalSeconds + (1.0 / _fps);
+            PausePlayback();
+
+            double target = GetCurrentTimelineSeconds() + (1.0 / _fps);
             if (target > _videoDurationSeconds) target = _videoDurationSeconds;
-            
-            MediaPlayer.Position = TimeSpan.FromSeconds(target);
+
+            SeekMediaTo(target);
             TimeSlider.Value = target;
             UpdateTimeStatus();
         }
 
         private void PausePlayback()
         {
-            MediaPlayer.Pause();
+            if (_isGif)
+            {
+                _gifPausedTimelineSeconds = GetGifTimelinePosition();
+                _gifTimelinePaused = true;
+            }
+            else
+            {
+                MediaPlayer.Pause();
+            }
+
             PlayPauseIconText.Text = "\uE768";
             UpdatePlayPauseToolTip();
+        }
+
+        private void SeekMediaTo(double seconds)
+        {
+            if (_isGif)
+            {
+                SyncGifTimelineAfterSeek(seconds);
+                UpdateGifFrameDisplay(seconds, force: true);
+                return;
+            }
+
+            MediaPlayer.Position = TimeSpan.FromSeconds(seconds);
         }
 
         private void StartSeekBtn_Click(object sender, RoutedEventArgs e)
         {
             PausePlayback();
-            MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+            SeekMediaTo(_startTimeSeconds);
             TimeSlider.Value = _startTimeSeconds;
             UpdateTimeStatus();
         }
@@ -578,7 +846,7 @@ namespace CyberSnap.UI
         private void EndSeekBtn_Click(object sender, RoutedEventArgs e)
         {
             PausePlayback();
-            MediaPlayer.Position = TimeSpan.FromSeconds(_endTimeSeconds);
+            SeekMediaTo(_endTimeSeconds);
             TimeSlider.Value = _endTimeSeconds;
             UpdateTimeStatus();
         }
@@ -598,7 +866,7 @@ namespace CyberSnap.UI
             // (OnPreviewMouseLeftButtonDown) to position the Thumb via
             // Track.ValueFromPoint BEFORE this instance handler fires.
             // Just seek the media to the already-correct slider value.
-            MediaPlayer.Position = TimeSpan.FromSeconds(TimeSlider.Value);
+            SeekMediaTo(TimeSlider.Value);
             _userTargetSeconds = TimeSlider.Value;
             _lastUserDragTime = DateTime.UtcNow;
             UpdateTimeStatus();
@@ -609,7 +877,7 @@ namespace CyberSnap.UI
             if (_isSliderDragging)
             {
                 _isSliderDragging = false;
-                MediaPlayer.Position = TimeSpan.FromSeconds(TimeSlider.Value);
+                SeekMediaTo(TimeSlider.Value);
                 _userTargetSeconds = TimeSlider.Value;
                 _lastUserDragTime = DateTime.UtcNow;
             }
@@ -626,7 +894,7 @@ namespace CyberSnap.UI
         {
             if (_isSliderDragging)
             {
-                MediaPlayer.Position = TimeSpan.FromSeconds(TimeSlider.Value);
+                SeekMediaTo(TimeSlider.Value);
                 _userTargetSeconds = TimeSlider.Value;
                 _lastUserDragTime = DateTime.UtcNow;
                 UpdateTimeStatus();
@@ -677,16 +945,17 @@ namespace CyberSnap.UI
 
         private void RefreshTimeDisplay()
         {
+            double currentSeconds = GetCurrentTimelineSeconds();
             if (_detailedTimeDisplay)
             {
-                TimeStatusText.Text = FormatTime(MediaPlayer.Position.TotalSeconds);
+                TimeStatusText.Text = FormatTime(currentSeconds);
                 TimeStatusSeparator.Visibility = Visibility.Visible;
                 DurationStatusText.Visibility = Visibility.Visible;
                 DurationStatusText.Text = FormatTime(_videoDurationSeconds);
             }
             else
             {
-                TimeStatusText.Text = FormatSimpleTime(MediaPlayer.Position.TotalSeconds);
+                TimeStatusText.Text = FormatSimpleTime(currentSeconds);
                 TimeStatusSeparator.Visibility = Visibility.Collapsed;
                 DurationStatusText.Visibility = Visibility.Collapsed;
             }
@@ -710,7 +979,7 @@ namespace CyberSnap.UI
             string lang = _settingsService.Settings.InterfaceLanguage;
             if (SetStartBtn.IsChecked == true)
             {
-                double current = MediaPlayer.Position.TotalSeconds;
+                double current = GetCurrentTimelineSeconds();
                 if (current < _endTimeSeconds)
                 {
                     _startTimeSeconds = current;
@@ -736,7 +1005,7 @@ namespace CyberSnap.UI
             string lang = _settingsService.Settings.InterfaceLanguage;
             if (SetEndBtn.IsChecked == true)
             {
-                double current = MediaPlayer.Position.TotalSeconds;
+                double current = GetCurrentTimelineSeconds();
                 if (current > _startTimeSeconds)
                 {
                     _endTimeSeconds = current;
@@ -951,6 +1220,12 @@ namespace CyberSnap.UI
             // Set source and call Pause() to kick-start the Media Foundation
             // pipeline.  With LoadedBehavior="Manual", Pause() is required to
             // trigger async media loading — without it, MediaOpened never fires.
+            if (_isGif)
+            {
+                LoadGifPreview();
+                return;
+            }
+
             MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
             MediaPlayer.Pause();
         }
@@ -992,6 +1267,7 @@ namespace CyberSnap.UI
             _audioPersistTimer.Stop();
             if (_audioPersistPending && Application.Current is App app)
                 app.PersistVideoTrimmerAudio(VolumeControl.Volume, VolumeControl.IsExportMuted);
+            DisposeGifSequence();
             MediaPlayer.Close();
         }
         
@@ -1022,6 +1298,7 @@ namespace CyberSnap.UI
                 try
                 {
                     CompositionTarget.Rendering -= OnRendering;
+                    DisposeGifSequence();
                     MediaPlayer.Close();
                     
                     // Give player time to release lock
@@ -1082,6 +1359,7 @@ namespace CyberSnap.UI
 
                 // Auto-load the new copy in the editor
                 CompositionTarget.Rendering -= OnRendering;
+                DisposeGifSequence();
                 MediaPlayer.Close();
 
                 // Give player time to release lock
@@ -1096,43 +1374,30 @@ namespace CyberSnap.UI
         {
             _mediaFilePath = newPath;
 
-            // Re-evaluate audio track
             if (_isGif)
             {
                 VolumeControl.SetGifMode();
-                try
-                {
-                    var bitmap = new System.Windows.Media.Imaging.BitmapImage();
-                    bitmap.BeginInit();
-                    bitmap.UriSource = new Uri(_mediaFilePath, UriKind.Absolute);
-                    bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                    bitmap.EndInit();
-                    PlaceholderImage.Source = bitmap;
-                }
-                catch (Exception ex)
-                {
-                    AppDiagnostics.LogWarning("trimmer.placeholder-err", $"Failed to load GIF placeholder: {ex.Message}");
-                }
+                LoadGifPreview();
+                return;
+            }
+
+            GifPreviewImage.Visibility = Visibility.Collapsed;
+            MediaPlayer.Visibility = Visibility.Visible;
+
+            _hasAudioTrack = MediaHasAudioTrack(_mediaFilePath);
+            if (!_hasAudioTrack)
+            {
+                VolumeControl.SetNoAudioMode();
             }
             else
             {
-                PlaceholderImage.Source = null;
-                _hasAudioTrack = MediaHasAudioTrack(_mediaFilePath);
-                if (!_hasAudioTrack)
-                {
-                    VolumeControl.SetNoAudioMode();
-                }
-                else
-                {
-                    VolumeControl.HasAudioTrack = true;
-                    SyncMediaAudio();
-                }
+                VolumeControl.HasAudioTrack = true;
+                SyncMediaAudio();
             }
 
-            // Reload path
             MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
             MediaPlayer.Play();
-            PlayPauseIconText.Text = "\uE769"; // Reset to Pause glyph as it plays immediately
+            PlayPauseIconText.Text = "\uE769";
             UpdatePlayPauseToolTip();
         }
         
