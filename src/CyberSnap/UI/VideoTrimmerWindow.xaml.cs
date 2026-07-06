@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -52,6 +54,7 @@ namespace CyberSnap.UI
         private bool _gifTimelinePaused;
         private GifFrameSequence? _gifSequence;
         private int _gifDisplayedFrameIndex = -1;
+        private int _gifLoadVersion;
 
         public VideoTrimmerWindow(string filePath, SettingsService settingsService)
         {
@@ -109,6 +112,16 @@ namespace CyberSnap.UI
             Topmost = _isPinned;
             
             UpdatePlayPauseToolTip();
+
+            if (_isGif)
+            {
+                GifPreviewImage.Visibility = Visibility.Collapsed;
+                MediaPlayer.Visibility = Visibility.Collapsed;
+                ShowProgressOverlay(LocalizationService.Translate(
+                    settingsService.Settings.InterfaceLanguage,
+                    "Loading GIF..."));
+                Loaded += (_, _) => LoadGifPreview();
+            }
         }
         
         private void ApplyTheme()
@@ -174,6 +187,9 @@ namespace CyberSnap.UI
 
                 if (_isGif)
                 {
+                    if (_gifSequence == null)
+                        return;
+
                     if (isPlaying)
                     {
                         double timeline = GetGifTimelinePosition();
@@ -242,20 +258,70 @@ namespace CyberSnap.UI
             _gifDisplayedFrameIndex = -1;
         }
 
-        private void LoadGifPreview()
+        private void ShowProgressOverlay(string message)
         {
-            DisposeGifSequence();
+            ProgressText.Text = message;
+            ProgressOverlay.Visibility = Visibility.Visible;
+        }
 
+        private void HideProgressOverlay()
+        {
+            ProgressOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private async Task LoadGifPreviewAsync()
+        {
+            int loadVersion = Interlocked.Increment(ref _gifLoadVersion);
+            string path = _mediaFilePath;
+            int defaultDelayMs = Math.Max(1, (int)Math.Round(1000.0 / _fps));
+            string lang = _settingsService.Settings.InterfaceLanguage;
+
+            ShowProgressOverlay(LocalizationService.Translate(lang, "Loading GIF..."));
+            GifPreviewImage.Visibility = Visibility.Collapsed;
+            MediaPlayer.Visibility = Visibility.Collapsed;
+
+            // Let the window and loading overlay paint before decoding the GIF on a worker thread.
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+            GifFrameSequence? sequence = null;
+            Exception? loadError = null;
             try
             {
-                _gifSequence = GifFrameSequence.Open(_mediaFilePath, Math.Max(1, (int)Math.Round(1000.0 / _fps)));
+                sequence = await Task.Run(() => GifFrameSequence.Open(path, defaultDelayMs));
             }
             catch (Exception ex)
             {
-                AppDiagnostics.LogError("trimmer.gif-load", ex);
-                ToastWindow.ShowError("Media load failed", ex.Message);
+                loadError = ex;
+            }
+
+            if (loadVersion != _gifLoadVersion)
+            {
+                sequence?.Dispose();
                 return;
             }
+
+            if (loadError != null)
+            {
+                sequence?.Dispose();
+                HideProgressOverlay();
+                AppDiagnostics.LogError("trimmer.gif-load", loadError);
+                ToastWindow.ShowError("Media load failed", loadError.Message);
+                return;
+            }
+
+            ApplyLoadedGifPreview(sequence!, lang, loadVersion);
+        }
+
+        private void ApplyLoadedGifPreview(GifFrameSequence sequence, string lang, int loadVersion)
+        {
+            if (loadVersion != _gifLoadVersion)
+            {
+                sequence.Dispose();
+                return;
+            }
+
+            DisposeGifSequence();
+            _gifSequence = sequence;
 
             MediaPlayer.Visibility = Visibility.Collapsed;
             GifPreviewImage.Visibility = Visibility.Visible;
@@ -276,13 +342,21 @@ namespace CyberSnap.UI
             UpdateMarkerLabels();
             EvaluateCropState();
 
-            ShowBanner(LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "GIF loaded"));
+            if (!_suppressLoadBanner)
+                ShowBanner(LocalizationService.Translate(lang, "GIF loaded"));
+            _suppressLoadBanner = false;
 
             ResetGifPlayAnchor(0);
             _gifTimelinePaused = false;
             UpdateGifFrameDisplay(0, force: true);
             PlayPauseIconText.Text = "\uE769";
             UpdatePlayPauseToolTip();
+            HideProgressOverlay();
+        }
+
+        private void LoadGifPreview()
+        {
+            _ = LoadGifPreviewAsync();
         }
 
         private void UpdateGifFrameDisplay(double seconds, bool force = false)
@@ -1216,6 +1290,9 @@ namespace CyberSnap.UI
             // trigger async media loading — without it, MediaOpened never fires.
             if (_isGif)
             {
+                if (_gifSequence != null)
+                    return;
+
                 LoadGifPreview();
                 return;
             }
@@ -1259,6 +1336,7 @@ namespace CyberSnap.UI
 
             CompositionTarget.Rendering -= OnRendering;
             _audioPersistTimer.Stop();
+            Interlocked.Increment(ref _gifLoadVersion);
             if (_audioPersistPending && Application.Current is App app)
                 app.PersistVideoTrimmerAudio(VolumeControl.Volume, VolumeControl.IsExportMuted);
             DisposeGifSequence();
@@ -1410,7 +1488,7 @@ namespace CyberSnap.UI
                 return false;
             }
             
-            ProgressOverlay.Visibility = Visibility.Visible;
+            ShowProgressOverlay(LocalizationService.Translate(lang, "Exporting..."));
 
             bool isGif = string.Equals(Path.GetExtension(input), ".gif", StringComparison.OrdinalIgnoreCase);
             double exportVolume = VolumeControl.Volume;
@@ -1461,7 +1539,7 @@ namespace CyberSnap.UI
             }
             finally
             {
-                ProgressOverlay.Visibility = Visibility.Collapsed;
+                HideProgressOverlay();
             }
         }
     }

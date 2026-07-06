@@ -65,6 +65,8 @@ public sealed partial class RecordingForm : Form
     private readonly bool _showMarginBorder = true; // dummy or keep
 #pragma warning restore CS0414
     private readonly bool _showMagnifier;
+    private readonly bool _openVideoTrimmerAfterCapture;
+    private readonly Action<string>? _onGifEncodedForTrimmer;
     private readonly CaptureMagnifierHelper? _magHelper;
     private LiveSelectionAdornerForm? _selectionAdorner;
     private Rectangle _autoDetectRect;
@@ -111,7 +113,9 @@ public sealed partial class RecordingForm : Form
                          bool showCursor = false,
                          bool recordMic = false, string? micDeviceId = null,
                          bool recordDesktop = false, string? desktopDeviceId = null,
-                         bool showMagnifier = false)
+                         bool showMagnifier = false,
+                         bool openVideoTrimmerAfterCapture = false,
+                         Action<string>? onGifEncodedForTrimmer = null)
     {
         CyberSnap.UI.Theme.Refresh();
         _screenshot = screenshot;
@@ -127,6 +131,8 @@ public sealed partial class RecordingForm : Form
         _recordDesktop = recordDesktop;
         _desktopDeviceId = desktopDeviceId;
         _showMagnifier = showMagnifier;
+        _openVideoTrimmerAfterCapture = openVideoTrimmerAfterCapture;
+        _onGifEncodedForTrimmer = onGifEncodedForTrimmer;
         if (_showMagnifier && screenshot is not null)
         {
             _magHelper = new CaptureMagnifierHelper();

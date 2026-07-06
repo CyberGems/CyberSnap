@@ -60,6 +60,18 @@ public partial class ToastWindow
     public static void Show(string title, string body = "", string? filePath = null)
         => Show(ToastSpec.Standard(title, body, filePath));
 
+    /// <summary>Pinned status toast for long-running encode/save work. Dismiss with <see cref="ForceDismissCurrent"/>.</summary>
+    public static void ShowEncodingWait(string title, string body)
+        => Show(new ToastSpec
+        {
+            Title = title,
+            Body = body,
+            IsSystemMessage = true,
+            AutoPin = true,
+            SuppressSound = true,
+            DurationSeconds = 600,
+        });
+
     internal static void Show(ToastSpec spec)
     {
         // Master switch: nothing is shown when notifications are off.
@@ -170,6 +182,11 @@ public partial class ToastWindow
     public static void DismissCurrent()
     {
         _current?.RequestDismiss();
+    }
+
+    public static void ForceDismissCurrent()
+    {
+        _current?.RequestDismiss(force: true);
     }
 
     private static void ReplaceCurrentToast()
