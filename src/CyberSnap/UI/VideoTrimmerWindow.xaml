@@ -350,6 +350,73 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Start Handle Style -->
+        <Style x:Key="TrimmerStartHandleThumbStyle" TargetType="Thumb">
+            <Setter Property="Background" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6,0,0,6"
+                                SnapsToDevicePixels="True">
+                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border Width="1.5" Height="10" Background="#33000000" CornerRadius="0.5"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#80FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FFFFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FFFFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- End Handle Style -->
+        <Style x:Key="TrimmerEndHandleThumbStyle" TargetType="Thumb">
+            <Setter Property="Background" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="0,6,6,0"
+                                SnapsToDevicePixels="True">
+                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border Width="1.5" Height="10" Background="#33000000" CornerRadius="0.5"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#80FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FFFFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FFFFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border Margin="1" CornerRadius="12">
@@ -436,7 +503,7 @@
             </Grid>
 
             <!-- Timeline and Seek Row (Integrated Buttons & Slider) -->
-            <Grid Grid.Row="2" Margin="12,0,12,6">
+            <Grid Grid.Row="2" Margin="12,0,12,6" ClipToBounds="False">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -445,14 +512,14 @@
 
                 <Border Grid.Column="0"
                         Style="{StaticResource TrimmerChipBorderStyle}"
-                        MinWidth="118"
+                        MinWidth="96"
                         Padding="3"
                         Margin="0,0,10,0">
                     <Grid MinHeight="28">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="54"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="28"/>
                         </Grid.ColumnDefinitions>
                         <Button x:Name="StartSeekBtn"
                                 Grid.Column="0"
@@ -471,15 +538,26 @@
                                 VerticalAlignment="Center"/>
                         <ToggleButton x:Name="SetStartBtn"
                                       Grid.Column="2"
-                                      Content="Set Start"
                                       Click="SetStartBtn_Click"
                                       ToolTip="Set the current time as the crop start position"
-                                      Style="{StaticResource TrimmerMarkerToggleButtonStyle}"/>
+                                      Style="{StaticResource TrimmerMarkerToggleButtonStyle}"
+                                      MinWidth="28"
+                                      Width="28"
+                                      Padding="0">
+                            <Path Data="M 2,3 L 2,17 M 5,6 L 11,10 L 5,14 Z"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                  StrokeThickness="1.5"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                  Width="10" Height="14" Stretch="Uniform"/>
+                        </ToggleButton>
                     </Grid>
                 </Border>
 
                 <!-- Slider with integrated range track (red/green segments behind thumb) -->
-                <Grid Grid.Column="1" VerticalAlignment="Center" Margin="0,0,10,0" Height="24">
+                <Grid Grid.Column="1" VerticalAlignment="Center" Margin="0,0,10,0" Height="28" ClipToBounds="False">
                     <Border VerticalAlignment="Center"
                             Height="6"
                             CornerRadius="3"
@@ -511,6 +589,39 @@
                             MouseMove="TimeSlider_MouseMove"
                             Cursor="Hand"/>
 
+                    <!-- Draggable Range Handles -->
+                    <Grid VerticalAlignment="Center" Height="28" Margin="6,0,6,0" ClipToBounds="False">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="ColStartHandle" Width="0*"/>
+                            <ColumnDefinition x:Name="ColKeepHandle" Width="1*"/>
+                            <ColumnDefinition x:Name="ColEndHandle" Width="0*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Thumb x:Name="StartThumb"
+                               Grid.Column="1"
+                               HorizontalAlignment="Left"
+                               Width="12"
+                               Height="24"
+                               Margin="-6,0,0,0"
+                               Cursor="SizeWE"
+                               Style="{StaticResource TrimmerStartHandleThumbStyle}"
+                               DragStarted="StartThumb_DragStarted"
+                               DragDelta="StartThumb_DragDelta"
+                               DragCompleted="StartThumb_DragCompleted"/>
+
+                        <Thumb x:Name="EndThumb"
+                               Grid.Column="1"
+                               HorizontalAlignment="Right"
+                               Width="12"
+                               Height="24"
+                               Margin="0,0,-6,0"
+                               Cursor="SizeWE"
+                               Style="{StaticResource TrimmerEndHandleThumbStyle}"
+                               DragStarted="EndThumb_DragStarted"
+                               DragDelta="EndThumb_DragDelta"
+                               DragCompleted="EndThumb_DragCompleted"/>
+                    </Grid>
+
                     <!-- Hover Timestamp Tooltip -->
                     <Border x:Name="TimelineHoverTooltip"
                             HorizontalAlignment="Left"
@@ -540,20 +651,31 @@
                 <!-- Set End marker -->
                 <Border Grid.Column="2"
                         Style="{StaticResource TrimmerChipBorderStyle}"
-                        MinWidth="118"
+                        MinWidth="96"
                         Padding="3">
                     <Grid MinHeight="28">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="28"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="54"/>
                         </Grid.ColumnDefinitions>
                         <ToggleButton x:Name="SetEndBtn"
                                       Grid.Column="0"
-                                      Content="Set End"
                                       Click="SetEndBtn_Click"
                                       ToolTip="Set the current time as the crop end position"
-                                      Style="{StaticResource TrimmerMarkerToggleButtonStyle}"/>
+                                      Style="{StaticResource TrimmerMarkerToggleButtonStyle}"
+                                      MinWidth="28"
+                                      Width="28"
+                                      Padding="0">
+                            <Path Data="M 7,6 L 1,10 L 7,14 Z M 10,3 L 10,17"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                  StrokeThickness="1.5"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                  Width="10" Height="14" Stretch="Uniform"/>
+                        </ToggleButton>
                         <Border Grid.Column="1"
                                 Width="1"
                                 Height="16"
