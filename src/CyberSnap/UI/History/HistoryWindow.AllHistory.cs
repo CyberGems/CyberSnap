@@ -310,9 +310,18 @@ public partial class HistoryWindow
             try
             {
                 if (!System.IO.File.Exists(entry.FilePath)) { ShowHistoryFileMissingError(entry.FilePath); return; }
-                using var bmp = BitmapPerf.LoadDetached(entry.FilePath);
-                ClipboardService.CopyToClipboard(bmp);
-                ToastWindow.Show("Copied", "Image copied");
+                if (entry.Kind == HistoryKind.Video || entry.Kind == HistoryKind.Gif)
+                {
+                    var files = new System.Collections.Specialized.StringCollection { entry.FilePath };
+                    System.Windows.Clipboard.SetFileDropList(files);
+                    ToastWindow.Show("Copied", entry.Kind == HistoryKind.Video ? "Video copied to clipboard" : "GIF copied to clipboard");
+                }
+                else
+                {
+                    using var bmp = BitmapPerf.LoadDetached(entry.FilePath);
+                    ClipboardService.CopyToClipboard(bmp);
+                    ToastWindow.Show("Copied", "Image copied");
+                }
             }
             catch (Exception ex) { ToastWindow.ShowError("Copy failed", ex.Message); }
         });

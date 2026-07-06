@@ -48,7 +48,7 @@ namespace CyberSnap.UI
 
         public VideoTrimmerWindow(string filePath, SettingsService settingsService)
         {
-            _mediaFilePath = filePath;
+            _mediaFilePath = Path.GetFullPath(filePath);
             _settingsService = settingsService;
             _isGif = string.Equals(Path.GetExtension(filePath), ".gif", StringComparison.OrdinalIgnoreCase);
 
@@ -234,6 +234,13 @@ namespace CyberSnap.UI
         {
             MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
             MediaPlayer.Play();
+        }
+
+        private void MediaPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)
+        {
+            var msg = e.ErrorException?.Message ?? "Unknown error";
+            AppDiagnostics.LogError("trimmer.media-failed", e.ErrorException ?? new Exception(msg));
+            ToastWindow.ShowError("Media load failed", msg);
         }
         
         private void PlayPauseBtn_Click(object sender, RoutedEventArgs e)
@@ -814,13 +821,17 @@ namespace CyberSnap.UI
             bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
             if (isModified)
             {
+                string lang = _settingsService.Settings.InterfaceLanguage;
+                string template = LocalizationService.Translate(lang, "The changes made will be lost.\nThe original file '{0}' will be kept.");
+                string msg = string.Format(template, Path.GetFileName(_mediaFilePath));
+
                 bool discard = ThemedConfirmDialog.Confirm(
                     this,
                     "Discard changes?",
-                    "You have unsaved changes. Are you sure you want to discard them?",
+                    msg,
                     "Discard",
                     "Keep editing",
-                    danger: true);
+                    danger: false);
 
                 if (!discard)
                 {
@@ -839,13 +850,16 @@ namespace CyberSnap.UI
         private async void TrimBtn_Click(object sender, RoutedEventArgs e)
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
+            string template = LocalizationService.Translate(lang, "Are you sure you want to overwrite the original file '{0}'?\nThis action cannot be undone.");
+            string msg = string.Format(template, Path.GetFileName(_mediaFilePath));
+
             if (!ThemedConfirmDialog.Confirm(
                 this, 
                 "Confirm Overwrite", 
-                "Are you sure you want to overwrite the original file? This action cannot be undone.",
+                msg,
                 "Yes",
                 "No",
-                danger: true))
+                danger: false))
             {
                 return;
             }

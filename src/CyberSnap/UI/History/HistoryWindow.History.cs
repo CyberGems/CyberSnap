@@ -168,7 +168,9 @@ public partial class HistoryWindow
             ResetHistoryItemThumbnail(vm, entry.FilePath);
 
         vm.Entry = entry;
-        vm.ThumbPath = entry.FilePath;
+        vm.ThumbPath = entry.Kind == HistoryKind.Video
+            ? GetVideoThumbnailPath(entry.FilePath)
+            : entry.FilePath;
         vm.Dimensions = entry.Width > 0 ? $"{entry.Width} x {entry.Height}" : "";
         vm.TimeAgo = FormatTimeAgo(entry.CapturedAt);
         vm.FileNameSearchText = Path.GetFileNameWithoutExtension(entry.FileName);
@@ -785,12 +787,24 @@ public partial class HistoryWindow
             vm.Card.ToolTip = null;
             if (vm.ImageContainer is FrameworkElement imgContainer)
             {
-                imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+                if (vm.Entry?.Kind is HistoryKind.Image or HistoryKind.Sticker)
                 {
-                    HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
-                    HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
-                    _ => LocalizationService.Translate("Open in Editor"),
-                };
+                    imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+                    {
+                        HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
+                        HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
+                        _ => LocalizationService.Translate("Open in Annotation Editor"),
+                    };
+                }
+                else
+                {
+                    imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+                    {
+                        HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
+                        HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
+                        _ => LocalizationService.Translate("Open in Video & GIF Trimmer"),
+                    };
+                }
             }
         }
 

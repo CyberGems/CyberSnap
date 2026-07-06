@@ -130,14 +130,23 @@ public partial class HistoryWindow
 
         imgContainer.Cursor = Cursors.Hand;
 
-        // Dynamic tooltip for image cards based on the configured click action.
-        if (vm.Entry.Kind == HistoryKind.Image)
+        // Dynamic tooltip for cards based on the configured click action.
+        if (vm.Entry.Kind is HistoryKind.Image or HistoryKind.Sticker)
         {
             imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
             {
                 HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
                 HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
-                _ => LocalizationService.Translate("Open in Editor"),
+                _ => LocalizationService.Translate("Open in Annotation Editor"),
+            };
+        }
+        else
+        {
+            imgContainer.ToolTip = _settingsService.Settings.HistoryClickAction switch
+            {
+                HistoryClickAction.CopyToClipboard => LocalizationService.Translate("Copy to clipboard"),
+                HistoryClickAction.OpenInDefaultViewer => LocalizationService.Translate("Open in default viewer"),
+                _ => LocalizationService.Translate("Open in Video & GIF Trimmer"),
             };
         }
 
@@ -166,6 +175,22 @@ public partial class HistoryWindow
                     ToastWindow.ShowError("Editor failed", $"Could not open editor: {ex.Message}");
                 }
             }, "Open this image in the Editor.", "compose"));
+        }
+        if ((vm.Entry.Kind == HistoryKind.Video || vm.Entry.Kind == HistoryKind.Gif) && HasHistoryFilePath(vm.Entry.FilePath))
+        {
+            actionMenu.Items.Add(CreateCardActionMenuItem("Video & GIF Trimmer", () =>
+            {
+                suppressOpenAction = true;
+                try
+                {
+                    var trimmer = new VideoTrimmerWindow(vm.Entry.FilePath, _settingsService);
+                    trimmer.Show();
+                }
+                catch (Exception ex)
+                {
+                    ToastWindow.ShowError("Trimmer failed", $"Could not open video trimmer: {ex.Message}");
+                }
+            }, "Open this video/GIF in the Trimmer.", "compose"));
         }
         actionMenu.Items.Add(CreateCardActionMenuItem(GetHistoryCopyMenuLabel(vm.Entry), () =>
         {
@@ -445,14 +470,29 @@ public partial class HistoryWindow
                 switch (_settingsService.Settings.HistoryClickAction)
                 {
                     case HistoryClickAction.OpenInEditor:
-                        try
+                        if (vm.Entry.Kind == HistoryKind.Video || vm.Entry.Kind == HistoryKind.Gif)
                         {
-                            using var bmp = new System.Drawing.Bitmap(vm.Entry.FilePath);
-                            CyberSnap.UI.Editor.EditorForm.ShowEditor(new System.Drawing.Bitmap(bmp), vm.Entry.FilePath);
+                            try
+                            {
+                                var trimmer = new VideoTrimmerWindow(vm.Entry.FilePath, _settingsService);
+                                trimmer.Show();
+                            }
+                            catch (Exception ex)
+                            {
+                                ToastWindow.ShowError("Trimmer failed", $"Could not open video trimmer: {ex.Message}");
+                            }
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            ToastWindow.ShowError("Editor failed", $"Could not open editor: {ex.Message}");
+                            try
+                            {
+                                using var bmp = new System.Drawing.Bitmap(vm.Entry.FilePath);
+                                CyberSnap.UI.Editor.EditorForm.ShowEditor(new System.Drawing.Bitmap(bmp), vm.Entry.FilePath);
+                            }
+                            catch (Exception ex)
+                            {
+                                ToastWindow.ShowError("Editor failed", $"Could not open editor: {ex.Message}");
+                            }
                         }
                         break;
                     case HistoryClickAction.CopyToClipboard:

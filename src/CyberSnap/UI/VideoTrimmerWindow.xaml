@@ -401,7 +401,8 @@
 
             <Grid Grid.Row="1" Background="#FF000000" Margin="12,4,12,8">
                 <MediaElement x:Name="MediaPlayer" LoadedBehavior="Manual" UnloadedBehavior="Manual" ScrubbingEnabled="True"
-                              MediaOpened="MediaPlayer_MediaOpened" MediaEnded="MediaPlayer_MediaEnded"/>
+                              MediaOpened="MediaPlayer_MediaOpened" MediaEnded="MediaPlayer_MediaEnded"
+                              MediaFailed="MediaPlayer_MediaFailed"/>
                 <!-- Loading / Exporting Overlay -->
                 <Grid x:Name="ProgressOverlay" Background="#B0000000" Visibility="Collapsed">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
