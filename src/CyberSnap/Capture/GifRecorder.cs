@@ -31,6 +31,9 @@ public sealed class GifRecorder : IDisposable
     private int _frameCount;
     private int _writtenFrameCount;
     private DateTime _startTime;
+    private long _activeStartTicks;
+    private TimeSpan _recordedDuration;
+    private volatile bool _captureClockStarted;
     private bool _disposed;
     private int _initialCaptureDelayMs = DefaultInitialCaptureDelayMs;
 
@@ -66,9 +69,9 @@ public sealed class GifRecorder : IDisposable
 
     private void CaptureLoop()
     {
-        int delayMs = 1000 / _fps;
         var ct = _cts.Token;
         int index = 0;
+        Bitmap? lastFrame = null;
 
         if (_initialCaptureDelayMs > 0)
         {
@@ -76,36 +79,128 @@ public sealed class GifRecorder : IDisposable
             catch (ThreadInterruptedException) { return; }
         }
 
+        _activeStartTicks = Stopwatch.GetTimestamp();
+        _captureClockStarted = true;
+
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                if (GetActiveElapsed().TotalMilliseconds >= _maxDurationMs)
+                    break;
+
+                WaitForNextFrameSlot(ct);
+                if (ct.IsCancellationRequested)
+                    break;
+
+                Bitmap? frameToEnqueue = null;
+                try
+                {
+                    var captured = ScreenCapture.CaptureRegionForRecording(_region, _showCursor);
+                    lastFrame?.Dispose();
+                    lastFrame = (Bitmap)captured.Clone();
+                    frameToEnqueue = captured;
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch
+                {
+                    if (lastFrame != null)
+                        frameToEnqueue = new Bitmap(lastFrame);
+                }
+
+                if (frameToEnqueue == null)
+                    continue;
+
+                if (!EnqueueFrame(frameToEnqueue, ref index, ct))
+                    break;
+
+                if (lastFrame != null)
+                    DuplicateQueuedFramesUntil(ref index, lastFrame, ct);
+            }
+
+            if (lastFrame != null && !ct.IsCancellationRequested)
+                DuplicateQueuedFramesUntil(ref index, lastFrame, ct);
+        }
+        finally
+        {
+            if (_captureClockStarted)
+                _recordedDuration = Stopwatch.GetElapsedTime(_activeStartTicks);
+
+            lastFrame?.Dispose();
+            try { _frameQueue.CompleteAdding(); } catch (InvalidOperationException) { }
+        }
+    }
+
+    private TimeSpan GetActiveElapsed()
+        => _captureClockStarted ? Stopwatch.GetElapsedTime(_activeStartTicks) : TimeSpan.Zero;
+
+    private void WaitForNextFrameSlot(CancellationToken ct)
+    {
         while (!ct.IsCancellationRequested)
         {
-            // Auto-stop at max duration
-            if ((DateTime.UtcNow - _startTime).TotalMilliseconds >= _maxDurationMs)
+            double nextDueSeconds = (double)_frameCount / _fps;
+            double waitSeconds = nextDueSeconds - GetActiveElapsed().TotalSeconds;
+            if (waitSeconds <= 0)
                 break;
 
-            var sw = Stopwatch.StartNew();
-            try
+            int sleepMs = (int)Math.Min(20, waitSeconds * 1000);
+            if (sleepMs <= 1)
             {
-                var frame = ScreenCapture.CaptureRegionForRecording(_region, _showCursor);
-                if (_frameQueue.TryAdd((frame, index), 100, ct))
-                {
-                    Interlocked.Increment(ref _frameCount);
-                    index++;
-                    frame = null!;
-                }
-                frame?.Dispose();
+                Thread.Yield();
+                continue;
             }
-            catch (OperationCanceledException) { break; }
-            catch { /* skip frame on capture error */ }
 
-            int sleep = delayMs - (int)sw.ElapsedMilliseconds;
-            if (sleep > 0)
-            {
-                try { Thread.Sleep(sleep); }
-                catch (ThreadInterruptedException) { break; }
-            }
+            try { Thread.Sleep(sleepMs); }
+            catch (ThreadInterruptedException) { break; }
+        }
+    }
+
+    private bool EnqueueFrame(Bitmap frame, ref int index, CancellationToken ct)
+    {
+        if (ct.IsCancellationRequested)
+        {
+            frame.Dispose();
+            return false;
         }
 
-        _frameQueue.CompleteAdding();
+        try
+        {
+            _frameQueue.Add((frame, index), ct);
+        }
+        catch (InvalidOperationException)
+        {
+            frame.Dispose();
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            frame.Dispose();
+            return false;
+        }
+
+        Interlocked.Increment(ref _frameCount);
+        index++;
+        return true;
+    }
+
+    private void DuplicateQueuedFramesUntil(
+        ref int index,
+        Bitmap lastFrame,
+        CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            int targetCount = VideoRecorder.GetExpectedFrameCount(GetActiveElapsed(), _fps);
+            if (_frameCount >= targetCount)
+                break;
+
+            var duplicate = new Bitmap(lastFrame);
+            if (!EnqueueFrame(duplicate, ref index, ct))
+                break;
+        }
     }
 
     private void WriteLoop()
@@ -170,9 +265,10 @@ public sealed class GifRecorder : IDisposable
             if (writtenFrameCount == 0)
                 throw new InvalidOperationException("No frames captured.");
 
-            int expectedFrameCount = VideoRecorder.GetExpectedFrameCount(Elapsed, _fps);
+            int expectedFrameCount = VideoRecorder.GetExpectedFrameCount(_recordedDuration, _fps);
             if (expectedFrameCount > writtenFrameCount)
             {
+                // Safety net only — in-loop duplication should already keep pace with the timer.
                 PadFramesToCount(writtenFrameCount, expectedFrameCount);
                 writtenFrameCount = expectedFrameCount;
             }

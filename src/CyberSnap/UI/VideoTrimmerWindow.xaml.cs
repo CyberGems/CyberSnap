@@ -263,12 +263,6 @@ namespace CyberSnap.UI
             double duration = _gifSequence.TotalDurationSeconds;
             if (duration <= 0.05)
                 duration = ResolveGifDuration(0);
-            else
-            {
-                double metadataDuration = ResolveGifDuration(0);
-                if (metadataDuration > duration)
-                    duration = metadataDuration;
-            }
 
             _videoDurationSeconds = duration;
             TimeSlider.Maximum = _videoDurationSeconds;
