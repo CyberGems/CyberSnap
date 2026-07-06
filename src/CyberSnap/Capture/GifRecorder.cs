@@ -237,7 +237,7 @@ public sealed class GifRecorder : IDisposable
             throw new InvalidOperationException("FFmpeg palette generation failed — no palette file produced.");
 
         RunFfmpegChecked(ffmpegPath,
-            $"-y {inputArgs} -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" -frames:v {frameCount} \"{outputPath}\"",
+            $"-y {inputArgs} -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" -frames:v {frameCount} -loop 0 -f gif \"{outputPath}\"",
             timeoutMs: 120_000);
 
         if (!IsValidOutputFile(outputPath))
@@ -260,11 +260,11 @@ public sealed class GifRecorder : IDisposable
 
         // Pass 2: encode using palette
         RunFfmpegChecked(ffmpegPath,
-            $"-y -framerate {_fps} -i \"{inputPattern}\" -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" \"{outputPath}\"",
+            $"-y -framerate {_fps} -i \"{inputPattern}\" -i \"{paletteFile}\" -lavfi \"[0:v]format=bgr24[v];[v][1:v]paletteuse=dither=sierra2_4a\" -loop 0 -f gif \"{outputPath}\"",
             timeoutMs: 120_000);
 
         if (!IsValidOutputFile(outputPath))
-            throw new InvalidOperationException("FFmpeg GIF encoding failed â€” no output file produced.");
+            throw new InvalidOperationException("FFmpeg GIF encoding failed — no output file produced.");
     }
 
     private static void RunFfmpegChecked(string path, string args, int timeoutMs)
