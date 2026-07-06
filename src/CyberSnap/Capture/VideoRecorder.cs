@@ -159,7 +159,7 @@ public sealed class VideoRecorder : IDisposable
 
         string codecArgs = BuildVideoCodecArguments(_format, _region.Width, _region.Height, outW, outH, _fps);
 
-        var args = $"-y -f rawvideo -pix_fmt bgra -s {_region.Width}x{_region.Height} -r {_fps} -i pipe:0 {codecArgs} \"{outputPath}\"";
+        var args = $"-y -f rawvideo -pix_fmt bgra -s {_region.Width}x{_region.Height} -r {_fps} -i pipe:0 {codecArgs} -f mp4 \"{outputPath}\"";
 
         _ffmpeg = new Process
         {
@@ -577,7 +577,8 @@ public sealed class VideoRecorder : IDisposable
         double targetDurationSeconds)
     {
         string duration = targetDurationSeconds.ToString("0.###", CultureInfo.InvariantCulture);
-        string muxerArgs = Path.GetExtension(tempOut).Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+        var ext = Path.GetExtension(tempOut);
+        string muxerArgs = (ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase) || ext.Equals(".tmp", StringComparison.OrdinalIgnoreCase))
             ? " -movflags +faststart"
             : "";
 
@@ -585,12 +586,12 @@ public sealed class VideoRecorder : IDisposable
         {
             return $"-y -i \"{videoPath}\" -i \"{audioFiles[0]}\" " +
                    $"-filter_complex \"[1:a]apad,atrim=0:{duration}[a]\" " +
-                   $"-c:v copy -c:a {audioCodec} -map 0:v -map \"[a]\"{muxerArgs} \"{tempOut}\"";
+                   $"-c:v copy -c:a {audioCodec} -map 0:v -map \"[a]\"{muxerArgs} -f mp4 \"{tempOut}\"";
         }
 
         return $"-y -i \"{videoPath}\" -i \"{audioFiles[0]}\" -i \"{audioFiles[1]}\" " +
                $"-filter_complex \"[1:a][2:a]amix=inputs=2:duration=longest:dropout_transition=0,apad,atrim=0:{duration}[a]\" " +
-               $"-c:v copy -c:a {audioCodec} -map 0:v -map \"[a]\"{muxerArgs} \"{tempOut}\"";
+               $"-c:v copy -c:a {audioCodec} -map 0:v -map \"[a]\"{muxerArgs} -f mp4 \"{tempOut}\"";
     }
 
     internal static int GetExpectedFrameCount(TimeSpan elapsed, int fps)
@@ -635,12 +636,12 @@ public sealed class VideoRecorder : IDisposable
 
         if (!hasAudioTrack)
         {
-            return $"-y -i \"{videoPath}\" -vf \"tpad=stop_mode=clone:stop_duration={padDuration},trim=duration={expectedDuration}\" {videoCodec} \"{tempOut}\"";
+            return $"-y -i \"{videoPath}\" -vf \"tpad=stop_mode=clone:stop_duration={padDuration},trim=duration={expectedDuration}\" {videoCodec} -f mp4 \"{tempOut}\"";
         }
 
         return $"-y -i \"{videoPath}\" " +
                $"-filter_complex \"[0:v]tpad=stop_mode=clone:stop_duration={padDuration},trim=duration={expectedDuration}[v];[0:a]apad,atrim=0:{expectedDuration}[a]\" " +
-               $"-map \"[v]\" -map \"[a]\" {videoCodec} -c:a {audioCodec} \"{tempOut}\"";
+               $"-map \"[v]\" -map \"[a]\" {videoCodec} -c:a {audioCodec} -f mp4 \"{tempOut}\"";
     }
 
     /// <summary>Cancels recording without saving.</summary>

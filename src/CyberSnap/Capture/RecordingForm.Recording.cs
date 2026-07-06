@@ -59,22 +59,35 @@ public sealed partial class RecordingForm
         ThreadPool.QueueUserWorkItem(_ =>
         {
             Bitmap? firstFrame = gifRec?.GetFirstFrame();
+            string tempPath = _savePath + ".tmp";
             try
             {
                 try { System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => ToastWindow.Show(LocalizationService.Translate("Recording"), LocalizationService.Translate("Encoding, please wait..."))); } catch { }
-                gifRec?.StopAndEncode(_savePath);
-                vidRec?.StopAndEncode(_savePath);
+                
+                if (gifRec != null)
+                {
+                    gifRec.StopAndEncode(tempPath);
+                    File.Move(tempPath, _savePath, overwrite: true);
+                }
+                else if (vidRec != null)
+                {
+                    vidRec.StopAndEncode(tempPath);
+                    File.Move(tempPath, _savePath, overwrite: true);
+                }
                 _desktopAudioSoundSuppression?.Dispose();
                 _desktopAudioSoundSuppression = null;
                 SoundService.PlayRecordStopSound();
                 firstFrame ??= vidRec?.GetFirstFrame();
                 firstFrame ??= TryCreateToastPreviewFrame(_savePath);
+                
                 RecordingCompleted?.Invoke(_savePath, firstFrame);
             }
             catch (Exception ex)
             {
+                AppDiagnostics.LogError("recording.stop-failed", ex, "Exception in StopRecording background task.");
                 firstFrame?.Dispose();
                 TryDeleteZeroByteRecordingOutput(_savePath);
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
 
                 RecordingFailed?.Invoke(ex);
             }
@@ -159,7 +172,7 @@ public sealed partial class RecordingForm
         {
             SoundService.PlayRecordStartSound();
             _recorder?.Start(RecordingWarmupDelayMs);
-            _videoRecorder?.Start(_savePath, RecordingWarmupDelayMs);
+            _videoRecorder?.Start(_savePath + ".tmp", RecordingWarmupDelayMs);
         }
         catch (Exception ex)
         {
@@ -312,9 +325,17 @@ public sealed partial class RecordingForm
     {
         try
         {
-            // Don't leave a zero-byte / partial file if encoding failed early.
-            if (File.Exists(path) && new FileInfo(path).Length == 0)
-                File.Delete(path);
+            AppDiagnostics.LogInfo("debug.zero-byte-delete-check", $"Checking zero-byte output for deletion: {path} (exists={File.Exists(path)})");
+            if (File.Exists(path))
+            {
+                var length = new FileInfo(path).Length;
+                AppDiagnostics.LogInfo("debug.zero-byte-delete-check", $"File size for {Path.GetFileName(path)} is {length} bytes.");
+                if (length == 0)
+                {
+                    AppDiagnostics.LogInfo("debug.zero-byte-delete", $"Deleting zero-byte file: {path}");
+                    File.Delete(path);
+                }
+            }
         }
         catch (Exception ex)
         {

@@ -191,6 +191,16 @@ public partial class HistoryWindow
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(thumbPath))
+                return;
+
+            if (thumbPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
+                thumbPath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+            {
+                AppDiagnostics.LogWarning("history.thumb-cache.safety", $"Safeguard triggered: Refusing to delete video/media file as thumbnail: {thumbPath}");
+                return;
+            }
+
             File.Delete(thumbPath);
         }
         catch (Exception ex)
@@ -207,8 +217,7 @@ public partial class HistoryWindow
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.Clear(System.Drawing.Color.FromArgb(30, 30, 30));
 
-            using var border = new System.Drawing.Pen(System.Drawing.Color.FromArgb(70, 255, 255, 255), 2f);
-            g.DrawRectangle(border, 1, 1, bmp.Width - 3, bmp.Height - 3);
+
 
             using var badgeBg = new SolidBrush(System.Drawing.Color.FromArgb(180, 0, 0, 0));
             var badgeRect = new RectangleF(bmp.Width / 2f - 46, bmp.Height / 2f - 22, 92, 44);

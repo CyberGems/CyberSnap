@@ -626,6 +626,17 @@ public partial class HistoryWindow
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(thumbPath))
+                return;
+
+            // Safety check: Never delete actual media files (ending with .mp4 or .gif)
+            if (thumbPath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
+                thumbPath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+            {
+                AppDiagnostics.LogWarning("history.video-thumb.safety", $"Safeguard triggered: Refusing to delete video/media file as thumbnail: {thumbPath}");
+                return;
+            }
+
             if (File.Exists(thumbPath))
                 File.Delete(thumbPath);
         }
