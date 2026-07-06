@@ -22,6 +22,8 @@ namespace CyberSnap.UI
         private readonly SettingsService _settingsService;
         private DateTime _lastPlaybackUpdate;
         private bool _isSliderDragging;
+        private bool _isHandleDragging;
+        private DateTime _lastHandleSeekTime = DateTime.MinValue;
         private double _videoDurationSeconds;
         private bool _isPinned = false;
 
@@ -181,7 +183,7 @@ namespace CyberSnap.UI
                 return;
             _lastPlaybackUpdate = now;
 
-            if (!_isSliderDragging && _videoDurationSeconds > 0)
+            if (!_isSliderDragging && !_isHandleDragging && _videoDurationSeconds > 0)
             {
                 bool isPlaying = PlayPauseIconText.Text == "\uE769";
 
@@ -691,7 +693,8 @@ namespace CyberSnap.UI
         {
             if (PlayPauseIconText.Text == "\uE768") // Play glyph
             {
-                if (_videoDurationSeconds > 0 && GetCurrentTimelineSeconds() >= _endTimeSeconds - 0.1)
+                double current = GetCurrentTimelineSeconds();
+                if (_videoDurationSeconds > 0 && (current < _startTimeSeconds - 0.1 || current >= _endTimeSeconds - 0.1))
                 {
                     if (_isGif)
                     {
@@ -699,8 +702,10 @@ namespace CyberSnap.UI
                     }
                     else
                     {
+                        // Play first to put it in playing state, then seek to _startTimeSeconds
+                        MediaPlayer.Play();
                         MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
-                        Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
+                        _ = Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
                     }
                 }
                 else
@@ -713,7 +718,7 @@ namespace CyberSnap.UI
                     }
                     else
                     {
-                        MediaPlayer.Play();
+                        _ = Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
                     }
                 }
                 PlayPauseIconText.Text = "\uE769"; // Pause glyph
@@ -1125,6 +1130,101 @@ namespace CyberSnap.UI
             ColStartCut.Width = new GridLength(startCut, GridUnitType.Star);
             ColKeep.Width = new GridLength(keep, GridUnitType.Star);
             ColEndCut.Width = new GridLength(endCut, GridUnitType.Star);
+
+            if (ColStartHandle != null && ColKeepHandle != null && ColEndHandle != null)
+            {
+                ColStartHandle.Width = new GridLength(startCut, GridUnitType.Star);
+                ColKeepHandle.Width = new GridLength(keep, GridUnitType.Star);
+                ColEndHandle.Width = new GridLength(endCut, GridUnitType.Star);
+            }
+        }
+
+        private void StartThumb_DragStarted(object sender, DragStartedEventArgs e)
+        {
+            _isHandleDragging = true;
+            PausePlayback();
+        }
+
+        private void StartThumb_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            _isHandleDragging = false;
+            SeekMediaTo(_startTimeSeconds);
+            _userTargetSeconds = _startTimeSeconds;
+            _lastUserDragTime = DateTime.UtcNow;
+            TimeSlider.Value = _startTimeSeconds;
+        }
+
+        private void StartThumb_DragDelta(object sender, DragDeltaEventArgs e)
+        {
+            if (_videoDurationSeconds <= 0) return;
+
+            double totalWidth = TimeSlider.ActualWidth;
+            if (totalWidth <= 0) return;
+
+            double deltaSeconds = (e.HorizontalChange / totalWidth) * _videoDurationSeconds;
+            double newStart = _startTimeSeconds + deltaSeconds;
+
+            double maxStart = _endTimeSeconds - 0.05;
+            if (newStart < 0) newStart = 0;
+            if (newStart > maxStart) newStart = maxStart;
+
+            _startTimeSeconds = newStart;
+
+            SeekMediaTo(_startTimeSeconds);
+            _userTargetSeconds = _startTimeSeconds;
+            _lastUserDragTime = DateTime.UtcNow;
+            TimeSlider.Value = _startTimeSeconds;
+
+            UpdateRangeBarDisplay();
+            UpdateMarkerLabels();
+            UpdateTimeStatus();
+            EvaluateCropState();
+
+            SetStartBtn.IsChecked = _startTimeSeconds > 0.05;
+        }
+
+        private void EndThumb_DragStarted(object sender, DragStartedEventArgs e)
+        {
+            _isHandleDragging = true;
+            PausePlayback();
+        }
+
+        private void EndThumb_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            _isHandleDragging = false;
+            SeekMediaTo(_startTimeSeconds); // Snap back to start on release so player is ready to play instantly
+            _userTargetSeconds = _startTimeSeconds;
+            _lastUserDragTime = DateTime.UtcNow;
+            TimeSlider.Value = _startTimeSeconds;
+        }
+
+        private void EndThumb_DragDelta(object sender, DragDeltaEventArgs e)
+        {
+            if (_videoDurationSeconds <= 0) return;
+
+            double totalWidth = TimeSlider.ActualWidth;
+            if (totalWidth <= 0) return;
+
+            double deltaSeconds = (e.HorizontalChange / totalWidth) * _videoDurationSeconds;
+            double newEnd = _endTimeSeconds + deltaSeconds;
+
+            double minEnd = _startTimeSeconds + 0.05;
+            if (newEnd < minEnd) newEnd = minEnd;
+            if (newEnd > _videoDurationSeconds) newEnd = _videoDurationSeconds;
+
+            _endTimeSeconds = newEnd;
+
+            SeekMediaTo(_endTimeSeconds);
+            _userTargetSeconds = _endTimeSeconds;
+            _lastUserDragTime = DateTime.UtcNow;
+            TimeSlider.Value = _endTimeSeconds;
+
+            UpdateRangeBarDisplay();
+            UpdateMarkerLabels();
+            UpdateTimeStatus();
+            EvaluateCropState();
+
+            SetEndBtn.IsChecked = _endTimeSeconds < (_videoDurationSeconds - 0.05);
         }
         
         private void EvaluateCropState()
