@@ -185,7 +185,7 @@ namespace CyberSnap.UI
 
             if (!_isSliderDragging && !_isHandleDragging && _videoDurationSeconds > 0)
             {
-                bool isPlaying = PlayPauseIconText.Text == "\uE769";
+                bool isPlaying = IsPlaying();
 
                 if (_isGif)
                 {
@@ -351,7 +351,7 @@ namespace CyberSnap.UI
             ResetGifPlayAnchor(0);
             _gifTimelinePaused = false;
             UpdateGifFrameDisplay(0, force: true);
-            PlayPauseIconText.Text = "\uE769";
+            SetPlayPauseIcon(true);
             UpdatePlayPauseToolTip();
             HideProgressOverlay();
         }
@@ -390,7 +390,7 @@ namespace CyberSnap.UI
 
         private double GetGifTimelinePosition()
         {
-            if (_gifTimelinePaused || PlayPauseIconText.Text == "\uE768")
+            if (_gifTimelinePaused || !IsPlaying())
                 return _gifPausedTimelineSeconds;
 
             double elapsed = (DateTime.UtcNow - _gifPlayAnchorUtc).TotalSeconds;
@@ -691,7 +691,7 @@ namespace CyberSnap.UI
         
         private void PlayPauseBtn_Click(object sender, RoutedEventArgs e)
         {
-            if (PlayPauseIconText.Text == "\uE768") // Play glyph
+            if (!IsPlaying()) // Play glyph
             {
                 double current = GetCurrentTimelineSeconds();
                 if (_videoDurationSeconds > 0 && (current < _startTimeSeconds - 0.1 || current >= _endTimeSeconds - 0.1))
@@ -721,7 +721,7 @@ namespace CyberSnap.UI
                         _ = Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
                     }
                 }
-                PlayPauseIconText.Text = "\uE769"; // Pause glyph
+                SetPlayPauseIcon(true); // Pause glyph
             }
             else
             {
@@ -733,9 +733,30 @@ namespace CyberSnap.UI
         private void UpdatePlayPauseToolTip()
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
-            PlayPauseBtn.ToolTip = PlayPauseIconText.Text == "\uE768"
+            PlayPauseBtn.ToolTip = !IsPlaying()
                 ? LocalizationService.Translate(lang, "Play")
                 : LocalizationService.Translate(lang, "Pause");
+        }
+
+        private bool IsPlaying()
+        {
+            if (PlayPauseIconPath == null) return false;
+            return PlayPauseIconPath.Tag?.ToString() == "Pause";
+        }
+
+        private void SetPlayPauseIcon(bool isPlaying)
+        {
+            if (PlayPauseIconPath == null) return;
+            if (isPlaying)
+            {
+                PlayPauseIconPath.Data = (Geometry)FindResource("PauseIconGeometry");
+                PlayPauseIconPath.Tag = "Pause";
+            }
+            else
+            {
+                PlayPauseIconPath.Data = (Geometry)FindResource("PlayIconGeometry");
+                PlayPauseIconPath.Tag = "Play";
+            }
         }
 
         private void InitializeVolumeControl()
@@ -892,7 +913,7 @@ namespace CyberSnap.UI
                 MediaPlayer.Pause();
             }
 
-            PlayPauseIconText.Text = "\uE768";
+            SetPlayPauseIcon(false);
             UpdatePlayPauseToolTip();
         }
 
@@ -1569,7 +1590,7 @@ namespace CyberSnap.UI
 
             MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
             MediaPlayer.Play();
-            PlayPauseIconText.Text = "\uE769";
+            SetPlayPauseIcon(true);
             UpdatePlayPauseToolTip();
         }
         
