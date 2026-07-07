@@ -1,5 +1,7 @@
 using System;
 using System.Diagnostics;
+using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using CyberSnap.Services;
 using CyberSnap.Helpers;
@@ -55,10 +58,12 @@ namespace CyberSnap.UI
         private double _gifPausedTimelineSeconds;
         private bool _gifTimelinePaused;
         private GifFrameSequence? _gifSequence;
+        private Mp4FrameSequence? _mp4Sequence;
         private int _gifDisplayedFrameIndex = -1;
         private int _gifLoadVersion;
+        private int _mp4LoadVersion;
 
-        public VideoTrimmerWindow(string filePath, SettingsService settingsService)
+        public VideoTrimmerWindow(string filePath, SettingsService settingsService, Bitmap? posterFrame = null)
         {
             _mediaFilePath = Path.GetFullPath(filePath);
             _settingsService = settingsService;
@@ -124,6 +129,22 @@ namespace CyberSnap.UI
                     "Loading GIF..."));
                 Loaded += (_, _) => LoadGifPreview();
             }
+            else
+            {
+                GifPreviewImage.Visibility = Visibility.Collapsed;
+                MediaPlayer.Visibility = Visibility.Collapsed;
+                if (posterFrame != null)
+                {
+                    GifPreviewImage.Source = BitmapPerf.ToBitmapSource(posterFrame);
+                    GifPreviewImage.Visibility = Visibility.Visible;
+                    posterFrame.Dispose();
+                }
+
+                ShowProgressOverlay(LocalizationService.Translate(
+                    settingsService.Settings.InterfaceLanguage,
+                    "Loading video..."));
+                Loaded += (_, _) => LoadMp4Preview();
+            }
         }
         
         private void ApplyTheme()
@@ -187,9 +208,11 @@ namespace CyberSnap.UI
             {
                 bool isPlaying = IsPlaying();
 
-                if (_isGif)
+                if (_isGif || _mp4Sequence != null)
                 {
-                    if (_gifSequence == null)
+                    if (_isGif && _gifSequence == null)
+                        return;
+                    if (!_isGif && _mp4Sequence == null)
                         return;
 
                     if (isPlaying)
@@ -200,7 +223,7 @@ namespace CyberSnap.UI
                         {
                             if (Math.Abs(_lastTargetSeekSeconds - _startTimeSeconds) > 0.01)
                             {
-                                RestartGifLoop();
+                                RestartPreviewLoop();
                                 return;
                             }
                         }
@@ -209,50 +232,12 @@ namespace CyberSnap.UI
                             _lastTargetSeekSeconds = -1;
                         }
 
-                        UpdateGifFrameDisplay(timeline);
+                        UpdatePreviewFrameDisplay(timeline);
                         TimeSlider.Value = timeline;
                         UpdateTimeStatus();
                     }
 
                     return;
-                }
-
-                double current = MediaPlayer.Position.TotalSeconds;
-
-                // Prevent jump-back glitches during asynchronous media seek operations
-                if (_userTargetSeconds >= 0)
-                {
-                    if (Math.Abs(current - _userTargetSeconds) < 0.25 || (now - _lastUserDragTime).TotalMilliseconds > 500)
-                    {
-                        _userTargetSeconds = -1;
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-
-                double endThreshold = (_videoDurationSeconds - _endTimeSeconds < 0.1) 
-                    ? (_endTimeSeconds - 0.06) 
-                    : _endTimeSeconds;
-
-                if (isPlaying && _endTimeSeconds > 0 && current >= endThreshold)
-                {
-                    if (Math.Abs(_lastTargetSeekSeconds - _startTimeSeconds) > 0.01)
-                    {
-                        _lastTargetSeekSeconds = _startTimeSeconds;
-                        MediaPlayer.Position = TimeSpan.FromSeconds(GetAdjustedStartTime());
-                        Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
-                    }
-                }
-                else
-                {
-                    if (current < _endTimeSeconds - 0.2)
-                    {
-                        _lastTargetSeekSeconds = -1;
-                    }
-                    TimeSlider.Value = current;
-                    UpdateTimeStatus();
                 }
             }
         }
@@ -273,6 +258,118 @@ namespace CyberSnap.UI
         private void HideProgressOverlay()
         {
             ProgressOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private void DisposeMp4Sequence()
+        {
+            _mp4Sequence?.Dispose();
+            _mp4Sequence = null;
+            _gifDisplayedFrameIndex = -1;
+        }
+
+        private async Task LoadMp4PreviewAsync()
+        {
+            int loadVersion = Interlocked.Increment(ref _mp4LoadVersion);
+            string path = _mediaFilePath;
+            string lang = _settingsService.Settings.InterfaceLanguage;
+
+            ShowProgressOverlay(LocalizationService.Translate(lang, "Loading video..."));
+            MediaPlayer.Visibility = Visibility.Collapsed;
+
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+            Mp4FrameSequence? sequence = null;
+            Exception? loadError = null;
+            try
+            {
+                sequence = await Mp4FrameSequence.OpenAsync(path, _fps);
+            }
+            catch (Exception ex)
+            {
+                loadError = ex;
+            }
+
+            if (loadVersion != _mp4LoadVersion)
+            {
+                sequence?.Dispose();
+                return;
+            }
+
+            if (loadError != null)
+            {
+                sequence?.Dispose();
+                HideProgressOverlay();
+                AppDiagnostics.LogError("trimmer.mp4-load", loadError);
+                ToastWindow.ShowError("Media load failed", loadError.Message);
+                return;
+            }
+
+            ApplyLoadedMp4Preview(sequence!, lang, loadVersion);
+        }
+
+        private void ApplyLoadedMp4Preview(Mp4FrameSequence sequence, string lang, int loadVersion)
+        {
+            if (loadVersion != _mp4LoadVersion)
+            {
+                sequence.Dispose();
+                return;
+            }
+
+            DisposeMp4Sequence();
+            _mp4Sequence = sequence;
+
+            MediaPlayer.Visibility = Visibility.Collapsed;
+            GifPreviewImage.Visibility = Visibility.Visible;
+
+            _videoDurationSeconds = _mp4Sequence.TotalDurationSeconds;
+            TimeSlider.Maximum = _videoDurationSeconds;
+            _startTimeSeconds = 0;
+            _endTimeSeconds = _videoDurationSeconds;
+
+            SetStartBtn.IsChecked = false;
+            SetEndBtn.IsChecked = false;
+
+            RefreshTimeDisplay();
+            UpdateMarkerLabels();
+            EvaluateCropState();
+
+            if (!_suppressLoadBanner)
+                ShowBanner(LocalizationService.Translate(lang, "MP4 loaded"));
+            _suppressLoadBanner = false;
+
+            if (_hasAudioTrack)
+            {
+                MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
+                MediaPlayer.Pause();
+            }
+
+            ResetGifPlayAnchor(0);
+            _gifTimelinePaused = false;
+            UpdatePreviewFrameDisplay(0, force: true);
+            SetPlayPauseIcon(true);
+            UpdatePlayPauseToolTip();
+            HideProgressOverlay();
+
+            if (_hasAudioTrack)
+                SyncMp4Audio(0, play: true);
+        }
+
+        private void LoadMp4Preview()
+        {
+            _ = LoadMp4PreviewAsync();
+        }
+
+        private void SyncMp4Audio(double seconds, bool play)
+        {
+            if (!_hasAudioTrack)
+                return;
+
+            seconds = Math.Clamp(seconds, 0, _videoDurationSeconds);
+            MediaPlayer.Position = TimeSpan.FromSeconds(seconds);
+            if (play)
+                MediaPlayer.Play();
+            else
+                MediaPlayer.Pause();
         }
 
         private async Task LoadGifPreviewAsync()
@@ -354,7 +451,7 @@ namespace CyberSnap.UI
 
             ResetGifPlayAnchor(0);
             _gifTimelinePaused = false;
-            UpdateGifFrameDisplay(0, force: true);
+            UpdatePreviewFrameDisplay(0, force: true);
             SetPlayPauseIcon(true);
             UpdatePlayPauseToolTip();
             HideProgressOverlay();
@@ -365,24 +462,45 @@ namespace CyberSnap.UI
             _ = LoadGifPreviewAsync();
         }
 
-        private void UpdateGifFrameDisplay(double seconds, bool force = false)
+        private void UpdatePreviewFrameDisplay(double seconds, bool force = false)
         {
-            if (_gifSequence == null)
-                return;
+            int frameIndex;
+            BitmapSource source;
 
-            int frameIndex = _gifSequence.GetFrameIndexAt(seconds);
-            if (!force && frameIndex == _gifDisplayedFrameIndex)
-                return;
+            if (_isGif)
+            {
+                if (_gifSequence == null)
+                    return;
 
-            GifPreviewImage.Source = _gifSequence.GetFrameSource(frameIndex);
+                frameIndex = _gifSequence.GetFrameIndexAt(seconds);
+                if (!force && frameIndex == _gifDisplayedFrameIndex)
+                    return;
+
+                source = _gifSequence.GetFrameSource(frameIndex);
+            }
+            else
+            {
+                if (_mp4Sequence == null)
+                    return;
+
+                frameIndex = _mp4Sequence.GetFrameIndexAt(seconds);
+                if (!force && frameIndex == _gifDisplayedFrameIndex)
+                    return;
+
+                source = _mp4Sequence.GetFrameSource(frameIndex);
+            }
+
+            GifPreviewImage.Source = source;
             _gifDisplayedFrameIndex = frameIndex;
         }
 
-        private void RestartGifLoop()
+        private void RestartPreviewLoop()
         {
             _lastTargetSeekSeconds = _startTimeSeconds;
             ResetGifPlayAnchor(_startTimeSeconds);
-            UpdateGifFrameDisplay(_startTimeSeconds, force: true);
+            UpdatePreviewFrameDisplay(_startTimeSeconds, force: true);
+            if (!_isGif)
+                SyncMp4Audio(_startTimeSeconds, play: true);
         }
 
         private void ResetGifPlayAnchor(double timelineSeconds)
@@ -403,7 +521,10 @@ namespace CyberSnap.UI
 
         private double GetCurrentTimelineSeconds()
         {
-            return _isGif ? GetGifTimelinePosition() : MediaPlayer.Position.TotalSeconds;
+            if (_isGif || _mp4Sequence != null)
+                return GetGifTimelinePosition();
+
+            return 0;
         }
 
         private void SyncGifTimelineAfterSeek(double timelineSeconds)
@@ -575,48 +696,10 @@ namespace CyberSnap.UI
 
         private void MediaPlayer_MediaOpened(object sender, RoutedEventArgs e)
         {
-            if (_isGif)
+            if (_isGif || !_hasAudioTrack || _mp4Sequence == null)
                 return;
 
-            double duration = 0;
-            bool gotDuration = false;
-
-            if (MediaPlayer.NaturalDuration.HasTimeSpan)
-            {
-                duration = MediaPlayer.NaturalDuration.TimeSpan.TotalSeconds;
-                gotDuration = true;
-            }
-
-            if (gotDuration)
-            {
-                _videoDurationSeconds = duration;
-                TimeSlider.Maximum = _videoDurationSeconds;
-                
-                // Initialize range markers to full duration
-                _startTimeSeconds = 0;
-                _endTimeSeconds = _videoDurationSeconds;
-                
-                SetStartBtn.IsChecked = false;
-                SetEndBtn.IsChecked = false;
-
-                RefreshTimeDisplay();
-                UpdateMarkerLabels();
-                EvaluateCropState();
-                
-                if (!_suppressLoadBanner)
-                {
-                    ShowBanner(LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "MP4 loaded"));
-                }
-                _suppressLoadBanner = false;
-                
-                MediaPlayer.Position = TimeSpan.Zero;
-                Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
-            }
-            else
-            {
-                // Fallback to start playback anyway
-                Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
-            }
+            SyncMp4Audio(GetGifTimelinePosition(), play: IsPlaying());
         }
 
         private static double GetGifDuration(string filePath)
@@ -679,11 +762,10 @@ namespace CyberSnap.UI
         
         private void MediaPlayer_MediaEnded(object sender, RoutedEventArgs e)
         {
-            if (_isGif)
+            if (_isGif || _mp4Sequence == null)
                 return;
 
-            MediaPlayer.Position = TimeSpan.FromSeconds(GetAdjustedStartTime());
-            Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
+            RestartPreviewLoop();
         }
 
         private void MediaPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)
@@ -700,17 +782,7 @@ namespace CyberSnap.UI
                 double current = GetCurrentTimelineSeconds();
                 if (_videoDurationSeconds > 0 && (current < _startTimeSeconds - 0.1 || current >= _endTimeSeconds - 0.1))
                 {
-                    if (_isGif)
-                    {
-                        RestartGifLoop();
-                    }
-                    else
-                    {
-                        // Play first to put it in playing state, then seek to _startTimeSeconds
-                        MediaPlayer.Play();
-                        MediaPlayer.Position = TimeSpan.FromSeconds(GetAdjustedStartTime());
-                        _ = Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
-                    }
+                    RestartPreviewLoop();
                 }
                 else
                 {
@@ -722,7 +794,10 @@ namespace CyberSnap.UI
                     }
                     else
                     {
-                        _ = Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
+                        _gifTimelinePaused = false;
+                        _gifPlayAnchorUtc = DateTime.UtcNow;
+                        _gifPlayAnchorPosition = _gifPausedTimelineSeconds;
+                        SyncMp4Audio(_gifPausedTimelineSeconds, play: true);
                     }
                 }
                 SetPlayPauseIcon(true); // Pause glyph
@@ -761,11 +836,6 @@ namespace CyberSnap.UI
                 PlayPauseIconPath.Data = (Geometry)FindResource("PlayIconGeometry");
                 PlayPauseIconPath.Tag = "Play";
             }
-        }
-
-        private double GetAdjustedStartTime()
-        {
-            return _startTimeSeconds == 0 ? 0.06 : _startTimeSeconds;
         }
 
         private void InitializeVolumeControl()
@@ -912,14 +982,12 @@ namespace CyberSnap.UI
 
         private void PausePlayback()
         {
-            if (_isGif)
+            if (_isGif || _mp4Sequence != null)
             {
                 _gifPausedTimelineSeconds = GetGifTimelinePosition();
                 _gifTimelinePaused = true;
-            }
-            else
-            {
-                MediaPlayer.Pause();
+                if (!_isGif)
+                    SyncMp4Audio(_gifPausedTimelineSeconds, play: false);
             }
 
             SetPlayPauseIcon(false);
@@ -928,15 +996,13 @@ namespace CyberSnap.UI
 
         private void SeekMediaTo(double seconds)
         {
-            if (_isGif)
+            if (_isGif || _mp4Sequence != null)
             {
                 SyncGifTimelineAfterSeek(seconds);
-                UpdateGifFrameDisplay(seconds, force: true);
-                return;
+                UpdatePreviewFrameDisplay(seconds, force: true);
+                if (!_isGif)
+                    SyncMp4Audio(seconds, play: false);
             }
-
-            double target = (_startTimeSeconds == 0 && seconds <= 0.06) ? 0.06 : seconds;
-            MediaPlayer.Position = TimeSpan.FromSeconds(target);
         }
 
         private void StartSeekBtn_Click(object sender, RoutedEventArgs e)
@@ -1428,8 +1494,10 @@ namespace CyberSnap.UI
                 return;
             }
 
-            MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
-            MediaPlayer.Pause();
+            if (_mp4Sequence != null)
+                return;
+
+            LoadMp4Preview();
         }
         
         private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -1468,9 +1536,11 @@ namespace CyberSnap.UI
             CompositionTarget.Rendering -= OnRendering;
             _audioPersistTimer.Stop();
             Interlocked.Increment(ref _gifLoadVersion);
+            Interlocked.Increment(ref _mp4LoadVersion);
             if (_audioPersistPending && Application.Current is App app)
                 app.PersistVideoTrimmerAudio(VolumeControl.Volume, VolumeControl.IsExportMuted);
             DisposeGifSequence();
+            DisposeMp4Sequence();
             MediaPlayer.Close();
         }
         
@@ -1502,6 +1572,7 @@ namespace CyberSnap.UI
                 {
                     CompositionTarget.Rendering -= OnRendering;
                     DisposeGifSequence();
+                    DisposeMp4Sequence();
                     MediaPlayer.Close();
                     
                     // Give player time to release lock
@@ -1563,6 +1634,7 @@ namespace CyberSnap.UI
                 // Auto-load the new copy in the editor
                 CompositionTarget.Rendering -= OnRendering;
                 DisposeGifSequence();
+                DisposeMp4Sequence();
                 MediaPlayer.Close();
 
                 // Give player time to release lock
@@ -1585,7 +1657,9 @@ namespace CyberSnap.UI
             }
 
             GifPreviewImage.Visibility = Visibility.Collapsed;
-            MediaPlayer.Visibility = Visibility.Visible;
+            MediaPlayer.Close();
+            DisposeMp4Sequence();
+            Interlocked.Increment(ref _mp4LoadVersion);
 
             _hasAudioTrack = MediaHasAudioTrack(_mediaFilePath);
             if (!_hasAudioTrack)
@@ -1598,10 +1672,7 @@ namespace CyberSnap.UI
                 SyncMediaAudio();
             }
 
-            MediaPlayer.Source = new Uri(_mediaFilePath, UriKind.Absolute);
-            MediaPlayer.Play();
-            SetPlayPauseIcon(true);
-            UpdatePlayPauseToolTip();
+            LoadMp4Preview();
         }
         
         private async System.Threading.Tasks.Task<bool> RunFfmpegTrimAsync(string input, string output, double start, double end)

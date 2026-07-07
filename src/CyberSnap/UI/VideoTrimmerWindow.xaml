@@ -197,8 +197,9 @@
                                 </Setter>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#55000000"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#20FFFFFF"/>
+                                <Setter Property="Foreground" Value="#FFF87171"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#55DC2626"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#88EF4444"/>
                                 <Setter TargetName="Content" Property="RenderTransform">
                                     <Setter.Value>
                                         <TranslateTransform Y="1"/>
@@ -210,7 +211,8 @@
                                     <Condition Property="IsChecked" Value="True"/>
                                     <Condition Property="IsMouseOver" Value="True"/>
                                 </MultiTrigger.Conditions>
-                                <Setter TargetName="Bd" Property="Background" Value="#70000000"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#70B91C1C"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#A0F87171"/>
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -579,7 +581,7 @@
                 <Image x:Name="GifPreviewImage" Visibility="Collapsed" Stretch="Uniform"
                        ContextMenu="{Binding ElementName=PreviewContextMenu}"/>
                 <MediaElement x:Name="MediaPlayer" LoadedBehavior="Manual" UnloadedBehavior="Manual" ScrubbingEnabled="True"
-                              Stretch="Uniform"
+                              Stretch="Uniform" Visibility="Collapsed"
                               MediaOpened="MediaPlayer_MediaOpened" MediaEnded="MediaPlayer_MediaEnded"
                               MediaFailed="MediaPlayer_MediaFailed"
                               ContextMenu="{Binding ElementName=PreviewContextMenu}"/>
