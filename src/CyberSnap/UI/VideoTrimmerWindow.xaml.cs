@@ -232,7 +232,11 @@ namespace CyberSnap.UI
                     }
                 }
 
-                if (isPlaying && _endTimeSeconds > 0 && current >= _endTimeSeconds)
+                double endThreshold = (_videoDurationSeconds - _endTimeSeconds < 0.1) 
+                    ? (_endTimeSeconds - 0.06) 
+                    : _endTimeSeconds;
+
+                if (isPlaying && _endTimeSeconds > 0 && current >= endThreshold)
                 {
                     if (Math.Abs(_lastTargetSeekSeconds - _startTimeSeconds) > 0.01)
                     {
