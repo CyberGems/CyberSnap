@@ -261,6 +261,9 @@
         </Style>
 
         <Style x:Key="TrimmerCutButtonStyle" TargetType="Button" BasedOn="{StaticResource TrimmerFlatButtonStyle}">
+            <Setter Property="Background" Value="#55DC2626"/>
+            <Setter Property="BorderBrush" Value="#88EF4444"/>
+            <Setter Property="Foreground" Value="#FFF87171"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -274,14 +277,16 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#33D32F2F"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#66D32F2F"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#70B91C1C"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#A0F87171"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#55D32F2F"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#99D32F2F"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#88B91C1C"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#C0F87171"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -494,10 +499,74 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="TrimmerLoopToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="18"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter x:Name="Content"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#30FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="#FF00FFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4400FFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#1800FFFF"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Bd" Property="Background" Value="#2800FFFF"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TrimmerTimeInputStyle" TargetType="TextBox">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
+            <Setter Property="Background" Value="#22FFFFFF"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="MaxLength" Value="8"/>
+            <Setter Property="Padding" Value="2,0"/>
+            <Setter Property="MinWidth" Value="48"/>
+        </Style>
     </Window.Resources>
 
     <Border Margin="1" CornerRadius="12">
-    <Border x:Name="RootBorder" CornerRadius="12" ClipToBounds="True" SnapsToDevicePixels="True" BorderThickness="1">
+    <Border x:Name="RootBorder" CornerRadius="12" ClipToBounds="True" SnapsToDevicePixels="True" BorderThickness="1"
+            RenderTransformOrigin="0.5,0.5">
+        <Border.RenderTransform>
+            <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1"/>
+        </Border.RenderTransform>
         <Border.Effect>
             <DropShadowEffect BlurRadius="24" ShadowDepth="2" Opacity="0.4" Color="Black"/>
         </Border.Effect>
@@ -637,11 +706,17 @@
                         <Button x:Name="StartSeekBtn"
                                 Grid.Column="0"
                                 Click="StartSeekBtn_Click"
-                                ToolTip="Click to seek to start position"
+                                MouseDoubleClick="StartSeekBtn_MouseDoubleClick"
                                 Style="{StaticResource TrimmerSeekButtonStyle}">
-                            <TextBlock x:Name="StartPointText"
-                                       Text="00:00.0"
-                                       IsHitTestVisible="False"/>
+                            <Grid>
+                                <TextBlock x:Name="StartPointText"
+                                           Text="00:00.0"
+                                           IsHitTestVisible="False"/>
+                                <TextBox x:Name="StartTimeInput"
+                                         Style="{StaticResource TrimmerTimeInputStyle}"
+                                         KeyDown="TimeInput_KeyDown"
+                                         LostFocus="StartTimeInput_LostFocus"/>
+                            </Grid>
                         </Button>
                         <Border Grid.Column="1"
                                 Width="1"
@@ -798,11 +873,17 @@
                         <Button x:Name="EndSeekBtn"
                                 Grid.Column="2"
                                 Click="EndSeekBtn_Click"
-                                ToolTip="Click to seek to end position"
+                                MouseDoubleClick="EndSeekBtn_MouseDoubleClick"
                                 Style="{StaticResource TrimmerSeekButtonStyle}">
-                            <TextBlock x:Name="EndPointText"
-                                       Text="00:00.0"
-                                       IsHitTestVisible="False"/>
+                            <Grid>
+                                <TextBlock x:Name="EndPointText"
+                                           Text="00:00.0"
+                                           IsHitTestVisible="False"/>
+                                <TextBox x:Name="EndTimeInput"
+                                         Style="{StaticResource TrimmerTimeInputStyle}"
+                                         KeyDown="TimeInput_KeyDown"
+                                         LostFocus="EndTimeInput_LostFocus"/>
+                            </Grid>
                         </Button>
                     </Grid>
                 </Border>
@@ -853,13 +934,41 @@
                                        FontSize="11.5"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"/>
+                            <TextBlock x:Name="SegmentDurationSeparator"
+                                       Text="·"
+                                       Foreground="{DynamicResource ThemeMutedBrush}"
+                                       FontSize="11.5"
+                                       Margin="8,0"
+                                       VerticalAlignment="Center"
+                                       Visibility="Collapsed"/>
+                            <TextBlock x:Name="SegmentDurationText"
+                                       Text=""
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                       FontSize="11.5"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Visibility="Collapsed"/>
                         </StackPanel>
                     </Button>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                 <!-- Loop Toggle -->
+                 <ToggleButton x:Name="LoopToggleBtn" Width="32" Height="32"
+                               IsChecked="True"
+                               Click="LoopToggleBtn_Click" Margin="0,0,8,0"
+                               Style="{StaticResource TrimmerLoopToggleStyle}">
+                     <Path Data="M 4,8 A 5,5 0 1,1 9,13 M 9,10 L 9,14 L 13,12 Z"
+                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                           StrokeThickness="1.5"
+                           StrokeStartLineCap="Round"
+                           StrokeEndLineCap="Round"
+                           StrokeLineJoin="Round"
+                           Fill="Transparent"
+                           Width="14" Height="14" Stretch="Uniform"/>
+                 </ToggleButton>
+
                  <!-- Step Backward -->
                  <Button x:Name="StepBackBtn" Width="40" Height="40" Click="StepBackBtn_Click" Margin="0,0,12,0"
-                         ToolTip="Step Backward"
                          Style="{StaticResource TrimmerRoundButtonStyle}">
                      <Path Data="M 11,5 L 4,10 L 11,15 Z M 14,5 L 16,5 L 16,15 L 14,15 Z" 
                            Fill="{DynamicResource ThemeTextPrimaryBrush}" Stretch="Uniform" Width="14" Height="14"/>
@@ -877,8 +986,7 @@
                  </Button>
  
                  <!-- Step Forward -->
-                 <Button x:Name="StepForwardBtn" Width="40" Height="40" Click="StepForwardBtn_Click" Margin="12,0,0,0"
-                         ToolTip="Step Forward"
+                 <Button x:Name="StepForwardBtn" Width="40" Height="40" Click="StepForwardBtn_Click" Margin="12,0,40,0"
                          Style="{StaticResource TrimmerRoundButtonStyle}">
                      <Path Data="M 4,5 L 6,5 L 6,15 L 4,15 Z M 9,5 L 16,10 L 9,15 Z" 
                            Fill="{DynamicResource ThemeTextPrimaryBrush}" Stretch="Uniform" Width="14" Height="14"/>
