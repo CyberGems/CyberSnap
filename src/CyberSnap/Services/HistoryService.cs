@@ -153,6 +153,7 @@ public sealed partial class HistoryService : IDisposable
             AddDirectorySignature(hash, HistoryDir);
             AddDirectoryTreeSignature(hash, saveDirectory);
             AddDirectoryTreeSignature(hash, Path.Combine(saveDirectory, "Videos"));
+            AddDirectoryTreeSignature(hash, Path.Combine(saveDirectory, "GIFs"));
 
             AddFileSignature(hash, DatabasePath);
 

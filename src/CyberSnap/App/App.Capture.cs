@@ -76,7 +76,7 @@ public partial class App
 
                 string baseDir = s.SaveDirectory;
                 string ext = fmt switch { RecordingFormat.MP4 => ".mp4", _ => ".gif" };
-                string saveRoot = fmt == RecordingFormat.GIF ? baseDir : Path.Combine(baseDir, "Videos");
+                string saveRoot = fmt == RecordingFormat.GIF ? Path.Combine(baseDir, "GIFs") : Path.Combine(baseDir, "Videos");
                 string saveDir = s.SaveInMonthlyFolders
                     ? Helpers.CaptureSavePath.GetMonthDirectory(saveRoot)
                     : saveRoot;
