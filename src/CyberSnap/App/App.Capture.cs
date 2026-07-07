@@ -719,10 +719,9 @@ public partial class App
             try
             {
                 ToastWindow.ForceDismissCurrent();
-                var trimmer = new VideoTrimmerWindow(path, _settingsService!);
+                var trimmer = new VideoTrimmerWindow(path, _settingsService!, firstFrame);
                 trimmer.Show();
                 trimmer.Activate();
-                firstFrame?.Dispose();
             }
             catch (Exception ex)
             {
