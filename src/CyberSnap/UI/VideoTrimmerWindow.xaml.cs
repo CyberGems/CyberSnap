@@ -761,7 +761,7 @@ namespace CyberSnap.UI
 
         private double GetAdjustedStartTime()
         {
-            return _startTimeSeconds == 0 ? 0.02 : _startTimeSeconds;
+            return _startTimeSeconds == 0 ? 0.06 : _startTimeSeconds;
         }
 
         private void InitializeVolumeControl()
@@ -931,7 +931,7 @@ namespace CyberSnap.UI
                 return;
             }
 
-            double target = (_startTimeSeconds == 0 && seconds <= 0.02) ? 0.02 : seconds;
+            double target = (_startTimeSeconds == 0 && seconds <= 0.06) ? 0.06 : seconds;
             MediaPlayer.Position = TimeSpan.FromSeconds(target);
         }
 
@@ -1690,7 +1690,13 @@ namespace CyberSnap.UI
             if (string.IsNullOrEmpty(_mediaFilePath) || !File.Exists(_mediaFilePath)) return;
             try
             {
-                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{_mediaFilePath}\"");
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{Path.GetFullPath(_mediaFilePath)}\"",
+                    UseShellExecute = true
+                };
+                System.Diagnostics.Process.Start(psi);
             }
             catch (Exception ex)
             {
