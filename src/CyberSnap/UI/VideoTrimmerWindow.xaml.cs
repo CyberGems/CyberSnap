@@ -237,7 +237,7 @@ namespace CyberSnap.UI
                     if (Math.Abs(_lastTargetSeekSeconds - _startTimeSeconds) > 0.01)
                     {
                         _lastTargetSeekSeconds = _startTimeSeconds;
-                        MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                        MediaPlayer.Position = TimeSpan.FromSeconds(GetAdjustedStartTime());
                         Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
                     }
                 }
@@ -678,7 +678,7 @@ namespace CyberSnap.UI
             if (_isGif)
                 return;
 
-            MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+            MediaPlayer.Position = TimeSpan.FromSeconds(GetAdjustedStartTime());
             Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
         }
 
@@ -704,7 +704,7 @@ namespace CyberSnap.UI
                     {
                         // Play first to put it in playing state, then seek to _startTimeSeconds
                         MediaPlayer.Play();
-                        MediaPlayer.Position = TimeSpan.FromSeconds(_startTimeSeconds);
+                        MediaPlayer.Position = TimeSpan.FromSeconds(GetAdjustedStartTime());
                         _ = Dispatcher.BeginInvoke(new Action(() => MediaPlayer.Play()), DispatcherPriority.Background);
                     }
                 }
@@ -757,6 +757,11 @@ namespace CyberSnap.UI
                 PlayPauseIconPath.Data = (Geometry)FindResource("PlayIconGeometry");
                 PlayPauseIconPath.Tag = "Play";
             }
+        }
+
+        private double GetAdjustedStartTime()
+        {
+            return _startTimeSeconds == 0 ? 0.02 : _startTimeSeconds;
         }
 
         private void InitializeVolumeControl()
@@ -926,7 +931,8 @@ namespace CyberSnap.UI
                 return;
             }
 
-            MediaPlayer.Position = TimeSpan.FromSeconds(seconds);
+            double target = (_startTimeSeconds == 0 && seconds <= 0.02) ? 0.02 : seconds;
+            MediaPlayer.Position = TimeSpan.FromSeconds(target);
         }
 
         private void StartSeekBtn_Click(object sender, RoutedEventArgs e)
