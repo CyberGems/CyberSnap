@@ -42,6 +42,7 @@ namespace CyberSnap.UI
         private bool _trimButtonVisible;
         private double _trimButtonExpandedWidth;
         private bool _detailedTimeDisplay = true;
+        private bool _loopEnabled = true;
 
         private static readonly SolidColorBrush GreenLedBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(34, 197, 94));
         private static readonly SolidColorBrush GreenLedAuraBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(50, 34, 197, 94));
@@ -119,6 +120,13 @@ namespace CyberSnap.UI
             Topmost = _isPinned;
             
             UpdatePlayPauseToolTip();
+            UpdateAllTooltips();
+
+            // Open animation: start slightly scaled down and transparent, animate in when Loaded
+            RootBorder.Opacity = 0;
+            RootScale.ScaleX = 0.97;
+            RootScale.ScaleY = 0.97;
+            Loaded += (_, _) => PlayOpenAnimation();
 
             if (_isGif)
             {
@@ -221,9 +229,20 @@ namespace CyberSnap.UI
 
                         if (timeline >= _endTimeSeconds - 0.02)
                         {
-                            if (Math.Abs(_lastTargetSeekSeconds - _startTimeSeconds) > 0.01)
+                            if (_loopEnabled)
                             {
-                                RestartPreviewLoop();
+                                if (Math.Abs(_lastTargetSeekSeconds - _startTimeSeconds) > 0.01)
+                                {
+                                    RestartPreviewLoop();
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                PausePlayback();
+                                SeekMediaTo(_endTimeSeconds);
+                                TimeSlider.Value = _endTimeSeconds;
+                                UpdateTimeStatus();
                                 return;
                             }
                         }
@@ -765,7 +784,15 @@ namespace CyberSnap.UI
             if (_isGif || _mp4Sequence == null)
                 return;
 
-            RestartPreviewLoop();
+            if (_loopEnabled)
+                RestartPreviewLoop();
+            else
+            {
+                PausePlayback();
+                SeekMediaTo(_endTimeSeconds);
+                TimeSlider.Value = _endTimeSeconds;
+                UpdateTimeStatus();
+            }
         }
 
         private void MediaPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)
@@ -813,8 +840,8 @@ namespace CyberSnap.UI
         {
             string lang = _settingsService.Settings.InterfaceLanguage;
             PlayPauseBtn.ToolTip = !IsPlaying()
-                ? LocalizationService.Translate(lang, "Play")
-                : LocalizationService.Translate(lang, "Pause");
+                ? LocalizationService.Translate(lang, "Play") + " (Space)"
+                : LocalizationService.Translate(lang, "Pause") + " (Space)";
         }
 
         private bool IsPlaying()
@@ -1129,6 +1156,30 @@ namespace CyberSnap.UI
                 TimeStatusSeparator.Visibility = Visibility.Collapsed;
                 DurationStatusText.Visibility = Visibility.Collapsed;
             }
+
+            // Show segment duration when there is an active crop
+            bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
+            if (isModified && _detailedTimeDisplay)
+            {
+                double segmentSeconds = _endTimeSeconds - _startTimeSeconds;
+                SegmentDurationSeparator.Visibility = Visibility.Visible;
+                SegmentDurationText.Visibility = Visibility.Visible;
+                SegmentDurationText.Text = FormatSegmentDuration(segmentSeconds);
+            }
+            else
+            {
+                SegmentDurationSeparator.Visibility = Visibility.Collapsed;
+                SegmentDurationText.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private static string FormatSegmentDuration(double seconds)
+        {
+            if (seconds < 0) seconds = 0;
+            var t = TimeSpan.FromSeconds(seconds);
+            if (t.TotalMinutes >= 1)
+                return $"{(int)t.TotalMinutes}m {t.Seconds}s";
+            return $"{t.TotalSeconds:0.0}s";
         }
         
         private string FormatTime(double seconds)
@@ -1202,11 +1253,14 @@ namespace CyberSnap.UI
 
             string lang = _settingsService.Settings.InterfaceLanguage;
             SetStartBtn.ToolTip = SetStartBtn.IsChecked == true
-                ? LocalizationService.Translate(lang, "Clear crop start position")
-                : LocalizationService.Translate(lang, "Set the current time as the crop start position");
+                ? LocalizationService.Translate(lang, "Clear crop start position") + " (I)"
+                : LocalizationService.Translate(lang, "Set the current time as the crop start position") + " (I)";
             SetEndBtn.ToolTip = SetEndBtn.IsChecked == true
-                ? LocalizationService.Translate(lang, "Clear crop end position")
-                : LocalizationService.Translate(lang, "Set the current time as the crop end position");
+                ? LocalizationService.Translate(lang, "Clear crop end position") + " (O)"
+                : LocalizationService.Translate(lang, "Set the current time as the crop end position") + " (O)";
+
+            StartSeekBtn.ToolTip = LocalizationService.Translate(lang, "Click to seek · Double-click to edit") + " (Shift+I)";
+            EndSeekBtn.ToolTip = LocalizationService.Translate(lang, "Click to seek · Double-click to edit") + " (Shift+O)";
 
             UpdateRangeBarDisplay();
         }
@@ -1475,6 +1529,180 @@ namespace CyberSnap.UI
             TrimmerTitleBar.IsPinActive = _isPinned;
             Topmost = _isPinned;
         }
+
+        private void PlayOpenAnimation()
+        {
+            RootBorder.BeginAnimation(UIElement.OpacityProperty,
+                Motion.To(1, 220, Motion.SmoothOut));
+            RootScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty,
+                Motion.To(1, 220, Motion.SmoothOut));
+            RootScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty,
+                Motion.To(1, 220, Motion.SmoothOut));
+        }
+
+        private void LoopToggleBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _loopEnabled = LoopToggleBtn.IsChecked == true;
+            UpdateLoopTooltip();
+
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            string msg = _loopEnabled
+                ? LocalizationService.Translate(lang, "Loop on")
+                : LocalizationService.Translate(lang, "Loop off");
+            ShowBanner(msg);
+        }
+
+        private void UpdateLoopTooltip()
+        {
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            LoopToggleBtn.ToolTip = _loopEnabled
+                ? LocalizationService.Translate(lang, "Disable loop") + " (L)"
+                : LocalizationService.Translate(lang, "Enable loop") + " (L)";
+        }
+
+        private void UpdateAllTooltips()
+        {
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            StepBackBtn.ToolTip = LocalizationService.Translate(lang, "Step Backward") + " (\u2190)";
+            StepForwardBtn.ToolTip = LocalizationService.Translate(lang, "Step Forward") + " (\u2192)";
+            UpdateLoopTooltip();
+        }
+
+        // --- Time Input Editing ---
+
+        private void StartSeekBtn_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            ActivateTimeInput(StartTimeInput, StartPointText, FormatTime(_startTimeSeconds));
+            e.Handled = true;
+        }
+
+        private void EndSeekBtn_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            ActivateTimeInput(EndTimeInput, EndPointText, FormatTime(_endTimeSeconds));
+            e.Handled = true;
+        }
+
+        private void ActivateTimeInput(System.Windows.Controls.TextBox input, TextBlock display, string currentValue)
+        {
+            PausePlayback();
+            display.Visibility = Visibility.Hidden;
+            input.Visibility = Visibility.Visible;
+            input.Text = currentValue;
+            input.SelectAll();
+            input.Focus();
+        }
+
+        private void DeactivateTimeInput(System.Windows.Controls.TextBox input, TextBlock display)
+        {
+            input.Visibility = Visibility.Collapsed;
+            display.Visibility = Visibility.Visible;
+        }
+
+        private void TimeInput_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (sender is not System.Windows.Controls.TextBox textBox)
+                return;
+
+            if (e.Key == Key.Enter)
+            {
+                CommitTimeInput(textBox);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                CancelTimeInput(textBox);
+                e.Handled = true;
+            }
+        }
+
+        private void StartTimeInput_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (StartTimeInput.Visibility == Visibility.Visible)
+                CommitTimeInput(StartTimeInput);
+        }
+
+        private void EndTimeInput_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (EndTimeInput.Visibility == Visibility.Visible)
+                CommitTimeInput(EndTimeInput);
+        }
+
+        private void CommitTimeInput(System.Windows.Controls.TextBox textBox)
+        {
+            bool isStart = textBox == StartTimeInput;
+            TextBlock display = isStart ? StartPointText : EndPointText;
+
+            if (TryParseTime(textBox.Text, out double seconds))
+            {
+                seconds = Math.Clamp(seconds, 0, _videoDurationSeconds);
+
+                if (isStart)
+                {
+                    if (seconds < _endTimeSeconds)
+                    {
+                        _startTimeSeconds = seconds;
+                        SetStartBtn.IsChecked = _startTimeSeconds > 0.05;
+                    }
+                }
+                else
+                {
+                    if (seconds > _startTimeSeconds)
+                    {
+                        _endTimeSeconds = seconds;
+                        SetEndBtn.IsChecked = _endTimeSeconds < (_videoDurationSeconds - 0.05);
+                    }
+                }
+
+                UpdateMarkerLabels();
+                EvaluateCropState();
+                SeekMediaTo(seconds);
+                TimeSlider.Value = seconds;
+                UpdateTimeStatus();
+            }
+
+            DeactivateTimeInput(textBox, display);
+        }
+
+        private void CancelTimeInput(System.Windows.Controls.TextBox textBox)
+        {
+            bool isStart = textBox == StartTimeInput;
+            TextBlock display = isStart ? StartPointText : EndPointText;
+            DeactivateTimeInput(textBox, display);
+        }
+
+        private static bool TryParseTime(string input, out double seconds)
+        {
+            seconds = 0;
+            if (string.IsNullOrWhiteSpace(input))
+                return false;
+
+            input = input.Trim();
+
+            // Try mm:ss.d or mm:ss
+            if (input.Contains(':'))
+            {
+                var parts = input.Split(':');
+                if (parts.Length == 2)
+                {
+                    if (double.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out double mins) &&
+                        double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double secs))
+                    {
+                        seconds = mins * 60 + secs;
+                        return seconds >= 0;
+                    }
+                }
+                return false;
+            }
+
+            // Try plain seconds (e.g. "5.3" or "12")
+            if (double.TryParse(input, NumberStyles.Any, CultureInfo.InvariantCulture, out double plainSeconds))
+            {
+                seconds = plainSeconds;
+                return seconds >= 0;
+            }
+
+            return false;
+        }
         
         protected override void OnContentRendered(EventArgs e)
         {
@@ -1502,9 +1730,52 @@ namespace CyberSnap.UI
         
         private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (e.Key == Key.Escape)
+            // Don't process shortcuts when a time input TextBox has focus
+            if (e.OriginalSource is System.Windows.Controls.TextBox)
+                return;
+
+            switch (e.Key)
             {
-                Close();
+                case Key.Escape:
+                    Close();
+                    break;
+                case Key.Space:
+                    PlayPauseBtn_Click(PlayPauseBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    break;
+                case Key.Left:
+                    StepBackBtn_Click(StepBackBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    break;
+                case Key.Right:
+                    StepForwardBtn_Click(StepForwardBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    break;
+                case Key.I:
+                    if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0)
+                        StartSeekBtn_Click(StartSeekBtn, new RoutedEventArgs());
+                    else
+                    {
+                        SetStartBtn.IsChecked = !(SetStartBtn.IsChecked == true);
+                        SetStartBtn_Click(SetStartBtn, new RoutedEventArgs());
+                    }
+                    e.Handled = true;
+                    break;
+                case Key.O:
+                    if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0)
+                        EndSeekBtn_Click(EndSeekBtn, new RoutedEventArgs());
+                    else
+                    {
+                        SetEndBtn.IsChecked = !(SetEndBtn.IsChecked == true);
+                        SetEndBtn_Click(SetEndBtn, new RoutedEventArgs());
+                    }
+                    e.Handled = true;
+                    break;
+                case Key.L:
+                    LoopToggleBtn.IsChecked = !LoopToggleBtn.IsChecked;
+                    LoopToggleBtn_Click(LoopToggleBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    break;
             }
         }
         
