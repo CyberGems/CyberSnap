@@ -28,6 +28,9 @@
         <SolidColorBrush x:Key="ThemeAccentBrush" Color="#FFFFFFFF"/>
         <SolidColorBrush x:Key="ThemeSeparatorBrush" Color="#0CFFFFFF"/>
 
+        <Geometry x:Key="PlayIconGeometry">M 6,4 L 18,12 L 6,20 Z</Geometry>
+        <Geometry x:Key="PauseIconGeometry">M 5,4 L 8,4 L 8,20 L 5,20 M 13,4 L 16,4 L 16,20 L 13,20</Geometry>
+
         <Style x:Key="TrimmerContextMenuStyle" TargetType="ContextMenu">
             <Setter Property="OverridesDefaultStyle" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -852,30 +855,33 @@
                     </Button>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <!-- Step Backward -->
-                <Button x:Name="StepBackBtn" Width="36" Height="36" Click="StepBackBtn_Click" Margin="0,0,12,0"
-                        ToolTip="Step Backward"
-                        Style="{StaticResource TrimmerRoundButtonStyle}">
-                    <Path Data="M 13,6 L 5,10 L 13,14 Z M 16,6 L 18,6 L 18,14 L 16,14 Z M 20,6 L 22,6 L 22,14 L 20,14 Z" 
-                          Fill="{DynamicResource ThemeTextPrimaryBrush}" Stretch="Uniform" Width="13" Height="13"/>
-                </Button>
-
-                <!-- Play / Pause -->
-                <Button x:Name="PlayPauseBtn" Width="52" Height="52" Click="PlayPauseBtn_Click"
-                        ToolTip="Pause"
-                        Style="{StaticResource TrimmerPlayButtonStyle}">
-                    <TextBlock x:Name="PlayPauseIconText" Text="&#xE769;" FontFamily="Segoe MDL2 Assets" FontSize="18" Margin="2,0,0,0"
-                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                </Button>
-
-                <!-- Step Forward -->
-                <Button x:Name="StepForwardBtn" Width="36" Height="36" Click="StepForwardBtn_Click" Margin="12,0,0,0"
-                        ToolTip="Step Forward"
-                        Style="{StaticResource TrimmerRoundButtonStyle}">
-                    <Path Data="M 5,6 L 7,6 L 7,14 L 5,14 Z M 9,6 L 11,6 L 11,14 L 9,14 Z M 14,6 L 22,10 L 14,14 Z" 
-                          Fill="{DynamicResource ThemeTextPrimaryBrush}" Stretch="Uniform" Width="13" Height="13"/>
-                </Button>
-                    </StackPanel>
+                 <!-- Step Backward -->
+                 <Button x:Name="StepBackBtn" Width="40" Height="40" Click="StepBackBtn_Click" Margin="0,0,12,0"
+                         ToolTip="Step Backward"
+                         Style="{StaticResource TrimmerRoundButtonStyle}">
+                     <Path Data="M 11,5 L 4,10 L 11,15 Z M 14,5 L 16,5 L 16,15 L 14,15 Z" 
+                           Fill="{DynamicResource ThemeTextPrimaryBrush}" Stretch="Uniform" Width="14" Height="14"/>
+                 </Button>
+ 
+                 <!-- Play / Pause -->
+                 <Button x:Name="PlayPauseBtn" Width="56" Height="56" Click="PlayPauseBtn_Click"
+                         ToolTip="Pause"
+                         Style="{StaticResource TrimmerPlayButtonStyle}">
+                     <Path x:Name="PlayPauseIconPath"
+                           Data="{StaticResource PauseIconGeometry}"
+                           Fill="{DynamicResource ThemeTextPrimaryBrush}"
+                           Stretch="Uniform" Width="18" Height="18"
+                           Tag="Pause"/>
+                 </Button>
+ 
+                 <!-- Step Forward -->
+                 <Button x:Name="StepForwardBtn" Width="40" Height="40" Click="StepForwardBtn_Click" Margin="12,0,0,0"
+                         ToolTip="Step Forward"
+                         Style="{StaticResource TrimmerRoundButtonStyle}">
+                     <Path Data="M 4,5 L 6,5 L 6,15 L 4,15 Z M 9,5 L 16,10 L 9,15 Z" 
+                           Fill="{DynamicResource ThemeTextPrimaryBrush}" Stretch="Uniform" Width="14" Height="14"/>
+                 </Button>
+                     </StackPanel>
                 </StackPanel>
 
                 <controls:MediaVolumeControl x:Name="VolumeControl"
