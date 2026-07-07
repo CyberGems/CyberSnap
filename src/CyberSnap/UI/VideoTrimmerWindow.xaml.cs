@@ -1642,5 +1642,48 @@ namespace CyberSnap.UI
                 HideProgressOverlay();
             }
         }
+
+        private void PreviewArea_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            string lang = _settingsService.Settings.InterfaceLanguage;
+
+            // Translate menu headers
+            MenuShowInFolder.Header = LocalizationService.Translate(lang, "Show in folder");
+            MenuTrim.Header = LocalizationService.Translate(lang, "Trim");
+            MenuSaveCopyAs.Header = LocalizationService.Translate(lang, "Save copy as...");
+            MenuClose.Header = LocalizationService.Translate(lang, "Close");
+
+            // Enable/disable Trim based on modifications
+            bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
+            MenuTrim.IsEnabled = isModified;
+        }
+
+        private void MenuShowInFolder_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_mediaFilePath) || !File.Exists(_mediaFilePath)) return;
+            try
+            {
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{_mediaFilePath}\"");
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("trimmer.context-menu.show-in-folder", ex);
+            }
+        }
+
+        private void MenuTrim_Click(object sender, RoutedEventArgs e)
+        {
+            TrimBtn_Click(sender, e);
+        }
+
+        private void MenuSaveCopyAs_Click(object sender, RoutedEventArgs e)
+        {
+            SaveAsNewBtn_Click(sender, e);
+        }
+
+        private void MenuClose_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
     }
 }

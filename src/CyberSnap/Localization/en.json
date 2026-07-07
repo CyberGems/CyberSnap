@@ -979,6 +979,8 @@
   "When disabled, right-click exits the ruler instead of showing the context menu.": "When disabled, right-click exits the ruler instead of showing the context menu.",
   "When enabled, the ruler's Enter capture takes every monitor. Applies only to multi-monitor setups.": "When enabled, the ruler's Enter capture takes every monitor. Applies only to multi-monitor setups.",
   "Video & GIF Trimmer": "Video & GIF Trimmer",
+  "Show in folder": "Show in folder",
+  "Save copy as...": "Save copy as...",
   "Exporting...": "Exporting...",
   "Play": "Play",
   "Pause": "Pause",
