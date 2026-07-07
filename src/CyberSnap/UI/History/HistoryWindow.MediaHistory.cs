@@ -240,6 +240,30 @@ public partial class HistoryWindow
             }
         });
 
+        var playIcon = new Border
+        {
+            Width = 36, Height = 36,
+            CornerRadius = new CornerRadius(18),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, 255, 180, 60)),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false,
+            ToolTip = "GIF media type",
+            Child = new System.Windows.Shapes.Path
+            {
+                Data = System.Windows.Media.Geometry.Parse("M8,5 L8,19 L19,12 Z"),
+                Fill = System.Windows.Media.Brushes.White,
+                Stretch = System.Windows.Media.Stretch.Uniform,
+                Width = 14, Height = 14,
+                Margin = new Thickness(2, 0, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            }
+        };
+        AutomationProperties.SetName(playIcon, "GIF play overlay");
+        AutomationProperties.SetHelpText(playIcon, "This history item is a GIF. Press Enter or Space to open it.");
+        shell.ImageContainer.Children.Add(playIcon);
+
         AddMediaInfo(shell.InfoPanel, vm.Entry.FileName, vm.TimeAgo, filePath, "GIF", System.Windows.Media.Color.FromRgb(255, 180, 60));
         AddCategoryTint(shell.Root, System.Windows.Media.Color.FromRgb(255, 180, 60));
         return shell.Card;
@@ -278,7 +302,7 @@ public partial class HistoryWindow
         {
             Width = 36, Height = 36,
             CornerRadius = new CornerRadius(18),
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 0, 0, 0)),
+            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, 240, 80, 180)),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             IsHitTestVisible = false,
