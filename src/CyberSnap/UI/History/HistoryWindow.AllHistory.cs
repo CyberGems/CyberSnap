@@ -331,14 +331,14 @@ public partial class HistoryWindow
         var badgeColor = entry.Kind == HistoryKind.Video ? System.Windows.Media.Color.FromRgb(240, 80, 180)
             : entry.Kind == HistoryKind.Gif ? System.Windows.Media.Color.FromRgb(255, 180, 60) : System.Windows.Media.Color.FromRgb(100, 180, 255);
 
-        // Add play icon overlay for videos (same as CreateVideoCard)
-        if (entry.Kind == HistoryKind.Video)
+        // Add play icon overlay for videos and GIFs (same as CreateVideoCard / CreateGifCard)
+        if (entry.Kind == HistoryKind.Video || entry.Kind == HistoryKind.Gif)
         {
             var playIcon = new Border
             {
                 Width = 36, Height = 36,
                 CornerRadius = new CornerRadius(18),
-                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 0, 0, 0)),
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, badgeColor.R, badgeColor.G, badgeColor.B)),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 IsHitTestVisible = false,
@@ -353,7 +353,7 @@ public partial class HistoryWindow
                     VerticalAlignment = VerticalAlignment.Center,
                 }
             };
-            AutomationProperties.SetName(playIcon, "Video play overlay");
+            AutomationProperties.SetName(playIcon, entry.Kind == HistoryKind.Video ? "Video play overlay" : "GIF play overlay");
             shell.ImageContainer.Children.Add(playIcon);
         }
 
