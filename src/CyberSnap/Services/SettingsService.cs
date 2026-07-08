@@ -29,6 +29,33 @@ public sealed class SettingsService : IDisposable
     public AppSettings Settings { get; internal set; } = new();
     public event Action<string>? SaveFailed;
 
+    public static event Action<bool>? OcrAutoCopyToClipboardChanged;
+
+    public static void SetOcrAutoCopyToClipboard(bool value)
+    {
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+            {
+                s_cachedSettings.OcrAutoCopyToClipboard = value;
+            }
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.OcrAutoCopyToClipboard = value;
+            svc.Save();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.ocr-auto-copy.static-save", ex);
+        }
+
+        OcrAutoCopyToClipboardChanged?.Invoke(value);
+    }
+
     public SettingsService(string? settingsPath = null, TimeSpan? saveDelay = null)
     {
         _settingsPath = ResolveSettingsPath(settingsPath);

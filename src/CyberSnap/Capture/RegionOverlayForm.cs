@@ -1105,7 +1105,25 @@ public sealed partial class RegionOverlayForm : Form
         retryItem.Click += (_, _) => ExitConfirmMode();
         menu.Items.Add(retryItem);
 
-        menu.Items.Add(new ToolStripSeparator());
+        if (_mode == CaptureMode.Ocr)
+        {
+            var autoCopy = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
+            var autoCopyItem = WindowsMenuRenderer.Item(
+                isSpanish ? "Auto-copiar OCR" : "Auto-copy OCR",
+                iconSize: 24);
+            autoCopyItem.ToolTipText = isSpanish
+                ? "Copiar el texto reconocido sin abrir la ventana de resultados"
+                : "Copy recognized text without opening the result window";
+            autoCopyItem.Image = autoCopy ? FluentIcons.RenderBitmap("check",
+                UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
+            autoCopyItem.Click += (_, _) =>
+            {
+                var current = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
+                SettingsService.SetOcrAutoCopyToClipboard(!current);
+            };
+            menu.Items.Add(autoCopyItem);
+            menu.Items.Add(new ToolStripSeparator());
+        }
 
         // Cancel everything and close the overlay (matches the red Cancel pill — routes through
         // ConfirmAndCancelCapture so pending annotations get the same "will be lost" warning).
@@ -1174,6 +1192,23 @@ public sealed partial class RegionOverlayForm : Form
         }
         else if (_mode == CaptureMode.Ocr)
         {
+            var autoCopy = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
+            var autoCopyItem = WindowsMenuRenderer.Item(
+                isSpanish ? "Auto-copiar OCR" : "Auto-copy OCR",
+                iconSize: 24);
+            autoCopyItem.ToolTipText = isSpanish
+                ? "Copiar el texto reconocido sin abrir la ventana de resultados"
+                : "Copy recognized text without opening the result window";
+            autoCopyItem.Image = autoCopy ? FluentIcons.RenderBitmap("check",
+                UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
+            autoCopyItem.Click += (_, _) =>
+            {
+                var current = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
+                SettingsService.SetOcrAutoCopyToClipboard(!current);
+            };
+            menu.Items.Add(autoCopyItem);
+            menu.Items.Add(new ToolStripSeparator());
+
             var cancelLabel = isSpanish ? "Cancelar extracción de texto" : "Cancel text extraction";
             var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
