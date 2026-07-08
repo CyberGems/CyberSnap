@@ -413,6 +413,12 @@ public partial class HistoryWindow
             ToolTipService.SetIsEnabled(menuChevron, false);
         };
 
+        menuChevron.ToolTipOpening += (_, e) =>
+        {
+            if (actionMenu.IsOpen)
+                e.Handled = true;
+        };
+
         actionMenu.Closed += (_, _) =>
         {
             ToolTipService.SetIsEnabled(menuChevron, true);

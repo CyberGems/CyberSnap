@@ -965,6 +965,12 @@ public partial class HistoryWindow
             ToolTipService.SetIsEnabled(chevron, false);
         };
 
+        chevron.ToolTipOpening += (_, e) =>
+        {
+            if (menu.IsOpen)
+                e.Handled = true;
+        };
+
         // Menu closed → update visual state
         menu.Closed += (_, _) =>
         {
