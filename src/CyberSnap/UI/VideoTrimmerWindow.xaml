@@ -13,7 +13,7 @@
         WindowStyle="None"
         AllowsTransparency="False"
         Topmost="False"
-        Icon="pack://application:,,,/CyberSnap.ico"
+        Icon="pack://application:,,,/Assets/Icons/Trimmer.ico"
         PreviewKeyDown="Window_PreviewKeyDown"
         Closing="Window_Closing">
 

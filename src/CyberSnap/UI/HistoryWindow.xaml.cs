@@ -74,8 +74,9 @@ public partial class HistoryWindow : Window
 
         InitializeComponent();
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
-        Title = LocalizationService.Translate(_settingsService.Settings.InterfaceLanguage, "CyberSnap - Capture Gallery");
-        SettingsTitleBar.Title = Title;
+        var lang = _settingsService.Settings.InterfaceLanguage;
+        WindowTitles.ApplyTaskbar(this, WindowTitles.Gallery, lang);
+        SettingsTitleBar.Title = LocalizationService.Translate(lang, "CyberSnap - Capture Gallery");
         CyberSnapWindowChrome.Apply(this);
         Theme.Refresh();
         Theme.ApplyTo(Application.Current.Resources);
@@ -303,7 +304,7 @@ public partial class HistoryWindow : Window
 
         OuterBorder.Background = Theme.Brush(Theme.BgPrimary);
         OuterBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
-        Icon = ThemedLogo.Square(32);
+        Icon = WindowIcons.Wpf(WindowIconKind.History);
         Foreground = Theme.Brush(Theme.TextPrimary);
         UiScale.ApplyToWindow(this, OuterBorder, scaleWindowBounds: true);
 

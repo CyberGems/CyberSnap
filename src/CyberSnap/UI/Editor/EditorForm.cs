@@ -227,14 +227,21 @@ public sealed partial class EditorForm : Form, IMessageFilter
         SuspendLayout();
         try
         {
-            var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            Icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+            Icon = WindowIcons.WinForms(WindowIconKind.Editor);
         }
-        catch
+        catch (Exception ex)
         {
-            // Fallback: app may not have an associated icon in all deployment modes
+            AppDiagnostics.LogWarning("editor.window-icon", $"Failed to load editor icon: {ex.Message}", ex);
+            try
+            {
+                var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                Icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath);
+            }
+            catch
+            {
+            }
         }
-        Text = LocalizationService.Translate("Editor");
+        Text = WindowTitles.Taskbar(WindowTitles.Editor);
         FormBorderStyle = FormBorderStyle.None;
         DoubleBuffered = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint |

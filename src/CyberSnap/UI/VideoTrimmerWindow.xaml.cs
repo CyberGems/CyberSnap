@@ -102,6 +102,8 @@ namespace CyberSnap.UI
             
             LocalizationService.ApplyCurrentCulture(settingsService.Settings.InterfaceLanguage);
             LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
+            var lang = settingsService.Settings.InterfaceLanguage;
+            WindowTitles.ApplyTaskbar(this, WindowTitles.Trimmer, lang);
             TrimmerTitleBar.Title = LocalizationService.Translate("Video & GIF Trimmer");
             
             _lastPlaybackUpdate = DateTime.UtcNow;
@@ -171,7 +173,7 @@ namespace CyberSnap.UI
             Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
             Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
             VolumeControl.RefreshThemeBrushes();
-            Icon = ThemedLogo.Square(32);
+            Icon = WindowIcons.Wpf(WindowIconKind.Trimmer);
 
             // Setup dynamic colors for the action banner overlay to match the Annotation Editor style precisely
             var accentBrush = Theme.Brush(Theme.Accent) as SolidColorBrush;

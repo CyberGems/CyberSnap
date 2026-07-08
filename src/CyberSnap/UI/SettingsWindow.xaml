@@ -12,7 +12,7 @@
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
-        Icon="pack://application:,,,/CyberSnap.ico">
+        Icon="pack://application:,,,/Assets/Icons/Configuration.ico">
 
     <Window.Resources>
         <SolidColorBrush x:Key="ThemeTextPrimaryBrush" Color="#FFF0F0F0"/>

@@ -32,7 +32,7 @@ public partial class SettingsWindow
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         OuterBorder.Background = Theme.Brush(Theme.BgPrimary);
         OuterBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
-        Icon = ThemedLogo.Square(32);
+        Icon = WindowIcons.Wpf(WindowIconKind.Settings);
         Foreground = Theme.Brush(Theme.TextPrimary);
         // SettingsWindow manages its own size via LoadWindowBounds/SaveWindowBounds,
         // so don't let UiScale rescale window bounds — only apply the LayoutTransform.
@@ -525,9 +525,8 @@ public partial class SettingsWindow
     private void UpdateWindowTitle()
     {
         var configLabel = LocalizationService.Translate("Configuration");
-        var title = $"CyberSnap {UpdateService.GetCurrentVersionLabel()} - {configLabel}";
-        Title = title;
-        SettingsTitleBar.Title = title;
+        SettingsTitleBar.Title = $"CyberSnap {UpdateService.GetCurrentVersionLabel()} - {configLabel}";
+        WindowTitles.ApplyTaskbar(this, WindowTitles.Settings, _settingsService.Settings.InterfaceLanguage);
     }
 
     private void SelectUiScale(double scale)
