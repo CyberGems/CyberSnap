@@ -302,7 +302,7 @@ public partial class HistoryWindow
         };
         // Add container BEFORE AttachCardMenu so the action button sits on top (Z-order)
         textArea.Children.Add(ocrContainer);
-        AttachCardMenu(card, root, () => { ClipboardService.CopyTextToClipboard(text); ToastWindow.Show("Copied", "Text copied"); }, () => DeleteOcrEntryFromTextTab(entry), System.Windows.Media.Color.FromRgb(80, 190, 180));
+        AttachCardMenu(card, root, () => { ClipboardService.CopyTextToClipboard(text); ToastWindow.Show("Copied", "Text copied"); }, () => DeleteOcrEntryFromTextTab(entry), System.Windows.Media.Color.FromRgb(80, 190, 180), () => { var window = new OcrResultWindow(text, _settingsService); window.Show(); });
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 

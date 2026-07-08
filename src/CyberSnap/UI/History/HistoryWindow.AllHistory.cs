@@ -412,7 +412,7 @@ public partial class HistoryWindow
         };
         // Add container BEFORE AttachCardMenu so the action button sits on top (Z-order)
         textArea.Children.Add(ocrContainer);
-        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(80, 190, 180));
+        AttachCardMenu(card, root, () => CopyTextToClipboard(text), () => DeleteOcrEntry(entry), System.Windows.Media.Color.FromRgb(80, 190, 180), () => { var window = new OcrResultWindow(text, _settingsService); window.Show(); });
         Grid.SetRow(textArea, 0);
         root.Children.Add(textArea);
 
@@ -847,9 +847,11 @@ public partial class HistoryWindow
 
     // ── Hover action menu (matches existing card menu style) ──
 
-    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null, System.Windows.Media.Color? badgeColor = null)
+    private void AttachCardMenu(Border card, Grid rootGrid, Action onCopy, Action? onDelete = null, System.Windows.Media.Color? badgeColor = null, Action? onViewText = null)
     {
         var menu = CreateCardActionMenu();
+        if (onViewText is not null)
+            menu.Items.Add(CreateCardActionMenuItem("View extracted text", onViewText, null, "eye"));
         menu.Items.Add(CreateCardActionMenuItem("Copy", onCopy, null, "copy"));
         if (onDelete is not null)
             menu.Items.Add(CreateCardActionMenuItem("Delete", onDelete, null, "trash", danger: true));
