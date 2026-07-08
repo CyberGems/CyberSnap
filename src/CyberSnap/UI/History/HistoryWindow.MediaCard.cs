@@ -405,8 +405,17 @@ public partial class HistoryWindow
 
         menuChevron.MouseEnter += (_, _) => { chevronHovered = true; UpdateChevronVisibility(); };
         menuChevron.MouseLeave += (_, _) => { chevronHovered = false; UpdateChevronVisibility(); };
+
+        actionMenu.Opened += (_, _) =>
+        {
+            if (menuChevron.ToolTip is System.Windows.Controls.ToolTip tt)
+                tt.IsOpen = false;
+            ToolTipService.SetIsEnabled(menuChevron, false);
+        };
+
         actionMenu.Closed += (_, _) =>
         {
+            ToolTipService.SetIsEnabled(menuChevron, true);
             if (closingActionMenuFromChevron)
                 closingActionMenuFromChevron = false;
             else
