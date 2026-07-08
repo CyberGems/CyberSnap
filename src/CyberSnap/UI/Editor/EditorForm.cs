@@ -70,10 +70,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             _instance.LoadCapture(captured, savedFilePath);
             _instance.RestoreAndActivate();
+            App.NotifyFirstTimeTool("editor");
             return;
         }
         _instance = new EditorForm(captured, savedFilePath);
         _instance.Show();
+        App.NotifyFirstTimeTool("editor");
     }
 
     public static void ShowEditorFromFile(string filePath)

@@ -357,6 +357,10 @@ public sealed class AppSettings
     public bool HasFirstOcr { get; set; }
     public bool HasFirstRecording { get; set; }
     public bool HasFirstScrollingCapture { get; set; }
+    public bool HasFirstColorPicker { get; set; }
+    public bool HasFirstScan { get; set; }
+    public bool HasFirstRuler { get; set; }
+    public bool HasFirstEditor { get; set; }
     public int ToastMonitorIndex { get; set; } = -1; // -1 = Auto/Follow, 0+ = fixed index
     public CaptureMode DefaultCaptureMode { get; set; } = CaptureMode.Rectangle;
     public CenterSelectionAspectRatio CenterSelectionAspectRatio { get; set; } = CenterSelectionAspectRatio.Free;

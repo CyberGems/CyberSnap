@@ -601,6 +601,8 @@ public partial class App
                                     ? copySucceeded ? "QR Code copied" : "QR Code found"
                                     : copySucceeded ? "Barcode copied" : "Barcode found";
                                 ToastWindow.ShowInlinePreview(preview, title, prev, suppressSound: true);
+                                MarkFirstTime(_settingsService!.Settings.HasFirstScan,
+                                    () => _settingsService!.Settings.HasFirstScan = true);
                             }
                             else
                             {
@@ -645,6 +647,9 @@ public partial class App
 
                         if (_settingsService!.Settings.SaveHistory)
                             EnsureHistoryService().SaveColorEntry(bare);
+
+                        MarkFirstTime(_settingsService.Settings.HasFirstColorPicker,
+                            () => _settingsService.Settings.HasFirstColorPicker = true);
                     });
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
