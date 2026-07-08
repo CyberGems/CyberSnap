@@ -193,6 +193,9 @@ public sealed class StandaloneColorPickerForm : Form
         // Save to history
         HistoryService.QuickSaveColor(hex);
 
+        // Count toward milestones and streak.
+        App.NotifyStandaloneCapture();
+
         // Close the picker first so the screenshot is released
         Close();
 

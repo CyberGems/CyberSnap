@@ -279,6 +279,9 @@ public sealed class StandaloneOcrForm : Form
                 // Save to history
                 HistoryService.QuickSaveOcr(text);
 
+                // Count toward milestones, streak and first-OCR achievement.
+                App.NotifyStandaloneCapture(isOcr: true);
+
                 // Show result on the WPF dispatcher thread
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(() =>
                 {

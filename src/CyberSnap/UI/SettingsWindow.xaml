@@ -2878,12 +2878,12 @@
                                     </Border>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Services:LocalizationService.SourceText="Achievements" Style="{StaticResource SettingTitle}"/>
-                                        <TextBlock Services:LocalizationService.SourceText="Add a festive flourish to milestone moments, like your first capture of the day." Style="{StaticResource SettingDescription}"/>
+                                        <TextBlock Services:LocalizationService.SourceText="Show celebratory toasts for milestones, streaks, and your first capture of the day." Style="{StaticResource SettingDescription}"/>
                                     </StackPanel>
                                     <CheckBox x:Name="CelebrationsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                               Width="150" HorizontalAlignment="Left"
                                               AutomationProperties.Name="Achievements"
-                                              Services:LocalizationService.SourceToolTip="Add a festive flourish to milestone moments, like your first capture of the day."
+                                              Services:LocalizationService.SourceToolTip="Show celebratory toasts for milestones, streaks, and your first capture of the day."
                                               Checked="CelebrationsCheck_Changed" Unchecked="CelebrationsCheck_Changed"/>
                                 </Grid>
                             </StackPanel>

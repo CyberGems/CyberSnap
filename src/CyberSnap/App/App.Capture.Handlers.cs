@@ -212,8 +212,6 @@ public partial class App
     // Counting core, shared by every capture path (image, OCR, video/GIF). Bumps the running
     // total, updates the consecutive-day streak on the first capture of each day, stamps the local
     // day, and persists (Save is debounced, so per-capture saving is cheap). Returns null when
-    // celebrations are off — then nothing counts, matching the previous behavior. Callers pick how
-    // to surface the flourish from the result.
     // Flips a first-time achievement flag on its very first occurrence and persists it (Save is
     // debounced). No-op once already unlocked. Independent of CelebrationsEnabled — the medal
     // grid records what happened even with celebration toasts turned off.
@@ -225,11 +223,12 @@ public partial class App
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.first-time-save", ex.Message, ex); }
     }
 
-    private (int Count, bool IsFirstToday, int Streak)? RegisterCaptureForCelebration(AppSettings settings)
+    // Core counting logic: always runs regardless of CelebrationsEnabled so that
+    // CelebrationCaptureCount, CurrentStreak, LongestStreak and LastCelebrationDate
+    // stay accurate even when the user has celebration toasts turned off. Callers
+    // that want to show a toast check CelebrationsEnabled themselves afterwards.
+    private (int Count, bool IsFirstToday, int Streak) RegisterCapture(AppSettings settings)
     {
-        if (!settings.CelebrationsEnabled)
-            return null;
-
         var count = ++settings.CelebrationCaptureCount;
 
         var todayDate = DateTime.Now.Date;
@@ -259,13 +258,15 @@ public partial class App
 
     // Image-capture trigger: counts the capture, then picks the highest-priority flourish and
     // returns its copy (the image toast replaces its text with this celebration copy), or null
-    // when nothing fires:
+    // when nothing fires or celebrations are disabled:
     //   1. A milestone count (50, 100, 250, ...) — rarer, so it outranks the daily greeting.
     //   2. A streak milestone (3, 7, 14, ... consecutive days), on the first capture of the day.
     //   3. The plain first capture of the local day.
     private (string Title, string Body)? TryGetCaptureCelebration(AppSettings settings)
     {
-        if (RegisterCaptureForCelebration(settings) is not { } reg)
+        var reg = RegisterCapture(settings);
+
+        if (!settings.CelebrationsEnabled)
             return null;
 
         // Milestones win when both land on the same capture; the daily date is still stamped above
@@ -295,10 +296,37 @@ public partial class App
     // fires. The milestone is still surfaced afterwards by the Settings rail.
     private bool TryRegisterCaptureFlourish(AppSettings settings)
     {
-        if (RegisterCaptureForCelebration(settings) is not { } reg)
+        var reg = RegisterCapture(settings);
+
+        if (!settings.CelebrationsEnabled)
             return false;
 
-        return CelebrationMilestones.IsMilestone(reg.Count) || reg.IsFirstToday;
+        return CelebrationMilestones.IsMilestone(reg.Count)
+            || (reg.IsFirstToday && CelebrationMilestones.IsStreakMilestone(reg.Streak))
+            || reg.IsFirstToday;
+    }
+
+    // Called by standalone tools (OCR, Scan, ColorPicker launched via hotkey) after a
+    // successful capture so they participate in CelebrationCaptureCount, streak tracking
+    // and first-time achievement flags, exactly like overlay captures do.
+    // Safe to call from any thread; dispatches to the WPF thread internally.
+    public static void NotifyStandaloneCapture(bool isOcr = false, bool isScan = false)
+    {
+        if (System.Windows.Application.Current is not App app)
+            return;
+
+        app.Dispatcher.BeginInvoke(() =>
+        {
+            var settings = app._settingsService?.Settings;
+            if (settings is null) return;
+
+            // Count toward milestones and streak (always, regardless of CelebrationsEnabled).
+            app.RegisterCapture(settings);
+
+            // First-time achievement flags.
+            if (isOcr)
+                app.MarkFirstTime(settings.HasFirstOcr, () => settings.HasFirstOcr = true);
+        });
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
