@@ -35,7 +35,7 @@ public partial class HistoryWindow
     private string _ocrSearchQuery = "";
     private List<OcrHistoryEntry> _filteredOcrEntries = new();
     private int _ocrRenderCount;
-    private DateTime? _ocrLastRenderedDate;
+
     private string _colorSearchQuery = "";
     private List<ColorHistoryEntry> _filteredColorEntries = new();
     private int _colorRenderCount;
@@ -82,7 +82,7 @@ public partial class HistoryWindow
 
         _filteredOcrEntries = entries;
         _ocrRenderCount = Math.Min(HistoryInitialPageSize, _filteredOcrEntries.Count);
-        _ocrLastRenderedDate = null;
+
         AppendOcrHistoryEntries(_filteredOcrEntries, 0, _ocrRenderCount);
         UpdateHistoryActionButtons();
         sw.Stop();
