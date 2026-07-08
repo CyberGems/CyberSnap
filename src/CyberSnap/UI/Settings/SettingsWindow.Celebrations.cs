@@ -176,6 +176,7 @@ public partial class SettingsWindow
         }
 
         // Grabber: a bright core with a cyan halo, parked at the fractional progress position.
+        // The tooltip shows the current capture count so hovering it gives instant feedback.
         _railGrabberFrac = ComputeGrabberFrac(railValues, count);
         _railGrabber = new Border
         {
@@ -185,9 +186,15 @@ public partial class SettingsWindow
             Background = new SolidColorBrush(MediaColor.FromRgb(0xEA, 0xFD, 0xFF)),
             BorderBrush = new SolidColorBrush(RailCyan),
             BorderThickness = new Thickness(1.5),
+            ToolTip = string.Format(LocalizationService.Translate("{0} captures"), count.ToString("N0")),
             Effect = new DropShadowEffect { Color = RailCyan, BlurRadius = isNew ? 14 : 9, ShadowDepth = 0, Opacity = 0.9 }
         };
         _railCanvas.Children.Add(_railGrabber);
+
+        // Persistent breathing glow on the grabber — always on, not just during the new-milestone
+        // flourish. Mirrors the animation that was present when the rail lived in Notifications.
+        if (!Motion.Disabled)
+            StartGrabberIdleAnimation();
 
         if (!_railSizeHooked)
         {
@@ -272,9 +279,36 @@ public partial class SettingsWindow
         }
     }
 
+    // Persistent breathing glow on the grabber. Runs at all times so the rail feels alive
+    // (this was present when the rail lived in the Notifications tab). The new-milestone
+    // flourish in PlayRailNewState ramps up the same effect temporarily.
+    private void StartGrabberIdleAnimation()
+    {
+        if (_railGrabber?.Effect is not DropShadowEffect glow) return;
+
+        glow.BeginAnimation(DropShadowEffect.BlurRadiusProperty, new DoubleAnimation
+        {
+            From = 7,
+            To = 16,
+            Duration = Motion.Sec(1.1),
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+        });
+        glow.BeginAnimation(DropShadowEffect.OpacityProperty, new DoubleAnimation
+        {
+            From = 0.55,
+            To = 0.95,
+            Duration = Motion.Sec(1.1),
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+        });
+    }
+
     // The one-shot "new milestone" flourish, mirroring ApplyCelebrationVisual: a flowing
-    // cyan->purple->magenta sweep on the progress fill + a breathing glow on the grabber + a pulse
-    // on the freshly lit node.
+    // cyan->purple->magenta sweep on the progress fill + an intensified glow on the grabber
+    // + a pulse on the freshly lit node.
     private void PlayRailNewState()
     {
         if (_railFillLine is null || _railGrabber is null) return;
@@ -306,20 +340,20 @@ public partial class SettingsWindow
             RepeatBehavior = RepeatBehavior.Forever
         });
 
-        // Breathing glow on the grabber.
+        // Intensified breathing glow on the grabber (overrides the idle animation temporarily).
         if (_railGrabber.Effect is DropShadowEffect glow)
         {
             glow.BeginAnimation(DropShadowEffect.BlurRadiusProperty, new DoubleAnimation
             {
-                From = 10,
-                To = 26,
+                From = 12,
+                To = 28,
                 Duration = Motion.Sec(0.8),
                 AutoReverse = true,
                 RepeatBehavior = RepeatBehavior.Forever
             });
             glow.BeginAnimation(DropShadowEffect.OpacityProperty, new DoubleAnimation
             {
-                From = 0.6,
+                From = 0.7,
                 To = 1.0,
                 Duration = Motion.Sec(0.8),
                 AutoReverse = true,
