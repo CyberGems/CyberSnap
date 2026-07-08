@@ -627,7 +627,8 @@
 
                     <!-- Images history -->
                     <ScrollViewer x:Name="ImagesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,14,4"
-                                  ScrollChanged="HistoryPanel_ScrollChanged">
+                                  ScrollChanged="HistoryPanel_ScrollChanged"
+                                  Focusable="False" FocusVisualStyle="{x:Null}">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
                         </ScrollViewer.Resources>
@@ -637,7 +638,8 @@
                     <!-- Videos / GIF history -->
                     <ScrollViewer x:Name="GifsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10,2,12,4"
                                   ScrollChanged="GifPanel_ScrollChanged"
-                                  Visibility="Collapsed">
+                                  Visibility="Collapsed"
+                                  Focusable="False" FocusVisualStyle="{x:Null}">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
                         </ScrollViewer.Resources>
@@ -647,7 +649,8 @@
                     <!-- Text history -->
                     <ScrollViewer x:Name="TextPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   Padding="10,2,14,14" Visibility="Collapsed"
-                                  ScrollChanged="OcrPanel_ScrollChanged">
+                                  ScrollChanged="OcrPanel_ScrollChanged"
+                                  Focusable="False" FocusVisualStyle="{x:Null}">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
                         </ScrollViewer.Resources>
@@ -657,7 +660,8 @@
                     <!-- Color history -->
                     <ScrollViewer x:Name="ColorsPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   Padding="10,2,14,14" Visibility="Collapsed"
-                                  ScrollChanged="ColorsPanel_ScrollChanged">
+                                  ScrollChanged="ColorsPanel_ScrollChanged"
+                                  Focusable="False" FocusVisualStyle="{x:Null}">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
                         </ScrollViewer.Resources>
@@ -667,7 +671,8 @@
                     <!-- Code/QR history -->
                     <ScrollViewer x:Name="CodesPanel" Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   Padding="10,2,14,14" Visibility="Collapsed"
-                                  ScrollChanged="CodesPanel_ScrollChanged">
+                                  ScrollChanged="CodesPanel_ScrollChanged"
+                                  Focusable="False" FocusVisualStyle="{x:Null}">
                         <ScrollViewer.Resources>
                             <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource HistoryScrollBarStyle}"/>
                         </ScrollViewer.Resources>
