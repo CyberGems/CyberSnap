@@ -235,6 +235,9 @@ public sealed class StandaloneScanForm : Form
                 // Save to history
                 HistoryService.QuickSaveCode(decoded.Text, decoded.Format.ToString());
 
+                // Count toward milestones and streak.
+                App.NotifyStandaloneCapture(isScan: true);
+
                 _ = System.Windows.Application.Current.Dispatcher.BeginInvoke(() =>
                 {
                     try

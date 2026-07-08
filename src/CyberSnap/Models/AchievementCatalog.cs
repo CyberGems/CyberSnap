@@ -40,6 +40,8 @@ public static class AchievementCatalog
         }
 
         // Day streaks — one medal per streak milestone; unlocked off the best streak ever.
+        // Progress toward the next streak milestone reflects the current active streak so
+        // the bar advances in real time as the user builds their streak today.
         var streaks = CelebrationMilestones.StreakDays;
         for (int i = 0; i < streaks.Length; i++)
         {
@@ -53,7 +55,11 @@ public static class AchievementCatalog
                 Glyph = GlyphStar,
                 Tier = Math.Min(4, i / 2),
                 Unlocked = s.LongestStreak >= d,
-                Progress = (Math.Min(s.LongestStreak, d), d)
+                // Unlocked medals use LongestStreak (historical record); locked ones show
+                // CurrentStreak so the bar moves as the user builds today's streak.
+                Progress = s.LongestStreak >= d
+                    ? (d, d)
+                    : (Math.Min(s.CurrentStreak, d), d)
             });
         }
 
