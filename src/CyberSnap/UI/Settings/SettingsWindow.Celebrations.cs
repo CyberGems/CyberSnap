@@ -187,8 +187,12 @@ public partial class SettingsWindow
             BorderBrush = new SolidColorBrush(RailCyan),
             BorderThickness = new Thickness(1.5),
             ToolTip = string.Format(LocalizationService.Translate("{0} captures"), count.ToString("N0")),
-            Effect = new DropShadowEffect { Color = RailCyan, BlurRadius = isNew ? 14 : 9, ShadowDepth = 0, Opacity = 0.9 }
+            RenderTransformOrigin = new System.Windows.Point(0.5, 0.5),
+            RenderTransform = new ScaleTransform(1, 1),
+            Effect = new DropShadowEffect { Color = RailCyan, BlurRadius = isNew ? 18 : 9, ShadowDepth = 0, Opacity = 0.9 }
         };
+        // Tooltip appears almost immediately instead of the default 400 ms delay.
+        ToolTipService.SetInitialShowDelay(_railGrabber, 120);
         _railCanvas.Children.Add(_railGrabber);
 
         // Persistent breathing glow on the grabber — always on, not just during the new-milestone
@@ -286,24 +290,41 @@ public partial class SettingsWindow
     {
         if (_railGrabber?.Effect is not DropShadowEffect glow) return;
 
+        // Glow pulse — more pronounced range so it reads clearly against the dark background.
         glow.BeginAnimation(DropShadowEffect.BlurRadiusProperty, new DoubleAnimation
         {
-            From = 7,
-            To = 16,
-            Duration = Motion.Sec(1.1),
+            From = 6,
+            To = 22,
+            Duration = Motion.Sec(0.95),
             AutoReverse = true,
             RepeatBehavior = RepeatBehavior.Forever,
             EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
         });
         glow.BeginAnimation(DropShadowEffect.OpacityProperty, new DoubleAnimation
         {
-            From = 0.55,
-            To = 0.95,
-            Duration = Motion.Sec(1.1),
+            From = 0.45,
+            To = 1.0,
+            Duration = Motion.Sec(0.95),
             AutoReverse = true,
             RepeatBehavior = RepeatBehavior.Forever,
             EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
         });
+
+        // Scale pulse on the grabber body — grows slightly in sync with the glow.
+        if (_railGrabber.RenderTransform is ScaleTransform scale)
+        {
+            var scaleAnim = new DoubleAnimation
+            {
+                From = 1.0,
+                To = 1.35,
+                Duration = Motion.Sec(0.95),
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            };
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, scaleAnim);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleAnim);
+        }
     }
 
     // The one-shot "new milestone" flourish, mirroring ApplyCelebrationVisual: a flowing
