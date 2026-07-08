@@ -124,196 +124,76 @@ public partial class HistoryWindow
 
     private Border CreateCodeHistoryCard(CodeHistoryEntry entry)
     {
-        var card = new Border
-        {
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12),
-            Margin = new Thickness(0, 0, 0, 6),
-            Background = HistoryCardIdleBrush,
-            BorderBrush = Brushes.Transparent,
-            BorderThickness = new Thickness(1),
-            Cursor = System.Windows.Input.Cursors.Hand,
-            Focusable = true,
-            ToolTip = LocalizationService.Translate("Copy this QR & Barcode text"),
-            DataContext = entry
-        };
+        var text = entry.Text ?? "";
+        var format = entry.Format ?? "";
+        var card = CreateBaseUnifiedCard($"{HumanizeBarcodeFormat(format)} history item", "Copy this QR & Barcode text");
+        card.DataContext = entry;
+        card.Tag = null;
 
-        card.MouseEnter += (_, _) =>
-        {
-            card.Background = HistoryCardHoverBrush;
-            card.BorderBrush = HistoryCardFocusBrush;
-        };
-        card.MouseLeave += (_, _) =>
-        {
-            if (!card.IsKeyboardFocusWithin)
-            {
-                card.Background = HistoryCardIdleBrush;
-                card.BorderBrush = Brushes.Transparent;
-            }
-        };
-        card.GotKeyboardFocus += (_, _) =>
-        {
-            card.Background = HistoryCardHoverBrush;
-            card.BorderBrush = HistoryCardFocusBrush;
-        };
-        card.LostKeyboardFocus += (_, _) =>
-        {
-            if (card.IsMouseOver)
-                return;
-
-            card.Background = HistoryCardIdleBrush;
-            card.BorderBrush = Brushes.Transparent;
-        };
-
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var isQr = string.Equals(entry.Format, BarcodeFormat.QR_CODE.ToString(), StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(entry.Format, BarcodeFormat.AZTEC.ToString(), StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(entry.Format, BarcodeFormat.DATA_MATRIX.ToString(), StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(entry.Format, BarcodeFormat.PDF_417.ToString(), StringComparison.OrdinalIgnoreCase);
-
-        var preview = new System.Windows.Controls.Image
-        {
-            Width = isQr ? 56 : 88,
-            Height = 56,
-            Stretch = Stretch.Uniform,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 12, 0),
-            SnapsToDevicePixels = true,
-            UseLayoutRounding = true
-        };
-        RenderOptions.SetBitmapScalingMode(preview, BitmapScalingMode.HighQuality);
-        preview.Source = GetOrCreateCodePreview(entry);
-        Grid.SetColumn(preview, 0);
-        grid.Children.Add(preview);
-
-        var infoStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-
-        var formatLabel = HumanizeBarcodeFormat(entry.Format);
-        var isUrl = TryNormalizeUrl(entry.Text, out var url);
-        AutomationProperties.SetName(card, $"{formatLabel} history item");
-        AutomationProperties.SetHelpText(card, "Press Enter or Space to copy this QR & Barcode text. In select mode, press Enter or Space to select it.");
-        preview.ToolTip = $"{formatLabel} preview";
-        AutomationProperties.SetName(preview, $"{formatLabel} preview");
-        AutomationProperties.SetHelpText(preview, $"Preview image for this {formatLabel} history item.");
-
-        var primary = new TextBlock
-        {
-            Text = entry.Text,
-            FontSize = 12,
-            LineHeight = 16,
-            TextWrapping = TextWrapping.Wrap,
-            MaxHeight = 36,
-            ClipToBounds = true,
-            Foreground = Theme.Brush(Theme.TextPrimary),
-            Opacity = 0.92
-        };
-        primary.ToolTip = entry.Text;
-        AutomationProperties.SetName(primary, $"{formatLabel} text");
-        AutomationProperties.SetHelpText(primary, entry.Text);
-        infoStack.Children.Add(primary);
-
-        var metadataText = $"{formatLabel} · {FormatTimeAgo(entry.CapturedAt)}";
-        var metadata = new TextBlock
-        {
-            Text = metadataText,
-            FontSize = 10,
-            Opacity = 0.35,
-            Margin = new Thickness(0, 4, 0, 0),
-            ToolTip = metadataText
-        };
-        AutomationProperties.SetName(metadata, "Code metadata");
-        AutomationProperties.SetHelpText(metadata, metadataText);
-        infoStack.Children.Add(metadata);
-
-        Grid.SetColumn(infoStack, 1);
-        grid.Children.Add(infoStack);
-
-        var btnPanel = new StackPanel
-        {
-            Orientation = System.Windows.Controls.Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(btnPanel, 2);
-
-        if (isUrl && !string.IsNullOrEmpty(url))
-        {
-            var openBtn = new Button
-            {
-                Content = "Open",
-                FontSize = 10,
-                Padding = new Thickness(8, 3, 8, 3),
-                Margin = new Thickness(0, 0, 6, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = LocalizationService.Translate("Open this code URL")
-            };
-            AutomationProperties.SetName(openBtn, "Open code URL");
-            AutomationProperties.SetHelpText(openBtn, "Open this QR & Barcode URL in your default browser.");
-            openBtn.Click += (_, _) => TryOpenExternalUrl(url);
-            btnPanel.Children.Add(openBtn);
-        }
-
-        var copyBtn = new Button
-        {
-            Content = LocalizationService.Translate("Copy"),
-            FontSize = 10,
-            Padding = new Thickness(8, 3, 8, 3),
-            VerticalAlignment = VerticalAlignment.Center,
-            Cursor = System.Windows.Input.Cursors.Hand,
-            ToolTip = LocalizationService.Translate("Copy this QR & Barcode text")
-        };
-        AutomationProperties.SetName(copyBtn, "Copy code text");
-        AutomationProperties.SetHelpText(copyBtn, "Copy this QR & Barcode text to the clipboard.");
-        var capturedText = entry.Text;
-        copyBtn.Click += (_, _) => CopyCodeText();
-        btnPanel.Children.Add(copyBtn);
-        grid.Children.Add(btnPanel);
-
-        var badge = CreateSelectionBadge(false);
         var root = new Grid();
-        root.Children.Add(grid);
-        root.Children.Add(badge);
+        var imageRow = new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) };
+        root.RowDefinitions.Add(imageRow);
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var previewArea = new Grid { Background = Brushes.White, MaxWidth = HistoryCardPreferredWidth };
+        var selBadge = CreateSelectionBadge(false);
+        previewArea.Children.Add(selBadge);
+        
+        var previewSrc = GetOrCreateCodePreview(entry);
+
+        var img = new System.Windows.Controls.Image { Stretch = Stretch.Uniform, Margin = new Thickness(16), Source = previewSrc };
+        RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+        previewArea.Children.Add(img);  // add image BEFORE AttachCardMenu so button is on top
+        AttachCardMenu(card, root, () => { ClipboardService.CopyTextToClipboard(text); ToastWindow.Show("Copied", "Text copied"); }, () => DeleteCodeEntryFromCodesTab(entry), System.Windows.Media.Color.FromRgb(176, 136, 240));
+        Grid.SetRow(previewArea, 0);
+        root.Children.Add(previewArea);
+
+        var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
+        // Single line: "Code  QR Code" (type + format)
+        info.Children.Add(new TextBlock
+        {
+            Text = $"Code  {HumanizeBarcodeFormat(format)}",
+            FontSize = 11,
+            FontWeight = FontWeights.Bold,
+            FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        info.Children.Add(CreateBadgeTimeText("QR", System.Windows.Media.Color.FromRgb(176, 136, 240), FormatTimeAgo(entry.CapturedAt)));
+
+        var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
+        infoBorder.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
+        infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
+        Grid.SetRow(infoBorder, 1);
+        root.Children.Add(infoBorder);
+        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(176, 136, 240));
+
+        var capturedText = text;
         card.Child = root;
-
-        void ToggleSelection()
+        SetupUnifiedCardHoverAndClip(card, root, imageRow, System.Windows.Media.Color.FromRgb(176, 136, 240));
+        var translatedCodeTooltip = LocalizationService.Translate("Copy this QR & Barcode text");
+        previewArea.ToolTip = translatedCodeTooltip;
+        previewArea.Cursor = System.Windows.Input.Cursors.Hand;
+        previewArea.MouseLeftButtonDown += (_, e) =>
         {
-            var selected = card.Tag is CodeHistoryEntry;
-            selected = !selected;
-            card.Tag = selected ? entry : null;
-            UpdateSelectableCardSelection(card, badge, selected);
-            UpdateHistoryActionButtons();
-        }
-
-        void CopyCodeText()
-        {
-            try
-            {
-                ClipboardService.CopyTextToClipboard(capturedText);
-                ToastWindow.Show("Copied", "Text copied");
-            }
-            catch (Exception ex)
-            {
-                ToastWindow.ShowError(
-                    "Copy failed",
-                    $"CyberSnap could not copy this QR & Barcode history item. Try again from Config -> History, or copy the visible decoded value manually.\n{ex.Message}");
-            }
-        }
-
-        card.MouseLeftButtonDown += (_, e) =>
-        {
+            if (e.OriginalSource is System.Windows.Controls.Button) return;
             e.Handled = true;
             if (_selectMode)
             {
                 ToggleSelection();
                 return;
             }
-
-            CopyCodeText();
+            ClipboardService.CopyTextToClipboard(capturedText);
+            ToastWindow.Show("Copied", "Text copied");
         };
+
+        void ToggleSelection()
+        {
+            var selected = card.Tag is CodeHistoryEntry;
+            selected = !selected;
+            card.Tag = selected ? entry : null;
+            UpdateSelectableCardSelection(card, selBadge, selected);
+            UpdateHistoryActionButtons();
+        }
 
         card.KeyDown += (_, e) =>
         {
@@ -322,13 +202,24 @@ public partial class HistoryWindow
 
             e.Handled = true;
             if (_selectMode)
+            {
                 ToggleSelection();
+            }
             else
-                CopyCodeText();
+            {
+                ClipboardService.CopyTextToClipboard(capturedText);
+                ToastWindow.Show("Copied", "Text copied");
+            }
         };
 
-        UpdateSelectableCardSelection(card, badge, selected: false);
+        UpdateSelectableCardSelection(card, selBadge, selected: false);
         return card;
+    }
+
+    private void DeleteCodeEntryFromCodesTab(CodeHistoryEntry entry)
+    {
+        _historyService.DeleteCodeEntry(entry);
+        LoadCodeHistory();
     }
 
     private BitmapSource GetOrCreateCodePreview(CodeHistoryEntry entry)
