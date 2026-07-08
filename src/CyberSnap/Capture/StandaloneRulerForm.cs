@@ -542,4 +542,11 @@ public sealed class StandaloneRulerForm : Form
         _closed = true;
         base.OnFormClosed(e);
     }
+
+    protected override void OnVisibleChanged(EventArgs e)
+    {
+        base.OnVisibleChanged(e);
+        if (Visible)
+            App.NotifyFirstTimeTool("ruler");
+    }
 }

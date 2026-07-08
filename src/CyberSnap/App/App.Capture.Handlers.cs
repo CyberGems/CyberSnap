@@ -310,7 +310,7 @@ public partial class App
     // successful capture so they participate in CelebrationCaptureCount, streak tracking
     // and first-time achievement flags, exactly like overlay captures do.
     // Safe to call from any thread; dispatches to the WPF thread internally.
-    public static void NotifyStandaloneCapture(bool isOcr = false, bool isScan = false)
+    public static void NotifyStandaloneCapture(bool isOcr = false, bool isScan = false, bool isEditor = false)
     {
         if (System.Windows.Application.Current is not App app)
             return;
@@ -326,6 +326,33 @@ public partial class App
             // First-time achievement flags.
             if (isOcr)
                 app.MarkFirstTime(settings.HasFirstOcr, () => settings.HasFirstOcr = true);
+            if (isScan)
+                app.MarkFirstTime(settings.HasFirstScan, () => settings.HasFirstScan = true);
+            if (isEditor)
+                app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true);
+        });
+    }
+
+    // Called from any thread to mark a first-time tool use without a capture count.
+    // action identifies which flag to flip: "ruler", "editor".
+    public static void NotifyFirstTimeTool(string action)
+    {
+        if (System.Windows.Application.Current is not App app)
+            return;
+
+        app.Dispatcher.BeginInvoke(() =>
+        {
+            var settings = app._settingsService?.Settings;
+            if (settings is null) return;
+            switch (action)
+            {
+                case "ruler":
+                    app.MarkFirstTime(settings.HasFirstRuler, () => settings.HasFirstRuler = true);
+                    break;
+                case "editor":
+                    app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true);
+                    break;
+            }
         });
     }
 

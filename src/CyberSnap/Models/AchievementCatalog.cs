@@ -11,10 +11,15 @@ public static class AchievementCatalog
 {
     // Glyphs (Segoe Fluent Icons) used on the medal tiles, built from code points so the source
     // stays free of literal private-use characters. These match glyphs used elsewhere in the app.
-    private static readonly string GlyphStar = ((char)0xE735).ToString();    // FavoriteStarFill
-    private static readonly string GlyphCapture = ((char)0xE722).ToString(); // camera (present in both Fluent + MDL2)
-    private static readonly string GlyphOcr = ((char)0xE8C8).ToString();     // OCR
-    private static readonly string GlyphVideo = ((char)0xE768).ToString();   // video
+    private static readonly string GlyphStar     = ((char)0xE735).ToString();    // FavoriteStarFill
+    private static readonly string GlyphCapture  = ((char)0xE722).ToString();    // camera (present in both Fluent + MDL2)
+    private static readonly string GlyphOcr      = ((char)0xE8C8).ToString();    // OCR / text recognition
+    private static readonly string GlyphVideo    = ((char)0xE768).ToString();    // video / record
+    private static readonly string GlyphScroll   = ((char)0xE7F0).ToString();    // scroll capture (ToolGlyphs.ScrollCaptureGlyph)
+    private static readonly string GlyphPicker   = ((char)0xEF3C).ToString();    // color eyedropper (Fluent "Eyedropper")
+    private static readonly string GlyphScan     = ((char)0xE702).ToString();    // QR/barcode (Fluent "QRCode")
+    private static readonly string GlyphRuler    = ((char)0xE8CA).ToString();    // ruler (Fluent "Ruler")
+    private static readonly string GlyphEditor   = ((char)0xE70F).ToString();    // edit/pencil (Fluent "Edit")
 
     public static IReadOnlyList<Achievement> Build(AppSettings s, Func<string, string> t)
     {
@@ -63,11 +68,15 @@ public static class AchievementCatalog
             });
         }
 
-        // First-time feature unlocks.
-        list.Add(FirstTime("first-capture", t("First capture"), t("Take your first capture"), GlyphCapture, count > 0));
-        list.Add(FirstTime("first-ocr", t("First OCR"), t("Extract text from a capture"), GlyphOcr, s.HasFirstOcr));
-        list.Add(FirstTime("first-recording", t("First recording"), t("Record a video or GIF"), GlyphVideo, s.HasFirstRecording));
-        list.Add(FirstTime("first-scroll", t("First scrolling capture"), t("Capture a scrolling page"), GlyphCapture, s.HasFirstScrollingCapture));
+        // First-time feature unlocks — one medal per tool/action, using each tool's own icon.
+        list.Add(FirstTime("first-capture",   t("First capture"),           t("Take your first capture"),          GlyphCapture, count > 0));
+        list.Add(FirstTime("first-ocr",       t("First OCR"),               t("Extract text from a capture"),      GlyphOcr,     s.HasFirstOcr));
+        list.Add(FirstTime("first-recording", t("First recording"),         t("Record a video or GIF"),            GlyphVideo,   s.HasFirstRecording));
+        list.Add(FirstTime("first-scroll",    t("First scrolling capture"), t("Capture a scrolling page"),         GlyphScroll,  s.HasFirstScrollingCapture));
+        list.Add(FirstTime("first-color",     t("First color pick"),        t("Pick a color from the screen"),     GlyphPicker,  s.HasFirstColorPicker));
+        list.Add(FirstTime("first-scan",      t("First scan"),              t("Scan a QR code or barcode"),        GlyphScan,    s.HasFirstScan));
+        list.Add(FirstTime("first-ruler",     t("First ruler"),             t("Measure something on screen"),      GlyphRuler,   s.HasFirstRuler));
+        list.Add(FirstTime("first-editor",    t("First editor"),            t("Open a capture in the editor"),     GlyphEditor,  s.HasFirstEditor));
 
         return list;
     }
