@@ -499,7 +499,7 @@ public partial class HistoryWindow
             ? System.Windows.Media.Color.FromRgb(r, g, b)
             : System.Windows.Media.Color.FromArgb(0, 0, 0, 0);
 
-        var badgeColor = System.Windows.Media.Color.FromRgb(90, 210, 120);
+        var badgeColor = System.Windows.Media.Color.FromRgb(160, 225, 40);
         var normalBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, badgeColor.R, badgeColor.G, badgeColor.B));
         var hoverBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(230, badgeColor.R, badgeColor.G, badgeColor.B));
         normalBorderBrush.Freeze();
@@ -569,7 +569,7 @@ public partial class HistoryWindow
             Foreground = Theme.Brush(Theme.TextSecondary)
         });
         info.Children.Add(colorLabelBlock);
-        info.Children.Add(CreateBadgeTimeText("CLR", System.Windows.Media.Color.FromRgb(90, 210, 120), FormatTimeAgo(entry.CapturedAt)));
+        info.Children.Add(CreateBadgeTimeText("CLR", System.Windows.Media.Color.FromRgb(160, 225, 40), FormatTimeAgo(entry.CapturedAt)));
 
         var infoBorder = new Border
         {
@@ -584,11 +584,11 @@ public partial class HistoryWindow
         root.Children.Add(infoBorder);
 
         // ── Category tint ──
-        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(90, 210, 120));
+        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(160, 225, 40));
 
         // ── Context menu + chevron ──
         var capturedHex = entry.Hex;
-        AttachCardMenu(card, root, () => CopyColorToClipboard(capturedHex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(90, 210, 120));
+        AttachCardMenu(card, root, () => CopyColorToClipboard(capturedHex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(160, 225, 40));
 
         card.Child = root;
 
