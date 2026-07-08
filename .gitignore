@@ -36,6 +36,8 @@ nul
 
 ## Publish
 publish/
+publish-win64/
+CyberSnap-Setup-*.exe
 
 ## Temp icon build artifacts
 src/CyberSnap/CyberSnap_*.png

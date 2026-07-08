@@ -12,7 +12,7 @@
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
-        Icon="pack://application:,,,/CyberSnap.ico">
+        Icon="pack://application:,,,/Assets/Icons/Gallery.ico">
 
     <Window.Resources>
         <Style TargetType="CheckBox">

@@ -40,6 +40,16 @@
     <Page Include="App.xaml" />
     <Resource Include="CyberSnap.ico" />
     <Resource Include="Assets\CyberSnap_square.png" />
+    <Resource Include="Assets\Icons\Configuration.ico" />
+    <Resource Include="Assets\Icons\CyberSnap.ico" />
+    <Resource Include="Assets\Icons\Editor.ico" />
+    <Resource Include="Assets\Icons\Gallery.ico" />
+    <Resource Include="Assets\Icons\OCR.ico" />
+    <Resource Include="Assets\Icons\Trimmer.ico" />
+    <Content Include="Assets\Icons\*.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

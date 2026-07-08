@@ -23,7 +23,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
+Name: "editordesktopicon"; Description: "Create a desktop icon for CyberSnap Annotations Editor"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "startup"; Description: "Run CyberSnap when Windows starts"; GroupDescription: "Options:"
 
 [Files]
@@ -31,9 +32,9 @@ Source: ".\publish-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdi
 
 [Icons]
 Name: "{group}\CyberSnap"; Filename: "{app}\CyberSnap.exe"
-Name: "{group}\CyberSnap Annotations Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"
+Name: "{group}\CyberSnap Annotations Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; IconFilename: "{app}\Assets\Icons\Editor.ico"
 Name: "{autodesktop}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: desktopicon
-Name: "{autodesktop}\CyberSnap Annotations Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; Tasks: desktopicon
+Name: "{autodesktop}\CyberSnap Annotations Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; Tasks: editordesktopicon; IconFilename: "{app}\Assets\Icons\Editor.ico"
 Name: "{userstartup}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: startup
 
 [Registry]

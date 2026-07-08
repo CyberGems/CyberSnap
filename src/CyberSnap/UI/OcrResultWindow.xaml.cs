@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using CyberSnap.Helpers;
 using CyberSnap.Services;
 using ComboBox = System.Windows.Controls.ComboBox;
 using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
@@ -67,6 +68,8 @@ public partial class OcrResultWindow : Window
         SetTranslationPanelExpanded(settingsService.Settings.OcrTranslationPanelExpanded, animate: false);
         SetPinned(settingsService.Settings.OcrResultWindowPinnedByDefault);
         LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
+        var lang = settingsService.Settings.InterfaceLanguage;
+        WindowTitles.ApplyTaskbar(this, WindowTitles.Ocr, lang);
         OcrTitleBar.Title = LocalizationService.Translate("Text extraction (OCR)");
         OcrTitleBar.MinimizeBtn.Visibility = Visibility.Collapsed;
 
@@ -125,7 +128,7 @@ public partial class OcrResultWindow : Window
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         Resources["TranslationTintBrush"] = Theme.Brush(Theme.AccentSubtle);
         Resources["TranslationTintBorderBrush"] = Theme.Brush(Theme.AccentHover);
-        Icon = ThemedLogo.Square(32);
+        Icon = WindowIcons.Wpf(WindowIconKind.Ocr);
     }
 
     private void ApplyMicaBackdrop()

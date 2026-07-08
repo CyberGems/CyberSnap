@@ -1,3 +1,4 @@
+using CyberSnap.Helpers;
 using CyberSnap.Services;
 
 namespace CyberSnap.UI.Editor;
@@ -18,7 +19,7 @@ public sealed partial class EditorForm
         var lang = SettingsService.LoadStatic()?.InterfaceLanguage ?? "en";
         LocalizationService.ApplyCurrentCulture(lang);
 
-        Text = LocalizationService.Translate("Editor");
+        Text = WindowTitles.Taskbar(WindowTitles.Editor, lang);
 
         foreach (var (tool, keys) in _toolButtonLabels)
         {

@@ -11,7 +11,7 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Topmost="True"
-        Icon="pack://application:,,,/CyberSnap.ico"
+        Icon="pack://application:,,,/Assets/Icons/OCR.ico"
         PreviewKeyDown="Window_PreviewKeyDown"
         Deactivated="Window_Deactivated">
 

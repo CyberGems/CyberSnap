@@ -1,3 +1,4 @@
+using CyberSnap.Helpers;
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
@@ -34,13 +35,14 @@ public static class UninstallService
             shortcut.Description = "CyberSnap screenshot tool";
             shortcut.Save();
 
-            // Editor shortcut (using same icon)
+            // Editor shortcut
             var editorShortcutPath = Path.Combine(programsDir, "CyberSnap Annotations Editor.lnk");
             dynamic editorShortcut = shell.CreateShortcut(editorShortcutPath);
             editorShortcut.TargetPath = exe;
             editorShortcut.Arguments = "--editor";
             editorShortcut.WorkingDirectory = Path.GetDirectoryName(exe) ?? string.Empty;
-            editorShortcut.IconLocation = exe + ",0";
+            var editorIconPath = WindowIcons.FilePath(WindowIconKind.Editor);
+            editorShortcut.IconLocation = File.Exists(editorIconPath) ? editorIconPath : exe + ",0";
             editorShortcut.Description = "CyberSnap annotations editor";
             editorShortcut.Save();
         }
