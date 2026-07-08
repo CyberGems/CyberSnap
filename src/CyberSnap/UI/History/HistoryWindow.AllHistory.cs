@@ -368,8 +368,7 @@ public partial class HistoryWindow
 
         shell.InfoPanel.Children.Add(CreateBadgeTimeText(badgeLabel, badgeColor, vm.TimeAgo));
 
-        AddCategoryTint(shell.Root, badgeColor);
-
+        AddCategoryTint(shell.Root, badgeColor, alphaOverride: entry.Kind == HistoryKind.Image ? (byte)0 : null);
         return shell.Card;
     }
 
