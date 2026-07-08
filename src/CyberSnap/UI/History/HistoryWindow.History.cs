@@ -678,7 +678,7 @@ public partial class HistoryWindow
         shell.InfoPanel.Children.Add(timeStatusBlock);
 
         RefreshHistoryCardTextMetadata(vm);
-        AddCategoryTint(shell.Root, System.Windows.Media.Color.FromRgb(100, 180, 255));
+        AddCategoryTint(shell.Root, System.Windows.Media.Color.FromRgb(100, 180, 255), alphaOverride: 0);
         return shell.Card;
     }
 
