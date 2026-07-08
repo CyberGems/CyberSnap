@@ -364,8 +364,9 @@ public sealed partial class HistoryService : IDisposable
         lock (_gate)
         {
             _ocrEntries.Insert(0, new OcrHistoryEntry { Text = text, CapturedAt = DateTime.Now });
-            if (_ocrEntries.Count > 200)
-                _ocrEntries.RemoveRange(200, _ocrEntries.Count - 200);
+            int maxCount = HistoryCountLimit > 0 ? HistoryCountLimit : 2000;
+            if (_ocrEntries.Count > maxCount)
+                _ocrEntries.RemoveRange(maxCount, _ocrEntries.Count - maxCount);
             SaveOcrIndex();
         }
         NotifyChanged();
@@ -519,8 +520,9 @@ public sealed partial class HistoryService : IDisposable
         lock (_gate)
         {
             _colorEntries.Insert(0, new ColorHistoryEntry { Hex = hex, CapturedAt = DateTime.Now });
-            if (_colorEntries.Count > 200)
-                _colorEntries.RemoveRange(200, _colorEntries.Count - 200);
+            int maxCount = HistoryCountLimit > 0 ? HistoryCountLimit : 2000;
+            if (_colorEntries.Count > maxCount)
+                _colorEntries.RemoveRange(maxCount, _colorEntries.Count - maxCount);
             SaveColorIndex();
         }
         NotifyChanged();
@@ -563,8 +565,9 @@ public sealed partial class HistoryService : IDisposable
                 string.Equals(e.Format, normalizedFormat, StringComparison.OrdinalIgnoreCase));
 
             _codeEntries.Insert(0, new CodeHistoryEntry { Text = text, Format = normalizedFormat, CapturedAt = DateTime.Now });
-            if (_codeEntries.Count > 200)
-                _codeEntries.RemoveRange(200, _codeEntries.Count - 200);
+            int maxCount = HistoryCountLimit > 0 ? HistoryCountLimit : 2000;
+            if (_codeEntries.Count > maxCount)
+                _codeEntries.RemoveRange(maxCount, _codeEntries.Count - maxCount);
             SaveCodeIndex();
         }
         NotifyChanged();
