@@ -9,17 +9,17 @@ namespace CyberSnap.Models;
 // just one more entry here — the UI renders whatever this returns.
 public static class AchievementCatalog
 {
-    // Glyphs (Segoe Fluent Icons) used on the medal tiles, built from code points so the source
-    // stays free of literal private-use characters. These match glyphs used elsewhere in the app.
-    private static readonly string GlyphStar     = ((char)0xE735).ToString();    // FavoriteStarFill
-    private static readonly string GlyphCapture  = ((char)0xE722).ToString();    // camera (present in both Fluent + MDL2)
-    private static readonly string GlyphOcr      = ((char)0xE8C8).ToString();    // OCR / text recognition
-    private static readonly string GlyphVideo    = ((char)0xE768).ToString();    // video / record
-    private static readonly string GlyphScroll   = ((char)0xE7F0).ToString();    // scroll capture (ToolGlyphs.ScrollCaptureGlyph)
-    private static readonly string GlyphPicker   = ((char)0xEF3C).ToString();    // color eyedropper (Fluent "Eyedropper")
-    private static readonly string GlyphScan     = ((char)0xE702).ToString();    // QR/barcode (Fluent "QRCode")
-    private static readonly string GlyphRuler    = ((char)0xE8CA).ToString();    // ruler (Fluent "Ruler")
-    private static readonly string GlyphEditor   = ((char)0xE70F).ToString();    // edit/pencil (Fluent "Edit")
+    // Glyphs from Segoe MDL2 Assets matching the exact code points used in ToolDef.AllTools,
+    // so each medal shows the same icon as the corresponding toolbar button.
+    private static readonly string GlyphStar     = ((char)0xE735).ToString();    // FavoriteStarFill (milestone rail)
+    private static readonly string GlyphCapture  = ((char)0xE722).ToString();    // Camera — first capture
+    private static readonly string GlyphOcr      = ((char)0xE53C).ToString();    // OCR scan-text (ToolDef "ocr")
+    private static readonly string GlyphVideo    = ((char)0xE7C8).ToString();    // Video — record (ToolDef "record")
+    private static readonly string GlyphScroll   = ((char)0xE7F0).ToString();    // Scroll capture (ToolDef "scroll" / ToolGlyphs.ScrollCaptureGlyph)
+    private static readonly string GlyphPicker   = ((char)0xE2B1).ToString();    // Eyedropper (ToolDef "picker")
+    private static readonly string GlyphScan     = ((char)0xE1DE).ToString();    // QR/barcode (ToolDef "scan")
+    private static readonly string GlyphRuler    = ((char)0xE14E).ToString();    // Ruler (ToolDef "ruler")
+    private static readonly string GlyphEditor   = ((char)0xE70F).ToString();    // Edit/pencil (Fluent "Edit")
 
     public static IReadOnlyList<Achievement> Build(AppSettings s, Func<string, string> t)
     {

@@ -80,6 +80,14 @@ public partial class SettingsWindow : Window
         Activated += (_, _) =>
         {
             ApplyThemeColors();
+            // Re-render the Achievements tab when the window regains focus so that
+            // any first-time flags set while the user was using a tool are reflected
+            // without requiring a tab switch.
+            if (AchievementsTab?.IsChecked == true)
+            {
+                RefreshAchievements();
+                RefreshMilestoneRail(reveal: true);
+            }
         };
         Closed += (_, _) =>
         {
