@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -129,7 +129,10 @@ public partial class SettingsWindow
             "OCR auto-copy",
             previous,
             selected,
-            value => _settingsService.Settings.OcrAutoCopyToClipboard = value,
+            value => {
+                _settingsService.Settings.OcrAutoCopyToClipboard = value;
+                SettingsService.SetOcrAutoCopyToClipboard(value);
+            },
             value => OcrAutoCopyCheck.IsChecked = value,
             SetOcrPreferenceStatus);
     }
@@ -456,5 +459,25 @@ public partial class SettingsWindow
         }
 
         combo.IsDropDownOpen = true;
+    }
+
+    private void OnOcrAutoCopyToClipboardChanged(bool value)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(() => OnOcrAutoCopyToClipboardChanged(value)));
+            return;
+        }
+
+        _suppressOcrPreferenceChange = true;
+        try
+        {
+            _settingsService.Settings.OcrAutoCopyToClipboard = value;
+            OcrAutoCopyCheck.IsChecked = value;
+        }
+        finally
+        {
+            _suppressOcrPreferenceChange = false;
+        }
     }
 }

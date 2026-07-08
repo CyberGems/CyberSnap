@@ -76,6 +76,7 @@ public partial class SettingsWindow : Window
         };
         LocalizationChanged += () => RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
+        SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopyToClipboardChanged;
         Activated += (_, _) =>
         {
             ApplyThemeColors();
@@ -83,6 +84,7 @@ public partial class SettingsWindow : Window
         Closed += (_, _) =>
         {
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;
+            SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopyToClipboardChanged;
             SaveWindowBounds();
         };
     }

@@ -59,6 +59,13 @@ public partial class App
 
         _settingsService = new SettingsService();
         _settingsService.Load();
+        SettingsService.OcrAutoCopyToClipboardChanged += value =>
+        {
+            if (_settingsService != null)
+            {
+                _settingsService.Settings.OcrAutoCopyToClipboard = value;
+            }
+        };
         _settingsService.SaveFailed += message =>
         {
             _ = Dispatcher.BeginInvoke(() =>

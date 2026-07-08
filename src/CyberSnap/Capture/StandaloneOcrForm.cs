@@ -100,8 +100,6 @@ public sealed class StandaloneOcrForm : Form
         {
             bool current = GetOcrAutoCopySetting();
             SetOcrAutoCopySetting(!current);
-            _autoCopyToggle.Image = !current ? FluentIcons.RenderBitmap("check",
-                UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
         };
         _contextMenu.Items.Add(_autoCopyToggle);
 
@@ -116,12 +114,15 @@ public sealed class StandaloneOcrForm : Form
         _contextMenu.Items.Add(exitItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(_contextMenu, minWidth: 260);
+
+        SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopyToClipboardChanged;
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
+            SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopyToClipboardChanged;
             WindowDetector.UnregisterIgnoredWindow(Handle);
             WindowDetector.ClearSnapshot();
             _contextMenu?.Dispose();
@@ -438,14 +439,26 @@ public sealed class StandaloneOcrForm : Form
 
     private static void SetOcrAutoCopySetting(bool value)
     {
-        try
+        SettingsService.SetOcrAutoCopyToClipboard(value);
+    }
+
+    private void OnOcrAutoCopyToClipboardChanged(bool value)
+    {
+        if (InvokeRequired)
         {
-            var svc = new SettingsService();
-            svc.Load();
-            svc.Settings.OcrAutoCopyToClipboard = value;
-            svc.Save();
+            try
+            {
+                BeginInvoke(new Action(() => OnOcrAutoCopyToClipboardChanged(value)));
+            }
+            catch (ObjectDisposedException) { }
+            return;
         }
-        catch { /* settings may be locked; silently ignore */ }
+
+        if (_autoCopyToggle != null)
+        {
+            _autoCopyToggle.Image = value ? FluentIcons.RenderBitmap("check",
+                UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
+        }
     }
 
     private static SettingsService GetSettingsService()
