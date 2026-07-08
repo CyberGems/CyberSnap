@@ -120,4 +120,41 @@ public static class Theme
 
     private static Color C(byte r, byte g, byte b) => Color.FromRgb(r, g, b);
     private static Color CA(byte r, byte g, byte b, byte a) => Color.FromArgb(a, r, g, b);
+
+    public static System.Windows.Media.Brush CreateCheckerboardBrush()
+    {
+        var c1 = IsDark ? Color.FromRgb(20, 22, 33) : Color.FromRgb(245, 246, 250);
+        var c2 = IsDark ? Color.FromRgb(28, 30, 43) : Color.FromRgb(233, 235, 243);
+
+        var brush = new DrawingBrush
+        {
+            TileMode = TileMode.Tile,
+            Viewport = new System.Windows.Rect(0, 0, 32, 32),
+            ViewportUnits = BrushMappingMode.Absolute
+        };
+
+        var geometryGroup = new GeometryGroup();
+        geometryGroup.Children.Add(new RectangleGeometry(new System.Windows.Rect(0, 0, 16, 16)));
+        geometryGroup.Children.Add(new RectangleGeometry(new System.Windows.Rect(16, 16, 16, 16)));
+
+        var geometryDrawing = new GeometryDrawing
+        {
+            Brush = new SolidColorBrush(c2),
+            Geometry = geometryGroup
+        };
+
+        var backgroundDrawing = new GeometryDrawing
+        {
+            Brush = new SolidColorBrush(c1),
+            Geometry = new RectangleGeometry(new System.Windows.Rect(0, 0, 32, 32))
+        };
+
+        var drawingGroup = new DrawingGroup();
+        drawingGroup.Children.Add(backgroundDrawing);
+        drawingGroup.Children.Add(geometryDrawing);
+
+        brush.Drawing = drawingGroup;
+        brush.Freeze();
+        return brush;
+    }
 }

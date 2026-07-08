@@ -472,10 +472,10 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(imageRow);
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
+        var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth, Background = Theme.CreateCheckerboardBrush() };
         var selBadge = CreateUnifiedSelectionBadge();
         swatchArea.Children.Add(selBadge);
-        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(255, 160, 80));
+        AttachCardMenu(card, root, () => CopyColorToClipboard(hex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(90, 210, 120));
         swatchArea.Children.Add(new Border
         {
             Width = 64, Height = 64, CornerRadius = new CornerRadius(32),
@@ -511,17 +511,17 @@ public partial class HistoryWindow
             Foreground = Theme.Brush(Theme.TextSecondary)
         });
         info.Children.Add(colorLabelBlock);
-        info.Children.Add(CreateBadgeTimeText("CLR", System.Windows.Media.Color.FromRgb(255, 160, 80), FormatTimeAgo(entry.CapturedAt)));
+        info.Children.Add(CreateBadgeTimeText("CLR", System.Windows.Media.Color.FromRgb(90, 210, 120), FormatTimeAgo(entry.CapturedAt)));
 
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         infoBorder.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
-        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(255, 160, 80));
+        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(90, 210, 120));
 
         card.Child = root;
-        SetupUnifiedCardHoverAndClip(card, root, imageRow, System.Windows.Media.Color.FromRgb(255, 160, 80));
+        SetupUnifiedCardHoverAndClip(card, root, imageRow, System.Windows.Media.Color.FromRgb(90, 210, 120));
         swatchArea.ToolTip = LocalizationService.Translate("Copy this color");
         swatchArea.Cursor = Cursors.Hand;
         swatchArea.MouseLeftButtonDown += (_, e) =>
