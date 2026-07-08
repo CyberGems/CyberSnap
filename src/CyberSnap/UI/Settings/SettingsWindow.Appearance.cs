@@ -600,6 +600,9 @@ public partial class SettingsWindow
 
                         if (w is CaptureWidgetWindow cww && cww.IsLoaded)
                             cww.RefreshLayout();
+
+                        if (w is VideoTrimmerWindow vtw && vtw.IsLoaded)
+                            vtw.ApplyTheme();
                     }
                     catch (Exception ex)
                     {
