@@ -19,7 +19,7 @@ public partial class HistoryWindow
     private string _codeSearchQuery = "";
     private List<CodeHistoryEntry> _filteredCodeEntries = new();
     private int _codeRenderCount;
-    private DateTime? _codeLastRenderedDate;
+
     private readonly Dictionary<CodeHistoryEntry, Border> _codeHistoryCardCache = new();
     private readonly Dictionary<CodeHistoryEntry, BitmapSource> _codePreviewCache = new();
     private readonly System.Windows.Threading.DispatcherTimer _codeSearchDebounceTimer = new()
@@ -57,7 +57,7 @@ public partial class HistoryWindow
             : $"{entries.Count} {LocalizationService.Translate("of")} {allEntries.Count} {LocalizationService.Translate(allEntries.Count == 1 ? "code" : "codes")}";
         _filteredCodeEntries = entries;
         _codeRenderCount = Math.Min(HistoryInitialPageSize, _filteredCodeEntries.Count);
-        _codeLastRenderedDate = null;
+
         AppendCodeHistoryEntries(_filteredCodeEntries, 0, _codeRenderCount);
         UpdateHistoryActionButtons();
         sw.Stop();
@@ -98,12 +98,62 @@ public partial class HistoryWindow
     private void AppendCodeHistoryEntries(IReadOnlyList<CodeHistoryEntry> entries, int start, int count)
     {
         var end = start + count;
+        WrapPanel? currentWrap = CodeStack.Children.Count > 0
+            ? CodeStack.Children[CodeStack.Children.Count - 1] as WrapPanel
+            : null;
+        DateTime? currentDate = currentWrap?.Tag is DateTime tagDate ? tagDate : null;
+        var updatedWraps = new HashSet<WrapPanel>();
+
         for (int i = start; i < end; i++)
         {
             var entry = entries[i];
-            AppendSectionHeaderIfNeeded(CodeStack, entry.CapturedAt.Date, ref _codeLastRenderedDate);
-            CodeStack.Children.Add(GetOrCreateCodeHistoryCard(entry));
+            var itemDate = entry.CapturedAt.Date;
+            if (currentWrap is null || currentDate != itemDate)
+            {
+                // Date separator line
+                if (CodeStack.Children.Count > 0)
+                {
+                    CodeStack.Children.Add(new Border
+                    {
+                        Height = 1,
+                        Background = Theme.Brush(Theme.BorderSubtle),
+                        Margin = new Thickness(6, 26, 6, 0)
+                    });
+                }
+
+                // Date label pill
+                var dateLabel = new TextBlock
+                {
+                    Text = FormatHistoryGroupLabel(itemDate).ToUpperInvariant(),
+                    FontSize = 12,
+                    FontWeight = FontWeights.Bold,
+                    FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName),
+                    Foreground = Theme.Brush(Theme.Accent),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Opacity = 0.9
+                };
+                CodeStack.Children.Add(new Border
+                {
+                    Background = Theme.Brush(Theme.AccentSubtle),
+                    CornerRadius = new CornerRadius(7),
+                    Padding = new Thickness(14, 6, 14, 6),
+                    Margin = new Thickness(6, 18, 0, 12),
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Left,
+                    Child = dateLabel
+                });
+
+                currentWrap = CreateHistoryWrapPanel(itemDate);
+                CodeStack.Children.Add(currentWrap);
+                currentDate = itemDate;
+            }
+
+            var card = GetOrCreateCodeHistoryCard(entry);
+            currentWrap!.Children.Add(card);
+            updatedWraps.Add(currentWrap);
         }
+
+        foreach (var wrap in updatedWraps)
+            UpdateHistoryWrapPanelCardWidths(wrap);
     }
 
     private Border GetOrCreateCodeHistoryCard(CodeHistoryEntry entry)
