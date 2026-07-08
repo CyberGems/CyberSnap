@@ -499,7 +499,7 @@ public partial class HistoryWindow
             ? System.Windows.Media.Color.FromRgb(r, g, b)
             : System.Windows.Media.Color.FromArgb(0, 0, 0, 0);
 
-        var badgeColor = System.Windows.Media.Color.FromRgb(255, 160, 80);
+        var badgeColor = System.Windows.Media.Color.FromRgb(90, 210, 120);
         var normalBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, badgeColor.R, badgeColor.G, badgeColor.B));
         var hoverBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(230, badgeColor.R, badgeColor.G, badgeColor.B));
         normalBorderBrush.Freeze();
@@ -527,7 +527,7 @@ public partial class HistoryWindow
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         // ── Swatch area (large, centered) ──
-        var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth };
+        var swatchArea = new Grid { MaxWidth = HistoryCardPreferredWidth, Background = Theme.CreateCheckerboardBrush() };
         var selBadge = CreateSelectionBadge(false);
         swatchArea.Children.Add(selBadge);
         swatchArea.Children.Add(new Border
@@ -569,7 +569,7 @@ public partial class HistoryWindow
             Foreground = Theme.Brush(Theme.TextSecondary)
         });
         info.Children.Add(colorLabelBlock);
-        info.Children.Add(CreateBadgeTimeText("CLR", System.Windows.Media.Color.FromRgb(255, 160, 80), FormatTimeAgo(entry.CapturedAt)));
+        info.Children.Add(CreateBadgeTimeText("CLR", System.Windows.Media.Color.FromRgb(90, 210, 120), FormatTimeAgo(entry.CapturedAt)));
 
         var infoBorder = new Border
         {
@@ -584,11 +584,11 @@ public partial class HistoryWindow
         root.Children.Add(infoBorder);
 
         // ── Category tint ──
-        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(255, 160, 80));
+        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(90, 210, 120));
 
         // ── Context menu + chevron ──
         var capturedHex = entry.Hex;
-        AttachCardMenu(card, root, () => CopyColorToClipboard(capturedHex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(255, 160, 80));
+        AttachCardMenu(card, root, () => CopyColorToClipboard(capturedHex), () => DeleteColorEntry(entry), System.Windows.Media.Color.FromRgb(90, 210, 120));
 
         card.Child = root;
 
