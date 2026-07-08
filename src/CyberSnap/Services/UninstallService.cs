@@ -36,14 +36,16 @@ public static class UninstallService
             shortcut.Save();
 
             // Editor shortcut
-            var editorShortcutPath = Path.Combine(programsDir, "CyberSnap Annotations Editor.lnk");
+            var editorShortcutPath = Path.Combine(programsDir, "CyberSnap Editor.lnk");
+            var legacyEditorShortcutPath = Path.Combine(programsDir, "CyberSnap Annotations Editor.lnk");
+            TryDeleteShortcut(legacyEditorShortcutPath);
             dynamic editorShortcut = shell.CreateShortcut(editorShortcutPath);
             editorShortcut.TargetPath = exe;
             editorShortcut.Arguments = "--editor";
             editorShortcut.WorkingDirectory = Path.GetDirectoryName(exe) ?? string.Empty;
             var editorIconPath = WindowIcons.FilePath(WindowIconKind.Editor);
             editorShortcut.IconLocation = File.Exists(editorIconPath) ? editorIconPath : exe + ",0";
-            editorShortcut.Description = "CyberSnap annotations editor";
+            editorShortcut.Description = "CyberSnap Editor";
             editorShortcut.Save();
         }
         finally
@@ -56,13 +58,16 @@ public static class UninstallService
     {
         var programsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Windows", "Start Menu", "Programs");
         var shortcutPath = Path.Combine(programsDir, "CyberSnap.lnk");
-        var editorShortcutPath = Path.Combine(programsDir, "CyberSnap Annotations Editor.lnk");
+        var editorShortcutPath = Path.Combine(programsDir, "CyberSnap Editor.lnk");
+        var legacyEditorShortcutPath = Path.Combine(programsDir, "CyberSnap Annotations Editor.lnk");
         try
         {
             if (File.Exists(shortcutPath))
                 File.Delete(shortcutPath);
             if (File.Exists(editorShortcutPath))
                 File.Delete(editorShortcutPath);
+            if (File.Exists(legacyEditorShortcutPath))
+                File.Delete(legacyEditorShortcutPath);
         }
         catch (Exception ex)
         {
@@ -217,6 +222,22 @@ public static class UninstallService
             AppDiagnostics.LogWarning(
                 "uninstall.folder-removal",
                 $"Failed to schedule install folder removal for {Path.GetFileName(dir)}: {ex.Message}",
+                ex);
+        }
+    }
+
+    private static void TryDeleteShortcut(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning(
+                "uninstall.shortcut-cleanup",
+                $"Failed to delete shortcut {Path.GetFileName(path)}: {ex.Message}",
                 ex);
         }
     }
