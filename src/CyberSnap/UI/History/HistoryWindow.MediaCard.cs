@@ -93,7 +93,7 @@ public partial class HistoryWindow
         {
             BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new Thickness(0, 1, 0, 0),
-            Background = Theme.Brush(Theme.BgSecondary),
+            Background = vm.Entry.Kind == HistoryKind.Image ? Theme.Brush(Theme.BgCard) : Theme.Brush(Theme.BgSecondary),
             Child = info
         };
         infoBorder.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
