@@ -424,6 +424,7 @@ public partial class HistoryWindow
         var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
         infoBorder.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
         infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
+        infoBorder.ToolTip = LocalizationService.Translate("Click the text to copy");
         Grid.SetRow(infoBorder, 1);
         root.Children.Add(infoBorder);
         AddCategoryTint(root, System.Windows.Media.Color.FromRgb(80, 190, 180), alphaOverride: Theme.IsDark ? (byte)40 : (byte)55);
@@ -431,7 +432,11 @@ public partial class HistoryWindow
         var capturedText = text;
         card.Child = root;
         SetupUnifiedCardHoverAndClip(card, root, imageRow, System.Windows.Media.Color.FromRgb(80, 190, 180));
-        textArea.ToolTip = LocalizationService.Translate("Copy this OCR text");
+        textArea.ToolTip = new System.Windows.Controls.ToolTip
+        {
+            Content = text.Length > 500 ? text[..500] + "..." : text,
+            MaxWidth = 400
+        };
         textArea.Cursor = Cursors.Hand;
         textArea.MouseLeftButtonDown += (_, e) =>
         {
