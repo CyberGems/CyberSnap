@@ -1386,5 +1386,10 @@
   "No audio track in this file": "Este archivo no tiene pista de audio",
   "GIF files do not contain audio": "Los archivos GIF no contienen audio",
   "Click to toggle time display": "Haz clic para alternar la vista del tiempo",
+  "Click to seek · Double-click to edit": "Haz clic para ir a la posición · Doble clic para editar",
+  "Loop on": "Bucle activado",
+  "Loop off": "Bucle desactivado",
+  "Enable loop": "Activar bucle",
+  "Disable loop": "Desactivar bucle",
   "DEFAULT": "PREDEFINIDO"
 }

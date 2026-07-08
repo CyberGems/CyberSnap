@@ -1029,5 +1029,10 @@
   "No audio track in this file": "No audio track in this file",
   "GIF files do not contain audio": "GIF files do not contain audio",
   "Click to toggle time display": "Click to toggle time display",
+  "Click to seek · Double-click to edit": "Click to seek · Double-click to edit",
+  "Loop on": "Loop on",
+  "Loop off": "Loop off",
+  "Enable loop": "Enable loop",
+  "Disable loop": "Disable loop",
   "DEFAULT": "DEFAULT"
 }
