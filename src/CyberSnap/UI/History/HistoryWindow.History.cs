@@ -1554,9 +1554,6 @@ public partial class HistoryWindow
         {
             if (wrap.Children[i] is not Border card)
                 continue;
-            // Accept image-history cards (HistoryItemVM tag) and unified cards (bool tag)
-            if (card.Tag is not HistoryItemVM && card.Tag is not bool)
-                continue;
 
             if (Math.Abs(card.Width - targetWidth) > 0.5)
                 card.Width = targetWidth;
