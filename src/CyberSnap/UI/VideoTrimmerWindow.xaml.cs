@@ -171,6 +171,8 @@ namespace CyberSnap.UI
             Resources["ThemeInputBorderBrush"] = Theme.Brush(Theme.BorderSubtle);
             Resources["ThemeWindowBorderBrush"] = Theme.Brush(Theme.WindowBorder);
             Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
+            Resources["ThemeAccentSubtleBrush"] = Theme.Brush(Theme.AccentSubtle);
+            Resources["ThemeAccentHoverBrush"] = Theme.Brush(Theme.AccentHover);
             Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
             VolumeControl.RefreshThemeBrushes();
             Icon = WindowIcons.Wpf(WindowIconKind.Trimmer);

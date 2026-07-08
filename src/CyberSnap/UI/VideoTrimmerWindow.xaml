@@ -521,22 +521,22 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#30FFFFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Foreground" Value="#FF00FFFF"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4400FFFF"/>
-                                <Setter TargetName="Bd" Property="Background" Value="#1800FFFF"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
                                     <Condition Property="IsChecked" Value="True"/>
                                     <Condition Property="IsMouseOver" Value="True"/>
                                 </MultiTrigger.Conditions>
-                                <Setter TargetName="Bd" Property="Background" Value="#2800FFFF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentHoverBrush}"/>
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
