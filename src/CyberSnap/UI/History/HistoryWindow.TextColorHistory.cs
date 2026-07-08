@@ -277,7 +277,7 @@ public partial class HistoryWindow
             Content = text.Length > 500 ? text[..500] + "..." : text,
             MaxWidth = 400
         };
-        textArea.Cursor = Cursors.Hand;
+        textArea.Cursor = System.Windows.Input.Cursors.Hand;
         textArea.MouseLeftButtonDown += (_, e) =>
         {
             if (e.OriginalSource is System.Windows.Controls.Button) return;
