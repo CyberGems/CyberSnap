@@ -97,7 +97,6 @@ namespace CyberSnap.UI
             UiScale.Set(settingsService.Settings.UiScale);
             UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
             
-            Theme.Refresh();
             ApplyTheme();
             
             LocalizationService.ApplyCurrentCulture(settingsService.Settings.InterfaceLanguage);
@@ -157,8 +156,9 @@ namespace CyberSnap.UI
             }
         }
         
-        private void ApplyTheme()
+        public void ApplyTheme()
         {
+            Theme.Refresh();
             RootBorder.Background = Theme.Brush(Theme.BgPrimary);
             RootBorder.BorderBrush = Theme.Brush(Theme.WindowBorder);
             RootBorder.BorderThickness = new Thickness(1);
@@ -189,6 +189,8 @@ namespace CyberSnap.UI
                     shadow.Color = accentBrush.Color;
                 }
             }
+
+            TrimmerTitleBar.RefreshIcons();
         }
 
         private void TitleBar_DragWindow(object sender, MouseButtonEventArgs e)
