@@ -215,181 +215,90 @@ public partial class HistoryWindow
 
     private Border CreateOcrHistoryCard(OcrHistoryEntry entry)
     {
-        var card = new Border
-        {
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12),
-            Margin = new Thickness(0, 0, 0, 6),
-            Background = HistoryCardIdleBrush,
-            BorderBrush = Brushes.Transparent,
-            BorderThickness = new Thickness(1),
-            Cursor = System.Windows.Input.Cursors.Hand,
-            Focusable = true,
-            ToolTip = LocalizationService.Translate("Copy this text history item"),
-            DataContext = entry
-        };
-        AutomationProperties.SetName(card, "Text history item");
-        AutomationProperties.SetHelpText(card, "Press Enter or Space to copy this text item. In select mode, press Enter or Space to select it.");
+        var text = entry.Text ?? "";
+        var card = CreateBaseUnifiedCard("Text history item", "Copy this OCR text");
+        card.DataContext = entry;
+        card.Tag = false;
 
-        card.MouseEnter += (_, _) =>
-        {
-            card.Background = HistoryCardHoverBrush;
-            card.BorderBrush = HistoryCardFocusBrush;
-        };
-        card.MouseLeave += (_, _) =>
-        {
-            if (!card.IsKeyboardFocusWithin)
-            {
-                card.Background = HistoryCardIdleBrush;
-                card.BorderBrush = Brushes.Transparent;
-            }
-        };
-        card.GotKeyboardFocus += (_, _) =>
-        {
-            card.Background = HistoryCardHoverBrush;
-            card.BorderBrush = HistoryCardFocusBrush;
-        };
-        card.LostKeyboardFocus += (_, _) =>
-        {
-            if (card.IsMouseOver)
-                return;
-
-            card.Background = HistoryCardIdleBrush;
-            card.BorderBrush = Brushes.Transparent;
-        };
-
-        var capturedText = entry.Text;
-        bool isLong = capturedText.Length > 220 || capturedText.Count(ch => ch == '\n') > 3;
-        bool expanded = false;
-
-        var textBlock = new TextBlock
-        {
-            Text = capturedText,
-            FontSize = 12,
-            LineHeight = 18,
-            TextWrapping = TextWrapping.Wrap,
-            MaxHeight = isLong ? 74 : double.PositiveInfinity,
-            ClipToBounds = true,
-            Foreground = Theme.Brush(Theme.TextPrimary),
-            Opacity = 0.92
-        };
-        textBlock.ToolTip = capturedText;
-        AutomationProperties.SetName(textBlock, "Recognized text");
-        AutomationProperties.SetHelpText(textBlock, capturedText);
-
-        var footer = new Grid { Margin = new Thickness(0, 10, 0, 0) };
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var capturedTimeText = FormatTimeAgo(entry.CapturedAt);
-        var capturedBlock = new TextBlock
-        {
-            Text = capturedTimeText,
-            FontSize = 10,
-            Opacity = 0.3,
-            VerticalAlignment = VerticalAlignment.Center,
-            ToolTip = $"{LocalizationService.Translate("Captured")} {capturedTimeText}"
-        };
-        AutomationProperties.SetName(capturedBlock, "Text capture time");
-        AutomationProperties.SetHelpText(capturedBlock, capturedTimeText);
-        footer.Children.Add(capturedBlock);
-
-        var btnPanel = new StackPanel
-        {
-            Orientation = System.Windows.Controls.Orientation.Horizontal,
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Right
-        };
-        Grid.SetColumn(btnPanel, 1);
-
-        if (isLong)
-        {
-            var showMoreBtn = new Button
-            {
-                Content = "Show more",
-                FontSize = 10,
-                Padding = new Thickness(6, 2, 6, 2),
-                Margin = new Thickness(0, 0, 6, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = LocalizationService.Translate("Expand this text history item")
-            };
-            UpdateShowMoreTextButtonLabel(showMoreBtn, expanded);
-            showMoreBtn.Click += (_, _) =>
-            {
-                expanded = !expanded;
-                if (expanded)
-                {
-                    textBlock.MaxHeight = double.PositiveInfinity;
-                    showMoreBtn.Content = "Show less";
-                }
-                else
-                {
-                    textBlock.MaxHeight = 74;
-                    showMoreBtn.Content = "Show more";
-                }
-
-                UpdateShowMoreTextButtonLabel(showMoreBtn, expanded);
-            };
-            btnPanel.Children.Add(showMoreBtn);
-        }
-
-        var copyBtn = new Button
-        {
-            Content = LocalizationService.Translate("Copy all"),
-            FontSize = 10,
-            Padding = new Thickness(6, 2, 6, 2),
-            VerticalAlignment = VerticalAlignment.Center,
-            Cursor = System.Windows.Input.Cursors.Hand,
-            ToolTip = LocalizationService.Translate("Copy all text")
-        };
-        AutomationProperties.SetName(copyBtn, "Copy text history item");
-        AutomationProperties.SetHelpText(copyBtn, "Copy all text from this history item.");
-        copyBtn.Click += (_, _) => CopyTextHistoryItem();
-
-        void CopyTextHistoryItem()
-        {
-            try
-            {
-                ClipboardService.CopyTextToClipboard(capturedText);
-                ToastWindow.Show("Copied", "Text copied");
-            }
-            catch (Exception ex)
-            {
-                ToastWindow.ShowError(
-                    "Copy failed",
-                    $"CyberSnap could not copy this text history item. Try again from Config -> History, or copy the visible text manually.\n{ex.Message}");
-            }
-        }
-        btnPanel.Children.Add(copyBtn);
-        footer.Children.Add(btnPanel);
-
-        var textStack = new StackPanel();
-        textStack.Children.Add(textBlock);
-        textStack.Children.Add(footer);
-
-        var badge = CreateSelectionBadge(false);
         var root = new Grid();
-        root.Children.Add(textStack);
-        root.Children.Add(badge);
-        card.Child = root;
+        var imageRow = new RowDefinition { Height = new GridLength(GetHistoryCardImageHeight(HistoryCardPreferredWidth)) };
+        root.RowDefinitions.Add(imageRow);
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        card.Cursor = System.Windows.Input.Cursors.Hand;
+        // Top: the actual text content (replaces the image thumbnail area)
+        var textArea = new Grid { Background = Theme.Brush(Theme.BgSecondary), ClipToBounds = true, MaxWidth = HistoryCardPreferredWidth };
+        var selBadge = CreateSelectionBadge(false);
+        textArea.Children.Add(selBadge);
+        var displayText = text.Length > 80 ? text[..80] + "…" : text;
+        var ocrTextBlock = new TextBlock
+        {
+            Text = displayText,
+            FontSize = 11,
+            TextWrapping = TextWrapping.Wrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+            Foreground = Theme.Brush(Theme.TextPrimary),
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        var ocrContainer = new Border
+        {
+            Background = Theme.Brush(Theme.IsDark ? Theme.BgElevated : Theme.BgPrimary),
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
+            BorderThickness = new System.Windows.Thickness(1),
+            CornerRadius = new System.Windows.CornerRadius(4),
+            Margin = new System.Windows.Thickness(8, 6, 8, 8),
+            Padding = new System.Windows.Thickness(8, 6, 8, 6),
+            Child = ocrTextBlock
+        };
+        // Add container BEFORE AttachCardMenu so the action button sits on top (Z-order)
+        textArea.Children.Add(ocrContainer);
+        AttachCardMenu(card, root, () => { ClipboardService.CopyTextToClipboard(text); ToastWindow.Show("Copied", "Text copied"); }, () => DeleteOcrEntryFromTextTab(entry), System.Windows.Media.Color.FromRgb(80, 190, 180));
+        Grid.SetRow(textArea, 0);
+        root.Children.Add(textArea);
+
+        // Bottom: just the capture time
+        var info = new StackPanel { Margin = new Thickness(12, 8, 12, 12) };
+        info.Children.Add(new TextBlock { Text = LocalizationService.Translate("OCR Text"), FontSize = 11, FontWeight = FontWeights.Bold, FontFamily = new System.Windows.Media.FontFamily(UiChrome.PreferredFamilyName), TextTrimming = TextTrimming.CharacterEllipsis });
+        info.Children.Add(CreateBadgeTimeText("OCR", System.Windows.Media.Color.FromRgb(80, 190, 180), FormatTimeAgo(entry.CapturedAt)));
+
+        var infoBorder = new Border { BorderBrush = Theme.Brush(Theme.BorderSubtle), BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Brush(Theme.BgSecondary), Child = info };
+        infoBorder.PreviewMouseLeftButtonDown += (_, e) => { e.Handled = true; };
+        infoBorder.PreviewMouseLeftButtonUp += (_, e) => { e.Handled = true; };
+        infoBorder.ToolTip = LocalizationService.Translate("Click the text to copy");
+        Grid.SetRow(infoBorder, 1);
+        root.Children.Add(infoBorder);
+        AddCategoryTint(root, System.Windows.Media.Color.FromRgb(80, 190, 180), alphaOverride: Theme.IsDark ? (byte)40 : (byte)55);
+
+        var capturedText = text;
+        card.Child = root;
+        SetupUnifiedCardHoverAndClip(card, root, imageRow, System.Windows.Media.Color.FromRgb(80, 190, 180));
+        textArea.ToolTip = new System.Windows.Controls.ToolTip
+        {
+            Content = text.Length > 500 ? text[..500] + "..." : text,
+            MaxWidth = 400
+        };
+        textArea.Cursor = Cursors.Hand;
+        textArea.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.OriginalSource is System.Windows.Controls.Button) return;
+            e.Handled = true;
+            if (_selectMode)
+            {
+                ToggleSelection();
+                return;
+            }
+            ClipboardService.CopyTextToClipboard(capturedText);
+            ToastWindow.Show("Copied", "Text copied");
+        };
+
         void ToggleSelection()
         {
             var selected = card.Tag is true;
             selected = !selected;
             card.Tag = selected;
-            UpdateSelectableCardSelection(card, badge, selected);
+            UpdateSelectableCardSelection(card, selBadge, selected);
             UpdateHistoryActionButtons();
         }
-
-        card.MouseLeftButtonDown += (_, e) =>
-        {
-            if (!_selectMode)
-                return;
-
-            e.Handled = true;
-            ToggleSelection();
-        };
 
         card.KeyDown += (_, e) =>
         {
@@ -398,13 +307,24 @@ public partial class HistoryWindow
 
             e.Handled = true;
             if (_selectMode)
+            {
                 ToggleSelection();
+            }
             else
-                CopyTextHistoryItem();
+            {
+                ClipboardService.CopyTextToClipboard(capturedText);
+                ToastWindow.Show("Copied", "Text copied");
+            }
         };
 
-        UpdateSelectableCardSelection(card, badge, selected: false);
+        UpdateSelectableCardSelection(card, selBadge, selected: false);
         return card;
+    }
+
+    private void DeleteOcrEntryFromTextTab(OcrHistoryEntry entry)
+    {
+        _historyService.DeleteOcrEntry(entry);
+        LoadOcrHistory();
     }
 
     private void AppendColorHistoryEntries(IReadOnlyList<ColorHistoryEntry> entries, int start, int count)
