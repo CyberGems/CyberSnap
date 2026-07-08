@@ -80,6 +80,8 @@ public static class Theme
         resources["ThemeWindowBorderBrush"] = Brush(WindowBorder);
         resources["ThemeSeparatorBrush"] = Brush(Separator);
         resources["ThemeAccentBrush"] = Brush(Accent);
+        resources["ThemeAccentSubtleBrush"] = Brush(AccentSubtle);
+        resources["ThemeAccentHoverBrush"] = Brush(AccentHover);
         resources["ThemeTooltipBackgroundBrush"] = Brush(IsDark ? C(20, 20, 20) : C(233, 236, 243));
         resources["ThemeTooltipBorderBrush"] = Brush(IsDark ? CA(255, 255, 255, 26) : CA(0, 0, 0, 16));
         resources["SoundItemCustomSourceBrush"] = Brush(AccentHover);
