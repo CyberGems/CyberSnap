@@ -310,7 +310,7 @@ public partial class App
     // successful capture so they participate in CelebrationCaptureCount, streak tracking
     // and first-time achievement flags, exactly like overlay captures do.
     // Safe to call from any thread; dispatches to the WPF thread internally.
-    public static void NotifyStandaloneCapture(bool isOcr = false, bool isScan = false, bool isEditor = false)
+    public static void NotifyStandaloneCapture(bool isOcr = false, bool isScan = false, bool isEditor = false, bool isColor = false)
     {
         if (System.Windows.Application.Current is not App app)
             return;
@@ -330,6 +330,8 @@ public partial class App
                 app.MarkFirstTime(settings.HasFirstScan, () => settings.HasFirstScan = true);
             if (isEditor)
                 app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true);
+            if (isColor)
+                app.MarkFirstTime(settings.HasFirstColorPicker, () => settings.HasFirstColorPicker = true);
         });
     }
 
