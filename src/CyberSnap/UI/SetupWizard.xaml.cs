@@ -414,6 +414,13 @@ public partial class SetupWizard : Window
                         s.ShowCaptureMagnifier = WizCaptureMagnifierCheck.IsChecked == true;
                         s.MuteSounds = WizEnableSoundsCheck.IsChecked != true;
                         s.ShowCaptureWidget = WizCaptureWidgetCheck.IsChecked == true;
+                        // Sync per-event mute state so the Sounds tab sub-toggles stay in sync
+                        foreach (SoundEvent evt in Enum.GetValues<SoundEvent>())
+                        {
+                            s.MutedSounds[evt] = s.MuteSounds;
+                            SoundService.SetSoundMuted(evt, s.MuteSounds);
+                        }
+                        SoundService.Muted = s.MuteSounds;
                         _settingsService.Save();
                     }
                     catch
@@ -422,6 +429,12 @@ public partial class SetupWizard : Window
                         s.ShowCaptureMagnifier = previousCapture.ShowCaptureMagnifier;
                         s.MuteSounds = previousCapture.MuteSounds;
                         s.ShowCaptureWidget = previousCapture.ShowCaptureWidget;
+                        foreach (SoundEvent evt in Enum.GetValues<SoundEvent>())
+                        {
+                            s.MutedSounds[evt] = s.MuteSounds;
+                            SoundService.SetSoundMuted(evt, s.MuteSounds);
+                        }
+                        SoundService.Muted = s.MuteSounds;
                         LoadDefaults();
                         throw;
                     }
