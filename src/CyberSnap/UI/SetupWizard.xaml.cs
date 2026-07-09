@@ -13,7 +13,7 @@ public partial class SetupWizard : Window
 {
     private readonly SettingsService _settingsService;
     private int _page = 1;
-    private const int TotalPages = 3;
+    private const int TotalPages = 4;
     private readonly Grid[] _pages;
     private readonly Border[] _stepDots;
     private readonly TextBlock[] _stepNums;
@@ -41,11 +41,11 @@ public partial class SetupWizard : Window
         UiScale.ApplyToWindow(this, WizardShell, scaleWindowBounds: true);
         ApplyTheme();
 
-        _pages = new[] { Page1, Page2, Page3 };
-        _stepDots = new[] { StepDot1, StepDot2, StepDot3 };
-        _stepNums = new[] { StepNum1, StepNum2, StepNum3 };
-        _stepLabels = new[] { StepLabel1, StepLabel2, StepLabel3 };
-        _stepSubs = new[] { StepSub1, StepSub2, StepSub3 };
+        _pages = new[] { Page1, Page2, Page3, Page4 };
+        _stepDots = new[] { StepDot1, StepDot2, StepDot3, StepDot4 };
+        _stepNums = new[] { StepNum1, StepNum2, StepNum3, StepNum4 };
+        _stepLabels = new[] { StepLabel1, StepLabel2, StepLabel3, StepLabel4 };
+        _stepSubs = new[] { StepSub1, StepSub2, StepSub3, StepSub4 };
 
         BuildHotkeyRows();
         LoadDefaults();
@@ -547,18 +547,13 @@ public partial class SetupWizard : Window
                         s.ShowCrosshairGuides,
                         s.ShowCaptureMagnifier,
                         s.MuteSounds,
-                        s.SaveToFile,
-                        s.ShowCaptureWidget,
-                        s.AfterCapture,
-                        s.OpenEditorAfterCapture);
+                        s.ShowCaptureWidget);
                     try
                     {
                         s.ShowCrosshairGuides = WizCrosshairCheck.IsChecked == true;
                         s.ShowCaptureMagnifier = WizCaptureMagnifierCheck.IsChecked == true;
                         s.MuteSounds = WizEnableSoundsCheck.IsChecked != true;
-                        s.SaveToFile = WizSaveToFileCheck.IsChecked == true;
                         s.ShowCaptureWidget = WizCaptureWidgetCheck.IsChecked == true;
-                        AfterCapturePreferences.ApplyToSettings(GetAfterCaptureViewPreferenceFromControls(), s);
                         _settingsService.Save();
                     }
                     catch
@@ -566,18 +561,35 @@ public partial class SetupWizard : Window
                         s.ShowCrosshairGuides = previousCapture.ShowCrosshairGuides;
                         s.ShowCaptureMagnifier = previousCapture.ShowCaptureMagnifier;
                         s.MuteSounds = previousCapture.MuteSounds;
-                        s.SaveToFile = previousCapture.SaveToFile;
                         s.ShowCaptureWidget = previousCapture.ShowCaptureWidget;
-                        s.AfterCapture = previousCapture.AfterCapture;
-                        s.OpenEditorAfterCapture = previousCapture.OpenEditorAfterCapture;
                         LoadDefaults();
                         throw;
                     }
                     break;
                 case 2:
-                    _settingsService.Save();
+                    var previousSaving = (
+                        s.SaveToFile,
+                        s.AfterCapture,
+                        s.OpenEditorAfterCapture);
+                    try
+                    {
+                        s.SaveToFile = WizSaveToFileCheck.IsChecked == true;
+                        AfterCapturePreferences.ApplyToSettings(GetAfterCaptureViewPreferenceFromControls(), s);
+                        _settingsService.Save();
+                    }
+                    catch
+                    {
+                        s.SaveToFile = previousSaving.SaveToFile;
+                        s.AfterCapture = previousSaving.AfterCapture;
+                        s.OpenEditorAfterCapture = previousSaving.OpenEditorAfterCapture;
+                        LoadDefaults();
+                        throw;
+                    }
                     break;
                 case 3:
+                    _settingsService.Save();
+                    break;
+                case 4:
                     var previousCompleted = s.HasCompletedSetup;
                     try
                     {

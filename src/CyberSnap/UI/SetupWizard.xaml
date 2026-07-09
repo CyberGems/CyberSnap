@@ -436,7 +436,7 @@
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
                             <TextBlock x:Name="StepLabel1" Text="Capture" FontSize="14"
                                        FontFamily="Segoe UI Variable Text"/>
-                            <TextBlock x:Name="StepSub1" Text="Images and saving" FontSize="11"
+                            <TextBlock x:Name="StepSub1" Text="Behavior and overlays" FontSize="11"
                                        FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
                         </StackPanel>
                     </Grid>
@@ -453,14 +453,14 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="StepLabel2" Text="Hotkeys" FontSize="14"
+                            <TextBlock x:Name="StepLabel2" Text="Saving" FontSize="14"
                                        FontFamily="Segoe UI Variable Text"/>
-                            <TextBlock x:Name="StepSub2" Text="Your shortcuts" FontSize="11"
+                            <TextBlock x:Name="StepSub2" Text="After capture and files" FontSize="11"
                                        FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
                         </StackPanel>
                     </Grid>
 
-                    <Grid x:Name="StepRow3">
+                    <Grid x:Name="StepRow3" Margin="0,0,0,20">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
@@ -472,9 +472,28 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="StepLabel3" Text="Ready" FontSize="14"
+                            <TextBlock x:Name="StepLabel3" Text="Hotkeys" FontSize="14"
                                        FontFamily="Segoe UI Variable Text"/>
-                            <TextBlock x:Name="StepSub3" Text="Finish up" FontSize="11"
+                            <TextBlock x:Name="StepSub3" Text="Your shortcuts" FontSize="11"
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="StepRow4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="StepDot4" Width="30" Height="30" CornerRadius="15"
+                                BorderThickness="1.5" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepNum4" Text="4" FontSize="13" FontWeight="SemiBold"
+                                       FontFamily="Segoe UI Variable Text"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepLabel4" Text="Ready" FontSize="14"
+                                       FontFamily="Segoe UI Variable Text"/>
+                            <TextBlock x:Name="StepSub4" Text="Finish up" FontSize="11"
                                        FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
                         </StackPanel>
                     </Grid>
@@ -515,10 +534,72 @@
             <Grid x:Name="Page1" Grid.Row="0" Margin="40,52,40,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
                     <StackPanel>
-                        <TextBlock Text="Capture and saving" FontSize="24" FontWeight="SemiBold"
+                        <TextBlock Text="Capture" FontSize="24" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Display"
                                    Foreground="{DynamicResource WizFg}"/>
-                        <TextBlock Text="How screenshots look and where they go" FontSize="13"
+                        <TextBlock Text="Behavior and overlays during capture" FontSize="13"
+                                   FontFamily="Segoe UI Variable Text"
+                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,18"/>
+
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Show pixel magnifier near cursor" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WizCaptureMagnifierCheck" Grid.Column="1" Content=""
+                                          Style="{StaticResource WizCheckBox}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Enable sounds" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WizEnableSoundsCheck" Grid.Column="1" Content=""
+                                          Style="{StaticResource WizCheckBox}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Show capture widget" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WizCaptureWidgetCheck" Grid.Column="1" Content=""
+                                          Style="{StaticResource WizCheckBox}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Show crosshair guides" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WizCrosshairCheck" Grid.Column="1" Content=""
+                                          Style="{StaticResource WizCheckBox}"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid x:Name="Page2" Grid.Row="0" Margin="40,52,40,0" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
+                    <StackPanel>
+                        <TextBlock Text="Saving" FontSize="24" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable Display"
+                                   Foreground="{DynamicResource WizFg}"/>
+                        <TextBlock Text="Choose what happens when a capture finishes" FontSize="13"
                                    FontFamily="Segoe UI Variable Text"
                                    Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,18"/>
 
@@ -532,7 +613,7 @@
                                     <StackPanel Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
                                         <TextBlock Text="After capture" FontSize="13" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource WizFg}"/>
-                                        <TextBlock Text="Choose what CyberSnap does after saving the selection."
+                                        <TextBlock Text="Choose what happens when a capture finishes."
                                                    FontSize="11" Foreground="{DynamicResource WizFgMuted}"
                                                    Margin="0,2,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
@@ -601,54 +682,6 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="Show pixel magnifier near cursor" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
-                                <CheckBox x:Name="WizCaptureMagnifierCheck" Grid.Column="1" Content=""
-                                          Style="{StaticResource WizCheckBox}"/>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource WizRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Enable sounds" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
-                                <CheckBox x:Name="WizEnableSoundsCheck" Grid.Column="1" Content=""
-                                          Style="{StaticResource WizCheckBox}"/>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource WizRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Show capture widget" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
-                                <CheckBox x:Name="WizCaptureWidgetCheck" Grid.Column="1" Content=""
-                                          Style="{StaticResource WizCheckBox}"/>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource WizRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Show crosshair guides" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
-                                <CheckBox x:Name="WizCrosshairCheck" Grid.Column="1" Content=""
-                                          Style="{StaticResource WizCheckBox}"/>
-                            </Grid>
-                        </Border>
-                        <Border Style="{StaticResource WizRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
                                 <TextBlock Text="Save screenshots to file" FontSize="13"
                                            Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
                                 <CheckBox x:Name="WizSaveToFileCheck" Grid.Column="1" Content=""
@@ -674,7 +707,7 @@
                 </ScrollViewer>
             </Grid>
 
-            <Grid x:Name="Page2" Grid.Row="0" Margin="40,52,40,0" Visibility="Collapsed">
+            <Grid x:Name="Page3" Grid.Row="0" Margin="40,52,40,0" Visibility="Collapsed">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
                     <StackPanel>
                         <TextBlock Text="Set your hotkeys" FontSize="24" FontWeight="SemiBold"
@@ -689,7 +722,7 @@
                 </ScrollViewer>
             </Grid>
 
-            <Grid x:Name="Page3" Grid.Row="0" Margin="40,32,40,0" Visibility="Collapsed">
+            <Grid x:Name="Page4" Grid.Row="0" Margin="40,32,40,0" Visibility="Collapsed">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                     <Border Width="72" Height="72" CornerRadius="36" HorizontalAlignment="Center"
                             Background="{DynamicResource WizBtnSecondaryBg}"

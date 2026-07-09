@@ -1462,7 +1462,7 @@
                                 </Border>
                                 <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Top">
                                     <TextBlock Text="After capture" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose what CyberSnap does after saving the selection." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Choose what happens when a capture finishes." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <ComboBox x:Name="AfterCaptureCombo" Grid.Row="0" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Top"
