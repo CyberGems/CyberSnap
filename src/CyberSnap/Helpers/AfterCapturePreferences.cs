@@ -52,18 +52,41 @@ public static class AfterCapturePreferences
         settings.OpenEditorAfterCapture = openEditor;
     }
 
-    public static string GetSummaryLocalizationKey(AfterCaptureViewPreference preference, bool wizardLabels = false) =>
-        preference switch
+    /// <summary>
+    /// Builds the outcome summary string by composing localized step labels
+    /// separated by ᐧ. Pass LocalizationService.Translate (or a test stub).
+    /// <paramref name="saveToFile"/> reflects the current SaveToFile toggle state.
+    /// </summary>
+    public static string BuildSummary(
+        AfterCaptureViewPreference preference,
+        bool saveToFile,
+        Func<string, string> translate)
+    {
+        const string sep = " ᐧ ";
+        var parts = new List<string>();
+
+        // Step 1: save to file (shown whenever the file will actually be written)
+        bool willSave = saveToFile || preference.WindowIndex >= 1;
+        if (willSave)
+            parts.Add(translate("Outcome step: save file"));
+
+        // Step 2: main action
+        string? actionKey = preference.WindowIndex switch
         {
-            (0, true) when wizardLabels  => "Wizard outcome: show notification and copy to clipboard.",
-            (0, false) when wizardLabels => "Wizard outcome: show notification only.",
-            (0, true)  => "Current outcome: open preview and copy to clipboard.",
-            (0, false) => "Current outcome: open preview only.",
-            (1, true)  => "Current outcome: open editor and copy to clipboard.",
-            (1, false) => "Current outcome: open editor only.",
-            (2, true)  => "Current outcome: save the file and copy to clipboard.",
-            (3, true)  => "Current outcome: open in system viewer and copy to clipboard.",
-            (3, false) => "Current outcome: open in system viewer.",
-            _          => "Current outcome: save the file only."
+            0 => "Outcome step: show notification",
+            1 => "Outcome step: open editor",
+            3 => "Outcome step: open in system viewer",
+            _ => null   // index 2 = save only — no extra action label
         };
+        if (actionKey is not null)
+            parts.Add(translate(actionKey));
+
+        // Step 3: copy to clipboard (optional modifier)
+        if (preference.Copy)
+            parts.Add(translate("Outcome step: copy to clipboard"));
+
+        // Prefix
+        string prefix = translate("Outcome prefix");
+        return prefix + string.Join(sep, parts);
+    }
 }

@@ -384,8 +384,9 @@ public partial class SettingsWindow : Window
 
     private void RefreshAfterCaptureSummary(AfterCaptureViewPreference preference)
     {
-        AfterCaptureSummaryText.Text = LocalizationService.Translate(
-            AfterCapturePreferences.GetSummaryLocalizationKey(preference));
+        bool saveToFile = SaveToFileCheck.IsChecked == true;
+        AfterCaptureSummaryText.Text = AfterCapturePreferences.BuildSummary(
+            preference, saveToFile, LocalizationService.Translate);
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
