@@ -447,8 +447,9 @@ public partial class SetupWizard : Window
 
     private void RefreshAfterCaptureSummary(AfterCaptureViewPreference preference)
     {
-        WizAfterCaptureSummaryText.Text = LocalizationService.Translate(
-            AfterCapturePreferences.GetSummaryLocalizationKey(preference, wizardLabels: true));
+        bool saveToFile = WizSaveToFileCheck.IsChecked == true;
+        WizAfterCaptureSummaryText.Text = AfterCapturePreferences.BuildSummary(
+            preference, saveToFile, LocalizationService.Translate);
     }
 
     private void WizAfterCapture_Changed(object sender, RoutedEventArgs e)
