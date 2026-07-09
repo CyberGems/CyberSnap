@@ -368,7 +368,15 @@
     </Window.Resources>
 
     <Border Margin="16" Background="Transparent">
-    <Grid ClipToBounds="False">
+    <Grid Margin="0,0,10,0">
+        <Border CornerRadius="0,14,14,0"
+                Background="{DynamicResource WizPanelShadow}"
+                Margin="5,8,0,0"
+                IsHitTestVisible="False"
+                SnapsToDevicePixels="True"/>
+        <Border x:Name="WizardShell" CornerRadius="0,14,14,0" ClipToBounds="True" SnapsToDevicePixels="True"
+                BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
+    <Grid ClipToBounds="True">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="270"/>
             <ColumnDefinition Width="*"/>
@@ -479,15 +487,9 @@
         </Grid>
 
         <!-- ===================== CONTENT (rounded right edge) ===================== -->
-        <Grid Grid.Column="1" Panel.ZIndex="1" Margin="0,0,10,0">
-            <Border CornerRadius="0,14,14,0"
-                    Background="{DynamicResource WizPanelShadow}"
-                    Margin="5,8,0,0"
-                    IsHitTestVisible="False"
-                    SnapsToDevicePixels="True"/>
-            <Border x:Name="WizardBorder" CornerRadius="0,14,14,0" ClipToBounds="True" SnapsToDevicePixels="True"
-                    Background="{DynamicResource WizBg}" BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                    BorderThickness="0,1,1,1">
+        <Border Grid.Column="1" x:Name="WizardBorder" Panel.ZIndex="1"
+                Background="{DynamicResource WizBg}" CornerRadius="0,14,14,0" 
+                ClipToBounds="True" SnapsToDevicePixels="True">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
@@ -731,7 +733,8 @@
             </Border>
         </Grid>
         </Border>
-        </Grid>
+    </Grid>
+        </Border>
     </Grid>
     </Border>
 </Window>
