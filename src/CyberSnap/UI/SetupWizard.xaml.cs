@@ -409,7 +409,11 @@ public partial class SetupWizard : Window
         UpdateSaveDirectoryState();
     }
 
-    private void WizSaveToFile_Changed(object sender, RoutedEventArgs e) => UpdateSaveDirectoryState();
+    private void WizSaveToFile_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateSaveDirectoryState();
+        RefreshAfterCaptureSummary(GetAfterCaptureViewPreferenceFromControls());
+    }
 
     private void UpdateSaveDirectoryState()
     {
