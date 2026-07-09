@@ -329,6 +329,14 @@ public sealed class SettingsService : IDisposable
         NormalizeUnsafeModifierlessHotkeys(settings);
         NormalizeToastButtonLayout(settings.ToastButtons);
 
+        // If the primary capture hotkey was never set (e.g. old settings file predating the
+        // property default), restore the factory default: Alt+Shift+A.
+        if (settings.HotkeyKey == 0 && settings.HotkeyModifiers == 0)
+        {
+            settings.HotkeyModifiers = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+            settings.HotkeyKey = 0x41; // A
+        }
+
         return settings;
     }
 
