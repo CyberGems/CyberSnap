@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using CaptureMode = CyberSnap.Models.CaptureMode;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 using System.Windows.Interop;
@@ -355,39 +356,11 @@ public partial class SettingsWindow : Window
             () => ((App)Application.Current).RefreshWidgetWindowLayout());
     }
 
-    private AfterCaptureViewPreference GetAfterCaptureViewPreference()
-    {
-        var action = NormalizeAfterCaptureAction(_settingsService.Settings.AfterCapture);
-        var openEditor = _settingsService.Settings.OpenEditorAfterCapture;
+    private AfterCaptureViewPreference GetAfterCaptureViewPreference() =>
+        AfterCapturePreferences.FromSettings(_settingsService.Settings);
 
-        return action switch
-        {
-            AfterCaptureAction.CopyToClipboard => new AfterCaptureViewPreference(2, true),
-            AfterCaptureAction.None => new AfterCaptureViewPreference(2, false),
-            _ => openEditor
-                ? new AfterCaptureViewPreference(1, action == AfterCaptureAction.PreviewAndCopy)
-                : new AfterCaptureViewPreference(0, action == AfterCaptureAction.PreviewAndCopy)
-        };
-    }
-
-    private static void SetAfterCaptureViewPreference(AfterCaptureViewPreference preference, AppSettings settings)
-    {
-        (AfterCaptureAction action, bool openEditor) = preference.WindowIndex switch
-        {
-            0 => preference.Copy
-                ? (AfterCaptureAction.PreviewAndCopy, false)
-                : (AfterCaptureAction.PreviewOnly, false),
-            1 => preference.Copy
-                ? (AfterCaptureAction.PreviewAndCopy, true)
-                : (AfterCaptureAction.PreviewOnly, true),
-            _ => preference.Copy
-                ? (AfterCaptureAction.CopyToClipboard, false)
-                : (AfterCaptureAction.None, false)
-        };
-
-        settings.AfterCapture = action;
-        settings.OpenEditorAfterCapture = openEditor;
-    }
+    private static void SetAfterCaptureViewPreference(AfterCaptureViewPreference preference, AppSettings settings) =>
+        AfterCapturePreferences.ApplyToSettings(preference, settings);
 
     private void SetAfterCaptureViewPreference(AfterCaptureViewPreference preference) =>
         SetAfterCaptureViewPreference(preference, _settingsService.Settings);
@@ -404,24 +377,12 @@ public partial class SettingsWindow : Window
 
     private void RefreshAfterCaptureSummary(AfterCaptureViewPreference preference)
     {
-        string key = preference switch
-        {
-            (0, true) => "Current outcome: open preview and copy to clipboard.",
-            (0, false) => "Current outcome: open preview only.",
-            (1, true) => "Current outcome: open editor and copy to clipboard.",
-            (1, false) => "Current outcome: open editor only.",
-            (2, true) => "Current outcome: copy to clipboard.",
-            _ => "Current outcome: save the file only."
-        };
-        AfterCaptureSummaryText.Text = LocalizationService.Translate(key);
+        AfterCaptureSummaryText.Text = LocalizationService.Translate(
+            AfterCapturePreferences.GetSummaryLocalizationKey(preference));
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
-        Enum.IsDefined(typeof(AfterCaptureAction), action)
-            ? action
-            : AfterCaptureAction.PreviewAndCopy;
-
-    private readonly record struct AfterCaptureViewPreference(int WindowIndex, bool Copy);
+        AfterCapturePreferences.NormalizeAction(action);
 
     private void DefaultCaptureModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
