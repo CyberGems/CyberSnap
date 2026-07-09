@@ -311,6 +311,12 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
+        // "Save only" (index 2) requires saving to file — auto-enable if off
+        if (AfterCaptureCombo.SelectedIndex == 2 && SaveToFileCheck.IsChecked != true)
+        {
+            SaveToFileCheck.IsChecked = true;
+        }
+
         var previous = GetAfterCaptureViewPreference();
         var selected = GetAfterCaptureViewPreferenceFromControls();
 
@@ -323,6 +329,7 @@ public partial class SettingsWindow : Window
             {
                 SetAfterCaptureViewPreference(value);
                 RefreshAfterCaptureSummary(value);
+                UpdateSaveToFileState();
                 // Keep the notification dual preview's emphasis in step with the editor state.
                 RefreshEditorPreviewState();
             },
@@ -443,6 +450,13 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
+        // "Save only" mode: don't allow disabling save-to-file
+        if (AfterCaptureCombo.SelectedIndex == 2 && SaveToFileCheck.IsChecked != true)
+        {
+            SaveToFileCheck.IsChecked = true;
+            return;
+        }
+
         var previous = _settingsService.Settings.SaveToFile;
         var selected = SaveToFileCheck.IsChecked == true;
         UpdateCaptureSavePreference(
@@ -460,6 +474,13 @@ public partial class SettingsWindow : Window
                     AnimateHighlight(SaveDirPanel);
             },
             () => SaveDirPanel.Visibility = selected ? Visibility.Visible : Visibility.Collapsed);
+    }
+
+    private void UpdateSaveToFileState()
+    {
+        bool saveOnlyMode = AfterCaptureCombo.SelectedIndex == 2;
+        SaveToFileCheck.IsEnabled = !saveOnlyMode;
+        SaveToFileCheck.Opacity = saveOnlyMode ? 0.5 : 1.0;
     }
 
     private void AutoOpenCapturedImagesCheck_Changed(object sender, RoutedEventArgs e)

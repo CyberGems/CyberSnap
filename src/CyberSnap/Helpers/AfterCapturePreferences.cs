@@ -54,7 +54,7 @@ public static class AfterCapturePreferences
             (0, false) => "Current outcome: open preview only.",
             (1, true) => "Current outcome: open editor and copy to clipboard.",
             (1, false) => "Current outcome: open editor only.",
-            (2, true) => "Current outcome: copy to clipboard.",
+            (2, true) => "Current outcome: save the file and copy to clipboard.",
             _ => "Current outcome: save the file only."
         };
 }
