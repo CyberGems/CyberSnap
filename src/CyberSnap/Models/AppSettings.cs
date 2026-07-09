@@ -7,7 +7,8 @@ public enum AfterCaptureAction
     CopyToClipboard,
     PreviewAndCopy,
     PreviewOnly,
-    None
+    None,
+    OpenInSystemViewer
 }
 
 public enum ToastPosition
@@ -294,7 +295,6 @@ public sealed class AppSettings
     public bool AskForFileNameOnSave { get; set; }
     public string FileNameTemplate { get; set; } = Helpers.FileNameTemplate.DefaultTemplate;
     public CaptureImageFormat CaptureImageFormat { get; set; } = CaptureImageFormat.Png;
-    public bool AutoOpenCapturedImages { get; set; }
     public bool StyleScreenshots { get; set; }
     public bool AddScreenshotShadow { get; set; }
     public bool AddScreenshotStroke { get; set; }

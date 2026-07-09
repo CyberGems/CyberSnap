@@ -101,6 +101,26 @@ public partial class App
                             LocalizationService.Translate("Your capture is open in the editor."),
                             persisted.FilePath);
                     }
+                    else if (action == AfterCaptureAction.OpenInSystemViewer)
+                    {
+                        persisted.Output.Dispose();
+                        if (!string.IsNullOrEmpty(persisted.FilePath) && File.Exists(persisted.FilePath))
+                        {
+                            try
+                            {
+                                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                                {
+                                    FileName = persisted.FilePath,
+                                    UseShellExecute = true
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                AppDiagnostics.LogError("capture.auto-open", ex);
+                            }
+                        }
+                        ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
+                    }
                     else if (ShouldPreviewAfterCapture(action))
                     {
                         ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
@@ -109,22 +129,6 @@ public partial class App
                     {
                         persisted.Output.Dispose();
                         ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
-                    }
-
-                    if (settings.AutoOpenCapturedImages && !string.IsNullOrEmpty(persisted.FilePath) && File.Exists(persisted.FilePath))
-                    {
-                        try
-                        {
-                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                            {
-                                FileName = persisted.FilePath,
-                                UseShellExecute = true
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            AppDiagnostics.LogError("capture.auto-open", ex);
-                        }
                     }
 
                     ScheduleIdleMemoryTrim();

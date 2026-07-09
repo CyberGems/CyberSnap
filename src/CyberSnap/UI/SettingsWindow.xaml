@@ -1481,6 +1481,10 @@
                                                   ToolTip="Save the capture without opening a window."
                                                   AutomationProperties.Name="Save capture only"
                                                   AutomationProperties.HelpText="Write the file and skip both preview and editor."/>
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="System viewer"
+                                                  ToolTip="Open the capture in the system default viewer."
+                                                  AutomationProperties.Name="Open in system viewer"
+                                                  AutomationProperties.HelpText="Open the saved file in the system default viewer (such as CyberViewer)."/>
                                 </ComboBox>
 
                                 <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,12,0,0">
@@ -1588,25 +1592,6 @@
                                           ToolTip="Write screenshots to the configured save folder"
                                           AutomationProperties.Name="Save screenshots to file"
                                           Checked="SaveToFileCheck_Changed" Unchecked="SaveToFileCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE7AC;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Auto-open image in system viewer" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Automatically open newly taken screenshots in the system default viewer (such as CyberViewer)." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="AutoOpenCapturedImagesCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Automatically open newly taken screenshots in the system default viewer (such as CyberViewer)."
-                                          AutomationProperties.Name="Auto-open image in system viewer"
-                                          Checked="AutoOpenCapturedImagesCheck_Changed" Unchecked="AutoOpenCapturedImagesCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">

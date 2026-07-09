@@ -413,8 +413,8 @@ public partial class SetupWizard : Window
 
     private void UpdateSaveDirectoryState()
     {
-        // When "Save only" is selected, saving to file is mandatory — lock the toggle
-        bool saveOnlyMode = WizAfterCaptureCombo.SelectedIndex == 2;
+        // When "Save only" or "System viewer" is selected, saving to file is mandatory
+        bool saveOnlyMode = WizAfterCaptureCombo.SelectedIndex >= 2;
         WizSaveToFileCheck.IsEnabled = !saveOnlyMode;
         WizSaveToFileCheck.Opacity = saveOnlyMode ? 0.5 : 1.0;
 
@@ -456,8 +456,8 @@ public partial class SetupWizard : Window
         if (_suppressAfterCaptureChange)
             return;
 
-        // "Save only" (index 2) requires saving to file — auto-enable if off
-        if (WizAfterCaptureCombo.SelectedIndex == 2 && WizSaveToFileCheck.IsChecked != true)
+        // "Save only" (index 2) and "System viewer" (index 3) require saving to file
+        if (WizAfterCaptureCombo.SelectedIndex >= 2 && WizSaveToFileCheck.IsChecked != true)
         {
             WizSaveToFileCheck.IsChecked = true;
         }

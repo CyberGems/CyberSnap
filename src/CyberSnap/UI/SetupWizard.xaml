@@ -544,6 +544,7 @@
                                         <ComboBoxItem Content="Notification with actions"/>
                                         <ComboBoxItem Content="Open editor"/>
                                         <ComboBoxItem Content="Save only"/>
+                                        <ComboBoxItem Content="System viewer"/>
                                     </ComboBox>
                                 </Grid>
 
