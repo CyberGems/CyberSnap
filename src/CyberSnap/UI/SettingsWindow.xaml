@@ -4303,6 +4303,34 @@
                                     AutomationProperties.Name="Project Repository"/>
                         </Grid>
                     </Border>
+
+                    <TextBlock Text="Setup" Style="{StaticResource SectionLabel}" Margin="0,16,0,6"
+                               Services:LocalizationService.SourceText="Setup"/>
+                    <Border Style="{StaticResource Card}">
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="Setup wizard" Style="{StaticResource SettingTitle}"
+                                           Services:LocalizationService.SourceText="Setup wizard"/>
+                                <TextBlock Text="Re-run the setup wizard to review or change your initial configuration."
+                                           Style="{StaticResource SettingDescription}"
+                                           Services:LocalizationService.SourceText="Re-run the setup wizard to review or change your initial configuration."/>
+                            </StackPanel>
+                            <Button x:Name="RunWizardBtn" Content="Open wizard" Grid.Column="2" MinWidth="108"
+                                    Services:LocalizationService.SourceContent="Open wizard"
+                                    VerticalAlignment="Center" Click="RunWizardBtn_Click" Cursor="Hand"
+                                    ToolTip="Re-run the setup wizard"
+                                    Services:LocalizationService.SourceToolTip="Re-run the setup wizard"
+                                    AutomationProperties.Name="Open setup wizard"/>
+                        </Grid>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
 
