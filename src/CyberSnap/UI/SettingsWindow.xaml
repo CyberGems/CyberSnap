@@ -1534,43 +1534,6 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Scrolling capture" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <Image x:Name="ScrollCaptureModeIcon" Width="22" Height="22"
-                                           RenderOptions.BitmapScalingMode="HighQuality"
-                                           Opacity="0.95"
-                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Scrolling capture mode" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose whether you scroll the content yourself or CyberSnap auto-scrolls and captures for you." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="ScrollingCaptureModeCombo" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Scrolling capture mode"
-                                          ToolTip="Choose whether you scroll the content yourself or CyberSnap auto-scrolls and captures for you."
-                                          SelectionChanged="ScrollingCaptureModeCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Manual"
-                                                  ToolTip="You scroll the content yourself. CyberSnap collects frames as they appear while you scroll."
-                                                  AutomationProperties.Name="Manual scrolling capture"
-                                                  AutomationProperties.HelpText="Collect frames while you scroll the content manually."/>
-                                    <ComboBoxItem Content="Autoscroll"
-                                                  ToolTip="Automatically scroll and capture the window content."
-                                                  AutomationProperties.Name="Autoscroll capture"
-                                                  AutomationProperties.HelpText="Automatically scroll the target window and stitch frames until the end is reached."/>
-                                </ComboBox>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
                     <TextBlock Text="Saving" Style="{StaticResource SectionLabel}" Margin="4,18,0,9"/>
 
                     <Border Style="{StaticResource Card}">
@@ -1815,6 +1778,43 @@
                                                   ToolTip="Limit captures to 480p."
                                                   AutomationProperties.Name="480p max image size"
                                                   AutomationProperties.HelpText="Resize oversized captures so the longest edge is at most 480 pixels."/>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Scrolling capture" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <Image x:Name="ScrollCaptureModeIcon" Width="22" Height="22"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           Opacity="0.95"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Scrolling capture mode" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Choose whether you scroll the content yourself or CyberSnap auto-scrolls and captures for you." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="ScrollingCaptureModeCombo" Grid.Column="2" MinWidth="150"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Scrolling capture mode"
+                                          ToolTip="Choose whether you scroll the content yourself or CyberSnap auto-scrolls and captures for you."
+                                          SelectionChanged="ScrollingCaptureModeCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Manual"
+                                                  ToolTip="You scroll the content yourself. CyberSnap collects frames as they appear while you scroll."
+                                                  AutomationProperties.Name="Manual scrolling capture"
+                                                  AutomationProperties.HelpText="Collect frames while you scroll the content manually."/>
+                                    <ComboBoxItem Content="Autoscroll"
+                                                  ToolTip="Automatically scroll and capture the window content."
+                                                  AutomationProperties.Name="Autoscroll capture"
+                                                  AutomationProperties.HelpText="Automatically scroll the target window and stitch frames until the end is reached."/>
                                 </ComboBox>
                             </Grid>
                         </StackPanel>
