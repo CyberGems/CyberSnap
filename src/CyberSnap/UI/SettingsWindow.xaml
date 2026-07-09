@@ -1649,6 +1649,7 @@
                                 </StackPanel>
                                 <Button x:Name="BrowseSaveDirBtn" Content="Browse" Grid.Column="2" MinWidth="90"
                                         VerticalAlignment="Center" ToolTip="Choose save folder"
+                                        Services:LocalizationService.SourceToolTip="Choose save folder"
                                         AutomationProperties.Name="Choose save folder"
                                         Cursor="Hand" Click="BrowseButton_Click"/>
                             </Grid>
@@ -1753,6 +1754,7 @@
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="Max image size"
                                           ToolTip="Resize oversized captures after saving."
+                                          Services:LocalizationService.SourceToolTip="Resize oversized captures after saving."
                                           SelectionChanged="CaptureSizeCombo_SelectionChanged">
                                     <ComboBoxItem Content="Original" Tag="0"
                                                   ToolTip="Keep the original capture size."
@@ -4280,30 +4282,6 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock x:Name="AboutResourcesSectionLabel" Text="Resources" Style="{StaticResource SectionLabel}" Margin="0,16,0,6" Services:LocalizationService.SourceText="Resources"/>
-                    <Border Style="{StaticResource Card}">
-                        <Grid Style="{StaticResource SettingRow}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}">
-                                <TextBlock Text="&#xE71B;" Style="{StaticResource SettingIconGlyph}"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <TextBlock x:Name="AboutRepoTitle" Text="Project Repository" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Project Repository"/>
-                                <TextBlock x:Name="AboutRepoDesc" Text="View the source code on GitHub, report issues, and contribute." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="View the source code on GitHub, report issues, and contribute."/>
-                            </StackPanel>
-                            <Button x:Name="GithubBtn" Content="View GitHub" Grid.Column="2" MinWidth="108"
-                                    Services:LocalizationService.SourceContent="View GitHub"
-                                    VerticalAlignment="Center" Click="GithubButton_Click" Cursor="Hand"
-                                    ToolTip="View the source code on GitHub"
-                                    Services:LocalizationService.SourceToolTip="View the source code on GitHub"
-                                    AutomationProperties.Name="Project Repository"/>
-                        </Grid>
-                    </Border>
-
                     <TextBlock Text="Setup" Style="{StaticResource SectionLabel}" Margin="0,16,0,6"
                                Services:LocalizationService.SourceText="Setup"/>
                     <Border Style="{StaticResource Card}">
@@ -4329,6 +4307,30 @@
                                     ToolTip="Re-run the setup wizard"
                                     Services:LocalizationService.SourceToolTip="Re-run the setup wizard"
                                     AutomationProperties.Name="Open setup wizard"/>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock x:Name="AboutResourcesSectionLabel" Text="Resources" Style="{StaticResource SectionLabel}" Margin="0,16,0,6" Services:LocalizationService.SourceText="Resources"/>
+                    <Border Style="{StaticResource Card}">
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE71B;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock x:Name="AboutRepoTitle" Text="Project Repository" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Project Repository"/>
+                                <TextBlock x:Name="AboutRepoDesc" Text="View the source code on GitHub, report issues, and contribute." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="View the source code on GitHub, report issues, and contribute."/>
+                            </StackPanel>
+                            <Button x:Name="GithubBtn" Content="View GitHub" Grid.Column="2" MinWidth="108"
+                                    Services:LocalizationService.SourceContent="View GitHub"
+                                    VerticalAlignment="Center" Click="GithubButton_Click" Cursor="Hand"
+                                    ToolTip="View the source code on GitHub"
+                                    Services:LocalizationService.SourceToolTip="View the source code on GitHub"
+                                    AutomationProperties.Name="Project Repository"/>
                         </Grid>
                     </Border>
                 </StackPanel>
