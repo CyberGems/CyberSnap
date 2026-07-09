@@ -285,11 +285,12 @@ public partial class SettingsWindow
             // Col 1: Label
             var labelBlock = new TextBlock
             {
-                Text = label,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(8, 0, 12, 0),
                 Style = (Style)FindResource("SettingTitle")
             };
+            LocalizationService.SetSourceText(labelBlock, label);
+            labelBlock.Text = LocalizationService.Translate(label);
             Grid.SetColumn(labelBlock, 1);
             row.Children.Add(labelBlock);
 

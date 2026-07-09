@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Net.Http;
 using System.Text.Json;
 
@@ -18,8 +18,8 @@ public static class TranslationService
     public static string GetModelLabel(TranslationModel model) => model switch
     {
         TranslationModel.Google => "Google Translate",
-        TranslationModel.MyMemory => "MyMemory (free web)",
-        _ => "MyMemory (free web)"
+        TranslationModel.MyMemory => "MyMemory (mymemory.translated.net)",
+        _ => "MyMemory (mymemory.translated.net)"
     };
 
     public static readonly IReadOnlyList<(string Code, string Name)> SupportedLanguages = new[]

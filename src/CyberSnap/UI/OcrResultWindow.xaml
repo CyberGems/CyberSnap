@@ -1,4 +1,4 @@
-﻿<Window x:Class="CyberSnap.UI.OcrResultWindow"
+<Window x:Class="CyberSnap.UI.OcrResultWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
@@ -555,7 +555,7 @@
                                       Margin="0,0,4,6"
                                       ItemContainerStyle="{StaticResource OcrComboItemStyle}"
                                       SelectionChanged="ModelCombo_Changed">
-                                <ComboBoxItem Content="MyMemory (free web)" Tag="3"/>
+                                <ComboBoxItem Content="MyMemory (mymemory.translated.net)" Tag="3"/>
                                 <ComboBoxItem Content="Google Translate" Tag="1"/>
                             </ComboBox>
 
