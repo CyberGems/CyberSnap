@@ -610,13 +610,6 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
-                                        <TextBlock Text="After capture" FontSize="13" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource WizFg}"/>
-                                        <TextBlock Text="Choose what happens when a capture finishes."
-                                                   FontSize="11" Foreground="{DynamicResource WizFgMuted}"
-                                                   Margin="0,2,0,0" TextWrapping="Wrap"/>
-                                    </StackPanel>
                                     <ComboBox x:Name="WizAfterCaptureCombo" Grid.Column="1" MinWidth="168"
                                               Style="{StaticResource WizComboBox}"
                                               ItemContainerStyle="{StaticResource WizComboBoxItem}"
