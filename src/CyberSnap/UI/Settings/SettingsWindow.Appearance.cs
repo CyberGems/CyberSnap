@@ -140,6 +140,7 @@ public partial class SettingsWindow
             RefreshAfterCaptureSummary(afterCaptureView);
 
             SaveToFileCheck.IsChecked = s.SaveToFile;
+            UpdateSaveToFileState();
             AskFileNameCheck.IsChecked = s.AskForFileNameOnSave;
             AutoOpenCapturedImagesCheck.IsChecked = s.AutoOpenCapturedImages;
             CaptureFormatCombo.SelectedIndex = (int)s.CaptureImageFormat;
