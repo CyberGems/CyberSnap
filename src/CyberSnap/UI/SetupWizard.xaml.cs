@@ -14,8 +14,14 @@ public partial class SetupWizard : Window
     private readonly SettingsService _settingsService;
     private int _page = 1;
     private const int TotalPages = 3;
-    private readonly Border[] _dots;
     private readonly Grid[] _pages;
+    private readonly Border[] _stepDots;
+    private readonly TextBlock[] _stepNums;
+    private readonly TextBlock[] _stepLabels;
+    private readonly TextBlock[] _stepSubs;
+    private bool _suppressLanguageChange;
+    private bool _suppressAfterCaptureChange;
+    private readonly Dictionary<string, string> _languageItemSources = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly (string id, string label, char icon)[] CaptureHotkeys =
     {
@@ -31,17 +37,227 @@ public partial class SetupWizard : Window
         _settingsService = settingsService;
         Theme.Refresh();
         InitializeComponent();
-        CyberSnapWindowChrome.ApplyRoundedCorners(this, 12);
         UiScale.Set(settingsService.Settings.UiScale);
         UiScale.ApplyToWindow(this, WizardBorder, scaleWindowBounds: true);
         ApplyTheme();
 
-        _dots = new[] { Dot1, Dot2, Dot3 };
         _pages = new[] { Page1, Page2, Page3 };
+        _stepDots = new[] { StepDot1, StepDot2, StepDot3 };
+        _stepNums = new[] { StepNum1, StepNum2, StepNum3 };
+        _stepLabels = new[] { StepLabel1, StepLabel2, StepLabel3 };
+        _stepSubs = new[] { StepSub1, StepSub2, StepSub3 };
 
         BuildHotkeyRows();
         LoadDefaults();
+        UpdateSteps(_page);
+        PopulateLanguages();
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
+        RefreshLanguageComboDisplay();
+    }
+
+    private static string GetLanguageLabel(LocalizationLanguage language) =>
+        string.Equals(language.EnglishName, language.NativeName, StringComparison.OrdinalIgnoreCase)
+            ? language.EnglishName
+            : $"{language.EnglishName} - {language.NativeName}";
+
+    private void PopulateLanguages()
+    {
+        _suppressLanguageChange = true;
+        try
+        {
+            WizLanguageCombo.Items.Clear();
+            _languageItemSources.Clear();
+            var current = LocalizationService.NormalizeLanguageSetting(_settingsService.Settings.InterfaceLanguage);
+
+            var entries = new List<(string Code, string Label)>
+            {
+                (LocalizationService.AutoLanguageCode, "Auto (system language)"),
+            };
+
+            foreach (var lang in LocalizationService.Languages)
+            {
+                if (!LocalizationService.HasInterfaceTranslations(lang.Code))
+                    continue;
+
+                entries.Add((lang.Code, GetLanguageLabel(lang)));
+            }
+
+            var autoEntry = entries.First(e =>
+                string.Equals(e.Code, LocalizationService.AutoLanguageCode, StringComparison.OrdinalIgnoreCase));
+            var sortedLanguages = entries
+                .Where(e => !string.Equals(e.Code, LocalizationService.AutoLanguageCode, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(entry => entry.Label, StringComparer.OrdinalIgnoreCase);
+
+            ComboBoxItem? toSelect = null;
+            foreach (var (code, label) in new[] { autoEntry }.Concat(sortedLanguages))
+            {
+                _languageItemSources[code] = label;
+                var item = new ComboBoxItem { Content = label, Tag = code };
+                LocalizationService.SetSourceContent(item, label);
+                WizLanguageCombo.Items.Add(item);
+                if (toSelect is null && string.Equals(code, current, StringComparison.OrdinalIgnoreCase))
+                    toSelect = item;
+            }
+
+            WizLanguageCombo.SelectedItem = toSelect
+                ?? WizLanguageCombo.Items.OfType<ComboBoxItem>().FirstOrDefault(item =>
+                    string.Equals(item.Tag as string, LocalizationService.AutoLanguageCode, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _suppressLanguageChange = false;
+        }
+    }
+
+    private void RefreshLanguageComboDisplay()
+    {
+        foreach (var item in WizLanguageCombo.Items.OfType<ComboBoxItem>())
+        {
+            var code = item.Tag?.ToString();
+            if (code is null || !_languageItemSources.TryGetValue(code, out var label))
+                continue;
+
+            item.Content = LocalizationService.Translate(label);
+        }
+
+        var selected = WizLanguageCombo.SelectedItem;
+        if (selected is null)
+            return;
+
+        _suppressLanguageChange = true;
+        try
+        {
+            WizLanguageCombo.SelectedItem = null;
+            WizLanguageCombo.SelectedItem = selected;
+        }
+        finally
+        {
+            _suppressLanguageChange = false;
+        }
+    }
+
+    private void SelectLanguage(string languageCode)
+    {
+        var normalized = LocalizationService.NormalizeLanguageSetting(languageCode);
+        foreach (var item in WizLanguageCombo.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag?.ToString(), normalized, StringComparison.OrdinalIgnoreCase))
+            {
+                WizLanguageCombo.SelectedItem = item;
+                return;
+            }
+        }
+    }
+
+    private void Language_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressLanguageChange) return;
+        if (WizLanguageCombo.SelectedItem is not ComboBoxItem item) return;
+
+        var code = item.Tag as string ?? LocalizationService.DefaultLanguageCode;
+        var normalized = LocalizationService.NormalizeLanguageSetting(code);
+        var previous = _settingsService.Settings.InterfaceLanguage;
+        if (string.Equals(previous, normalized, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        try
+        {
+            _settingsService.Settings.InterfaceLanguage = normalized;
+            _settingsService.Save();
+        }
+        catch (Exception ex)
+        {
+            _settingsService.Settings.InterfaceLanguage = previous;
+            AppDiagnostics.LogError("setup.language", ex);
+            _suppressLanguageChange = true;
+            SelectLanguage(previous);
+            _suppressLanguageChange = false;
+            ToastWindow.ShowError(
+                "Language change failed",
+                $"The previous language was restored.\n{ex.Message}");
+            return;
+        }
+
+        LocalizationService.ApplyCurrentCulture(normalized);
+        LocalizationService.ApplyTo(this, normalized);
+        RefreshAfterCaptureSummary(GetAfterCaptureViewPreferenceFromControls());
+        UpdateSaveDirectoryState();
+        UpdateNavButtons();
+        RefreshLanguageComboDisplay();
+    }
+
+    private void UpdateNavButtons()
+    {
+        NextBtn.Content = LocalizationService.Translate(_page == TotalPages ? "Get Started" : "Next");
+    }
+
+    private void UpdateSteps(int page)
+    {
+        Theme.Refresh();
+        var accent = Theme.Brush(Theme.Accent);
+        var onAccent = Theme.Brush(Theme.IsDark
+            ? Theme.BgPrimary
+            : System.Windows.Media.Color.FromRgb(255, 255, 255));
+        var upcomingBorder = Theme.Brush(Theme.Border);
+        var textPrimary = Theme.Brush(Theme.TextPrimary);
+        var textSecondary = Theme.Brush(Theme.TextSecondary);
+        var textMuted = Theme.Brush(Theme.TextMuted);
+        var transparent = System.Windows.Media.Brushes.Transparent;
+
+        for (int i = 0; i < _stepDots.Length; i++)
+        {
+            int step = i + 1;
+            var dot = _stepDots[i];
+            var num = _stepNums[i];
+            var label = _stepLabels[i];
+            var sub = _stepSubs[i];
+
+            if (step < page)
+            {
+                dot.Background = accent;
+                dot.BorderBrush = accent;
+                dot.Opacity = 0.85;
+                dot.Effect = null;
+                num.Text = "\u2713";
+                num.Foreground = onAccent;
+                num.FontWeight = FontWeights.Bold;
+                label.Foreground = textSecondary;
+                label.FontWeight = FontWeights.Normal;
+                sub.Foreground = textMuted;
+            }
+            else if (step == page)
+            {
+                dot.Background = accent;
+                dot.BorderBrush = accent;
+                dot.Opacity = 1;
+                dot.Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = Theme.Accent,
+                    BlurRadius = 16,
+                    ShadowDepth = 0,
+                    Opacity = Theme.IsDark ? 0.9 : 0.45,
+                };
+                num.Text = step.ToString();
+                num.Foreground = onAccent;
+                num.FontWeight = FontWeights.SemiBold;
+                label.Foreground = textPrimary;
+                label.FontWeight = FontWeights.SemiBold;
+                sub.Foreground = textSecondary;
+            }
+            else
+            {
+                dot.Background = transparent;
+                dot.BorderBrush = upcomingBorder;
+                dot.Opacity = 1;
+                dot.Effect = null;
+                num.Text = step.ToString();
+                num.Foreground = textMuted;
+                num.FontWeight = FontWeights.SemiBold;
+                label.Foreground = textMuted;
+                label.FontWeight = FontWeights.Normal;
+                sub.Foreground = textMuted;
+            }
+        }
     }
 
     private void BuildHotkeyRows()
@@ -185,20 +401,57 @@ public partial class SetupWizard : Window
         var s = _settingsService.Settings;
         WizCrosshairCheck.IsChecked = s.ShowCrosshairGuides;
         WizCaptureMagnifierCheck.IsChecked = s.ShowCaptureMagnifier;
-        WizMuteCheck.IsChecked = s.MuteSounds;
+        WizEnableSoundsCheck.IsChecked = !s.MuteSounds;
         WizSaveToFileCheck.IsChecked = s.SaveToFile;
-        WizCaptureFormatCombo.SelectedIndex = (int)s.CaptureImageFormat;
-
-        // Max size combo by tag
-        for (int i = 0; i < WizCaptureSizeCombo.Items.Count; i++)
-        {
-            if (WizCaptureSizeCombo.Items[i] is ComboBoxItem item && item.Tag is string tag &&
-                int.TryParse(tag, out int val) && val == s.CaptureMaxLongEdge)
-            { WizCaptureSizeCombo.SelectedIndex = i; break; }
-        }
-        if (WizCaptureSizeCombo.SelectedIndex < 0) WizCaptureSizeCombo.SelectedIndex = 0;
-
+        WizCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
+        ApplyAfterCaptureViewPreference(AfterCapturePreferences.FromSettings(s));
         WizSaveDirText.Text = s.SaveDirectory;
+        UpdateSaveDirectoryState();
+    }
+
+    private void WizSaveToFile_Changed(object sender, RoutedEventArgs e) => UpdateSaveDirectoryState();
+
+    private void UpdateSaveDirectoryState()
+    {
+        var saveEnabled = WizSaveToFileCheck.IsChecked == true;
+        WizSaveDirRow.Opacity = saveEnabled ? 1 : 0.48;
+        WizBrowseSaveDirBtn.IsEnabled = saveEnabled;
+        WizSaveDirText.Visibility = saveEnabled ? Visibility.Visible : Visibility.Collapsed;
+        WizSaveDirDisabledHint.Visibility = saveEnabled ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void ApplyAfterCaptureViewPreference(AfterCaptureViewPreference preference)
+    {
+        _suppressAfterCaptureChange = true;
+        try
+        {
+            WizAfterCaptureCombo.SelectedIndex = Math.Clamp(preference.WindowIndex, 0, WizAfterCaptureCombo.Items.Count - 1);
+            WizAfterCaptureCopyCheck.IsChecked = preference.Copy;
+            RefreshAfterCaptureSummary(preference);
+        }
+        finally
+        {
+            _suppressAfterCaptureChange = false;
+        }
+    }
+
+    private AfterCaptureViewPreference GetAfterCaptureViewPreferenceFromControls() =>
+        new(
+            Math.Clamp(WizAfterCaptureCombo.SelectedIndex, 0, 2),
+            WizAfterCaptureCopyCheck.IsChecked == true);
+
+    private void RefreshAfterCaptureSummary(AfterCaptureViewPreference preference)
+    {
+        WizAfterCaptureSummaryText.Text = LocalizationService.Translate(
+            AfterCapturePreferences.GetSummaryLocalizationKey(preference, wizardLabels: true));
+    }
+
+    private void WizAfterCapture_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAfterCaptureChange)
+            return;
+
+        RefreshAfterCaptureSummary(GetAfterCaptureViewPreferenceFromControls());
     }
 
     private void BrowseSaveDir_Click(object sender, RoutedEventArgs e)
@@ -258,13 +511,11 @@ public partial class SetupWizard : Window
             }
             else
                 _pages[i].Visibility = Visibility.Collapsed;
-
-            _dots[i].BeginAnimation(OpacityProperty,
-                Motion.To(i == page - 1 ? 0.7 : 0.2, 220, Motion.SmoothOut));
         }
+        UpdateSteps(page);
         BackBtn.Visibility = page > 1 ? Visibility.Visible : Visibility.Collapsed;
         SkipBtn.Visibility = page == TotalPages ? Visibility.Collapsed : Visibility.Visible;
-        NextBtn.Content = page == TotalPages ? "Get Started" : "Next";
+        UpdateNavButtons();
     }
 
     private bool SaveCurrentPage()
@@ -275,25 +526,22 @@ public partial class SetupWizard : Window
             switch (_page)
             {
                 case 1:
-                    _settingsService.Save();
-                    break;
-                case 2:
                     var previousCapture = (
                         s.ShowCrosshairGuides,
                         s.ShowCaptureMagnifier,
                         s.MuteSounds,
                         s.SaveToFile,
-                        s.CaptureImageFormat,
-                        s.CaptureMaxLongEdge);
+                        s.ShowCaptureWidget,
+                        s.AfterCapture,
+                        s.OpenEditorAfterCapture);
                     try
                     {
                         s.ShowCrosshairGuides = WizCrosshairCheck.IsChecked == true;
                         s.ShowCaptureMagnifier = WizCaptureMagnifierCheck.IsChecked == true;
-                        s.MuteSounds = WizMuteCheck.IsChecked == true;
+                        s.MuteSounds = WizEnableSoundsCheck.IsChecked != true;
                         s.SaveToFile = WizSaveToFileCheck.IsChecked == true;
-                        s.CaptureImageFormat = (CaptureImageFormat)WizCaptureFormatCombo.SelectedIndex;
-                        if (WizCaptureSizeCombo.SelectedItem is ComboBoxItem sizeItem && sizeItem.Tag is string sizeTag && int.TryParse(sizeTag, out int sizeVal))
-                            s.CaptureMaxLongEdge = sizeVal;
+                        s.ShowCaptureWidget = WizCaptureWidgetCheck.IsChecked == true;
+                        AfterCapturePreferences.ApplyToSettings(GetAfterCaptureViewPreferenceFromControls(), s);
                         _settingsService.Save();
                     }
                     catch
@@ -302,11 +550,15 @@ public partial class SetupWizard : Window
                         s.ShowCaptureMagnifier = previousCapture.ShowCaptureMagnifier;
                         s.MuteSounds = previousCapture.MuteSounds;
                         s.SaveToFile = previousCapture.SaveToFile;
-                        s.CaptureImageFormat = previousCapture.CaptureImageFormat;
-                        s.CaptureMaxLongEdge = previousCapture.CaptureMaxLongEdge;
+                        s.ShowCaptureWidget = previousCapture.ShowCaptureWidget;
+                        s.AfterCapture = previousCapture.AfterCapture;
+                        s.OpenEditorAfterCapture = previousCapture.OpenEditorAfterCapture;
                         LoadDefaults();
                         throw;
                     }
+                    break;
+                case 2:
+                    _settingsService.Save();
                     break;
                 case 3:
                     var previousCompleted = s.HasCompletedSetup;
@@ -355,29 +607,55 @@ public partial class SetupWizard : Window
     {
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         Native.Dwm.DisableBackdrop(hwnd);
+        Native.Dwm.TrySetWindowCornerPreference(hwnd, Native.Dwm.DWMWCP_DONOTROUND);
     }
 
     private void ApplyTheme()
     {
         Theme.Refresh();
+        Theme.ApplyTo(Resources);
+        var accent = Theme.Accent;
+        var onAccent = Theme.IsDark
+            ? Theme.BgPrimary
+            : System.Windows.Media.Color.FromRgb(255, 255, 255);
+
         Resources["WizBg"] = Theme.Brush(Theme.BgPrimary);
         Resources["WizCardBg"] = Theme.Brush(Theme.BgCard);
         Resources["WizFg"] = Theme.Brush(Theme.TextPrimary);
         Resources["WizFgMuted"] = Theme.Brush(Theme.TextSecondary);
         Resources["WizBorder"] = Theme.Brush(Theme.WindowBorder);
         Resources["WizInputBg"] = Theme.Brush(Theme.BgSecondary);
-        Resources["WizBtnPrimaryBg"] = Theme.Brush(Theme.IsDark
-            ? System.Windows.Media.Color.FromRgb(240, 240, 240) : System.Windows.Media.Color.FromRgb(30, 30, 30));
-        Resources["WizBtnPrimaryFg"] = Theme.Brush(Theme.IsDark
-            ? System.Windows.Media.Color.FromRgb(26, 26, 26) : System.Windows.Media.Color.FromRgb(240, 240, 240));
-        Resources["WizBtnPrimaryBorder"] = Theme.Brush(Theme.BorderSubtle);
+        Resources["WizAccent"] = Theme.Brush(accent);
+        Resources["WizBtnPrimaryBg"] = Theme.Brush(accent);
+        Resources["WizBtnPrimaryHoverBg"] = Theme.Brush(Lighten(accent, Theme.IsDark ? 0.4 : 0.14));
+        Resources["WizBtnPrimaryFg"] = Theme.Brush(onAccent);
         Resources["WizBtnSecondaryBg"] = Theme.Brush(Theme.AccentSubtle);
         Resources["WizBtnSecondaryFg"] = Theme.Brush(Theme.TextPrimary);
         Resources["WizShadowColor"] = Theme.IsDark
             ? System.Windows.Media.Color.FromArgb(128, 0, 0, 0)
             : System.Windows.Media.Color.FromArgb(72, 0, 0, 0);
+        Resources["WizPanelShadow"] = Theme.Brush(Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(64, 0, 0, 0)
+            : System.Windows.Media.Color.FromArgb(36, 0, 0, 0));
+        Resources["WizAccentGlowColor"] = accent;
+        Resources["WizGlowColor"] = Theme.IsDark
+            ? System.Windows.Media.Color.FromArgb(58, accent.R, accent.G, accent.B)
+            : System.Windows.Media.Color.FromArgb(30, accent.R, accent.G, accent.B);
+        Resources["WizSidebarTopColor"] = Theme.IsDark
+            ? System.Windows.Media.Color.FromRgb(15, 30, 44)
+            : System.Windows.Media.Color.FromRgb(226, 236, 245);
+        Resources["WizSidebarBottomColor"] = Theme.IsDark
+            ? System.Windows.Media.Color.FromRgb(11, 14, 22)
+            : System.Windows.Media.Color.FromRgb(213, 219, 230);
         Foreground = Theme.Brush(Theme.TextPrimary);
         Icon = ThemedLogo.Square(32);
+    }
+
+    private static System.Windows.Media.Color Lighten(System.Windows.Media.Color c, double amount)
+    {
+        amount = Math.Clamp(amount, 0, 1);
+        byte Mix(byte v) => (byte)Math.Round(v + (255 - v) * amount);
+        return System.Windows.Media.Color.FromRgb(Mix(c.R), Mix(c.G), Mix(c.B));
     }
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e)

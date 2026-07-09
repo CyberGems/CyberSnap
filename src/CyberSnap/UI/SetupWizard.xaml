@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
-        Width="580" Height="680" Topmost="True"
+        Width="840" Height="600" Topmost="True" UseLayoutRounding="True"
         SourceInitialized="OnSourceInit"
         MouseLeftButtonDown="Window_MouseDown">
 
@@ -14,27 +14,73 @@
         <SolidColorBrush x:Key="WizFgMuted" Color="#99F0F0F0"/>
         <SolidColorBrush x:Key="WizBorder" Color="#12FFFFFF"/>
         <SolidColorBrush x:Key="WizInputBg" Color="#1E1E1E"/>
-        <SolidColorBrush x:Key="WizBtnPrimaryBg" Color="#F0F0F0"/>
-        <SolidColorBrush x:Key="WizBtnPrimaryFg" Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="WizAccent" Color="#00FFFF"/>
+        <SolidColorBrush x:Key="WizBtnPrimaryBg" Color="#00FFFF"/>
+        <SolidColorBrush x:Key="WizBtnPrimaryHoverBg" Color="#66FFFF"/>
+        <SolidColorBrush x:Key="WizBtnPrimaryFg" Color="#0B0E16"/>
         <SolidColorBrush x:Key="WizBtnSecondaryBg" Color="#15FFFFFF"/>
         <SolidColorBrush x:Key="WizBtnSecondaryFg" Color="#CCF0F0F0"/>
-        <SolidColorBrush x:Key="WizBtnPrimaryBorder" Color="#20000000"/>
         <Color x:Key="WizShadowColor">#80000000</Color>
+        <SolidColorBrush x:Key="WizPanelShadow" Color="#40000000"/>
+        <Color x:Key="WizAccentGlowColor">#00FFFF</Color>
+        <Color x:Key="WizSidebarTopColor">#0F1E2C</Color>
+        <Color x:Key="WizSidebarBottomColor">#0B0E16</Color>
+        <Color x:Key="WizGlowColor">#3A00FFFF</Color>
 
         <Style x:Key="WizBtn" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
-            <Setter Property="Padding" Value="24,10"/>
+            <Setter Property="Padding" Value="22,10"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="MinWidth" Value="100"/>
+            <Setter Property="MinHeight" Value="38"/>
         </Style>
-        <Style x:Key="WizBtnPrimary" TargetType="Button" BasedOn="{StaticResource WizBtn}">
-            <Setter Property="Background" Value="{DynamicResource WizBtnPrimaryBg}"/>
-            <Setter Property="Foreground" Value="{DynamicResource WizBtnPrimaryFg}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource WizBtnPrimaryBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+
+        <!-- Accent primary action button with soft glow -->
+        <Style x:Key="WizBtnPrimary" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinWidth" Value="118"/>
+            <Setter Property="MinHeight" Value="38"/>
+            <Setter Property="Padding" Value="24,9"/>
+            <Setter Property="Foreground" Value="{DynamicResource WizBtnPrimaryFg}"/>
+            <Setter Property="Background" Value="{DynamicResource WizBtnPrimaryBg}"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="18" ShadowDepth="0" Opacity="0.35"
+                                                  Color="{DynamicResource WizAccentGlowColor}"/>
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource WizBtnPrimaryHoverBg}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
+
         <Style x:Key="WizBtnSecondary" TargetType="Button" BasedOn="{StaticResource WizBtn}">
             <Setter Property="Background" Value="{DynamicResource WizBtnSecondaryBg}"/>
             <Setter Property="Foreground" Value="{DynamicResource WizBtnSecondaryFg}"/>
@@ -42,167 +88,650 @@
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
 
-        <Style x:Key="WizRow" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource WizCardBg}"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,11"/>
-            <Setter Property="Margin" Value="0,0,0,3"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource WizBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+        <Style x:Key="WizBtnClose" TargetType="Button" BasedOn="{StaticResource WizBtnSecondary}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeDangerButtonBackground}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ChromeDangerButtonBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
+
+        <Style x:Key="WizRow" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="14,9"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
+        <Style x:Key="WizCheckBox" TargetType="CheckBox">
+            <Setter Property="Width" Value="42"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Track"
+                                Width="40"
+                                Height="20"
+                                CornerRadius="10"
+                                Background="#00000000"
+                                BorderBrush="{DynamicResource ThemeTextSecondaryBrush}"
+                                BorderThickness="1"
+                                SnapsToDevicePixels="True">
+                            <Rectangle x:Name="Thumb"
+                                     Width="12"
+                                     Height="12"
+                                     Margin="4,0"
+                                     HorizontalAlignment="Left"
+                                     VerticalAlignment="Center"
+                                     Fill="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Track" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="WizComboBox" TargetType="ComboBox">
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+            <Setter Property="MaxDropDownHeight" Value="280"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid SnapsToDevicePixels="True">
+                            <ToggleButton x:Name="ToggleSite"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <ContentPresenter/>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <Border x:Name="Bd"
+                                        MinHeight="{TemplateBinding MinHeight}"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="3"
+                                        Padding="{TemplateBinding Padding}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="18"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ContentPresenter x:Name="ContentSite"
+                                                          Content="{TemplateBinding SelectionBoxItem}"
+                                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                          IsHitTestVisible="False"
+                                                          Margin="0,0,6,0"
+                                                          RecognizesAccessKey="True"
+                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                        <Path Grid.Column="1"
+                                              Width="8"
+                                              Height="4"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Data="M 0 0 L 4 4 L 8 0 Z"
+                                              Fill="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                    </Grid>
+                                </Border>
+                            </ToggleButton>
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom"
+                                   PopupAnimation="Fade">
+                                <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        Margin="0,4,0,0"
+                                        Background="{DynamicResource ThemeCardBrush}"
+                                        BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        SnapsToDevicePixels="True">
+                                    <ScrollViewer Padding="4"
+                                                  CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#35FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="WizComboBoxItem" TargetType="ComboBoxItem">
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="9,5"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              RecognizesAccessKey="True"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollViewer">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+
+        <Style x:Key="WizScrollThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Opacity" Value="0.35"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border CornerRadius="3" Background="{DynamicResource ThemeTextSecondaryBrush}" Margin="0,2,8,2"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+                <Trigger Property="IsDragging" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="WizScrollBarStyle" TargetType="{x:Type ScrollBar}">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Opacity" Value="0.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid Background="Transparent" Width="{TemplateBinding Width}">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="0,6,0,6">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource WizScrollThumbStyle}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand" Background="Transparent" BorderThickness="0" Focusable="False" IsTabStop="False"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource WizScrollBarStyle}"/>
     </Window.Resources>
 
-    <Border Margin="16" CornerRadius="12">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="28" ShadowDepth="4" Opacity="0.5" Color="{DynamicResource WizShadowColor}"/>
-        </Border.Effect>
-    <Border x:Name="WizardBorder" CornerRadius="12" ClipToBounds="True"
-            Background="{DynamicResource WizBg}" BorderBrush="{DynamicResource WizBorder}" BorderThickness="1">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Border Margin="16" Background="Transparent">
+    <Grid ClipToBounds="False">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="270"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <Button Content="X"
-                Width="32" Height="32" MinWidth="32"
-                Padding="0"
-                Margin="0,10,10,0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Panel.ZIndex="10"
-                FontSize="16"
-                Style="{StaticResource WizBtnSecondary}"
-                Click="Skip_Click"/>
+        <!-- ===================== HERO SIDEBAR (square left edge) ===================== -->
+        <Grid Grid.Column="0" x:Name="SidebarRoot" Panel.ZIndex="2" Margin="0,0,-2,0">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0.5,1">
+                    <GradientStop Color="{DynamicResource WizSidebarTopColor}" Offset="0"/>
+                    <GradientStop Color="{DynamicResource WizSidebarBottomColor}" Offset="1"/>
+                </LinearGradientBrush>
+            </Grid.Background>
 
-        <Grid x:Name="Page1" Grid.Row="0" Margin="36,28,36,0">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
-                <StackPanel>
-                    <TextBlock Text="Welcome to CyberSnap" FontSize="24" FontWeight="SemiBold"
+            <!-- accent glow -->
+            <Border IsHitTestVisible="False">
+                <Border.Background>
+                    <RadialGradientBrush Center="0.22,0.14" GradientOrigin="0.22,0.14" RadiusX="1.15" RadiusY="0.72">
+                        <GradientStop Color="{DynamicResource WizGlowColor}" Offset="0"/>
+                        <GradientStop Color="#00FFFFFF" Offset="1"/>
+                    </RadialGradientBrush>
+                </Border.Background>
+            </Border>
+
+            <Grid Margin="28,36,26,26">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0">
+                    <Image Source="pack://application:,,,/Assets/CyberSnap_square.png"
+                           Width="54" Height="54" HorizontalAlignment="Left"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <TextBlock Text="CyberSnap" FontSize="22" FontWeight="SemiBold"
                                FontFamily="Segoe UI Variable Display"
-                               Foreground="{DynamicResource WizFg}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Set up your capture hotkeys" FontSize="13"
+                               Foreground="{DynamicResource WizFg}" Margin="0,14,0,0"/>
+                    <TextBlock Text="Let's get you set up" FontSize="12.5"
                                FontFamily="Segoe UI Variable Text"
-                               Foreground="{DynamicResource WizFgMuted}" HorizontalAlignment="Center" Margin="0,4,0,20"/>
-
-                    <StackPanel x:Name="HotkeyPanel"/>
-
-                    <TextBlock Text="Click a box and press your preferred shortcut"
-                               FontSize="11" FontFamily="Segoe UI Variable Text"
-                               Foreground="{DynamicResource WizFgMuted}" HorizontalAlignment="Center"
-                               Margin="0,12,0,0" Opacity="0.5"/>
+                               Foreground="{DynamicResource WizFgMuted}" Margin="0,3,0,0"/>
                 </StackPanel>
-            </ScrollViewer>
+
+                <!-- Numbered stepper -->
+                <StackPanel Grid.Row="1" x:Name="StepList" VerticalAlignment="Center">
+                    <Grid x:Name="StepRow1" Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="StepDot1" Width="30" Height="30" CornerRadius="15"
+                                BorderThickness="1.5" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepNum1" Text="1" FontSize="13" FontWeight="SemiBold"
+                                       FontFamily="Segoe UI Variable Text"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepLabel1" Text="Capture" FontSize="14"
+                                       FontFamily="Segoe UI Variable Text"/>
+                            <TextBlock x:Name="StepSub1" Text="Images and saving" FontSize="11"
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="StepRow2" Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="StepDot2" Width="30" Height="30" CornerRadius="15"
+                                BorderThickness="1.5" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepNum2" Text="2" FontSize="13" FontWeight="SemiBold"
+                                       FontFamily="Segoe UI Variable Text"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepLabel2" Text="Hotkeys" FontSize="14"
+                                       FontFamily="Segoe UI Variable Text"/>
+                            <TextBlock x:Name="StepSub2" Text="Your shortcuts" FontSize="11"
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="StepRow3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="StepDot3" Width="30" Height="30" CornerRadius="15"
+                                BorderThickness="1.5" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepNum3" Text="3" FontSize="13" FontWeight="SemiBold"
+                                       FontFamily="Segoe UI Variable Text"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepLabel3" Text="Ready" FontSize="14"
+                                       FontFamily="Segoe UI Variable Text"/>
+                            <TextBlock x:Name="StepSub3" Text="Finish up" FontSize="11"
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+
+                <TextBlock Grid.Row="2" Text="You can change everything later in Settings."
+                           FontSize="11" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"
+                           Foreground="{DynamicResource WizFgMuted}" Opacity="0.7"/>
+            </Grid>
         </Grid>
 
-        <Grid x:Name="Page2" Grid.Row="0" Margin="36,28,36,0" Visibility="Collapsed">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
-                <StackPanel>
-                    <TextBlock Text="Capture" FontSize="24" FontWeight="SemiBold"
-                               FontFamily="Segoe UI Variable Display"
-                               Foreground="{DynamicResource WizFg}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Screenshots and saving" FontSize="13"
-                               FontFamily="Segoe UI Variable Text"
-                               Foreground="{DynamicResource WizFgMuted}" HorizontalAlignment="Center" Margin="0,4,0,18"/>
+        <!-- ===================== CONTENT (rounded right edge) ===================== -->
+        <Grid Grid.Column="1" Panel.ZIndex="1" Margin="0,0,10,0">
+            <Border CornerRadius="0,14,14,0"
+                    Background="{DynamicResource WizPanelShadow}"
+                    Margin="5,8,0,0"
+                    IsHitTestVisible="False"
+                    SnapsToDevicePixels="True"/>
+            <Border x:Name="WizardBorder" CornerRadius="0,14,14,0" ClipToBounds="True" SnapsToDevicePixels="True"
+                    Background="{DynamicResource WizBg}" BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                    BorderThickness="0,1,1,1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-                    <Border Style="{StaticResource WizRow}">
-                        <CheckBox x:Name="WizCrosshairCheck" Content="Show crosshair guides" FontSize="13"
-                                  Foreground="{DynamicResource WizFg}" Cursor="Hand"/>
-                    </Border>
-                    <Border Style="{StaticResource WizRow}">
-                        <CheckBox x:Name="WizCaptureMagnifierCheck" Content="Show pixel magnifier near cursor" FontSize="13"
-                                  Foreground="{DynamicResource WizFg}" Cursor="Hand"/>
-                    </Border>
-                    <Border Style="{StaticResource WizRow}">
-                        <CheckBox x:Name="WizMuteCheck" Content="Mute sounds" FontSize="13"
-                                  Foreground="{DynamicResource WizFg}" Cursor="Hand"/>
-                    </Border>
-                    <Border Style="{StaticResource WizRow}">
-                        <CheckBox x:Name="WizSaveToFileCheck" Content="Save screenshots to file" FontSize="13"
-                                  Foreground="{DynamicResource WizFg}" Cursor="Hand"/>
-                    </Border>
-                    <Border Style="{StaticResource WizRow}">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <TextBlock Text="Image format" FontSize="13" Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
-                            <ComboBox x:Name="WizCaptureFormatCombo" Grid.Column="1" MinWidth="100" Padding="8,5" FontSize="12">
-                                <ComboBoxItem Content="PNG"/><ComboBoxItem Content="JPG"/><ComboBoxItem Content="BMP"/>
-                            </ComboBox>
-                        </Grid>
-                    </Border>
-                    <Border Style="{StaticResource WizRow}">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <TextBlock Text="Max image size" FontSize="13" Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
-                            <ComboBox x:Name="WizCaptureSizeCombo" Grid.Column="1" MinWidth="100" Padding="8,5" FontSize="12">
-                                <ComboBoxItem Content="Original" Tag="0"/><ComboBoxItem Content="2160p" Tag="2160"/>
-                                <ComboBoxItem Content="1440p" Tag="1440"/><ComboBoxItem Content="1080p" Tag="1080"/>
-                                <ComboBoxItem Content="720p" Tag="720"/><ComboBoxItem Content="480p" Tag="480"/>
-                            </ComboBox>
-                        </Grid>
-                    </Border>
-                    <Border Style="{StaticResource WizRow}">
-                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Save directory" FontSize="13" Foreground="{DynamicResource WizFg}"/>
-                                <TextBlock x:Name="WizSaveDirText" Text="" FontSize="11"
-                                           Foreground="{DynamicResource WizFgMuted}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
-                            </StackPanel>
-                            <Button Grid.Column="1" Content="Browse" Style="{StaticResource WizBtnSecondary}"
-                                    Padding="12,6" MinWidth="0" FontSize="11" Click="BrowseSaveDir_Click"/>
-                        </Grid>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-        </Grid>
-
-        <Grid x:Name="Page3" Grid.Row="0" Margin="40,32,40,0" Visibility="Collapsed">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="You're all set!" FontSize="26" FontWeight="SemiBold"
-                           FontFamily="Segoe UI Variable Display"
-                           Foreground="{DynamicResource WizFg}" HorizontalAlignment="Center"/>
-                <TextBlock FontSize="13" FontFamily="Segoe UI Variable Text" TextAlignment="Center"
-                           Foreground="{DynamicResource WizFgMuted}" HorizontalAlignment="Center"
-                           Margin="0,12,0,0" LineHeight="22">
-                    CyberSnap is running in your system tray.
-                    <LineBreak/>
-                    Use your hotkeys or right-click the tray icon to get started.
-                </TextBlock>
-                <TextBlock FontSize="12" FontFamily="Segoe UI Variable Text" TextAlignment="Center"
-                           Foreground="{DynamicResource WizFgMuted}" HorizontalAlignment="Center"
-                           Margin="0,24,0,0" Opacity="0.5">
-                    More options live in Settings.
-                </TextBlock>
-
-                <Button Content="Open Settings" Style="{StaticResource WizBtnSecondary}"
-                        HorizontalAlignment="Center" Margin="0,20,0,0"
-                        Click="OpenSettings_Click"/>
+            <StackPanel Orientation="Horizontal" Margin="0,12,12,0"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Panel.ZIndex="10">
+                <ComboBox x:Name="WizLanguageCombo" MinWidth="180" Height="32"
+                          Style="{StaticResource WizComboBox}"
+                          ItemContainerStyle="{StaticResource WizComboBoxItem}"
+                          VerticalContentAlignment="Center" FontSize="12" Margin="0,0,8,0"
+                          ToolTip="Language" SelectionChanged="Language_SelectionChanged"/>
+                <Button Content="X"
+                        Width="32" Height="32" MinWidth="32"
+                        Padding="0"
+                        FontSize="15"
+                        Style="{StaticResource WizBtnClose}"
+                        Click="Skip_Click"/>
             </StackPanel>
-        </Grid>
 
-        <Border Grid.Row="1" Padding="28,12,28,20">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="7" Height="7" CornerRadius="4" x:Name="Dot1"
-                            Background="{DynamicResource WizFg}" Opacity="0.7" Margin="0,0,5,0"/>
-                    <Border Width="7" Height="7" CornerRadius="4" x:Name="Dot2"
-                            Background="{DynamicResource WizFg}" Opacity="0.2" Margin="0,0,5,0"/>
-                    <Border Width="7" Height="7" CornerRadius="4" x:Name="Dot3"
-                            Background="{DynamicResource WizFg}" Opacity="0.2"/>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button x:Name="SkipBtn" Content="Skip setup" Style="{StaticResource WizBtnSecondary}"
-                            Click="Skip_Click" Margin="0,0,8,0"/>
-                    <Button x:Name="BackBtn" Content="Back" Style="{StaticResource WizBtnSecondary}"
-                            Click="Back_Click" Visibility="Collapsed" Margin="0,0,8,0"/>
-                    <Button x:Name="NextBtn" Content="Next" Style="{StaticResource WizBtnPrimary}"
-                            Click="Next_Click"/>
+            <Grid x:Name="Page1" Grid.Row="0" Margin="40,52,40,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
+                    <StackPanel>
+                        <TextBlock Text="Capture and saving" FontSize="24" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable Display"
+                                   Foreground="{DynamicResource WizFg}"/>
+                        <TextBlock Text="How screenshots look and where they go" FontSize="13"
+                                   FontFamily="Segoe UI Variable Text"
+                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,18"/>
+
+                        <Border Style="{StaticResource WizRow}" Padding="14,12" Margin="0,0,0,12">
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                                        <TextBlock Text="After capture" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource WizFg}"/>
+                                        <TextBlock Text="Choose what CyberSnap does after saving the selection."
+                                                   FontSize="11" Foreground="{DynamicResource WizFgMuted}"
+                                                   Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="WizAfterCaptureCombo" Grid.Column="1" MinWidth="168"
+                                              Style="{StaticResource WizComboBox}"
+                                              ItemContainerStyle="{StaticResource WizComboBoxItem}"
+                                              VerticalAlignment="Center"
+                                              SelectionChanged="WizAfterCapture_Changed">
+                                        <ComboBoxItem Content="Notification with actions"/>
+                                        <ComboBoxItem Content="Open editor"/>
+                                        <ComboBoxItem Content="Save only"/>
+                                    </ComboBox>
+                                </Grid>
+
+                                <Grid Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="Copy capture to clipboard" FontSize="12"
+                                                   Foreground="{DynamicResource WizFg}"/>
+                                        <TextBlock Text="Automatically copy the saved image to the clipboard."
+                                                   FontSize="11" Foreground="{DynamicResource WizFgMuted}"
+                                                   Margin="0,2,0,0" TextWrapping="Wrap" Opacity="0.85"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="WizAfterCaptureCopyCheck" Grid.Column="1" Content=""
+                                              Style="{StaticResource WizCheckBox}"
+                                              Checked="WizAfterCapture_Changed" Unchecked="WizAfterCapture_Changed"/>
+                                </Grid>
+
+                                <Border Margin="0,12,0,0"
+                                        Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                        BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="5"
+                                        Padding="9,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="&#xE946;"
+                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource WizFg}"
+                                                   Opacity="0.9"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0"/>
+                                        <TextBlock x:Name="WizAfterCaptureSummaryText" Grid.Column="1"
+                                                   FontSize="11.5"
+                                                   FontFamily="Segoe UI Variable Text"
+                                                   Foreground="{DynamicResource WizFg}"
+                                                   Opacity="0.9"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Show pixel magnifier near cursor" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WizCaptureMagnifierCheck" Grid.Column="1" Content=""
+                                          Style="{StaticResource WizCheckBox}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Enable sounds" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WizEnableSoundsCheck" Grid.Column="1" Content=""
+                                          Style="{StaticResource WizCheckBox}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Show capture widget" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WizCaptureWidgetCheck" Grid.Column="1" Content=""
+                                          Style="{StaticResource WizCheckBox}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Show crosshair guides" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WizCrosshairCheck" Grid.Column="1" Content=""
+                                          Style="{StaticResource WizCheckBox}"/>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Save screenshots to file" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <CheckBox x:Name="WizSaveToFileCheck" Grid.Column="1" Content=""
+                                          Style="{StaticResource WizCheckBox}"
+                                          Checked="WizSaveToFile_Changed" Unchecked="WizSaveToFile_Changed"/>
+                            </Grid>
+                        </Border>
+                        <Border x:Name="WizSaveDirRow" Style="{StaticResource WizRow}">
+                            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Save directory" FontSize="13" Foreground="{DynamicResource WizFg}"/>
+                                    <TextBlock x:Name="WizSaveDirText" Text="" FontSize="11"
+                                               Foreground="{DynamicResource WizFgMuted}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
+                                    <TextBlock x:Name="WizSaveDirDisabledHint" Text="Files won't be saved to disk."
+                                               FontSize="11" Foreground="{DynamicResource WizFgMuted}"
+                                               Margin="0,2,0,0" TextWrapping="Wrap" Visibility="Collapsed" Opacity="0.85"/>
+                                </StackPanel>
+                                <Button x:Name="WizBrowseSaveDirBtn" Grid.Column="1" Content="Browse" Style="{StaticResource WizBtnSecondary}"
+                                        Padding="12,6" MinWidth="0" MinHeight="0" FontSize="11" Click="BrowseSaveDir_Click"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid x:Name="Page2" Grid.Row="0" Margin="40,52,40,0" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
+                    <StackPanel>
+                        <TextBlock Text="Set your hotkeys" FontSize="24" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable Display"
+                                   Foreground="{DynamicResource WizFg}"/>
+                        <TextBlock Text="Click a box and press your preferred shortcut" FontSize="13"
+                                   FontFamily="Segoe UI Variable Text"
+                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,20"/>
+
+                        <StackPanel x:Name="HotkeyPanel"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid x:Name="Page3" Grid.Row="0" Margin="40,32,40,0" Visibility="Collapsed">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Border Width="72" Height="72" CornerRadius="36" HorizontalAlignment="Center"
+                            Background="{DynamicResource WizBtnSecondaryBg}"
+                            BorderBrush="{DynamicResource WizAccent}" BorderThickness="1.5">
+                        <TextBlock Text="&#x2713;" FontSize="34" FontWeight="Bold"
+                                   Foreground="{DynamicResource WizAccent}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="You're all set!" FontSize="26" FontWeight="SemiBold"
+                               FontFamily="Segoe UI Variable Display"
+                               Foreground="{DynamicResource WizFg}" HorizontalAlignment="Center"
+                               Margin="0,20,0,0"/>
+                    <TextBlock FontSize="13" FontFamily="Segoe UI Variable Text" TextAlignment="Center"
+                               Foreground="{DynamicResource WizFgMuted}" HorizontalAlignment="Center"
+                               Margin="0,12,0,0" LineHeight="22">
+                        CyberSnap is running in your system tray.
+                        <LineBreak/>
+                        Use your hotkeys or right-click the tray icon to get started.
+                    </TextBlock>
+
+                    <Button Content="Open Settings" Style="{StaticResource WizBtnSecondary}"
+                            HorizontalAlignment="Center" Margin="0,24,0,0"
+                            Click="OpenSettings_Click"/>
                 </StackPanel>
             </Grid>
+
+            <Border Grid.Row="1" Padding="40,14,40,22">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button x:Name="SkipBtn" Content="Skip setup" Style="{StaticResource WizBtnSecondary}"
+                            Click="Skip_Click" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="BackBtn" Content="Back" Style="{StaticResource WizBtnSecondary}"
+                                Click="Back_Click" Visibility="Collapsed" Margin="0,0,8,0"/>
+                        <Button x:Name="NextBtn" Content="Next" Style="{StaticResource WizBtnPrimary}"
+                                Click="Next_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
         </Border>
+        </Grid>
     </Grid>
-    </Border>
     </Border>
 </Window>

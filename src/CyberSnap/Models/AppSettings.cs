@@ -321,8 +321,8 @@ public sealed class AppSettings
     public bool DisableAnimations { get; set; }
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.Dark;
     public double UiScale { get; set; } = 1.0;
-    public string InterfaceLanguage { get; set; } = "en";
-    public bool ShowCrosshairGuides { get; set; } // off by default
+    public string InterfaceLanguage { get; set; } = "auto";
+    public bool ShowCrosshairGuides { get; set; } = true;
     public bool ShowToolBanners { get; set; } = true;
     public bool ConfirmBeforeExit { get; set; } = true;
     public bool HasSeenCaptureBanner { get; set; }
