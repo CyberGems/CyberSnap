@@ -242,7 +242,7 @@ public partial class ToastWindow : Window
 
         var celebrating = spec.Celebrate && !spec.IsError;
         TitleText.Text = LocalizationService.Translate(spec.Title);
-        SetBodyContent(LocalizationService.Translate(spec.Body), celebrating);
+        SetBodyContent(LocalizationService.Translate(spec.Body), celebrating, spec.CelebrationBodyIconId);
 
         // Always center-align toast text notifications as requested by the user.
         TitleText.TextAlignment = TextAlignment.Center;
@@ -2157,7 +2157,7 @@ public partial class ToastWindow : Window
     // Sets the body text, optionally followed by the app's signature capture icon
     // (the same "captureRect" icon shown for Area Capture in the widget) for celebrations —
     // a friendly "stamp" at the end of the second line.
-    private void SetBodyContent(string text, bool withCelebrationIcon)
+    private void SetBodyContent(string text, bool withCelebrationIcon, string? celebrationIconId = null)
     {
         BodyText.Inlines.Clear();
 
@@ -2167,9 +2167,16 @@ public partial class ToastWindow : Window
             return;
         }
 
+        // Default to the cyan capture motif; a "trophy" (or other) icon is tinted gold so it reads
+        // as a reward on achievement toasts instead of an unrelated capture icon.
+        var iconId = string.IsNullOrEmpty(celebrationIconId) ? "captureRect" : celebrationIconId;
+        var iconColor = iconId == "captureRect"
+            ? System.Drawing.Color.FromArgb(0x00, 0xF2, 0xFF)
+            : System.Drawing.Color.FromArgb(0xFF, 0xC1, 0x07);
+
         var icon = new System.Windows.Controls.Image
         {
-            Source = FluentIcons.RenderWpf("captureRect", System.Drawing.Color.FromArgb(0x00, 0xF2, 0xFF), 16),
+            Source = FluentIcons.RenderWpf(iconId, iconColor, 16),
             Width = 14,
             Height = 14,
             Margin = new Thickness(5, 0, 0, 0),

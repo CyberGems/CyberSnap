@@ -68,10 +68,11 @@ public partial class App
                         TryCopyCaptureOutputToClipboard(persisted.Output);
                     ResetCapturing();
 
-                    // Evaluated once per capture, before the action branches, so every capture counts
-                    // toward milestones — including straight-to-editor and copy-only, which never show
-                    // a preview. Each branch below surfaces the flourish in its own toast shape.
-                    var celebration = TryGetCaptureCelebration(settings);
+                    // Counted once per capture, before the action branches, so every capture counts
+                    // toward milestones — including straight-to-editor and copy-only. Any earned
+                    // milestone/streak/first-of-day celebration is shown as a delayed follow-up toast
+                    // (separate from the functional toast below) so it's always noticeable.
+                    CelebrateCaptureIfEarned(settings);
 
                     if (settings.OpenEditorAfterCapture &&
                         persisted.HistoryEntry?.Kind != Services.HistoryKind.Video &&
@@ -93,31 +94,21 @@ public partial class App
                         persisted.Output.Dispose();
 
                         // No preview toast is shown when the editor opens directly, so surface a
-                        // lightweight system message confirming where the capture went — unless this
-                        // capture earned a celebration, which takes the toast instead. A text-only
+                        // lightweight system message confirming where the capture went. A text-only
                         // toast (no preview bitmap) is treated as a system message by ToastWindow.
-                        if (celebration is { } editorCopy)
-                            ShowCelebrationToast(editorCopy.Title, editorCopy.Body, persisted.FilePath);
-                        else
-                            ToastWindow.Show(
-                                LocalizationService.Translate("Sent to the editor"),
-                                LocalizationService.Translate("Your capture is open in the editor."),
-                                persisted.FilePath);
+                        ToastWindow.Show(
+                            LocalizationService.Translate("Sent to the editor"),
+                            LocalizationService.Translate("Your capture is open in the editor."),
+                            persisted.FilePath);
                     }
                     else if (ShouldPreviewAfterCapture(action))
                     {
-                        if (celebration is { } copy)
-                            ToastWindow.ShowImagePreview(persisted.Output, copy.Title, copy.Body, persisted.FilePath, settings.AutoPinPreviews, celebrate: true);
-                        else
-                            ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
+                        ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
                     }
                     else
                     {
                         persisted.Output.Dispose();
-                        if (celebration is { } copy)
-                            ShowCelebrationToast(copy.Title, copy.Body, persisted.FilePath);
-                        else
-                            ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
+                        ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
                     }
 
                     if (settings.AutoOpenCapturedImages && !string.IsNullOrEmpty(persisted.FilePath) && File.Exists(persisted.FilePath))
@@ -203,24 +194,84 @@ public partial class App
         });
     }
 
-    // A text-only celebration toast for the branches that show no preview (straight-to-editor,
-    // copy-only). The rainbow/glow flourish rides the toast's progress bar, so it reads as
-    // celebratory without a preview image. Title is translated by the toast; body arrives ready.
-    private static void ShowCelebrationToast(string title, string body, string? filePath) =>
-        ToastWindow.Show(ToastSpec.Standard(title, body, filePath) with { Celebrate = true });
-
     // Counting core, shared by every capture path (image, OCR, video/GIF). Bumps the running
     // total, updates the consecutive-day streak on the first capture of each day, stamps the local
     // day, and persists (Save is debounced, so per-capture saving is cheap). Returns null when
     // Flips a first-time achievement flag on its very first occurrence and persists it (Save is
     // debounced). No-op once already unlocked. Independent of CelebrationsEnabled — the medal
     // grid records what happened even with celebration toasts turned off.
-    private void MarkFirstTime(bool alreadyUnlocked, Action setUnlocked)
+    private void MarkFirstTime(bool alreadyUnlocked, Action setUnlocked,
+        string? achievementTitleKey = null, string? iconId = null)
     {
         if (alreadyUnlocked) return;
         setUnlocked();
         try { _settingsService!.Save(); }
         catch (Exception ex) { AppDiagnostics.LogWarning("capture.first-time-save", ex.Message, ex); }
+
+        // Recording the medal is unconditional (above); the celebratory toast for the unlock
+        // respects the Celebrations setting, matching the milestone/streak flourishes.
+        if (achievementTitleKey is { Length: > 0 } && iconId is { Length: > 0 }
+            && _settingsService?.Settings.CelebrationsEnabled == true)
+        {
+            ShowFirstTimeAchievementToast(achievementTitleKey, iconId);
+        }
+    }
+
+    // Celebrates a first-time achievement unlock with a dedicated toast carrying the tool's own
+    // icon. Shown after a short delay so it reads as a follow-up to the tool's functional toast
+    // (scan result, "Color copied", etc.) rather than instantly replacing it in the single-toast
+    // host. Fired at most once per achievement since MarkFirstTime no-ops after the first unlock.
+    private void ShowFirstTimeAchievementToast(string achievementTitleKey, string iconId) =>
+        ShowDelayedCelebrationToast(() =>
+        {
+            // Warm gold reads as a reward and stays legible on the dark toast shell.
+            var accent = System.Drawing.Color.FromArgb(255, 0xFF, 0xC1, 0x07);
+            var icon = Helpers.FluentIcons.RenderBitmap(iconId, accent, 40);
+            var title = LocalizationService.Translate("Achievement unlocked!");
+            var body = LocalizationService.Translate(achievementTitleKey);
+
+            return (icon is not null
+                ? ToastSpec.InlinePreview(icon, title, body)
+                : ToastSpec.Standard(title, body)) with
+            {
+                Celebrate = true,
+                SuppressSound = true,
+                IsSystemMessage = false,
+                // A trophy after the name reads as an unlock; the default capture icon would be
+                // out of place here since the tool's own icon already sits on the left badge.
+                CelebrationBodyIconId = "trophy"
+            };
+        });
+
+    // Shared delayed-follow-up mechanism for every celebration toast (first-time achievements,
+    // capture milestones, streaks, first-of-day greeting). The short delay lets the tool's own
+    // functional toast (scan result, "Color copied", file size, ...) appear first, so the
+    // celebration reads as a distinct follow-up instead of being merged into — and easily missed
+    // alongside — it. Plays the dedicated, user-customizable Achievement sound on show; the toast
+    // itself is built with SuppressSound so the sound isn't doubled.
+    private void ShowDelayedCelebrationToast(Func<ToastSpec> buildSpec)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(() => ShowDelayedCelebrationToast(buildSpec));
+            return;
+        }
+
+        var timer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+        {
+            Interval = TimeSpan.FromSeconds(2.2)
+        };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            try
+            {
+                ToastWindow.Show(buildSpec());
+                SoundService.PlayAchievementSound();
+            }
+            catch (Exception ex) { AppDiagnostics.LogWarning("celebration.toast", ex.Message, ex); }
+        };
+        timer.Start();
     }
 
     // Core counting logic: always runs regardless of CelebrationsEnabled so that
@@ -256,54 +307,56 @@ public partial class App
         return (count, isFirstToday, settings.CurrentStreak);
     }
 
-    // Image-capture trigger: counts the capture, then picks the highest-priority flourish and
-    // returns its copy (the image toast replaces its text with this celebration copy), or null
-    // when nothing fires or celebrations are disabled:
+    // Single celebration trigger shared by every capture path (image, OCR, video/GIF, standalone
+    // tools). Counts the capture, then — when celebrations are enabled and this capture earns the
+    // highest-priority flourish — schedules a dedicated delayed follow-up toast (see
+    // ShowDelayedCelebrationToast). The follow-up is deliberately separate from the tool's own
+    // functional toast so the celebration is always noticeable instead of merged into it. Priority:
     //   1. A milestone count (50, 100, 250, ...) — rarer, so it outranks the daily greeting.
     //   2. A streak milestone (3, 7, 14, ... consecutive days), on the first capture of the day.
     //   3. The plain first capture of the local day.
-    private (string Title, string Body)? TryGetCaptureCelebration(AppSettings settings)
+    private void CelebrateCaptureIfEarned(AppSettings settings)
     {
         var reg = RegisterCapture(settings);
 
         if (!settings.CelebrationsEnabled)
-            return null;
+            return;
 
-        // Milestones win when both land on the same capture; the daily date is still stamped above
-        // so tomorrow's greeting fires normally.
-        // The number is formatted into a translatable template; the toast translates the
-        // raw title key ("Milestone reached!") on its own.
+        // Milestones win when both land on the same capture; the daily date is still stamped by
+        // RegisterCapture so tomorrow's greeting fires normally. The number is formatted into a
+        // translatable template; the toast translates the raw title key ("Milestone reached!").
+        string? title = null;
+        string? body = null;
+
         if (CelebrationMilestones.IsMilestone(reg.Count))
-            return ("Milestone reached!", string.Format(
-                LocalizationService.Translate("{0} captures and counting"), reg.Count));
+        {
+            title = "Milestone reached!";
+            body = string.Format(LocalizationService.Translate("{0} captures and counting"), reg.Count);
+        }
+        else if (reg.IsFirstToday && CelebrationMilestones.IsStreakMilestone(reg.Streak))
+        {
+            title = "On a roll!";
+            body = string.Format(LocalizationService.Translate("{0}-day streak"), reg.Streak);
+        }
+        else if (reg.IsFirstToday)
+        {
+            // Time-neutral greeting (works for night owls). The trailing capture icon fits here.
+            title = "Welcome back!";
+            body = LocalizationService.Translate("Your first capture today");
+        }
 
-        // Streak milestone — only on the first capture of the day, since the streak just advanced.
-        if (reg.IsFirstToday && CelebrationMilestones.IsStreakMilestone(reg.Streak))
-            return ("On a roll!", string.Format(
-                LocalizationService.Translate("{0}-day streak"), reg.Streak));
+        if (title is null)
+            return;
 
-        // First capture of the day. Time-neutral greeting (works for night owls); the capture icon
-        // is added by the toast.
-        if (reg.IsFirstToday)
-            return ("Welcome back!", "Your first capture today");
-
-        return null;
-    }
-
-    // OCR / video-GIF trigger: counts the capture and reports whether it earned a flourish, without
-    // producing copy — those paths keep their own functional toast text ("OCR copied", file size)
-    // and only ride the celebratory sweep on top. Returns false when celebrations are off or nothing
-    // fires. The milestone is still surfaced afterwards by the Settings rail.
-    private bool TryRegisterCaptureFlourish(AppSettings settings)
-    {
-        var reg = RegisterCapture(settings);
-
-        if (!settings.CelebrationsEnabled)
-            return false;
-
-        return CelebrationMilestones.IsMilestone(reg.Count)
-            || (reg.IsFirstToday && CelebrationMilestones.IsStreakMilestone(reg.Streak))
-            || reg.IsFirstToday;
+        var celebrationTitle = title;
+        var celebrationBody = body!;
+        ShowDelayedCelebrationToast(() =>
+            ToastSpec.Standard(celebrationTitle, celebrationBody) with
+            {
+                Celebrate = true,
+                SuppressSound = true,
+                IsSystemMessage = false
+            });
     }
 
     // Called by standalone tools (OCR, Scan, ColorPicker launched via hotkey) after a
@@ -320,18 +373,19 @@ public partial class App
             var settings = app._settingsService?.Settings;
             if (settings is null) return;
 
-            // Count toward milestones and streak (always, regardless of CelebrationsEnabled).
-            app.RegisterCapture(settings);
+            // Count toward milestones and streak, and surface any earned milestone/streak/first-of-day
+            // celebration as a delayed follow-up toast — same as overlay captures.
+            app.CelebrateCaptureIfEarned(settings);
 
             // First-time achievement flags.
             if (isOcr)
-                app.MarkFirstTime(settings.HasFirstOcr, () => settings.HasFirstOcr = true);
+                app.MarkFirstTime(settings.HasFirstOcr, () => settings.HasFirstOcr = true, "First OCR", "ocr");
             if (isScan)
-                app.MarkFirstTime(settings.HasFirstScan, () => settings.HasFirstScan = true);
+                app.MarkFirstTime(settings.HasFirstScan, () => settings.HasFirstScan = true, "First scan", "scan");
             if (isEditor)
-                app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true);
+                app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true, "First editor", "compose");
             if (isColor)
-                app.MarkFirstTime(settings.HasFirstColorPicker, () => settings.HasFirstColorPicker = true);
+                app.MarkFirstTime(settings.HasFirstColorPicker, () => settings.HasFirstColorPicker = true, "First color pick", "picker");
         });
     }
 
@@ -349,10 +403,10 @@ public partial class App
             switch (action)
             {
                 case "ruler":
-                    app.MarkFirstTime(settings.HasFirstRuler, () => settings.HasFirstRuler = true);
+                    app.MarkFirstTime(settings.HasFirstRuler, () => settings.HasFirstRuler = true, "First ruler", "ruler");
                     break;
                 case "editor":
-                    app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true);
+                    app.MarkFirstTime(settings.HasFirstEditor, () => settings.HasFirstEditor = true, "First editor", "compose");
                     break;
             }
         });
@@ -406,18 +460,17 @@ public partial class App
                         EnsureHistoryService().SaveOcrEntry(text);
 
                     // Count this OCR toward milestones (covers both the auto-copy toast and the
-                    // workbench window). When it earns a flourish, the "OCR copied" toast rides the
-                    // celebratory sweep while keeping its functional text; the no-toast workbench
-                    // path just counts silently and surfaces the milestone in the Settings rail.
-                    var ocrFlourish = TryRegisterCaptureFlourish(_settingsService.Settings);
+                    // workbench window). Any earned celebration is shown as a separate delayed
+                    // follow-up toast; the "OCR copied" toast keeps its own functional text.
+                    CelebrateCaptureIfEarned(_settingsService.Settings);
                     MarkFirstTime(_settingsService.Settings.HasFirstOcr,
-                        () => _settingsService.Settings.HasFirstOcr = true);
+                        () => _settingsService.Settings.HasFirstOcr = true, "First OCR", "ocr");
 
                     if (_settingsService.Settings.OcrAutoCopyToClipboard)
                     {
                         var copied = TryCopyCaptureTextToClipboard(text);
                         ToastWindow.Show(copied
-                            ? ToastSpec.Standard(LocalizationService.Translate("OCR copied"), FormatOcrAutoCopyToastPreview(text)) with { SuppressSound = true, Celebrate = ocrFlourish }
+                            ? ToastSpec.Standard(LocalizationService.Translate("OCR copied"), FormatOcrAutoCopyToastPreview(text)) with { SuppressSound = true }
                             : ToastSpec.Standard(LocalizationService.Translate("OCR ready"), LocalizationService.Translate("Clipboard copy failed.")));
                         if (!copied)
                         {

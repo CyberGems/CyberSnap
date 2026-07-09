@@ -36,6 +36,11 @@ internal sealed record ToastSpec
     // Only honored for non-error toasts.
     public bool Celebrate { get; init; }
 
+    // Trailing icon appended after the body text on a celebration toast. Defaults to the cyan
+    // "captureRect" capture motif (suits capture-milestone/streak toasts). Achievement toasts
+    // override it (e.g. "trophy") so they don't show a capture icon unrelated to the unlock.
+    public string? CelebrationBodyIconId { get; init; }
+
     public static ToastSpec Standard(string title, string body = "", string? filePath = null) => new()
     {
         Title = title,

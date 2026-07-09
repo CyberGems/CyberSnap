@@ -66,18 +66,20 @@ public partial class SettingsWindow
         int reached = CelebrationMilestones.Values.Count(v => count >= v);
         int total = CelebrationMilestones.Values.Length;
 
-        var stats = new (string Glyph, string Value, string LabelKey, MediaColor Accent)[]
+        // IconId, when set, renders the matching Fluent SVG (e.g. the trophy for milestones) instead
+        // of a Segoe font glyph — Segoe has no trophy, and vector icons stay crisp on scaled displays.
+        var stats = new (string Glyph, string? IconId, string Value, string LabelKey, MediaColor Accent)[]
         {
-            (GlyphCamera, count.ToString("N0"), "Total captures", RailCyan),
-            ("🔥", s.CurrentStreak.ToString("N0"), "Current streak", MediaColor.FromRgb(0xFF, 0x9A, 0x3D)),
-            (GlyphStar, s.LongestStreak.ToString("N0"), "Longest streak", MediaColor.FromRgb(0xFF, 0xC1, 0x07)),
-            (GlyphStar, $"{reached}/{total}", "Milestones reached", RailPurple),
+            (GlyphCamera, null, count.ToString("N0"), "Total captures", RailCyan),
+            ("🔥", null, s.CurrentStreak.ToString("N0"), "Current streak", MediaColor.FromRgb(0xFF, 0x9A, 0x3D)),
+            (GlyphStar, null, s.LongestStreak.ToString("N0"), "Longest streak", MediaColor.FromRgb(0xFF, 0xC1, 0x07)),
+            (GlyphStar, "trophy", $"{reached}/{total}", "Milestones reached", RailPurple),
         };
 
         for (int i = 0; i < stats.Length; i++)
         {
-            var (glyph, value, labelKey, accent) = stats[i];
-            var card = MakeStatCard(glyph, value, LocalizationService.Translate(labelKey), accent);
+            var (glyph, iconId, value, labelKey, accent) = stats[i];
+            var card = MakeStatCard(glyph, iconId, value, LocalizationService.Translate(labelKey), accent);
             card.Margin = new Thickness(5);
             Grid.SetColumn(card, i % 2);
             Grid.SetRow(card, i / 2);
@@ -85,21 +87,43 @@ public partial class SettingsWindow
         }
     }
 
-    // A single stat card: glyph accent + big number + small label, in a framed tile.
-    private Border MakeStatCard(string glyph, string value, string label, MediaColor accent)
+    // A single stat card: icon accent + big number + small label, in a framed tile. Uses the Fluent
+    // SVG icon when iconId is set, otherwise the Segoe font glyph (or emoji).
+    private Border MakeStatCard(string glyph, string? iconId, string value, string label, MediaColor accent)
     {
-        bool isEmoji = glyph.Length > 1 && char.IsSurrogatePair(glyph, 0);
+        var glow = new DropShadowEffect { Color = accent, BlurRadius = 10, ShadowDepth = 0, Opacity = 0.5 };
 
-        var glyphBlock = new TextBlock
+        UIElement iconBlock;
+        if (iconId is { Length: > 0 } id && Helpers.FluentIcons.HasIcon(id))
         {
-            Text = glyph,
-            FontSize = 20,
-            FontFamily = isEmoji ? new FontFamily("Segoe UI Emoji") : IconFont,
-            Foreground = new SolidColorBrush(accent),
-            HorizontalAlignment = HAlign.Center,
-            Margin = new Thickness(0, 0, 0, 6),
-            Effect = new DropShadowEffect { Color = accent, BlurRadius = 10, ShadowDepth = 0, Opacity = 0.5 }
-        };
+            const int iconDip = 22;
+            var drawingColor = System.Drawing.Color.FromArgb(accent.A, accent.R, accent.G, accent.B);
+            var img = new System.Windows.Controls.Image
+            {
+                Source = Helpers.FluentIcons.RenderWpf(id, drawingColor, iconDip * 2),
+                Width = iconDip,
+                Height = iconDip,
+                HorizontalAlignment = HAlign.Center,
+                Margin = new Thickness(0, 0, 0, 6),
+                Effect = glow
+            };
+            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+            iconBlock = img;
+        }
+        else
+        {
+            bool isEmoji = glyph.Length > 1 && char.IsSurrogatePair(glyph, 0);
+            iconBlock = new TextBlock
+            {
+                Text = glyph,
+                FontSize = 20,
+                FontFamily = isEmoji ? new FontFamily("Segoe UI Emoji") : IconFont,
+                Foreground = new SolidColorBrush(accent),
+                HorizontalAlignment = HAlign.Center,
+                Margin = new Thickness(0, 0, 0, 6),
+                Effect = glow
+            };
+        }
 
         var valueBlock = new TextBlock
         {
@@ -123,11 +147,11 @@ public partial class SettingsWindow
         };
 
         var panel = new StackPanel();
-        panel.Children.Add(glyphBlock);
+        panel.Children.Add(iconBlock);
         panel.Children.Add(valueBlock);
         panel.Children.Add(labelBlock);
 
-        return new Border
+        var card = new Border
         {
             Padding = new Thickness(14, 16, 14, 14),
             CornerRadius = new CornerRadius(8),
@@ -138,6 +162,9 @@ public partial class SettingsWindow
             BorderThickness = new Thickness(1),
             Child = panel
         };
+        // Screen readers otherwise only see the raw number; pair it with its label.
+        System.Windows.Automation.AutomationProperties.SetName(card, $"{label}: {value}");
+        return card;
     }
 
     // Medal grid: one section per category, each with a WrapPanel of medal tiles.
@@ -198,17 +225,44 @@ public partial class SettingsWindow
         var color = TierColor(a.Kind, a.Tier);
         const double badgeSize = 52;
 
-        var glyphBlock = new TextBlock
+        // Icon tint: the tier color when unlocked (darkened a touch in light mode for contrast),
+        // a dim theme wash when locked. Shared by both the vector icon and the glyph fallback.
+        var iconColor = a.Unlocked
+            ? (Theme.IsDark ? color : MediaColor.FromArgb(255, (byte)Math.Max(color.R - 30, 0), (byte)Math.Max(color.G - 30, 0), (byte)Math.Max(color.B - 30, 0)))
+            : ThemeAlpha(0x55);
+
+        // Prefer the tool's own Fluent SVG icon so the medal matches the live toolbar/widget icon;
+        // fall back to the Segoe font glyph when no vector icon is available (e.g. milestone stars).
+        const int iconDip = 26;
+        UIElement iconElement;
+        if (a.IconId is { Length: > 0 } iconId && Helpers.FluentIcons.HasIcon(iconId))
         {
-            Text = a.Glyph,
-            FontSize = 22,
-            FontFamily = IconFont,
-            Foreground = a.Unlocked
-                ? new SolidColorBrush(Theme.IsDark ? color : MediaColor.FromArgb(255, (byte)Math.Max(color.R - 30, 0), (byte)Math.Max(color.G - 30, 0), (byte)Math.Max(color.B - 30, 0)))
-                : new SolidColorBrush(ThemeAlpha(0x55)),
-            HorizontalAlignment = HAlign.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
+            var drawingColor = System.Drawing.Color.FromArgb(iconColor.A, iconColor.R, iconColor.G, iconColor.B);
+            // Render at 2× the display size and downscale with HighQuality so the vector icon stays
+            // crisp on 125%/150% DPI displays (matches ToolListBuilder's icon handling).
+            var img = new System.Windows.Controls.Image
+            {
+                Source = Helpers.FluentIcons.RenderWpf(iconId, drawingColor, iconDip * 2),
+                Width = iconDip,
+                Height = iconDip,
+                HorizontalAlignment = HAlign.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+            iconElement = img;
+        }
+        else
+        {
+            iconElement = new TextBlock
+            {
+                Text = a.Glyph,
+                FontSize = 22,
+                FontFamily = IconFont,
+                Foreground = new SolidColorBrush(iconColor),
+                HorizontalAlignment = HAlign.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+        }
 
         var badge = new Border
         {
@@ -222,26 +276,37 @@ public partial class SettingsWindow
                 ? new SolidColorBrush(color)
                 : ThemeAlphaBrush(0x1F),
             BorderThickness = new Thickness(a.Unlocked ? 2 : 1),
-            Child = glyphBlock
+            Child = iconElement
         };
 
         if (a.Unlocked)
             badge.Effect = new DropShadowEffect { Color = color, BlurRadius = 12, ShadowDepth = 0, Opacity = 0.6 };
 
-        // Lock overlay for locked medals, anchored to the bottom-right of the badge.
+        // Lock overlay for locked medals, anchored to the bottom-right of the badge. A small solid
+        // disc backs the padlock so it stays legible over the badge edge and the icon behind it.
         var badgeGrid = new Grid { Width = badgeSize, Height = badgeSize, HorizontalAlignment = HAlign.Center };
         badgeGrid.Children.Add(badge);
         if (!a.Unlocked)
         {
-            badgeGrid.Children.Add(new TextBlock
+            var lockBacking = new Border
             {
-                Text = GlyphLock,
-                FontSize = 12,
-                FontFamily = IconFont,
-                Foreground = ThemeAlphaBrush(0x99),
+                Width = 18,
+                Height = 18,
+                CornerRadius = new CornerRadius(9),
+                Background = new SolidColorBrush(Theme.IsDark ? MediaColor.FromRgb(0x1B, 0x1F, 0x27) : MediaColor.FromRgb(0xEC, 0xEE, 0xF2)),
                 HorizontalAlignment = HAlign.Right,
-                VerticalAlignment = VerticalAlignment.Bottom
-            });
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Child = new TextBlock
+                {
+                    Text = GlyphLock,
+                    FontSize = 10,
+                    FontFamily = IconFont,
+                    Foreground = ThemeAlphaBrush(0xB0),
+                    HorizontalAlignment = HAlign.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            badgeGrid.Children.Add(lockBacking);
         }
 
         var titleBlock = new TextBlock
@@ -276,13 +341,56 @@ public partial class SettingsWindow
             });
         }
 
-        return new Border
+        var tile = new Border
         {
             Child = panel,
-            ToolTip = a.Description,
+            ToolTip = BuildMedalTooltip(a),
             HorizontalAlignment = HAlign.Center,
             VerticalAlignment = VerticalAlignment.Top
         };
+        // Show the richer tooltip promptly rather than after the default ~1s hover.
+        ToolTipService.SetInitialShowDelay(tile, 200);
+
+        // Screen-reader label: title, unlocked/locked state (with progress when applicable), then
+        // the description. Automation names are kept in English to match the rest of the app.
+        string state = a.Unlocked
+            ? "Unlocked"
+            : (a.Progress is (int c, int t) ? $"Locked, {c:N0} of {t:N0}" : "Locked");
+        System.Windows.Automation.AutomationProperties.SetName(tile, $"{a.Title}. {state}. {a.Description}");
+
+        return tile;
+    }
+
+    // A compact multi-line tooltip for a medal: bold title, description, and a progress line on
+    // locked tiles that track toward a target. Uses already-localized content only.
+    private static object BuildMedalTooltip(Achievement a)
+    {
+        var content = new StackPanel { MaxWidth = 240 };
+        content.Children.Add(new TextBlock
+        {
+            Text = a.Title,
+            FontWeight = FontWeights.SemiBold,
+            FontFamily = new FontFamily("Segoe UI Variable Text")
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = a.Description,
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.85,
+            Margin = new Thickness(0, 2, 0, 0),
+            FontFamily = new FontFamily("Segoe UI Variable Text")
+        });
+        if (!a.Unlocked && a.Progress is (int cur, int target))
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = $"{cur:N0} / {target:N0}",
+                Opacity = 0.7,
+                Margin = new Thickness(0, 4, 0, 0),
+                FontFamily = new FontFamily("Segoe UI Variable Text")
+            });
+        }
+        return content;
     }
 
     // Neon color ramp by tier: capture milestones go cyan→blue→purple→magenta→gold;
