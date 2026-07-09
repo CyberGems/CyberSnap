@@ -38,7 +38,7 @@ public partial class SetupWizard : Window
         Theme.Refresh();
         InitializeComponent();
         UiScale.Set(settingsService.Settings.UiScale);
-        UiScale.ApplyToWindow(this, WizardBorder, scaleWindowBounds: true);
+        UiScale.ApplyToWindow(this, WizardShell, scaleWindowBounds: true);
         ApplyTheme();
 
         _pages = new[] { Page1, Page2, Page3 };
