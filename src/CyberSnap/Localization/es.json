@@ -233,6 +233,8 @@
   "Save screenshots to file": "Guardar capturas en archivos",
   "Write captures to your configured folder.": "Guarda las capturas en tu carpeta configurada.",
   "Write screenshots to the configured save folder": "Guardar las capturas en la carpeta configurada",
+  "Choose save folder": "Elegir carpeta de guardado",
+  "Resize oversized captures after saving.": "Redimensionar capturas demasiado grandes al guardar.",
   "Auto-open image in system viewer": "Abrir imagen en el visor del sistema",
   "Automatically open newly taken screenshots in the system default viewer.": "Abrir automáticamente las nuevas capturas de pantalla en el visor predeterminado del sistema.",
   "Automatically open newly taken screenshots in the system default viewer (such as CyberViewer).": "Abrir automáticamente las nuevas capturas de pantalla en el visor predeterminado del sistema (como CyberViewer).",
