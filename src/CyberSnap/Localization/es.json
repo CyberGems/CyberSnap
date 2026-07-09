@@ -199,6 +199,7 @@
   "Current outcome: open editor only.": "Resultado: abrir solo el editor.",
   "Current outcome: copy to clipboard.": "Resultado: copiar al portapapeles.",
   "Current outcome: save the file and copy to clipboard.": "Resultado: guardar el archivo y copiar al portapapeles.",
+  "Current outcome: open in system viewer and copy to clipboard.": "Resultado: abrir en el visor de sistema y copiar al portapapeles.",
   "Current outcome: open in system viewer.": "Resultado: abrir en el visor de sistema.",
   "Current outcome: save the file only.": "Resultado: solo guardar el archivo.",
   "Copy to clipboard": "Copiar al portapapeles",
