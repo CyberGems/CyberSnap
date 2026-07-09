@@ -41,7 +41,8 @@ public enum SoundEvent
     RecordStart,
     RecordStop,
     Error,
-    Startup
+    Startup,
+    Achievement
 }
 
 public enum RecordingFormat

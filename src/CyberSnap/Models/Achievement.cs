@@ -21,8 +21,13 @@ public sealed class Achievement
     public required string Title { get; init; }
     public required string Description { get; init; }
 
-    // Segoe Fluent Icons glyph shown on the medal tile.
+    // Segoe Fluent Icons glyph shown on the medal tile. Used as a fallback when IconId is not set.
     public required string Glyph { get; init; }
+
+    // Optional Fluent SVG icon ID (from FluentIconData). When set, the medal renders the
+    // vector tool icon via FluentIcons.RenderWpf instead of the Segoe font Glyph, so the medal
+    // shows the exact same icon as the tool it celebrates.
+    public string? IconId { get; init; }
 
     // 0..4 — drives the neon color ramp (low → top tier).
     public int Tier { get; init; }

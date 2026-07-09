@@ -243,6 +243,7 @@ public partial class SettingsWindow
         (SoundEvent.Scan, "QR / Barcode scan", "scan"),
         (SoundEvent.RecordStart, "Recording start", "record"),
         (SoundEvent.RecordStop, "Recording stop", "stop"),
+        (SoundEvent.Achievement, "Achievement", "trophy"),
         (SoundEvent.Error, "Error", "warning"),
     ];
 

@@ -142,8 +142,10 @@ public partial class App
 
                         var copiedToClipboard = TryCopyRecordingFileToClipboard(path);
 
-                        bool flourish = TryRegisterCaptureFlourish(s);
-                        MarkFirstTime(s.HasFirstRecording, () => s.HasFirstRecording = true);
+                        // Count toward milestones; any earned celebration shows as a separate
+                        // delayed follow-up toast, so the recording toast keeps its own text.
+                        CelebrateCaptureIfEarned(s);
+                        MarkFirstTime(s.HasFirstRecording, () => s.HasFirstRecording = true, "First recording", "record");
 
                         if (openTrimmer)
                         {
@@ -156,18 +158,18 @@ public partial class App
                                 try
                                 {
                                     OpenVideoTrimmerAfterRecording(path, firstFrame, isGif: false, onFailure: () =>
-                                        ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false, flourish));
+                                        ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false));
                                 }
                                 catch (Exception ex)
                                 {
                                     AppDiagnostics.LogError("capture.auto-open-trimmer", ex);
-                                    ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false, flourish);
+                                    ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false);
                                 }
                             }
                         }
                         else
                         {
-                            ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif, flourish);
+                            ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif);
                         }
 
                         ScheduleIdleMemoryTrim();
@@ -225,7 +227,7 @@ public partial class App
         thread.Start();
     }
 
-    private void ShowRecordingToast(string path, Bitmap? firstFrame, bool copiedToClipboard, bool isGif, bool flourish)
+    private void ShowRecordingToast(string path, Bitmap? firstFrame, bool copiedToClipboard, bool isGif)
     {
         if (firstFrame != null)
         {
@@ -237,7 +239,7 @@ public partial class App
                 false,
                 transparentShell: false,
                 showOverlayButtons: true,
-                hideEditButton: false) with { Celebrate = flourish });
+                hideEditButton: false));
         }
         else
         {
@@ -247,7 +249,7 @@ public partial class App
                 ? $"{fi.Length / 1024.0 / 1024.0:F1} MB"
                 : $"{fi.Length / 1024:N0} KB";
             var copyStatus = copiedToClipboard ? LocalizationService.Translate("File copied to clipboard") : LocalizationService.Translate("Saved; clipboard copy failed");
-            ToastWindow.Show(ToastSpec.Standard($"{label} recorded", $"{fi.Name} · {size} · {copyStatus}", path) with { Celebrate = flourish });
+            ToastWindow.Show(ToastSpec.Standard($"{label} recorded", $"{fi.Name} · {size} · {copyStatus}", path));
         }
     }
 
@@ -276,7 +278,7 @@ public partial class App
                     {
                         HandleCaptureResult(result);
                         MarkFirstTime(_settingsService!.Settings.HasFirstScrollingCapture,
-                            () => _settingsService!.Settings.HasFirstScrollingCapture = true);
+                            () => _settingsService!.Settings.HasFirstScrollingCapture = true, "First scrolling capture", "scrollCapture");
                         ScheduleIdleMemoryTrim();
                     });
                 };
@@ -602,7 +604,7 @@ public partial class App
                                     : copySucceeded ? "Barcode copied" : "Barcode found";
                                 ToastWindow.ShowInlinePreview(preview, title, prev, suppressSound: true);
                                 MarkFirstTime(_settingsService!.Settings.HasFirstScan,
-                                    () => _settingsService!.Settings.HasFirstScan = true);
+                                    () => _settingsService!.Settings.HasFirstScan = true, "First scan", "scan");
                             }
                             else
                             {
@@ -649,7 +651,7 @@ public partial class App
                             EnsureHistoryService().SaveColorEntry(bare);
 
                         MarkFirstTime(_settingsService.Settings.HasFirstColorPicker,
-                            () => _settingsService.Settings.HasFirstColorPicker = true);
+                            () => _settingsService.Settings.HasFirstColorPicker = true, "First color pick", "picker");
                     });
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();

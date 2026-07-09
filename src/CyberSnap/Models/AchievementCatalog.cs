@@ -9,17 +9,30 @@ namespace CyberSnap.Models;
 // just one more entry here — the UI renders whatever this returns.
 public static class AchievementCatalog
 {
-    // Glyphs from Segoe MDL2 Assets matching the exact code points used in ToolDef.AllTools,
-    // so each medal shows the same icon as the corresponding toolbar button.
+    // Fallback Segoe glyph for the milestone/streak rail medals (no vector tool icon applies).
     private static readonly string GlyphStar     = ((char)0xE735).ToString();    // FavoriteStarFill (milestone rail)
+
+    // Fallback Segoe MDL2 glyphs for the first-time medals, used only when the vector icon is
+    // unavailable. The live medal renders the matching Fluent SVG icon below instead.
     private static readonly string GlyphCapture  = ((char)0xE722).ToString();    // Camera — first capture
-    private static readonly string GlyphOcr      = ((char)0xE53C).ToString();    // OCR scan-text (ToolDef "ocr")
-    private static readonly string GlyphVideo    = ((char)0xE7C8).ToString();    // Video — record (ToolDef "record")
-    private static readonly string GlyphScroll   = ((char)0xE7F0).ToString();    // Scroll capture (ToolDef "scroll" / ToolGlyphs.ScrollCaptureGlyph)
-    private static readonly string GlyphPicker   = ((char)0xE2B1).ToString();    // Eyedropper (ToolDef "picker")
-    private static readonly string GlyphScan     = ((char)0xE1DE).ToString();    // QR/barcode (ToolDef "scan")
-    private static readonly string GlyphRuler    = ((char)0xE14E).ToString();    // Ruler (ToolDef "ruler")
-    private static readonly string GlyphEditor   = ((char)0xE70F).ToString();    // Edit/pencil (Fluent "Edit")
+    private static readonly string GlyphOcr      = ((char)0xE53C).ToString();    // OCR scan-text
+    private static readonly string GlyphVideo    = ((char)0xE7C8).ToString();    // Video — record
+    private static readonly string GlyphScroll   = ((char)0xE7F0).ToString();    // Scroll capture
+    private static readonly string GlyphPicker   = ((char)0xE2B1).ToString();    // Eyedropper
+    private static readonly string GlyphScan     = ((char)0xE1DE).ToString();    // QR/barcode
+    private static readonly string GlyphRuler    = ((char)0xE14E).ToString();    // Ruler
+    private static readonly string GlyphEditor   = ((char)0xE70F).ToString();    // Edit/pencil
+
+    // Fluent SVG icon IDs (from FluentIconData) matching each tool's live toolbar/widget icon,
+    // so each first-time medal shows the exact same vector icon as the tool it celebrates.
+    private const string IconCapture = "captureRect";   // area capture tool
+    private const string IconOcr     = "ocr";
+    private const string IconVideo   = "record";
+    private const string IconScroll  = "scrollCapture";
+    private const string IconPicker  = "picker";
+    private const string IconScan    = "scan";
+    private const string IconRuler   = "ruler";
+    private const string IconEditor  = "compose";       // editor (shared with tray/widget menus)
 
     public static IReadOnlyList<Achievement> Build(AppSettings s, Func<string, string> t)
     {
@@ -69,19 +82,19 @@ public static class AchievementCatalog
         }
 
         // First-time feature unlocks — one medal per tool/action, using each tool's own icon.
-        list.Add(FirstTime("first-capture",   t("First capture"),           t("Take your first capture"),          GlyphCapture, count > 0));
-        list.Add(FirstTime("first-ocr",       t("First OCR"),               t("Extract text from a capture"),      GlyphOcr,     s.HasFirstOcr));
-        list.Add(FirstTime("first-recording", t("First recording"),         t("Record a video or GIF"),            GlyphVideo,   s.HasFirstRecording));
-        list.Add(FirstTime("first-scroll",    t("First scrolling capture"), t("Capture a scrolling page"),         GlyphScroll,  s.HasFirstScrollingCapture));
-        list.Add(FirstTime("first-color",     t("First color pick"),        t("Pick a color from the screen"),     GlyphPicker,  s.HasFirstColorPicker));
-        list.Add(FirstTime("first-scan",      t("First scan"),              t("Scan a QR code or barcode"),        GlyphScan,    s.HasFirstScan));
-        list.Add(FirstTime("first-ruler",     t("First ruler"),             t("Measure something on screen"),      GlyphRuler,   s.HasFirstRuler));
-        list.Add(FirstTime("first-editor",    t("First editor"),            t("Open a capture in the editor"),     GlyphEditor,  s.HasFirstEditor));
+        list.Add(FirstTime("first-capture",   t("First capture"),           t("Take your first capture"),          GlyphCapture, IconCapture, count > 0));
+        list.Add(FirstTime("first-ocr",       t("First OCR"),               t("Extract text from a capture"),      GlyphOcr,     IconOcr,     s.HasFirstOcr));
+        list.Add(FirstTime("first-recording", t("First recording"),         t("Record a video or GIF"),            GlyphVideo,   IconVideo,   s.HasFirstRecording));
+        list.Add(FirstTime("first-scroll",    t("First scrolling capture"), t("Capture a scrolling page"),         GlyphScroll,  IconScroll,  s.HasFirstScrollingCapture));
+        list.Add(FirstTime("first-color",     t("First color pick"),        t("Pick a color from the screen"),     GlyphPicker,  IconPicker,  s.HasFirstColorPicker));
+        list.Add(FirstTime("first-scan",      t("First scan"),              t("Scan a QR code or barcode"),        GlyphScan,    IconScan,    s.HasFirstScan));
+        list.Add(FirstTime("first-ruler",     t("First ruler"),             t("Measure something on screen"),      GlyphRuler,   IconRuler,   s.HasFirstRuler));
+        list.Add(FirstTime("first-editor",    t("First editor"),            t("Open a capture in the editor"),     GlyphEditor,  IconEditor,  s.HasFirstEditor));
 
         return list;
     }
 
-    private static Achievement FirstTime(string id, string title, string desc, string glyph, bool unlocked) =>
+    private static Achievement FirstTime(string id, string title, string desc, string glyph, string iconId, bool unlocked) =>
         new()
         {
             Id = id,
@@ -89,6 +102,7 @@ public static class AchievementCatalog
             Title = title,
             Description = desc,
             Glyph = glyph,
+            IconId = iconId,
             Tier = 0,
             Unlocked = unlocked,
             Progress = null
