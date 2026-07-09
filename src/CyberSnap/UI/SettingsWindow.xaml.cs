@@ -473,6 +473,7 @@ public partial class SettingsWindow : Window
                 SaveDirPanel.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
                 if (value && !wasVisible)
                     AnimateHighlight(SaveDirPanel);
+                RefreshAfterCaptureSummary(GetAfterCaptureViewPreferenceFromControls());
             },
             () => SaveDirPanel.Visibility = selected ? Visibility.Visible : Visibility.Collapsed);
     }

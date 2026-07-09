@@ -1469,10 +1469,10 @@
                                           AutomationProperties.Name="Open after capture"
                                           ToolTip="Choose what CyberSnap opens after saving the selection."
                                           SelectionChanged="AfterCaptureCombo_SelectionChanged">
-                                    <ComboBoxItem Services:LocalizationService.SourceContent="Preview"
+                                    <ComboBoxItem Services:LocalizationService.SourceContent="Notification"
                                                   ToolTip="Open the preview window after capture."
-                                                  AutomationProperties.Name="Open preview after capture"
-                                                  AutomationProperties.HelpText="Show the post-capture preview window."/>
+                                                  AutomationProperties.Name="Open notification after capture"
+                                                  AutomationProperties.HelpText="Show the post-capture notification window."/>
                                     <ComboBoxItem Services:LocalizationService.SourceContent="Editor"
                                                   ToolTip="Open the editor after capture."
                                                   AutomationProperties.Name="Open editor after capture"
