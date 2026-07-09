@@ -31,6 +31,11 @@
         <sys:Double x:Key="SettingsControlFontSize">12</sys:Double>
         <sys:Double x:Key="SettingsControlMinWidth">88</sys:Double>
 
+        <Style TargetType="ScrollViewer">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+
         <Style x:Key="TabPill" TargetType="RadioButton">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
@@ -2022,7 +2027,89 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
 
-                    <TextBlock Text="Translation" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Translation"/>
+                    <TextBlock Text="Recognition" Style="{StaticResource SectionLabel}" Margin="4,0,0,9"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE8C8;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Auto-copy OCR" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Auto-copy OCR"/>
+                                <TextBlock Text="Copy recognized text without opening the result window." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Copy recognized text without opening the result window."/>
+                            </StackPanel>
+                            <CheckBox x:Name="OcrAutoCopyCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Auto-copy OCR text"
+                                      ToolTip="Copy recognized text without opening the result window."
+                                      Services:LocalizationService.SourceToolTip="Copy recognized text without opening the result window."
+                                      Checked="OcrAutoCopyCheck_Changed" Unchecked="OcrAutoCopyCheck_Changed"/>
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE718;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Pin OCR result window by default" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Pin OCR result window by default"/>
+                                <TextBlock Text="Open new OCR result windows already pinned so they stay visible when focus changes." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Open new OCR result windows already pinned so they stay visible when focus changes."/>
+                            </StackPanel>
+                            <CheckBox x:Name="OcrPinByDefaultCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                      AutomationProperties.Name="Pin OCR result window by default"
+                                      ToolTip="Open new OCR result windows already pinned so they stay visible when focus changes."
+                                      Services:LocalizationService.SourceToolTip="Open new OCR result windows already pinned so they stay visible when focus changes."
+                                      Checked="OcrPinByDefaultCheck_Changed" Unchecked="OcrPinByDefaultCheck_Changed"/>
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <Path Width="14" Height="14" Stretch="Uniform" 
+                                      Fill="{DynamicResource ThemeTextPrimaryBrush}"
+                                      Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="0.3"
+                                      Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2Zm-9-11a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Zm0 3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7ZM6 12.5c0-.28.22-.5.5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5Z"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="OCR language" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="OCR language"/>
+                                <TextBlock Style="{StaticResource SettingDescription}" TextWrapping="Wrap"
+                                           Text="Language used for text recognition. Auto detects from the image." Services:LocalizationService.SourceText="Language used for text recognition. Auto detects from the image."/>
+                                <TextBlock x:Name="OcrLanguageStatusText" Style="{StaticResource SettingDescription}"
+                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                           AutomationProperties.Name="OCR language availability"
+                                           AutomationProperties.LiveSetting="Polite"/>
+                            </StackPanel>
+                            <ComboBox x:Name="OcrLanguageCombo" Grid.Column="2" MinWidth="145"
+                                      VerticalAlignment="Center"
+                                      AutomationProperties.Name="OCR language"
+                                      ToolTip="Choose the language used for text recognition."
+                                      Services:LocalizationService.SourceToolTip="Choose the language used for text recognition."
+                                      IsEditable="False" IsTextSearchEnabled="True"
+                                      SelectionChanged="OcrLanguageCombo_SelectionChanged"/>
+                        </Grid>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock x:Name="OcrPreferenceStatusText"
+                               Style="{StaticResource SettingsStatusText}"
+                               Visibility="Collapsed"
+                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                               AutomationProperties.Name="OCR preference status"
+                               AutomationProperties.LiveSetting="Polite"
+                                Margin="4,8,0,0"/>
+
+                    <TextBlock Text="Translation" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Translation" Margin="4,16,0,9"/>
                     <Border Style="{StaticResource Card}">
                         <Grid HorizontalAlignment="Stretch">
                             <Grid.RowDefinitions>
@@ -2056,8 +2143,7 @@
                                     <StackPanel Grid.Column="1">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Style="{StaticResource SettingTitle}">
-                                                <Run Text="MyMemory" Services:LocalizationService.SourceText="MyMemory"/>
-                                                <Run Text=" (translate.net)" FontSize="11" Foreground="{DynamicResource ThemeMutedBrush}" Services:LocalizationService.SourceText="(translate.net)"/>
+                                                <Run Text="MyMemory (mymemory.translated.net)" Services:LocalizationService.SourceText="MyMemory (mymemory.translated.net)"/>
                                             </TextBlock>
                                             <Border x:Name="MyMemoryDefaultBadge" VerticalAlignment="Center" Margin="8,0,0,0"
                                                     Background="{DynamicResource ThemeAccentBrush}"
@@ -2127,6 +2213,7 @@
                                                  Background="{DynamicResource ThemeInputBackgroundBrush}"
                                                  Foreground="{DynamicResource ThemeTextPrimaryBrush}"
                                                  BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 Services:LocalizationService.SourceToolTip="Hidden for safety. Paste a new value to replace it."
                                                  PasswordChanged="GoogleApiKeyBox_Changed"/>
                                     </StackPanel>
                                 </Grid>
@@ -2146,13 +2233,14 @@
                                     <TextBlock Text="&#xE8C1;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Default source language" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Language to translate from by default." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Default source language" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Default source language"/>
+                                    <TextBlock Text="Language to translate from by default." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Language to translate from by default."/>
                                 </StackPanel>
                                 <ComboBox x:Name="TranslateFromCombo" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="Default source language"
                                           ToolTip="Language to translate from by default."
+                                          Services:LocalizationService.SourceToolTip="Language to translate from by default."
                                           IsEditable="False" IsTextSearchEnabled="True"
                                           SelectionChanged="TranslateFromCombo_Changed"/>
                             </Grid>
@@ -2171,13 +2259,14 @@
                                     <TextBlock Text="&#xE8C1;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Default target language" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Language to translate into by default." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Default target language" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Default target language"/>
+                                    <TextBlock Text="Language to translate into by default." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Language to translate into by default."/>
                                 </StackPanel>
                                 <ComboBox x:Name="TranslateToCombo" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="Default target language"
                                           ToolTip="Language to translate into by default."
+                                          Services:LocalizationService.SourceToolTip="Language to translate into by default."
                                           IsEditable="False" IsTextSearchEnabled="True"
                                           SelectionChanged="TranslateToCombo_Changed"/>
                             </Grid>
@@ -2191,85 +2280,6 @@
                                AutomationProperties.Name="Translation preference status"
                                AutomationProperties.LiveSetting="Polite"
                                Margin="4,8,0,0"/>
-
-                    <TextBlock Text="Recognition" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                        <Grid Style="{StaticResource SettingRow}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}">
-                                <TextBlock Text="&#xE8C8;" Style="{StaticResource SettingIconGlyph}"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Auto-copy OCR" Style="{StaticResource SettingTitle}"/>
-                                <TextBlock Text="Copy recognized text without opening the result window." Style="{StaticResource SettingDescription}"/>
-                            </StackPanel>
-                            <CheckBox x:Name="OcrAutoCopyCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                      AutomationProperties.Name="Auto-copy OCR text"
-                                      ToolTip="Copy recognized text without opening the result window."
-                                      Checked="OcrAutoCopyCheck_Changed" Unchecked="OcrAutoCopyCheck_Changed"/>
-                        </Grid>
-                        <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                        <Grid Style="{StaticResource SettingRow}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}">
-                                <TextBlock Text="&#xE718;" Style="{StaticResource SettingIconGlyph}"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Pin OCR result window by default" Style="{StaticResource SettingTitle}"/>
-                                <TextBlock Text="Open new OCR result windows already pinned so they stay visible when focus changes." Style="{StaticResource SettingDescription}"/>
-                            </StackPanel>
-                            <CheckBox x:Name="OcrPinByDefaultCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                      AutomationProperties.Name="Pin OCR result window by default"
-                                      ToolTip="Open new OCR result windows already pinned so they stay visible when focus changes."
-                                      Checked="OcrPinByDefaultCheck_Changed" Unchecked="OcrPinByDefaultCheck_Changed"/>
-                        </Grid>
-                        <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                        <Grid Style="{StaticResource SettingRow}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}">
-                                <Path Width="14" Height="14" Stretch="Uniform" 
-                                      Fill="{DynamicResource ThemeTextPrimaryBrush}"
-                                      Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="0.3"
-                                      Data="M4.5 3C3.67 3 3 3.67 3 4.5v2a.5.5 0 0 1-1 0v-2A2.5 2.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2Zm0 14A1.5 1.5 0 0 1 3 15.5v-2a.5.5 0 0 0-1 0v2A2.5 2.5 0 0 0 4.5 18h2a.5.5 0 0 0 0-1h-2ZM17 4.5c0-.83-.67-1.5-1.5-1.5h-2a.5.5 0 0 1 0-1h2A2.5 2.5 0 0 1 18 4.5v2a.5.5 0 0 1-1 0v-2ZM15.5 17c.83 0 1.5-.67 1.5-1.5v-2a.5.5 0 0 1 1 0v2a2.5 2.5 0 0 1-2.5 2.5h-2a.5.5 0 0 1 0-1h2Zm-9-11a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Zm0 3a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7ZM6 12.5c0-.28.22-.5.5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5Z"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="OCR language" Style="{StaticResource SettingTitle}"/>
-                                <TextBlock Style="{StaticResource SettingDescription}" TextWrapping="Wrap"
-                                           Text="Language used for text recognition. Auto detects from the image." Services:LocalizationService.SourceText="Language used for text recognition. Auto detects from the image."/>
-                                <TextBlock x:Name="OcrLanguageStatusText" Style="{StaticResource SettingDescription}"
-                                           ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                           AutomationProperties.Name="OCR language availability"
-                                           AutomationProperties.LiveSetting="Polite"/>
-                            </StackPanel>
-                            <ComboBox x:Name="OcrLanguageCombo" Grid.Column="2" MinWidth="145"
-                                      VerticalAlignment="Center"
-                                      AutomationProperties.Name="OCR language"
-                                      ToolTip="Choose the language used for text recognition."
-                                      IsEditable="False" IsTextSearchEnabled="True"
-                                      SelectionChanged="OcrLanguageCombo_SelectionChanged"/>
-                        </Grid>
-                        </StackPanel>
-                    </Border>
-                    <TextBlock x:Name="OcrPreferenceStatusText"
-                               Style="{StaticResource SettingsStatusText}"
-                               Visibility="Collapsed"
-                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                               AutomationProperties.Name="OCR preference status"
-                               AutomationProperties.LiveSetting="Polite"
-                                Margin="4,8,0,0"/>
 
                 </StackPanel>
                 </Grid>
@@ -2298,13 +2308,14 @@
                                     <TextBlock Text="&#xF2B7;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Interface language" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose your preferred language for CyberSnap." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Interface language" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Interface language"/>
+                                    <TextBlock Text="Choose your preferred language for CyberSnap." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Choose your preferred language for CyberSnap."/>
                                 </StackPanel>
                                 <ComboBox x:Name="InterfaceLanguageCombo" Grid.Column="2" MinWidth="145"
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="Interface language"
                                           ToolTip="Choose your preferred language for CyberSnap."
+                                          Services:LocalizationService.SourceToolTip="Choose your preferred language for CyberSnap."
                                           SelectionChanged="InterfaceLanguageCombo_SelectionChanged"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>

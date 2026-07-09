@@ -265,7 +265,8 @@ public partial class SettingsWindow
 
     private void SelectTranslationEngineUi(int modelValue)
     {
-        var accentBrush = (System.Windows.Media.Brush)FindResource("ThemeAccentBrush");
+        var activeBorderColor = System.Windows.Media.Color.FromArgb(Theme.IsDark ? (byte)100 : (byte)140, Theme.Accent.R, Theme.Accent.G, Theme.Accent.B);
+        var accentBrush = Theme.Brush(activeBorderColor);
         var activeBg = Theme.Brush(Theme.AccentSubtle);
         var transparentBrush = System.Windows.Media.Brushes.Transparent;
 
