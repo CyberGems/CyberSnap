@@ -311,8 +311,8 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
-        // "Save only" (index 2) and "System viewer" (index 3) require saving to file
-        if (AfterCaptureCombo.SelectedIndex >= 2 && SaveToFileCheck.IsChecked != true)
+        // "Editor", "Save only" and "System viewer" require saving to file
+        if (AfterCaptureCombo.SelectedIndex >= 1 && SaveToFileCheck.IsChecked != true)
         {
             SaveToFileCheck.IsChecked = true;
         }
@@ -450,8 +450,8 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
-        // "Save only" mode: don't allow disabling save-to-file
-        if (AfterCaptureCombo.SelectedIndex >= 2 && SaveToFileCheck.IsChecked != true)
+        // "Editor", "Save only", and "System viewer" modes require save-to-file
+        if (AfterCaptureCombo.SelectedIndex >= 1 && SaveToFileCheck.IsChecked != true)
         {
             SaveToFileCheck.IsChecked = true;
             return;
@@ -478,9 +478,9 @@ public partial class SettingsWindow : Window
 
     private void UpdateSaveToFileState()
     {
-        bool saveOnlyMode = AfterCaptureCombo.SelectedIndex >= 2;
-        SaveToFileCheck.IsEnabled = !saveOnlyMode;
-        SaveToFileCheck.Opacity = saveOnlyMode ? 0.5 : 1.0;
+        bool requiresSaveToFile = AfterCaptureCombo.SelectedIndex >= 1;
+        SaveToFileCheck.IsEnabled = !requiresSaveToFile;
+        SaveToFileCheck.Opacity = requiresSaveToFile ? 0.5 : 1.0;
     }
 
     private void AskFileNameCheck_Changed(object sender, RoutedEventArgs e)

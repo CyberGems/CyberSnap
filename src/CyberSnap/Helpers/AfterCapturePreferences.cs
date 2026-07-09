@@ -62,7 +62,8 @@ public static class AfterCapturePreferences
             (1, true)  => "Current outcome: open editor and copy to clipboard.",
             (1, false) => "Current outcome: open editor only.",
             (2, true)  => "Current outcome: save the file and copy to clipboard.",
-            (3, _)     => "Current outcome: open in system viewer.",
+            (3, true)  => "Current outcome: open in system viewer and copy to clipboard.",
+            (3, false) => "Current outcome: open in system viewer.",
             _          => "Current outcome: save the file only."
         };
 }
