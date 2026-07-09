@@ -15,7 +15,6 @@ public static class SettingsSchemaCatalog
                     "How captures are saved by default.",
                     [
                         new SettingDefinition("save_to_file", "Save screenshots to file", SettingsValueKind.Toggle, "Store captures in the configured save folder.", "SaveToFile"),
-                        new SettingDefinition("auto_open_images", "Auto-open image in system viewer", SettingsValueKind.Toggle, "Automatically open newly taken screenshots in the system default viewer.", "AutoOpenCapturedImages"),
                         new SettingDefinition("save_directory", "Save directory", SettingsValueKind.Folder, "Default output folder for screenshots.", "SaveDirectory"),
                         new SettingDefinition("monthly_folders", "Create monthly subfolders", SettingsValueKind.Toggle, "Store captures under yyyy-MM folders inside the save directory.", "SaveInMonthlyFolders"),
                         new SettingDefinition("capture_format", "Image format", SettingsValueKind.Choice, "Default file format for new screenshots.", "CaptureImageFormat",

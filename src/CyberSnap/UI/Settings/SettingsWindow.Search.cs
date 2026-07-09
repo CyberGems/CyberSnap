@@ -809,7 +809,6 @@ public partial class SettingsWindow
             "AfterCapture"              => AfterCaptureCombo,
             // General / Output
             "SaveToFile"                => SaveToFileCheck,
-            "AutoOpenCapturedImages"    => AutoOpenCapturedImagesCheck,
             "SaveDirectory"             => SaveDirBox,
             "SaveInMonthlyFolders"      => MonthlyFoldersCheck,
             "CaptureImageFormat"        => CaptureFormatCombo,

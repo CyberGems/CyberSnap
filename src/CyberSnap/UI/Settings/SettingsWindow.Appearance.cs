@@ -142,7 +142,6 @@ public partial class SettingsWindow
             SaveToFileCheck.IsChecked = s.SaveToFile;
             UpdateSaveToFileState();
             AskFileNameCheck.IsChecked = s.AskForFileNameOnSave;
-            AutoOpenCapturedImagesCheck.IsChecked = s.AutoOpenCapturedImages;
             CaptureFormatCombo.SelectedIndex = (int)s.CaptureImageFormat;
             JpegQualityCombo.SelectedIndex = s.JpegQuality switch
             {

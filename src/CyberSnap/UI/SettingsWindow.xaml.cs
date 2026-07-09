@@ -311,8 +311,8 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
-        // "Save only" (index 2) requires saving to file — auto-enable if off
-        if (AfterCaptureCombo.SelectedIndex == 2 && SaveToFileCheck.IsChecked != true)
+        // "Save only" (index 2) and "System viewer" (index 3) require saving to file
+        if (AfterCaptureCombo.SelectedIndex >= 2 && SaveToFileCheck.IsChecked != true)
         {
             SaveToFileCheck.IsChecked = true;
         }
@@ -451,7 +451,7 @@ public partial class SettingsWindow : Window
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
         // "Save only" mode: don't allow disabling save-to-file
-        if (AfterCaptureCombo.SelectedIndex == 2 && SaveToFileCheck.IsChecked != true)
+        if (AfterCaptureCombo.SelectedIndex >= 2 && SaveToFileCheck.IsChecked != true)
         {
             SaveToFileCheck.IsChecked = true;
             return;
@@ -478,24 +478,9 @@ public partial class SettingsWindow : Window
 
     private void UpdateSaveToFileState()
     {
-        bool saveOnlyMode = AfterCaptureCombo.SelectedIndex == 2;
+        bool saveOnlyMode = AfterCaptureCombo.SelectedIndex >= 2;
         SaveToFileCheck.IsEnabled = !saveOnlyMode;
         SaveToFileCheck.Opacity = saveOnlyMode ? 0.5 : 1.0;
-    }
-
-    private void AutoOpenCapturedImagesCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
-
-        var previous = _settingsService.Settings.AutoOpenCapturedImages;
-        var selected = AutoOpenCapturedImagesCheck.IsChecked == true;
-        UpdateCaptureSavePreference(
-            "settings.auto-open-images",
-            "Auto-open image in system viewer",
-            previous,
-            selected,
-            value => _settingsService.Settings.AutoOpenCapturedImages = value,
-            value => AutoOpenCapturedImagesCheck.IsChecked = value);
     }
 
     private void AskFileNameCheck_Changed(object sender, RoutedEventArgs e)
