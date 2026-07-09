@@ -945,6 +945,17 @@ public partial class SettingsWindow : Window
         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/CyberGems/CyberSnap") { UseShellExecute = true }); } catch { }
     }
 
+    private void RunWizardBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var wizard = new SetupWizard(_settingsService);
+        wizard.Owner = this;
+        wizard.ShowDialog();
+
+        // Reload all settings panels so any changes made in the wizard are reflected live
+        LoadSettings();
+        ((App)Application.Current).RegisterHotkeys(showReadyNotification: false);
+    }
+
     private async void UpdateCheckButton_Click(object sender, RoutedEventArgs e)
     {
         var result = await UpdateService.CheckForUpdatesAsync();
