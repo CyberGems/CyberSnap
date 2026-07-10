@@ -512,8 +512,7 @@ public static class LocalizationService
         }
 
         return languages.Values
-            .OrderBy(language => string.Equals(language.Code, DefaultLanguageCode, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(language => language.EnglishName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(language => language.NativeName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
