@@ -228,6 +228,14 @@
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
 
+        <!-- Implicit RadioButton style: forces foreground so WPF Light/System theme
+             doesn't inject white text over light backgrounds. -->
+        <Style TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="{StaticResource SettingsControlFontSize}"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
+        </Style>
+
         <Style TargetType="ComboBox">
             <Setter Property="MinHeight" Value="{StaticResource SettingsControlHeight}"/>
             <Setter Property="Padding" Value="{StaticResource SettingsControlPadding}"/>
@@ -273,6 +281,7 @@
                                                           IsHitTestVisible="False"
                                                           Margin="0,0,6,0"
                                                           RecognizesAccessKey="True"
+                                                          TextBlock.Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ComboBox}}"
                                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                                         <Path Grid.Column="1"
                                               Width="8"

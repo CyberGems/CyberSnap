@@ -476,7 +476,9 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot1" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center">
+                                BorderThickness="1.5" VerticalAlignment="Center"
+                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
+                                MouseLeftButtonUp="StepDot_Click" Tag="1">
                             <TextBlock x:Name="StepNum1" Text="1" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -495,7 +497,9 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot2" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center">
+                                BorderThickness="1.5" VerticalAlignment="Center"
+                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
+                                MouseLeftButtonUp="StepDot_Click" Tag="2">
                             <TextBlock x:Name="StepNum2" Text="2" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -514,7 +518,9 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot3" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center">
+                                BorderThickness="1.5" VerticalAlignment="Center"
+                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
+                                MouseLeftButtonUp="StepDot_Click" Tag="3">
                             <TextBlock x:Name="StepNum3" Text="3" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -533,7 +539,9 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot4" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center">
+                                BorderThickness="1.5" VerticalAlignment="Center"
+                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
+                                MouseLeftButtonUp="StepDot_Click" Tag="4">
                             <TextBlock x:Name="StepNum4" Text="4" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -552,7 +560,9 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Border x:Name="StepDot5" Width="30" Height="30" CornerRadius="15"
-                                BorderThickness="1.5" VerticalAlignment="Center">
+                                BorderThickness="1.5" VerticalAlignment="Center"
+                                Cursor="Hand" MouseLeftButtonDown="StepDot_MouseDown"
+                                MouseLeftButtonUp="StepDot_Click" Tag="5">
                             <TextBlock x:Name="StepNum5" Text="5" FontSize="13" FontWeight="SemiBold"
                                        FontFamily="Segoe UI Variable Text"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -604,9 +614,31 @@
                                    FontSize="13" FontFamily="Segoe UI Variable Text"
                                    Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,20"/>
 
-                        <TextBlock Text="Theme" FontSize="13" FontWeight="SemiBold"
+                        <TextBlock Text="Interface language" FontSize="13" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Text"
                                    Foreground="{DynamicResource WizFg}" Margin="0,0,0,8"/>
+
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Language" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="WizLanguageCombo" Grid.Column="1"
+                                          MinWidth="200" Height="32"
+                                          Style="{StaticResource WizComboBox}"
+                                          ItemContainerStyle="{StaticResource WizComboBoxItem}"
+                                          VerticalContentAlignment="Center" FontSize="12"
+                                          ToolTip="Language"
+                                          SelectionChanged="Language_SelectionChanged"/>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="Theme" FontSize="13" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable Text"
+                                   Foreground="{DynamicResource WizFg}" Margin="0,14,0,8"/>
 
                         <Border Style="{StaticResource WizRow}" Padding="14,12">
                             <StackPanel Orientation="Horizontal">
@@ -634,28 +666,6 @@
                                              Foreground="{DynamicResource WizFg}"
                                              Checked="ThemeRadio_Changed"/>
                             </StackPanel>
-                        </Border>
-
-                        <TextBlock Text="Interface language" FontSize="13" FontWeight="SemiBold"
-                                   FontFamily="Segoe UI Variable Text"
-                                   Foreground="{DynamicResource WizFg}" Margin="0,14,0,8"/>
-
-                        <Border Style="{StaticResource WizRow}">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Language" FontSize="13"
-                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
-                                <ComboBox x:Name="WizLanguageCombo" Grid.Column="1"
-                                          MinWidth="200" Height="32"
-                                          Style="{StaticResource WizComboBox}"
-                                          ItemContainerStyle="{StaticResource WizComboBoxItem}"
-                                          VerticalContentAlignment="Center" FontSize="12"
-                                          ToolTip="Language"
-                                          SelectionChanged="Language_SelectionChanged"/>
-                            </Grid>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
@@ -865,9 +875,9 @@
                     <TextBlock FontSize="13" FontFamily="Segoe UI Variable Text" TextAlignment="Center"
                                Foreground="{DynamicResource WizFgMuted}" HorizontalAlignment="Center"
                                Margin="0,12,0,0" LineHeight="22">
-                        CyberSnap is running in your system tray.
+                        Close this wizard to start using CyberSnap.
                         <LineBreak/>
-                        Use your hotkeys or right-click the tray icon to get started.
+                        Your hotkeys and tray icon will be ready once you close this window.
                     </TextBlock>
 
                     <Button Content="Open Settings" Style="{StaticResource WizBtnSecondary}"
