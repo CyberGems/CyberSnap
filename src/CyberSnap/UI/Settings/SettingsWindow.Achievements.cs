@@ -91,7 +91,7 @@ public partial class SettingsWindow
     // SVG icon when iconId is set, otherwise the Segoe font glyph (or emoji).
     private Border MakeStatCard(string glyph, string? iconId, string value, string label, MediaColor accent)
     {
-        var glow = new DropShadowEffect { Color = accent, BlurRadius = 10, ShadowDepth = 0, Opacity = 0.5 };
+        var glow = new DropShadowEffect { Color = accent, BlurRadius = 10, ShadowDepth = 0, Opacity = Theme.IsDark ? 0.5 : 0.0 };
 
         UIElement iconBlock;
         if (iconId is { Length: > 0 } id && Helpers.FluentIcons.HasIcon(id))
