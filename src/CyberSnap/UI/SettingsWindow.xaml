@@ -4177,8 +4177,8 @@
             </ScrollViewer>
 
             <!-- Achievements / Logros -->
-            <ScrollViewer x:Name="AchievementsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="24,42,24,24">
-                <StackPanel MaxWidth="680" HorizontalAlignment="Left">
+            <ScrollViewer x:Name="AchievementsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24,42,24,24">
+                <StackPanel HorizontalAlignment="Stretch">
                     <!-- Each section is a self-contained card (header inside) so nothing floats on the
                          bare panel. Cards use the lighter ThemeCardBrush; inner tiles use the darker
                          ThemeInputBackgroundBrush for an inset hierarchy. Inner content (rail, stat
