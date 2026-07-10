@@ -282,9 +282,18 @@ public partial class App
     // CelebrationCaptureCount, CurrentStreak, LongestStreak and LastCelebrationDate
     // stay accurate even when the user has celebration toasts turned off. Callers
     // that want to show a toast check CelebrationsEnabled themselves afterwards.
-    private (int Count, bool IsFirstToday, int Streak) RegisterCapture(AppSettings settings)
+    private (int Count, bool IsFirstToday, int Streak) RegisterCapture(AppSettings settings, CaptureKind kind = CaptureKind.Screenshot)
     {
         var count = ++settings.CelebrationCaptureCount;
+        switch (kind)
+        {
+            case CaptureKind.Recording:     settings.RecordingCount++;     break;
+            case CaptureKind.Ocr:           settings.OcrCount++;           break;
+            case CaptureKind.ColorPick:     settings.ColorPickCount++;     break;
+            case CaptureKind.Scan:          settings.ScanCount++;          break;
+            case CaptureKind.ScrollCapture: settings.ScrollCaptureCount++; break;
+            default:                        settings.ScreenshotCount++;    break;
+        }
 
         var todayDate = DateTime.Now.Date;
         var today = todayDate.ToString("yyyy-MM-dd");
@@ -319,9 +328,9 @@ public partial class App
     //   1. A milestone count (50, 100, 250, ...) — rarer, so it outranks the daily greeting.
     //   2. A streak milestone (3, 7, 14, ... consecutive days), on the first capture of the day.
     //   3. The plain first capture of the local day.
-    private void CelebrateCaptureIfEarned(AppSettings settings)
+    private void CelebrateCaptureIfEarned(AppSettings settings, CaptureKind kind = CaptureKind.Screenshot)
     {
-        var reg = RegisterCapture(settings);
+        var reg = RegisterCapture(settings, kind);
 
         if (!settings.CelebrationsEnabled)
             return;
@@ -379,7 +388,11 @@ public partial class App
 
             // Count toward milestones and streak, and surface any earned milestone/streak/first-of-day
             // celebration as a delayed follow-up toast — same as overlay captures.
-            app.CelebrateCaptureIfEarned(settings);
+            var kind = isOcr ? CaptureKind.Ocr
+                     : isScan ? CaptureKind.Scan
+                     : isColor ? CaptureKind.ColorPick
+                     : CaptureKind.Screenshot;
+            app.CelebrateCaptureIfEarned(settings, kind);
 
             // First-time achievement flags.
             if (isOcr)
@@ -466,7 +479,7 @@ public partial class App
                     // Count this OCR toward milestones (covers both the auto-copy toast and the
                     // workbench window). Any earned celebration is shown as a separate delayed
                     // follow-up toast; the "OCR copied" toast keeps its own functional text.
-                    CelebrateCaptureIfEarned(_settingsService.Settings);
+                    CelebrateCaptureIfEarned(_settingsService.Settings, CaptureKind.Ocr);
                     MarkFirstTime(_settingsService.Settings.HasFirstOcr,
                         () => _settingsService.Settings.HasFirstOcr = true, "First OCR", "ocr");
 

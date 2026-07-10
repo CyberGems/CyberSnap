@@ -144,7 +144,7 @@ public partial class App
 
                         // Count toward milestones; any earned celebration shows as a separate
                         // delayed follow-up toast, so the recording toast keeps its own text.
-                        CelebrateCaptureIfEarned(s);
+                        CelebrateCaptureIfEarned(s, CaptureKind.Recording);
                         MarkFirstTime(s.HasFirstRecording, () => s.HasFirstRecording = true, "First recording", "record");
 
                         if (openTrimmer)
