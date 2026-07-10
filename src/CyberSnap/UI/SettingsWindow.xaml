@@ -934,6 +934,12 @@
 
                     <RadioButton x:Name="HistoryTab" Content="Gallery" Tag="Gallery" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
+
+                    <!-- Separator between tool sections and personal stats -->
+                    <Border Height="1" Margin="9,6,9,6"
+                            Background="{DynamicResource ThemeSeparatorBrush}"
+                            Opacity="0.7" IsHitTestVisible="False"/>
+
                     <RadioButton x:Name="AchievementsTab" Content="Achievements" Tag="Achievements" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="AboutTab" Content="About" Tag="About" GroupName="Main"

@@ -143,12 +143,12 @@ public partial class SettingsWindow
         // Per-type cards
         var typeCards = new (string Glyph, string? IconId, string Value, string LabelKey, MediaColor Accent)[]
         {
-            (GlyphCamera, "screenshot", s.ScreenshotCount.ToString("N0"),  "Screenshots",   RailCyan),
-            (GlyphStar,   "record",     s.RecordingCount.ToString("N0"),   "Recordings",    MediaColor.FromRgb(0xE0, 0x60, 0xFF)),
-            (GlyphStar,   "ocr",        s.OcrCount.ToString("N0"),         "OCR",           MediaColor.FromRgb(0x00, 0xC8, 0xFF)),
-            (GlyphStar,   "picker",     s.ColorPickCount.ToString("N0"),   "Color picks",   MediaColor.FromRgb(0xFF, 0x6B, 0x35)),
-            (GlyphStar,   "scan",       s.ScanCount.ToString("N0"),        "QR & Barcodes", MediaColor.FromRgb(0x4C, 0xFF, 0x91)),
-            (GlyphStar,   null,         s.ScrollCaptureCount.ToString("N0"), "Scroll captures", RailCyan),
+            (GlyphCamera, "screenshot",    s.ScreenshotCount.ToString("N0"),    "Screenshots",    RailCyan),
+            (GlyphStar,   "record",        s.RecordingCount.ToString("N0"),    "Recordings",     MediaColor.FromRgb(0xE0, 0x60, 0xFF)),
+            (GlyphStar,   "ocr",           s.OcrCount.ToString("N0"),          "OCR",            MediaColor.FromRgb(0x00, 0xC8, 0xFF)),
+            (GlyphStar,   "picker",        s.ColorPickCount.ToString("N0"),    "Color picks",    MediaColor.FromRgb(0xFF, 0x6B, 0x35)),
+            (GlyphStar,   "scan",          s.ScanCount.ToString("N0"),         "QR & Barcodes",  MediaColor.FromRgb(0x4C, 0xFF, 0x91)),
+            (GlyphStar,   "scrollCapture", s.ScrollCaptureCount.ToString("N0"), "Scroll captures", RailCyan),
         };
         int startRow = sepRow + 1;
         for (int i = 0; i < typeCards.Length; i++)
