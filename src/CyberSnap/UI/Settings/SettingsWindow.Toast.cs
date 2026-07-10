@@ -705,7 +705,8 @@ public partial class SettingsWindow
         // or an eviction-preview occupant at 0.20 that ended up not evicted). Without this,
         // the stale transparency persists across refreshes and presets.
         border.Opacity = 1;
-        border.Background = new SolidColorBrush(Color.FromArgb(180, 26, 46, 37));
+        border.SetResourceReference(Border.BackgroundProperty, "ThemeInputBackgroundBrush");
+        border.SetResourceReference(Border.BorderBrushProperty, "ThemeAccentSubtleBrush");
         icon.Source = Helpers.FluentIcons.RenderWpf(iconId, GetToastLayoutIconColor(active: false), 22);
 
         // Don't override tooltip - let XAML localization handle it
