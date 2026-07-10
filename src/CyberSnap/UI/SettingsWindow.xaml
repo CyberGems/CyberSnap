@@ -2330,26 +2330,23 @@
                                     <TextBlock Text="Choose dark, light, or follow your Windows theme." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <RadioButton x:Name="ThemeDarkRadio" GroupName="AppTheme"
-                                                 VerticalAlignment="Center" Cursor="Hand"
-                                                 AutomationProperties.Name="Dark theme"
-                                                 ToolTip="Always use the dark theme."
-                                                 Checked="AppThemeRadio_Changed">
-                                        <RadioButton.Content>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <TextBlock Text="Dark" VerticalAlignment="Center"/>
-                                                <Border CornerRadius="3" Background="{DynamicResource ThemeTabActiveBrush}"
-                                                        BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="0.8"
-                                                        Padding="3,0.5" Margin="5,0,0,0" VerticalAlignment="Center" Opacity="0.85">
-                                                    <TextBlock Text="DEFAULT" FontSize="7" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource ThemeAccentBrush}"
-                                                               FontFamily="Segoe UI Variable Display" VerticalAlignment="Center"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </RadioButton.Content>
-                                    </RadioButton>
+                                    <!-- Dark: radio + DEFAULT badge below, in a vertical stack -->
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,18,0">
+                                        <RadioButton x:Name="ThemeDarkRadio" Content="Dark" GroupName="AppTheme"
+                                                     HorizontalAlignment="Center" Cursor="Hand"
+                                                     AutomationProperties.Name="Dark theme"
+                                                     ToolTip="Always use the dark theme."
+                                                     Checked="AppThemeRadio_Changed"/>
+                                        <Border CornerRadius="3" Background="{DynamicResource ThemeTabActiveBrush}"
+                                                BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="0.8"
+                                                Padding="4,1" Margin="0,3,0,0" HorizontalAlignment="Center" Opacity="0.85">
+                                            <TextBlock Text="DEFAULT" FontSize="7.5" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ThemeAccentBrush}"
+                                                       FontFamily="Segoe UI Variable Display" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </StackPanel>
                                     <RadioButton x:Name="ThemeLightRadio" Content="Light" GroupName="AppTheme"
-                                                 Margin="6,0,6,0" VerticalAlignment="Center" Cursor="Hand"
+                                                 Margin="0,0,18,0" VerticalAlignment="Center" Cursor="Hand"
                                                  AutomationProperties.Name="Light theme"
                                                  ToolTip="Always use the light theme."
                                                  Checked="AppThemeRadio_Changed"/>
