@@ -584,14 +584,6 @@ public partial class SettingsWindow
                 Theme.SetMode(value);
                 Theme.ApplyTo(Application.Current.Resources);
 
-                // Update WPF native ThemeMode so scrollbars, checkboxes, etc. match.
-                Application.Current.ThemeMode = value switch
-                {
-                    Models.AppThemeMode.Dark => System.Windows.ThemeMode.Dark,
-                    Models.AppThemeMode.Light => System.Windows.ThemeMode.Light,
-                    _ => System.Windows.ThemeMode.System
-                };
-
                 ApplyThemeColors();
 
                 // Live-refresh all open windows.

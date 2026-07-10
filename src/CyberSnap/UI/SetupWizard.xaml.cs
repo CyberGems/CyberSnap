@@ -664,6 +664,22 @@ public partial class SetupWizard : Window
             $"{message}\n{ex.Message}");
     }
 
+    private void StepDot_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border dot && dot.Tag is string tag && int.TryParse(tag, out int target))
+        {
+            e.Handled = true;
+            GoToPage(target);
+        }
+    }
+
+    private void StepDot_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // Prevent the window drag handler from capturing the mouse and eating the Up event.
+        if (e.ChangedButton == MouseButton.Left)
+            e.Handled = true;
+    }
+
     private void Window_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton == MouseButton.Left) DragMove();

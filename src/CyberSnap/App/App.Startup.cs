@@ -88,12 +88,6 @@ public partial class App
         Theme.SetMode(_settingsService.Settings.ThemeMode);
         Theme.Refresh();
         Theme.ApplyTo(Resources);
-        ThemeMode = _settingsService.Settings.ThemeMode switch
-        {
-            Models.AppThemeMode.Dark => System.Windows.ThemeMode.Dark,
-            Models.AppThemeMode.Light => System.Windows.ThemeMode.Light,
-            _ => System.Windows.ThemeMode.System
-        };
         Helpers.UiChrome.DetectRefreshRate();
         ToastWindow.SetPosition(_settingsService.Settings.ToastPosition);
         ToastWindow.SetMonitorIndex(_settingsService.Settings.ToastMonitorIndex);
