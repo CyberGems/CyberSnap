@@ -13,7 +13,7 @@ public partial class SetupWizard : Window
 {
     private readonly SettingsService _settingsService;
     private int _page = 1;
-    private const int TotalPages = 4;
+    private const int TotalPages = 5;
     private readonly Grid[] _pages;
     private readonly Border[] _stepDots;
     private readonly TextBlock[] _stepNums;
@@ -21,6 +21,7 @@ public partial class SetupWizard : Window
     private readonly TextBlock[] _stepSubs;
     private bool _suppressLanguageChange;
     private bool _suppressAfterCaptureChange;
+    private bool _suppressThemeChange;
     private readonly Dictionary<string, string> _languageItemSources = new(StringComparer.OrdinalIgnoreCase);
 
     public SetupWizard(SettingsService settingsService)
@@ -32,11 +33,11 @@ public partial class SetupWizard : Window
         UiScale.ApplyToWindow(this, WizardShell, scaleWindowBounds: true);
         ApplyTheme();
 
-        _pages = new[] { Page1, Page2, Page3, Page4 };
-        _stepDots = new[] { StepDot1, StepDot2, StepDot3, StepDot4 };
-        _stepNums = new[] { StepNum1, StepNum2, StepNum3, StepNum4 };
-        _stepLabels = new[] { StepLabel1, StepLabel2, StepLabel3, StepLabel4 };
-        _stepSubs = new[] { StepSub1, StepSub2, StepSub3, StepSub4 };
+        _pages = new[] { Page0, Page1, Page2, Page3, Page4 };
+        _stepDots = new[] { StepDot1, StepDot2, StepDot3, StepDot4, StepDot5 };
+        _stepNums = new[] { StepNum1, StepNum2, StepNum3, StepNum4, StepNum5 };
+        _stepLabels = new[] { StepLabel1, StepLabel2, StepLabel3, StepLabel4, StepLabel5 };
+        _stepSubs = new[] { StepSub1, StepSub2, StepSub3, StepSub4, StepSub5 };
 
         BuildHotkeyRows();
         LoadDefaults();
@@ -44,12 +45,15 @@ public partial class SetupWizard : Window
         PopulateLanguages();
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
         RefreshLanguageComboDisplay();
+
+        // Show the first page explicitly (Page0 starts collapsed in XAML)
+        Page0.Visibility = Visibility.Visible;
     }
 
     private static string GetLanguageLabel(LocalizationLanguage language) =>
         string.Equals(language.EnglishName, language.NativeName, StringComparison.OrdinalIgnoreCase)
             ? language.EnglishName
-            : $"{language.EnglishName} - {language.NativeName}";
+            : $"{language.NativeName} - {language.EnglishName}";
 
     private void PopulateLanguages()
     {
@@ -267,6 +271,37 @@ public partial class SetupWizard : Window
         ApplyAfterCaptureViewPreference(AfterCapturePreferences.FromSettings(s));
         WizSaveDirText.Text = s.SaveDirectory;
         UpdateSaveDirectoryState();
+        LoadAppearanceDefaults();
+    }
+
+    private void LoadAppearanceDefaults()
+    {
+        _suppressThemeChange = true;
+        try
+        {
+            var mode = _settingsService.Settings.ThemeMode;
+            WizThemeDarkRadio.IsChecked  = mode == AppThemeMode.Dark;
+            WizThemeLightRadio.IsChecked = mode == AppThemeMode.Light;
+            WizThemeAutoRadio.IsChecked  = mode == AppThemeMode.System;
+        }
+        finally
+        {
+            _suppressThemeChange = false;
+        }
+    }
+
+    private void ThemeRadio_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_suppressThemeChange) return;
+
+        var mode = WizThemeDarkRadio.IsChecked  == true ? AppThemeMode.Dark
+                 : WizThemeLightRadio.IsChecked == true ? AppThemeMode.Light
+                 : AppThemeMode.System;
+
+        _settingsService.Settings.ThemeMode = mode;
+        Theme.SetMode(mode);
+        ApplyTheme();
+        UpdateSteps(_page);
     }
 
     private void WizSaveToFile_Changed(object sender, RoutedEventArgs e)
@@ -403,6 +438,22 @@ public partial class SetupWizard : Window
             switch (_page)
             {
                 case 1:
+                    var previousTheme = s.ThemeMode;
+                    try
+                    {
+                        _settingsService.Save();
+                    }
+                    catch
+                    {
+                        s.ThemeMode = previousTheme;
+                        Theme.SetMode(previousTheme);
+                        ApplyTheme();
+                        UpdateSteps(_page);
+                        LoadAppearanceDefaults();
+                        throw;
+                    }
+                    break;
+                case 2:
                     var previousCapture = (
                         s.ShowCrosshairGuides,
                         s.ShowCaptureMagnifier,
@@ -414,7 +465,6 @@ public partial class SetupWizard : Window
                         s.ShowCaptureMagnifier = WizCaptureMagnifierCheck.IsChecked == true;
                         s.MuteSounds = WizEnableSoundsCheck.IsChecked != true;
                         s.ShowCaptureWidget = WizCaptureWidgetCheck.IsChecked == true;
-                        // Sync per-event mute state so the Sounds tab sub-toggles stay in sync
                         foreach (SoundEvent evt in Enum.GetValues<SoundEvent>())
                         {
                             s.MutedSounds[evt] = s.MuteSounds;
@@ -439,7 +489,7 @@ public partial class SetupWizard : Window
                         throw;
                     }
                     break;
-                case 2:
+                case 3:
                     var previousSaving = (
                         s.SaveToFile,
                         s.AfterCapture,
@@ -459,10 +509,10 @@ public partial class SetupWizard : Window
                         throw;
                     }
                     break;
-                case 3:
+                case 4:
                     _settingsService.Save();
                     break;
-                case 4:
+                case 5:
                     var previousCompleted = s.HasCompletedSetup;
                     try
                     {

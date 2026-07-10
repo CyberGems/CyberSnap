@@ -223,6 +223,7 @@
                                                           IsHitTestVisible="False"
                                                           Margin="0,0,6,0"
                                                           RecognizesAccessKey="True"
+                                                          TextBlock.Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ComboBox}}"
                                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                                         <Path Grid.Column="1"
                                               Width="8"
@@ -481,9 +482,9 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="StepLabel1" Text="Capture" FontSize="14"
+                            <TextBlock x:Name="StepLabel1" Text="Appearance" FontSize="14"
                                        FontFamily="Segoe UI Variable Text"/>
-                            <TextBlock x:Name="StepSub1" Text="Behavior and overlays" FontSize="11"
+                            <TextBlock x:Name="StepSub1" Text="Language and visual theme" FontSize="11"
                                        FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
                         </StackPanel>
                     </Grid>
@@ -500,9 +501,9 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="StepLabel2" Text="Saving" FontSize="14"
+                            <TextBlock x:Name="StepLabel2" Text="Capture" FontSize="14"
                                        FontFamily="Segoe UI Variable Text"/>
-                            <TextBlock x:Name="StepSub2" Text="After capture and files" FontSize="11"
+                            <TextBlock x:Name="StepSub2" Text="Behavior and overlays" FontSize="11"
                                        FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
                         </StackPanel>
                     </Grid>
@@ -519,14 +520,14 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="StepLabel3" Text="Hotkeys" FontSize="14"
+                            <TextBlock x:Name="StepLabel3" Text="Saving" FontSize="14"
                                        FontFamily="Segoe UI Variable Text"/>
-                            <TextBlock x:Name="StepSub3" Text="Your shortcuts" FontSize="11"
+                            <TextBlock x:Name="StepSub3" Text="After capture and files" FontSize="11"
                                        FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
                         </StackPanel>
                     </Grid>
 
-                    <Grid x:Name="StepRow4">
+                    <Grid x:Name="StepRow4" Margin="0,0,0,20">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
@@ -538,9 +539,28 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="StepLabel4" Text="Ready" FontSize="14"
+                            <TextBlock x:Name="StepLabel4" Text="Hotkeys" FontSize="14"
                                        FontFamily="Segoe UI Variable Text"/>
-                            <TextBlock x:Name="StepSub4" Text="Finish up" FontSize="11"
+                            <TextBlock x:Name="StepSub4" Text="Your shortcuts" FontSize="11"
+                                       FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="StepRow5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="StepDot5" Width="30" Height="30" CornerRadius="15"
+                                BorderThickness="1.5" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepNum5" Text="5" FontSize="13" FontWeight="SemiBold"
+                                       FontFamily="Segoe UI Variable Text"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="StepLabel5" Text="Ready" FontSize="14"
+                                       FontFamily="Segoe UI Variable Text"/>
+                            <TextBlock x:Name="StepSub5" Text="Finish up" FontSize="11"
                                        FontFamily="Segoe UI Variable Text" Margin="0,1,0,0"/>
                         </StackPanel>
                     </Grid>
@@ -565,20 +585,83 @@
             <StackPanel Orientation="Horizontal" Margin="0,12,12,0"
                         HorizontalAlignment="Right" VerticalAlignment="Top"
                         Panel.ZIndex="10">
-                <ComboBox x:Name="WizLanguageCombo" MinWidth="180" Height="32"
-                          Style="{StaticResource WizComboBox}"
-                          ItemContainerStyle="{StaticResource WizComboBoxItem}"
-                          VerticalContentAlignment="Center" FontSize="12" Margin="0,0,8,0"
-                          ToolTip="Language" SelectionChanged="Language_SelectionChanged"/>
                 <Button Content="X"
                         Width="32" Height="32" MinWidth="32"
                         Padding="0"
                         FontSize="15"
                         Style="{StaticResource WizBtnClose}"
+                        ToolTip="Accept defaults and close the Setup Wizard"
                         Click="Skip_Click"/>
             </StackPanel>
 
-            <Grid x:Name="Page1" Grid.Row="0" Margin="40,52,40,0">
+            <Grid x:Name="Page0" Grid.Row="0" Margin="40,52,40,0" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
+                    <StackPanel>
+                        <TextBlock Text="Appearance" FontSize="24" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable Display"
+                                   Foreground="{DynamicResource WizFg}"/>
+                        <TextBlock Text="Customize the language and visual appearance of the application"
+                                   FontSize="13" FontFamily="Segoe UI Variable Text"
+                                   Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,20"/>
+
+                        <TextBlock Text="Theme" FontSize="13" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable Text"
+                                   Foreground="{DynamicResource WizFg}" Margin="0,0,0,8"/>
+
+                        <Border Style="{StaticResource WizRow}" Padding="14,12">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="WizThemeDarkRadio"
+                                             Content="Dark"
+                                             GroupName="WizTheme"
+                                             FontSize="13"
+                                             FontFamily="Segoe UI Variable Text"
+                                             Foreground="{DynamicResource WizFg}"
+                                             Margin="0,0,16,0"
+                                             Checked="ThemeRadio_Changed"/>
+                                <RadioButton x:Name="WizThemeLightRadio"
+                                             Content="Light"
+                                             GroupName="WizTheme"
+                                             FontSize="13"
+                                             FontFamily="Segoe UI Variable Text"
+                                             Foreground="{DynamicResource WizFg}"
+                                             Margin="0,0,16,0"
+                                             Checked="ThemeRadio_Changed"/>
+                                <RadioButton x:Name="WizThemeAutoRadio"
+                                             Content="Auto"
+                                             GroupName="WizTheme"
+                                             FontSize="13"
+                                             FontFamily="Segoe UI Variable Text"
+                                             Foreground="{DynamicResource WizFg}"
+                                             Checked="ThemeRadio_Changed"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="Interface language" FontSize="13" FontWeight="SemiBold"
+                                   FontFamily="Segoe UI Variable Text"
+                                   Foreground="{DynamicResource WizFg}" Margin="0,14,0,8"/>
+
+                        <Border Style="{StaticResource WizRow}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Language" FontSize="13"
+                                           Foreground="{DynamicResource WizFg}" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="WizLanguageCombo" Grid.Column="1"
+                                          MinWidth="200" Height="32"
+                                          Style="{StaticResource WizComboBox}"
+                                          ItemContainerStyle="{StaticResource WizComboBoxItem}"
+                                          VerticalContentAlignment="Center" FontSize="12"
+                                          ToolTip="Language"
+                                          SelectionChanged="Language_SelectionChanged"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid x:Name="Page1" Grid.Row="0" Margin="40,52,40,0" Visibility="Collapsed">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
                     <StackPanel>
                         <TextBlock Text="Capture" FontSize="24" FontWeight="SemiBold"
@@ -800,6 +883,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Button x:Name="SkipBtn" Content="Skip setup" Style="{StaticResource WizBtnSecondary}"
+                            ToolTip="Accept defaults and close the Setup Wizard"
                             Click="Skip_Click" HorizontalAlignment="Left" VerticalAlignment="Center"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button x:Name="BackBtn" Content="Back" Style="{StaticResource WizBtnSecondary}"

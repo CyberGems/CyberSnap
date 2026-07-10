@@ -289,7 +289,7 @@ public partial class SettingsWindow
         var autoAutomationName = "Auto interface language";
         var autoAutomationHelp = "Use the Windows language when CyberSnap has app translations for it.";
         _languageItemSources[LocalizationService.AutoLanguageCode] =
-            (autoLabel, autoToolTip, autoAutomationName, autoAutomationHelp);
+            (autoLabel, autoToolTip, null, autoAutomationName, autoAutomationHelp);
 
         var autoLanguageItem = new ComboBoxItem
         {
@@ -305,16 +305,21 @@ public partial class SettingsWindow
             bool available = LocalizationService.HasInterfaceTranslations(language.Code);
             var label = string.Equals(language.EnglishName, language.NativeName, StringComparison.OrdinalIgnoreCase)
                 ? language.EnglishName
-                : $"{language.EnglishName} - {language.NativeName}";
+                : $"{language.NativeName} - {language.EnglishName}";
             var contentLabel = available ? label : $"{label} (not translated yet)";
-            var toolTip = available
-                ? $"Use {label} for the CyberSnap interface."
+            // Store the tooltip template key and label separately so RefreshLanguageComboDisplay
+            // can re-translate and re-format the tooltip when the language changes.
+            var toolTipTemplate = available
+                ? "Use {0} for the CyberSnap interface."
                 : "This language is recognized, but CyberSnap does not have app translations for it yet.";
+            var toolTip = available
+                ? string.Format(LocalizationService.Translate(toolTipTemplate), label)
+                : LocalizationService.Translate(toolTipTemplate);
             var automationName = $"{label} interface language";
             var automationHelp = available
                 ? $"Use {label} for CyberSnap menus, settings, and prompts."
                 : $"{label} is recognized, but CyberSnap does not have app translations for it yet.";
-            _languageItemSources[language.Code] = (contentLabel, toolTip, automationName, automationHelp);
+            _languageItemSources[language.Code] = (contentLabel, toolTipTemplate, label, automationName, automationHelp);
 
             var item = new ComboBoxItem
             {
@@ -328,14 +333,11 @@ public partial class SettingsWindow
             InterfaceLanguageCombo.Items.Add(item);
         }
 
-        // English (added first by LocalizationService.Languages) stays at the top as the
-        // default; insert Auto right after it so auto-detection is second until every
-        // language is fully translated.
-        int autoIndex = InterfaceLanguageCombo.Items.Count > 0 ? 1 : 0;
-        InterfaceLanguageCombo.Items.Insert(autoIndex, autoLanguageItem);
+        // Auto always goes first, then all languages in native-name alphabetical order.
+        InterfaceLanguageCombo.Items.Insert(0, autoLanguageItem);
     }
 
-    private readonly Dictionary<string, (string Label, string ToolTip, string AutomationName, string AutomationHelp)> _languageItemSources = new();
+    private readonly Dictionary<string, (string Label, string ToolTipTemplate, string? LanguageLabel, string AutomationName, string AutomationHelp)> _languageItemSources = new();
 
     private void RefreshLanguageComboDisplay()
     {
@@ -346,7 +348,13 @@ public partial class SettingsWindow
                 continue;
 
             item.Content = LocalizationService.Translate(info.Label);
-            item.ToolTip = LocalizationService.Translate(info.ToolTip);
+
+            // Re-translate and re-format the tooltip using the stored template and language label.
+            var translatedTemplate = LocalizationService.Translate(info.ToolTipTemplate);
+            item.ToolTip = info.LanguageLabel != null
+                ? string.Format(translatedTemplate, info.LanguageLabel)
+                : translatedTemplate;
+
             AutomationProperties.SetName(item, LocalizationService.Translate(info.AutomationName));
             AutomationProperties.SetHelpText(item, LocalizationService.Translate(info.AutomationHelp));
         }
