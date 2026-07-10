@@ -414,23 +414,31 @@ public partial class SettingsWindow
         };
 
         // Total captures.
-        chips.Children.Add(MakeChip(b =>
-            b.Add(new Run(string.Format(LocalizationService.Translate("{0} captures"), count.ToString("N0"))))));
+        var capturesChip = MakeChip(b =>
+            b.Add(new Run(string.Format(LocalizationService.Translate("{0} captures"), count.ToString("N0")))));
+        capturesChip.ToolTip = LocalizationService.Translate("Total captures across all tools — screenshots, recordings, OCR, color picks, and more.");
+        ToolTipService.SetInitialShowDelay(capturesChip, 300);
+        chips.Children.Add(capturesChip);
 
         // Distance to next milestone, or an "all done" badge.
-        chips.Children.Add(MakeChip(b =>
+        var nextChip = MakeChip(b =>
         {
             if (next is int nv)
                 b.Add(new Run(string.Format(LocalizationService.Translate("{0} to next milestone"),
                     (nv - count).ToString("N0"))));
             else
                 b.Add(new Run(LocalizationService.Translate("All milestones reached!")));
-        }));
+        });
+        nextChip.ToolTip = next is int nextVal
+            ? string.Format(LocalizationService.Translate("Reach {0} total captures to unlock your next milestone medal."), nextVal.ToString("N0"))
+            : LocalizationService.Translate("You've unlocked every capture milestone. Impressive!");
+        ToolTipService.SetInitialShowDelay(nextChip, 300);
+        chips.Children.Add(nextChip);
 
         // Streak — only once it's actually a streak (>= 2 days).
         if (streak >= 2)
         {
-            chips.Children.Add(MakeChip(b =>
+            var streakChip = MakeChip(b =>
             {
                 b.Add(new Run("🔥")
                 {
@@ -438,7 +446,11 @@ public partial class SettingsWindow
                     Foreground = new SolidColorBrush(MediaColor.FromRgb(0xFF, 0x9A, 0x3D))
                 });
                 b.Add(new Run(" " + string.Format(LocalizationService.Translate("{0}-day streak"), streak)));
-            }));
+            });
+            streakChip.ToolTip = string.Format(
+                LocalizationService.Translate("You've used CyberSnap on {0} consecutive days. Missing a day resets the streak."), streak);
+            ToolTipService.SetInitialShowDelay(streakChip, 300);
+            chips.Children.Add(streakChip);
         }
 
         MilestoneRailHost.Children.Add(chips);
