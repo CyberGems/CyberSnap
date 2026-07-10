@@ -68,6 +68,13 @@ public partial class SettingsWindow
             // ScrollCaptureCount stays 0 — scroll captures are stored as images
             // and cannot be distinguished from regular screenshots retroactively.
 
+            // Also sync CelebrationCaptureCount if the gallery total exceeds it — this
+            // happens for users who had captures before the Achievements system was added.
+            int galleryTotal = s.ScreenshotCount + s.RecordingCount + s.OcrCount +
+                               s.ColorPickCount + s.ScanCount;
+            if (galleryTotal > s.CelebrationCaptureCount)
+                s.CelebrationCaptureCount = galleryTotal;
+
             if (s.ScreenshotCount > 0 || s.RecordingCount > 0 || s.OcrCount > 0 ||
                 s.ColorPickCount > 0 || s.ScanCount > 0)
             {
