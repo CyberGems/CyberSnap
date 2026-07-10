@@ -3514,7 +3514,7 @@
 
                                                 <Border x:Name="ToastLayoutCloseBtn"
                                                         Width="30" Height="30" CornerRadius="9"
-                                                        Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
+                                                        Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                         Services:LocalizationService.SourceToolTip="Move the close notification button"
@@ -3525,7 +3525,7 @@
                                                 </Border>
                                                 <Border x:Name="ToastLayoutPinBtn"
                                                         Width="30" Height="30" CornerRadius="9"
-                                                        Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
+                                                        Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                         Services:LocalizationService.SourceToolTip="Move the pin notification button"
@@ -3536,7 +3536,7 @@
                                                 </Border>
                                                 <Border x:Name="ToastLayoutSaveBtn"
                                                         Width="30" Height="30" CornerRadius="9"
-                                                        Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
+                                                        Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                         Services:LocalizationService.SourceToolTip="Move the save notification button"
@@ -3547,7 +3547,7 @@
                                                 </Border>
                                                 <Border x:Name="ToastLayoutCopyBtn"
                                                         Width="30" Height="30" CornerRadius="9"
-                                                        Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
+                                                        Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                         Services:LocalizationService.SourceToolTip="Move the copy notification button"
@@ -3558,7 +3558,7 @@
                                                 </Border>
                                                 <Border x:Name="ToastLayoutOfficeBtn"
                                                         Width="30" Height="30" CornerRadius="9"
-                                                        Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
+                                                        Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                         Services:LocalizationService.SourceToolTip="Move the send to notification button"
@@ -3569,7 +3569,7 @@
                                                 </Border>
                                                 <Border x:Name="ToastLayoutDeleteBtn"
                                                         Width="30" Height="30" CornerRadius="9"
-                                                        Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
+                                                        Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                         Services:LocalizationService.SourceToolTip="Move the delete notification button"
@@ -3580,7 +3580,7 @@
                                                 </Border>
                                                 <Border x:Name="ToastLayoutAiRedirectBtn"
                                                         Width="30" Height="30" CornerRadius="9"
-                                                        Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
+                                                        Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                         Services:LocalizationService.SourceToolTip="Move the gallery notification button"
@@ -3591,7 +3591,7 @@
                                                 </Border>
                                                 <Border x:Name="ToastLayoutEditBtn"
                                                         Width="30" Height="30" CornerRadius="9"
-                                                        Background="#FF303030" BorderBrush="{DynamicResource ThemeWindowBorderBrush}" BorderThickness="1"
+                                                        Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
                                                         Services:LocalizationService.SourceToolTip="Move the edit notification button"
