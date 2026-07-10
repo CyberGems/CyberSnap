@@ -4082,7 +4082,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE74A;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE8B0;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Thumbnail click action" Style="{StaticResource SettingTitle}"/>
