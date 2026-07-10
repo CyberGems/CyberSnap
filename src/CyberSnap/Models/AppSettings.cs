@@ -131,6 +131,16 @@ public enum HistoryClickAction
     OpenInDefaultViewer
 }
 
+public enum CaptureKind
+{
+    Screenshot,
+    Recording,
+    Ocr,
+    ColorPick,
+    Scan,
+    ScrollCapture,
+}
+
 public sealed class AppSettings
 {
     public sealed class ToastButtonLayoutSettings
@@ -344,6 +354,14 @@ public sealed class AppSettings
     // Running total of all captures (image, OCR, and video/GIF recordings alike). Drives
     // milestone celebrations (50, 100, 250, ...) and the milestone rail in Settings.
     public int CelebrationCaptureCount { get; set; }
+    // Per-type capture counters. Start at 0 for new installs; retroactively bootstrapped
+    // from the gallery on first load for existing users. All are incremented in RegisterCapture.
+    public int ScreenshotCount { get; set; }
+    public int RecordingCount { get; set; }
+    public int OcrCount { get; set; }
+    public int ColorPickCount { get; set; }
+    public int ScanCount { get; set; }
+    public int ScrollCaptureCount { get; set; }
     // Highest milestone value the user has already seen acknowledged in the Settings rail.
     // When HighestAchieved(count) exceeds this, the rail flares as "new" until viewed.
     public int LastSeenMilestone { get; set; }

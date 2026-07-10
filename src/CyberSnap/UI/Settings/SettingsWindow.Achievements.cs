@@ -45,44 +45,115 @@ public partial class SettingsWindow
             return;
 
         var s = _settingsService.Settings;
+        BootstrapCaptureCountsFromGallery(s);
         BuildStatsCards(s);
         BuildMedalGrid(s);
     }
 
-    // 2×2 grid of summary stat cards: total captures, current streak, longest streak, milestones reached.
+    // Seeds per-type counters from the gallery on the very first load for existing users.
+    // Once any counter is non-zero we assume AppSettings is being maintained incrementally.
+    private void BootstrapCaptureCountsFromGallery(AppSettings s)
+    {
+        if (s.ScreenshotCount > 0 || s.RecordingCount > 0 || s.OcrCount > 0 ||
+            s.ColorPickCount > 0 || s.ScanCount > 0)
+            return;
+
+        try
+        {
+            s.ScreenshotCount  = _historyService.ImageEntries.Count;
+            s.RecordingCount   = _historyService.VideoEntries.Count + _historyService.GifEntries.Count;
+            s.OcrCount         = _historyService.OcrEntries.Count;
+            s.ColorPickCount   = _historyService.ColorEntries.Count;
+            s.ScanCount        = _historyService.CodeEntries.Count;
+            // ScrollCaptureCount stays 0 — scroll captures are stored as images
+            // and cannot be distinguished from regular screenshots retroactively.
+
+            if (s.ScreenshotCount > 0 || s.RecordingCount > 0 || s.OcrCount > 0 ||
+                s.ColorPickCount > 0 || s.ScanCount > 0)
+            {
+                try { _settingsService.Save(); } catch { /* non-critical */ }
+            }
+        }
+        catch (Exception ex)
+        {
+            Services.AppDiagnostics.LogWarning("achievements.bootstrap-counts", ex.Message, ex);
+        }
+    }
+
+    // Grid of summary stat cards + per-type breakdown.
     private void BuildStatsCards(AppSettings s)
     {
         var host = AchievementsStatsHost!;
         host.Children.Clear();
         host.ColumnDefinitions.Clear();
         host.RowDefinitions.Clear();
-        for (int i = 0; i < 2; i++)
-        {
-            host.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            host.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        }
+
+        host.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        host.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         int count = s.CelebrationCaptureCount;
         int reached = CelebrationMilestones.Values.Count(v => count >= v);
         int total = CelebrationMilestones.Values.Length;
 
-        // IconId, when set, renders the matching Fluent SVG (e.g. the trophy for milestones) instead
-        // of a Segoe font glyph — Segoe has no trophy, and vector icons stay crisp on scaled displays.
-        var stats = new (string Glyph, string? IconId, string Value, string LabelKey, MediaColor Accent)[]
+        // Row 0-1: summary cards (2×2)
+        var summaryCards = new (string Glyph, string? IconId, string Value, string LabelKey, MediaColor Accent)[]
         {
             (GlyphCamera, null, count.ToString("N0"), "Total captures", RailCyan),
             ("🔥", null, s.CurrentStreak.ToString("N0"), "Current streak", MediaColor.FromRgb(0xFF, 0x9A, 0x3D)),
             (GlyphStar, null, s.LongestStreak.ToString("N0"), "Longest streak", MediaColor.FromRgb(0xFF, 0xC1, 0x07)),
             (GlyphStar, "trophy", $"{reached}/{total}", "Milestones reached", RailPurple),
         };
-
-        for (int i = 0; i < stats.Length; i++)
+        for (int i = 0; i < summaryCards.Length; i++)
         {
-            var (glyph, iconId, value, labelKey, accent) = stats[i];
+            if (i % 2 == 0)
+                host.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var (glyph, iconId, value, labelKey, accent) = summaryCards[i];
             var card = MakeStatCard(glyph, iconId, value, LocalizationService.Translate(labelKey), accent);
             card.Margin = new Thickness(5);
             Grid.SetColumn(card, i % 2);
             Grid.SetRow(card, i / 2);
+            host.Children.Add(card);
+        }
+
+        // Separator label "By type"
+        int sepRow = summaryCards.Length / 2;
+        host.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var sepLabel = new TextBlock
+        {
+            Text = LocalizationService.Translate("By type"),
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Opacity = 0.55,
+            FontFamily = new FontFamily("Segoe UI Variable Text"),
+            Foreground = (Brush?)Application.Current.TryFindResource("ThemeTextPrimaryBrush") ?? FallbackTextBrush,
+            Margin = new Thickness(5, 14, 5, 4),
+        };
+        Grid.SetColumn(sepLabel, 0);
+        Grid.SetColumnSpan(sepLabel, 2);
+        Grid.SetRow(sepLabel, sepRow);
+        host.Children.Add(sepLabel);
+
+        // Per-type cards
+        var typeCards = new (string Glyph, string? IconId, string Value, string LabelKey, MediaColor Accent)[]
+        {
+            (GlyphCamera, "screenshot", s.ScreenshotCount.ToString("N0"),  "Screenshots",   RailCyan),
+            (GlyphStar,   "record",     s.RecordingCount.ToString("N0"),   "Recordings",    MediaColor.FromRgb(0xE0, 0x60, 0xFF)),
+            (GlyphStar,   "ocr",        s.OcrCount.ToString("N0"),         "OCR",           MediaColor.FromRgb(0x00, 0xC8, 0xFF)),
+            (GlyphStar,   "picker",     s.ColorPickCount.ToString("N0"),   "Color picks",   MediaColor.FromRgb(0xFF, 0x6B, 0x35)),
+            (GlyphStar,   "scan",       s.ScanCount.ToString("N0"),        "QR & Barcodes", MediaColor.FromRgb(0x4C, 0xFF, 0x91)),
+            (GlyphStar,   null,         s.ScrollCaptureCount.ToString("N0"), "Scroll captures", RailCyan),
+        };
+        int startRow = sepRow + 1;
+        for (int i = 0; i < typeCards.Length; i++)
+        {
+            int row = startRow + i / 2;
+            if (i % 2 == 0)
+                host.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var (glyph, iconId, value, labelKey, accent) = typeCards[i];
+            var card = MakeStatCard(glyph, iconId, value, LocalizationService.Translate(labelKey), accent);
+            card.Margin = new Thickness(5);
+            Grid.SetColumn(card, i % 2);
+            Grid.SetRow(card, row);
             host.Children.Add(card);
         }
     }
