@@ -51,9 +51,7 @@ public partial class SetupWizard : Window
     }
 
     private static string GetLanguageLabel(LocalizationLanguage language) =>
-        string.Equals(language.EnglishName, language.NativeName, StringComparison.OrdinalIgnoreCase)
-            ? language.EnglishName
-            : $"{language.NativeName} - {language.EnglishName}";
+        $"{language.NativeName} - {language.EnglishName}";
 
     private void PopulateLanguages()
     {

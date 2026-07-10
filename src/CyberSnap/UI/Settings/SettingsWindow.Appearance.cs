@@ -303,9 +303,7 @@ public partial class SettingsWindow
         foreach (var language in LocalizationService.Languages)
         {
             bool available = LocalizationService.HasInterfaceTranslations(language.Code);
-            var label = string.Equals(language.EnglishName, language.NativeName, StringComparison.OrdinalIgnoreCase)
-                ? language.EnglishName
-                : $"{language.NativeName} - {language.EnglishName}";
+            var label = $"{language.NativeName} - {language.EnglishName}";
             var contentLabel = available ? label : $"{label} (not translated yet)";
             // Store the tooltip template key and label separately so RefreshLanguageComboDisplay
             // can re-translate and re-format the tooltip when the language changes.
