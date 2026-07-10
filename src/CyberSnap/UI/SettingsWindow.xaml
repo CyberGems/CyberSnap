@@ -2564,11 +2564,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
                                     <TextBlock Text="Export settings" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Save a redacted copy of your settings to a JSON file." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Save your settings and achievements to a JSON file. API keys are redacted." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <Button x:Name="ExportSettingsBtn" Grid.Column="2" Content="Export" MinWidth="90"
                                         VerticalAlignment="Center" Cursor="Hand"
-                                        ToolTip="Export redacted settings to a JSON file"
+                                        ToolTip="Exports all settings and achievements (streaks, capture counts, medals) to a JSON file. API keys are removed for security."
                                         AutomationProperties.Name="Export settings"
                                         Click="ExportSettingsButton_Click"/>
                             </Grid>
@@ -2585,11 +2585,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
                                     <TextBlock Text="Import settings" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Restore your settings from a previously exported JSON file." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Restore your settings and achievements from a previously exported JSON file." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <Button x:Name="ImportSettingsBtn" Grid.Column="2" Content="Import" MinWidth="90"
                                         VerticalAlignment="Center" Cursor="Hand"
-                                        ToolTip="Import settings from a JSON file"
+                                        ToolTip="Restores all settings and achievements from an exported JSON file. Current settings will be replaced."
                                         AutomationProperties.Name="Import settings"
                                         Click="ImportSettingsButton_Click"/>
                             </Grid>
