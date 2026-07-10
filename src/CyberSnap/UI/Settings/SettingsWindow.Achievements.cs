@@ -280,7 +280,7 @@ public partial class SettingsWindow
         };
 
         if (a.Unlocked)
-            badge.Effect = new DropShadowEffect { Color = color, BlurRadius = 12, ShadowDepth = 0, Opacity = 0.6 };
+            badge.Effect = new DropShadowEffect { Color = color, BlurRadius = 12, ShadowDepth = 0, Opacity = Theme.IsDark ? 0.6 : 0.0 };
 
         // Lock overlay for locked medals, anchored to the bottom-right of the badge. A small solid
         // disc backs the padlock so it stays legible over the badge edge and the icon behind it.
