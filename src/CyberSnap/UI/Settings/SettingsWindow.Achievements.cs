@@ -143,7 +143,7 @@ public partial class SettingsWindow
         // Per-type cards
         var typeCards = new (string Glyph, string? IconId, string Value, string LabelKey, MediaColor Accent)[]
         {
-            (GlyphCamera, "screenshot",    s.ScreenshotCount.ToString("N0"),    "Screenshots",    RailCyan),
+            (GlyphCamera, "captureRect",    s.ScreenshotCount.ToString("N0"),    "Screenshots",    RailCyan),
             (GlyphStar,   "record",        s.RecordingCount.ToString("N0"),    "Recordings",     MediaColor.FromRgb(0xE0, 0x60, 0xFF)),
             (GlyphStar,   "ocr",           s.OcrCount.ToString("N0"),          "OCR",            MediaColor.FromRgb(0x00, 0xC8, 0xFF)),
             (GlyphStar,   "picker",        s.ColorPickCount.ToString("N0"),    "Color picks",    MediaColor.FromRgb(0xFF, 0x6B, 0x35)),
