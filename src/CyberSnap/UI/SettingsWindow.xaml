@@ -2330,7 +2330,7 @@
                                     <TextBlock Text="Choose dark, light, or follow your Windows theme." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <!-- Dark: radio + DEFAULT badge below, in a vertical stack -->
+                                    <!-- Each option in an identical vertical stack so the radio buttons align -->
                                     <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,18,0">
                                         <RadioButton x:Name="ThemeDarkRadio" Content="Dark" GroupName="AppTheme"
                                                      HorizontalAlignment="Center" Cursor="Hand"
@@ -2345,16 +2345,24 @@
                                                        FontFamily="Segoe UI Variable Display" VerticalAlignment="Center"/>
                                         </Border>
                                     </StackPanel>
-                                    <RadioButton x:Name="ThemeLightRadio" Content="Light" GroupName="AppTheme"
-                                                 Margin="0,0,18,0" VerticalAlignment="Center" Cursor="Hand"
-                                                 AutomationProperties.Name="Light theme"
-                                                 ToolTip="Always use the light theme."
-                                                 Checked="AppThemeRadio_Changed"/>
-                                    <RadioButton x:Name="ThemeSystemRadio" Content="Auto" GroupName="AppTheme"
-                                                 VerticalAlignment="Center" Cursor="Hand"
-                                                 AutomationProperties.Name="Auto theme"
-                                                 ToolTip="Follow the Windows system theme."
-                                                 Checked="AppThemeRadio_Changed"/>
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,18,0">
+                                        <RadioButton x:Name="ThemeLightRadio" Content="Light" GroupName="AppTheme"
+                                                     HorizontalAlignment="Center" Cursor="Hand"
+                                                     AutomationProperties.Name="Light theme"
+                                                     ToolTip="Always use the light theme."
+                                                     Checked="AppThemeRadio_Changed"/>
+                                        <!-- Spacer to match the badge height under Dark -->
+                                        <Border Height="14" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                        <RadioButton x:Name="ThemeSystemRadio" Content="Auto" GroupName="AppTheme"
+                                                     HorizontalAlignment="Center" Cursor="Hand"
+                                                     AutomationProperties.Name="Auto theme"
+                                                     ToolTip="Follow the Windows system theme."
+                                                     Checked="AppThemeRadio_Changed"/>
+                                        <!-- Spacer to match the badge height under Dark -->
+                                        <Border Height="14" Margin="0,3,0,0"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
