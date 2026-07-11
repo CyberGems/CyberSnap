@@ -1881,21 +1881,26 @@ public sealed partial class EditorForm
 internal static class EditorColors
 {
     public static bool IsDark => CyberSnap.UI.Theme.IsDark;
+    public static bool IsGray => CyberSnap.UI.Theme.IsGray;
 
-    public static Color BgPrimary => IsDark ? Color.FromArgb(13, 15, 23) : Color.FromArgb(223, 226, 234);
-    public static Color BgSecondary => IsDark ? Color.FromArgb(18, 20, 31) : Color.FromArgb(230, 233, 241);
-    public static Color BgCard => IsDark ? Color.FromArgb(23, 26, 40) : Color.FromArgb(232, 238, 247);
-    public static Color BgHover => IsDark ? Color.FromArgb(33, 38, 58) : Color.FromArgb(214, 218, 229);
-    public static Color CanvasBg => IsDark ? Color.FromArgb(8, 10, 16) : Color.FromArgb(240, 242, 248);
+    // Sober silver accent for the grayscale theme (mirrors Theme.GraySilver).
+    private static Color GraySilver => Color.FromArgb(184, 190, 198);
+    private static Color P(Color gray, Color dark, Color light) => IsGray ? gray : (IsDark ? dark : light);
+
+    public static Color BgPrimary => P(Color.FromArgb(22, 24, 27), Color.FromArgb(13, 15, 23), Color.FromArgb(223, 226, 234));
+    public static Color BgSecondary => P(Color.FromArgb(29, 32, 35), Color.FromArgb(18, 20, 31), Color.FromArgb(230, 233, 241));
+    public static Color BgCard => P(Color.FromArgb(36, 39, 43), Color.FromArgb(23, 26, 40), Color.FromArgb(232, 238, 247));
+    public static Color BgHover => P(Color.FromArgb(46, 50, 55), Color.FromArgb(33, 38, 58), Color.FromArgb(214, 218, 229));
+    public static Color CanvasBg => P(Color.FromArgb(16, 17, 20), Color.FromArgb(8, 10, 16), Color.FromArgb(240, 242, 248));
     public static Color TitleBar => BgPrimary;
-    public static Color TextPrimary => IsDark ? Color.FromArgb(230, 240, 255) : Color.FromArgb(26, 26, 26);
-    public static Color TextSecondary => IsDark ? Color.FromArgb(160, 180, 210) : Color.FromArgb(96, 96, 96);
-    public static Color TextMuted => IsDark ? Color.FromArgb(110, 130, 160) : Color.FromArgb(128, 128, 128);
-    public static Color Accent => IsDark ? Color.FromArgb(0, 255, 255) : Color.FromArgb(0, 120, 215);
-    public static Color AccentPressed => IsDark ? Color.FromArgb(0, 210, 230) : Color.FromArgb(0, 100, 190);
-    public static Color Border => IsDark ? Color.FromArgb(76, 0, 255, 255) : Color.FromArgb(22, 0, 0, 0);
-    public static Color BorderSubtle => IsDark ? Color.FromArgb(34, 0, 255, 255) : Color.FromArgb(14, 0, 0, 0);
-    public static Color WindowBorder => IsDark ? Color.FromArgb(75, 0, 255, 255) : Color.FromArgb(20, 0, 0, 0);
+    public static Color TextPrimary => P(Color.FromArgb(232, 234, 236), Color.FromArgb(230, 240, 255), Color.FromArgb(26, 26, 26));
+    public static Color TextSecondary => P(Color.FromArgb(166, 171, 178), Color.FromArgb(160, 180, 210), Color.FromArgb(96, 96, 96));
+    public static Color TextMuted => P(Color.FromArgb(110, 116, 124), Color.FromArgb(110, 130, 160), Color.FromArgb(128, 128, 128));
+    public static Color Accent => P(GraySilver, Color.FromArgb(0, 255, 255), Color.FromArgb(0, 120, 215));
+    public static Color AccentPressed => P(Color.FromArgb(150, 156, 164), Color.FromArgb(0, 210, 230), Color.FromArgb(0, 100, 190));
+    public static Color Border => P(Color.FromArgb(76, 184, 190, 198), Color.FromArgb(76, 0, 255, 255), Color.FromArgb(22, 0, 0, 0));
+    public static Color BorderSubtle => P(Color.FromArgb(34, 184, 190, 198), Color.FromArgb(34, 0, 255, 255), Color.FromArgb(14, 0, 0, 0));
+    public static Color WindowBorder => P(Color.FromArgb(75, 184, 190, 198), Color.FromArgb(75, 0, 255, 255), Color.FromArgb(20, 0, 0, 0));
 }
 
 internal sealed class EditorWindowFrame : DoubleBufferedPanel

@@ -171,7 +171,9 @@ public partial class ToastWindow : Window
     private void ConfigureShell()
     {
         OuterShell.Background = System.Windows.Media.Brushes.Transparent;
-        OuterShell.BorderBrush = Theme.Brush(Theme.IsDark
+        OuterShell.BorderBrush = Theme.Brush(Theme.IsGray
+            ? Color.FromArgb(160, 184, 190, 198)
+            : Theme.IsDark
             ? Color.FromArgb(160, 0, 200, 215)
             : Color.FromArgb(160, 0, 110, 205));
         OuterShell.BorderThickness = new Thickness(1.0);
@@ -235,7 +237,21 @@ public partial class ToastWindow : Window
         ConfigureShell();
         ProgressBar.Visibility = Visibility.Visible;
         // Capture the XAML gradient once, before any error/celebration swap, so we can restore it.
-        _defaultProgressBrush ??= ProgressBar.Background;
+        // In the grayscale theme, swap the cyberpunk cyan/purple/magenta for a sober silver
+        // sheen (and a white glow) so the timeline bar keeps its motion without leaking colour.
+        if (_defaultProgressBrush is null)
+        {
+            if (Theme.IsGray)
+            {
+                _defaultProgressBrush = CreateSilverProgressBrush(loopable: false);
+                ProgressBar.Background = _defaultProgressBrush;
+                ProgressGlow.Color = Color.FromRgb(0xE8, 0xEC, 0xF0); // soft white-silver halo
+            }
+            else
+            {
+                _defaultProgressBrush = ProgressBar.Background;
+            }
+        }
         ApplyToastOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
 
         _savedFilePath = spec.FilePath;
@@ -461,7 +477,16 @@ public partial class ToastWindow : Window
 
     private static void ApplyToastOverlayButtonVisual(System.Windows.Controls.Border btn, System.Windows.Controls.Image icon, string iconId, bool active)
     {
-        if (Theme.IsDark)
+        if (Theme.IsGray)
+        {
+            btn.Background = Theme.Brush(active
+                ? Color.FromArgb(235, 46, 50, 55)
+                : Color.FromArgb(215, 29, 32, 35));
+            btn.BorderBrush = Theme.Brush(active
+                ? Color.FromArgb(255, 184, 190, 198)
+                : Color.FromArgb(130, 150, 156, 164));
+        }
+        else if (Theme.IsDark)
         {
             btn.Background = Theme.Brush(active
                 ? Color.FromArgb(235, 12, 50, 62)
@@ -481,7 +506,9 @@ public partial class ToastWindow : Window
         }
         btn.BorderThickness = new Thickness(1);
 
-        var iconColor = Theme.IsDark
+        var iconColor = Theme.IsGray
+            ? (active ? System.Drawing.Color.FromArgb(255, 184, 190, 198) : System.Drawing.Color.FromArgb(235, 255, 255, 255))
+            : Theme.IsDark
             ? (active ? System.Drawing.Color.FromArgb(255, 0, 255, 255) : System.Drawing.Color.FromArgb(235, 255, 255, 255))
             : (active ? System.Drawing.Color.FromArgb(255, 0, 90, 180) : System.Drawing.Color.FromArgb(235, 24, 24, 24));
         icon.Source = FluentIcons.RenderWpf(iconId, iconColor, 22, active);
@@ -2194,6 +2221,45 @@ public partial class ToastWindow : Window
     // Celebration flourish: swaps the timeline to a seamless flowing rainbow that
     // sweeps continuously; restores the normal gradient when off. Cheapest effect of
     // the celebration-mode roadmap.
+    // Builds the sober silver progress brush used in the grayscale theme, replacing the
+    // cyberpunk cyan/purple/magenta so the timeline bar stays monochrome. When loopable,
+    // the stops are periodic and symmetric (start == end) so the celebration sweep can
+    // translate 0->1 with no visible seam; otherwise it's a static left-to-right sheen.
+    private static System.Windows.Media.LinearGradientBrush CreateSilverProgressBrush(
+        bool loopable, TranslateTransform? sweep = null)
+    {
+        // Sober silver ramp: bright highlight through mid-silver to a dim edge.
+        var bright = Color.FromRgb(0xE6, 0xEA, 0xEF);
+        var mid = Color.FromRgb(0xB8, 0xBE, 0xC6); // mirrors Theme.GraySilver
+        var dim = Color.FromRgb(0x7C, 0x82, 0x8C);
+
+        var stops = loopable
+            ? new GradientStopCollection
+            {
+                new GradientStop(bright, 0.0),
+                new GradientStop(mid, 0.25),
+                new GradientStop(dim, 0.5),
+                new GradientStop(mid, 0.75),
+                new GradientStop(bright, 1.0),
+            }
+            : new GradientStopCollection
+            {
+                new GradientStop(bright, 0.0),
+                new GradientStop(mid, 0.5),
+                new GradientStop(dim, 1.0),
+            };
+
+        return new System.Windows.Media.LinearGradientBrush
+        {
+            StartPoint = new System.Windows.Point(0, 0.5),
+            EndPoint = new System.Windows.Point(1, 0.5),
+            MappingMode = BrushMappingMode.RelativeToBoundingBox,
+            SpreadMethod = loopable ? GradientSpreadMethod.Repeat : GradientSpreadMethod.Pad,
+            GradientStops = stops,
+            RelativeTransform = sweep
+        };
+    }
+
     private void ApplyCelebrationVisual(bool on)
     {
         if (on)
@@ -2201,7 +2267,9 @@ public partial class ToastWindow : Window
             if (_celebrationBrush is null)
             {
                 _celebrationSweep = new TranslateTransform();
-                _celebrationBrush = new System.Windows.Media.LinearGradientBrush
+                _celebrationBrush = Theme.IsGray
+                    ? CreateSilverProgressBrush(loopable: true, _celebrationSweep)
+                    : new System.Windows.Media.LinearGradientBrush
                 {
                     StartPoint = new System.Windows.Point(0, 0.5),
                     EndPoint = new System.Windows.Point(1, 0.5),

@@ -121,7 +121,8 @@ public enum AppThemeMode
 {
     System,
     Dark,
-    Light
+    Light,
+    Grayscale
 }
 
 public enum HistoryClickAction

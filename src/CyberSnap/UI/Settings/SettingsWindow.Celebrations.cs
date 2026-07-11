@@ -25,9 +25,11 @@ namespace CyberSnap.UI;
 public partial class SettingsWindow
 {
     // Neon palette shared with the celebration toast sweep.
-    private static MediaColor RailCyan => Theme.IsDark
-        ? MediaColor.FromRgb(0x00, 0xF2, 0xFF)
-        : MediaColor.FromRgb(0x00, 0x80, 0xFF);
+    private static MediaColor RailCyan => Theme.IsGray
+        ? MediaColor.FromRgb(0xB8, 0xBE, 0xC6)
+        : Theme.IsDark
+            ? MediaColor.FromRgb(0x00, 0xF2, 0xFF)
+            : MediaColor.FromRgb(0x00, 0x80, 0xFF);
     private static readonly MediaColor RailPurple = MediaColor.FromRgb(0x7A, 0x00, 0xFF);
     private static readonly MediaColor RailMagenta = MediaColor.FromRgb(0xFF, 0x00, 0xD0);
 

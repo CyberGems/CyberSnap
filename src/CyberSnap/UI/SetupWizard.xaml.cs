@@ -344,6 +344,7 @@ public partial class SetupWizard : Window
             var mode = _settingsService.Settings.ThemeMode;
             WizThemeDarkRadio.IsChecked  = mode == AppThemeMode.Dark;
             WizThemeLightRadio.IsChecked = mode == AppThemeMode.Light;
+            WizThemeGrayscaleRadio.IsChecked = mode == AppThemeMode.Grayscale;
             WizThemeAutoRadio.IsChecked  = mode == AppThemeMode.System;
         }
         finally
@@ -358,6 +359,7 @@ public partial class SetupWizard : Window
 
         var mode = WizThemeDarkRadio.IsChecked  == true ? AppThemeMode.Dark
                  : WizThemeLightRadio.IsChecked == true ? AppThemeMode.Light
+                 : WizThemeGrayscaleRadio.IsChecked == true ? AppThemeMode.Grayscale
                  : AppThemeMode.System;
 
         _settingsService.Settings.ThemeMode = mode;
@@ -655,10 +657,14 @@ public partial class SetupWizard : Window
         Resources["WizGlowColor"] = Theme.IsDark
             ? System.Windows.Media.Color.FromArgb(58, accent.R, accent.G, accent.B)
             : System.Windows.Media.Color.FromArgb(30, accent.R, accent.G, accent.B);
-        Resources["WizSidebarTopColor"] = Theme.IsDark
+        Resources["WizSidebarTopColor"] = Theme.IsGray
+            ? System.Windows.Media.Color.FromRgb(34, 37, 41)
+            : Theme.IsDark
             ? System.Windows.Media.Color.FromRgb(15, 30, 44)
             : System.Windows.Media.Color.FromRgb(226, 236, 245);
-        Resources["WizSidebarBottomColor"] = Theme.IsDark
+        Resources["WizSidebarBottomColor"] = Theme.IsGray
+            ? System.Windows.Media.Color.FromRgb(22, 24, 27)
+            : Theme.IsDark
             ? System.Windows.Media.Color.FromRgb(11, 14, 22)
             : System.Windows.Media.Color.FromRgb(213, 219, 230);
         Foreground = Theme.Brush(Theme.TextPrimary);
