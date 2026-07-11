@@ -255,7 +255,71 @@ public partial class SetupWizard : Window
 
     private void BuildHotkeyRows()
     {
-        ToolListBuilder.Build(WizCapturePanelHotkeys, WizAnnotationPanelHotkeys, _settingsService, this);
+        // Keep this step uncluttered: the wizard shows only the capture hotkeys and
+        // points users to Configuration -> Hotkeys for the rest (annotation tools, etc.).
+        ToolListBuilder.Build(WizCapturePanelHotkeys, WizAnnotationPanelHotkeys, _settingsService, this,
+            includeAnnotationTools: false);
+        AddHotkeysFooterNote();
+    }
+
+    private void AddHotkeysFooterNote()
+    {
+        var card = new Border
+        {
+            Margin = new Thickness(0, 10, 0, 4),
+            Background = (System.Windows.Media.Brush)FindResource("ThemeInputBackgroundBrush"),
+            BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(12, 10, 12, 10),
+        };
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var icon = new TextBlock
+        {
+            Text = "\uE946", // Info glyph
+            FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
+            FontSize = 14,
+            Foreground = (System.Windows.Media.Brush)FindResource("WizAccent"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 10, 0),
+        };
+        Grid.SetColumn(icon, 0);
+        grid.Children.Add(icon);
+
+        var prefix = new System.Windows.Documents.Run(
+            LocalizationService.Translate("The rest of the shortcuts can be configured in"));
+        LocalizationService.SetSourceText(prefix, "The rest of the shortcuts can be configured in");
+
+        var path = new System.Windows.Documents.Run(
+            LocalizationService.Translate("Configuration -> Hotkeys"))
+        {
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (System.Windows.Media.Brush)FindResource("WizAccent"),
+        };
+        LocalizationService.SetSourceText(path, "Configuration -> Hotkeys");
+
+        var text = new TextBlock
+        {
+            FontSize = 12,
+            FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text"),
+            Foreground = (System.Windows.Media.Brush)FindResource("WizFgMuted"),
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center,
+            LineHeight = 18,
+        };
+        text.Inlines.Add(prefix);
+        text.Inlines.Add(new System.Windows.Documents.Run(" "));
+        text.Inlines.Add(path);
+        text.Inlines.Add(new System.Windows.Documents.Run("."));
+        Grid.SetColumn(text, 1);
+        grid.Children.Add(text);
+
+        card.Child = grid;
+        WizAnnotationPanelHotkeys.Children.Add(card);
     }
 
     private void LoadDefaults()
