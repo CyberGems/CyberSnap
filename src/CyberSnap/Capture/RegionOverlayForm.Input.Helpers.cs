@@ -249,7 +249,7 @@ public sealed partial class RegionOverlayForm
             _isPlacingMagnifier = true;
 
         // Show a mode-specific help banner so the user knows what to do.
-        // Tool name + icon in white, action description + suffix in accent cyan.
+        // Tool name + icon in theme label color, action description + suffix in theme accent.
         var suffix = " · " + LocalizationService.Translate("Right-click or Esc to cancel");
         var tool = ToolDef.AllTools.FirstOrDefault(t => t.Mode == m);
         // Render the SAME vector icon the toolbar uses, by id — not the font char (which has no
@@ -317,8 +317,8 @@ public sealed partial class RegionOverlayForm
             var label = toolName + ": ";
             var segments = new BannerSegment[]
             {
-                new(label, Color.White),
-                new(action + suffix, null), // null = accent color
+                new(label, StandaloneToolBanner.LabelColor),
+                new(action + suffix, null), // null = theme accent
             };
             ShowToolBanner(segments, persistent: false, iconId: iconId);
         }

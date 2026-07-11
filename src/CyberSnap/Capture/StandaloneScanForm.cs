@@ -73,8 +73,8 @@ public sealed class StandaloneScanForm : Form
         _banner = new StandaloneToolBanner(
             new BannerSegment[]
             {
-                new(scanLabel, Color.White),
-                new(scanAction, null), // accent
+                new(scanLabel, StandaloneToolBanner.LabelColor),
+                new(scanAction, null), // theme accent
             },
             _bannerWorkingArea,
             Bounds,

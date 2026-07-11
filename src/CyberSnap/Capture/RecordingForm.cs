@@ -156,7 +156,7 @@ public sealed partial class RecordingForm : Form
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.Opaque, true);
 
         // ── Banner (unified style with the capture-overlay tool banners) ──
-        // White "MP4/GIF Recording:" label + leading record icon, then the accent-cyan action.
+        // Theme label for "MP4/GIF Recording:" + leading record icon, then theme-accent action.
         bool isMp4 = _format == Models.RecordingFormat.MP4;
         var label = LocalizationService.Translate(isMp4 ? "MP4 Recording" : "GIF Recording") + ": ";
         var action = LocalizationService.Translate("Click & drag to select area")
@@ -164,8 +164,8 @@ public sealed partial class RecordingForm : Form
         var iconId = isMp4 ? "record" : "recordGif";
         var bannerSegments = new BannerSegment[]
         {
-            new(label, Color.White),
-            new(action, null), // null = accent color
+            new(label, StandaloneToolBanner.LabelColor),
+            new(action, null), // null = theme accent
         };
         var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
         _banner = new StandaloneToolBanner(

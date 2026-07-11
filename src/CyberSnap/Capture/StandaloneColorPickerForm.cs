@@ -95,8 +95,8 @@ public sealed class StandaloneColorPickerForm : Form
         _banner = new StandaloneToolBanner(
             new BannerSegment[]
             {
-                new(pickerLabel, Color.White),
-                new(pickerAction, null), // accent
+                new(pickerLabel, StandaloneToolBanner.LabelColor),
+                new(pickerAction, null), // theme accent
             },
             _bannerWorkingArea,
             Bounds,

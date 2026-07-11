@@ -155,8 +155,8 @@ public sealed partial class ScrollingCaptureForm : Form
             _hintBanner = new StandaloneToolBanner(
                 new BannerSegment[]
                 {
-                    new(scrollLabel, Color.White),
-                    new(scrollAction, null), // accent
+                    new(scrollLabel, StandaloneToolBanner.LabelColor),
+                    new(scrollAction, null), // theme accent
                 },
                 Screen.FromPoint(Cursor.Position).WorkingArea,
                 Bounds,

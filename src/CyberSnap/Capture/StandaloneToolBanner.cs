@@ -12,7 +12,9 @@ public readonly record struct BannerSegment(string Text, Color? Color = null);
 /// <summary>
 /// Reusable animated instruction banner for standalone tool forms (e.g. ruler, color picker).
 /// Renders a centered pill-shaped banner that fades in, holds while hovered, then fades out.
-/// 
+///
+/// Theme-aware: Dark (CyberSnap cyan), Light (blue on pale card), Grayscale (silver on charcoal).
+///
 /// Usage:
 ///   _banner = new StandaloneToolBanner("Your instructions here", workingArea, Bounds);
 ///   // In OnPaint:   _banner.Render(g);
@@ -27,7 +29,7 @@ public sealed class StandaloneToolBanner : IDisposable
     /// the text — the SAME SVG the capture toolbar draws, so the banner matches it exactly
     /// (a font char would just render as tofu in the banner's text font).</summary>
     private readonly string? _iconId;
-    private readonly Color _iconColor;
+    private readonly Color? _iconColorOverride;
     /// <summary>Gap between the leading icon and the text.</summary>
     private const int IconGap = 10;
     private readonly Rectangle _workingArea;
@@ -35,9 +37,33 @@ public sealed class StandaloneToolBanner : IDisposable
     private readonly Action? _onInvalidate;
     private readonly Action<Rectangle>? _onInvalidateRect;
     private readonly bool _persistent;
+    /// <summary>When true, the banner is centered near the bottom of the working area
+    /// (used when the capture toolbar occupies the top so they do not overlap).</summary>
+    private readonly bool _anchorBottom;
 
     /// <summary>Master switch — when false, no banner renders anywhere.</summary>
     public static bool Enabled { get; set; } = true;
+
+    // ── Theme tokens (mirror Theme / EditorColors so capture banners match the rest of the app) ──
+
+    /// <summary>Accent used for action text, border, and glow.
+    /// Dark: neon cyan · Light: Windows blue · Gray: sober silver.</summary>
+    public static Color AccentColor =>
+        Theme.IsGray ? Color.FromArgb(184, 190, 198)
+        : Theme.IsDark ? Color.FromArgb(0, 255, 255)
+        : Color.FromArgb(0, 120, 215);
+
+    /// <summary>Primary label color (tool name / icon). White on dark/gray; near-black on light.</summary>
+    public static Color LabelColor =>
+        Theme.IsDark ? Color.FromArgb(255, 255, 255)
+        : Color.FromArgb(26, 26, 26);
+
+    /// <summary>Pill background. Matches Theme.BgPrimary (dark/gray) and EditorColors.BgCard (light).</summary>
+    public static Color BackgroundColor =>
+        Theme.IsGray ? Color.FromArgb(22, 24, 27)
+        : Theme.IsDark ? Color.FromArgb(13, 15, 23)
+        : Color.FromArgb(232, 238, 247);
+
     private float _opacity;
     private System.Windows.Forms.Timer? _timer;
     private int _holdTicks;
@@ -55,17 +81,20 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <param name="onInvalidate">Optional callback to trigger form repaint on animation ticks.</param>
     /// <param name="persistent">When true, the banner holds at full opacity indefinitely and only
     /// disappears when <see cref="Dismiss"/> is called (e.g. on first user interaction).</param>
-    public StandaloneToolBanner(string text, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null, string? iconId = null, Color? iconColor = null)
+    /// <param name="anchorBottom">When true, place the banner near the bottom of the working area
+    /// instead of the top (to avoid overlapping a top-docked capture toolbar).</param>
+    public StandaloneToolBanner(string text, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null, string? iconId = null, Color? iconColor = null, bool anchorBottom = false)
     {
         _text = text;
         _segments = null;
         _iconId = iconId;
-        _iconColor = iconColor ?? Color.White;
+        _iconColorOverride = iconColor;
         _workingArea = workingArea;
         _bounds = bounds;
         _onInvalidate = onInvalidate;
         _onInvalidateRect = onInvalidateRect;
         _persistent = persistent;
+        _anchorBottom = anchorBottom;
 
         // Pre-compute the banner rect so region-based invalidation works from the very first tick
         // (before Render has run once). Matches the layout math in Render().
@@ -84,17 +113,20 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <param name="bounds">Form bounds used to convert screen → client coordinates.</param>
     /// <param name="onInvalidate">Optional callback to trigger form repaint on animation ticks.</param>
     /// <param name="persistent">When true, the banner holds at full opacity indefinitely.</param>
-    public StandaloneToolBanner(IReadOnlyList<BannerSegment> segments, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null, string? iconId = null, Color? iconColor = null)
+    /// <param name="anchorBottom">When true, place the banner near the bottom of the working area
+    /// instead of the top (to avoid overlapping a top-docked capture toolbar).</param>
+    public StandaloneToolBanner(IReadOnlyList<BannerSegment> segments, Rectangle workingArea, Rectangle bounds, Action? onInvalidate = null, bool persistent = false, Action<Rectangle>? onInvalidateRect = null, string? iconId = null, Color? iconColor = null, bool anchorBottom = false)
     {
         _segments = segments;
         _text = string.Concat(segments.Select(s => s.Text));
         _iconId = iconId;
-        _iconColor = iconColor ?? Color.White;
+        _iconColorOverride = iconColor;
         _workingArea = workingArea;
         _bounds = bounds;
         _onInvalidate = onInvalidate;
         _onInvalidateRect = onInvalidateRect;
         _persistent = persistent;
+        _anchorBottom = anchorBottom;
 
         ComputeBannerRect();
 
@@ -102,6 +134,9 @@ public sealed class StandaloneToolBanner : IDisposable
         _timer.Tick += OnTick;
         _timer.Start();
     }
+
+    /// <summary>Edge inset (in client pixels) between the working-area edge and the banner pill.</summary>
+    private const float EdgeMargin = 35f;
 
     private void ComputeBannerRect()
     {
@@ -115,10 +150,15 @@ public sealed class StandaloneToolBanner : IDisposable
         float iconBlock = _iconId != null ? size.Height * 0.92f + IconGap : 0f;
         float width = size.Width + iconBlock + paddingH * 2;
         float height = size.Height + paddingV * 2;
-        float y = _workingArea.Top - _bounds.Top + 35;
+        float y = ComputeBannerY(height);
         float x = _workingArea.Left - _bounds.Left + (_workingArea.Width - width) / 2f;
         _bannerRect = new RectangleF(x, y, width, height);
     }
+
+    private float ComputeBannerY(float height) =>
+        _anchorBottom
+            ? _workingArea.Bottom - _bounds.Top - height - EdgeMargin
+            : _workingArea.Top - _bounds.Top + EdgeMargin;
 
     /// <summary>Inflated client-space rect covering the banner pill plus its glow — the only region
     /// that needs repainting when the banner animates. Lets the host invalidate just this area
@@ -165,22 +205,25 @@ public sealed class StandaloneToolBanner : IDisposable
             float width = size.Width + iconBlock + paddingH * 2;
             float height = size.Height + paddingV * 2;
 
-            float y = _workingArea.Top - _bounds.Top + 35;
+            float y = ComputeBannerY(height);
             float x = _workingArea.Left - _bounds.Left + (_workingArea.Width - width) / 2f;
 
             _bannerRect = new RectangleF(x, y, width, height);
 
-            int alphaBg = Math.Min((int)(255 * _opacity), 255);
-            int alphaBorder = (int)(140 * _opacity);
-            int alphaGlow = (int)(40 * _opacity);
+            // Light uses a slightly translucent card so the dimmed capture still shows through;
+            // dark/gray stay near-opaque so cyan/silver type stays readable on the screenshot.
+            int alphaBg = Math.Min((int)((Theme.IsDark ? 255 : 235) * _opacity), 255);
+            int alphaBorder = (int)((Theme.IsDark ? 140 : 110) * _opacity);
+            int alphaGlow = (int)((Theme.IsDark ? 40 : 24) * _opacity);
             int alphaText = (int)(255 * _opacity);
 
-            var accent = Theme.IsDark
-                ? Color.FromArgb(0, 255, 255)   // Neon cyan — dark mode
-                : Color.FromArgb(0, 170, 190);  // Muted cyan — light mode
+            var accent = AccentColor;
+            var bg = BackgroundColor;
+            var label = LabelColor;
+            var iconColor = _iconColorOverride ?? label;
 
             using var path = RoundedRect(_bannerRect, 10);
-            using var bgBrush = new SolidBrush(Color.FromArgb(alphaBg, 13, 15, 23));
+            using var bgBrush = new SolidBrush(Color.FromArgb(alphaBg, bg));
             using var glowPen = new Pen(Color.FromArgb(alphaGlow, accent), 3f);
             using var borderPen = new Pen(Color.FromArgb(alphaBorder, accent), 1.5f);
 
@@ -196,7 +239,7 @@ public sealed class StandaloneToolBanner : IDisposable
                 float iconY = y + (height - iconSize) / 2f;
                 FluentIcons.DrawIcon(g, _iconId,
                     new RectangleF(iconX, iconY, iconSize, iconSize),
-                    Color.FromArgb(alphaText, _iconColor), 0f);
+                    Color.FromArgb(alphaText, iconColor), 0f);
             }
 
             using var sf = new StringFormat
@@ -212,7 +255,8 @@ public sealed class StandaloneToolBanner : IDisposable
                 float textTop = y + paddingV;
                 foreach (var seg in _segments)
                 {
-                    var segColor = seg.Color ?? accent;
+                    // null → accent; pure white (legacy call sites) → theme label color
+                    var segColor = ResolveSegmentColor(seg.Color, accent, label);
                     using var segBrush = new SolidBrush(Color.FromArgb(alphaText, segColor));
                     g.DrawString(seg.Text, font, segBrush, cursorX, textTop);
                     cursorX += g.MeasureString(seg.Text, font).Width;
@@ -296,6 +340,21 @@ public sealed class StandaloneToolBanner : IDisposable
             _timer?.Stop();
             RaiseInvalidate();
         }
+    }
+
+    /// <summary>
+    /// Maps a segment color override to a concrete paint color.
+    /// <c>null</c> → accent; pure white (legacy label call sites) → theme <see cref="LabelColor"/>.
+    /// </summary>
+    private static Color ResolveSegmentColor(Color? overrideColor, Color accent, Color label)
+    {
+        if (overrideColor is null)
+            return accent;
+        // Historical call sites used Color.White for the tool-name label. Remap so light mode
+        // gets near-black text without forcing every caller to switch overnight.
+        if (overrideColor.Value.ToArgb() == Color.White.ToArgb())
+            return label;
+        return overrideColor.Value;
     }
 
     private static GraphicsPath RoundedRect(RectangleF r, float rad)
