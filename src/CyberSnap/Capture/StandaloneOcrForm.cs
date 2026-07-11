@@ -79,8 +79,8 @@ public sealed class StandaloneOcrForm : Form
         _banner = new StandaloneToolBanner(
             new BannerSegment[]
             {
-                new(ocrLabel, Color.White),
-                new(ocrAction, null), // accent
+                new(ocrLabel, StandaloneToolBanner.LabelColor),
+                new(ocrAction, null), // theme accent
             },
             _bannerWorkingArea,
             Bounds,

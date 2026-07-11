@@ -84,8 +84,8 @@ public sealed class StandaloneRulerForm : Form
         _banner = new StandaloneToolBanner(
             new BannerSegment[]
             {
-                new(rulerLabel, Color.White),
-                new(rulerAction, null), // accent
+                new(rulerLabel, StandaloneToolBanner.LabelColor),
+                new(rulerAction, null), // theme accent
             },
             _bannerWorkingArea,
             Bounds,

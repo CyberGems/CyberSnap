@@ -443,16 +443,21 @@ public sealed partial class RegionOverlayForm : Form
         _confirmShineTimer.Tick += (_, _) => ConfirmShineTick();
 
         // ── First-time capture banner ──
+        // CaptureDockSide is assigned via object-initializer after the ctor, so read the
+        // preferred dock from settings here (default Bottom matches the property default).
         var settings = SettingsService.LoadStatic();
         if (settings != null && !settings.HasSeenCaptureBanner)
         {
             var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+            bool toolbarAtTop = settings.CaptureDockSide == CaptureDockSide.Top;
+            // Anchor opposite the toolbar so the pill does not cover the dock.
             _banner = new StandaloneToolBanner(
                 LocalizationService.Translate("Click & drag to capture · Toolbar below · Right-click or Esc to cancel"),
                 bannerWorkingArea,
                 Bounds,
                 persistent: true,
-                onInvalidateRect: r => Invalidate(r));
+                onInvalidateRect: r => Invalidate(r),
+                anchorBottom: toolbarAtTop);
             _captureBannerShown = true;
         }
 
@@ -1363,12 +1368,14 @@ public sealed partial class RegionOverlayForm : Form
             _banner = null;
         }
         var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+        // Place opposite the active dock so the banner never sits under the toolbar.
         _banner = new StandaloneToolBanner(
             text,
             bannerWorkingArea,
             Bounds,
             persistent: persistent,
-            onInvalidateRect: r => Invalidate(r));
+            onInvalidateRect: r => Invalidate(r),
+            anchorBottom: IsTopDock);
         Invalidate(_banner.InvalidateBounds);
     }
 
@@ -1380,13 +1387,15 @@ public sealed partial class RegionOverlayForm : Form
             _banner = null;
         }
         var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
+        // Place opposite the active dock so the banner never sits under the toolbar.
         _banner = new StandaloneToolBanner(
             segments,
             bannerWorkingArea,
             Bounds,
             persistent: persistent,
             onInvalidateRect: r => Invalidate(r),
-            iconId: iconId);
+            iconId: iconId,
+            anchorBottom: IsTopDock);
         Invalidate(_banner.InvalidateBounds);
     }
 
