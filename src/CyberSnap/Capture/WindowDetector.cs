@@ -86,20 +86,15 @@ public static class WindowDetector
                 return true;
             }
 
-            // Skip non-activatable tool windows
-            if ((exStyle & User32.WS_EX_TOOLWINDOW) != 0 && (exStyle & User32.WS_EX_NOACTIVATE) != 0)
-            {
-                return true;
-            }
-
-            if (!IsSnappableWindowCandidate(style, exStyle, className, title))
-            {
-                return true;
-            }
-
             var screenRect = GetSnappableBounds(hwnd);
             if (screenRect.Width <= 2 || screenRect.Height <= 2)
                 return true;
+
+            // Candidate filters (including native/3rd-party taskbar exemptions) live in IsSnappableWindowCandidate.
+            if (!IsSnappableWindowCandidate(style, exStyle, className, title, screenRect))
+            {
+                return true;
+            }
 
             // Save the client area if it differs significantly from the main window rect (helps capture inside content cleanly)
             var clientScreenRect = GetClientRect(hwnd);
@@ -252,7 +247,7 @@ public static class WindowDetector
         int exStyle = User32.GetWindowLongA(hwnd, User32.GWL_EXSTYLE);
         string className = GetClassName(hwnd);
         string title = GetWindowTitle(hwnd);
-        if (!IsSnappableWindowCandidate(style, exStyle, className, title))
+        if (!IsSnappableWindowCandidate(style, exStyle, className, title, screenRect))
             return IsPassThroughWindowCandidate(exStyle, className)
                 ? WindowHitResult.PassThrough
                 : WindowHitResult.Blocked;
@@ -277,7 +272,104 @@ public static class WindowDetector
         return root != IntPtr.Zero ? root : hwnd;
     }
 
-    internal static bool IsSnappableWindowCandidate(int style, int exStyle, string className, string windowTitle)
+    /// <summary>
+    /// Native and common third-party multi-monitor taskbar window classes.
+    /// ShareX is more permissive overall; we keep app-window filters but allow these explicitly.
+    /// </summary>
+    internal static bool IsTaskbarClass(string className)
+    {
+        if (string.IsNullOrEmpty(className))
+            return false;
+
+        if (string.Equals(className, "Shell_TrayWnd", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(className, "Shell_SecondaryTrayWnd", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(className, "ActualTools_MultiMonitorTaskbar", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // DisplayFusion, StartAllBack, and similar shells often encode "Taskbar" / "TrayWnd" in the class.
+        if (className.Contains("Taskbar", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (className.EndsWith("TrayWnd", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// Heuristic for third-party taskbars that use opaque class names: a thin strip docked to a
+    /// monitor edge, typically TOOLWINDOW/TOPMOST with no app title (same profile as Shell_TrayWnd).
+    /// </summary>
+    internal static bool IsLikelyTaskbarChrome(int exStyle, string windowTitle, Rectangle screenBounds)
+    {
+        if (screenBounds.Width <= 2 || screenBounds.Height <= 2)
+            return false;
+
+        // Real taskbars usually have no title and are not normal APPWINDOW apps.
+        if (!string.IsNullOrWhiteSpace(windowTitle))
+            return false;
+
+        bool isToolOrTopmost =
+            (exStyle & User32.WS_EX_TOOLWINDOW) != 0
+            || (exStyle & User32.WS_EX_TOPMOST) != 0;
+        if (!isToolOrTopmost)
+            return false;
+
+        const int minThickness = 16;
+        const int maxThickness = 160;
+        const double minSpanRatio = 0.55;
+
+        bool horizontalBar =
+            screenBounds.Height >= minThickness
+            && screenBounds.Height <= maxThickness
+            && screenBounds.Width > screenBounds.Height * 3;
+
+        bool verticalBar =
+            screenBounds.Width >= minThickness
+            && screenBounds.Width <= maxThickness
+            && screenBounds.Height > screenBounds.Width * 3;
+
+        if (!horizontalBar && !verticalBar)
+            return false;
+
+        // Docked to at least one monitor edge and spanning most of that edge.
+        foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+        {
+            var bounds = screen.Bounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+                continue;
+
+            if (!screenBounds.IntersectsWith(bounds))
+                continue;
+
+            if (horizontalBar)
+            {
+                bool spansWidth = screenBounds.Width >= (int)(bounds.Width * minSpanRatio);
+                bool dockedTop = Math.Abs(screenBounds.Top - bounds.Top) <= 4;
+                bool dockedBottom = Math.Abs(screenBounds.Bottom - bounds.Bottom) <= 4;
+                if (spansWidth && (dockedTop || dockedBottom))
+                    return true;
+            }
+
+            if (verticalBar)
+            {
+                bool spansHeight = screenBounds.Height >= (int)(bounds.Height * minSpanRatio);
+                bool dockedLeft = Math.Abs(screenBounds.Left - bounds.Left) <= 4;
+                bool dockedRight = Math.Abs(screenBounds.Right - bounds.Right) <= 4;
+                if (spansHeight && (dockedLeft || dockedRight))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static bool IsSnappableWindowCandidate(
+        int style,
+        int exStyle,
+        string className,
+        string windowTitle,
+        Rectangle? screenBounds = null)
     {
         if ((style & User32.WS_CHILD) != 0)
             return false;
@@ -288,17 +380,20 @@ public static class WindowDetector
         if ((exStyle & User32.WS_EX_TRANSPARENT) != 0)
             return false;
 
-        bool isTaskbar = string.Equals(className, "Shell_TrayWnd", StringComparison.OrdinalIgnoreCase) ||
-                         string.Equals(className, "Shell_SecondaryTrayWnd", StringComparison.OrdinalIgnoreCase);
+        // Taskbars (native + third-party) are snappable shell chrome: empty title, TOOLWINDOW,
+        // often no APPWINDOW. Accept them before the normal app-window filters would reject them.
+        // ShareX is more inclusive overall; we keep app filters and only special-case taskbar chrome.
+        if (IsTaskbarClass(className))
+            return true;
 
-        if (!isTaskbar)
-        {
-            if ((exStyle & User32.WS_EX_NOACTIVATE) != 0 && (exStyle & User32.WS_EX_APPWINDOW) == 0)
-                return false;
+        if (screenBounds is { } bounds && IsLikelyTaskbarChrome(exStyle, windowTitle, bounds))
+            return true;
 
-            if ((exStyle & User32.WS_EX_TOOLWINDOW) != 0 && (exStyle & User32.WS_EX_APPWINDOW) == 0)
-                return false;
-        }
+        if ((exStyle & User32.WS_EX_NOACTIVATE) != 0 && (exStyle & User32.WS_EX_APPWINDOW) == 0)
+            return false;
+
+        if ((exStyle & User32.WS_EX_TOOLWINDOW) != 0 && (exStyle & User32.WS_EX_APPWINDOW) == 0)
+            return false;
 
         if (IgnoredWindowClasses.Any(ignored => string.Equals(ignored, className, StringComparison.OrdinalIgnoreCase)))
             return false;
@@ -323,7 +418,8 @@ public static class WindowDetector
         int exStyle = User32.GetWindowLongA(hwnd, User32.GWL_EXSTYLE);
         string className = GetClassName(hwnd);
         string title = GetWindowTitle(hwnd);
-        return IsSnappableWindowCandidate(style, exStyle, className, title);
+        var bounds = GetSnappableBounds(hwnd);
+        return IsSnappableWindowCandidate(style, exStyle, className, title, bounds);
     }
 
     internal static Rectangle ChoosePreferredBounds(Rectangle dwmRect, Rectangle rawRect)
