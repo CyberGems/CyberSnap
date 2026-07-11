@@ -178,6 +178,55 @@
             </Setter>
         </Style>
 
+        <!-- Clean circular radio: full-stroke ring + accent dot, replaces the
+             Aero2 default whose glossy arc reads as a crescent on dark cards -->
+        <Style x:Key="WizRadio" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource WizFg}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <StackPanel Orientation="Horizontal" Background="Transparent"
+                                    SnapsToDevicePixels="True">
+                            <Grid Width="18" Height="18" VerticalAlignment="Center">
+                                <Ellipse x:Name="Ring"
+                                         Width="18" Height="18"
+                                         Stroke="{DynamicResource ThemeTextSecondaryBrush}"
+                                         StrokeThickness="1.5"
+                                         Fill="Transparent"/>
+                                <Ellipse x:Name="Dot"
+                                         Width="8" Height="8"
+                                         Fill="{DynamicResource WizAccent}"
+                                         Opacity="0"/>
+                            </Grid>
+                            <ContentPresenter Margin="8,0,0,0"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource WizAccent}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource WizAccent}"/>
+                                <Setter TargetName="Dot" Property="Opacity" Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource WizFg}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="WizComboBox" TargetType="ComboBox">
             <Setter Property="MinHeight" Value="32"/>
             <Setter Property="Padding" Value="10,6"/>
@@ -641,51 +690,40 @@
                                    Foreground="{DynamicResource WizFg}" Margin="0,14,0,8"/>
 
                         <Border Style="{StaticResource WizRow}" Padding="14,12">
-                            <StackPanel Orientation="Horizontal">
+                            <UniformGrid Rows="1" Columns="4">
                                 <RadioButton x:Name="WizThemeDarkRadio"
                                              Content="CyberSnap"
                                              GroupName="WizTheme"
-                                             FontSize="13"
-                                             FontFamily="Segoe UI Variable Text"
-                                             Foreground="{DynamicResource WizFg}"
-                                             Margin="0,0,16,0"
-                                             Cursor="Hand"
+                                             Style="{StaticResource WizRadio}"
+                                             HorizontalAlignment="Center"
                                              AutomationProperties.Name="CyberSnap theme"
                                              ToolTip="Always use the signature CyberSnap theme."
                                              Checked="ThemeRadio_Changed"/>
                                 <RadioButton x:Name="WizThemeGrayscaleRadio"
                                              Content="Dark"
                                              GroupName="WizTheme"
-                                             FontSize="13"
-                                             FontFamily="Segoe UI Variable Text"
-                                             Foreground="{DynamicResource WizFg}"
-                                             Margin="0,0,16,0"
-                                             Cursor="Hand"
+                                             Style="{StaticResource WizRadio}"
+                                             HorizontalAlignment="Center"
                                              AutomationProperties.Name="Dark theme"
                                              ToolTip="Sober, monochrome dark theme."
                                              Checked="ThemeRadio_Changed"/>
                                 <RadioButton x:Name="WizThemeLightRadio"
                                              Content="Light"
                                              GroupName="WizTheme"
-                                             FontSize="13"
-                                             FontFamily="Segoe UI Variable Text"
-                                             Foreground="{DynamicResource WizFg}"
-                                             Margin="0,0,16,0"
-                                             Cursor="Hand"
+                                             Style="{StaticResource WizRadio}"
+                                             HorizontalAlignment="Center"
                                              AutomationProperties.Name="Light theme"
                                              ToolTip="Always use the light theme."
                                              Checked="ThemeRadio_Changed"/>
                                 <RadioButton x:Name="WizThemeAutoRadio"
                                              Content="Auto"
                                              GroupName="WizTheme"
-                                             FontSize="13"
-                                             FontFamily="Segoe UI Variable Text"
-                                             Foreground="{DynamicResource WizFg}"
-                                             Cursor="Hand"
+                                             Style="{StaticResource WizRadio}"
+                                             HorizontalAlignment="Center"
                                              AutomationProperties.Name="Auto theme"
                                              ToolTip="Follows Windows: CyberSnap when dark, Light when light."
                                              Checked="ThemeRadio_Changed"/>
-                            </StackPanel>
+                            </UniformGrid>
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
