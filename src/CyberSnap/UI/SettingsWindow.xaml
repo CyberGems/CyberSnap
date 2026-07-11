@@ -3378,7 +3378,7 @@
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
                                                 </Grid>
-                                                <Border Grid.Row="1" HorizontalAlignment="Stretch" CornerRadius="0,0,12,12" Margin="4,0">
+                                                <Border x:Name="EditorToastMockRail" Grid.Row="1" HorizontalAlignment="Stretch" CornerRadius="0,0,12,12" Margin="4,0">
                                                     <Border.Background>
                                                         <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
                                                             <GradientStop Color="#FF00F2FF" Offset="0.0"/>
@@ -3387,7 +3387,7 @@
                                                         </LinearGradientBrush>
                                                     </Border.Background>
                                                     <Border.Effect>
-                                                        <DropShadowEffect Color="#FF7A00FF" BlurRadius="4" ShadowDepth="0" Opacity="0.45"/>
+                                                        <DropShadowEffect x:Name="EditorToastMockRailGlow" Color="#FF7A00FF" BlurRadius="4" ShadowDepth="0" Opacity="0.45"/>
                                                     </Border.Effect>
                                                 </Border>
                                             </Grid>
@@ -3435,12 +3435,14 @@
                                                 <RowDefinition Height="4"/>
                                             </Grid.RowDefinitions>
 
-                                            <Border Grid.Row="0" Margin="0" Background="#FF1A4F96"
+                                            <Border x:Name="ToastLayoutImageArea" Grid.Row="0" Margin="0" Background="#FF1A4F96"
                                                     Services:LocalizationService.SourceToolTip="Notification Preview">
                                                 <Grid>
                                                     <!-- Faint "your capture goes here" image glyph, behind the slots/buttons.
-                                                         Not hit-testable so drops still reach the slots underneath. -->
-                                                    <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="54"
+                                                         Not hit-testable so drops still reach the slots underneath.
+                                                         Colours (area + glyph) set in code to track the theme. -->
+                                                    <TextBlock x:Name="ToastLayoutImageGlyph"
+                                                               Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="54"
                                                                Foreground="White" Opacity="0.15"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                IsHitTestVisible="False"/>
@@ -3637,7 +3639,7 @@
                                                 </StackPanel>
                                             </StackPanel>
 
-                                            <Border Grid.Row="2" HorizontalAlignment="Stretch">
+                                            <Border x:Name="ToastLayoutRail" Grid.Row="2" HorizontalAlignment="Stretch">
                                                 <Border.Background>
                                                     <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
                                                         <GradientStop Color="#FF00F2FF" Offset="0.0"/>
@@ -3646,7 +3648,7 @@
                                                     </LinearGradientBrush>
                                                 </Border.Background>
                                                 <Border.Effect>
-                                                    <DropShadowEffect Color="#FF7A00FF" BlurRadius="4" ShadowDepth="0" Opacity="0.45"/>
+                                                    <DropShadowEffect x:Name="ToastLayoutRailGlow" Color="#FF7A00FF" BlurRadius="4" ShadowDepth="0" Opacity="0.45"/>
                                                 </Border.Effect>
                                             </Border>
                                         </Grid>
