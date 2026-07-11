@@ -705,7 +705,13 @@ public partial class SettingsWindow
         // or an eviction-preview occupant at 0.20 that ended up not evicted). Without this,
         // the stale transparency persists across refreshes and presets.
         border.Opacity = 1;
-        if (Theme.IsDark)
+        if (Theme.IsGray)
+        {
+            // Grayscale theme: no cyan. Neutral charcoal fill with a soft silver stroke.
+            border.Background = Theme.Brush(Color.FromArgb(215, 24, 26, 29));
+            border.BorderBrush = Theme.Brush(Color.FromArgb(130, 184, 190, 198));
+        }
+        else if (Theme.IsDark)
         {
             border.Background = Theme.Brush(Color.FromArgb(215, 6, 22, 28));
             border.BorderBrush = Theme.Brush(Color.FromArgb(130, 0, 220, 220));
@@ -858,6 +864,34 @@ public partial class SettingsWindow
             ToastLayoutShell.BorderBrush = ToastAccentStroke();
         }
 
+        // The image area used to be a hardcoded bright blue (#FF1A4F96) that clashed with the dark
+        // toast. The real toast's image frame sits right on ToastBg with only a hair of lift, so
+        // match that: reuse ToastBg per theme and nudge it a couple of levels lighter (dark/gray) or
+        // darker (light) so it still reads as a distinct "your capture goes here" panel. Note the UI
+        // "Dark" radio maps to Grayscale internally (IsGray), so that branch must be handled first.
+        if (ToastLayoutImageArea is not null)
+        {
+            ToastLayoutImageArea.Background = Theme.Brush(Theme.IsGray
+                ? Color.FromRgb(0x1E, 0x20, 0x23)   // gray "Dark": ToastBg 30,32,35 nudged down
+                : Theme.IsDark
+                ? Color.FromRgb(0x20, 0x21, 0x26)   // CyberSnap dark: ToastBg 26,27,31 nudged up
+                : Color.FromRgb(0xE2, 0xE5, 0xED));  // light: ToastBg 234,237,244 nudged down
+        }
+        if (ToastLayoutImageGlyph is not null)
+        {
+            ToastLayoutImageGlyph.Foreground = Theme.Brush(Theme.IsDark
+                ? Color.FromRgb(255, 255, 255)
+                : Color.FromRgb(0, 0, 0));
+            ToastLayoutImageGlyph.Opacity = Theme.IsDark ? 0.14 : 0.20;
+        }
+
+        // Both mock timeline rails carry the cyber cyan/purple/magenta gradient hardcoded in XAML.
+        // That's right for the CyberSnap/Light themes, but the real toast swaps to a sober silver
+        // ramp under the grayscale ("Dark" radio) theme — so mirror that here to keep the previews
+        // faithful. Setting the same gradient back in the other themes is a cheap no-op.
+        ApplyMockRail(EditorToastMockRail, EditorToastMockRailGlow);
+        ApplyMockRail(ToastLayoutRail, ToastLayoutRailGlow);
+
         // Left (image-capture text toast) is the active path only when the editor is on. The banner
         // and the live toggle already explain the off state, so the card just dims — no extra note.
         ApplyEditorPreviewEmphasis(EditorToastMockCard, active: editorOn);
@@ -888,12 +922,60 @@ public partial class SettingsWindow
     private static void ApplyEditorPreviewEmphasis(UIElement card, bool active)
         => card.Opacity = active ? 1.0 : 0.40;
 
-    // The cyan/blue accent stroke ConfigureShell() applies to the real toast's OuterShell, shared
-    // by both notification previews so they match the real thing (and each other).
+    // The accent stroke ConfigureShell() applies to the real toast's OuterShell, shared by both
+    // notification previews so they match the real thing (and each other). Mirrors ConfigureShell
+    // exactly: silver under the grayscale ("Dark" radio) theme so the previews honour its no-colour
+    // promise, cyan in CyberSnap dark, blue in light.
     private static SolidColorBrush ToastAccentStroke()
-        => Theme.Brush(Theme.IsDark
+        => Theme.Brush(Theme.IsGray
+            ? Color.FromArgb(160, 184, 190, 198)
+            : Theme.IsDark
             ? Color.FromArgb(160, 0, 200, 215)
             : Color.FromArgb(160, 0, 110, 205));
+
+    // Paint a preview's bottom timeline rail to match the real toast's ProgressBar: the cyber
+    // cyan/purple/magenta gradient in the CyberSnap/Light themes, or the sober silver ramp the real
+    // toast swaps in under grayscale (the "Dark" radio). Mirrors ToastWindow's CreateSilverProgressBrush
+    // and the ProgressBar gradient defined in ToastWindow.xaml so the previews stay faithful per theme.
+    private static void ApplyMockRail(Border? rail, System.Windows.Media.Effects.DropShadowEffect? glow)
+    {
+        if (rail is null)
+            return;
+
+        if (Theme.IsGray)
+        {
+            // Static (non-looping) silver ramp: bright → mid → dim, matching CreateSilverProgressBrush.
+            rail.Background = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0.5),
+                EndPoint = new Point(1, 0.5),
+                GradientStops = new GradientStopCollection
+                {
+                    new GradientStop(Color.FromRgb(0xE6, 0xEA, 0xEF), 0.0),
+                    new GradientStop(Color.FromRgb(0xB8, 0xBE, 0xC6), 0.5),
+                    new GradientStop(Color.FromRgb(0x7C, 0x82, 0x8C), 1.0),
+                }
+            };
+            if (glow is not null)
+                glow.Color = Color.FromRgb(0xE8, 0xEC, 0xF0); // soft white-silver halo
+        }
+        else
+        {
+            rail.Background = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0.5),
+                EndPoint = new Point(1, 0.5),
+                GradientStops = new GradientStopCollection
+                {
+                    new GradientStop(Color.FromRgb(0x00, 0xF2, 0xFF), 0.0), // Cyber Cyan
+                    new GradientStop(Color.FromRgb(0x7A, 0x00, 0xFF), 0.5), // Cyber Purple
+                    new GradientStop(Color.FromRgb(0xFF, 0x00, 0xD0), 1.0), // Cyber Magenta
+                }
+            };
+            if (glow is not null)
+                glow.Color = Color.FromRgb(0x7A, 0x00, 0xFF);
+        }
+    }
 
     // In-panel mirror of the widget's "Enable editor" toggle. Flipping it here updates the setting,
     // keeps the General-tab checkbox and the widget toggle in lockstep, and re-renders both
