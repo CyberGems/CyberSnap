@@ -100,15 +100,15 @@ public partial class CaptureWidgetWindow : Window
         
         // Define colors/brushes for widget based on IsDark
         var bg = Theme.IsDark ? System.Windows.Media.Color.FromArgb(242, 13, 15, 26) : System.Windows.Media.Color.FromArgb(242, 223, 226, 234);
-        var accent = Theme.IsDark ? System.Windows.Media.Color.FromRgb(0, 255, 255) : System.Windows.Media.Color.FromRgb(0, 120, 215);
-        var accentHover = Theme.IsDark ? System.Windows.Media.Color.FromRgb(128, 255, 255) : System.Windows.Media.Color.FromRgb(50, 150, 240);
+        var accent = Theme.IsGray ? System.Windows.Media.Color.FromRgb(184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromRgb(0, 255, 255) : System.Windows.Media.Color.FromRgb(0, 120, 215);
+        var accentHover = Theme.IsGray ? System.Windows.Media.Color.FromRgb(214, 218, 224) : Theme.IsDark ? System.Windows.Media.Color.FromRgb(128, 255, 255) : System.Windows.Media.Color.FromRgb(50, 150, 240);
         var text = Theme.IsDark ? System.Windows.Media.Color.FromRgb(230, 240, 255) : System.Windows.Media.Color.FromRgb(26, 26, 26);
         var textMuted = Theme.IsDark ? System.Windows.Media.Color.FromRgb(160, 180, 210) : System.Windows.Media.Color.FromRgb(96, 96, 96);
-        var border = Theme.IsDark ? System.Windows.Media.Color.FromArgb(32, 0, 255, 255) : System.Windows.Media.Color.FromArgb(22, 0, 0, 0);
-        var borderActive = Theme.IsDark ? System.Windows.Media.Color.FromArgb(128, 0, 255, 255) : System.Windows.Media.Color.FromArgb(80, 0, 120, 215);
-        var peekGripBg = Theme.IsDark ? System.Windows.Media.Color.FromArgb(38, 0, 255, 255) : System.Windows.Media.Color.FromArgb(38, 0, 120, 215);
-        var hoverBg = Theme.IsDark ? System.Windows.Media.Color.FromArgb(21, 0, 255, 255) : System.Windows.Media.Color.FromArgb(21, 0, 120, 215);
-        var pressedBg = Theme.IsDark ? System.Windows.Media.Color.FromArgb(48, 0, 255, 255) : System.Windows.Media.Color.FromArgb(48, 0, 120, 215);
+        var border = Theme.IsGray ? System.Windows.Media.Color.FromArgb(32, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(32, 0, 255, 255) : System.Windows.Media.Color.FromArgb(22, 0, 0, 0);
+        var borderActive = Theme.IsGray ? System.Windows.Media.Color.FromArgb(128, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(128, 0, 255, 255) : System.Windows.Media.Color.FromArgb(80, 0, 120, 215);
+        var peekGripBg = Theme.IsGray ? System.Windows.Media.Color.FromArgb(38, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(38, 0, 255, 255) : System.Windows.Media.Color.FromArgb(38, 0, 120, 215);
+        var hoverBg = Theme.IsGray ? System.Windows.Media.Color.FromArgb(21, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(21, 0, 255, 255) : System.Windows.Media.Color.FromArgb(21, 0, 120, 215);
+        var pressedBg = Theme.IsGray ? System.Windows.Media.Color.FromArgb(48, 184, 190, 198) : Theme.IsDark ? System.Windows.Media.Color.FromArgb(48, 0, 255, 255) : System.Windows.Media.Color.FromArgb(48, 0, 120, 215);
 
         // Toggle Switch colors
         var toggleTrackBg = Theme.IsDark ? System.Windows.Media.Color.FromRgb(42, 42, 42) : System.Windows.Media.Color.FromRgb(224, 224, 224);
@@ -137,8 +137,10 @@ public partial class CaptureWidgetWindow : Window
     private void LoadIcons()
     {
         Theme.Refresh();
-        var accentColor = Theme.IsDark 
-            ? System.Drawing.Color.FromArgb(0, 255, 255) 
+        var accentColor = Theme.IsGray
+            ? System.Drawing.Color.FromArgb(184, 190, 198)
+            : Theme.IsDark
+            ? System.Drawing.Color.FromArgb(0, 255, 255)
             : System.Drawing.Color.FromArgb(0, 120, 215);
         var normalIconColor = Theme.IsDark 
             ? System.Drawing.Color.FromArgb(230, 240, 255) 

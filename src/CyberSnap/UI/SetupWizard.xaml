@@ -643,12 +643,26 @@
                         <Border Style="{StaticResource WizRow}" Padding="14,12">
                             <StackPanel Orientation="Horizontal">
                                 <RadioButton x:Name="WizThemeDarkRadio"
+                                             Content="CyberSnap"
+                                             GroupName="WizTheme"
+                                             FontSize="13"
+                                             FontFamily="Segoe UI Variable Text"
+                                             Foreground="{DynamicResource WizFg}"
+                                             Margin="0,0,16,0"
+                                             Cursor="Hand"
+                                             AutomationProperties.Name="CyberSnap theme"
+                                             ToolTip="Always use the signature CyberSnap theme."
+                                             Checked="ThemeRadio_Changed"/>
+                                <RadioButton x:Name="WizThemeGrayscaleRadio"
                                              Content="Dark"
                                              GroupName="WizTheme"
                                              FontSize="13"
                                              FontFamily="Segoe UI Variable Text"
                                              Foreground="{DynamicResource WizFg}"
                                              Margin="0,0,16,0"
+                                             Cursor="Hand"
+                                             AutomationProperties.Name="Dark theme"
+                                             ToolTip="Sober, monochrome dark theme."
                                              Checked="ThemeRadio_Changed"/>
                                 <RadioButton x:Name="WizThemeLightRadio"
                                              Content="Light"
@@ -657,6 +671,9 @@
                                              FontFamily="Segoe UI Variable Text"
                                              Foreground="{DynamicResource WizFg}"
                                              Margin="0,0,16,0"
+                                             Cursor="Hand"
+                                             AutomationProperties.Name="Light theme"
+                                             ToolTip="Always use the light theme."
                                              Checked="ThemeRadio_Changed"/>
                                 <RadioButton x:Name="WizThemeAutoRadio"
                                              Content="Auto"
@@ -664,6 +681,9 @@
                                              FontSize="13"
                                              FontFamily="Segoe UI Variable Text"
                                              Foreground="{DynamicResource WizFg}"
+                                             Cursor="Hand"
+                                             AutomationProperties.Name="Auto theme"
+                                             ToolTip="Follows Windows: CyberSnap when dark, Light when light."
                                              Checked="ThemeRadio_Changed"/>
                             </StackPanel>
                         </Border>

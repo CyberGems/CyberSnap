@@ -8,54 +8,66 @@ public static class Theme
 {
     public static bool IsDark { get; private set; } = true;
 
-    // Backgrounds - Cyberpunk deep blues
-    public static Color BgPrimary => IsDark ? C(13, 15, 23) : C(223, 226, 234);
-    public static Color BgSecondary => IsDark ? C(18, 20, 31) : C(230, 233, 241);
-    public static Color BgElevated => IsDark ? C(23, 26, 40) : C(236, 239, 246);
-    public static Color BgHover => IsDark ? C(33, 38, 58) : C(214, 218, 229);
-    public static Color BgCard => IsDark ? C(23, 26, 40) : C(236, 239, 246);
+    // Grayscale is a *variant* of dark: IsDark stays true (so the ~195 scattered
+    // `IsDark ? ...` ternaries across the app keep taking the dark branch), while
+    // IsGray redirects the palette below toward sober, desaturated greys with a
+    // silver accent instead of the cyberpunk cyan/blue.
+    public static bool IsGray { get; private set; }
+
+    // Sober silver accent used across the grayscale theme (replaces cyan).
+    private static Color GraySilver => C(184, 190, 198);
+
+    // Palette selector: grey takes priority, else the usual dark/light ternary.
+    private static Color P(Color gray, Color dark, Color light) => IsGray ? gray : (IsDark ? dark : light);
+
+    // Backgrounds - Cyberpunk deep blues (grey: neutral charcoals)
+    public static Color BgPrimary => P(C(22, 24, 27), C(13, 15, 23), C(223, 226, 234));
+    public static Color BgSecondary => P(C(29, 32, 35), C(18, 20, 31), C(230, 233, 241));
+    public static Color BgElevated => P(C(36, 39, 43), C(23, 26, 40), C(236, 239, 246));
+    public static Color BgHover => P(C(46, 50, 55), C(33, 38, 58), C(214, 218, 229));
+    public static Color BgCard => P(C(36, 39, 43), C(23, 26, 40), C(236, 239, 246));
     public static Color BgOverlay => IsDark ? CA(0, 0, 0, 160) : CA(0, 0, 0, 100);
 
     // Text
-    public static Color TextPrimary => IsDark ? C(230, 240, 255) : C(26, 26, 26);
-    public static Color TextSecondary => IsDark ? C(160, 180, 210) : C(96, 96, 96);
-    public static Color TextMuted => IsDark ? C(110, 130, 160) : C(128, 128, 128);
+    public static Color TextPrimary => P(C(232, 234, 236), C(230, 240, 255), C(26, 26, 26));
+    public static Color TextSecondary => P(C(166, 171, 178), C(160, 180, 210), C(96, 96, 96));
+    public static Color TextMuted => P(C(110, 116, 124), C(110, 130, 160), C(128, 128, 128));
 
     // Borders
-    public static Color Border => IsDark ? CA(0, 255, 255, 60) : CA(0, 0, 0, 22);
-    public static Color BorderSubtle => IsDark ? CA(0, 255, 255, 30) : CA(0, 0, 0, 14);
+    public static Color Border => P(CA(255, 255, 255, 26), CA(0, 255, 255, 60), CA(0, 0, 0, 22));
+    public static Color BorderSubtle => P(CA(255, 255, 255, 16), CA(0, 255, 255, 30), CA(0, 0, 0, 14));
 
     // Shared stroke: the one white outline used on preview, toast, buttons, cards
     public static Color Stroke => IsDark ? CA(255, 255, 255, 0xCC) : CA(0, 0, 0, 0x40);
     public const double StrokeThickness = 1.5;
     public static SolidColorBrush StrokeBrush() => Brush(Stroke);
 
-    // Accent (Cyberpunk cyan)
-    public static Color Accent => IsDark ? C(0, 255, 255) : C(0, 120, 215);
-    public static Color AccentSubtle => IsDark ? CA(0, 255, 255, 20) : CA(0, 120, 215, 18);
-    public static Color AccentHover => IsDark ? CA(0, 255, 255, 40) : CA(0, 120, 215, 28);
+    // Accent (Cyberpunk cyan; grey: sober silver)
+    public static Color Accent => P(GraySilver, C(0, 255, 255), C(0, 120, 215));
+    public static Color AccentSubtle => P(CA(184, 190, 198, 22), CA(0, 255, 255, 20), CA(0, 120, 215, 18));
+    public static Color AccentHover => P(CA(184, 190, 198, 44), CA(0, 255, 255, 40), CA(0, 120, 215, 28));
     public static Color DangerHover => IsDark ? CA(255, 0, 85, 210) : CA(196, 43, 28, 225);
 
     // Selection
-    public static Color SelectionBg => IsDark ? CA(0, 255, 255, 25) : CA(0, 120, 215, 10);
+    public static Color SelectionBg => P(CA(184, 190, 198, 30), CA(0, 255, 255, 25), CA(0, 120, 215, 10));
 
     // Window chrome
-    public static Color TitleBar => IsDark ? C(10, 12, 18) : C(220, 223, 232);
-    public static Color WindowBorder => IsDark ? CA(0, 255, 255, 75) : CA(0, 0, 0, 20);
-    public static Color CardBg => IsDark ? C(23, 26, 40) : C(236, 239, 246);
-    public static Color TabActiveBg => IsDark ? CA(0, 255, 255, 25) : CA(0, 0, 0, 16);
-    public static Color TabHoverBg => IsDark ? CA(0, 255, 255, 12) : CA(0, 0, 0, 10);
-    public static Color PreviewStroke => IsDark ? CA(0, 255, 255, 64) : CA(0, 0, 0, 25);
+    public static Color TitleBar => P(C(18, 20, 23), C(10, 12, 18), C(220, 223, 232));
+    public static Color WindowBorder => P(CA(255, 255, 255, 40), CA(0, 255, 255, 75), CA(0, 0, 0, 20));
+    public static Color CardBg => P(C(36, 39, 43), C(23, 26, 40), C(236, 239, 246));
+    public static Color TabActiveBg => P(CA(255, 255, 255, 22), CA(0, 255, 255, 25), CA(0, 0, 0, 16));
+    public static Color TabHoverBg => P(CA(255, 255, 255, 12), CA(0, 255, 255, 12), CA(0, 0, 0, 10));
+    public static Color PreviewStroke => P(CA(184, 190, 198, 64), CA(0, 255, 255, 64), CA(0, 0, 0, 25));
 
     // Section icon tints
-    public static Color SectionIconBg => IsDark ? CA(0, 240, 255, 14) : CA(0, 0, 0, 8);
-    public static Color SectionIconFg => IsDark ? C(0, 240, 255) : CA(0, 0, 0, 170);
+    public static Color SectionIconBg => P(CA(255, 255, 255, 14), CA(0, 240, 255, 14), CA(0, 0, 0, 8));
+    public static Color SectionIconFg => P(GraySilver, C(0, 240, 255), CA(0, 0, 0, 170));
 
     // Separator
     public static Color Separator => IsDark ? CA(255, 255, 255, 16) : CA(0, 0, 0, 10);
 
     // Toast background (needs to be opaque enough to read)
-    public static Color ToastBg => IsDark ? C(26, 27, 31) : C(234, 237, 244);
+    public static Color ToastBg => P(C(30, 32, 35), C(26, 27, 31), C(234, 237, 244));
     public static Color ToastBorder => IsDark ? CA(255, 255, 255, 30) : CA(0, 0, 0, 18);
 
     public static SolidColorBrush Brush(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
@@ -98,9 +110,11 @@ public static class Theme
 
     public static void Refresh()
     {
+        IsGray = _forcedMode == Models.AppThemeMode.Grayscale;
         IsDark = _forcedMode switch
         {
             Models.AppThemeMode.Dark => true,
+            Models.AppThemeMode.Grayscale => true,   // grey is a dark variant
             Models.AppThemeMode.Light => false,
             _ => DetectDarkMode()
         };

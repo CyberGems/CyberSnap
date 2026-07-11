@@ -557,6 +557,7 @@ public partial class SettingsWindow
         ThemeSystemRadio.IsChecked = mode == Models.AppThemeMode.System;
         ThemeDarkRadio.IsChecked = mode == Models.AppThemeMode.Dark;
         ThemeLightRadio.IsChecked = mode == Models.AppThemeMode.Light;
+        ThemeGrayscaleRadio.IsChecked = mode == Models.AppThemeMode.Grayscale;
     }
 
     private void AppThemeRadio_Changed(object sender, RoutedEventArgs e)
@@ -565,6 +566,7 @@ public partial class SettingsWindow
 
         var selected = ThemeDarkRadio.IsChecked == true ? Models.AppThemeMode.Dark
             : ThemeLightRadio.IsChecked == true ? Models.AppThemeMode.Light
+            : ThemeGrayscaleRadio.IsChecked == true ? Models.AppThemeMode.Grayscale
             : Models.AppThemeMode.System;
 
         var previous = _settingsService.Settings.ThemeMode;
