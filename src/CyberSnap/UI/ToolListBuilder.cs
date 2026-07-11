@@ -52,7 +52,7 @@ public static class ToolListBuilder
         return false;
     }
 
-    public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null, StackPanel? editorToolsPanel = null, StackPanel? toolbarUtilitiesPanel = null)
+    public static void Build(StackPanel capturePanel, StackPanel annotationPanel, SettingsService settingsService, FrameworkElement owner, Action? hotkeyChanged = null, StackPanel? editorToolsPanel = null, StackPanel? toolbarUtilitiesPanel = null, bool includeAnnotationTools = true)
     {
         capturePanel.Children.Clear();
         annotationPanel.Children.Clear();
@@ -92,7 +92,8 @@ public static class ToolListBuilder
         void AddToolRow(StackPanel targetPanel, string toolId, string label, char icon, bool showHotkey,
             Func<string, (uint mod, uint key)> getHotkey,
             Action<string, uint, uint> setHotkey,
-            bool allowSingleKeyHotkeys = false)
+            bool allowSingleKeyHotkeys = false,
+            bool showPrintScreenQuickAssign = false)
         {
             var card = new Border { Style = (Style)owner.FindResource("CompactItemCard") };
 
@@ -285,7 +286,17 @@ public static class ToolListBuilder
                         settingsService.Save();
                         capturedBox.Text = HotkeyFormatter.Format(mod, vk);
                         hotkeyChanged?.Invoke();
-                        Keyboard.ClearFocus();
+
+                        // Print Screen assigned by typing it: surface Case B interceptors (Snagit,
+                        // Snipping Tool). Keep focus so the advisory stays visible — ClearFocus would
+                        // trigger LostFocus and wipe the styling.
+                        var interceptors = mod == 0 && vk == Native.User32.VK_SNAPSHOT
+                            ? HotkeyConflictProbe.DetectPrintScreenInterceptors()
+                            : System.Array.Empty<string>();
+                        if (interceptors.Count > 0)
+                            ApplyPrintScreenFeedback(hkBox, capturedBox, tooltip, canRegister: true, interceptors);
+                        else
+                            Keyboard.ClearFocus();
                     }
                     catch (Exception ex)
                     {
@@ -372,6 +383,64 @@ public static class ToolListBuilder
                 };
 
                 right.Children.Add(hkBox);
+
+                if (showPrintScreenQuickAssign)
+                {
+                    var prtScBtn = new Button { Content = "PrtSc" };
+                    prtScBtn.SetResourceReference(Button.StyleProperty, "ClearBtn");
+                    prtScBtn.Height = 28;
+                    prtScBtn.MinHeight = 28;
+                    prtScBtn.Width = 52;
+                    prtScBtn.MinWidth = 52;
+                    prtScBtn.FontSize = 11;
+                    prtScBtn.Margin = new Thickness(6, 0, 0, 0);
+                    prtScBtn.ToolTip = LocalizationService.Translate("Assign Print Screen (PrtSc) as the capture shortcut, replacing the default — works only if no other app is already using that key.");
+
+                    prtScBtn.Click += (_, _) =>
+                    {
+                        var (prevMod, prevKey) = getHotkey(capturedId);
+                        var app = Application.Current as App;
+
+                        // Release our own claim so CanRegister does not report a self-conflict,
+                        // then probe both failure modes before committing.
+                        bool canReg = true;
+                        if (app is not null)
+                        {
+                            app.UnregisterAllHotkeys();
+                            canReg = HotkeyConflictProbe.CanRegister(0, Native.User32.VK_SNAPSHOT);
+                        }
+                        var interceptors = HotkeyConflictProbe.DetectPrintScreenInterceptors();
+
+                        // Re-register our hotkeys after committing. In SettingsWindow this happens via
+                        // hotkeyChanged; the SetupWizard passes none, so re-register directly.
+                        void ReRegister()
+                        {
+                            if (hotkeyChanged is not null) hotkeyChanged.Invoke();
+                            else app?.RegisterHotkeys(showReadyNotification: false);
+                        }
+
+                        try
+                        {
+                            setHotkey(capturedId, 0, Native.User32.VK_SNAPSHOT);
+                            settingsService.Save();
+                            capturedBox.Text = HotkeyFormatter.Format(0, Native.User32.VK_SNAPSHOT);
+                            ReRegister();
+                            ApplyPrintScreenFeedback(hkBox, capturedBox, tooltip, canReg, interceptors);
+                        }
+                        catch (Exception ex)
+                        {
+                            AppDiagnostics.LogError("settings.tool-hotkey-prtsc", ex);
+                            setHotkey(capturedId, prevMod, prevKey);
+                            try { settingsService.Save(); } catch { }
+                            capturedBox.Text = HotkeyFormatter.Format(prevMod, prevKey);
+                            ReRegister();
+                            ShowToolHotkeySaveFailed("save", restoredConflict: false, ex);
+                        }
+                    };
+
+                    right.Children.Add(prtScBtn);
+                }
+
                 right.Children.Add(clearBtn);
 
                 Grid.SetColumn(right, 2);
@@ -419,7 +488,8 @@ public static class ToolListBuilder
 
         AddSubHeader(capturePanel, "Core Captures");
         foreach (var item in System.Linq.Enumerable.Take(captureItems, 6))
-            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey);
+            AddToolRow(capturePanel, item.id, item.label, item.icon, true, GetCaptureHotkey, SetCaptureHotkey,
+                showPrintScreenQuickAssign: item.id == "rect");
 
         AddSubHeader(capturePanel, "Video & Recording");
         foreach (var item in System.Linq.Enumerable.Take(System.Linq.Enumerable.Skip(captureItems, 6), 2))
@@ -437,9 +507,12 @@ public static class ToolListBuilder
             LocalizationService.ApplyTo(toolbarUtilitiesPanel, settingsService.Settings.InterfaceLanguage);
         }
 
-        AddSubHeader(annotationPanel, "Annotation tools");
-        foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
-            AddToolRow(annotationPanel, t.Id, t.Label, t.Icon, true, GetCaptureHotkey, SetCaptureHotkey, allowSingleKeyHotkeys: true);
+        if (includeAnnotationTools)
+        {
+            AddSubHeader(annotationPanel, "Annotation tools");
+            foreach (var t in ToolDef.AllTools.Where(t => t.Group == 1))
+                AddToolRow(annotationPanel, t.Id, t.Label, t.Icon, true, GetCaptureHotkey, SetCaptureHotkey, allowSingleKeyHotkeys: true);
+        }
 
         if (editorToolsPanel is not null)
         {
@@ -556,6 +629,40 @@ public static class ToolListBuilder
         hkBox.FontWeight = FontWeights.SemiBold;
         tooltip.Content = LocalizationService.Translate("Global hotkeys require a modifier (Ctrl, Alt, or Shift).");
         tooltip.IsOpen = true;
+    }
+
+    /// <summary>
+    /// Feedback after assigning Print Screen: red "Taken" when another app owns it (Case A),
+    /// amber advisory naming likely interceptors when a low-level hook may swallow it (Case B),
+    /// or cleared styling on success.
+    /// </summary>
+    private static void ApplyPrintScreenFeedback(TextBox hkBox, TextBox capturedBox,
+        System.Windows.Controls.ToolTip tooltip, bool canRegister, IReadOnlyList<string> interceptors)
+    {
+        if (!canRegister)
+        {
+            capturedBox.Text = LocalizationService.Translate("Taken");
+            hkBox.Foreground = System.Windows.Media.Brushes.Red;
+            hkBox.FontWeight = FontWeights.Bold;
+            tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
+            tooltip.IsOpen = true;
+            return;
+        }
+
+        if (interceptors.Count > 0)
+        {
+            hkBox.Foreground = HotkeyWarningBrush;
+            hkBox.FontWeight = FontWeights.SemiBold;
+            tooltip.Content = string.Format(
+                LocalizationService.Translate("Print Screen assigned, but {0} may intercept it. Close it or change its shortcut."),
+                string.Join(", ", interceptors));
+            tooltip.IsOpen = true;
+            return;
+        }
+
+        hkBox.ClearValue(TextBox.ForegroundProperty);
+        hkBox.ClearValue(TextBox.FontWeightProperty);
+        tooltip.IsOpen = false;
     }
 
     private static (uint Modifiers, uint Key) ClearHotkeyConflict(AppSettings settings, HotkeyConflict conflict)
