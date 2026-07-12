@@ -25,9 +25,26 @@
             </TransformGroup>
         </Border.RenderTransform>
 
+        <!-- Shadow plate (behind) + EdgeRing (1px solid ring via Padding, not BorderThickness).
+             The padding-ring technique avoids WPF's soft anti-aliased Border stroke on curves. -->
+        <Grid SnapsToDevicePixels="True" UseLayoutRounding="True">
+        <Border x:Name="ShadowPlate"
+                CornerRadius="10"
+                Background="Transparent"
+                IsHitTestVisible="False"
+                SnapsToDevicePixels="True"/>
+
+        <Border x:Name="EdgeRing"
+                CornerRadius="10"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="0"
+                SnapsToDevicePixels="True"
+                UseLayoutRounding="True">
         <Border x:Name="Root" CornerRadius="10" ClipToBounds="True"
                 MaxWidth="360" MinWidth="196"
-                SnapsToDevicePixels="True">
+                SnapsToDevicePixels="True"
+                UseLayoutRounding="True">
             <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition x:Name="TopProgressRow" Height="0"/>
@@ -242,17 +259,9 @@
                     </Border.RenderTransform>
                 </Border>
             </Grid>
-
-            <Border x:Name="ShellStroke"
-                    Grid.RowSpan="3"
-                    Margin="0"
-                    CornerRadius="10"
-                    Background="Transparent"
-                    BorderThickness="1"
-                    SnapsToDevicePixels="True"
-                    Visibility="Collapsed"
-                    IsHitTestVisible="False"/>
             </Grid>
         </Border>
+        </Border>
+        </Grid>
     </Border>
 </Window>

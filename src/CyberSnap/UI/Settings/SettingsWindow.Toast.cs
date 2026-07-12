@@ -705,16 +705,16 @@ public partial class SettingsWindow
         // or an eviction-preview occupant at 0.20 that ended up not evicted). Without this,
         // the stale transparency persists across refreshes and presets.
         border.Opacity = 1;
-        if (Theme.IsGray)
+        // Default Dark only: Settings chrome. Grayscale/Light keep prior teal/blue button fills.
+        if (Theme.IsDark && !Theme.IsGray)
         {
-            // Grayscale theme: no cyan. Neutral charcoal fill with a soft silver stroke.
+            border.Background = Theme.Brush(Theme.BgSecondary);
+            border.BorderBrush = Theme.Brush(Theme.BorderSubtle);
+        }
+        else if (Theme.IsGray)
+        {
             border.Background = Theme.Brush(Color.FromArgb(215, 24, 26, 29));
             border.BorderBrush = Theme.Brush(Color.FromArgb(130, 184, 190, 198));
-        }
-        else if (Theme.IsDark)
-        {
-            border.Background = Theme.Brush(Color.FromArgb(215, 6, 22, 28));
-            border.BorderBrush = Theme.Brush(Color.FromArgb(130, 0, 220, 220));
         }
         else
         {
@@ -849,9 +849,7 @@ public partial class SettingsWindow
         if (NotificationsEditorToggle is not null && NotificationsEditorToggle.IsChecked != editorOn)
             NotificationsEditorToggle.IsChecked = editorOn;
 
-        // Keep both previews faithful to the real toast: Theme.ToastBg fill and the same cyan/blue
-        // accent stroke ConfigureShell() gives the real toast's OuterShell. (Theme.ToastBorder is
-        // the wrong, white-ish stroke.)
+        // Keep both previews faithful to the real toast shell + OuterShell stroke.
         EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
         EditorToastMockShell.BorderBrush = ToastAccentStroke();
         if (EditorToastMockCloseIcon is not null)
@@ -864,18 +862,14 @@ public partial class SettingsWindow
             ToastLayoutShell.BorderBrush = ToastAccentStroke();
         }
 
-        // The image area used to be a hardcoded bright blue (#FF1A4F96) that clashed with the dark
-        // toast. The real toast's image frame sits right on ToastBg with only a hair of lift, so
-        // match that: reuse ToastBg per theme and nudge it a couple of levels lighter (dark/gray) or
-        // darker (light) so it still reads as a distinct "your capture goes here" panel. Note the UI
-        // "Dark" radio maps to Grayscale internally (IsGray), so that branch must be handled first.
+        // Image placeholder. Default Dark: Settings BgSecondary well. Gray/light: prior nudges.
         if (ToastLayoutImageArea is not null)
         {
             ToastLayoutImageArea.Background = Theme.Brush(Theme.IsGray
-                ? Color.FromRgb(0x1E, 0x20, 0x23)   // gray "Dark": ToastBg 30,32,35 nudged down
+                ? Color.FromRgb(0x1E, 0x20, 0x23)
                 : Theme.IsDark
-                ? Color.FromRgb(0x20, 0x21, 0x26)   // CyberSnap dark: ToastBg 26,27,31 nudged up
-                : Color.FromRgb(0xE2, 0xE5, 0xED));  // light: ToastBg 234,237,244 nudged down
+                ? Theme.BgSecondary
+                : Color.FromRgb(0xE2, 0xE5, 0xED));
         }
         if (ToastLayoutImageGlyph is not null)
         {
@@ -922,15 +916,12 @@ public partial class SettingsWindow
     private static void ApplyEditorPreviewEmphasis(UIElement card, bool active)
         => card.Opacity = active ? 1.0 : 0.40;
 
-    // The accent stroke ConfigureShell() applies to the real toast's OuterShell, shared by both
-    // notification previews so they match the real thing (and each other). Mirrors ConfigureShell
-    // exactly: silver under the grayscale ("Dark" radio) theme so the previews honour its no-colour
-    // promise, cyan in CyberSnap dark, blue in light.
+    // Outer stroke matching ToastWindow EdgeRing (default Dark solid cyan) or OuterShell rings.
     private static SolidColorBrush ToastAccentStroke()
         => Theme.Brush(Theme.IsGray
             ? Color.FromArgb(160, 184, 190, 198)
             : Theme.IsDark
-            ? Color.FromArgb(160, 0, 200, 215)
+            ? Theme.ToastBorder
             : Color.FromArgb(160, 0, 110, 205));
 
     // Paint a preview's bottom timeline rail to match the real toast's ProgressBar: the cyber
@@ -1046,7 +1037,17 @@ public partial class SettingsWindow
         => string.IsNullOrEmpty(label) ? label : char.ToUpperInvariant(label[0]) + label[1..];
 
     private static System.Drawing.Color GetToastLayoutIconColor(bool active)
-        => Theme.IsDark
+    {
+        // Default Dark: Settings text/accent tones. Other themes keep prior white/black icons.
+        if (Theme.IsDark && !Theme.IsGray)
+        {
+            var tone = active ? Theme.Accent : Theme.TextPrimary;
+            byte a = active ? (byte)255 : (byte)220;
+            return System.Drawing.Color.FromArgb(a, tone.R, tone.G, tone.B);
+        }
+
+        return Theme.IsDark
             ? System.Drawing.Color.FromArgb(active ? 255 : 220, 255, 255, 255)
             : System.Drawing.Color.FromArgb(active ? 255 : 210, 24, 24, 24);
+    }
 }

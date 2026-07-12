@@ -66,9 +66,15 @@ public static class Theme
     // Separator
     public static Color Separator => IsDark ? CA(255, 255, 255, 16) : CA(0, 0, 0, 10);
 
-    // Toast background (needs to be opaque enough to read)
-    public static Color ToastBg => P(C(30, 32, 35), C(26, 27, 31), C(234, 237, 244));
-    public static Color ToastBorder => IsDark ? CA(255, 255, 255, 30) : CA(0, 0, 0, 18);
+    // Toast shell. Only the default Dark theme (not Grayscale/Light) uses Settings CardBg so
+    // notifications match Configuración; gray/light keep the prior island palette.
+    public static Color ToastBg => P(C(30, 32, 35), C(23, 26, 40), C(234, 237, 244));
+    // Default Dark: muted teal hairline for the padding-ring edge. Opaque solid (composites
+    // cleanly) but washed toward ToastBg so it reads elegant like Settings WindowBorder@low-alpha,
+    // not a neon frame. Gray/light: prior soft white/black edge.
+    public static Color ToastBorder => (!IsGray && IsDark)
+        ? C(42, 108, 118)
+        : (IsDark ? CA(255, 255, 255, 30) : CA(0, 0, 0, 18));
 
     public static SolidColorBrush Brush(Color c) { var b = new SolidColorBrush(c); b.Freeze(); return b; }
 

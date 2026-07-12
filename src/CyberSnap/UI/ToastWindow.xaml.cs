@@ -58,15 +58,34 @@ public partial class ToastWindow : Window
     private readonly DispatcherTimer _officeMenuDismissTimer;
     private bool _officeMenuMouseWasDown;
 
+    private static bool IsDefaultDarkTheme()
+        => Theme.IsDark && !Theme.IsGray;
+
+    // Inner fill radius when EdgeRing uses a 1px padding ring (outer radius - stroke width).
+    private const double EdgeRingStrokeWidth = 1.0;
+    private static double InnerCornerRadius => Math.Max(0, RootCornerRadius - EdgeRingStrokeWidth);
+
     private static System.Windows.Media.Effects.DropShadowEffect CreateToastShadow()
-        => new()
+    {
+        // Default Dark: soft lift only — keep opacity modest so the halo doesn't muddy the edge ring.
+        bool defaultDark = IsDefaultDarkTheme();
+        return new()
         {
-            BlurRadius = 18,
-            ShadowDepth = 3,
-            Opacity = Theme.IsDark ? 0.32 : 0.20,
+            BlurRadius = defaultDark ? 20 : 18,
+            ShadowDepth = defaultDark ? 4 : 3,
+            Opacity = defaultDark ? 0.42 : (Theme.IsDark ? 0.32 : 0.20),
             Direction = 270,
-            Color = Colors.Black
+            Color = Colors.Black,
+            RenderingBias = System.Windows.Media.Effects.RenderingBias.Quality
         };
+    }
+
+    /// <summary>
+    /// Solid edge paint for the padding-ring technique. Opaque (clean composite) but muted —
+    /// Theme.ToastBorder is a teal washed into ToastBg so the 1px ring feels light, not neon.
+    /// </summary>
+    private static Color DefaultDarkToastStroke()
+        => Theme.ToastBorder;
 
     internal static (int Width, int Height, bool Framed) ComputeImageOnlyPreviewLayout(int sourceWidth, int sourceHeight)
     {
@@ -109,7 +128,8 @@ public partial class ToastWindow : Window
     {
         _spec = spec;
         InitializeComponent();
-        CyberSnapWindowChrome.ApplyRoundedCorners(this, 12);
+        // Match content CornerRadius exactly — a larger HWND radius left mismatched arcs at the tips.
+        CyberSnapWindowChrome.ApplyRoundedCorners(this, RootCornerRadius);
         Opacity = 0;
         Theme.Refresh();
         LoadOverlayIcons();
@@ -170,33 +190,86 @@ public partial class ToastWindow : Window
 
     private void ConfigureShell()
     {
-        OuterShell.Background = System.Windows.Media.Brushes.Transparent;
-        OuterShell.BorderBrush = Theme.Brush(Theme.IsGray
-            ? Color.FromArgb(160, 184, 190, 198)
-            : Theme.IsDark
-            ? Color.FromArgb(160, 0, 200, 215)
-            : Color.FromArgb(160, 0, 110, 205));
-        OuterShell.BorderThickness = new Thickness(1.0);
-        OuterShell.Effect = CreateToastShadow();
         Root.Background = Theme.Brush(Theme.ToastBg);
         Root.BorderBrush = System.Windows.Media.Brushes.Transparent;
         Root.BorderThickness = new Thickness(0);
+        Root.Effect = null;
         TitleText.Foreground = Theme.Brush(Theme.TextPrimary);
         BodyText.Foreground = Theme.Brush(Theme.TextSecondary);
-        ImageFrame.BorderBrush = Theme.Brush(Theme.IsDark
-            ? Color.FromArgb(28, 255, 255, 255)
-            : Color.FromArgb(18, 0, 0, 0));
-        ImageFrame.BorderThickness = new Thickness(1);
-        InlinePreviewHost.Background = Theme.Brush(Theme.IsDark
-            ? Color.FromArgb(22, 255, 255, 255)
-            : Color.FromArgb(12, 0, 0, 0));
-        InlinePreviewHost.BorderBrush = Theme.Brush(Theme.IsDark
-            ? Color.FromArgb(34, 255, 255, 255)
-            : Color.FromArgb(20, 0, 0, 0));
-        PreviewActionsDivider.Background = Theme.Brush(Theme.IsDark
-            ? Color.FromArgb(36, 255, 255, 255)
-            : Color.FromArgb(28, 0, 0, 0));
 
+        if (IsDefaultDarkTheme())
+        {
+            // Padding-ring edge: EdgeRing is a solid stroke-colored plate with Padding=1;
+            // Root sits inside as ToastBg with radius-1. No BorderThickness stroke → clean arcs.
+            OuterShell.Background = System.Windows.Media.Brushes.Transparent;
+            OuterShell.BorderBrush = System.Windows.Media.Brushes.Transparent;
+            OuterShell.BorderThickness = new Thickness(0);
+            OuterShell.CornerRadius = new CornerRadius(RootCornerRadius);
+            OuterShell.Effect = null;
+
+            ShadowPlate.Visibility = Visibility.Visible;
+            ShadowPlate.Background = Theme.Brush(Theme.ToastBg);
+            ShadowPlate.CornerRadius = new CornerRadius(RootCornerRadius);
+            ShadowPlate.Effect = CreateToastShadow();
+
+            EdgeRing.Background = Theme.Brush(DefaultDarkToastStroke());
+            EdgeRing.Padding = new Thickness(EdgeRingStrokeWidth);
+            EdgeRing.CornerRadius = new CornerRadius(RootCornerRadius);
+            EdgeRing.BorderThickness = new Thickness(0);
+            EdgeRing.SnapsToDevicePixels = true;
+            EdgeRing.UseLayoutRounding = true;
+
+            Root.CornerRadius = new CornerRadius(InnerCornerRadius);
+            Root.SnapsToDevicePixels = true;
+            Root.UseLayoutRounding = true;
+
+            // Soft glow on the progress rail bleeds past the bottom arcs.
+            ProgressGlow.BlurRadius = 0;
+            ProgressGlow.Opacity = 0;
+
+            ImageFrame.BorderBrush = Theme.Brush(Theme.BorderSubtle);
+            InlinePreviewHost.Background = Theme.Brush(Theme.BgSecondary);
+            InlinePreviewHost.BorderBrush = Theme.Brush(Theme.BorderSubtle);
+            PreviewActionsDivider.Background = Theme.Brush(Theme.Separator);
+        }
+        else
+        {
+            // Grayscale / Light: prior OuterShell border + shadow (unchanged).
+            OuterShell.Background = System.Windows.Media.Brushes.Transparent;
+            OuterShell.BorderBrush = Theme.Brush(Theme.IsGray
+                ? Color.FromArgb(160, 184, 190, 198)
+                : Color.FromArgb(160, 0, 110, 205));
+            OuterShell.BorderThickness = new Thickness(1.0);
+            OuterShell.CornerRadius = new CornerRadius(12);
+            OuterShell.Effect = CreateToastShadow();
+
+            ShadowPlate.Visibility = Visibility.Collapsed;
+            ShadowPlate.Effect = null;
+
+            EdgeRing.Background = System.Windows.Media.Brushes.Transparent;
+            EdgeRing.Padding = new Thickness(0);
+            EdgeRing.CornerRadius = new CornerRadius(RootCornerRadius);
+            EdgeRing.BorderThickness = new Thickness(0);
+
+            Root.CornerRadius = new CornerRadius(RootCornerRadius);
+
+            ProgressGlow.BlurRadius = 8;
+            ProgressGlow.Opacity = 0.8;
+
+            ImageFrame.BorderBrush = Theme.Brush(Theme.IsDark
+                ? Color.FromArgb(28, 255, 255, 255)
+                : Color.FromArgb(18, 0, 0, 0));
+            InlinePreviewHost.Background = Theme.Brush(Theme.IsDark
+                ? Color.FromArgb(22, 255, 255, 255)
+                : Color.FromArgb(12, 0, 0, 0));
+            InlinePreviewHost.BorderBrush = Theme.Brush(Theme.IsDark
+                ? Color.FromArgb(34, 255, 255, 255)
+                : Color.FromArgb(20, 0, 0, 0));
+            PreviewActionsDivider.Background = Theme.Brush(Theme.IsDark
+                ? Color.FromArgb(36, 255, 255, 255)
+                : Color.FromArgb(28, 0, 0, 0));
+        }
+        ImageFrame.BorderThickness = new Thickness(1);
     }
 
     internal bool TryUpdateInPlace(ToastSpec spec)
@@ -313,18 +386,32 @@ public partial class ToastWindow : Window
         if (spec.TransparentShell)
         {
             OuterShell.Background = System.Windows.Media.Brushes.Transparent;
+            ShadowPlate.Visibility = Visibility.Collapsed;
+            ShadowPlate.Effect = null;
+            EdgeRing.Background = System.Windows.Media.Brushes.Transparent;
+            EdgeRing.Padding = new Thickness(0);
         }
 
         if (spec.IsError)
         {
             var red = Color.FromRgb(239, 68, 68);
-            Root.Background = Theme.Brush(Theme.IsDark
-                ? Color.FromRgb(60, 28, 28)
-                : Color.FromRgb(255, 240, 240));
-            OuterShell.BorderBrush = Theme.Brush(Color.FromArgb(160, red.R, red.G, red.B));
-            OuterShell.BorderThickness = new Thickness(1.0);
+            var errorFill = Theme.IsDark ? Color.FromRgb(60, 28, 28) : Color.FromRgb(255, 240, 240);
+            Root.Background = Theme.Brush(errorFill);
             ProgressBar.Background = Theme.Brush(Color.FromArgb(180, red.R, red.G, red.B));
             TitleText.Foreground = Theme.Brush(red);
+
+            if (IsDefaultDarkTheme())
+            {
+                ShadowPlate.Background = Theme.Brush(errorFill);
+                EdgeRing.Background = Theme.Brush(Color.FromRgb(red.R, red.G, red.B));
+                EdgeRing.Padding = new Thickness(EdgeRingStrokeWidth);
+                OuterShell.BorderThickness = new Thickness(0);
+            }
+            else
+            {
+                OuterShell.BorderBrush = Theme.Brush(Color.FromArgb(160, red.R, red.G, red.B));
+                OuterShell.BorderThickness = new Thickness(1.0);
+            }
         }
 
         ApplyCelebrationVisual(spec.Celebrate && !spec.IsError);
@@ -366,7 +453,8 @@ public partial class ToastWindow : Window
             System.Windows.Controls.Grid.SetRowSpan(ImageArea, 1);
             Root.Background = Theme.Brush(Theme.ToastBg);
             ImageFrame.Background = Theme.Brush(Theme.ToastBg);
-            ImageFrame.CornerRadius = new CornerRadius(10, 10, 0, 0);
+            double topR = IsDefaultDarkTheme() ? InnerCornerRadius : RootCornerRadius;
+            ImageFrame.CornerRadius = new CornerRadius(topR, topR, 0, 0);
             ImageFrame.BorderThickness = new Thickness(0);
         }
         else
@@ -383,7 +471,8 @@ public partial class ToastWindow : Window
             System.Windows.Controls.Grid.SetRowSpan(ImageArea, 1);
             Root.Background = Theme.Brush(Theme.ToastBg);
             ImageFrame.Background = Theme.Brush(Theme.ToastBg);
-            ImageFrame.CornerRadius = new CornerRadius(10, 10, 0, 0);
+            double topR = IsDefaultDarkTheme() ? InnerCornerRadius : RootCornerRadius;
+            ImageFrame.CornerRadius = new CornerRadius(topR, topR, 0, 0);
             ImageFrame.BorderThickness = new Thickness(1);
         }
 
@@ -475,8 +564,20 @@ public partial class ToastWindow : Window
         };
     }
 
+    // Default Dark only: Settings chrome (BgSecondary/BorderSubtle, hover lift). Grayscale/Light keep prior fills.
     private static void ApplyToastOverlayButtonVisual(System.Windows.Controls.Border btn, System.Windows.Controls.Image icon, string iconId, bool active)
     {
+        if (IsDefaultDarkTheme())
+        {
+            btn.Background = Theme.Brush(active ? Theme.BgHover : Theme.BgSecondary);
+            btn.BorderBrush = Theme.Brush(active ? Theme.Border : Theme.BorderSubtle);
+            var iconTone = active ? Theme.Accent : Theme.TextPrimary;
+            var iconColor = System.Drawing.Color.FromArgb(iconTone.A, iconTone.R, iconTone.G, iconTone.B);
+            btn.BorderThickness = new Thickness(1);
+            icon.Source = FluentIcons.RenderWpf(iconId, iconColor, 22, active);
+            return;
+        }
+
         if (Theme.IsGray)
         {
             btn.Background = Theme.Brush(active
@@ -485,15 +586,6 @@ public partial class ToastWindow : Window
             btn.BorderBrush = Theme.Brush(active
                 ? Color.FromArgb(255, 184, 190, 198)
                 : Color.FromArgb(130, 150, 156, 164));
-        }
-        else if (Theme.IsDark)
-        {
-            btn.Background = Theme.Brush(active
-                ? Color.FromArgb(235, 12, 50, 62)
-                : Color.FromArgb(215, 6, 22, 28));
-            btn.BorderBrush = Theme.Brush(active
-                ? Color.FromArgb(255, 0, 255, 255)
-                : Color.FromArgb(130, 0, 220, 220));
         }
         else
         {
@@ -506,12 +598,10 @@ public partial class ToastWindow : Window
         }
         btn.BorderThickness = new Thickness(1);
 
-        var iconColor = Theme.IsGray
+        var legacyIcon = Theme.IsGray
             ? (active ? System.Drawing.Color.FromArgb(255, 184, 190, 198) : System.Drawing.Color.FromArgb(235, 255, 255, 255))
-            : Theme.IsDark
-            ? (active ? System.Drawing.Color.FromArgb(255, 0, 255, 255) : System.Drawing.Color.FromArgb(235, 255, 255, 255))
             : (active ? System.Drawing.Color.FromArgb(255, 0, 90, 180) : System.Drawing.Color.FromArgb(235, 24, 24, 24));
-        icon.Source = FluentIcons.RenderWpf(iconId, iconColor, 22, active);
+        icon.Source = FluentIcons.RenderWpf(iconId, legacyIcon, 22, active);
     }
 
     private void HookOverlayButtons()
@@ -1446,6 +1536,23 @@ public partial class ToastWindow : Window
         if (Root.ActualWidth <= 0 || Root.ActualHeight <= 0)
             return;
 
+        // Default Dark: clip fill/content to the INNER radius. EdgeRing's solid padding ring
+        // (outer radius) is outside Root, so the progress rail is clipped by this geometry and
+        // follows the same arcs instead of painting square ends across the curve.
+        if (IsDefaultDarkTheme())
+        {
+            double r = InnerCornerRadius;
+            var geo = new RectangleGeometry(
+                new Rect(0, 0, Root.ActualWidth, Root.ActualHeight),
+                r, r);
+            geo.Freeze();
+            Root.Clip = geo;
+            Root.CornerRadius = new CornerRadius(r);
+            EdgeRing.CornerRadius = new CornerRadius(RootCornerRadius);
+            ShadowPlate.CornerRadius = new CornerRadius(RootCornerRadius);
+            return;
+        }
+
         const double inset = 0.5;
         Root.Clip = new RectangleGeometry(
             new Rect(inset, inset, Math.Max(0, Root.ActualWidth - (inset * 2)), Math.Max(0, Root.ActualHeight - (inset * 2))),
@@ -1684,10 +1791,20 @@ public partial class ToastWindow : Window
     private void BeginDragFeedback()
     {
         CancelDismissForHover();
-        _dragBorderThickness = OuterShell.BorderThickness;
-        _dragBorderBrush = OuterShell.BorderBrush;
-        OuterShell.BorderBrush = Theme.Brush(Color.FromArgb(230, 255, 255, 255));
-        OuterShell.BorderThickness = new Thickness(2.4);
+        if (IsDefaultDarkTheme())
+        {
+            // Padding-ring: flash the solid EdgeRing fill brighter while dragging.
+            _dragBorderBrush = EdgeRing.Background;
+            _dragBorderThickness = EdgeRing.Padding;
+            EdgeRing.Background = Theme.Brush(Color.FromRgb(230, 250, 255));
+        }
+        else
+        {
+            _dragBorderThickness = OuterShell.BorderThickness;
+            _dragBorderBrush = OuterShell.BorderBrush;
+            OuterShell.BorderBrush = Theme.Brush(Color.FromArgb(230, 255, 255, 255));
+            OuterShell.BorderThickness = new Thickness(2.4);
+        }
         DragScale.CenterX = ActualWidth / 2;
         DragScale.CenterY = ActualHeight / 2;
         DragScale.BeginAnimation(ScaleTransform.ScaleXProperty,
@@ -1699,9 +1816,20 @@ public partial class ToastWindow : Window
 
     private void EndDragFeedback(bool cancelled)
     {
-        if (_dragBorderBrush is not null)
-            OuterShell.BorderBrush = _dragBorderBrush;
-        OuterShell.BorderThickness = _dragBorderThickness;
+        if (IsDefaultDarkTheme())
+        {
+            if (_dragBorderBrush is not null)
+                EdgeRing.Background = _dragBorderBrush;
+            EdgeRing.Padding = _dragBorderThickness == default
+                ? new Thickness(EdgeRingStrokeWidth)
+                : _dragBorderThickness;
+        }
+        else
+        {
+            if (_dragBorderBrush is not null)
+                OuterShell.BorderBrush = _dragBorderBrush;
+            OuterShell.BorderThickness = _dragBorderThickness;
+        }
         _dragBorderBrush = null;
         DragScale.BeginAnimation(ScaleTransform.ScaleXProperty,
             Motion.To(1, 140, Motion.SmoothOut));
@@ -1851,9 +1979,20 @@ public partial class ToastWindow : Window
         ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
         ProgressScale.ScaleX = 1;
         ProgressBar.Visibility = Visibility.Visible;
-        if (_dragBorderBrush is not null)
-            OuterShell.BorderBrush = _dragBorderBrush;
-        OuterShell.BorderThickness = _dragBorderThickness == default ? new Thickness(1.0) : _dragBorderThickness;
+        if (IsDefaultDarkTheme())
+        {
+            if (_dragBorderBrush is not null)
+                EdgeRing.Background = _dragBorderBrush;
+            EdgeRing.Padding = _dragBorderThickness == default
+                ? new Thickness(EdgeRingStrokeWidth)
+                : _dragBorderThickness;
+        }
+        else
+        {
+            if (_dragBorderBrush is not null)
+                OuterShell.BorderBrush = _dragBorderBrush;
+            OuterShell.BorderThickness = _dragBorderThickness == default ? new Thickness(1.0) : _dragBorderThickness;
+        }
         _dragBorderBrush = null;
         _dragBorderThickness = default;
         Mouse.OverrideCursor = null;
@@ -2330,8 +2469,17 @@ public partial class ToastWindow : Window
             _celebrationSweep?.BeginAnimation(TranslateTransform.XProperty, null);
             ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.BlurRadiusProperty, null);
             ProgressGlow.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty, null);
-            ProgressGlow.BlurRadius = 8;
-            ProgressGlow.Opacity = 0.8;
+            // Default Dark keeps the rail glow off so bottom corner arcs stay sharp.
+            if (IsDefaultDarkTheme())
+            {
+                ProgressGlow.BlurRadius = 0;
+                ProgressGlow.Opacity = 0;
+            }
+            else
+            {
+                ProgressGlow.BlurRadius = 8;
+                ProgressGlow.Opacity = 0.8;
+            }
             ProgressHost.ClipToBounds = true;
             // Don't clobber the red error brush; restore the normal gradient otherwise.
             if (!_spec.IsError && _defaultProgressBrush is not null)
@@ -2361,10 +2509,11 @@ public partial class ToastWindow : Window
             : new System.Windows.Point(0, 0.5);
 
         // When the bar sits on top, square the image's upper corners so the rounded
-        // notch doesn't peek out beneath the timeline.
+        // notch doesn't peek out beneath the timeline. Inner radius matches EdgeRing inset.
+        double imageR = IsDefaultDarkTheme() ? InnerCornerRadius : RootCornerRadius;
         ImageFrame.CornerRadius = topEdge
             ? new CornerRadius(0)
-            : new CornerRadius(RootCornerRadius, RootCornerRadius, 0, 0);
+            : new CornerRadius(imageR, imageR, 0, 0);
     }
 
     [DllImport("user32.dll")]
