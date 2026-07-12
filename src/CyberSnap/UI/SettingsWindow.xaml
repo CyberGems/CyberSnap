@@ -2703,12 +2703,12 @@
                                     <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Enable editor" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Open the annotation editor after each image capture (not for video or GIF)." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Send to Editor" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Send image captures to the Annotation Editor (not for video or GIF)." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="WidgetEnableEditorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Enable editor"
-                                          ToolTip="Open the post-capture editor for annotations after capturing."
+                                          AutomationProperties.Name="Send to Editor"
+                                          ToolTip="Send image captures to the Annotation Editor"
                                           Checked="WidgetEnableEditorCheck_Changed" Unchecked="WidgetEnableEditorCheck_Changed"/>
                             </Grid>
                             <Border x:Name="WidgetEnableEditorSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -3254,14 +3254,14 @@
                                     </StackPanel>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="16,0,0,0">
-                                    <TextBlock Services:LocalizationService.SourceText="Toast preview click action" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6"
+                                    <TextBlock Services:LocalizationService.SourceText="Notification preview click action" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6"
                                                HorizontalAlignment="Right"
                                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                     <ComboBox x:Name="ToastPreviewClickActionCombo" MinWidth="190"
                                               HorizontalAlignment="Right"
                                               VerticalAlignment="Center"
-                                              AutomationProperties.Name="Toast preview click action"
-                                              Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a toast."
+                                              AutomationProperties.Name="Notification preview click action"
+                                              Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a notification."
                                               SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
                                         <ComboBoxItem Content="Open in editor"
                                                       Services:LocalizationService.SourceToolTip="Open the capture in the built-in editor."
@@ -3336,12 +3336,12 @@
                                         <!-- Live editor toggle (same setting as the widget's). -->
                                         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,2,0,0" VerticalAlignment="Top">
                                             <CheckBox x:Name="NotificationsEditorToggle" VerticalAlignment="Center"
-                                                      AutomationProperties.Name="Enable editor"
-                                                      Services:LocalizationService.SourceToolTip="Open the editor after each image capture. Toggle it to see how the notifications change."
+                                                      AutomationProperties.Name="Send to Editor"
+                                                      Services:LocalizationService.SourceToolTip="Send image captures to the Annotation Editor. Toggle it to see how the notifications change."
                                                       Checked="NotificationsEditorToggle_Changed" Unchecked="NotificationsEditorToggle_Changed"/>
-                                            <TextBlock Services:LocalizationService.SourceText="Enable editor" VerticalAlignment="Center" Margin="8,0,0,0"
+                                            <TextBlock Services:LocalizationService.SourceText="Send to Editor" VerticalAlignment="Center" Margin="8,0,0,0"
                                                        FontSize="13" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                       Services:LocalizationService.SourceToolTip="Open the editor after each image capture. Toggle it to see how the notifications change."/>
+                                                       Services:LocalizationService.SourceToolTip="Send image captures to the Annotation Editor. Toggle it to see how the notifications change."/>
                                         </StackPanel>
 
                                         <!-- Fixed text-toast mock, bottom-aligned to the big preview. -->
