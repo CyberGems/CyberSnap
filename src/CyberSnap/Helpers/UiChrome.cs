@@ -35,10 +35,11 @@ public static class UiChrome
     public const float ChromeHintSize = 13f;
     public const string DefaultFontFamily = "Segoe UI";
 
-    public static double UiScale { get; private set; } = 1.0;
+    // Real LayoutTransform factor (matches CyberSnap.UI.UiScale). Default 1.1 = Settings "100%".
+    public static double UiScale { get; private set; } = 1.1;
 
     public static void SetUiScale(double scale)
-        => UiScale = Math.Clamp(double.IsFinite(scale) ? scale : 1.0, 1.0, 1.4);
+        => UiScale = Math.Clamp(double.IsFinite(scale) ? scale : 1.1, 1.0, 1.4);
 
     public static int ScaleInt(int value)
         => Math.Max(1, (int)Math.Round(value * UiScale, MidpointRounding.AwayFromZero));
