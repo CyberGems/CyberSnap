@@ -629,7 +629,14 @@ public partial class SettingsWindow
 
     private void TabChanged(object sender, RoutedEventArgs e)
     {
-        ApplyMainTabSelection();
+        if (_isSearching)
+        {
+            HideSearchBar();
+        }
+        else
+        {
+            ApplyMainTabSelection();
+        }
     }
 
     private void ApplyMainTabSelection()
