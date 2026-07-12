@@ -99,6 +99,38 @@ public static class Theme
         resources["SoundItemCustomSourceBrush"] = Brush(AccentHover);
     }
 
+    /// <summary>
+    /// Immutable colour snapshot for a single theme, used to paint the theme-selector
+    /// mini-previews. Computed off-band so drawing four cards never touches the global
+    /// IsDark/IsGray state (which Refresh() drives before every capture).
+    /// </summary>
+    public readonly record struct ThemePalette(
+        Color Background, Color Surface, Color Accent, Color TextLine, Color TextMuted);
+
+    // Pure palette builder: same formulas as the P()-based properties above, but
+    // parameterized instead of reading the static IsDark/IsGray. Only the ~5 colours a
+    // preview card needs are duplicated here; keep in sync with BgPrimary/BgCard/Accent/
+    // TextPrimary/TextSecondary if those change.
+    private static ThemePalette Palette(bool isDark, bool isGray)
+    {
+        Color Pick(Color gray, Color dark, Color light) => isGray ? gray : (isDark ? dark : light);
+        return new ThemePalette(
+            Background: Pick(C(22, 24, 27), C(13, 15, 23), C(223, 226, 234)),
+            Surface:    Pick(C(36, 39, 43), C(23, 26, 40), C(236, 239, 246)),
+            Accent:     Pick(GraySilver, C(0, 255, 255), C(0, 120, 215)),
+            TextLine:   Pick(C(232, 234, 236), C(230, 240, 255), C(26, 26, 26)),
+            TextMuted:  Pick(C(166, 171, 178), C(160, 180, 210), C(96, 96, 96)));
+    }
+
+    /// <summary>Colour snapshot for a theme mode; System resolves the live OS theme.</summary>
+    public static ThemePalette PreviewPalette(Models.AppThemeMode mode) => mode switch
+    {
+        Models.AppThemeMode.Dark => Palette(isDark: true, isGray: false),
+        Models.AppThemeMode.Grayscale => Palette(isDark: true, isGray: true),
+        Models.AppThemeMode.Light => Palette(isDark: false, isGray: false),
+        _ => Palette(isDark: DetectDarkMode(), isGray: false)   // System
+    };
+
     private static Models.AppThemeMode _forcedMode = Models.AppThemeMode.System;
 
     /// <summary>Set the app-wide theme mode and refresh IsDark.</summary>
