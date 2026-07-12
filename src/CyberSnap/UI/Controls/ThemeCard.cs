@@ -96,12 +96,12 @@ internal sealed class ThemeCard : RadioButton
 
         Content = Build();
         UpdateSelectionVisual();
-        UpdateDefaultTooltip();
 
         Checked += (_, _) => UpdateSelectionVisual();
         Unchecked += (_, _) => UpdateSelectionVisual();
         MouseEnter += (_, _) => UpdateSelectionVisual();
         MouseLeave += (_, _) => UpdateSelectionVisual();
+        Loaded += (_, _) => UpdateDefaultTooltip();
     }
 
     private static void OnVisualChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
