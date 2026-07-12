@@ -490,6 +490,8 @@ public partial class SettingsWindow
     {
         LocalizationService.ApplyCurrentCulture(_settingsService.Settings.InterfaceLanguage);
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
+        // Re-apply the default theme tooltip after ApplyTo re-translates it from SourceToolTip.
+        ThemeDarkRadio?.ApplyDefaultTooltip();
         // Second pass on AboutPanel specifically — ensures SourceText/SourceToolTip/SourceContent
         // are processed even if the first pass missed them (e.g., due to template timing).
         LocalizationService.ApplyTo(AboutPanel, _settingsService.Settings.InterfaceLanguage);
