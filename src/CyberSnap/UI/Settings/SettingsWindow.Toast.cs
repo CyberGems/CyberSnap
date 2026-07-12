@@ -857,7 +857,16 @@ public partial class SettingsWindow
         if (EditorToastMockShell is null || EditorButtonsCard is null)
             return;
 
+        // Two related-but-separate settings: images → editor, video/GIF → trimmer.
+        // The widget toggle often sets both; Settings can set them independently.
         bool editorOn = _settingsService.Settings.OpenEditorAfterCapture;
+        bool trimmerOn = _settingsService.Settings.OpenVideoTrimmerAfterCapture;
+        // Video/GIF "success" path skips the designed preview toast when the trimmer opens
+        // (only an encoding system wait toast). Images skip it when the editor opens.
+        bool designedToastForImages = !editorOn;
+        bool designedToastForVideo = !trimmerOn;
+        bool videoOnlyOnRight = editorOn && designedToastForVideo;
+        bool showVideoBadge = videoOnlyOnRight; // badge when the mock is video/GIF-only
 
         // Keep the in-panel editor toggle reflecting the setting. Setting IsChecked to the same
         // value is a no-op; a real change makes the handler re-enter, but it early-outs once the
@@ -889,24 +898,30 @@ public partial class SettingsWindow
         }
         if (ToastLayoutImageGlyph is not null)
         {
-            ToastLayoutImageGlyph.Foreground = Theme.Brush(Theme.IsDark
-                ? Color.FromRgb(255, 255, 255)
-                : Color.FromRgb(0, 0, 0));
-            // Fainter under the video play badge so the badge reads first.
-            ToastLayoutImageGlyph.Opacity = editorOn
-                ? (Theme.IsDark ? 0.10 : 0.14)
-                : (Theme.IsDark ? 0.14 : 0.20);
+            // In video-only mock mode the play badge is enough — hide the photo glyph entirely.
+            if (showVideoBadge)
+            {
+                ToastLayoutImageGlyph.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                ToastLayoutImageGlyph.Visibility = Visibility.Visible;
+                ToastLayoutImageGlyph.Foreground = Theme.Brush(Theme.IsDark
+                    ? Color.FromRgb(255, 255, 255)
+                    : Color.FromRgb(0, 0, 0));
+                ToastLayoutImageGlyph.Opacity = Theme.IsDark ? 0.14 : 0.20;
+            }
         }
 
-        // Gallery-style VID/GIF cues when the right mock covers only video/GIF captures.
-        UpdateCapturePreviewMediaBadge(videoMode: editorOn);
+        // Neutral play badge when the right mock is video/GIF-only (matches the live notification).
+        UpdateCapturePreviewMediaBadge(videoMode: showVideoBadge);
 
         // Both mock timeline rails carry the cyber cyan/purple/magenta gradient hardcoded in XAML.
         // In grayscale, swap to the sober silver ramp so previews stay faithful.
         ApplyMockRail(EditorToastMockRail, EditorToastMockRailGlow);
         ApplyMockRail(ToastLayoutRail, ToastLayoutRailGlow);
 
-        // Left: show the system-alert example only when Send to Editor is on; otherwise a short note.
+        // Left: system-alert example only when images are sent to the editor.
         if (EditorToastMockShell is not null)
             EditorToastMockShell.Visibility = editorOn ? Visibility.Visible : Visibility.Collapsed;
         if (SystemAlertExampleLabel is not null)
@@ -914,13 +929,16 @@ public partial class SettingsWindow
         if (SystemAlertOffNote is not null)
             SystemAlertOffNote.Visibility = editorOn ? Visibility.Collapsed : Visibility.Visible;
 
-        // Right: capture-notification designer always applies to something.
-        ApplyEditorPreviewEmphasis(EditorButtonsCard, active: true);
+        // Right: designed capture notification — used for whatever is NOT auto-sent to Editor/Trimmer.
+        ApplyEditorPreviewEmphasis(EditorButtonsCard, active: designedToastForImages || designedToastForVideo);
         if (EditorPreviewOtherCaption is not null)
         {
-            string caption = Services.LocalizationService.Translate(editorOn
-                ? "Capture notification (video and GIF)"
-                : "Capture notification (all)");
+            string captionKey =
+                designedToastForImages && designedToastForVideo ? "Capture notification (all)" :
+                designedToastForImages ? "Capture notification (images)" :
+                designedToastForVideo ? "Capture notification (video and GIF)" :
+                "Capture notification (when not opened automatically)";
+            string caption = Services.LocalizationService.Translate(captionKey);
             EditorPreviewOtherCaption.Text = caption;
             AutomationProperties.SetName(EditorPreviewOtherCaption, caption);
         }
@@ -934,12 +952,27 @@ public partial class SettingsWindow
 
         if (EditorPreviewGuide is not null)
         {
-            string guide = Services.LocalizationService.Translate(editorOn
-                ? "With Send to Editor on, image captures open in the editor and show only this brief system alert. The design on the right is the capture notification used for video and GIF (preview and actions)."
-                : "Every capture uses the capture notification you design on the right (preview and actions). Turn on Send to Editor to open images in the editor and show the brief system alert on the left instead.");
+            string guide = Services.LocalizationService.Translate(BuildDesignerGuideKey(
+                editorOn, trimmerOn, designedToastForImages, designedToastForVideo));
             EditorPreviewGuide.Text = guide;
             AutomationProperties.SetName(EditorPreviewGuide, guide);
         }
+    }
+
+    private static string BuildDesignerGuideKey(
+        bool editorOn, bool trimmerOn, bool designedToastForImages, bool designedToastForVideo)
+    {
+        if (designedToastForImages && designedToastForVideo)
+            return "Every capture uses the capture notification you design on the right (preview and actions). Turn on Send to Editor to open images in the editor and show the brief system alert on the left instead.";
+
+        if (editorOn && trimmerOn)
+            return "Images open in the editor (brief system alert on the left). Video and GIF open in the trimmer with an encoding wait alert. The design on the right is only used if those automatic opens are off or fail.";
+
+        if (editorOn && designedToastForVideo)
+            return "With Send to Editor on, image captures open in the editor and show only this brief system alert. Video and GIF still use the capture notification you design on the right (unless Send to Trimmer is also on in Video settings).";
+
+        // Images use the designed toast; video goes to trimmer.
+        return "Image captures use the notification you design on the right. Video and GIF open in the trimmer with an encoding wait alert (Send to Trimmer is on).";
     }
 
     private static void ApplyEditorPreviewEmphasis(UIElement card, bool active)
