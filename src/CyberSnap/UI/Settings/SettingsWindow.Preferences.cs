@@ -351,6 +351,8 @@ public partial class SettingsWindow
             (PosBlock_TopLeft, PosDot_TopLeft, ToastPosition.TopLeft),
             (PosBlock_TopCenter, PosDot_TopCenter, ToastPosition.TopCenter),
             (PosBlock_TopRight, PosDot_TopRight, ToastPosition.TopRight),
+            (PosBlock_Left, PosDot_Left, ToastPosition.Left),
+            (PosBlock_Right, PosDot_Right, ToastPosition.Right),
             (PosBlock_BottomLeft, PosDot_BottomLeft, ToastPosition.BottomLeft),
             (PosBlock_BottomCenter, PosDot_BottomCenter, ToastPosition.BottomCenter),
             (PosBlock_BottomRight, PosDot_BottomRight, ToastPosition.BottomRight)
@@ -543,7 +545,7 @@ public partial class SettingsWindow
             value => _settingsService.Settings.NotificationsEnabled = value,
             value => NotificationsEnabledCheck.IsChecked = value,
             ToastWindow.SetNotificationsEnabled,
-            value => UpdateSystemNotificationsRowState(value));
+            value => UpdateNotificationsDependentState(value));
     }
 
     private void SystemNotificationsCheck_Changed(object sender, RoutedEventArgs e)
@@ -584,12 +586,30 @@ public partial class SettingsWindow
         RefreshAchievements();
     }
 
-    // The "System messages" sub-toggle only applies while the master switch is on, so it is
-    // greyed out and disabled when notifications are turned off entirely.
-    private void UpdateSystemNotificationsRowState(bool notificationsEnabled)
+    /// <summary>
+    /// When the master "Show notifications" switch is off, dim and disable the rest of the
+    /// Notifications tab (sub-types, placement, timing, and design) so those controls are not
+    /// inviting configuration that has no visible effect.
+    /// </summary>
+    private void UpdateNotificationsDependentState(bool notificationsEnabled)
     {
-        SystemNotificationsRow.IsEnabled = notificationsEnabled;
-        SystemNotificationsRow.Opacity = notificationsEnabled ? 1.0 : 0.45;
+        UpdateSystemNotificationsRowState(notificationsEnabled);
+        ApplyNotificationsDependentVisual(CelebrationsNotificationsRow, notificationsEnabled);
+        ApplyNotificationsDependentVisual(NotificationsPlacementSection, notificationsEnabled);
+        ApplyNotificationsDependentVisual(NotificationsTimingSection, notificationsEnabled);
+        ApplyNotificationsDependentVisual(NotificationsDesignSection, notificationsEnabled);
+    }
+
+    // The "System messages" sub-toggle only applies while the master switch is on.
+    private void UpdateSystemNotificationsRowState(bool notificationsEnabled)
+        => ApplyNotificationsDependentVisual(SystemNotificationsRow, notificationsEnabled);
+
+    private static void ApplyNotificationsDependentVisual(UIElement? element, bool enabled)
+    {
+        if (element is null)
+            return;
+        element.IsEnabled = enabled;
+        element.Opacity = enabled ? 1.0 : 0.45;
     }
 
     private void UpdateToastPreference<T>(

@@ -18,7 +18,11 @@ public enum ToastPosition
     BottomLeft,
     BottomRight,
     TopCenter,
-    BottomCenter
+    BottomCenter,
+    // Vertically centered on the left/right edge (restored from the pre-grid selector).
+    // Appended so existing serialized numeric values stay stable.
+    Left,
+    Right
 }
 
 public enum ToastButtonSlot

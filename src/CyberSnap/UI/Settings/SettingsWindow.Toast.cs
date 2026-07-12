@@ -960,15 +960,6 @@ public partial class SettingsWindow
         if (CaptureDesignIdleNote is not null)
             CaptureDesignIdleNote.Visibility = Visibility.Collapsed;
 
-        if (EditorPreviewOtherCaption is not null)
-        {
-            // Caption stays stable — "what this panel is", not a per-toggle mode flip.
-            string caption = Services.LocalizationService.Translate(
-                "Capture notification (when not opened automatically)");
-            EditorPreviewOtherCaption.Text = caption;
-            AutomationProperties.SetName(EditorPreviewOtherCaption, caption);
-        }
-
         if (EditorPreviewImagesCaption is not null)
         {
             string leftCaption = Services.LocalizationService.Translate("System alert");

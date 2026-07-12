@@ -2511,6 +2511,8 @@ public partial class ToastWindow : Window
         CyberSnap.Models.ToastPosition.BottomLeft => (-56, 0),
         CyberSnap.Models.ToastPosition.TopCenter => (0, -32),
         CyberSnap.Models.ToastPosition.BottomCenter => (0, 32),
+        CyberSnap.Models.ToastPosition.Left => (-56, 0),
+        CyberSnap.Models.ToastPosition.Right => (56, 0),
         _ => (56, 0)
     };
 
