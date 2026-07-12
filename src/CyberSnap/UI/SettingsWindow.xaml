@@ -3230,43 +3230,44 @@
                                                 AutomationProperties.Name="Manual layout"
                                                 AutomationProperties.HelpText="Unlock the per-button controls to place each button yourself."
                                                 Services:LocalizationService.SourceToolTip="Customize each button yourself" Click="ToastManualBtn_Click"/>
+                                        <!-- Same circular-arrow control as Capture → file name pattern reset. -->
+                                        <Button x:Name="ResetToastButtonsBtn" Content="↺"
+                                                Margin="16,0,0,0" Width="32" Height="32" Padding="0"
+                                                FontSize="14" FontWeight="Bold" Cursor="Hand"
+                                                AutomationProperties.Name="Default notification layout"
+                                                Services:LocalizationService.SourceToolTip="Restore the default button layout and preview click action."
+                                                Click="ResetToastButtonsBtn_Click"/>
                                     </StackPanel>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="16,0,0,0">
                                     <TextBlock Services:LocalizationService.SourceText="Toast preview click action" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6"
                                                HorizontalAlignment="Right"
                                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                        <ComboBox x:Name="ToastPreviewClickActionCombo" MinWidth="190" Margin="0,0,8,0"
-                                                  VerticalAlignment="Center"
-                                                  AutomationProperties.Name="Toast preview click action"
-                                                  Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a toast."
-                                                  SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
-                                            <ComboBoxItem Content="Open in editor"
-                                                          Services:LocalizationService.SourceToolTip="Open the capture in the built-in editor."
-                                                          AutomationProperties.Name="Open in editor"/>
-                                            <ComboBoxItem Content="Open in default viewer"
-                                                          Services:LocalizationService.SourceToolTip="Open the file with the system default image viewer."
-                                                          AutomationProperties.Name="Open in default viewer"/>
-                                            <ComboBoxItem Content="Copy to clipboard"
-                                                          Services:LocalizationService.SourceToolTip="Copy the capture to your clipboard."
-                                                          AutomationProperties.Name="Copy to clipboard"/>
-                                            <ComboBoxItem Content="Save"
-                                                          Services:LocalizationService.SourceToolTip="Save the capture to a file."
-                                                          AutomationProperties.Name="Save"/>
-                                            <ComboBoxItem Content="Open in Gallery"
-                                                          Services:LocalizationService.SourceToolTip="Open the capture in the Gallery."
-                                                          AutomationProperties.Name="Open in Gallery"/>
-                                            <ComboBoxItem Content="Close immediately"
-                                                          Services:LocalizationService.SourceToolTip="Dismiss the notification instantly without a fade-out."
-                                                          AutomationProperties.Name="Close immediately"/>
-                                        </ComboBox>
-                                        <Button x:Name="ResetToastButtonsBtn" Services:LocalizationService.SourceContent="Default"
-                                                Cursor="Hand"
-                                                AutomationProperties.Name="Default notification layout"
-                                                Services:LocalizationService.SourceToolTip="Restore the default button layout and preview click action."
-                                                Click="ResetToastButtonsBtn_Click"/>
-                                    </StackPanel>
+                                    <ComboBox x:Name="ToastPreviewClickActionCombo" MinWidth="190"
+                                              HorizontalAlignment="Right"
+                                              VerticalAlignment="Center"
+                                              AutomationProperties.Name="Toast preview click action"
+                                              Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a toast."
+                                              SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
+                                        <ComboBoxItem Content="Open in editor"
+                                                      Services:LocalizationService.SourceToolTip="Open the capture in the built-in editor."
+                                                      AutomationProperties.Name="Open in editor"/>
+                                        <ComboBoxItem Content="Open in default viewer"
+                                                      Services:LocalizationService.SourceToolTip="Open the file with the system default image viewer."
+                                                      AutomationProperties.Name="Open in default viewer"/>
+                                        <ComboBoxItem Content="Copy to clipboard"
+                                                      Services:LocalizationService.SourceToolTip="Copy the capture to your clipboard."
+                                                      AutomationProperties.Name="Copy to clipboard"/>
+                                        <ComboBoxItem Content="Save"
+                                                      Services:LocalizationService.SourceToolTip="Save the capture to a file."
+                                                      AutomationProperties.Name="Save"/>
+                                        <ComboBoxItem Content="Open in Gallery"
+                                                      Services:LocalizationService.SourceToolTip="Open the capture in the Gallery."
+                                                      AutomationProperties.Name="Open in Gallery"/>
+                                        <ComboBoxItem Content="Close immediately"
+                                                      Services:LocalizationService.SourceToolTip="Dismiss the notification instantly without a fade-out."
+                                                      AutomationProperties.Name="Close immediately"/>
+                                    </ComboBox>
                                 </StackPanel>
                             </Grid>
 
