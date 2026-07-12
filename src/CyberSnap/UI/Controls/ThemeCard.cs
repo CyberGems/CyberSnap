@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using CyberSnap.Models;
+using CyberSnap.Services;
 using RadioButton = System.Windows.Controls.RadioButton;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
@@ -54,6 +55,10 @@ internal sealed class ThemeCard : RadioButton
         DependencyProperty.Register(nameof(CardWidth), typeof(double), typeof(ThemeCard),
             new PropertyMetadata(DefaultCardWidth, OnVisualChanged));
 
+    public static readonly DependencyProperty IsDefaultThemeProperty =
+        DependencyProperty.Register(nameof(IsDefaultTheme), typeof(bool), typeof(ThemeCard),
+            new PropertyMetadata(false, OnDefaultThemeChanged));
+
     public AppThemeMode ThemeMode
     {
         get => (AppThemeMode)GetValue(ThemeModeProperty);
@@ -72,6 +77,12 @@ internal sealed class ThemeCard : RadioButton
         set => SetValue(CardWidthProperty, value);
     }
 
+    public bool IsDefaultTheme
+    {
+        get => (bool)GetValue(IsDefaultThemeProperty);
+        set => SetValue(IsDefaultThemeProperty, value);
+    }
+
     public ThemeCard()
     {
         Cursor = System.Windows.Input.Cursors.Hand;
@@ -85,6 +96,7 @@ internal sealed class ThemeCard : RadioButton
 
         Content = Build();
         UpdateSelectionVisual();
+        UpdateDefaultTooltip();
 
         Checked += (_, _) => UpdateSelectionVisual();
         Unchecked += (_, _) => UpdateSelectionVisual();
@@ -95,6 +107,20 @@ internal sealed class ThemeCard : RadioButton
     private static void OnVisualChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is ThemeCard c) c.Rebuild();
+    }
+
+    private static void OnDefaultThemeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is ThemeCard c) c.UpdateDefaultTooltip();
+    }
+
+    private void UpdateDefaultTooltip()
+    {
+        if (IsDefaultTheme)
+        {
+            var baseTip = ToolTip?.ToString() ?? Caption;
+            ToolTip = baseTip + "\n" + LocalizationService.Translate("Default theme");
+        }
     }
 
     private void Rebuild()
