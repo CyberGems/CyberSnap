@@ -101,7 +101,7 @@ internal sealed class ThemeCard : RadioButton
         Unchecked += (_, _) => UpdateSelectionVisual();
         MouseEnter += (_, _) => UpdateSelectionVisual();
         MouseLeave += (_, _) => UpdateSelectionVisual();
-        Loaded += (_, _) => UpdateDefaultTooltip();
+        Loaded += (_, _) => ApplyDefaultTooltip();
     }
 
     private static void OnVisualChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -111,16 +111,13 @@ internal sealed class ThemeCard : RadioButton
 
     private static void OnDefaultThemeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is ThemeCard c) c.UpdateDefaultTooltip();
+        if (d is ThemeCard c) c.ApplyDefaultTooltip();
     }
 
-    private void UpdateDefaultTooltip()
+    private void ApplyDefaultTooltip()
     {
-        if (IsDefaultTheme)
-        {
-            var baseTip = ToolTip?.ToString() ?? Caption;
-            ToolTip = baseTip + "\n" + LocalizationService.Translate("Default theme");
-        }
+        if (!IsDefaultTheme) return;
+        ToolTip = LocalizationService.Translate("Always use the signature CyberSnap theme. (Default)");
     }
 
     private void Rebuild()
