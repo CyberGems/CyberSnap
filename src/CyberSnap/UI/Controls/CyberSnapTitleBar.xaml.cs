@@ -150,20 +150,19 @@ public partial class CyberSnapTitleBar : UserControl
             var menu = new ContextMenu();
             menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
 
-            // Search settings toggle
+            // Focus the always-visible settings search bar
             var searchItem = new MenuItem
             {
                 Header = LocalizationService.Translate("Search settings"),
-                IsCheckable = true,
                 Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("search", titleIcon, 16), Width = 16, Height = 16 },
-                ToolTip = LocalizationService.Translate("Show or hide the search bar")
+                ToolTip = LocalizationService.Translate("Search settings (Ctrl+F)")
             };
             searchItem.Click += (_, _) =>
             {
                 menu.IsOpen = false;
                 _ = ((App)Application.Current).Dispatcher.BeginInvoke(
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => settingsWin.ToggleSearchBar());
+                    () => settingsWin.FocusSearchBox());
             };
             menu.Items.Add(searchItem);
 
@@ -221,7 +220,6 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Opened += (_, _) =>
             {
-                searchItem.IsChecked = settingsWin.IsSearchBarVisible();
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
             };
 

@@ -7,7 +7,10 @@ namespace CyberSnap.UI;
 
 public static class UiScale
 {
-    public const double Default = 1.0;
+    // Real LayoutTransform factors. UI labels are renumbered one step down so the
+    // former 110% (1.1) reads as 100% default; the former 100% (1.0) is labeled 90%.
+    // Labels: 90%→1.0, 100%→1.1, 110%→1.2, 120%→1.3, 130%→1.4.
+    public const double Default = 1.1;
     public const double Min = 1.0;
     public const double Max = 1.4;
 

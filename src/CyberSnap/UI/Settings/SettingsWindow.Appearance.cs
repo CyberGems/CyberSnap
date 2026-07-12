@@ -28,6 +28,7 @@ public partial class SettingsWindow
         Resources["ThemeInputBackgroundBrush"] = Theme.Brush(Theme.BgSecondary);
         Resources["ThemeInputBorderBrush"] = Theme.Brush(Theme.BorderSubtle);
         Resources["ThemeWindowBorderBrush"] = Theme.Brush(Theme.WindowBorder);
+        Resources["ThemePanelBackgroundBrush"] = Theme.Brush(Theme.BgPrimary);
         Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
         Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
         OuterBorder.Background = Theme.Brush(Theme.BgPrimary);
@@ -40,7 +41,89 @@ public partial class SettingsWindow
 
         ApplyThemeToVisualTree(OuterBorder);
         UpdateSectionIcons();
+        UpdateThemeCardLayoutForScale();
         RefreshToastButtonLayoutDesigner();
+    }
+
+    // Design baseline for the refined side-by-side theme picker (Settings at 100% scale).
+    private const double ThemeCardDesignWidth = 104;
+    private const double ThemeCardDesignGap = 14;
+    private bool _themeCardLayoutHooked;
+
+    /// <summary>
+    /// Fits ThemeCards into the real content width under LayoutTransform.
+    /// Pure inverse-scale is not enough at 140%: ScrollViewer H=Auto measured infinitely
+    /// and ClipToBounds cut the right edge. We measure against a finite width and assign
+    /// CardWidth/gaps from the remaining budget (capped at design visual size).
+    /// </summary>
+    private void UpdateThemeCardLayoutForScale()
+    {
+        if (ThemeDarkRadio is null)
+            return;
+
+        EnsureThemeCardLayoutHook();
+
+        var scale = Math.Max(UiScale.Current, 0.01);
+
+        // Layout width of the settings content column (already in pre-transform units).
+        var panel = SettingsPanel;
+        double contentLayoutW;
+        if (panel is not null && panel.ActualWidth > 1)
+            contentLayoutW = panel.ActualWidth;
+        else if (ThemeSettingRow is not null && ThemeSettingRow.ActualWidth > 1)
+            contentLayoutW = ThemeSettingRow.ActualWidth + (panel?.Padding.Left ?? 18) + (panel?.Padding.Right ?? 18);
+        else
+        {
+            var winW = ActualWidth > 1 ? ActualWidth : (!double.IsNaN(Width) && Width > 0 ? Width : 960);
+            // sidebar 150 + chrome/borders ~24
+            contentLayoutW = Math.Max(300, winW / scale - 150 - 24);
+        }
+
+        // Inside the Interface card: panel padding + card padding (~14*2).
+        var padL = panel?.Padding.Left ?? 18;
+        var padR = panel?.Padding.Right ?? 18;
+        var innerW = Math.Max(200, contentLayoutW - padL - padR - 28);
+
+        // Label column: shrink MaxWidth at high scale so cards keep a usable strip.
+        var labelMax = Math.Clamp(280 / scale, 120, 280);
+        if (ThemeSettingTextHost is not null && Math.Abs(ThemeSettingTextHost.MaxWidth - labelMax) > 0.5)
+            ThemeSettingTextHost.MaxWidth = labelMax;
+
+        // Cards get whatever remains after icon (~36) + label reserve + spacing.
+        var labelReserve = Math.Min(labelMax, Math.Max(120, innerW * 0.32));
+        var cardsBudget = Math.Max(160, innerW - 36 - labelReserve - 12);
+
+        // 4 cards + 3 gaps, keep design gap/width ratio.
+        const double gapRatio = ThemeCardDesignGap / ThemeCardDesignWidth;
+        var cardW = cardsBudget / (4.0 + 3.0 * gapRatio);
+        // Never larger than pure inverse of design (visual size ≤ design at 100%).
+        cardW = Math.Min(cardW, ThemeCardDesignWidth / scale);
+        cardW = Math.Clamp(cardW, 52, ThemeCardDesignWidth);
+        var gap = Math.Clamp(cardW * gapRatio, 4, ThemeCardDesignGap);
+
+        if (Math.Abs(ThemeDarkRadio.CardWidth - cardW) < 0.5
+            && Math.Abs(ThemeDarkRadio.Margin.Right - gap) < 0.5)
+            return;
+
+        var gapMargin = new Thickness(0, 0, gap, 0);
+        ThemeDarkRadio.CardWidth = cardW;
+        ThemeDarkRadio.Margin = gapMargin;
+        ThemeGrayscaleRadio.CardWidth = cardW;
+        ThemeGrayscaleRadio.Margin = gapMargin;
+        ThemeLightRadio.CardWidth = cardW;
+        ThemeLightRadio.Margin = gapMargin;
+        ThemeSystemRadio.CardWidth = cardW;
+        ThemeSystemRadio.Margin = new Thickness(0);
+    }
+
+    private void EnsureThemeCardLayoutHook()
+    {
+        if (_themeCardLayoutHooked)
+            return;
+        _themeCardLayoutHooked = true;
+        SizeChanged += (_, _) => UpdateThemeCardLayoutForScale();
+        if (SettingsPanel is not null)
+            SettingsPanel.SizeChanged += (_, _) => UpdateThemeCardLayoutForScale();
     }
 
     private void UpdateSectionIcons()
@@ -551,7 +634,7 @@ public partial class SettingsWindow
             }
         }
 
-        SelectComboByTag(UiScaleCombo, "1.0");
+        SelectComboByTag(UiScaleCombo, "1.1");
     }
 
     private void SelectAppTheme(Models.AppThemeMode mode)
@@ -631,7 +714,8 @@ public partial class SettingsWindow
     {
         if (_isSearching)
         {
-            HideSearchBar();
+            // Leaving search-results mode when the user picks a nav tab
+            ClearSearch();
         }
         else
         {

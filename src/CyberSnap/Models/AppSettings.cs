@@ -331,7 +331,8 @@ public sealed class AppSettings
     public bool MuteSounds { get; set; }
     public bool DisableAnimations { get; set; }
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.Dark;
-    public double UiScale { get; set; } = 1.0;
+    /// <summary>Real UI LayoutTransform factor (1.0–1.4). Default 1.1 is shown as "100%" in Settings.</summary>
+    public double UiScale { get; set; } = 1.1;
     public string InterfaceLanguage { get; set; } = "auto";
     public bool ShowCrosshairGuides { get; set; } = true;
     public bool ShowToolBanners { get; set; } = true;

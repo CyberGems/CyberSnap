@@ -54,17 +54,17 @@ public partial class SettingsWindow
             ApplySettingsSearch();
         };
 
-        // Ctrl+F to open search
+        // Ctrl+F focuses the always-visible search bar; Esc clears an active search
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                ShowSearchBar();
+                FocusSearchBox();
                 e.Handled = true;
             }
-            else if (e.Key == Key.Escape && SettingsSearchBar.Visibility == Visibility.Visible)
+            else if (e.Key == Key.Escape && (_isSearching || !string.IsNullOrWhiteSpace(SettingsSearchBox.Text)))
             {
-                HideSearchBar();
+                ClearSearch();
                 e.Handled = true;
             }
         };
@@ -649,7 +649,7 @@ public partial class SettingsWindow
         switch (e.Key)
         {
             case Key.Escape:
-                HideSearchBar();
+                ClearSearch();
                 e.Handled = true;
                 break;
         }
@@ -936,66 +936,40 @@ public partial class SettingsWindow
         };
     }
 
-    // ── Show / Hide ──
-    /// <summary>Public toggle for the search bar, called from the burger menu.</summary>
-    public void ToggleSearchBar()
+    // ── Focus / Clear (search bar is always visible) ──
+
+    /// <summary>Focuses the always-visible search box (burger menu / Ctrl+F).</summary>
+    public void FocusSearchBox()
     {
-        if (SettingsSearchBar.Visibility == Visibility.Visible)
-            HideSearchBar();
-        else
-            ShowSearchBar();
+        SettingsSearchBox.Focus();
+        SettingsSearchBox.SelectAll();
     }
 
-    /// <summary>Returns whether the search bar is currently visible.</summary>
-    public bool IsSearchBarVisible() => SettingsSearchBar.Visibility == Visibility.Visible;
+    /// <summary>Legacy entry point for the burger menu; focuses the search box.</summary>
+    public void ToggleSearchBar() => FocusSearchBox();
 
-    private void SettingsSearchToggle_Click(object sender, MouseButtonEventArgs e)
-    {
-        e.Handled = true;
-        if (SettingsSearchBar.Visibility == Visibility.Visible)
-            HideSearchBar();
-        else
-            ShowSearchBar();
-    }
+    /// <summary>Search bar is always visible in the content header.</summary>
+    public bool IsSearchBarVisible() => true;
 
     /// <summary>Re-applies translated tooltips for all search bar elements.</summary>
     private void RefreshSearchTooltips()
     {
-        SettingsSearchToggleBtn.ToolTip = LocalizationService.Translate("Search settings (Ctrl+F)");
         SettingsSearchBox.ToolTip = LocalizationService.Translate("Search settings — type a setting name, section, or keyword (Ctrl+F)");
         SettingsSearchClearBtn.ToolTip = LocalizationService.Translate("Clear search");
         SettingsSearchPlaceholder.Text = LocalizationService.Translate("Search settings...");
     }
 
-    private void ShowSearchBar()
-    {
-        SettingsSearchBar.Visibility = Visibility.Visible;
-        SettingsSearchToggleBtn.Text = "\uE711";         // ✕ cancel icon
-        SettingsSearchToggleBtn.Opacity = 0.85;
-        SettingsSearchToggleBtn.ToolTip = LocalizationService.Translate("Close search (Esc)");
-        PageTitleText.Margin = new Thickness(18, 50, 18, 0);
-        AdjustPanelTopPadding(42 + 44);
-        SettingsSearchBox.Focus();
-        SettingsSearchBox.SelectAll();
-    }
-
-    private void HideSearchBar()
+    /// <summary>Clears the query and leaves search-results mode (bar stays visible).</summary>
+    private void ClearSearch()
     {
         _suppressSearchTextEvents = true;
         SettingsSearchBox.Clear();
         _suppressSearchTextEvents = false;
 
-        SettingsSearchBar.Visibility = Visibility.Collapsed;
-        SettingsSearchToggleBtn.Text = "\uE721";         // 🔍 search icon
-        SettingsSearchToggleBtn.Opacity = 0.55;
-        SettingsSearchToggleBtn.ToolTip = LocalizationService.Translate("Search settings (Ctrl+F)");
         _filteredResults.Clear();
         SettingsSearchCount.Text = "";
         SettingsSearchPlaceholder.Visibility = Visibility.Visible;
         SettingsSearchClearBtn.Visibility = Visibility.Collapsed;
-
-        PageTitleText.Margin = new Thickness(18, 10, 18, 0);
-        AdjustPanelTopPadding(42);
 
         RestoreMovedElements();
         _isSearching = false;
@@ -1004,37 +978,10 @@ public partial class SettingsWindow
         Focus();
     }
 
-    private void AdjustPanelTopPadding(double topPadding)
-    {
-        var panels = new ScrollViewer[]
-        {
-            SettingsPanel, SoundsPanel, WidgetPanel, ToastPanel,
-            CapturePanel, EditorPanel, RecordingPanel, OcrPanel,
-            HotkeysPanel, HistoryPanel, AchievementsPanel, AboutPanel,
-            SearchResultsPanel
-        };
-        foreach (var panel in panels)
-        {
-            var current = panel.Padding;
-            panel.Padding = new Thickness(current.Left, topPadding, current.Right, current.Bottom);
-        }
-    }
-
     private void SettingsSearchClear_Click(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
-        _suppressSearchTextEvents = true;
-        SettingsSearchBox.Clear();
-        _suppressSearchTextEvents = false;
-        _filteredResults.Clear();
-        SettingsSearchCount.Text = "";
-        SettingsSearchPlaceholder.Visibility = Visibility.Visible;
-        SettingsSearchClearBtn.Visibility = Visibility.Collapsed;
-
-        RestoreMovedElements();
-        _isSearching = false;
-        ApplyMainTabSelection();
-
+        ClearSearch();
         SettingsSearchBox.Focus();
     }
 
