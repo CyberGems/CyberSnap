@@ -159,6 +159,7 @@ public partial class SettingsWindow
             (WidgetPanel,     "widget",        "Widget"),
             (ToastPanel,      "notifications", "Notifications"),
             (CapturePanel,    "capture",       "Capture"),
+            (EditorPanel,     "editor",        "Editor"),
             (RecordingPanel,  "recording",     "Video"),
             (OcrPanel,        "ocr",           "OCR & Translation"),
             (HotkeysPanel,    "hotkeys",       "Hotkeys"),
@@ -921,8 +922,9 @@ public partial class SettingsWindow
     {
         var panels = new ScrollViewer[]
         {
-            SettingsPanel, ToastPanel, CapturePanel, RecordingPanel,
-            OcrPanel, HotkeysPanel, HistoryPanel, AboutPanel
+            SettingsPanel, SoundsPanel, WidgetPanel, ToastPanel,
+            CapturePanel, EditorPanel, RecordingPanel, OcrPanel,
+            HotkeysPanel, HistoryPanel, AchievementsPanel, AboutPanel
         };
         foreach (var panel in panels)
         {
