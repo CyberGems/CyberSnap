@@ -634,29 +634,52 @@ public partial class SettingsWindow
 
     private void ApplyMainTabSelection()
     {
-        SettingsPanel.Visibility = SettingsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        SoundsPanel.Visibility = SoundsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        ToastPanel.Visibility = ToastTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        HotkeysPanel.Visibility = HotkeysTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        CapturePanel.Visibility = CaptureTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        WidgetPanel.Visibility = WidgetTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        EditorPanel.Visibility = EditorTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        RecordingPanel.Visibility = RecordingTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        AchievementsPanel.Visibility = AchievementsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        AboutPanel.Visibility = AboutTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        PageTitleText.Text = LocalizationService.Translate(GetSelectedSettingsPageTitle());
-
-        if (OcrTab.IsChecked == true)
-            LoadOcrTab();
-
-        // Reveal the milestone rail + refresh stats/medals when the Achievements tab is shown,
-        // so a newly reached milestone gets its one-shot flourish at the moment the user sees it.
-        if (AchievementsTab.IsChecked == true)
+        if (_isSearching)
         {
-            RefreshAchievements();
-            RefreshMilestoneRail(reveal: true);
+            SettingsPanel.Visibility = Visibility.Collapsed;
+            SoundsPanel.Visibility = Visibility.Collapsed;
+            ToastPanel.Visibility = Visibility.Collapsed;
+            HotkeysPanel.Visibility = Visibility.Collapsed;
+            CapturePanel.Visibility = Visibility.Collapsed;
+            WidgetPanel.Visibility = Visibility.Collapsed;
+            EditorPanel.Visibility = Visibility.Collapsed;
+            RecordingPanel.Visibility = Visibility.Collapsed;
+            OcrPanel.Visibility = Visibility.Collapsed;
+            HistoryPanel.Visibility = Visibility.Collapsed;
+            AchievementsPanel.Visibility = Visibility.Collapsed;
+            AboutPanel.Visibility = Visibility.Collapsed;
+            SearchResultsPanel.Visibility = Visibility.Visible;
+
+            PageTitleText.Text = LocalizationService.Translate("Search Results");
+        }
+        else
+        {
+            SettingsPanel.Visibility = SettingsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            SoundsPanel.Visibility = SoundsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            ToastPanel.Visibility = ToastTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            HotkeysPanel.Visibility = HotkeysTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            CapturePanel.Visibility = CaptureTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            WidgetPanel.Visibility = WidgetTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            EditorPanel.Visibility = EditorTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            RecordingPanel.Visibility = RecordingTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            AchievementsPanel.Visibility = AchievementsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            AboutPanel.Visibility = AboutTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            SearchResultsPanel.Visibility = Visibility.Collapsed;
+
+            PageTitleText.Text = LocalizationService.Translate(GetSelectedSettingsPageTitle());
+
+            if (OcrTab.IsChecked == true)
+                LoadOcrTab();
+
+            // Reveal the milestone rail + refresh stats/medals when the Achievements tab is shown,
+            // so a newly reached milestone gets its one-shot flourish at the moment the user sees it.
+            if (AchievementsTab.IsChecked == true)
+            {
+                RefreshAchievements();
+                RefreshMilestoneRail(reveal: true);
+            }
         }
     }
 

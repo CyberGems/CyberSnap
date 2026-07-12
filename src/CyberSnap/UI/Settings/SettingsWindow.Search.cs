@@ -31,9 +31,16 @@ public partial class SettingsWindow
     // ── Search state ──
     private List<SettingsSearchEntry> _searchIndex = [];
     private List<SettingsSearchEntry> _filteredResults = [];
-    private int _selectedResultIndex = -1;
     private readonly DispatcherTimer _searchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(150) };
     private bool _suppressSearchTextEvents;
+    private bool _isSearching;
+    private sealed class MovedElementInfo
+    {
+        public FrameworkElement Element { get; set; } = null!;
+        public System.Windows.Controls.Panel OriginalParent { get; set; } = null!;
+        public int OriginalIndex { get; set; }
+    }
+    private readonly List<MovedElementInfo> _movedElements = [];
 
     // ── Panel → PageKey mapping ──
     private readonly Dictionary<ScrollViewer, (string PageKey, string PageTitle)> _panelMap = [];
@@ -298,8 +305,13 @@ public partial class SettingsWindow
         if (string.IsNullOrWhiteSpace(text))
         {
             _filteredResults.Clear();
-            SettingsSearchPopup.IsOpen = false;
             SettingsSearchCount.Text = "";
+            RestoreMovedElements();
+            if (_isSearching)
+            {
+                _isSearching = false;
+                ApplyMainTabSelection();
+            }
             return;
         }
 
@@ -312,8 +324,13 @@ public partial class SettingsWindow
         if (string.IsNullOrWhiteSpace(query) || _searchIndex.Count == 0)
         {
             _filteredResults.Clear();
-            SettingsSearchPopup.IsOpen = false;
             SettingsSearchCount.Text = "";
+            RestoreMovedElements();
+            if (_isSearching)
+            {
+                _isSearching = false;
+                ApplyMainTabSelection();
+            }
             return;
         }
 
@@ -326,14 +343,10 @@ public partial class SettingsWindow
             .OrderByDescending(x => x.Score)
             .ThenBy(x => x.Entry.PageTitle)
             .ThenBy(x => x.Entry.MatchText.Length)
-            .Take(12)
+            .Take(25)
             .Select(x => x.Entry)
             .ToList();
 
-        // If no strict matches, fall back to density-aware subsequence matching.
-        // Characters must appear in order AND within a tight window (max query.Length*4 chars).
-        // "cruz" → matches "Mostrar guías en cruz" (4 chars in ~6 char span) ✓
-        // "cruz" → no match "Todas las capturas usan..." (span too wide) ✗
         if (_filteredResults.Count == 0 && normalized.Length >= 3)
         {
             _filteredResults = _searchIndex
@@ -341,18 +354,162 @@ public partial class SettingsWindow
                 .Where(x => x.Score > 0)
                 .OrderByDescending(x => x.Score)
                 .ThenBy(x => x.Entry.MatchText.Length)
-                .Take(8)
+                .Take(15)
                 .Select(x => x.Entry)
                 .ToList();
         }
 
-        _selectedResultIndex = _filteredResults.Count > 0 ? 0 : -1;
-        SettingsSearchResultsList.ItemsSource = _filteredResults;
-        SettingsSearchPopup.IsOpen = _filteredResults.Count > 0;
-        UpdateResultSelectionVisual();
-        SettingsSearchCount.Text = _filteredResults.Count > 0
-            ? $"{_filteredResults.Count} {LocalizationService.Translate(_filteredResults.Count == 1 ? "result" : "results")}"
+        _isSearching = true;
+        ApplyMainTabSelection();
+        PerformFilterSearch();
+    }
+
+    private void PerformFilterSearch()
+    {
+        RestoreMovedElements();
+
+        if (_filteredResults.Count == 0)
+        {
+            SettingsSearchCount.Text = LocalizationService.Translate("No results");
+            return;
+        }
+
+        var seenContainers = new HashSet<FrameworkElement>();
+        var containerEntries = new List<(FrameworkElement Container, SettingsSearchEntry Entry)>();
+
+        foreach (var entry in _filteredResults)
+        {
+            var container = FindSettingContainer(entry);
+            if (container == null || seenContainers.Contains(container))
+                continue;
+
+            if (VisualTreeHelper.GetParent(container) is System.Windows.Controls.Panel parent)
+            {
+                seenContainers.Add(container);
+                containerEntries.Add((container, entry));
+            }
+        }
+
+        foreach (var (container, entry) in containerEntries)
+        {
+            if (VisualTreeHelper.GetParent(container) is System.Windows.Controls.Panel originalParent)
+            {
+                int originalIndex = originalParent.Children.IndexOf(container);
+                if (originalIndex >= 0)
+                {
+                    _movedElements.Add(new MovedElementInfo
+                    {
+                        Element = container,
+                        OriginalParent = originalParent,
+                        OriginalIndex = originalIndex
+                    });
+
+                    originalParent.Children.Remove(container);
+
+                    var cardBorder = new Border
+                    {
+                        Style = (Style)FindResource("Card"),
+                        Margin = new Thickness(0, 0, 0, 12),
+                        Padding = new Thickness(16, 12, 16, 12)
+                    };
+
+                    var cardStack = new StackPanel();
+
+                    var pageTitle = LocalizationService.Translate(entry.PageTitle);
+                    var sectionTitle = !string.IsNullOrEmpty(entry.SectionTitle)
+                        ? LocalizationService.Translate(entry.SectionTitle)
+                        : "";
+                    var categoryText = string.IsNullOrEmpty(sectionTitle)
+                        ? pageTitle
+                        : $"{pageTitle} › {sectionTitle}";
+
+                    var categoryLabel = new TextBlock
+                    {
+                        Text = categoryText.ToUpperInvariant(),
+                        FontSize = 9.5,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = (System.Windows.Media.Brush)FindResource("ThemeAccentBrush"),
+                        Opacity = 0.75,
+                        Margin = new Thickness(0, 0, 0, 8),
+                        FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Display")
+                    };
+                    cardStack.Children.Add(categoryLabel);
+                    cardStack.Children.Add(container);
+
+                    cardBorder.Child = cardStack;
+                    SearchResultsStack.Children.Add(cardBorder);
+                }
+            }
+        }
+
+        int count = containerEntries.Count;
+        SettingsSearchCount.Text = count > 0
+            ? $"{count} {LocalizationService.Translate(count == 1 ? "result" : "results")}"
             : LocalizationService.Translate("No results");
+    }
+
+    private void RestoreMovedElements()
+    {
+        if (_movedElements.Count == 0) return;
+
+        for (int i = _movedElements.Count - 1; i >= 0; i--)
+        {
+            var info = _movedElements[i];
+            try
+            {
+                if (info.Element.Parent is System.Windows.Controls.Panel tempParent)
+                {
+                    tempParent.Children.Remove(info.Element);
+                }
+                info.OriginalParent.Children.Insert(info.OriginalIndex, info.Element);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("settings.search-restore", $"Failed to restore search element: {ex.Message}");
+            }
+        }
+        _movedElements.Clear();
+
+        while (SearchResultsStack.Children.Count > 1)
+        {
+            SearchResultsStack.Children.RemoveAt(1);
+        }
+    }
+
+    private FrameworkElement? FindSettingContainer(SettingsSearchEntry entry)
+    {
+        var element = entry.TargetElement;
+        if (element == null && entry.TargetSettingKey != null)
+        {
+            element = FindSettingControl(entry.TargetSettingKey);
+        }
+
+        if (element == null) return null;
+
+        var rowStyle = FindResource("SettingRow") as Style;
+        var cardStyle = FindResource("Card") as Style;
+
+        DependencyObject? parent = element;
+        FrameworkElement? container = null;
+
+        while (parent != null)
+        {
+            if (parent is FrameworkElement fe)
+            {
+                if (rowStyle != null && fe is Grid g && g.Style == rowStyle)
+                {
+                    container = g;
+                    break;
+                }
+                if (cardStyle != null && fe is Border b && b.Style == cardStyle)
+                {
+                    container = b;
+                }
+            }
+            parent = VisualTreeHelper.GetParent(parent);
+        }
+
+        return container ?? element;
     }
 
     private static double ScoreEntry(SettingsSearchEntry entry, string normalized, string[] tokens)
@@ -385,12 +542,6 @@ public partial class SettingsWindow
         return score;
     }
 
-    /// <summary>
-    /// Density-aware fuzzy fallback: query characters must appear in order
-    /// AND within a tight character span (max query.Length * 4).
-    /// This prevents "cruz" from matching long texts that happen to contain
-    /// c, r, u, z scattered hundreds of characters apart.
-    /// </summary>
     private static double ScoreEntryFuzzy(SettingsSearchEntry entry, string normalized)
     {
         var matchText = NormalizeForDedup(entry.MatchText);
@@ -402,11 +553,6 @@ public partial class SettingsWindow
         return score;
     }
 
-    /// <summary>
-    /// Returns a score > 0 if the query is a subsequence of target AND the
-    /// matched span (distance from first to last matched char) is at most
-    /// query.Length * 4. Score is higher for tighter matches.
-    /// </summary>
     private static double DensitySubsequenceScore(string query, string target)
     {
         if (query.Length == 0 || target.Length == 0) return 0;
@@ -426,57 +572,12 @@ public partial class SettingsWindow
             }
         }
 
-        if (qi != query.Length) return 0; // Not a subsequence
+        if (qi != query.Length) return 0;
 
         int span = lastMatch - firstMatch;
-        if (span > maxSpan) return 0; // Too spread out
+        if (span > maxSpan) return 0;
 
-        // Score: higher for tighter spans relative to max allowed
         return 1.0 - (double)span / maxSpan;
-    }
-
-    // ── Navigation ──
-    private void SettingsSearchResultsList_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        var originalSource = e.OriginalSource as DependencyObject;
-        while (originalSource != null)
-        {
-            if (originalSource is FrameworkElement fe && fe.DataContext is SettingsSearchEntry entry)
-            {
-                NavigateToEntry(entry);
-                e.Handled = true;
-                return;
-            }
-            originalSource = VisualTreeHelper.GetParent(originalSource);
-        }
-    }
-
-    private void SettingsSearchResultsList_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        switch (e.Key)
-        {
-            case Key.Up:
-                if (_filteredResults.Count > 0)
-                {
-                    _selectedResultIndex = (_selectedResultIndex - 1 + _filteredResults.Count) % _filteredResults.Count;
-                    UpdateResultSelectionVisual();
-                    e.Handled = true;
-                }
-                break;
-            case Key.Down:
-                if (_filteredResults.Count > 0)
-                {
-                    _selectedResultIndex = (_selectedResultIndex + 1) % _filteredResults.Count;
-                    UpdateResultSelectionVisual();
-                    e.Handled = true;
-                }
-                break;
-            case Key.Enter:
-                if (_selectedResultIndex >= 0 && _selectedResultIndex < _filteredResults.Count)
-                    NavigateToEntry(_filteredResults[_selectedResultIndex]);
-                e.Handled = true;
-                break;
-        }
     }
 
     private void SettingsSearchBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -487,106 +588,6 @@ public partial class SettingsWindow
                 HideSearchBar();
                 e.Handled = true;
                 break;
-            case Key.Up:
-                if (_filteredResults.Count > 0)
-                {
-                    _selectedResultIndex = (_selectedResultIndex - 1 + _filteredResults.Count) % _filteredResults.Count;
-                    UpdateResultSelectionVisual();
-                    // Keep focus on search box so user can keep typing
-                    e.Handled = true;
-                }
-                break;
-            case Key.Down:
-                if (_filteredResults.Count > 0)
-                {
-                    _selectedResultIndex = (_selectedResultIndex + 1) % _filteredResults.Count;
-                    UpdateResultSelectionVisual();
-                    e.Handled = true;
-                }
-                break;
-            case Key.Enter:
-                if (_selectedResultIndex >= 0 && _selectedResultIndex < _filteredResults.Count)
-                    NavigateToEntry(_filteredResults[_selectedResultIndex]);
-                else if (_filteredResults.Count > 0)
-                    NavigateToEntry(_filteredResults[0]);
-                e.Handled = true;
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Updates the visual highlight on the currently selected item in the results list.
-    /// </summary>
-    private void UpdateResultSelectionVisual()
-    {
-        for (int i = 0; i < SettingsSearchResultsList.Items.Count; i++)
-        {
-            if (SettingsSearchResultsList.ItemContainerGenerator.ContainerFromIndex(i)
-                is FrameworkElement container)
-            {
-                // Find the inner border within the DataTemplate
-                var border = FindVisualChild<Border>(container, "ResultItemBorder");
-                if (border != null)
-                {
-                    if (i == _selectedResultIndex)
-                    {
-                        border.Background = (System.Windows.Media.Brush)FindResource("ThemeTabActiveBrush");
-                    }
-                    else
-                    {
-                        border.Background = System.Windows.Media.Brushes.Transparent;
-                    }
-                }
-            }
-        }
-    }
-
-    private static T? FindVisualChild<T>(DependencyObject parent, string? name = null) where T : DependencyObject
-    {
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is T typedChild && (name == null || (child is FrameworkElement fe && fe.Name == name)))
-                return typedChild;
-            var result = FindVisualChild<T>(child, name);
-            if (result != null) return result;
-        }
-        return null;
-    }
-
-    private void NavigateToEntry(SettingsSearchEntry entry)
-    {
-        try
-        {
-            // 1. Switch to the correct tab
-            SelectSettingsTab(entry.PageKey);
-
-            // 2. Close search
-            HideSearchBar();
-
-            // 3. Scroll + highlight (defer to let layout update after tab switch)
-            var elementToScroll = entry.TargetElement
-                ?? (entry.TargetSettingKey != null ? FindSettingControl(entry.TargetSettingKey) : null);
-
-            if (elementToScroll != null)
-            {
-                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
-                {
-                    try
-                    {
-                        ScrollToElement(elementToScroll);
-                        HighlightSettingCard(elementToScroll);
-                    }
-                    catch (Exception ex)
-                    {
-                        AppDiagnostics.LogWarning("settings.search-navigate", $"Scroll/highlight failed: {ex.Message}");
-                    }
-                }));
-            }
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("settings.search-navigate", $"Navigation failed: {ex.Message}");
         }
     }
 
@@ -907,7 +908,6 @@ public partial class SettingsWindow
         SettingsSearchToggleBtn.Text = "\uE721";         // 🔍 search icon
         SettingsSearchToggleBtn.Opacity = 0.55;
         SettingsSearchToggleBtn.ToolTip = LocalizationService.Translate("Search settings (Ctrl+F)");
-        SettingsSearchPopup.IsOpen = false;
         _filteredResults.Clear();
         SettingsSearchCount.Text = "";
         SettingsSearchPlaceholder.Visibility = Visibility.Visible;
@@ -915,6 +915,11 @@ public partial class SettingsWindow
 
         PageTitleText.Margin = new Thickness(18, 10, 18, 0);
         AdjustPanelTopPadding(42);
+
+        RestoreMovedElements();
+        _isSearching = false;
+        ApplyMainTabSelection();
+
         Focus();
     }
 
@@ -924,7 +929,8 @@ public partial class SettingsWindow
         {
             SettingsPanel, SoundsPanel, WidgetPanel, ToastPanel,
             CapturePanel, EditorPanel, RecordingPanel, OcrPanel,
-            HotkeysPanel, HistoryPanel, AchievementsPanel, AboutPanel
+            HotkeysPanel, HistoryPanel, AchievementsPanel, AboutPanel,
+            SearchResultsPanel
         };
         foreach (var panel in panels)
         {
@@ -939,26 +945,19 @@ public partial class SettingsWindow
         _suppressSearchTextEvents = true;
         SettingsSearchBox.Clear();
         _suppressSearchTextEvents = false;
-        SettingsSearchPopup.IsOpen = false;
         _filteredResults.Clear();
         SettingsSearchCount.Text = "";
         SettingsSearchPlaceholder.Visibility = Visibility.Visible;
         SettingsSearchClearBtn.Visibility = Visibility.Collapsed;
+
+        RestoreMovedElements();
+        _isSearching = false;
+        ApplyMainTabSelection();
+
         SettingsSearchBox.Focus();
     }
 
     private void SettingsSearchBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            if (!SettingsSearchBox.IsKeyboardFocused
-                && !SettingsSearchResultsList.IsKeyboardFocusWithin)
-            {
-                SettingsSearchPopup.IsOpen = false;
-            }
-        };
-        timer.Start();
     }
 }
