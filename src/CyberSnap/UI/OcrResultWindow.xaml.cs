@@ -81,6 +81,21 @@ public partial class OcrResultWindow : Window
             RedrawSearchHighlights();
             OcrTextBox.Focus();
             OcrTextBox.CaretIndex = OcrTextBox.Text.Length;
+
+            // Force window to foreground on show, even if the user switched to another app
+            var wasPinned = _isPinned;
+            Topmost = true;
+            Activate();
+            if (!wasPinned)
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (!_isPinned)
+                    {
+                        Topmost = false;
+                    }
+                }), DispatcherPriority.Background);
+            }
         };
 
         TranslationService.SetGoogleApiKey(settingsService.Settings.GoogleTranslateApiKey);
