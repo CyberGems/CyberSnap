@@ -3213,26 +3213,40 @@
                                     <TextBlock Services:LocalizationService.SourceText="Presets" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6"
                                                HorizontalAlignment="Left"
                                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                    <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left">
-                                        <Button x:Name="ToastPresetNoneBtn" Services:LocalizationService.SourceContent="No buttons" Margin="0,0,6,0" Cursor="Hand"
+                                    <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left"
+                                                VerticalAlignment="Center">
+                                        <Button x:Name="ToastPresetNoneBtn" Services:LocalizationService.SourceContent="No buttons" Margin="0,0,6,0"
+                                                Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
+                                                VerticalContentAlignment="Center" Cursor="Hand"
                                                 AutomationProperties.Name="No buttons preset"
                                                 AutomationProperties.HelpText="Hide every overlay button. Use the preview click action."
                                                 Services:LocalizationService.SourceToolTip="Hide every overlay button. Use the preview click action." Click="ToastPresetNoneBtn_Click"/>
-                                        <Button x:Name="ToastPresetStandardBtn" Services:LocalizationService.SourceContent="Standard" Margin="0,0,6,0" Cursor="Hand"
+                                        <Button x:Name="ToastPresetStandardBtn" Services:LocalizationService.SourceContent="Standard" Margin="0,0,6,0"
+                                                Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
+                                                VerticalContentAlignment="Center" Cursor="Hand"
                                                 AutomationProperties.Name="Standard preset"
                                                 AutomationProperties.HelpText="Show pin, close, gallery and save."
                                                 Services:LocalizationService.SourceToolTip="Show pin, close, gallery and save." Click="ToastPresetStandardBtn_Click"/>
-                                        <Button x:Name="ToastPresetFullBtn" Services:LocalizationService.SourceContent="Full" Margin="0,0,6,0" Cursor="Hand"
+                                        <Button x:Name="ToastPresetFullBtn" Services:LocalizationService.SourceContent="Full" Margin="0,0,6,0"
+                                                Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
+                                                VerticalContentAlignment="Center" Cursor="Hand"
                                                 AutomationProperties.Name="Full preset"
                                                 AutomationProperties.HelpText="Show every button."
                                                 Services:LocalizationService.SourceToolTip="Show every button." Click="ToastPresetFullBtn_Click"/>
-                                        <Button x:Name="ToastManualBtn" Services:LocalizationService.SourceContent="Manual" Margin="0,0,6,0" Cursor="Hand"
+                                        <Button x:Name="ToastManualBtn" Services:LocalizationService.SourceContent="Manual" Margin="0,0,6,0"
+                                                Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
+                                                VerticalContentAlignment="Center" Cursor="Hand"
                                                 AutomationProperties.Name="Manual layout"
                                                 AutomationProperties.HelpText="Unlock the per-button controls to place each button yourself."
                                                 Services:LocalizationService.SourceToolTip="Customize each button yourself" Click="ToastManualBtn_Click"/>
-                                        <!-- Same circular-arrow control as Capture → file name pattern reset. -->
+                                        <!-- Same circular-arrow control as Capture → file name pattern reset; fixed 32×32 so it
+                                             matches preset chip height (global Button MinWidth=40 would otherwise mis-size it). -->
                                         <Button x:Name="ResetToastButtonsBtn" Content="↺"
-                                                Margin="16,0,0,0" Width="32" Height="32" Padding="0"
+                                                Margin="16,0,0,0"
+                                                Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="0"
+                                                VerticalAlignment="Center"
+                                                VerticalContentAlignment="Center"
+                                                HorizontalContentAlignment="Center"
                                                 FontSize="14" FontWeight="Bold" Cursor="Hand"
                                                 AutomationProperties.Name="Default notification layout"
                                                 Services:LocalizationService.SourceToolTip="Restore the default button layout and preview click action."

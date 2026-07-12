@@ -729,9 +729,9 @@ public partial class ToastWindow : Window
 
         if (spec.PreviewBitmap is not null)
         {
-            var previewHelp = string.IsNullOrWhiteSpace(spec.FilePath)
-                ? "Toast preview image"
-                : Path.GetFileName(spec.FilePath);
+            // Tooltip/help for the image surface is owned by RefreshInteractiveTooltip so the
+            // configured body-click action and file name stay in one place (no competing tips).
+            var previewHelp = BuildPreviewBodyTooltip(spec) ?? "Toast preview image";
             SetToastElementAccessibility(PreviewImage, "Toast preview image", previewHelp);
         }
     }
@@ -1423,25 +1423,26 @@ public partial class ToastWindow : Window
 
     private void RefreshInteractiveTooltip(ToastSpec spec)
     {
-        // Capture previews: surface the configured body-click action so the toast is self-explanatory
-        // (especially with the "None" button preset).
-        if (spec.PreviewBitmap is null && string.IsNullOrWhiteSpace(spec.ClickActionLabel))
-        {
-            ToolTip = null;
-            return;
-        }
+        // One tooltip for the whole toast surface (window + preview image) so the body-click
+        // action and file name never fight each other depending on where the cursor sits.
+        var tip = BuildPreviewBodyTooltip(spec);
+        ToolTip = tip;
+        if (ImageArea.Visibility == Visibility.Visible)
+            PreviewImage.ToolTip = tip;
+    }
 
+    /// <summary>
+    /// Body-click action line, optionally with the capture file name on a second line.
+    /// Used for both the window tooltip and the preview image (which fills most of the toast).
+    /// </summary>
+    private static string? BuildPreviewBodyTooltip(ToastSpec spec)
+    {
         if (!string.IsNullOrWhiteSpace(spec.ClickActionLabel))
-        {
-            ToolTip = LocalizationService.Translate(spec.ClickActionLabel);
-            return;
-        }
+            return LocalizationService.Translate(spec.ClickActionLabel);
 
+        // Non-preview toasts (system messages, etc.) leave tooltip empty unless a custom label was set.
         if (spec.PreviewBitmap is null)
-        {
-            ToolTip = null;
-            return;
-        }
+            return null;
 
         ToastPreviewClickAction action;
         try
@@ -1463,7 +1464,15 @@ public partial class ToastWindow : Window
             ToastPreviewClickAction.Close => "Click to close",
             _ => "Click to open in editor"
         };
-        ToolTip = LocalizationService.Translate(tipKey);
+        string actionLine = LocalizationService.Translate(tipKey);
+
+        if (string.IsNullOrWhiteSpace(spec.FilePath))
+            return actionLine;
+
+        string fileName = Path.GetFileName(spec.FilePath);
+        return string.IsNullOrWhiteSpace(fileName)
+            ? actionLine
+            : $"{actionLine}\n{fileName}";
     }
 
     private void DeleteBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
