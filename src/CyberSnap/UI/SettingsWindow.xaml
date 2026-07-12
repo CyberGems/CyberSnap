@@ -3228,87 +3228,28 @@
                                            AutomationProperties.LiveSetting="Polite"/>
                             </Grid>
 
-                            <!-- Compact toolbar: presets + click action + default. Minimal removed (redundant with No buttons). -->
-                            <Grid Grid.Row="1" Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Services:LocalizationService.SourceText="Presets" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6"
-                                               HorizontalAlignment="Left"
-                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                    <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left"
-                                                VerticalAlignment="Center">
-                                        <Button x:Name="ToastPresetNoneBtn" Services:LocalizationService.SourceContent="No buttons" Margin="0,0,6,0"
-                                                Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
-                                                VerticalContentAlignment="Center" Cursor="Hand"
-                                                AutomationProperties.Name="No buttons preset"
-                                                AutomationProperties.HelpText="Hide every overlay button. Use the preview click action."
-                                                Services:LocalizationService.SourceToolTip="Hide every overlay button. Use the preview click action." Click="ToastPresetNoneBtn_Click"/>
-                                        <Button x:Name="ToastPresetStandardBtn" Services:LocalizationService.SourceContent="Standard" Margin="0,0,6,0"
-                                                Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
-                                                VerticalContentAlignment="Center" Cursor="Hand"
-                                                AutomationProperties.Name="Standard preset"
-                                                AutomationProperties.HelpText="Show pin, close, gallery and save."
-                                                Services:LocalizationService.SourceToolTip="Show pin, close, gallery and save." Click="ToastPresetStandardBtn_Click"/>
-                                        <Button x:Name="ToastPresetFullBtn" Services:LocalizationService.SourceContent="Full" Margin="0,0,6,0"
-                                                Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
-                                                VerticalContentAlignment="Center" Cursor="Hand"
-                                                AutomationProperties.Name="Full preset"
-                                                AutomationProperties.HelpText="Show every button."
-                                                Services:LocalizationService.SourceToolTip="Show every button." Click="ToastPresetFullBtn_Click"/>
-                                        <Button x:Name="ToastManualBtn" Services:LocalizationService.SourceContent="Manual" Margin="0,0,6,0"
-                                                Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
-                                                VerticalContentAlignment="Center" Cursor="Hand"
-                                                AutomationProperties.Name="Manual layout"
-                                                AutomationProperties.HelpText="Unlock the per-button controls to place each button yourself."
-                                                Services:LocalizationService.SourceToolTip="Customize each button yourself" Click="ToastManualBtn_Click"/>
-                                        <!-- Same circular-arrow control as Capture → file name pattern reset; fixed 32×32 so it
-                                             matches preset chip height (global Button MinWidth=40 would otherwise mis-size it). -->
-                                        <Button x:Name="ResetToastButtonsBtn" Content="↺"
-                                                Margin="16,0,0,0"
-                                                Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="0"
-                                                VerticalAlignment="Center"
-                                                VerticalContentAlignment="Center"
-                                                HorizontalContentAlignment="Center"
-                                                FontSize="14" FontWeight="Bold" Cursor="Hand"
-                                                AutomationProperties.Name="Default notification layout"
-                                                Services:LocalizationService.SourceToolTip="Restore the default button layout and preview click action."
-                                                Click="ResetToastButtonsBtn_Click"/>
+                            <!-- Send to Editor lives in its own card so it is not mixed with system-alert examples. -->
+                            <Border Grid.Row="1" Margin="0,10,0,0" Style="{StaticResource Card}" Padding="14,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}">
+                                        <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Services:LocalizationService.SourceText="Send to Editor" Style="{StaticResource SettingTitle}"/>
+                                        <TextBlock Services:LocalizationService.SourceText="Send image captures to the Annotation Editor and video/GIF to the Trimmer"
+                                                   Style="{StaticResource SettingDescription}"/>
                                     </StackPanel>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="16,0,0,0">
-                                    <TextBlock Services:LocalizationService.SourceText="Notification preview click action" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6"
-                                               HorizontalAlignment="Right"
-                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                    <ComboBox x:Name="ToastPreviewClickActionCombo" MinWidth="190"
-                                              HorizontalAlignment="Right"
-                                              VerticalAlignment="Center"
-                                              AutomationProperties.Name="Notification preview click action"
-                                              Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a notification."
-                                              SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
-                                        <ComboBoxItem Content="Open in editor"
-                                                      Services:LocalizationService.SourceToolTip="Open the capture in the built-in editor."
-                                                      AutomationProperties.Name="Open in editor"/>
-                                        <ComboBoxItem Content="Open in default viewer"
-                                                      Services:LocalizationService.SourceToolTip="Open the file with the system default image viewer."
-                                                      AutomationProperties.Name="Open in default viewer"/>
-                                        <ComboBoxItem Content="Copy to clipboard"
-                                                      Services:LocalizationService.SourceToolTip="Copy the capture to your clipboard."
-                                                      AutomationProperties.Name="Copy to clipboard"/>
-                                        <ComboBoxItem Content="Save"
-                                                      Services:LocalizationService.SourceToolTip="Save the capture to a file."
-                                                      AutomationProperties.Name="Save"/>
-                                        <ComboBoxItem Content="Open in Gallery"
-                                                      Services:LocalizationService.SourceToolTip="Open the capture in the Gallery."
-                                                      AutomationProperties.Name="Open in Gallery"/>
-                                        <ComboBoxItem Content="Close immediately"
-                                                      Services:LocalizationService.SourceToolTip="Dismiss the notification instantly without a fade-out."
-                                                      AutomationProperties.Name="Close immediately"/>
-                                    </ComboBox>
-                                </StackPanel>
-                            </Grid>
+                                    <CheckBox x:Name="NotificationsEditorToggle" Grid.Column="2" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Send to Editor"
+                                              Services:LocalizationService.SourceToolTip="Send images to the Annotation Editor and video/GIF to the Trimmer. Toggle it to see how the notifications change."
+                                              Checked="NotificationsEditorToggle_Changed" Unchecked="NotificationsEditorToggle_Changed"/>
+                                </Grid>
+                            </Border>
 
                             <Border Grid.Row="2" Margin="0,10,0,0"
                                     CornerRadius="12"
@@ -3340,8 +3281,8 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- LEFT panel: system alert (fixed). -->
-                                    <Border Grid.Column="0" MinWidth="220" MaxWidth="280" Margin="0,0,12,0"
+                                    <!-- LEFT panel: system alert examples only (fixed). -->
+                                    <Border Grid.Column="0" Width="248" Margin="0,0,12,0"
                                             CornerRadius="10" Padding="12,12,12,14" BorderThickness="1"
                                             Background="{DynamicResource ThemeCardBrush}"
                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}">
@@ -3360,16 +3301,6 @@
                                                            FontSize="11.5" FontWeight="SemiBold" Opacity="0.75"
                                                            VerticalAlignment="Center"
                                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
-                                                <CheckBox x:Name="NotificationsEditorToggle" VerticalAlignment="Center"
-                                                          AutomationProperties.Name="Send to Editor"
-                                                          Services:LocalizationService.SourceToolTip="Send images to the Annotation Editor and video/GIF to the Trimmer. Toggle it to see how the notifications change."
-                                                          Checked="NotificationsEditorToggle_Changed" Unchecked="NotificationsEditorToggle_Changed"/>
-                                                <TextBlock Services:LocalizationService.SourceText="Send to Editor" VerticalAlignment="Center" Margin="8,0,0,0"
-                                                           FontSize="13" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                           Services:LocalizationService.SourceToolTip="Send images to the Annotation Editor and video/GIF to the Trimmer. Toggle it to see how the notifications change."/>
                                             </StackPanel>
 
                                             <StackPanel x:Name="EditorToastMockCard" Grid.Row="2" VerticalAlignment="Bottom">
@@ -3397,8 +3328,9 @@
                                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                                                            Services:LocalizationService.SourceText="Examples"/>
                                                 <StackPanel x:Name="SystemAlertExamplesHost">
+                                                <!-- Both mocks use the same fixed width + content grid so they match live system alerts. -->
                                                 <Border x:Name="EditorToastMockShell" CornerRadius="12" Margin="0,0,0,8"
-                                                        MinWidth="196" MaxWidth="248" BorderThickness="1"
+                                                        Width="224" BorderThickness="1"
                                                         ClipToBounds="True" HorizontalAlignment="Left"
                                                         Visibility="Collapsed">
                                                     <Grid>
@@ -3406,7 +3338,7 @@
                                                             <RowDefinition Height="Auto"/>
                                                             <RowDefinition Height="4"/>
                                                         </Grid.RowDefinitions>
-                                                        <Grid Grid.Row="0" Margin="14,11,14,11">
+                                                        <Grid Grid.Row="0" Margin="14,11,14,11" MinHeight="44">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="Auto"/>
@@ -3446,7 +3378,7 @@
                                                     </Grid>
                                                 </Border>
                                                 <Border x:Name="EncodingToastMockShell" CornerRadius="12"
-                                                        MinWidth="196" MaxWidth="248" BorderThickness="1"
+                                                        Width="224" BorderThickness="1"
                                                         ClipToBounds="True" HorizontalAlignment="Left"
                                                         Visibility="Collapsed">
                                                     <Grid>
@@ -3454,16 +3386,25 @@
                                                             <RowDefinition Height="Auto"/>
                                                             <RowDefinition Height="4"/>
                                                         </Grid.RowDefinitions>
-                                                        <StackPanel Grid.Row="0" Margin="14,11,14,11" VerticalAlignment="Center">
-                                                            <TextBlock Services:LocalizationService.SourceText="Recording"
-                                                                       FontSize="12.75" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
-                                                                       TextWrapping="Wrap" TextAlignment="Center"
-                                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                                            <TextBlock Services:LocalizationService.SourceText="Encoding, please wait..."
-                                                                       FontSize="11.5" FontFamily="Segoe UI Variable Text"
-                                                                       TextWrapping="Wrap" TextAlignment="Center" Opacity="0.72" Margin="0,2,0,0"
-                                                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-                                                        </StackPanel>
+                                                        <Grid Grid.Row="0" Margin="14,11,14,11" MinHeight="44">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                                <TextBlock Services:LocalizationService.SourceText="Recording"
+                                                                           FontSize="12.75" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
+                                                                           TextWrapping="Wrap" TextAlignment="Center"
+                                                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                                                <TextBlock Services:LocalizationService.SourceText="Encoding, please wait..."
+                                                                           FontSize="11.5" FontFamily="Segoe UI Variable Text"
+                                                                           TextWrapping="Wrap" TextAlignment="Center" Opacity="0.72" Margin="0,2,0,0"
+                                                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                                            </StackPanel>
+                                                            <!-- Spacer matches the close control on the editor example so widths align. -->
+                                                            <Border Grid.Column="1" Width="22" Height="22" Margin="10,-2,-4,0"
+                                                                    VerticalAlignment="Top" Background="Transparent"/>
+                                                        </Grid>
                                                         <Border x:Name="EncodingToastMockRail" Grid.Row="1" HorizontalAlignment="Stretch" CornerRadius="0,0,12,12" Margin="4,0">
                                                             <Border.Background>
                                                                 <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
@@ -3515,6 +3456,82 @@
                                                            Foreground="{DynamicResource ThemeAccentBrush}"/>
                                             </Border>
                                         </StackPanel>
+
+                                        <!-- Presets live with the capture preview they control. -->
+                                        <TextBlock Services:LocalizationService.SourceText="Presets" FontSize="12" FontWeight="SemiBold"
+                                                   Margin="0,0,0,6" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                        <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" Margin="0,0,0,10"
+                                                    VerticalAlignment="Center">
+                                            <Button x:Name="ToastPresetNoneBtn" Services:LocalizationService.SourceContent="No buttons" Margin="0,0,6,0"
+                                                    Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
+                                                    VerticalContentAlignment="Center" Cursor="Hand"
+                                                    AutomationProperties.Name="No buttons preset"
+                                                    Services:LocalizationService.SourceToolTip="Hide every overlay button. Use the preview click action."
+                                                    Click="ToastPresetNoneBtn_Click"/>
+                                            <Button x:Name="ToastPresetStandardBtn" Services:LocalizationService.SourceContent="Standard" Margin="0,0,6,0"
+                                                    Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
+                                                    VerticalContentAlignment="Center" Cursor="Hand"
+                                                    AutomationProperties.Name="Standard preset"
+                                                    Services:LocalizationService.SourceToolTip="Show pin, close, gallery and save."
+                                                    Click="ToastPresetStandardBtn_Click"/>
+                                            <Button x:Name="ToastPresetFullBtn" Services:LocalizationService.SourceContent="Full" Margin="0,0,6,0"
+                                                    Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
+                                                    VerticalContentAlignment="Center" Cursor="Hand"
+                                                    AutomationProperties.Name="Full preset"
+                                                    Services:LocalizationService.SourceToolTip="Show every button."
+                                                    Click="ToastPresetFullBtn_Click"/>
+                                            <Button x:Name="ToastManualBtn" Services:LocalizationService.SourceContent="Manual" Margin="0,0,6,0"
+                                                    Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
+                                                    VerticalContentAlignment="Center" Cursor="Hand"
+                                                    AutomationProperties.Name="Manual layout"
+                                                    Services:LocalizationService.SourceToolTip="Customize each button yourself"
+                                                    Click="ToastManualBtn_Click"/>
+                                            <Button x:Name="ResetToastButtonsBtn" Content="↺"
+                                                    Margin="16,0,0,0"
+                                                    Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="0"
+                                                    VerticalAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    HorizontalContentAlignment="Center"
+                                                    FontSize="14" FontWeight="Bold" Cursor="Hand"
+                                                    AutomationProperties.Name="Default notification layout"
+                                                    Services:LocalizationService.SourceToolTip="Restore the default button layout and preview click action."
+                                                    Click="ResetToastButtonsBtn_Click"/>
+                                        </StackPanel>
+
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Services:LocalizationService.SourceText="Notification preview click action"
+                                                       FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                            <ComboBox x:Name="ToastPreviewClickActionCombo" Grid.Column="1" MinWidth="190"
+                                                      VerticalAlignment="Center"
+                                                      AutomationProperties.Name="Notification preview click action"
+                                                      Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a notification."
+                                                      SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
+                                                <ComboBoxItem Content="Open in editor"
+                                                              Services:LocalizationService.SourceToolTip="Open the capture in the built-in editor."
+                                                              AutomationProperties.Name="Open in editor"/>
+                                                <ComboBoxItem Content="Open in default viewer"
+                                                              Services:LocalizationService.SourceToolTip="Open the file with the system default image viewer."
+                                                              AutomationProperties.Name="Open in default viewer"/>
+                                                <ComboBoxItem Content="Copy to clipboard"
+                                                              Services:LocalizationService.SourceToolTip="Copy the capture to your clipboard."
+                                                              AutomationProperties.Name="Copy to clipboard"/>
+                                                <ComboBoxItem Content="Save"
+                                                              Services:LocalizationService.SourceToolTip="Save the capture to a file."
+                                                              AutomationProperties.Name="Save"/>
+                                                <ComboBoxItem Content="Open in Gallery"
+                                                              Services:LocalizationService.SourceToolTip="Open the capture in the Gallery."
+                                                              AutomationProperties.Name="Open in Gallery"/>
+                                                <ComboBoxItem Content="Close immediately"
+                                                              Services:LocalizationService.SourceToolTip="Dismiss the notification instantly without a fade-out."
+                                                              AutomationProperties.Name="Close immediately"/>
+                                            </ComboBox>
+                                        </Grid>
+
                                     <TextBlock x:Name="CaptureDesignIdleNote" Margin="0,0,0,10" FontSize="11.5"
                                                TextWrapping="Wrap" MaxWidth="420" Opacity="0.9"
                                                Visibility="Collapsed"
