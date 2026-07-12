@@ -965,7 +965,8 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="0.28*" MinWidth="148" MaxWidth="240"/>
+                            <!-- Collapsed on Achievements via UpdateSettingsSearchChrome() -->
+                            <ColumnDefinition x:Name="SettingsSearchHeaderColumn" Width="0.28*" MinWidth="148" MaxWidth="240"/>
                         </Grid.ColumnDefinitions>
 
                         <TextBlock x:Name="PageTitleText"
@@ -979,7 +980,7 @@
                                    TextTrimming="CharacterEllipsis"
                                    IsHitTestVisible="False"/>
 
-                        <!-- ── Settings search bar (always visible; Ctrl+F focuses) ── -->
+                        <!-- ── Settings search bar (hidden on Achievements; Ctrl+F focuses) ── -->
                         <Border x:Name="SettingsSearchBar" Grid.Column="1"
                                 VerticalAlignment="Center"
                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
@@ -4201,35 +4202,50 @@
             <!-- About -->
             <ScrollViewer x:Name="AboutPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
                 <StackPanel>
-                    <Grid Margin="0,0,0,32">
+                    <!-- Hero: branding left + description stretched to the same right edge as the cards below. -->
+                    <Grid Margin="0,4,0,32">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*" MinWidth="200"/>
                         </Grid.ColumnDefinitions>
-                        <Border Width="80" Height="80" CornerRadius="20" Background="{DynamicResource ThemeCardBrush}" 
-                                BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1.5">
-                            <Image Width="52" Height="52" Stretch="Uniform"
-                                   Source="pack://application:,,,/Assets/CyberSnap_square.png"
-                                   RenderOptions.BitmapScalingMode="HighQuality"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Margin="24,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="CyberSnap" FontSize="32" FontWeight="Bold" FontFamily="Segoe UI Variable Display" 
-                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                            <TextBlock x:Name="AboutVersionText" FontSize="14" Opacity="0.5" Margin="0,2,0,0"/>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Width="80" Height="80" CornerRadius="20" Background="{DynamicResource ThemeCardBrush}"
+                                    BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1.5">
+                                <Image Width="52" Height="52" Stretch="Uniform"
+                                       Source="pack://application:,,,/Assets/CyberSnap_square.png"
+                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </Border>
+                            <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="CyberSnap" FontSize="32" FontWeight="Bold" FontFamily="Segoe UI Variable Display"
+                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                <TextBlock x:Name="AboutVersionText" FontSize="14" Opacity="0.5" Margin="0,4,0,0"/>
+                            </StackPanel>
                         </StackPanel>
+
+                        <Border Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                Background="{DynamicResource ThemeCardBrush}"
+                                BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                BorderThickness="1" CornerRadius="12" Padding="22,18"
+                                Margin="36,0,0,0">
+                            <TextBlock x:Name="AboutDescriptionText"
+                                       FontSize="13"
+                                       FontFamily="Segoe UI Variable Text"
+                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                       Opacity="0.78"
+                                       LineHeight="24"
+                                       LineStackingStrategy="BlockLineHeight"
+                                       TextWrapping="Wrap"
+                                       TextOptions.TextFormattingMode="Display"
+                                       Services:LocalizationService.SourceText="CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. Built with performance in mind, it combines rapid image capture with advanced features like local OCR, instant translation, and comprehensive gallery management.">
+                                CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows.
+                                Built with performance in mind, it combines rapid image capture with advanced features like
+                                local OCR, instant translation, and comprehensive gallery management.
+                            </TextBlock>
+                        </Border>
                     </Grid>
 
-                    <TextBlock x:Name="AboutSectionLabel" Text="About CyberSnap" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="About CyberSnap"/>
-                    <Border Style="{StaticResource Card}">
-                        <TextBlock x:Name="AboutDescriptionText" Style="{StaticResource InfoText}" LineHeight="20"
-                                   Services:LocalizationService.SourceText="CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. Built with performance in mind, it combines rapid image capture with advanced features like local OCR, instant translation, and comprehensive gallery management.">
-                            CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. 
-                            Built with performance in mind, it combines rapid image capture with advanced features like 
-                            local OCR, instant translation, and comprehensive gallery management.
-                        </TextBlock>
-                    </Border>
-
-                    <TextBlock x:Name="AboutUpdatesSectionLabel" Text="Updates &amp; Maintenance" Style="{StaticResource SectionLabel}" Margin="0,16,0,6" Services:LocalizationService.SourceText="Updates &amp; Maintenance"/>
+                    <TextBlock x:Name="AboutUpdatesSectionLabel" Text="Updates &amp; Maintenance" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Updates &amp; Maintenance"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
                             <Grid Style="{StaticResource SettingRow}">

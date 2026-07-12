@@ -590,7 +590,6 @@ public partial class SettingsWindow
     {
         try
         {
-            AboutSectionLabel.Text = LocalizationService.Translate("About CyberSnap");
             AboutDescriptionText.Text = LocalizationService.Translate("CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. Built with performance in mind, it combines rapid image capture with advanced features like local OCR, instant translation, and comprehensive gallery management.");
             AboutUpdatesSectionLabel.Text = LocalizationService.Translate("Updates & Maintenance");
             AboutAutoUpdateTitle.Text = LocalizationService.Translate("Check for updates on startup");
@@ -742,6 +741,7 @@ public partial class SettingsWindow
             SearchResultsPanel.Visibility = Visibility.Visible;
 
             PageTitleText.Text = LocalizationService.Translate("Search Results");
+            UpdateSettingsSearchChrome();
         }
         else
         {
@@ -760,6 +760,7 @@ public partial class SettingsWindow
             SearchResultsPanel.Visibility = Visibility.Collapsed;
 
             PageTitleText.Text = LocalizationService.Translate(GetSelectedSettingsPageTitle());
+            UpdateSettingsSearchChrome();
 
             if (OcrTab.IsChecked == true)
                 LoadOcrTab();
@@ -770,6 +771,30 @@ public partial class SettingsWindow
             {
                 RefreshAchievements();
                 RefreshMilestoneRail(reveal: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Search chrome is hidden on Achievements (no settings to filter; bar fights the hero).
+    /// Collapses the header column so the page title can use the full width.
+    /// </summary>
+    private void UpdateSettingsSearchChrome()
+    {
+        var hide = !_isSearching && AchievementsTab.IsChecked == true;
+        SettingsSearchBar.Visibility = hide ? Visibility.Collapsed : Visibility.Visible;
+        if (SettingsSearchHeaderColumn is not null)
+        {
+            if (hide)
+            {
+                SettingsSearchHeaderColumn.Width = new GridLength(0);
+                SettingsSearchHeaderColumn.MinWidth = 0;
+            }
+            else
+            {
+                SettingsSearchHeaderColumn.Width = new GridLength(0.28, GridUnitType.Star);
+                SettingsSearchHeaderColumn.MinWidth = 148;
+                SettingsSearchHeaderColumn.MaxWidth = 240;
             }
         }
     }
