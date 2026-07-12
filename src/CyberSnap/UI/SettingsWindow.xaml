@@ -2328,56 +2328,53 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}" Grid.Row="0" Grid.Column="0">
                                     <TextBlock Text="&#xE793;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" MaxWidth="280">
                                     <TextBlock Text="App theme" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose the signature CyberSnap look, dark, light, or follow your Windows theme." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Choose the signature CyberSnap look, dark, light, or follow your Windows theme." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <!-- Each option in an identical vertical stack so the radio buttons align -->
-                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,18,0">
-                                        <RadioButton x:Name="ThemeDarkRadio" Content="CyberSnap" GroupName="AppTheme"
-                                                     HorizontalAlignment="Center" Cursor="Hand"
+                                <!-- Theme picker cards: each RadioButton is a ThemeCard showing a live
+                                     mini-preview of its own theme. x:Names + Checked handler are unchanged
+                                     so SelectAppTheme / AppThemeRadio_Changed keep working. -->
+                                <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,14,0">
+                                        <controls:ThemeCard x:Name="ThemeDarkRadio" Caption="CyberSnap"
+                                                     ThemeMode="Dark" CardWidth="104" GroupName="AppTheme"
                                                      AutomationProperties.Name="CyberSnap theme"
                                                      ToolTip="Always use the signature CyberSnap theme."
                                                      Checked="AppThemeRadio_Changed"/>
                                         <Border CornerRadius="3" Background="{DynamicResource ThemeTabActiveBrush}"
                                                 BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="0.8"
-                                                Padding="4,1" Margin="0,3,0,0" HorizontalAlignment="Center" Opacity="0.85">
+                                                Padding="4,1" Margin="0,6,0,0" HorizontalAlignment="Center" Opacity="0.85">
                                             <TextBlock Text="DEFAULT" FontSize="7.5" FontWeight="SemiBold"
                                                        Foreground="{DynamicResource ThemeAccentBrush}"
                                                        FontFamily="Segoe UI Variable Display" VerticalAlignment="Center"/>
                                         </Border>
                                     </StackPanel>
-                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,18,0">
-                                        <RadioButton x:Name="ThemeGrayscaleRadio" Content="Dark" GroupName="AppTheme"
-                                                     HorizontalAlignment="Center" Cursor="Hand"
-                                                     AutomationProperties.Name="Dark theme"
-                                                     ToolTip="Sober, monochrome dark theme."
-                                                     Checked="AppThemeRadio_Changed"/>
-                                        <!-- Spacer to match the badge height under CyberSnap -->
-                                        <Border Height="14" Margin="0,3,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,18,0">
-                                        <RadioButton x:Name="ThemeLightRadio" Content="Light" GroupName="AppTheme"
-                                                     HorizontalAlignment="Center" Cursor="Hand"
-                                                     AutomationProperties.Name="Light theme"
-                                                     ToolTip="Always use the light theme."
-                                                     Checked="AppThemeRadio_Changed"/>
-                                        <!-- Spacer to match the badge height under CyberSnap -->
-                                        <Border Height="14" Margin="0,3,0,0"/>
-                                    </StackPanel>
-                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
-                                        <RadioButton x:Name="ThemeSystemRadio" Content="Auto" GroupName="AppTheme"
-                                                     HorizontalAlignment="Center" Cursor="Hand"
-                                                     AutomationProperties.Name="Auto theme"
-                                                     ToolTip="Follows Windows: CyberSnap when dark, Light when light."
-                                                     Checked="AppThemeRadio_Changed"/>
-                                        <!-- Spacer to match the badge height under Dark -->
-                                        <Border Height="14" Margin="0,3,0,0"/>
-                                    </StackPanel>
+                                    <controls:ThemeCard x:Name="ThemeGrayscaleRadio" Caption="Dark"
+                                                 ThemeMode="Grayscale" CardWidth="104" GroupName="AppTheme" Margin="0,0,14,0"
+                                                 VerticalAlignment="Top"
+                                                 AutomationProperties.Name="Dark theme"
+                                                 ToolTip="Sober, monochrome dark theme."
+                                                 Checked="AppThemeRadio_Changed"/>
+                                    <controls:ThemeCard x:Name="ThemeLightRadio" Caption="Light"
+                                                 ThemeMode="Light" CardWidth="104" GroupName="AppTheme" Margin="0,0,14,0"
+                                                 VerticalAlignment="Top"
+                                                 AutomationProperties.Name="Light theme"
+                                                 ToolTip="Always use the light theme."
+                                                 Checked="AppThemeRadio_Changed"/>
+                                    <controls:ThemeCard x:Name="ThemeSystemRadio" Caption="System"
+                                                 ThemeMode="System" CardWidth="104" GroupName="AppTheme"
+                                                 VerticalAlignment="Top"
+                                                 AutomationProperties.Name="System theme"
+                                                 ToolTip="Follows Windows: CyberSnap when dark, Light when light."
+                                                 Checked="AppThemeRadio_Changed"/>
                                 </StackPanel>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
