@@ -2911,35 +2911,6 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8A7;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Services:LocalizationService.SourceText="Toast preview click action" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Services:LocalizationService.SourceText="What happens when you click the capture preview on a notification." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <ComboBox x:Name="ToastPreviewClickActionCombo" Grid.Column="2" MinWidth="170"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Toast preview click action"
-                                          Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a toast."
-                                          SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Open in editor"
-                                                  Services:LocalizationService.SourceToolTip="Open the capture in the built-in editor."
-                                                  AutomationProperties.Name="Open in editor"
-                                                  AutomationProperties.HelpText="Opens the image in the post-capture editor for annotation and adjustments."/>
-                                    <ComboBoxItem Content="Open in default viewer"
-                                                  Services:LocalizationService.SourceToolTip="Open the file with the system default image viewer."
-                                                  AutomationProperties.Name="Open in default viewer"
-                                                  AutomationProperties.HelpText="Opens the saved file using your operating system's default image application."/>
-                                </ComboBox>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
                                     <TextBlock Text="&#xE90D;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -3218,6 +3189,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <Grid Grid.Row="0">
                                 <Grid.RowDefinitions>
@@ -3237,6 +3209,10 @@
                                        HorizontalAlignment="Left"
                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                             <StackPanel Grid.Row="2" x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Button x:Name="ToastPresetNoneBtn" Services:LocalizationService.SourceContent="No buttons" Margin="0,0,8,0" Cursor="Hand"
+                                        AutomationProperties.Name="No buttons preset"
+                                        AutomationProperties.HelpText="Hide every overlay button. Use the preview click action below."
+                                        Services:LocalizationService.SourceToolTip="Hide every overlay button. Use the preview click action below." Click="ToastPresetNoneBtn_Click"/>
                                 <Button x:Name="ToastPresetMinimalBtn" Services:LocalizationService.SourceContent="Minimal" Margin="0,0,8,0" Cursor="Hand"
                                         AutomationProperties.Name="Minimal preset"
                                         AutomationProperties.HelpText="Show only the close button."
@@ -3259,7 +3235,47 @@
                                         Click="ResetToastButtonsBtn_Click"/>
                             </StackPanel>
 
-                            <Border Grid.Row="3" Margin="0,14,0,0"
+                            <!-- Preview-body click lives with the button designer: same surface, same mental model. -->
+                            <Grid Grid.Row="3" Margin="0,16,0,0" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8A7;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Services:LocalizationService.SourceText="Toast preview click action" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="What happens when you click the capture image on a notification (works with or without overlay buttons)." Style="{StaticResource SettingDescription}"/>
+                                </StackPanel>
+                                <ComboBox x:Name="ToastPreviewClickActionCombo" Grid.Column="2" MinWidth="190"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Toast preview click action"
+                                          Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a toast."
+                                          SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
+                                    <ComboBoxItem Content="Open in editor"
+                                                  Services:LocalizationService.SourceToolTip="Open the capture in the built-in editor."
+                                                  AutomationProperties.Name="Open in editor"/>
+                                    <ComboBoxItem Content="Open in default viewer"
+                                                  Services:LocalizationService.SourceToolTip="Open the file with the system default image viewer."
+                                                  AutomationProperties.Name="Open in default viewer"/>
+                                    <ComboBoxItem Content="Copy to clipboard"
+                                                  Services:LocalizationService.SourceToolTip="Copy the capture to your clipboard."
+                                                  AutomationProperties.Name="Copy to clipboard"/>
+                                    <ComboBoxItem Content="Save"
+                                                  Services:LocalizationService.SourceToolTip="Save the capture to a file."
+                                                  AutomationProperties.Name="Save"/>
+                                    <ComboBoxItem Content="Open in Gallery"
+                                                  Services:LocalizationService.SourceToolTip="Open the capture in the Gallery."
+                                                  AutomationProperties.Name="Open in Gallery"/>
+                                    <ComboBoxItem Content="Close immediately"
+                                                  Services:LocalizationService.SourceToolTip="Dismiss the notification instantly without a fade-out."
+                                                  AutomationProperties.Name="Close immediately"/>
+                                </ComboBox>
+                            </Grid>
+
+                            <Border Grid.Row="4" Margin="0,14,0,0"
                                     CornerRadius="12"
                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                     BorderThickness="1"

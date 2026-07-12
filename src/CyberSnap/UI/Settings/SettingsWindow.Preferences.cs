@@ -518,7 +518,8 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressToastPreferenceChange) return;
 
         var previous = _settingsService.Settings.ToastPreviewClickAction;
-        var selected = (ToastPreviewClickAction)Math.Clamp(ToastPreviewClickActionCombo.SelectedIndex, 0, 1);
+        var selected = (ToastPreviewClickAction)Math.Clamp(
+            ToastPreviewClickActionCombo.SelectedIndex, 0, (int)ToastPreviewClickAction.Close);
         UpdateToastPreference(
             "settings.toast-preview-click-action",
             "Toast preview click action",

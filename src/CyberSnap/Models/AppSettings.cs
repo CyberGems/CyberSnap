@@ -135,8 +135,12 @@ public enum HistoryClickAction
 /// <summary>What happens when the user left-clicks the capture preview body on a toast.</summary>
 public enum ToastPreviewClickAction
 {
-    OpenInEditor,
-    OpenInDefaultViewer
+    OpenInEditor = 0,
+    OpenInDefaultViewer = 1,
+    CopyToClipboard = 2,
+    Save = 3,
+    OpenInGallery = 4,
+    Close = 5
 }
 
 public enum CaptureKind

@@ -604,6 +604,7 @@ public partial class SettingsWindow
         return null;
     }
 
+    private void ToastPresetNoneBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.None);
     private void ToastPresetMinimalBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Minimal);
     private void ToastPresetStandardBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Standard);
     private void ToastPresetFullBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Full);
@@ -789,6 +790,7 @@ public partial class SettingsWindow
         bool manualActive = IsManualMode;
 
         // Preset buttons are highlighted when their preset is active AND Manual mode is off.
+        HighlightToastPreset(ToastPresetNoneBtn, active == ToastButtonPreset.None && !manualActive);
         HighlightToastPreset(ToastPresetMinimalBtn, active == ToastButtonPreset.Minimal && !manualActive);
         HighlightToastPreset(ToastPresetStandardBtn, active == ToastButtonPreset.Standard && !manualActive);
         HighlightToastPreset(ToastPresetFullBtn, active == ToastButtonPreset.Full && !manualActive);

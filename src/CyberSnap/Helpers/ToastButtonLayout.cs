@@ -27,7 +27,9 @@ public enum ToastButtonPreset
 {
     Minimal,
     Standard,
-    Full
+    Full,
+    /// <summary>No overlay buttons — relies on preview-body click action.</summary>
+    None
 }
 
 public static class ToastButtonLayout
@@ -266,6 +268,10 @@ public static class ToastButtonLayout
 
         switch (preset)
         {
+            case ToastButtonPreset.None:
+                // Intentionally empty: no overlay buttons. Preview-body click still works.
+                break;
+
             case ToastButtonPreset.Minimal:
                 Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
                 break;
