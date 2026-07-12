@@ -930,16 +930,41 @@ public partial class SettingsWindow
         ApplyMockRail(EditorToastMockRail, EditorToastMockRailGlow);
         ApplyMockRail(ToastLayoutRail, ToastLayoutRailGlow);
 
-        // Left: system-alert example only when images are sent to the editor.
+        // Left: system-alert examples for the auto-open paths that skip the designed preview toast.
         if (EditorToastMockShell is not null)
+        {
             EditorToastMockShell.Visibility = editorOn ? Visibility.Visible : Visibility.Collapsed;
+            EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
+            EditorToastMockShell.BorderBrush = ToastAccentStroke();
+        }
+        if (EncodingToastMockShell is not null)
+        {
+            EncodingToastMockShell.Visibility = trimmerOn ? Visibility.Visible : Visibility.Collapsed;
+            EncodingToastMockShell.Background = Theme.Brush(Theme.ToastBg);
+            EncodingToastMockShell.BorderBrush = ToastAccentStroke();
+        }
+        ApplyMockRail(EncodingToastMockRail, EncodingToastMockRailGlow);
+
+        bool anySystemExample = editorOn || trimmerOn;
         if (SystemAlertExampleLabel is not null)
-            SystemAlertExampleLabel.Visibility = editorOn ? Visibility.Visible : Visibility.Collapsed;
+            SystemAlertExampleLabel.Visibility = anySystemExample ? Visibility.Visible : Visibility.Collapsed;
         if (SystemAlertOffNote is not null)
-            SystemAlertOffNote.Visibility = editorOn ? Visibility.Collapsed : Visibility.Visible;
+        {
+            SystemAlertOffNote.Visibility = anySystemExample ? Visibility.Collapsed : Visibility.Visible;
+            if (!anySystemExample)
+            {
+                SystemAlertOffNote.Text = Services.LocalizationService.Translate(
+                    "Send to Editor is off — captures use the notification you design on the right.");
+            }
+        }
 
         // Right: designed capture notification — used for whatever is NOT auto-sent to Editor/Trimmer.
-        ApplyEditorPreviewEmphasis(EditorButtonsCard, active: designedToastForImages || designedToastForVideo);
+        bool designActive = designedToastForImages || designedToastForVideo;
+        ApplyEditorPreviewEmphasis(EditorButtonsCard, active: designActive);
+        if (ToastLayoutStack is not null)
+            ToastLayoutStack.Opacity = designActive ? 1.0 : 0.35;
+        if (CaptureDesignIdleNote is not null)
+            CaptureDesignIdleNote.Visibility = designActive ? Visibility.Collapsed : Visibility.Visible;
         if (EditorPreviewOtherCaption is not null)
         {
             string captionKey =

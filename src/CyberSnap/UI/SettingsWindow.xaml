@@ -2704,11 +2704,11 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="Send to Editor" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Send image captures to the Annotation Editor (not for video or GIF)." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Send image captures to the Annotation Editor and video/GIF to the Trimmer" Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="WidgetEnableEditorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           AutomationProperties.Name="Send to Editor"
-                                          ToolTip="Send image captures to the Annotation Editor"
+                                          ToolTip="Send image captures to the Annotation Editor and video/GIF to the Trimmer"
                                           Checked="WidgetEnableEditorCheck_Changed" Unchecked="WidgetEnableEditorCheck_Changed"/>
                             </Grid>
                             <Border x:Name="WidgetEnableEditorSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -2822,6 +2822,13 @@
                     <TextBlock Text="Behavior" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
+                            <Border Margin="0,0,0,12" CornerRadius="8" Padding="12,9" BorderThickness="1"
+                                    Background="{DynamicResource ThemeTabHoverBrush}"
+                                    BorderBrush="{DynamicResource ThemeInputBorderBrush}">
+                                <TextBlock Services:LocalizationService.SourceText="Notification types glossary"
+                                           FontSize="12.5" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                            </Border>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -3010,9 +3017,18 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Services:LocalizationService.SourceText="Test notification" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Services:LocalizationService.SourceText="Send a test preview notification to verify position and layout." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Send a test capture notification or system alert to verify position and layout." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
-                                <Button x:Name="TestToastBtn" Grid.Column="2" Services:LocalizationService.SourceContent="Send Test" MinWidth="150" Height="28" Cursor="Hand" Click="TestToastBtn_Click"/>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button x:Name="TestToastBtn" Services:LocalizationService.SourceContent="Capture preview"
+                                            MinWidth="120" Height="28" Margin="0,0,8,0" Cursor="Hand"
+                                            Services:LocalizationService.SourceToolTip="Send a test capture notification with preview and your button layout."
+                                            Click="TestToastBtn_Click"/>
+                                    <Button x:Name="TestSystemAlertBtn" Services:LocalizationService.SourceContent="System alert"
+                                            MinWidth="120" Height="28" Cursor="Hand"
+                                            Services:LocalizationService.SourceToolTip="Send a test system alert (brief status message)."
+                                            Click="TestSystemAlertBtn_Click"/>
+                                </StackPanel>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -3379,10 +3395,12 @@
                                                 <TextBlock x:Name="SystemAlertExampleLabel" Margin="0,0,0,6" FontSize="11"
                                                            Opacity="0.7" Visibility="Collapsed"
                                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                                           Services:LocalizationService.SourceText="Example"/>
-                                                <Border x:Name="EditorToastMockShell" CornerRadius="12"
+                                                           Services:LocalizationService.SourceText="Examples"/>
+                                                <StackPanel x:Name="SystemAlertExamplesHost">
+                                                <Border x:Name="EditorToastMockShell" CornerRadius="12" Margin="0,0,0,8"
                                                         MinWidth="196" MaxWidth="248" BorderThickness="1"
-                                                        ClipToBounds="True" HorizontalAlignment="Left">
+                                                        ClipToBounds="True" HorizontalAlignment="Left"
+                                                        Visibility="Collapsed">
                                                     <Grid>
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition Height="Auto"/>
@@ -3427,6 +3445,40 @@
                                                         </Border>
                                                     </Grid>
                                                 </Border>
+                                                <Border x:Name="EncodingToastMockShell" CornerRadius="12"
+                                                        MinWidth="196" MaxWidth="248" BorderThickness="1"
+                                                        ClipToBounds="True" HorizontalAlignment="Left"
+                                                        Visibility="Collapsed">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="4"/>
+                                                        </Grid.RowDefinitions>
+                                                        <StackPanel Grid.Row="0" Margin="14,11,14,11" VerticalAlignment="Center">
+                                                            <TextBlock Services:LocalizationService.SourceText="Recording"
+                                                                       FontSize="12.75" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
+                                                                       TextWrapping="Wrap" TextAlignment="Center"
+                                                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                                            <TextBlock Services:LocalizationService.SourceText="Encoding, please wait..."
+                                                                       FontSize="11.5" FontFamily="Segoe UI Variable Text"
+                                                                       TextWrapping="Wrap" TextAlignment="Center" Opacity="0.72" Margin="0,2,0,0"
+                                                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                                        </StackPanel>
+                                                        <Border x:Name="EncodingToastMockRail" Grid.Row="1" HorizontalAlignment="Stretch" CornerRadius="0,0,12,12" Margin="4,0">
+                                                            <Border.Background>
+                                                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                                                    <GradientStop Color="#FF00F2FF" Offset="0.0"/>
+                                                                    <GradientStop Color="#FF7A00FF" Offset="0.5"/>
+                                                                    <GradientStop Color="#FFFF00D0" Offset="1.0"/>
+                                                                </LinearGradientBrush>
+                                                            </Border.Background>
+                                                            <Border.Effect>
+                                                                <DropShadowEffect x:Name="EncodingToastMockRailGlow" Color="#FF7A00FF" BlurRadius="4" ShadowDepth="0" Opacity="0.45"/>
+                                                            </Border.Effect>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                                </StackPanel>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -3463,6 +3515,11 @@
                                                            Foreground="{DynamicResource ThemeAccentBrush}"/>
                                             </Border>
                                         </StackPanel>
+                                    <TextBlock x:Name="CaptureDesignIdleNote" Margin="0,0,0,10" FontSize="11.5"
+                                               TextWrapping="Wrap" MaxWidth="420" Opacity="0.9"
+                                               Visibility="Collapsed"
+                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                               Services:LocalizationService.SourceText="Not used while captures open automatically in the Editor or Trimmer. Turn Send to Editor off to use this layout after every capture."/>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                                     <StackPanel x:Name="ToastLayoutStack" Width="260" HorizontalAlignment="Left" VerticalAlignment="Center">
                                     <!-- Capture-notification mock: Theme.ToastBg + accent edge (set in RefreshEditorPreviewState). -->
