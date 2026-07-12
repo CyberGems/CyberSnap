@@ -114,10 +114,16 @@ internal sealed class ThemeCard : RadioButton
         if (d is ThemeCard c) c.ApplyDefaultTooltip();
     }
 
-    private void ApplyDefaultTooltip()
+    private bool _applyingDefaultTip;
+
+    public void ApplyDefaultTooltip()
     {
-        if (!IsDefaultTheme) return;
-        ToolTip = LocalizationService.Translate("Always use the signature CyberSnap theme. (Default)");
+        if (!IsDefaultTheme || _applyingDefaultTip) return;
+        var translated = LocalizationService.Translate("Always use the signature CyberSnap theme. (Default)");
+        if (ToolTip?.ToString() == translated) return; // already correct
+        _applyingDefaultTip = true;
+        ToolTip = translated;
+        _applyingDefaultTip = false;
     }
 
     private void Rebuild()
