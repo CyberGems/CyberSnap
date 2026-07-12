@@ -347,6 +347,26 @@ public partial class SettingsWindow
             return;
         }
 
+        // ── Temporarily make ALL panels visible so WPF populates the visual tree ──
+        // Collapsed panels never get their visual tree built by WPF, which means
+        // VisualTreeHelper.GetParent returns null for their children. We force them
+        // visible briefly, run a synchronous layout pass, then hide them again after
+        // we've extracted the containers we need.
+        var allPanels = new ScrollViewer[]
+        {
+            SettingsPanel, SoundsPanel, WidgetPanel, ToastPanel,
+            CapturePanel, EditorPanel, RecordingPanel, OcrPanel,
+            HotkeysPanel, HistoryPanel, AchievementsPanel, AboutPanel
+        };
+
+        var originalVisibility = new Visibility[allPanels.Length];
+        for (int i = 0; i < allPanels.Length; i++)
+        {
+            originalVisibility[i] = allPanels[i].Visibility;
+            allPanels[i].Visibility = Visibility.Visible;
+        }
+        UpdateLayout(); // Force WPF to build the visual tree for all panels
+
         var seenContainers = new HashSet<FrameworkElement>();
         var containerEntries = new List<(FrameworkElement Container, SettingsSearchEntry Entry)>();
 
@@ -356,8 +376,7 @@ public partial class SettingsWindow
             if (container == null || seenContainers.Contains(container))
                 continue;
 
-            var parent = GetParentPanel(container);
-            if (parent != null)
+            if (VisualTreeHelper.GetParent(container) is System.Windows.Controls.Panel)
             {
                 seenContainers.Add(container);
                 containerEntries.Add((container, entry));
@@ -366,8 +385,7 @@ public partial class SettingsWindow
 
         foreach (var (container, entry) in containerEntries)
         {
-            var originalParent = GetParentPanel(container);
-            if (originalParent != null)
+            if (VisualTreeHelper.GetParent(container) is System.Windows.Controls.Panel originalParent)
             {
                 int originalIndex = originalParent.Children.IndexOf(container);
                 if (originalIndex >= 0)
@@ -416,6 +434,11 @@ public partial class SettingsWindow
                 }
             }
         }
+
+        // ── Re-collapse all panels; only SearchResultsPanel stays visible ──
+        foreach (var panel in allPanels)
+            panel.Visibility = Visibility.Collapsed;
+        SearchResultsPanel.Visibility = Visibility.Visible;
 
         int count = containerEntries.Count;
         SettingsSearchCount.Text = count > 0
