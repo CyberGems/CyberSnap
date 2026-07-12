@@ -731,8 +731,8 @@ public partial class ToastWindow : Window
         {
             // Tooltip/help for the image surface is owned by RefreshInteractiveTooltip so the
             // configured body-click action and file name stay in one place (no competing tips).
-            var previewHelp = BuildPreviewBodyTooltip(spec) ?? "Toast preview image";
-            SetToastElementAccessibility(PreviewImage, "Toast preview image", previewHelp);
+            var previewHelp = BuildPreviewBodyTooltip(spec) ?? "Notification preview image";
+            SetToastElementAccessibility(PreviewImage, "Notification preview image", previewHelp);
         }
     }
 
@@ -756,7 +756,7 @@ public partial class ToastWindow : Window
                 ? (T("Deleting file"), T("Delete is already running."))
                 : (T("Delete capture"), T("Delete capture")),
             Helpers.ToastButtonKind.History => (T("Open capture in Gallery"), T("Open capture in Gallery.")),
-            _ => (T("Toast action"), T("Run this toast action."))
+            _ => (T("Notification action"), T("Run this notification action."))
         };
         SetToastElementAccessibility(button, name, helpText);
     }

@@ -249,17 +249,17 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0" Margin="0,0,0,6" ToolTip="Open the post-capture editor for annotations after capturing.">
+                        <Grid Grid.Row="0" Margin="0,0,0,6" ToolTip="Send image captures to the Annotation Editor">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Enable editor" FontSize="11" Foreground="{DynamicResource WidgetTextMuted}" FontFamily="Segoe UI Variable Text"
+                            <TextBlock Text="Send to Editor" FontSize="11" Foreground="{DynamicResource WidgetTextMuted}" FontFamily="Segoe UI Variable Text"
                                        Margin="0,0,8,0" VerticalAlignment="Center"
-                                       ToolTip="Open the post-capture editor for annotations after capturing."/>
+                                       ToolTip="Send image captures to the Annotation Editor"/>
                             <ToggleButton x:Name="EnableEditorToggle" Grid.Column="1" Style="{StaticResource WidgetToggleSwitch}"
                                           Checked="EnableEditorToggle_Changed" Unchecked="EnableEditorToggle_Changed"
-                                          ToolTip="Open the post-capture editor for annotations after capturing."/>
+                                          ToolTip="Send image captures to the Annotation Editor"/>
                         </Grid>
 
                         <Grid Grid.Row="1">

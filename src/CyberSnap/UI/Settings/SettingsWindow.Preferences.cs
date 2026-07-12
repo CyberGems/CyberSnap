@@ -522,7 +522,7 @@ public partial class SettingsWindow
             ToastPreviewClickActionCombo.SelectedIndex, 0, (int)ToastPreviewClickAction.Close);
         UpdateToastPreference(
             "settings.toast-preview-click-action",
-            "Toast preview click action",
+            "Notification preview click action",
             previous,
             selected,
             value => _settingsService.Settings.ToastPreviewClickAction = value,
@@ -1283,7 +1283,7 @@ public partial class SettingsWindow
             AppDiagnostics.LogError("settings.test-toast", ex);
             ToastWindow.ShowError(
                 LocalizationService.Translate("Test failed"),
-                $"{LocalizationService.Translate("Could not show test toast notification:")}\n{ex.Message}");
+                $"{LocalizationService.Translate("Could not show test notification:")}\n{ex.Message}");
         }
     }
 }
