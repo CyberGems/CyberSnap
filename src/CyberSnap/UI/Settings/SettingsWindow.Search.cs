@@ -107,49 +107,58 @@ public partial class SettingsWindow
         // ─── Source 1: SchemaCatalog ───
         foreach (var page in SettingsSchemaCatalog.Pages)
         {
+            var translatedPageTitle = LocalizationService.Translate(page.Title);
+            var translatedPageDesc = LocalizationService.Translate(page.Description);
+
             entries.Add(new SettingsSearchEntry
             {
                 PageKey = page.Key,
-                PageTitle = page.Title,
-                MatchText = page.Title,
-                ContextText = page.Description,
+                PageTitle = translatedPageTitle,
+                MatchText = translatedPageTitle,
+                ContextText = translatedPageDesc,
                 Source = SearchEntrySource.Schema
             });
 
             foreach (var section in page.Sections)
             {
+                var translatedSectionTitle = LocalizationService.Translate(section.Title);
+                var translatedSectionDesc = LocalizationService.Translate(section.Description);
+
                 entries.Add(new SettingsSearchEntry
                 {
                     PageKey = page.Key,
-                    PageTitle = page.Title,
-                    SectionTitle = section.Title,
-                    MatchText = section.Title,
-                    ContextText = section.Description,
+                    PageTitle = translatedPageTitle,
+                    SectionTitle = translatedSectionTitle,
+                    MatchText = translatedSectionTitle,
+                    ContextText = translatedSectionDesc,
                     Source = SearchEntrySource.Schema
                 });
 
                 foreach (var setting in section.Items)
                 {
+                    var translatedLabel = LocalizationService.Translate(setting.Label);
+                    var translatedDesc = LocalizationService.Translate(setting.Description);
+
                     entries.Add(new SettingsSearchEntry
                     {
                         PageKey = page.Key,
-                        PageTitle = page.Title,
-                        SectionTitle = section.Title,
-                        MatchText = setting.Label,
-                        ContextText = setting.Description,
+                        PageTitle = translatedPageTitle,
+                        SectionTitle = translatedSectionTitle,
+                        MatchText = translatedLabel,
+                        ContextText = translatedDesc,
                         Source = SearchEntrySource.Schema,
                         TargetSettingKey = setting.Key
                     });
 
-                    if (!string.IsNullOrWhiteSpace(setting.Description) && setting.Description.Length < 150)
+                    if (!string.IsNullOrWhiteSpace(translatedDesc) && translatedDesc.Length < 150)
                     {
                         entries.Add(new SettingsSearchEntry
                         {
                             PageKey = page.Key,
-                            PageTitle = page.Title,
-                            SectionTitle = section.Title,
-                            MatchText = setting.Description,
-                            ContextText = setting.Label,
+                            PageTitle = translatedPageTitle,
+                            SectionTitle = translatedSectionTitle,
+                            MatchText = translatedDesc,
+                            ContextText = translatedLabel,
                             Source = SearchEntrySource.Schema,
                             TargetSettingKey = setting.Key
                         });
@@ -477,7 +486,13 @@ public partial class SettingsWindow
                     break;
                 }
             }
-            parent = VisualTreeHelper.GetParent(parent);
+
+            var nextParent = VisualTreeHelper.GetParent(parent);
+            if (nextParent == null && parent is FrameworkElement frameworkElement)
+            {
+                nextParent = LogicalTreeHelper.GetParent(frameworkElement) ?? frameworkElement.Parent;
+            }
+            parent = nextParent;
         }
 
         if (container != null)
