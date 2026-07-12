@@ -355,6 +355,7 @@ public sealed class SettingsService : IDisposable
         }
         settings.HistoryRetention = NormalizeEnum(settings.HistoryRetention, HistoryRetentionPeriod.Never);
         settings.HistoryClickAction = NormalizeEnum(settings.HistoryClickAction, HistoryClickAction.OpenInEditor);
+        settings.ToastPreviewClickAction = NormalizeEnum(settings.ToastPreviewClickAction, ToastPreviewClickAction.OpenInEditor);
         settings.ToastPosition = NormalizeEnum(settings.ToastPosition, ToastPosition.TopCenter);
 
         settings.RecordingFormat = NormalizeEnum(settings.RecordingFormat, RecordingFormat.MP4);

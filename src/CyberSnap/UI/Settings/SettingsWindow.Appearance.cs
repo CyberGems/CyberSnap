@@ -288,6 +288,7 @@ public partial class SettingsWindow
             AnnotationStrokeShadowCheck.IsChecked = s.AnnotationStrokeShadow;
             CaptureDelayCombo.SelectedIndex = s.CaptureDelaySeconds switch { 3 => 1, 5 => 2, 10 => 3, _ => 0 };
             AutoPinPreviewsCheck.IsChecked = s.AutoPinPreviews;
+            ToastPreviewClickActionCombo.SelectedIndex = (int)s.ToastPreviewClickAction;
             NotificationsEnabledCheck.IsChecked = s.NotificationsEnabled;
             SystemNotificationsCheck.IsChecked = s.SystemNotificationsEnabled;
             CelebrationsCheck.IsChecked = s.CelebrationsEnabled;
