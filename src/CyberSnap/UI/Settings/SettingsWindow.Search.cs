@@ -147,7 +147,7 @@ public partial class SettingsWindow
                         MatchText = translatedLabel,
                         ContextText = translatedDesc,
                         Source = SearchEntrySource.Schema,
-                        TargetSettingKey = setting.Key
+                        TargetSettingKey = setting.BindingPath ?? setting.Key
                     });
 
                     if (!string.IsNullOrWhiteSpace(translatedDesc) && translatedDesc.Length < 150)
@@ -160,7 +160,7 @@ public partial class SettingsWindow
                             MatchText = translatedDesc,
                             ContextText = translatedLabel,
                             Source = SearchEntrySource.Schema,
-                            TargetSettingKey = setting.Key
+                            TargetSettingKey = setting.BindingPath ?? setting.Key
                         });
                     }
                 }
@@ -370,22 +370,58 @@ public partial class SettingsWindow
         var seenContainers = new HashSet<FrameworkElement>();
         var containerEntries = new List<(FrameworkElement Container, SettingsSearchEntry Entry)>();
 
+        AppDiagnostics.LogInfo("search.diag", $"─── Search extraction: {_filteredResults.Count} filtered results ───");
         foreach (var entry in _filteredResults)
         {
             var container = FindSettingContainer(entry);
-            if (container == null || seenContainers.Contains(container))
+            if (container == null)
+            {
+                AppDiagnostics.LogInfo("search.diag", $"  SKIP (no container): MatchText='{entry.MatchText}' Source={entry.Source} Key={entry.TargetSettingKey} Element={entry.TargetElement?.GetType().Name}");
                 continue;
+            }
+            if (seenContainers.Contains(container))
+            {
+                AppDiagnostics.LogInfo("search.diag", $"  SKIP (duplicate): MatchText='{entry.MatchText}'");
+                continue;
+            }
 
-            if (VisualTreeHelper.GetParent(container) is System.Windows.Controls.Panel)
+            var visualParent = VisualTreeHelper.GetParent(container);
+            var logicalParent = LogicalTreeHelper.GetParent(container);
+            var directParent = (container as FrameworkElement)?.Parent;
+            AppDiagnostics.LogInfo("search.diag",
+                $"  Container: {container.GetType().Name} Style={(container as FrameworkElement)?.Style?.TargetType?.Name} " +
+                $"VisualParent={(visualParent?.GetType().Name ?? "NULL")} " +
+                $"LogicalParent={(logicalParent?.GetType().Name ?? "NULL")} " +
+                $"DirectParent={(directParent?.GetType().Name ?? "NULL")} " +
+                $"MatchText='{entry.MatchText}'");
+
+            // Accept parent from visual tree OR logical tree
+            System.Windows.Controls.Panel? parentPanel =
+                (visualParent as System.Windows.Controls.Panel) ??
+                (logicalParent as System.Windows.Controls.Panel) ??
+                (directParent as System.Windows.Controls.Panel);
+
+            if (parentPanel != null)
             {
                 seenContainers.Add(container);
                 containerEntries.Add((container, entry));
             }
+            else
+            {
+                AppDiagnostics.LogInfo("search.diag", $"  REJECTED (no panel parent): MatchText='{entry.MatchText}'");
+            }
         }
+        AppDiagnostics.LogInfo("search.diag", $"─── {containerEntries.Count} containers accepted ───");
 
         foreach (var (container, entry) in containerEntries)
         {
-            if (VisualTreeHelper.GetParent(container) is System.Windows.Controls.Panel originalParent)
+            // Find parent panel using visual tree first, then logical tree fallback
+            System.Windows.Controls.Panel? originalParent =
+                (VisualTreeHelper.GetParent(container) as System.Windows.Controls.Panel) ??
+                (LogicalTreeHelper.GetParent(container) as System.Windows.Controls.Panel) ??
+                ((container as FrameworkElement)?.Parent as System.Windows.Controls.Panel);
+
+            if (originalParent != null)
             {
                 int originalIndex = originalParent.Children.IndexOf(container);
                 if (originalIndex >= 0)
@@ -832,53 +868,70 @@ public partial class SettingsWindow
 
     private FrameworkElement? FindSettingControl(string settingKey)
     {
-        return settingKey switch
+        var normalized = (settingKey ?? "").ToLowerInvariant().Replace("_", "");
+        return normalized switch
         {
             // General / Startup
-            "StartWithWindows"          => StartWithWindowsCheck,
-            "AfterCapture"              => AfterCaptureCombo,
+            "startwithwindows"          => StartWithWindowsCheck,
+            "aftercapture"              => AfterCaptureCombo,
             // General / Output
-            "SaveToFile"                => SaveToFileCheck,
-            "SaveDirectory"             => SaveDirBox,
-            "SaveInMonthlyFolders"      => MonthlyFoldersCheck,
-            "CaptureImageFormat"        => CaptureFormatCombo,
-            "FileNameTemplate"          => FileNameTemplateBox,
+            "savetofile"                => SaveToFileCheck,
+            "savedirectory"             => SaveDirBox,
+            "saveinmonthlyfolders"      => MonthlyFoldersCheck,
+            "monthlyfolders"            => MonthlyFoldersCheck,
+            "captureimageformat"        => CaptureFormatCombo,
+            "captureformat"             => CaptureFormatCombo,
+            "filenametemplate"          => FileNameTemplateBox,
+            // Standalone ruler
+            "rulercaptureallscreens"    => RulerCaptureAllScreensCheck,
+            "rulercontextmenuenabled"   => RulerContextMenuEnabledCheck,
             // Capture / Overlay
-            "ShowCrosshairGuides"       => CrosshairGuidesCheck,
-            "ShowCaptureMagnifier"      => ShowCaptureMagnifierCheck,
-            "DetectWindows"             => WindowDetectionCheck,
-            "CaptureDockSide"           => CaptureDockSideCombo,
+            "showcrosshairguides"       => CrosshairGuidesCheck,
+            "crosshair"                 => CrosshairGuidesCheck,
+            "showcapturemagnifier"      => ShowCaptureMagnifierCheck,
+            "magnifier"                 => ShowCaptureMagnifierCheck,
+            "detectwindows"             => WindowDetectionCheck,
+            "capturedockside"           => CaptureDockSideCombo,
+            "dockside"                  => CaptureDockSideCombo,
             // Capture / Screenshot styling
-            "StyleScreenshots"          => FindName("StyleScreenshotsCheck") as FrameworkElement,
-            "AddScreenshotShadow"       => FindName("AddScreenshotShadowCheck") as FrameworkElement,
-            "AddScreenshotStroke"       => FindName("AddScreenshotStrokeCheck") as FrameworkElement,
+            "stylescreenshots"          => FindName("StyleScreenshotsCheck") as FrameworkElement,
+            "addscreenshotshadow"       => FindName("AddScreenshotShadowCheck") as FrameworkElement,
+            "addscreenshotstroke"       => FindName("AddScreenshotStrokeCheck") as FrameworkElement,
+            "shadow"                    => FindName("AddScreenshotShadowCheck") as FrameworkElement,
+            "stroke"                    => FindName("AddScreenshotStrokeCheck") as FrameworkElement,
             // Recording
-            "RecordingFormat"           => FindName("RecordingFormatCombo") as FrameworkElement,
-            "RecordingQuality"          => RecordingQualityCombo,
-            "RecordingFps"              => RecordingFpsCombo,
-            "RecordMicrophone"          => RecordMicCheck,
-            "RecordDesktopAudio"        => RecordDesktopAudioCheck,
+            "recordingformat"           => FindName("RecordingFormatCombo") as FrameworkElement,
+            "recordingquality"          => RecordingQualityCombo,
+            "recordingfps"              => RecordingFpsCombo,
+            "recordmicrophone"          => RecordMicCheck,
+            "recorddesktopaudio"        => RecordDesktopAudioCheck,
             // OCR
-            "OcrLanguageTag"            => OcrLanguageCombo,
-            "OcrDefaultTranslateFrom"   => TranslateFromCombo,
-            "OcrDefaultTranslateTo"     => TranslateToCombo,
-            "TranslationModel"          => FindName("TranslationModelCombo") as FrameworkElement,
+            "ocrlanguagetag"            => OcrLanguageCombo,
+            "ocrlanguage"               => OcrLanguageCombo,
+            "ocrdefaulttranslatefrom"   => TranslateFromCombo,
+            "translatefrom"             => TranslateFromCombo,
+            "ocrdefaulttranslateto"     => TranslateToCombo,
+            "translateto"               => TranslateToCombo,
+            "translationmodel"          => FindName("TranslationModelCombo") as FrameworkElement,
             // History
-            "SaveHistory"               => SaveHistoryCheck,
-            "HistoryRetention"          => HistoryRetentionCombo,
-            "CompressHistory"           => FindName("CompressHistoryCheck") as FrameworkElement,
-            "AutoIndexImages"           => AutoIndexImagesCheck,
-            "ShowImageSearchBar"        => ShowImageSearchBarCheck,
-            "ImageSearchSources"        => FindName("ImageSearchSourcesCombo") as FrameworkElement,
+            "savehistory"               => SaveHistoryCheck,
+            "historyretention"          => HistoryRetentionCombo,
+            "compresshistory"           => FindName("CompressHistoryCheck") as FrameworkElement,
+            "autoindeximages"           => AutoIndexImagesCheck,
+            "showimagesearchbar"        => ShowImageSearchBarCheck,
+            "showimagesearch"           => ShowImageSearchBarCheck,
+            "imagesearchsources"        => FindName("ImageSearchSourcesCombo") as FrameworkElement,
+            "searchsources"             => FindName("ImageSearchSourcesCombo") as FrameworkElement,
+            "historyclickaction"        => HistoryClickActionCombo,
             // Interface language
-            "InterfaceLanguage"         => InterfaceLanguageCombo,
+            "interfacelanguage"         => InterfaceLanguageCombo,
             // General / Widgets
-            "ShowCaptureWidget"         => ShowCaptureWidgetCheck,
-            "WidgetEnableEditor"        => WidgetEnableEditorCheck,
-            "VideoEnableEditor"         => VideoEnableEditorCheck,
-            "WidgetDockEdge"            => WidgetDockEdgeCombo,
-            "WidgetHoverDelay"          => WidgetHoverDelayCombo,
-            "WidgetAlwaysOnTop"         => WidgetAlwaysOnTopCheck,
+            "showcapturewidget"         => ShowCaptureWidgetCheck,
+            "widgetenableeditor"        => WidgetEnableEditorCheck,
+            "videoenableeditor"         => VideoEnableEditorCheck,
+            "widgetdockedge"            => WidgetDockEdgeCombo,
+            "widgethoverdelay"          => WidgetHoverDelayCombo,
+            "widgetalwaysontop"         => WidgetAlwaysOnTopCheck,
             _ => null
         };
     }
