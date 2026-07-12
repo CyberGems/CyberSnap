@@ -64,18 +64,33 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private readonly System.Windows.Forms.Timer _clipboardMonitorTimer = new() { Interval = 1000 };
 
     /// <summary>Opens or reuses the single editor instance.</summary>
-    public static void ShowEditor(Bitmap captured, string? savedFilePath = null)
+    /// <param name="source">Origin of the image — controls size limits and soft warnings.</param>
+    /// <returns>False when the image was rejected (caller still owns cleanup of other resources).</returns>
+    public static bool ShowEditor(Bitmap captured, string? savedFilePath = null, ImageOpenSource source = ImageOpenSource.Capture)
     {
+        if (captured is null) throw new ArgumentNullException(nameof(captured));
+
+        var eval = ImageOpenPolicy.EvaluateBitmap(captured, source);
+        if (!eval.IsAllowed)
+        {
+            captured.Dispose();
+            ShowImageOpenError(eval);
+            return false;
+        }
+
         if (_instance is not null && !_instance.IsDisposed)
         {
-            _instance.LoadCapture(captured, savedFilePath);
+            _instance.LoadCapture(captured, savedFilePath, performanceWarning: eval.ShouldWarn);
             _instance.RestoreAndActivate();
             App.NotifyFirstTimeTool("editor");
-            return;
+            return true;
         }
         _instance = new EditorForm(captured, savedFilePath);
         _instance.Show();
+        if (eval.ShouldWarn)
+            _instance.ShowLargeImagePerformanceBanner(eval);
         App.NotifyFirstTimeTool("editor");
+        return true;
     }
 
     public static void ShowEditorFromFile(string filePath)
@@ -87,35 +102,66 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
             if (filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
             {
+                var sizeEval = ImageOpenPolicy.EvaluateFileSize(filePath, ImageOpenSource.FilePath);
+                if (!sizeEval.IsAllowed)
+                {
+                    ShowImageOpenError(sizeEval);
+                    return;
+                }
+
                 var (baseBitmap, projectData) = CanvasProjectService.LoadProject(filePath);
+                var dimEval = ImageOpenPolicy.EvaluateBitmap(baseBitmap, ImageOpenSource.FilePath, sizeEval.FileSizeBytes);
+                if (!dimEval.IsAllowed)
+                {
+                    baseBitmap.Dispose();
+                    ShowImageOpenError(dimEval);
+                    return;
+                }
+
                 if (_instance is not null && !_instance.IsDisposed)
                 {
-                    _instance.LoadCaptureProject(baseBitmap, projectData, filePath);
+                    _instance.LoadCaptureProject(baseBitmap, projectData, filePath, performanceWarning: dimEval.ShouldWarn);
                     _instance.RestoreAndActivate();
                     return;
                 }
                 _instance = new EditorForm(baseBitmap, filePath);
-                _instance.LoadCaptureProject(baseBitmap, projectData, filePath);
+                _instance.LoadCaptureProject(baseBitmap, projectData, filePath, performanceWarning: dimEval.ShouldWarn);
                 _instance.Show();
                 return;
             }
 
-            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-            using (var tempBmp = new Bitmap(stream))
+            var eval = ImageOpenPolicy.EvaluateAndLoad(
+                filePath,
+                ImageOpenSource.FilePath,
+                LoadDecoupledBitmap,
+                out var captured);
+            if (!eval.IsAllowed || captured is null)
             {
-                var captured = new Bitmap(tempBmp);
-                ShowEditor(captured, filePath);
-                if (_instance is not null)
-                    _instance.AddRecentFile(filePath);
+                ShowImageOpenError(eval);
+                return;
             }
+
+            ShowEditor(captured, filePath, ImageOpenSource.FilePath);
+            if (_instance is not null)
+                _instance.AddRecentFile(filePath);
         }
         catch (Exception ex)
         {
-            System.Windows.Forms.MessageBox.Show($"Failed to load image: {ex.Message}", "Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            ThemedConfirmDialog.Alert(
+                _instance is { IsDisposed: false } ? _instance.Handle : IntPtr.Zero,
+                LocalizationService.Translate("Error importing image"),
+                ex.Message,
+                error: true);
         }
     }
 
-    private void LoadCaptureProject(Bitmap baseBitmap, ProjectData data, string filePath, bool autoMaximize = true)
+    private static void ShowImageOpenError(ImageOpenEvaluation eval)
+    {
+        IntPtr owner = _instance is { IsDisposed: false } ? _instance.Handle : IntPtr.Zero;
+        ThemedConfirmDialog.Alert(owner, eval.ErrorTitle, eval.FormatErrorMessage(), error: true);
+    }
+
+    private void LoadCaptureProject(Bitmap baseBitmap, ProjectData data, string filePath, bool autoMaximize = true, bool performanceWarning = false)
     {
         _savedFilePath = filePath;
         _canvas.LoadProjectState(baseBitmap, data.Annotations, data.HorizontalGuides, data.VerticalGuides);
@@ -125,7 +171,16 @@ public sealed partial class EditorForm : Form, IMessageFilter
         UpdateCaptureCaption();
         RefreshUi();
         AddRecentFile(filePath);
-        _canvas.ShowToolBanner(LocalizationService.Translate("Project opened"));
+        if (performanceWarning)
+            ShowLargeImagePerformanceBanner(ImageOpenPolicy.EvaluateBitmap(baseBitmap, ImageOpenSource.FilePath));
+        else
+            _canvas.ShowToolBanner(LocalizationService.Translate("Project opened"));
+    }
+
+    private void ShowLargeImagePerformanceBanner(ImageOpenEvaluation eval)
+    {
+        // Sticky so the user has time to read; the next tool/status banner replaces it.
+        _canvas.ShowToolBanner(eval.FormatPerformanceBanner(), sticky: true);
     }
 
     /// <summary>Records a file path in the app's recent-files list (persists to settings.json
@@ -646,7 +701,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
     }
 
-    private void LoadCapture(Bitmap captured, string? savedFilePath, bool autoMaximize = true, bool showOpenedBanner = true)
+    private void LoadCapture(
+        Bitmap captured,
+        string? savedFilePath,
+        bool autoMaximize = true,
+        bool showOpenedBanner = true,
+        bool performanceWarning = false)
     {
         _savedFilePath = savedFilePath;
         _canvas.ResetState(new Bitmap(captured));
@@ -657,7 +717,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
             MaybeAutoMaximizeForCapture();
         UpdateCaptureCaption();
         RefreshUi();
-        if (!string.IsNullOrEmpty(savedFilePath) && showOpenedBanner)
+        if (performanceWarning)
+        {
+            ShowLargeImagePerformanceBanner(ImageOpenPolicy.EvaluateBitmap(captured, ImageOpenSource.Capture));
+        }
+        else if (!string.IsNullOrEmpty(savedFilePath) && showOpenedBanner)
         {
             _canvas.ShowToolBanner(LocalizationService.Translate("Image opened"));
         }
@@ -1190,38 +1254,39 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 {
                     if (dlg.FileName.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
                     {
+                        var sizeEval = ImageOpenPolicy.EvaluateFileSize(dlg.FileName, ImageOpenSource.UserImport);
+                        if (!sizeEval.IsAllowed)
+                        {
+                            ThemedConfirmDialog.Alert(Handle, sizeEval.ErrorTitle, sizeEval.FormatErrorMessage(), error: true);
+                            return;
+                        }
+
                         var (baseBitmap, projectData) = CanvasProjectService.LoadProject(dlg.FileName);
-                        LoadCaptureProject(baseBitmap, projectData, dlg.FileName);
+                        var dimEval = ImageOpenPolicy.EvaluateBitmap(baseBitmap, ImageOpenSource.UserImport, sizeEval.FileSizeBytes);
+                        if (!dimEval.IsAllowed)
+                        {
+                            baseBitmap.Dispose();
+                            ThemedConfirmDialog.Alert(Handle, dimEval.ErrorTitle, dimEval.FormatErrorMessage(), error: true);
+                            return;
+                        }
+
+                        LoadCaptureProject(baseBitmap, projectData, dlg.FileName, performanceWarning: dimEval.ShouldWarn);
                     }
                     else
                     {
-                        var fileInfo = new FileInfo(dlg.FileName);
-                        const long maxFileSize = 10 * 1024 * 1024; // 10 MB
-                        if (fileInfo.Length > maxFileSize)
+                        var eval = ImageOpenPolicy.EvaluateAndLoad(
+                            dlg.FileName,
+                            ImageOpenSource.UserImport,
+                            LoadDecoupledBitmap,
+                            out var captured);
+                        if (!eval.IsAllowed || captured is null)
                         {
-                            ThemedConfirmDialog.Alert(Handle,
-                                LocalizationService.Translate("Error importing image"),
-                                string.Format(LocalizationService.Translate("The file is too large ({0:F1} MB). Maximum allowed is 10 MB."), fileInfo.Length / 1024.0 / 1024.0),
-                                error: true);
+                            ThemedConfirmDialog.Alert(Handle, eval.ErrorTitle, eval.FormatErrorMessage(), error: true);
                             return;
                         }
 
-                        Bitmap captured = LoadDecoupledBitmap(dlg.FileName);
-
-                        const int maxDimension = 4096;
-                        int width = captured.Width;
-                        int height = captured.Height;
-                        if (width > maxDimension || height > maxDimension)
-                        {
-                            captured.Dispose();
-                            ThemedConfirmDialog.Alert(Handle,
-                                LocalizationService.Translate("Error importing image"),
-                                string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), width, height, maxDimension),
-                                error: true);
-                            return;
-                        }
-
-                        LoadCapture(captured, dlg.FileName);
+                        LoadCapture(captured, dlg.FileName, performanceWarning: eval.ShouldWarn);
+                        captured.Dispose();
                         AddRecentFile(dlg.FileName);
                     }
                 }
@@ -1326,11 +1391,22 @@ public sealed partial class EditorForm : Form, IMessageFilter
                     if (img != null)
                     {
                         var bmp = new Bitmap(img);
+                        var eval = ImageOpenPolicy.EvaluateBitmap(bmp, ImageOpenSource.Clipboard);
+                        if (!eval.IsAllowed)
+                        {
+                            bmp.Dispose();
+                            ThemedConfirmDialog.Alert(Handle, eval.ErrorTitle, eval.FormatErrorMessage(), error: true);
+                            return;
+                        }
+
                         var command = new CyberSnap.Models.Commands.PasteImageCommand(bmp);
+                        bmp.Dispose(); // command owns its own clone
                         _canvas.Push(command);
                         _canvas.ZoomFit();
                         _canvas.IsDefaultBlank = false;
                         RefreshUi();
+                        if (eval.ShouldWarn)
+                            ShowLargeImagePerformanceBanner(eval);
                     }
                 }
             }
@@ -2095,20 +2171,15 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 return;
             }
 
-            // ── File size check: max 10 MB ──
-            var fileInfo = new FileInfo(filePath);
-            const long maxFileSize = 10 * 1024 * 1024; // 10 MB
-            if (fileInfo.Length > maxFileSize)
-            {
-                ThemedConfirmDialog.Alert(Handle,
-                    LocalizationService.Translate("Error importing image"),
-                    string.Format(LocalizationService.Translate("The file is too large ({0:F1} MB). Maximum allowed is 10 MB."), fileInfo.Length / 1024.0 / 1024.0),
-                    error: true);
-                return;
-            }
-
             if (isProject)
             {
+                var sizeEval = ImageOpenPolicy.EvaluateFileSize(filePath, ImageOpenSource.UserImport);
+                if (!sizeEval.IsAllowed)
+                {
+                    ThemedConfirmDialog.Alert(Handle, sizeEval.ErrorTitle, sizeEval.FormatErrorMessage(), error: true);
+                    return;
+                }
+
                 if (_canvas.IsDirty)
                 {
                     if (!PromptSaveChanges())
@@ -2116,36 +2187,37 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 }
 
                 var (baseBitmap, projectData) = CanvasProjectService.LoadProject(filePath);
-                LoadCaptureProject(baseBitmap, projectData, filePath, autoMaximize: false);
-            }
-            else
-            {
-                Bitmap captured = LoadDecoupledBitmap(filePath);
-
-                // ── Max dimension check: 4K (4096 px on longest side) ──
-                const int maxDimension = 4096;
-                int width = captured.Width;
-                int height = captured.Height;
-                if (width > maxDimension || height > maxDimension)
+                var dimEval = ImageOpenPolicy.EvaluateBitmap(baseBitmap, ImageOpenSource.UserImport, sizeEval.FileSizeBytes);
+                if (!dimEval.IsAllowed)
                 {
-                    captured.Dispose();
-                    ThemedConfirmDialog.Alert(Handle,
-                        LocalizationService.Translate("Error importing image"),
-                        string.Format(LocalizationService.Translate("The image is too large ({0}x{1}). Maximum allowed is {2} pixels on the longest side (4K)."), width, height, maxDimension),
-                        error: true);
+                    baseBitmap.Dispose();
+                    ThemedConfirmDialog.Alert(Handle, dimEval.ErrorTitle, dimEval.FormatErrorMessage(), error: true);
                     return;
                 }
 
+                LoadCaptureProject(baseBitmap, projectData, filePath, autoMaximize: false, performanceWarning: dimEval.ShouldWarn);
+            }
+            else
+            {
                 if (_canvas.IsDirty)
                 {
                     if (!PromptSaveChanges())
-                    {
-                        captured.Dispose();
                         return;
-                    }
                 }
 
-                LoadCapture(captured, filePath, autoMaximize: false);
+                var eval = ImageOpenPolicy.EvaluateAndLoad(
+                    filePath,
+                    ImageOpenSource.UserImport,
+                    LoadDecoupledBitmap,
+                    out var captured);
+                if (!eval.IsAllowed || captured is null)
+                {
+                    ThemedConfirmDialog.Alert(Handle, eval.ErrorTitle, eval.FormatErrorMessage(), error: true);
+                    return;
+                }
+
+                LoadCapture(captured, filePath, autoMaximize: false, performanceWarning: eval.ShouldWarn);
+                captured.Dispose();
                 AddRecentFile(filePath);
             }
         }

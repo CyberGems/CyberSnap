@@ -1035,7 +1035,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     /// <summary>Smallest / largest canvas dimension accepted by the resize feature.</summary>
     public const int MinCanvasSize = 16;
-    public const int MaxCanvasSize = 10000;
+    /// <summary>Max width/height for canvas resize. Aligned with trusted image open ceiling
+    /// (<see cref="CyberSnap.Helpers.ImageOpenPolicy.MaxTrustedLongestSide"/>) so tall scroll
+    /// captures remain editable after open.</summary>
+    public const int MaxCanvasSize = 32768;
 
     private bool _editorShowResizeHandles = true;
     /// <summary>Whether the square resize handles float around the canvas in the gray margin.

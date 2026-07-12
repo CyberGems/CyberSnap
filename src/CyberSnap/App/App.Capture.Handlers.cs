@@ -78,19 +78,29 @@ public partial class App
                         persisted.HistoryEntry?.Kind != Services.HistoryKind.Video &&
                         persisted.HistoryEntry?.Kind != Services.HistoryKind.Gif)
                     {
+                        bool openedInEditor = false;
                         try
                         {
-                            // Editor takes ownership of its own clone; dispose the original
-                            // so the persisted output doesn't leak when we skip the toast path.
-                            CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(persisted.Output), persisted.FilePath);
+                            // Editor clones for its canvas; on reject it disposes the clone we pass.
+                            // On success we still dispose the persisted output below.
+                            openedInEditor = CyberSnap.UI.Editor.EditorForm.ShowEditor(
+                                new Bitmap(persisted.Output),
+                                persisted.FilePath,
+                                CyberSnap.Helpers.ImageOpenSource.Capture);
                         }
                         catch (Exception ex)
                         {
                             AppDiagnostics.LogError("capture.auto-open-editor", ex);
-                            // Fall back to the standard preview so the capture isn't lost.
+                        }
+
+                        if (!openedInEditor)
+                        {
+                            // Fall back to the standard preview so the capture isn't lost
+                            // (size rejection, GDI failure, etc.).
                             ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
                             return;
                         }
+
                         persisted.Output.Dispose();
 
                         // No preview toast is shown when the editor opens directly, so surface a

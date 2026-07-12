@@ -1553,7 +1553,15 @@ public sealed partial class EditorForm
                 if (img != null)
                 {
                     var bmp = new Bitmap(img);
-                    LoadCapture(bmp, null);
+                    var eval = ImageOpenPolicy.EvaluateBitmap(bmp, ImageOpenSource.Clipboard);
+                    if (!eval.IsAllowed)
+                    {
+                        bmp.Dispose();
+                        ThemedConfirmDialog.Alert(Handle, eval.ErrorTitle, eval.FormatErrorMessage(), error: true);
+                        return;
+                    }
+                    LoadCapture(bmp, null, performanceWarning: eval.ShouldWarn);
+                    bmp.Dispose();
                     _canvas.ZoomFit();
                     _canvas.IsDefaultBlank = false;
                     RefreshUi();
