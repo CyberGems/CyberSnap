@@ -3256,23 +3256,7 @@
                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                     BorderThickness="1"
                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                    Padding="16">
-                                <StackPanel>
-                                <!-- State-aware guide: Send to Editor vs what each panel shows. Set in RefreshEditorPreviewState(). -->
-                                <Border x:Name="EditorPreviewGuideBanner" CornerRadius="8" Margin="0,0,0,14"
-                                        Padding="12,9" BorderThickness="1"
-                                        Background="{DynamicResource ThemeTabActiveBrush}"
-                                        BorderBrush="{DynamicResource ThemeInputBorderBrush}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                                   Margin="0,1,10,0" VerticalAlignment="Top"
-                                                   Foreground="{DynamicResource ThemeAccentBrush}"/>
-                                        <TextBlock x:Name="EditorPreviewGuide" Text="" FontSize="12.5"
-                                                   TextWrapping="Wrap" MaxWidth="620"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                   AutomationProperties.LiveSetting="Polite"/>
-                                    </StackPanel>
-                                </Border>
+                                    Padding="18,18,20,18">
                                 <Grid x:Name="ToastDesignerRoot" HorizontalAlignment="Left" Background="Transparent"
                                       AllowDrop="True" DragOver="ToastDesigner_DragOver">
                                     <Grid.ColumnDefinitions>
@@ -3281,29 +3265,54 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- LEFT panel: system alert examples only (fixed). -->
-                                    <Border Grid.Column="0" Width="248" Margin="0,0,12,0"
-                                            CornerRadius="10" Padding="12,12,12,14" BorderThickness="1"
-                                            Background="{DynamicResource ThemeCardBrush}"
-                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="*"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
+                                    <!-- LEFT column: guide in the free gap; system card on the shared bottom edge. -->
+                                    <Grid x:Name="EditorToastMockCard" Grid.Column="0" Width="268" Margin="0,0,16,0"
+                                          VerticalAlignment="Stretch">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
 
-                                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                                                <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="13"
-                                                           Margin="0,1,8,0" VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource ThemeMutedBrush}"/>
-                                                <TextBlock Services:LocalizationService.SourceText="What you see"
-                                                           FontSize="11.5" FontWeight="SemiBold" Opacity="0.75"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-                                            </StackPanel>
+                                        <!-- Guide sits in the open space above the system card (outside it). -->
+                                        <Border x:Name="EditorPreviewGuideBanner" Grid.Row="0"
+                                                CornerRadius="10" Margin="2,6,2,16" Padding="14,12" BorderThickness="1"
+                                                VerticalAlignment="Center"
+                                                Background="{DynamicResource ThemeTabActiveBrush}"
+                                                BorderBrush="{DynamicResource ThemeAccentSubtleBrush}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                           Margin="0,1,10,0" VerticalAlignment="Top"
+                                                           Foreground="{DynamicResource ThemeAccentBrush}"/>
+                                                <TextBlock x:Name="EditorPreviewGuide" Grid.Column="1" Text=""
+                                                           FontSize="12" TextWrapping="Wrap" LineHeight="17.5"
+                                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                           AutomationProperties.LiveSetting="Polite"/>
+                                            </Grid>
+                                        </Border>
 
-                                            <StackPanel x:Name="EditorToastMockCard" Grid.Row="2" VerticalAlignment="Bottom">
+                                        <!-- System-alert card — highlight toggled in RefreshEditorPreviewState.
+                                             Extra padding keeps content clear of the 2px selection stroke. -->
+                                        <Border x:Name="SystemAlertCard" Grid.Row="1"
+                                                CornerRadius="12" Padding="16,16,16,18" BorderThickness="1"
+                                                Background="{DynamicResource ThemeCardBrush}"
+                                                BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                                VerticalAlignment="Bottom"
+                                                SnapsToDevicePixels="True" UseLayoutRounding="True">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                    <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                                               Margin="0,1,8,0" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource ThemeMutedBrush}"/>
+                                                    <TextBlock Services:LocalizationService.SourceText="What you see"
+                                                               FontSize="11.5" FontWeight="SemiBold" Opacity="0.75"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                                </StackPanel>
+
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                                     <TextBlock x:Name="EditorPreviewImagesCaption"
                                                                Services:LocalizationService.SourceText="System alert"
@@ -3318,32 +3327,27 @@
                                                                    Foreground="{DynamicResource ThemeMutedBrush}"/>
                                                     </Border>
                                                 </StackPanel>
-                                                <TextBlock x:Name="SystemAlertOffNote" Margin="0,0,0,8" FontSize="11.5"
-                                                           TextWrapping="Wrap" MaxWidth="248" Opacity="0.9"
-                                                           Visibility="Collapsed"
-                                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                                           Services:LocalizationService.SourceText="Send to Editor is off — image captures use the capture notification on the right."/>
                                                 <TextBlock x:Name="SystemAlertExampleLabel" Margin="0,0,0,6" FontSize="11"
-                                                           Opacity="0.7" Visibility="Collapsed"
+                                                           Opacity="0.7"
                                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                                                            Services:LocalizationService.SourceText="Examples"/>
                                                 <StackPanel x:Name="SystemAlertExamplesHost">
-                                                <!-- Both mocks use the same fixed width + content grid so they match live system alerts. -->
+                                                <!-- Always visible reference examples (selection is shown by card highlight). -->
                                                 <Border x:Name="EditorToastMockShell" CornerRadius="12" Margin="0,0,0,8"
-                                                        Width="224" BorderThickness="1"
-                                                        ClipToBounds="True" HorizontalAlignment="Left"
-                                                        Visibility="Collapsed">
+                                                        BorderThickness="1" HorizontalAlignment="Stretch"
+                                                        SnapsToDevicePixels="True" UseLayoutRounding="True"
+                                                        Visibility="Visible">
                                                     <Grid>
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition Height="Auto"/>
                                                             <RowDefinition Height="4"/>
                                                         </Grid.RowDefinitions>
-                                                        <Grid Grid.Row="0" Margin="14,11,14,11" MinHeight="44">
+                                                        <Grid Grid.Row="0" Margin="12,11,10,11" MinHeight="44">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,6,0">
                                                                 <TextBlock x:Name="EditorToastMockTitle"
                                                                            Services:LocalizationService.SourceText="Sent to the editor"
                                                                            FontSize="12.75" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
@@ -3356,7 +3360,7 @@
                                                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                                                             </StackPanel>
                                                             <Border Grid.Column="1" Width="22" Height="22" CornerRadius="6"
-                                                                    Margin="10,-2,-4,0" VerticalAlignment="Top"
+                                                                    VerticalAlignment="Top"
                                                                     Background="Transparent">
                                                                 <Image x:Name="EditorToastMockCloseIcon" Width="11" Height="11"
                                                                        Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
@@ -3378,20 +3382,20 @@
                                                     </Grid>
                                                 </Border>
                                                 <Border x:Name="EncodingToastMockShell" CornerRadius="12"
-                                                        Width="224" BorderThickness="1"
-                                                        ClipToBounds="True" HorizontalAlignment="Left"
-                                                        Visibility="Collapsed">
+                                                        BorderThickness="1" HorizontalAlignment="Stretch"
+                                                        SnapsToDevicePixels="True" UseLayoutRounding="True"
+                                                        Visibility="Visible">
                                                     <Grid>
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition Height="Auto"/>
                                                             <RowDefinition Height="4"/>
                                                         </Grid.RowDefinitions>
-                                                        <Grid Grid.Row="0" Margin="14,11,14,11" MinHeight="44">
+                                                        <Grid Grid.Row="0" Margin="12,11,10,11" MinHeight="44">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*"/>
                                                                 <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,6,0">
                                                                 <TextBlock Services:LocalizationService.SourceText="Recording"
                                                                            FontSize="12.75" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
                                                                            TextWrapping="Wrap" TextAlignment="Center"
@@ -3402,7 +3406,7 @@
                                                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                                                             </StackPanel>
                                                             <!-- Spacer matches the close control on the editor example so widths align. -->
-                                                            <Border Grid.Column="1" Width="22" Height="22" Margin="10,-2,-4,0"
+                                                            <Border Grid.Column="1" Width="22" Height="22"
                                                                     VerticalAlignment="Top" Background="Transparent"/>
                                                         </Grid>
                                                         <Border x:Name="EncodingToastMockRail" Grid.Row="1" HorizontalAlignment="Stretch" CornerRadius="0,0,12,12" Margin="4,0">
@@ -3421,19 +3425,28 @@
                                                 </Border>
                                                 </StackPanel>
                                             </StackPanel>
-                                        </Grid>
-                                    </Border>
+                                        </Border>
+                                    </Grid>
 
                                     <!-- Divider -->
-                                    <Border Grid.Column="1" Width="1" Margin="0,4,12,4" VerticalAlignment="Stretch"
+                                    <Border Grid.Column="1" Width="1" Margin="0,6,16,6" VerticalAlignment="Stretch"
                                             Background="{DynamicResource ThemeSeparatorBrush}"/>
 
-                                    <!-- RIGHT panel: capture notification designer. -->
+                                    <!-- RIGHT panel: capture notification designer (highlight toggled in code).
+                                         Extra padding keeps presets/mock clear of the selection stroke. -->
                                     <Border x:Name="EditorButtonsCard" Grid.Column="2"
-                                            CornerRadius="10" Padding="12,12,12,14" BorderThickness="1"
+                                            CornerRadius="12" Padding="18,16,18,18" BorderThickness="1"
                                             Background="{DynamicResource ThemeCardBrush}"
-                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}">
-                                        <StackPanel>
+                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                            VerticalAlignment="Stretch"
+                                            SnapsToDevicePixels="True" UseLayoutRounding="True">
+                                        <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <StackPanel Grid.Row="0">
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                             <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="13"
                                                        Margin="0,1,8,0" VerticalAlignment="Center"
@@ -3503,12 +3516,12 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Services:LocalizationService.SourceText="Notification preview click action"
+                                            <TextBlock Services:LocalizationService.SourceText="On capture preview click:"
                                                        FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                             <ComboBox x:Name="ToastPreviewClickActionCombo" Grid.Column="1" MinWidth="190"
                                                       VerticalAlignment="Center"
-                                                      AutomationProperties.Name="Notification preview click action"
+                                                      AutomationProperties.Name="On capture preview click"
                                                       Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a notification."
                                                       SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
                                                 <ComboBoxItem Content="Open in editor"
@@ -3531,14 +3544,17 @@
                                                               AutomationProperties.Name="Close immediately"/>
                                             </ComboBox>
                                         </Grid>
+                                        </StackPanel>
 
+                                    <!-- Capture mock + palette sit on the bottom edge so they line up with system mocks. -->
+                                    <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
                                     <TextBlock x:Name="CaptureDesignIdleNote" Margin="0,0,0,10" FontSize="11.5"
                                                TextWrapping="Wrap" MaxWidth="420" Opacity="0.9"
                                                Visibility="Collapsed"
                                                Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                                                Services:LocalizationService.SourceText="Not used while captures open automatically in the Editor or Trimmer. Turn Send to Editor off to use this layout after every capture."/>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                    <StackPanel x:Name="ToastLayoutStack" Width="260" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <StackPanel x:Name="ToastLayoutStack" Width="260" HorizontalAlignment="Left" VerticalAlignment="Bottom">
                                     <!-- Capture-notification mock: Theme.ToastBg + accent edge (set in RefreshEditorPreviewState). -->
                                     <Border x:Name="ToastLayoutShell" Width="260" Height="220" CornerRadius="12"
                                             BorderThickness="1">
@@ -3788,7 +3804,7 @@
                                     </StackPanel>
 
                                     <!-- Button palette beside the capture-notification mock. -->
-                                    <StackPanel Margin="16,0,0,0" VerticalAlignment="Top">
+                                    <StackPanel Margin="20,0,4,0" VerticalAlignment="Bottom">
                                         <StackPanel Orientation="Horizontal" Margin="2,0,0,12" Opacity="0.55"
                                                     Services:LocalizationService.SourceToolTip="Drag any button below onto the preview to add it">
                                             <Path VerticalAlignment="Center" HorizontalAlignment="Left"
@@ -3803,6 +3819,7 @@
                                     </StackPanel>
                                     </StackPanel>
                                     </StackPanel>
+                                        </Grid>
                                     </Border>
 
                                     <!-- Floating drag ghost over the designer surface. -->
@@ -3815,7 +3832,6 @@
                                         </Image.Effect>
                                     </Image>
                                 </Grid>
-                                </StackPanel>
                             </Border>
                         </Grid>
                     </Border>

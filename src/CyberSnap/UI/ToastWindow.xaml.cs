@@ -788,7 +788,7 @@ public partial class ToastWindow : Window
 
     private void CloseBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (!CanActivateMouseControl(sender))
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
         {
             e.Handled = true;
             return;
@@ -800,7 +800,7 @@ public partial class ToastWindow : Window
 
     private void CloseBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (!CanActivateKeyboardControl(sender, e))
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
             return;
 
         e.Handled = true;
@@ -809,7 +809,7 @@ public partial class ToastWindow : Window
 
     private void PinBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (!CanActivateMouseControl(sender))
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
         {
             e.Handled = true;
             return;
@@ -821,7 +821,7 @@ public partial class ToastWindow : Window
 
     private void PinBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (!CanActivateKeyboardControl(sender, e))
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
             return;
 
         e.Handled = true;
@@ -830,7 +830,7 @@ public partial class ToastWindow : Window
 
     private void SaveBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (!CanActivateMouseControl(sender))
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
         {
             e.Handled = true;
             return;
@@ -842,7 +842,7 @@ public partial class ToastWindow : Window
 
     private void CopyBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (!CanActivateMouseControl(sender))
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
         {
             e.Handled = true;
             return;
@@ -854,7 +854,7 @@ public partial class ToastWindow : Window
 
     private void CopyBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (!CanActivateKeyboardControl(sender, e))
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
             return;
 
         e.Handled = true;
@@ -863,7 +863,7 @@ public partial class ToastWindow : Window
 
     private void HistoryBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (!CanActivateMouseControl(sender))
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
         {
             e.Handled = true;
             return;
@@ -875,7 +875,7 @@ public partial class ToastWindow : Window
 
     private void HistoryBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (!CanActivateKeyboardControl(sender, e))
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
             return;
 
         e.Handled = true;
@@ -884,7 +884,7 @@ public partial class ToastWindow : Window
 
     private void EditBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (!CanActivateMouseControl(sender))
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
         {
             e.Handled = true;
             return;
@@ -896,7 +896,7 @@ public partial class ToastWindow : Window
 
     private void EditBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (!CanActivateKeyboardControl(sender, e))
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
             return;
 
         e.Handled = true;
@@ -905,6 +905,9 @@ public partial class ToastWindow : Window
 
     private void OpenEditor()
     {
+        if (InteractiveActionsBlocked)
+            return;
+
         if (_previewBitmap is null && _savedFilePath is null)
             return;
 
@@ -939,13 +942,16 @@ public partial class ToastWindow : Window
 
     private void OpenHistory()
     {
+        if (InteractiveActionsBlocked)
+            return;
+
         ((App)Application.Current).ShowHistory(_savedFilePath);
         DismissAnimated();
     }
 
     private void SaveBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (!CanActivateKeyboardControl(sender, e))
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
             return;
 
         e.Handled = true;
@@ -961,6 +967,9 @@ public partial class ToastWindow : Window
     private static bool CanActivateMouseControl(object sender) =>
         sender is not UIElement { IsEnabled: false };
 
+    /// <summary>Settings layout-test notifications show buttons but must not run real actions.</summary>
+    private bool InteractiveActionsBlocked => _spec.DisableInteractiveActions;
+
     /// <summary>User-initiated close (X button or click-action Close): dismiss immediately, no fade.</summary>
     private void CloseToast() => RequestDismiss(force: true);
 
@@ -968,7 +977,7 @@ public partial class ToastWindow : Window
 
     private void SavePreview()
     {
-        if (_previewBitmap is null || _isSavingPreview)
+        if (InteractiveActionsBlocked || _previewBitmap is null || _isSavingPreview)
             return;
 
         _isSavingPreview = true;
@@ -1068,7 +1077,7 @@ public partial class ToastWindow : Window
 
     private void CopyPreview()
     {
-        if (_previewBitmap is null)
+        if (InteractiveActionsBlocked || _previewBitmap is null)
             return;
 
         try
@@ -1116,7 +1125,7 @@ public partial class ToastWindow : Window
 
     private void OfficeBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (!CanActivateMouseControl(sender))
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
         {
             e.Handled = true;
             return;
@@ -1128,7 +1137,7 @@ public partial class ToastWindow : Window
 
     private void OfficeBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (!CanActivateKeyboardControl(sender, e))
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
             return;
 
         e.Handled = true;
@@ -1137,7 +1146,7 @@ public partial class ToastWindow : Window
 
     private void OpenOfficeMenu()
     {
-        if (_previewBitmap is null || _isRunningOfficeAction)
+        if (InteractiveActionsBlocked || _previewBitmap is null || _isRunningOfficeAction)
             return;
 
         if (_officeMenu?.IsOpen == true)
@@ -1480,7 +1489,7 @@ public partial class ToastWindow : Window
 
     private void DeleteBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (!CanActivateMouseControl(sender))
+        if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
         {
             e.Handled = true;
             return;
@@ -1492,7 +1501,7 @@ public partial class ToastWindow : Window
 
     private void DeleteBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (!CanActivateKeyboardControl(sender, e))
+        if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
             return;
 
         e.Handled = true;
@@ -1501,7 +1510,7 @@ public partial class ToastWindow : Window
 
     private void DeleteSavedFile()
     {
-        if (_isDeletingSavedFile)
+        if (InteractiveActionsBlocked || _isDeletingSavedFile)
             return;
 
         if (!HasSavedFileOnDisk())
@@ -1627,6 +1636,13 @@ public partial class ToastWindow : Window
             return;
         }
 
+        // Layout-test toasts: no drag-out and no body click actions.
+        if (InteractiveActionsBlocked)
+        {
+            e.Handled = true;
+            return;
+        }
+
         _mouseDownPos = e.GetPosition(this);
         _isDragging = false;
         CaptureMouse();
@@ -1639,6 +1655,9 @@ public partial class ToastWindow : Window
             CancelRootInteractionFromOverlaySource(e);
             return;
         }
+
+        if (InteractiveActionsBlocked)
+            return;
 
         if (!IsMouseCaptured || e.LeftButton != MouseButtonState.Pressed)
             return;
@@ -1722,6 +1741,14 @@ public partial class ToastWindow : Window
             return;
         }
 
+        if (InteractiveActionsBlocked)
+        {
+            if (IsMouseCaptured)
+                ReleaseMouseCapture();
+            e.Handled = true;
+            return;
+        }
+
         if (!IsMouseCaptured)
             return;
 
@@ -1786,6 +1813,9 @@ public partial class ToastWindow : Window
 
     private void HandlePreviewBodyClick()
     {
+        if (InteractiveActionsBlocked)
+            return;
+
         ToastPreviewClickAction action;
         try
         {
@@ -1891,6 +1921,12 @@ public partial class ToastWindow : Window
     {
         if (IsToastOverlayButtonSource(e.OriginalSource as DependencyObject))
             return;
+
+        if (InteractiveActionsBlocked)
+        {
+            e.Handled = true;
+            return;
+        }
 
         if (!HasSavedFileOnDisk())
             return;

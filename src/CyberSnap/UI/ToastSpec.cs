@@ -26,6 +26,11 @@ internal sealed record ToastSpec
     public bool TransparentShell { get; init; }
     public bool ShowOverlayButtons { get; init; }
     public bool HideEditButton { get; init; }
+    /// <summary>
+    /// Layout-only preview (e.g. Settings → Test capture notification): buttons and body click
+    /// are visible but do not run real actions.
+    /// </summary>
+    public bool DisableInteractiveActions { get; init; }
     public Stretch PreviewStretch { get; init; } = Stretch.Uniform;
     public Thickness PreviewMargin { get; init; }
     public double? PreviewMaxHeight { get; init; }

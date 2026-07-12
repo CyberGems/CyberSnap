@@ -1282,7 +1282,12 @@ public partial class SettingsWindow
                     autoPin: false,
                     transparentShell: false,
                     showOverlayButtons: true
-                ) with { IsSystemMessage = false });
+                ) with
+                {
+                    IsSystemMessage = false,
+                    // Buttons are only for layout inspection — no open/save/delete/etc.
+                    DisableInteractiveActions = true
+                });
             }
         }
         catch (Exception ex)
