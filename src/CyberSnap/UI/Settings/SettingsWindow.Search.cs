@@ -230,42 +230,6 @@ public partial class SettingsWindow
                 }
             }
 
-            // Tooltip
-            if (depChild is FrameworkElement fe && fe.ToolTip is string tip
-                && !string.IsNullOrWhiteSpace(tip) && tip.Length is >= 3 and <= 200)
-            {
-                entries.Add(new SettingsSearchEntry
-                {
-                    PageKey = pageKey,
-                    PageTitle = pageTitle,
-                    SectionTitle = currentSection,
-                    MatchText = tip,
-                    ContextText = "tooltip",
-                    Source = SearchEntrySource.VisualTree,
-                    TargetElement = fe
-                });
-            }
-
-            // AutomationProperties.Name (but not the same as tooltip to avoid excess duplication)
-            if (depChild is FrameworkElement fe2)
-            {
-                var autoName = AutomationProperties.GetName(fe2);
-                if (!string.IsNullOrWhiteSpace(autoName) && autoName.Length is >= 3 and <= 150)
-                {
-                    var autoHelp = AutomationProperties.GetHelpText(fe2);
-                    entries.Add(new SettingsSearchEntry
-                    {
-                        PageKey = pageKey,
-                        PageTitle = pageTitle,
-                        SectionTitle = currentSection,
-                        MatchText = autoName,
-                        ContextText = autoHelp ?? "",
-                        Source = SearchEntrySource.VisualTree,
-                        TargetElement = fe2
-                    });
-                }
-            }
-
             // Recurse
             DiscoverTextsInTree(depChild, pageKey, pageTitle, ref currentSection, entries);
         }
