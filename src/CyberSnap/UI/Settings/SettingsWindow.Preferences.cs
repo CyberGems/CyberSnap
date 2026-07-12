@@ -1007,19 +1007,27 @@ public partial class SettingsWindow
     {
         if (!IsLoaded || _suppressGeneralPreferenceChange) return;
 
+        // Same as the floating widget and Notifications designer: images → Editor, video/GIF → Trimmer.
         var previous = _settingsService.Settings.OpenEditorAfterCapture;
         var selected = WidgetEnableEditorCheck.IsChecked == true;
         UpdateGeneralPreference(
             "settings.open-editor-after-capture",
-            "Enable editor",
+            "Send to Editor",
             previous,
             selected,
-            value => _settingsService.Settings.OpenEditorAfterCapture = value,
-            value => WidgetEnableEditorCheck.IsChecked = value,
-            // Keep the widget's own "Enable editor" toggle in lockstep when it's open.
+            value =>
+            {
+                _settingsService.Settings.OpenEditorAfterCapture = value;
+                _settingsService.Settings.OpenVideoTrimmerAfterCapture = value;
+            },
+            value =>
+            {
+                WidgetEnableEditorCheck.IsChecked = value;
+                if (VideoEnableEditorCheck != null)
+                    VideoEnableEditorCheck.IsChecked = value;
+            },
             value => ((App)Application.Current).SyncWidgetEnableEditorToggle());
 
-        // Re-emphasise the notification mock-ups so the dual preview tracks the new editor state.
         RefreshEditorPreviewState();
     }
 
@@ -1054,13 +1062,15 @@ public partial class SettingsWindow
 
         _suppressGeneralPreferenceChange = true;
         try {
-            WidgetEnableEditorCheck.IsChecked = _settingsService.Settings.OpenEditorAfterCapture;
+            // Widget checkbox mirrors "either path on" (same as the floating widget toggle).
+            WidgetEnableEditorCheck.IsChecked =
+                _settingsService.Settings.OpenEditorAfterCapture
+                || _settingsService.Settings.OpenVideoTrimmerAfterCapture;
             if (VideoEnableEditorCheck != null)
                 VideoEnableEditorCheck.IsChecked = _settingsService.Settings.OpenVideoTrimmerAfterCapture;
         }
         finally { _suppressGeneralPreferenceChange = false; }
 
-        // The editor state drives which notification mock-up is emphasised.
         RefreshEditorPreviewState();
     }
 
@@ -1226,28 +1236,23 @@ public partial class SettingsWindow
     {
         try
         {
-            // Generate a small mock screenshot to preview the image layout
+            // Capture-notification test: preview + the user's overlay button layout.
             using (var bmp = new System.Drawing.Bitmap(280, 200))
             {
                 using (var g = System.Drawing.Graphics.FromImage(bmp))
                 {
-                    // Gradient background matching modern/premium aesthetics
                     using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
                         new System.Drawing.Point(0, 0),
                         new System.Drawing.Point(280, 200),
-                        System.Drawing.Color.FromArgb(99, 102, 241), // Indigo
-                        System.Drawing.Color.FromArgb(168, 85, 247)  // Purple
-                    ))
+                        System.Drawing.Color.FromArgb(99, 102, 241),
+                        System.Drawing.Color.FromArgb(168, 85, 247)))
                     {
                         g.FillRectangle(brush, 0, 0, 280, 200);
                     }
 
-                    // Draw centered strings using StringFormat
                     using (var sf = new System.Drawing.StringFormat())
                     {
                         sf.Alignment = System.Drawing.StringAlignment.Center;
-
-                        // Logo text with dynamic version
                         string versionLabel = UpdateService.GetCurrentVersionLabel();
                         string brandLine = string.Format(LocalizationService.Translate("CyberSnap {0}"), versionLabel);
                         using (var font = new System.Drawing.Font("Segoe UI", 16, System.Drawing.FontStyle.Bold))
@@ -1256,7 +1261,6 @@ public partial class SettingsWindow
                             g.DrawString(brandLine, font, brush, new System.Drawing.RectangleF(0, 24, 280, 40), sf);
                         }
 
-                        // Description text (44 px tall to fit two-line phrases in any language)
                         using (var font = new System.Drawing.Font("Segoe UI", 10))
                         using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(220, 255, 255, 255)))
                         {
@@ -1266,7 +1270,6 @@ public partial class SettingsWindow
                     }
                 }
 
-                // Show the toast without overlay buttons and no system suppression
                 ToastWindow.Show(ToastSpec.ImagePreview(
                     (System.Drawing.Bitmap)bmp.Clone(),
                     "Notification Preview",
@@ -1274,13 +1277,35 @@ public partial class SettingsWindow
                     filePath: null,
                     autoPin: false,
                     transparentShell: false,
-                    showOverlayButtons: false
+                    showOverlayButtons: true
                 ) with { IsSystemMessage = false });
             }
         }
         catch (Exception ex)
         {
             AppDiagnostics.LogError("settings.test-toast", ex);
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Test failed"),
+                $"{LocalizationService.Translate("Could not show test notification:")}\n{ex.Message}");
+        }
+    }
+
+    private void TestSystemAlertBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // Brief system alert — same family as "Sent to the editor" / encoding wait.
+            ToastWindow.Show(ToastSpec.Standard(
+                LocalizationService.Translate("Sent to the editor"),
+                LocalizationService.Translate("Your capture is open in the editor.")) with
+            {
+                IsSystemMessage = true,
+                SuppressSound = true
+            });
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.test-system-alert", ex);
             ToastWindow.ShowError(
                 LocalizationService.Translate("Test failed"),
                 $"{LocalizationService.Translate("Could not show test notification:")}\n{ex.Message}");

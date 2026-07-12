@@ -297,7 +297,7 @@ public partial class SettingsWindow
             MuteSoundsCheck.IsChecked = !s.MuteSounds; // activator: checked = all sounds on
             PopulateSoundCustomizationPanel();
             ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
-            WidgetEnableEditorCheck.IsChecked = s.OpenEditorAfterCapture;
+            WidgetEnableEditorCheck.IsChecked = s.OpenEditorAfterCapture || s.OpenVideoTrimmerAfterCapture;
             if (VideoEnableEditorCheck != null)
                 VideoEnableEditorCheck.IsChecked = s.OpenVideoTrimmerAfterCapture;
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
