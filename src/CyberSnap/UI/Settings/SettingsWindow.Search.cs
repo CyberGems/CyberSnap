@@ -487,7 +487,8 @@ public partial class SettingsWindow
         if (element == null) return null;
 
         var rowStyle = FindResource("SettingRow") as Style;
-        var cardStyle = FindResource("Card") as Style;
+        var compactCardStyle = FindResource("CompactItemCard") as Style;
+        var soundItemStyle = FindResource("SoundItemCard") as Style;
 
         DependencyObject? parent = element;
         FrameworkElement? container = null;
@@ -501,15 +502,29 @@ public partial class SettingsWindow
                     container = g;
                     break;
                 }
-                if (cardStyle != null && fe is Border b && b.Style == cardStyle)
+                if (compactCardStyle != null && fe is Border cb && cb.Style == compactCardStyle)
                 {
-                    container = b;
+                    container = cb;
+                    break;
+                }
+                if (soundItemStyle != null && fe is Border sb && sb.Style == soundItemStyle)
+                {
+                    container = sb;
+                    break;
                 }
             }
             parent = VisualTreeHelper.GetParent(parent);
         }
 
-        return container ?? element;
+        if (container != null)
+            return container;
+
+        if (element is System.Windows.Controls.Control && element is not TextBlock)
+        {
+            return element;
+        }
+
+        return null;
     }
 
     private static double ScoreEntry(SettingsSearchEntry entry, string normalized, string[] tokens)
