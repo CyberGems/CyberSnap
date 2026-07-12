@@ -293,7 +293,7 @@ public partial class SettingsWindow
             SystemNotificationsCheck.IsChecked = s.SystemNotificationsEnabled;
             CelebrationsCheck.IsChecked = s.CelebrationsEnabled;
             RefreshMilestoneRail(reveal: false);
-            UpdateSystemNotificationsRowState(s.NotificationsEnabled);
+            UpdateNotificationsDependentState(s.NotificationsEnabled);
             MuteSoundsCheck.IsChecked = !s.MuteSounds; // activator: checked = all sounds on
             PopulateSoundCustomizationPanel();
             ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
