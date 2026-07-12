@@ -348,13 +348,6 @@ public partial class OcrResultWindow : Window
         CloseWindow();
     }
 
-    private void Window_Deactivated(object? sender, EventArgs e)
-    {
-        if (!_lifecycle.ShouldCloseOnDeactivate(IsLoaded, WindowState == WindowState.Minimized))
-            return;
-
-        CloseWindow();
-    }
 
     protected override void OnClosed(EventArgs e)
     {
@@ -900,6 +893,7 @@ public partial class OcrResultWindow : Window
         _isPinned = pinned;
         _lifecycle.SetPinned(_isPinned);
         OcrTitleBar.IsPinActive = _isPinned;
+        Topmost = pinned;
         _settingsService.Settings.OcrResultWindowPinnedByDefault = pinned;
         _settingsService.Save();
     }

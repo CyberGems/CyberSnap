@@ -10,10 +10,9 @@
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
-        Topmost="True"
+        Topmost="False"
         Icon="pack://application:,,,/Assets/Icons/OCR.ico"
-        PreviewKeyDown="Window_PreviewKeyDown"
-        Deactivated="Window_Deactivated">
+        PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
         <SolidColorBrush x:Key="ThemeTextPrimaryBrush" Color="#FFF0F0F0"/>
