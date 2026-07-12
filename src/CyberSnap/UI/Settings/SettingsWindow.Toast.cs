@@ -946,28 +946,17 @@ public partial class SettingsWindow
         => card.Opacity = active ? 1.0 : 0.40;
 
     /// <summary>
-    /// When the designer represents video/GIF captures only, show the same play-circle + kind
-    /// chip language as Gallery cards so the mock is not read as a still image notification.
+    /// When the designer represents video/GIF captures only, show a neutral play circle
+    /// matching the real capture notification (not the Gallery card color language).
     /// </summary>
     private void UpdateCapturePreviewMediaBadge(bool videoMode)
     {
-        var show = videoMode ? Visibility.Visible : Visibility.Collapsed;
-        if (ToastLayoutVideoBadge is not null)
-            ToastLayoutVideoBadge.Visibility = show;
-        if (ToastLayoutVideoKindChip is not null)
-            ToastLayoutVideoKindChip.Visibility = show;
-
-        if (!videoMode)
+        if (ToastLayoutVideoBadge is null)
             return;
 
-        // Same magenta as Gallery video cards (HistoryKind.Video badge).
-        var videoMagenta = Color.FromRgb(240, 80, 180);
-        if (ToastLayoutVideoBadge is not null)
-            ToastLayoutVideoBadge.Background = Theme.Brush(Color.FromArgb(180, videoMagenta.R, videoMagenta.G, videoMagenta.B));
-        if (ToastLayoutVideoKindChip is not null)
-            ToastLayoutVideoKindChip.Background = Theme.Brush(Color.FromArgb(230, videoMagenta.R, videoMagenta.G, videoMagenta.B));
-        if (ToastLayoutVideoKindText is not null)
-            ToastLayoutVideoKindText.Text = "VID / GIF";
+        ToastLayoutVideoBadge.Visibility = videoMode ? Visibility.Visible : Visibility.Collapsed;
+        if (videoMode)
+            ToastLayoutVideoBadge.Background = Theme.Brush(Color.FromArgb(180, 0, 0, 0));
     }
 
     // Outer stroke matching ToastWindow EdgeRing (default Dark solid cyan) or OuterShell rings.

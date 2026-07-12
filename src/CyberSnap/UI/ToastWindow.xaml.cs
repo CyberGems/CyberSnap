@@ -374,11 +374,14 @@ public partial class ToastWindow : Window
             _previewBitmap = spec.PreviewBitmap;
             ImageArea.Visibility = Visibility.Visible;
             ConfigureImagePreview(spec);
+            UpdateVideoPlayBadge(spec.FilePath);
         }
         else
         {
             ImageArea.Visibility = Visibility.Collapsed;
             PreviewImage.Source = null;
+            if (VideoPlayBadge is not null)
+                VideoPlayBadge.Visibility = Visibility.Collapsed;
             CloseBtn.Visibility = Visibility.Collapsed;
             PinBtn.Visibility = Visibility.Collapsed;
             SaveBtn.Visibility = Visibility.Collapsed;
@@ -1869,6 +1872,20 @@ public partial class ToastWindow : Window
         => path is not null &&
            (path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
             path.EndsWith(".gif", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Centered neutral play badge on video/GIF capture previews (same language as the designer mock).
+    /// </summary>
+    private void UpdateVideoPlayBadge(string? filePath)
+    {
+        if (VideoPlayBadge is null)
+            return;
+
+        bool show = IsVideoOrGifPath(filePath);
+        VideoPlayBadge.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (show)
+            VideoPlayBadge.Background = Theme.Brush(Color.FromArgb(180, 0, 0, 0));
+    }
 
     private void OnMouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
