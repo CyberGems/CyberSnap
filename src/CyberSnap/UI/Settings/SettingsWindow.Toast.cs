@@ -40,6 +40,9 @@ public partial class SettingsWindow
     // Transient message (e.g. "corner is full") shown in place of the preset name until the next action.
     private string? _toastLayoutHint;
 
+    // Prevents RefreshEditorPreviewState from echoing IsChecked into a save/sync loop.
+    private bool _suppressNotificationsEditorToggle;
+
     private AppSettings.ToastButtonLayoutSettings ToastButtons
     {
         get
@@ -868,11 +871,17 @@ public partial class SettingsWindow
         bool videoOnlyOnRight = editorOn && designedToastForVideo;
         bool showVideoBadge = videoOnlyOnRight; // badge when the mock is video/GIF-only
 
-        // Keep the in-panel editor toggle reflecting the setting. Setting IsChecked to the same
-        // value is a no-op; a real change makes the handler re-enter, but it early-outs once the
-        // setting already matches, so there's no loop.
-        if (NotificationsEditorToggle is not null && NotificationsEditorToggle.IsChecked != editorOn)
-            NotificationsEditorToggle.IsChecked = editorOn;
+        // Mirror the widget: checked when either auto-open path is on (images→editor and/or video→trimmer).
+        if (NotificationsEditorToggle is not null)
+        {
+            bool eitherOn = editorOn || trimmerOn;
+            if (NotificationsEditorToggle.IsChecked != eitherOn)
+            {
+                _suppressNotificationsEditorToggle = true;
+                try { NotificationsEditorToggle.IsChecked = eitherOn; }
+                finally { _suppressNotificationsEditorToggle = false; }
+            }
+        }
 
         // Keep both previews faithful to the real notification shell + edge stroke.
         EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
@@ -1044,22 +1053,24 @@ public partial class SettingsWindow
         }
     }
 
-    // In-panel mirror of the widget's "Enable editor" toggle. Flipping it here updates the setting,
-    // keeps the General-tab checkbox and the widget toggle in lockstep, and re-renders both
-    // notification previews live so the user can see exactly how the editor state changes them.
+    // In-panel mirror of the widget's "Send to Editor" toggle: flips BOTH OpenEditorAfterCapture
+    // (images → Annotation Editor) and OpenVideoTrimmerAfterCapture (video/GIF → Trimmer), same as
+    // the floating widget, so the dual notification mock tracks a single mental model.
     private void NotificationsEditorToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded)
+        if (!IsLoaded || _suppressNotificationsEditorToggle)
             return;
 
         bool enabled = NotificationsEditorToggle.IsChecked == true;
-        if (_settingsService.Settings.OpenEditorAfterCapture == enabled)
-            return; // already in sync (e.g. set programmatically by RefreshEditorPreviewState)
+        var s = _settingsService.Settings;
+        if (s.OpenEditorAfterCapture == enabled && s.OpenVideoTrimmerAfterCapture == enabled)
+            return; // already in sync
 
-        _settingsService.Settings.OpenEditorAfterCapture = enabled;
+        s.OpenEditorAfterCapture = enabled;
+        s.OpenVideoTrimmerAfterCapture = enabled;
         _settingsService.Save();
-        RefreshEnableEditorCheck();                                 // General-tab checkbox
-        ((App)Application.Current).SyncWidgetEnableEditorToggle();  // widget toggle
+        RefreshEnableEditorCheck();                                 // Widget + Video tab checkboxes
+        ((App)Application.Current).SyncWidgetEnableEditorToggle();  // floating widget toggle
         RefreshEditorPreviewState();                               // both previews + this toggle
     }
 

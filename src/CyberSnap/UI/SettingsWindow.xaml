@@ -3349,11 +3349,11 @@
                                             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Top">
                                                 <CheckBox x:Name="NotificationsEditorToggle" VerticalAlignment="Center"
                                                           AutomationProperties.Name="Send to Editor"
-                                                          Services:LocalizationService.SourceToolTip="Send image captures to the Annotation Editor. Toggle it to see how the notifications change."
+                                                          Services:LocalizationService.SourceToolTip="Send images to the Annotation Editor and video/GIF to the Trimmer. Toggle it to see how the notifications change."
                                                           Checked="NotificationsEditorToggle_Changed" Unchecked="NotificationsEditorToggle_Changed"/>
                                                 <TextBlock Services:LocalizationService.SourceText="Send to Editor" VerticalAlignment="Center" Margin="8,0,0,0"
                                                            FontSize="13" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                           Services:LocalizationService.SourceToolTip="Send image captures to the Annotation Editor. Toggle it to see how the notifications change."/>
+                                                           Services:LocalizationService.SourceToolTip="Send images to the Annotation Editor and video/GIF to the Trimmer. Toggle it to see how the notifications change."/>
                                             </StackPanel>
 
                                             <StackPanel x:Name="EditorToastMockCard" Grid.Row="2" VerticalAlignment="Bottom">
