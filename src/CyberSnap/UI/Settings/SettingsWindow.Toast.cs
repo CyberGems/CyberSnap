@@ -892,8 +892,14 @@ public partial class SettingsWindow
             ToastLayoutImageGlyph.Foreground = Theme.Brush(Theme.IsDark
                 ? Color.FromRgb(255, 255, 255)
                 : Color.FromRgb(0, 0, 0));
-            ToastLayoutImageGlyph.Opacity = Theme.IsDark ? 0.14 : 0.20;
+            // Fainter under the video play badge so the badge reads first.
+            ToastLayoutImageGlyph.Opacity = editorOn
+                ? (Theme.IsDark ? 0.10 : 0.14)
+                : (Theme.IsDark ? 0.14 : 0.20);
         }
+
+        // Gallery-style VID/GIF cues when the right mock covers only video/GIF captures.
+        UpdateCapturePreviewMediaBadge(videoMode: editorOn);
 
         // Both mock timeline rails carry the cyber cyan/purple/magenta gradient hardcoded in XAML.
         // In grayscale, swap to the sober silver ramp so previews stay faithful.
@@ -938,6 +944,31 @@ public partial class SettingsWindow
 
     private static void ApplyEditorPreviewEmphasis(UIElement card, bool active)
         => card.Opacity = active ? 1.0 : 0.40;
+
+    /// <summary>
+    /// When the designer represents video/GIF captures only, show the same play-circle + kind
+    /// chip language as Gallery cards so the mock is not read as a still image notification.
+    /// </summary>
+    private void UpdateCapturePreviewMediaBadge(bool videoMode)
+    {
+        var show = videoMode ? Visibility.Visible : Visibility.Collapsed;
+        if (ToastLayoutVideoBadge is not null)
+            ToastLayoutVideoBadge.Visibility = show;
+        if (ToastLayoutVideoKindChip is not null)
+            ToastLayoutVideoKindChip.Visibility = show;
+
+        if (!videoMode)
+            return;
+
+        // Same magenta as Gallery video cards (HistoryKind.Video badge).
+        var videoMagenta = Color.FromRgb(240, 80, 180);
+        if (ToastLayoutVideoBadge is not null)
+            ToastLayoutVideoBadge.Background = Theme.Brush(Color.FromArgb(180, videoMagenta.R, videoMagenta.G, videoMagenta.B));
+        if (ToastLayoutVideoKindChip is not null)
+            ToastLayoutVideoKindChip.Background = Theme.Brush(Color.FromArgb(230, videoMagenta.R, videoMagenta.G, videoMagenta.B));
+        if (ToastLayoutVideoKindText is not null)
+            ToastLayoutVideoKindText.Text = "VID / GIF";
+    }
 
     // Outer stroke matching ToastWindow EdgeRing (default Dark solid cyan) or OuterShell rings.
     private static SolidColorBrush ToastAccentStroke()
