@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
+using CyberSnap.Services;
 using Color = System.Windows.Media.Color;
 using Image = System.Windows.Controls.Image;
 using Button = System.Windows.Controls.Button;
@@ -605,7 +606,6 @@ public partial class SettingsWindow
     }
 
     private void ToastPresetNoneBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.None);
-    private void ToastPresetMinimalBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Minimal);
     private void ToastPresetStandardBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Standard);
     private void ToastPresetFullBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Full);
 
@@ -628,8 +628,21 @@ public partial class SettingsWindow
 
     private void ResetToastButtonsBtn_Click(object sender, RoutedEventArgs e)
     {
+        // "Default" restores the shipping layout AND the preview-body click action together —
+        // they form one notification interaction surface.
         _settingsService.Settings.ToastButtons = new AppSettings.ToastButtonLayoutSettings();
+        _settingsService.Settings.ToastPreviewClickAction = ToastPreviewClickAction.OpenInEditor;
         _toastLayoutHint = null;
+        _suppressToastPreferenceChange = true;
+        try
+        {
+            if (ToastPreviewClickActionCombo is not null)
+                ToastPreviewClickActionCombo.SelectedIndex = (int)ToastPreviewClickAction.OpenInEditor;
+        }
+        finally
+        {
+            _suppressToastPreferenceChange = false;
+        }
         PersistToastButtonLayout();
     }
 
@@ -790,8 +803,9 @@ public partial class SettingsWindow
         bool manualActive = IsManualMode;
 
         // Preset buttons are highlighted when their preset is active AND Manual mode is off.
+        // Minimal was removed from the toolbar (redundant with No buttons); layouts that still
+        // match only-close simply leave every preset chip unhighlighted.
         HighlightToastPreset(ToastPresetNoneBtn, active == ToastButtonPreset.None && !manualActive);
-        HighlightToastPreset(ToastPresetMinimalBtn, active == ToastButtonPreset.Minimal && !manualActive);
         HighlightToastPreset(ToastPresetStandardBtn, active == ToastButtonPreset.Standard && !manualActive);
         HighlightToastPreset(ToastPresetFullBtn, active == ToastButtonPreset.Full && !manualActive);
         // Manual button is highlighted whenever Manual mode is active.
