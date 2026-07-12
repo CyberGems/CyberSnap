@@ -9,6 +9,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using CyberSnap.Capture;
 using CyberSnap.Helpers;
+using CyberSnap.Models;
 using CyberSnap.Services;
 using Color = System.Windows.Media.Color;
 
@@ -906,11 +907,7 @@ public partial class ToastWindow : Window
 
         try
         {
-            bool isVideoOrGif = _savedFilePath != null &&
-                (_savedFilePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
-                 _savedFilePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase));
-
-            if (isVideoOrGif)
+            if (IsVideoOrGifPath(_savedFilePath))
             {
                 var trimmer = new VideoTrimmerWindow(_savedFilePath!, ((App)Application.Current).SettingsService);
                 trimmer.Show();
@@ -918,6 +915,15 @@ public partial class ToastWindow : Window
             else if (_previewBitmap is not null)
             {
                 CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(_previewBitmap), _savedFilePath);
+            }
+            else if (HasSavedFileOnDisk())
+            {
+                CyberSnap.UI.Editor.EditorForm.ShowEditorFromFile(_savedFilePath!);
+            }
+            else if (!string.IsNullOrWhiteSpace(_savedFilePath))
+            {
+                ShowSavedFileMissingError();
+                return;
             }
         }
         catch (Exception ex)
@@ -1714,20 +1720,73 @@ public partial class ToastWindow : Window
             return;
         }
 
-        if (HasSavedFileOnDisk())
+        // Capture-preview body click: honor Settings → Notifications → toast preview click action.
+        // Spec-level ClickActionUrl (updates, etc.) was already handled above.
+        if (_previewBitmap is not null || HasSavedFileOnDisk() || !string.IsNullOrWhiteSpace(_savedFilePath))
         {
-            OpenWithDefaultViewer();
-            return;
-        }
-
-        if (!string.IsNullOrWhiteSpace(_savedFilePath))
-        {
-            ShowSavedFileMissingError();
+            HandlePreviewBodyClick();
             return;
         }
 
         DismissAnimated();
     }
+
+    private void HandlePreviewBodyClick()
+    {
+        ToastPreviewClickAction action;
+        try
+        {
+            action = SettingsService.LoadStatic()?.ToastPreviewClickAction
+                ?? ToastPreviewClickAction.OpenInEditor;
+        }
+        catch
+        {
+            action = ToastPreviewClickAction.OpenInEditor;
+        }
+
+        switch (action)
+        {
+            case ToastPreviewClickAction.OpenInDefaultViewer:
+                if (HasSavedFileOnDisk())
+                {
+                    OpenWithDefaultViewer();
+                    return;
+                }
+                if (!string.IsNullOrWhiteSpace(_savedFilePath))
+                {
+                    ShowSavedFileMissingError();
+                    return;
+                }
+                // No file on disk (clipboard-only preview): fall back to the editor when possible.
+                if (_previewBitmap is not null)
+                {
+                    OpenEditor();
+                    return;
+                }
+                DismissAnimated();
+                return;
+
+            case ToastPreviewClickAction.OpenInEditor:
+            default:
+                if (_previewBitmap is not null || HasSavedFileOnDisk() || IsVideoOrGifPath(_savedFilePath))
+                {
+                    OpenEditor();
+                    return;
+                }
+                if (!string.IsNullOrWhiteSpace(_savedFilePath))
+                {
+                    ShowSavedFileMissingError();
+                    return;
+                }
+                DismissAnimated();
+                return;
+        }
+    }
+
+    private static bool IsVideoOrGifPath(string? path)
+        => path is not null &&
+           (path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".gif", StringComparison.OrdinalIgnoreCase));
 
     private void OnMouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {

@@ -513,6 +513,21 @@ public partial class SettingsWindow
             value => AutoPinPreviewsCheck.IsChecked = value);
     }
 
+    private void ToastPreviewClickActionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToastPreferenceChange) return;
+
+        var previous = _settingsService.Settings.ToastPreviewClickAction;
+        var selected = (ToastPreviewClickAction)Math.Clamp(ToastPreviewClickActionCombo.SelectedIndex, 0, 1);
+        UpdateToastPreference(
+            "settings.toast-preview-click-action",
+            "Toast preview click action",
+            previous,
+            selected,
+            value => _settingsService.Settings.ToastPreviewClickAction = value,
+            value => ToastPreviewClickActionCombo.SelectedIndex = (int)value);
+    }
+
     private void NotificationsEnabledCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressToastPreferenceChange) return;

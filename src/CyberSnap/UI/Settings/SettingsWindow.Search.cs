@@ -927,6 +927,7 @@ public partial class SettingsWindow
             "imagesearchsources"        => FindName("ImageSearchSourcesCombo") as FrameworkElement,
             "searchsources"             => FindName("ImageSearchSourcesCombo") as FrameworkElement,
             "historyclickaction"        => HistoryClickActionCombo,
+            "toastpreviewclickaction"   => ToastPreviewClickActionCombo,
             // Interface language
             "interfacelanguage"         => InterfaceLanguageCombo,
             // General / Widgets

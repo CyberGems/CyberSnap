@@ -132,6 +132,13 @@ public enum HistoryClickAction
     OpenInDefaultViewer
 }
 
+/// <summary>What happens when the user left-clicks the capture preview body on a toast.</summary>
+public enum ToastPreviewClickAction
+{
+    OpenInEditor,
+    OpenInDefaultViewer
+}
+
 public enum CaptureKind
 {
     Screenshot,
@@ -407,6 +414,8 @@ public sealed class AppSettings
     // Toasts always dismiss with a fade-out; this only controls how long that fade takes.
     public double ToastFadeOutSeconds { get; set; } = 1.0;
     public bool AutoPinPreviews { get; set; }
+    /// <summary>Action when left-clicking the toast capture preview (not the action buttons).</summary>
+    public ToastPreviewClickAction ToastPreviewClickAction { get; set; } = ToastPreviewClickAction.OpenInEditor;
     public ToastButtonLayoutSettings ToastButtons { get; set; } = new();
     public Dictionary<string, string> OpenWithApps { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     // Per-sound customization: null = use built-in default MP3, string = path to user's custom MP3.
