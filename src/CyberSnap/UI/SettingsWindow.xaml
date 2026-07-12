@@ -2250,7 +2250,11 @@
             <!-- Search Results Panel -->
             <ScrollViewer x:Name="SearchResultsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,42,18,18">
                 <StackPanel x:Name="SearchResultsStack">
-                    <TextBlock Text="Search Results" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Search Results"/>
+                    <TextBlock Text="Edit matched settings directly. Changes are saved automatically." 
+                               Style="{StaticResource SettingDescription}" 
+                               Services:LocalizationService.SourceText="Edit matched settings directly. Changes are saved automatically."
+                               Margin="4,-4,0,16" 
+                               Opacity="0.75"/>
                     <!-- Filtered settings rows will be inserted here dynamically -->
                 </StackPanel>
             </ScrollViewer>
