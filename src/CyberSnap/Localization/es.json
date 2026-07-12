@@ -39,6 +39,7 @@
   "Enable editor": "Activar editor",
   "Send to Editor": "Enviar a Editor",
   "Send image captures to the Annotation Editor": "Envía capturas de imagen al Editor de Anotaciones",
+  "Send image captures to the Annotation Editor and video/GIF to the Trimmer": "Envía capturas de imagen al Editor de Anotaciones y vídeo/GIF al Recortador",
   "Send image captures to the Annotation Editor (not for video or GIF).": "Envía capturas de imagen al Editor de Anotaciones (no para video o GIF).",
   "Send image captures to the Annotation Editor. Toggle it to see how the notifications change.": "Envía las imágenes al Editor de Anotaciones y el vídeo/GIF al Recortador. Actívalo para ver cómo cambian las notificaciones.",
   "Send images to the Annotation Editor and video/GIF to the Trimmer. Toggle it to see how the notifications change.": "Envía las imágenes al Editor de Anotaciones y el vídeo/GIF al Recortador. Actívalo para ver cómo cambian las notificaciones.",
