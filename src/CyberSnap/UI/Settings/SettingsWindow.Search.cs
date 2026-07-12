@@ -54,13 +54,17 @@ public partial class SettingsWindow
             ApplySettingsSearch();
         };
 
-        // Ctrl+F focuses the always-visible search bar; Esc clears an active search
+        // Ctrl+F focuses search (except Achievements, where the bar is hidden);
+        // Esc clears an active search
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                FocusSearchBox();
-                e.Handled = true;
+                if (SettingsSearchBar.Visibility == Visibility.Visible)
+                {
+                    FocusSearchBox();
+                    e.Handled = true;
+                }
             }
             else if (e.Key == Key.Escape && (_isSearching || !string.IsNullOrWhiteSpace(SettingsSearchBox.Text)))
             {
@@ -938,9 +942,11 @@ public partial class SettingsWindow
 
     // ── Focus / Clear (search bar is always visible) ──
 
-    /// <summary>Focuses the always-visible search box (burger menu / Ctrl+F).</summary>
+    /// <summary>Focuses the search box when the chrome is visible (burger menu / Ctrl+F).</summary>
     public void FocusSearchBox()
     {
+        if (SettingsSearchBar.Visibility != Visibility.Visible)
+            return;
         SettingsSearchBox.Focus();
         SettingsSearchBox.SelectAll();
     }
@@ -948,8 +954,8 @@ public partial class SettingsWindow
     /// <summary>Legacy entry point for the burger menu; focuses the search box.</summary>
     public void ToggleSearchBar() => FocusSearchBox();
 
-    /// <summary>Search bar is always visible in the content header.</summary>
-    public bool IsSearchBarVisible() => true;
+    /// <summary>Whether the settings search bar is shown in the content header.</summary>
+    public bool IsSearchBarVisible() => SettingsSearchBar.Visibility == Visibility.Visible;
 
     /// <summary>Re-applies translated tooltips for all search bar elements.</summary>
     private void RefreshSearchTooltips()
