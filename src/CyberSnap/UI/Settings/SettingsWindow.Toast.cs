@@ -930,49 +930,41 @@ public partial class SettingsWindow
         ApplyMockRail(EditorToastMockRail, EditorToastMockRailGlow);
         ApplyMockRail(ToastLayoutRail, ToastLayoutRailGlow);
 
-        // Left: system-alert examples for the auto-open paths that skip the designed preview toast.
+        // Left: always show both system-alert examples as a stable reference (no show/hide flip).
+        // Which path is active is communicated by the cyan selection outline, not by dimming.
         if (EditorToastMockShell is not null)
         {
-            EditorToastMockShell.Visibility = editorOn ? Visibility.Visible : Visibility.Collapsed;
+            EditorToastMockShell.Visibility = Visibility.Visible;
             EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
             EditorToastMockShell.BorderBrush = ToastAccentStroke();
         }
         if (EncodingToastMockShell is not null)
         {
-            EncodingToastMockShell.Visibility = trimmerOn ? Visibility.Visible : Visibility.Collapsed;
+            EncodingToastMockShell.Visibility = Visibility.Visible;
             EncodingToastMockShell.Background = Theme.Brush(Theme.ToastBg);
             EncodingToastMockShell.BorderBrush = ToastAccentStroke();
         }
         ApplyMockRail(EncodingToastMockRail, EncodingToastMockRailGlow);
 
-        bool anySystemExample = editorOn || trimmerOn;
         if (SystemAlertExampleLabel is not null)
-            SystemAlertExampleLabel.Visibility = anySystemExample ? Visibility.Visible : Visibility.Collapsed;
-        if (SystemAlertOffNote is not null)
-        {
-            SystemAlertOffNote.Visibility = anySystemExample ? Visibility.Collapsed : Visibility.Visible;
-            if (!anySystemExample)
-            {
-                SystemAlertOffNote.Text = Services.LocalizationService.Translate(
-                    "Send to Editor is off — captures use the notification you design on the right.");
-            }
-        }
+            SystemAlertExampleLabel.Visibility = Visibility.Visible;
 
-        // Right: designed capture notification — used for whatever is NOT auto-sent to Editor/Trimmer.
-        bool designActive = designedToastForImages || designedToastForVideo;
-        ApplyEditorPreviewEmphasis(EditorButtonsCard, active: designActive);
+        // Selection: wrap the active section with a cyan outline (Send to Editor on → left; off → right).
+        // Both panels stay fully visible so the layout never jumps or fades.
+        bool autoOpenOn = editorOn || trimmerOn;
+        ApplySectionSelectionHighlight(SystemAlertCard, selected: autoOpenOn);
+        ApplySectionSelectionHighlight(EditorButtonsCard, selected: !autoOpenOn);
+
         if (ToastLayoutStack is not null)
-            ToastLayoutStack.Opacity = designActive ? 1.0 : 0.35;
+            ToastLayoutStack.Opacity = 1.0;
         if (CaptureDesignIdleNote is not null)
-            CaptureDesignIdleNote.Visibility = designActive ? Visibility.Collapsed : Visibility.Visible;
+            CaptureDesignIdleNote.Visibility = Visibility.Collapsed;
+
         if (EditorPreviewOtherCaption is not null)
         {
-            string captionKey =
-                designedToastForImages && designedToastForVideo ? "Capture notification (all)" :
-                designedToastForImages ? "Capture notification (images)" :
-                designedToastForVideo ? "Capture notification (video and GIF)" :
-                "Capture notification (when not opened automatically)";
-            string caption = Services.LocalizationService.Translate(captionKey);
+            // Caption stays stable — "what this panel is", not a per-toggle mode flip.
+            string caption = Services.LocalizationService.Translate(
+                "Capture notification (when not opened automatically)");
             EditorPreviewOtherCaption.Text = caption;
             AutomationProperties.SetName(EditorPreviewOtherCaption, caption);
         }
@@ -996,21 +988,49 @@ public partial class SettingsWindow
     private static string BuildDesignerGuideKey(
         bool editorOn, bool trimmerOn, bool designedToastForImages, bool designedToastForVideo)
     {
+        // Short copy that points at the highlighted card without implying the other side vanished.
         if (designedToastForImages && designedToastForVideo)
-            return "Every capture uses the capture notification you design on the right (preview and actions). Turn on Send to Editor to open images in the editor and show the brief system alert on the left instead.";
+            return "Send to Editor is off. Captures use the notification you design on the right (highlighted).";
 
         if (editorOn && trimmerOn)
-            return "Images open in the editor (brief system alert on the left). Video and GIF open in the trimmer with an encoding wait alert. The design on the right is only used if those automatic opens are off or fail.";
+            return "Send to Editor is on. Images and video/GIF open automatically; system alerts on the left are highlighted.";
 
         if (editorOn && designedToastForVideo)
-            return "With Send to Editor on, image captures open in the editor and show only this brief system alert. Video and GIF still use the capture notification you design on the right (unless Send to Trimmer is also on in Video settings).";
+            return "Images open in the editor (system alerts). Video/GIF still use the capture notification on the right.";
 
-        // Images use the designed toast; video goes to trimmer.
-        return "Image captures use the notification you design on the right. Video and GIF open in the trimmer with an encoding wait alert (Send to Trimmer is on).";
+        return "Video/GIF open in the trimmer (system alerts). Images use the capture notification on the right.";
     }
 
-    private static void ApplyEditorPreviewEmphasis(UIElement card, bool active)
-        => card.Opacity = active ? 1.0 : 0.40;
+    /// <summary>
+    /// Cyan wrap around the active side of the designer (replaces opacity fading, which felt confusing).
+    /// </summary>
+    private static void ApplySectionSelectionHighlight(Border? card, bool selected)
+    {
+        if (card is null)
+            return;
+
+        card.Opacity = 1.0;
+        if (selected)
+        {
+            // Match app accent (cyan cyber / silver gray / blue light) — same language as the mockup frame.
+            var accent = Theme.Accent;
+            card.BorderThickness = new Thickness(2);
+            card.BorderBrush = Theme.Brush(accent);
+            card.Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                Color = Color.FromRgb(accent.R, accent.G, accent.B),
+                BlurRadius = 16,
+                ShadowDepth = 0,
+                Opacity = Theme.IsGray ? 0.28 : 0.45
+            };
+        }
+        else
+        {
+            card.BorderThickness = new Thickness(1);
+            card.BorderBrush = Theme.Brush(Theme.BorderSubtle);
+            card.Effect = null;
+        }
+    }
 
     /// <summary>
     /// When the designer represents video/GIF captures only, show a neutral play circle
