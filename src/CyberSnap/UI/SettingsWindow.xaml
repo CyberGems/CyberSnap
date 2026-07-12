@@ -2343,20 +2343,12 @@
                                      so SelectAppTheme / AppThemeRadio_Changed keep working. -->
                                 <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal"
                                             VerticalAlignment="Center">
-                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,0,14,0">
-                                        <controls:ThemeCard x:Name="ThemeDarkRadio" Caption="CyberSnap"
-                                                     ThemeMode="Dark" CardWidth="104" GroupName="AppTheme"
-                                                     AutomationProperties.Name="CyberSnap theme"
-                                                     ToolTip="Always use the signature CyberSnap theme."
-                                                     Checked="AppThemeRadio_Changed"/>
-                                        <Border CornerRadius="3" Background="{DynamicResource ThemeTabActiveBrush}"
-                                                BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="0.8"
-                                                Padding="4,1" Margin="0,6,0,0" HorizontalAlignment="Center" Opacity="0.85">
-                                            <TextBlock Text="DEFAULT" FontSize="7.5" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource ThemeAccentBrush}"
-                                                       FontFamily="Segoe UI Variable Display" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </StackPanel>
+                                    <controls:ThemeCard x:Name="ThemeDarkRadio" Caption="CyberSnap"
+                                                 ThemeMode="Dark" CardWidth="104" GroupName="AppTheme" Margin="0,0,14,0"
+                                                 IsDefaultTheme="True"
+                                                 AutomationProperties.Name="CyberSnap theme"
+                                                 ToolTip="Always use the signature CyberSnap theme."
+                                                 Checked="AppThemeRadio_Changed"/>
                                     <controls:ThemeCard x:Name="ThemeGrayscaleRadio" Caption="Dark"
                                                  ThemeMode="Grayscale" CardWidth="104" GroupName="AppTheme" Margin="0,0,14,0"
                                                  VerticalAlignment="Top"
