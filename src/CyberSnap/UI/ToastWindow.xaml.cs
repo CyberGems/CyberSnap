@@ -958,7 +958,8 @@ public partial class ToastWindow : Window
     private static bool CanActivateMouseControl(object sender) =>
         sender is not UIElement { IsEnabled: false };
 
-    private void CloseToast() => DismissAnimated();
+    /// <summary>User-initiated close (X button or click-action Close): dismiss immediately, no fade.</summary>
+    private void CloseToast() => RequestDismiss(force: true);
 
     private void TogglePinned() => ApplyPinnedState(!_isPinned);
 
@@ -1422,7 +1423,47 @@ public partial class ToastWindow : Window
 
     private void RefreshInteractiveTooltip(ToastSpec spec)
     {
-        ToolTip = null;
+        // Capture previews: surface the configured body-click action so the toast is self-explanatory
+        // (especially with the "None" button preset).
+        if (spec.PreviewBitmap is null && string.IsNullOrWhiteSpace(spec.ClickActionLabel))
+        {
+            ToolTip = null;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(spec.ClickActionLabel))
+        {
+            ToolTip = LocalizationService.Translate(spec.ClickActionLabel);
+            return;
+        }
+
+        if (spec.PreviewBitmap is null)
+        {
+            ToolTip = null;
+            return;
+        }
+
+        ToastPreviewClickAction action;
+        try
+        {
+            action = SettingsService.LoadStatic()?.ToastPreviewClickAction
+                ?? ToastPreviewClickAction.OpenInEditor;
+        }
+        catch
+        {
+            action = ToastPreviewClickAction.OpenInEditor;
+        }
+
+        string tipKey = action switch
+        {
+            ToastPreviewClickAction.OpenInDefaultViewer => "Click to open in default viewer",
+            ToastPreviewClickAction.CopyToClipboard => "Click to copy",
+            ToastPreviewClickAction.Save => "Click to save",
+            ToastPreviewClickAction.OpenInGallery => "Click to open in Gallery",
+            ToastPreviewClickAction.Close => "Click to close",
+            _ => "Click to open in editor"
+        };
+        ToolTip = LocalizationService.Translate(tipKey);
     }
 
     private void DeleteBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -1757,13 +1798,45 @@ public partial class ToastWindow : Window
                     ShowSavedFileMissingError();
                     return;
                 }
-                // No file on disk (clipboard-only preview): fall back to the editor when possible.
+                // Clipboard-only preview: fall back to the editor when possible.
                 if (_previewBitmap is not null)
                 {
                     OpenEditor();
                     return;
                 }
-                DismissAnimated();
+                CloseToast();
+                return;
+
+            case ToastPreviewClickAction.CopyToClipboard:
+                if (_previewBitmap is not null)
+                {
+                    CopyPreview();
+                    return;
+                }
+                CloseToast();
+                return;
+
+            case ToastPreviewClickAction.Save:
+                if (_previewBitmap is not null)
+                {
+                    SavePreview();
+                    return;
+                }
+                if (HasSavedFileOnDisk())
+                {
+                    // Already on disk: open save-as still useful, but without a bitmap fall back to folder.
+                    OpenFileLocation(_savedFilePath);
+                    return;
+                }
+                CloseToast();
+                return;
+
+            case ToastPreviewClickAction.OpenInGallery:
+                OpenHistory();
+                return;
+
+            case ToastPreviewClickAction.Close:
+                CloseToast();
                 return;
 
             case ToastPreviewClickAction.OpenInEditor:
@@ -1778,7 +1851,7 @@ public partial class ToastWindow : Window
                     ShowSavedFileMissingError();
                     return;
                 }
-                DismissAnimated();
+                CloseToast();
                 return;
         }
     }
