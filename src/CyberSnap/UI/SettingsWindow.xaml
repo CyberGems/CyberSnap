@@ -3322,10 +3322,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- LEFT column: an "Enable editor" toggle on top (mirrors the widget/General
-                                         setting — flip it to watch both previews react live), and the fixed
-                                         text-toast mock bottom-aligned so the two toasts share a baseline,
-                                         like they do on screen. -->
+                                    <!-- LEFT: system-alert mock (fixed brief status). RIGHT: capture notification designer. -->
                                     <Grid Grid.Column="0" Margin="0,0,16,0">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
@@ -3344,27 +3341,29 @@
                                                        Services:LocalizationService.SourceToolTip="Send image captures to the Annotation Editor. Toggle it to see how the notifications change."/>
                                         </StackPanel>
 
-                                        <!-- Fixed text-toast mock, bottom-aligned to the big preview. -->
+                                        <!-- Fixed system-alert mock (brief status message, not a capture preview).
+                                             Caption + off-note stay full opacity; only the mock shell dims when inactive. -->
                                         <StackPanel x:Name="EditorToastMockCard" Grid.Row="2" VerticalAlignment="Bottom">
                                         <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
                                             <TextBlock x:Name="EditorPreviewImagesCaption"
-                                                       Services:LocalizationService.SourceText="Image captures"
+                                                       Services:LocalizationService.SourceText="System alert"
                                                        FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
                                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                            <!-- "Automatic": this view is fixed (not customizable). -->
                                             <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
                                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
                                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                                                    Services:LocalizationService.SourceToolTip="This view is fixed and can't be customized.">
-                                                <TextBlock Services:LocalizationService.SourceText="Automatic"
+                                                    Services:LocalizationService.SourceToolTip="Brief status messages are fixed and cannot be customized here.">
+                                                <TextBlock Services:LocalizationService.SourceText="Fixed"
                                                            FontSize="10.5" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource ThemeMutedBrush}"/>
                                             </Border>
                                         </StackPanel>
-                                        <!-- Faithful mock of the real text toast: rounded shell (clip so the
-                                             progress bar follows the corners), centered title/body, and the
-                                             static "animated" gradient timeline along the bottom — matching
-                                             ToastWindow.xaml's ProgressBar exactly. Colours set in code. -->
+                                        <TextBlock x:Name="SystemAlertOffNote" Margin="2,0,0,8" FontSize="11.5"
+                                                   TextWrapping="Wrap" MaxWidth="260" Opacity="0.9"
+                                                   Visibility="Collapsed"
+                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                                   Services:LocalizationService.SourceText="Send to Editor is off — image captures use the capture notification on the right."/>
+                                        <!-- Faithful mock of the real system-alert notification. -->
                                         <Border x:Name="EditorToastMockShell" CornerRadius="12"
                                                 MinWidth="196" MaxWidth="300" BorderThickness="1"
                                                 ClipToBounds="True" HorizontalAlignment="Left">
@@ -3420,18 +3419,16 @@
                                     <Border Grid.Column="1" Width="1" Margin="0,2,16,2" VerticalAlignment="Stretch"
                                             Background="{DynamicResource ThemeSeparatorBrush}"/>
 
-                                    <!-- RIGHT card: the drag-and-drop button designer. Applies to every capture
-                                         when the editor is off, or only to video/GIF when the editor is on. -->
+                                    <!-- RIGHT: capture notification designer (preview + buttons + click action). -->
                                     <StackPanel x:Name="EditorButtonsCard" Grid.Column="2" VerticalAlignment="Top">
                                         <StackPanel Orientation="Horizontal" Margin="2,0,0,8">
                                             <TextBlock x:Name="EditorPreviewOtherCaption" Text=""
                                                        FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
                                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                            <!-- "Customizable": the editable designer — drag buttons here. -->
                                             <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
                                                     Background="{DynamicResource ThemeTabActiveBrush}"
                                                     BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="1"
-                                                    Services:LocalizationService.SourceToolTip="Drag buttons here to customize this notification.">
+                                                    Services:LocalizationService.SourceToolTip="Design the capture notification: buttons and what a click on the image does.">
                                                 <TextBlock Services:LocalizationService.SourceText="Customizable"
                                                            FontSize="10.5" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource ThemeAccentBrush}"/>

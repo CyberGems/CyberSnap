@@ -846,11 +846,11 @@ public partial class SettingsWindow
         RefreshToastButtonLayoutDesigner();
     }
 
-    /// <summary>Reflect the "Enable editor" state across the two side-by-side mock-ups: the text
-    /// toast on the left is what image captures show when the editor is on; the button designer on
-    /// the right applies to every capture when the editor is off, or only to video/GIF when it is
-    /// on. The card that actually applies is emphasised; the other is dimmed with a hint. Also
-    /// recolours the text-toast mock to match the real toast (called on theme changes too).</summary>
+    /// <summary>
+    /// Side-by-side mocks: left = fixed system alert (brief status when Send to Editor is on);
+    /// right = customizable capture notification (preview + buttons). Captions and guide use
+    /// that vocabulary so newcomers don't confuse media type with notification type.
+    /// </summary>
     private void RefreshEditorPreviewState()
     {
         // Guard: this runs from theme refreshes that can fire before the designer is built.
@@ -865,7 +865,7 @@ public partial class SettingsWindow
         if (NotificationsEditorToggle is not null && NotificationsEditorToggle.IsChecked != editorOn)
             NotificationsEditorToggle.IsChecked = editorOn;
 
-        // Keep both previews faithful to the real toast shell + OuterShell stroke.
+        // Keep both previews faithful to the real notification shell + edge stroke.
         EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
         EditorToastMockShell.BorderBrush = ToastAccentStroke();
         if (EditorToastMockCloseIcon is not null)
@@ -896,34 +896,38 @@ public partial class SettingsWindow
         }
 
         // Both mock timeline rails carry the cyber cyan/purple/magenta gradient hardcoded in XAML.
-        // That's right for the CyberSnap/Light themes, but the real toast swaps to a sober silver
-        // ramp under the grayscale ("Dark" radio) theme — so mirror that here to keep the previews
-        // faithful. Setting the same gradient back in the other themes is a cheap no-op.
+        // In grayscale, swap to the sober silver ramp so previews stay faithful.
         ApplyMockRail(EditorToastMockRail, EditorToastMockRailGlow);
         ApplyMockRail(ToastLayoutRail, ToastLayoutRailGlow);
 
-        // Left (image-capture text toast) is the active path only when the editor is on. The banner
-        // and the live toggle already explain the off state, so the card just dims — no extra note.
-        ApplyEditorPreviewEmphasis(EditorToastMockCard, active: editorOn);
+        // Left: only the system-alert shell dims when Send to Editor is off (caption/note stay readable).
+        ApplyEditorPreviewEmphasis(EditorToastMockShell, active: editorOn);
+        if (SystemAlertOffNote is not null)
+            SystemAlertOffNote.Visibility = editorOn ? Visibility.Collapsed : Visibility.Visible;
 
-        // Right (button designer) always applies to something, so it's never fully dimmed; its
-        // caption states exactly what it covers given the current editor state.
+        // Right: capture-notification designer always applies to something.
         ApplyEditorPreviewEmphasis(EditorButtonsCard, active: true);
         if (EditorPreviewOtherCaption is not null)
         {
-            string caption = Services.LocalizationService.Translate(
-                editorOn ? "Video and GIF captures" : "All captures");
+            string caption = Services.LocalizationService.Translate(editorOn
+                ? "Capture notification (video and GIF)"
+                : "Capture notification (all)");
             EditorPreviewOtherCaption.Text = caption;
             AutomationProperties.SetName(EditorPreviewOtherCaption, caption);
         }
 
-        // Plain-language guide that names the Editor toggle and explains why the two sides can
-        // differ — the single biggest clarity win for this panel.
+        if (EditorPreviewImagesCaption is not null)
+        {
+            string leftCaption = Services.LocalizationService.Translate("System alert");
+            EditorPreviewImagesCaption.Text = leftCaption;
+            AutomationProperties.SetName(EditorPreviewImagesCaption, leftCaption);
+        }
+
         if (EditorPreviewGuide is not null)
         {
             string guide = Services.LocalizationService.Translate(editorOn
-                ? "The editor is on, so image captures open straight in it and show this brief message. Video and GIF captures still use the notification you design on the right."
-                : "Every capture uses the notification you design on the right. If you turn the editor on, image captures will open in it and show the message on the left instead.");
+                ? "With Send to Editor on, image captures open in the editor and show only this brief system alert. The design on the right is the capture notification used for video and GIF (preview and actions)."
+                : "Every capture uses the capture notification you design on the right (preview and actions). Turn on Send to Editor to open images in the editor and show the brief system alert on the left instead.");
             EditorPreviewGuide.Text = guide;
             AutomationProperties.SetName(EditorPreviewGuide, guide);
         }
