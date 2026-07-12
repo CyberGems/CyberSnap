@@ -1237,6 +1237,8 @@ public partial class SettingsWindow
         try
         {
             // Capture-notification test: preview + the user's overlay button layout.
+            // Write a real temp file so buttons that require a path on disk (Delete) still appear.
+            string tempPath = Path.Combine(Path.GetTempPath(), $"CyberSnap_test_notif_{Guid.NewGuid():N}.png");
             using (var bmp = new System.Drawing.Bitmap(280, 200))
             {
                 using (var g = System.Drawing.Graphics.FromImage(bmp))
@@ -1270,11 +1272,13 @@ public partial class SettingsWindow
                     }
                 }
 
+                bmp.Save(tempPath, System.Drawing.Imaging.ImageFormat.Png);
+
                 ToastWindow.Show(ToastSpec.ImagePreview(
                     (System.Drawing.Bitmap)bmp.Clone(),
                     "Notification Preview",
                     "Testing layout & alignment",
-                    filePath: null,
+                    filePath: tempPath,
                     autoPin: false,
                     transparentShell: false,
                     showOverlayButtons: true
