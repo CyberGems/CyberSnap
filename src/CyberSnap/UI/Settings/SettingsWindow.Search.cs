@@ -356,7 +356,8 @@ public partial class SettingsWindow
             if (container == null || seenContainers.Contains(container))
                 continue;
 
-            if (VisualTreeHelper.GetParent(container) is System.Windows.Controls.Panel parent)
+            var parent = GetParentPanel(container);
+            if (parent != null)
             {
                 seenContainers.Add(container);
                 containerEntries.Add((container, entry));
@@ -365,7 +366,8 @@ public partial class SettingsWindow
 
         foreach (var (container, entry) in containerEntries)
         {
-            if (VisualTreeHelper.GetParent(container) is System.Windows.Controls.Panel originalParent)
+            var originalParent = GetParentPanel(container);
+            if (originalParent != null)
             {
                 int originalIndex = originalParent.Children.IndexOf(container);
                 if (originalIndex >= 0)
@@ -486,13 +488,7 @@ public partial class SettingsWindow
                     break;
                 }
             }
-
-            var nextParent = VisualTreeHelper.GetParent(parent);
-            if (nextParent == null && parent is FrameworkElement frameworkElement)
-            {
-                nextParent = LogicalTreeHelper.GetParent(frameworkElement) ?? frameworkElement.Parent;
-            }
-            parent = nextParent;
+            parent = GetParent(parent);
         }
 
         if (container != null)
@@ -504,6 +500,21 @@ public partial class SettingsWindow
         }
 
         return null;
+    }
+
+    private DependencyObject? GetParent(DependencyObject element)
+    {
+        var parent = VisualTreeHelper.GetParent(element);
+        if (parent == null && element is FrameworkElement fe)
+        {
+            parent = LogicalTreeHelper.GetParent(fe) ?? fe.Parent;
+        }
+        return parent;
+    }
+
+    private System.Windows.Controls.Panel? GetParentPanel(DependencyObject element)
+    {
+        return GetParent(element) as System.Windows.Controls.Panel;
     }
 
     private static double ScoreEntry(SettingsSearchEntry entry, string normalized, string[] tokens)
