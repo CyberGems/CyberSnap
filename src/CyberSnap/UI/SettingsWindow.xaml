@@ -3188,8 +3188,6 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <Grid Grid.Row="0">
                                 <Grid.RowDefinitions>
@@ -3205,77 +3203,74 @@
                                            AutomationProperties.LiveSetting="Polite"/>
                             </Grid>
 
-                            <TextBlock Grid.Row="1" Services:LocalizationService.SourceText="Presets" FontSize="12.5" FontWeight="SemiBold" Margin="0,16,0,8"
-                                       HorizontalAlignment="Left"
-                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                            <StackPanel Grid.Row="2" x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left">
-                                <Button x:Name="ToastPresetNoneBtn" Services:LocalizationService.SourceContent="No buttons" Margin="0,0,8,0" Cursor="Hand"
-                                        AutomationProperties.Name="No buttons preset"
-                                        AutomationProperties.HelpText="Hide every overlay button. Use the preview click action below."
-                                        Services:LocalizationService.SourceToolTip="Hide every overlay button. Use the preview click action below." Click="ToastPresetNoneBtn_Click"/>
-                                <Button x:Name="ToastPresetMinimalBtn" Services:LocalizationService.SourceContent="Minimal" Margin="0,0,8,0" Cursor="Hand"
-                                        AutomationProperties.Name="Minimal preset"
-                                        AutomationProperties.HelpText="Show only the close button."
-                                        Services:LocalizationService.SourceToolTip="Show only the close button." Click="ToastPresetMinimalBtn_Click"/>
-                                <Button x:Name="ToastPresetStandardBtn" Services:LocalizationService.SourceContent="Standard" Margin="0,0,8,0" Cursor="Hand"
-                                        AutomationProperties.Name="Standard preset"
-                                        AutomationProperties.HelpText="Show pin, close, gallery and save."
-                                        Services:LocalizationService.SourceToolTip="Show pin, close, gallery and save." Click="ToastPresetStandardBtn_Click"/>
-                                <Button x:Name="ToastPresetFullBtn" Services:LocalizationService.SourceContent="Full" Margin="0,0,8,0" Cursor="Hand"
-                                        AutomationProperties.Name="Full preset"
-                                        AutomationProperties.HelpText="Show every button."
-                                        Services:LocalizationService.SourceToolTip="Show every button." Click="ToastPresetFullBtn_Click"/>
-                                <Button x:Name="ToastManualBtn" Services:LocalizationService.SourceContent="Manual" Margin="0,0,8,0" Cursor="Hand"
-                                        AutomationProperties.Name="Manual layout"
-                                        AutomationProperties.HelpText="Unlock the per-button controls to place each button yourself."
-                                        Services:LocalizationService.SourceToolTip="Customize each button yourself" Click="ToastManualBtn_Click"/>
-                                <Button x:Name="ResetToastButtonsBtn" Services:LocalizationService.SourceContent="Reset" Margin="8,0,0,0" Cursor="Hand"
-                                        AutomationProperties.Name="Reset notification button layout"
-                                        Services:LocalizationService.SourceToolTip="Restore the default notification button layout"
-                                        Click="ResetToastButtonsBtn_Click"/>
-                            </StackPanel>
-
-                            <!-- Preview-body click lives with the button designer: same surface, same mental model. -->
-                            <Grid Grid.Row="3" Margin="0,16,0,0" Style="{StaticResource SettingRow}">
+                            <!-- Compact toolbar: presets + click action + default. Minimal removed (redundant with No buttons). -->
+                            <Grid Grid.Row="1" Margin="0,10,0,0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8A7;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock Services:LocalizationService.SourceText="Toast preview click action" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Services:LocalizationService.SourceText="What happens when you click the capture image on a notification (works with or without overlay buttons)." Style="{StaticResource SettingDescription}"/>
+                                <StackPanel>
+                                    <TextBlock Services:LocalizationService.SourceText="Presets" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6"
+                                               HorizontalAlignment="Left"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" HorizontalAlignment="Left">
+                                        <Button x:Name="ToastPresetNoneBtn" Services:LocalizationService.SourceContent="No buttons" Margin="0,0,6,0" Cursor="Hand"
+                                                AutomationProperties.Name="No buttons preset"
+                                                AutomationProperties.HelpText="Hide every overlay button. Use the preview click action."
+                                                Services:LocalizationService.SourceToolTip="Hide every overlay button. Use the preview click action." Click="ToastPresetNoneBtn_Click"/>
+                                        <Button x:Name="ToastPresetStandardBtn" Services:LocalizationService.SourceContent="Standard" Margin="0,0,6,0" Cursor="Hand"
+                                                AutomationProperties.Name="Standard preset"
+                                                AutomationProperties.HelpText="Show pin, close, gallery and save."
+                                                Services:LocalizationService.SourceToolTip="Show pin, close, gallery and save." Click="ToastPresetStandardBtn_Click"/>
+                                        <Button x:Name="ToastPresetFullBtn" Services:LocalizationService.SourceContent="Full" Margin="0,0,6,0" Cursor="Hand"
+                                                AutomationProperties.Name="Full preset"
+                                                AutomationProperties.HelpText="Show every button."
+                                                Services:LocalizationService.SourceToolTip="Show every button." Click="ToastPresetFullBtn_Click"/>
+                                        <Button x:Name="ToastManualBtn" Services:LocalizationService.SourceContent="Manual" Margin="0,0,6,0" Cursor="Hand"
+                                                AutomationProperties.Name="Manual layout"
+                                                AutomationProperties.HelpText="Unlock the per-button controls to place each button yourself."
+                                                Services:LocalizationService.SourceToolTip="Customize each button yourself" Click="ToastManualBtn_Click"/>
+                                    </StackPanel>
                                 </StackPanel>
-                                <ComboBox x:Name="ToastPreviewClickActionCombo" Grid.Column="2" MinWidth="190"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.Name="Toast preview click action"
-                                          Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a toast."
-                                          SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
-                                    <ComboBoxItem Content="Open in editor"
-                                                  Services:LocalizationService.SourceToolTip="Open the capture in the built-in editor."
-                                                  AutomationProperties.Name="Open in editor"/>
-                                    <ComboBoxItem Content="Open in default viewer"
-                                                  Services:LocalizationService.SourceToolTip="Open the file with the system default image viewer."
-                                                  AutomationProperties.Name="Open in default viewer"/>
-                                    <ComboBoxItem Content="Copy to clipboard"
-                                                  Services:LocalizationService.SourceToolTip="Copy the capture to your clipboard."
-                                                  AutomationProperties.Name="Copy to clipboard"/>
-                                    <ComboBoxItem Content="Save"
-                                                  Services:LocalizationService.SourceToolTip="Save the capture to a file."
-                                                  AutomationProperties.Name="Save"/>
-                                    <ComboBoxItem Content="Open in Gallery"
-                                                  Services:LocalizationService.SourceToolTip="Open the capture in the Gallery."
-                                                  AutomationProperties.Name="Open in Gallery"/>
-                                    <ComboBoxItem Content="Close immediately"
-                                                  Services:LocalizationService.SourceToolTip="Dismiss the notification instantly without a fade-out."
-                                                  AutomationProperties.Name="Close immediately"/>
-                                </ComboBox>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="16,0,0,0">
+                                    <TextBlock Services:LocalizationService.SourceText="Toast preview click action" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,6"
+                                               HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <ComboBox x:Name="ToastPreviewClickActionCombo" MinWidth="190" Margin="0,0,8,0"
+                                                  VerticalAlignment="Center"
+                                                  AutomationProperties.Name="Toast preview click action"
+                                                  Services:LocalizationService.SourceToolTip="Choose what happens when you click the capture preview on a toast."
+                                                  SelectionChanged="ToastPreviewClickActionCombo_SelectionChanged">
+                                            <ComboBoxItem Content="Open in editor"
+                                                          Services:LocalizationService.SourceToolTip="Open the capture in the built-in editor."
+                                                          AutomationProperties.Name="Open in editor"/>
+                                            <ComboBoxItem Content="Open in default viewer"
+                                                          Services:LocalizationService.SourceToolTip="Open the file with the system default image viewer."
+                                                          AutomationProperties.Name="Open in default viewer"/>
+                                            <ComboBoxItem Content="Copy to clipboard"
+                                                          Services:LocalizationService.SourceToolTip="Copy the capture to your clipboard."
+                                                          AutomationProperties.Name="Copy to clipboard"/>
+                                            <ComboBoxItem Content="Save"
+                                                          Services:LocalizationService.SourceToolTip="Save the capture to a file."
+                                                          AutomationProperties.Name="Save"/>
+                                            <ComboBoxItem Content="Open in Gallery"
+                                                          Services:LocalizationService.SourceToolTip="Open the capture in the Gallery."
+                                                          AutomationProperties.Name="Open in Gallery"/>
+                                            <ComboBoxItem Content="Close immediately"
+                                                          Services:LocalizationService.SourceToolTip="Dismiss the notification instantly without a fade-out."
+                                                          AutomationProperties.Name="Close immediately"/>
+                                        </ComboBox>
+                                        <Button x:Name="ResetToastButtonsBtn" Services:LocalizationService.SourceContent="Default"
+                                                Cursor="Hand"
+                                                AutomationProperties.Name="Default notification layout"
+                                                Services:LocalizationService.SourceToolTip="Restore the default button layout and preview click action."
+                                                Click="ResetToastButtonsBtn_Click"/>
+                                    </StackPanel>
+                                </StackPanel>
                             </Grid>
 
-                            <Border Grid.Row="4" Margin="0,14,0,0"
+                            <Border Grid.Row="2" Margin="0,10,0,0"
                                     CornerRadius="12"
                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                     BorderThickness="1"
