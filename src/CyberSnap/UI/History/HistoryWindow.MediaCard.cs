@@ -168,7 +168,10 @@ public partial class HistoryWindow
                 try
                 {
                     using var bmp = new System.Drawing.Bitmap(vm.Entry.FilePath);
-                    CyberSnap.UI.Editor.EditorForm.ShowEditor(new System.Drawing.Bitmap(bmp), vm.Entry.FilePath);
+                    CyberSnap.UI.Editor.EditorForm.ShowEditor(
+                        new System.Drawing.Bitmap(bmp),
+                        vm.Entry.FilePath,
+                        CyberSnap.Helpers.ImageOpenSource.History);
                 }
                 catch (Exception ex)
                 {
@@ -502,7 +505,10 @@ public partial class HistoryWindow
                             try
                             {
                                 using var bmp = new System.Drawing.Bitmap(vm.Entry.FilePath);
-                                CyberSnap.UI.Editor.EditorForm.ShowEditor(new System.Drawing.Bitmap(bmp), vm.Entry.FilePath);
+                                CyberSnap.UI.Editor.EditorForm.ShowEditor(
+                                    new System.Drawing.Bitmap(bmp),
+                                    vm.Entry.FilePath,
+                                    CyberSnap.Helpers.ImageOpenSource.History);
                             }
                             catch (Exception ex)
                             {
