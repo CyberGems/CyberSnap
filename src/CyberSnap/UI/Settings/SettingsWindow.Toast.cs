@@ -900,8 +900,11 @@ public partial class SettingsWindow
         ApplyMockRail(EditorToastMockRail, EditorToastMockRailGlow);
         ApplyMockRail(ToastLayoutRail, ToastLayoutRailGlow);
 
-        // Left: only the system-alert shell dims when Send to Editor is off (caption/note stay readable).
-        ApplyEditorPreviewEmphasis(EditorToastMockShell, active: editorOn);
+        // Left: show the system-alert example only when Send to Editor is on; otherwise a short note.
+        if (EditorToastMockShell is not null)
+            EditorToastMockShell.Visibility = editorOn ? Visibility.Visible : Visibility.Collapsed;
+        if (SystemAlertExampleLabel is not null)
+            SystemAlertExampleLabel.Visibility = editorOn ? Visibility.Visible : Visibility.Collapsed;
         if (SystemAlertOffNote is not null)
             SystemAlertOffNote.Visibility = editorOn ? Visibility.Collapsed : Visibility.Visible;
 
