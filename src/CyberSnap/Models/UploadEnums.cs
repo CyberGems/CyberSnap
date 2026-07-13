@@ -17,6 +17,17 @@ public enum UploadCustomProtocol
     Ftp = 0,
     Sftp = 1,
     S3 = 2,
+    /// <summary>HTTP(S) webhook: POST multipart or JSON base64 to a user URL.</summary>
+    Webhook = 3,
+}
+
+/// <summary>Body format for custom webhook uploads.</summary>
+public enum UploadWebhookBodyMode
+{
+    /// <summary>multipart/form-data with the image file field.</summary>
+    Multipart = 0,
+    /// <summary>application/json with base64 image payload.</summary>
+    JsonBase64 = 1,
 }
 
 /// <summary>Encoded image format preferred for share uploads.</summary>

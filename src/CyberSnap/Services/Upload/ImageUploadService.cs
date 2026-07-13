@@ -19,6 +19,7 @@ public static class ImageUploadService
         new FtpUploadProvider(),
         new SftpUploadProvider(),
         new S3CompatibleUploadProvider(),
+        new WebhookUploadProvider(),
     ];
 
     public static UploadProviderKind GetDefaultProvider(AppSettings? settings = null)
@@ -102,6 +103,7 @@ public static class ImageUploadService
                 UploadCustomProtocol.Ftp => "FTP",
                 UploadCustomProtocol.Sftp => "SFTP",
                 UploadCustomProtocol.S3 => "S3",
+                UploadCustomProtocol.Webhook => LocalizationService.Translate("Webhook"),
                 _ => "Custom",
             };
             list.Add((
@@ -316,6 +318,14 @@ public static class ImageUploadService
             CustomPassword: settings.UploadCustomPassword,
             CustomRemoteDirectory: settings.UploadCustomRemoteDirectory ?? "",
             CustomPublicUrlBase: settings.UploadCustomPublicUrlBase ?? "",
+            WebhookUrl: settings.UploadWebhookUrl ?? "",
+            WebhookBearerToken: settings.UploadWebhookBearerToken,
+            WebhookBodyMode: Enum.IsDefined(typeof(UploadWebhookBodyMode), settings.UploadWebhookBodyMode)
+                ? settings.UploadWebhookBodyMode
+                : UploadWebhookBodyMode.Multipart,
+            WebhookFormFieldName: string.IsNullOrWhiteSpace(settings.UploadWebhookFormFieldName)
+                ? "image"
+                : settings.UploadWebhookFormFieldName.Trim(),
             RemoteFileName: remoteName,
             OverwriteOnCollision: settings.UploadOverwriteOnCollision,
             UniqueSuffixOnCollision: settings.UploadUniqueSuffixOnCollision,
