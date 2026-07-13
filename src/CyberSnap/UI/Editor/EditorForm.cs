@@ -1617,6 +1617,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (keyData == (Keys.Control | Keys.Shift | Keys.Z) || keyData == (Keys.Control | Keys.Y))
         { _canvas.Redo(); return true; }
         if (keyData == (Keys.Control | Keys.D)) { _canvas.DuplicateSelectionInternal(); return true; }
+        if (keyData == Keys.Delete && !_canvas.IsEditingText)
+        {
+            _canvas.DeleteSelected();
+            return true;
+        }
 
         // Inline text Esc must commit/cancel directly — do not rely on SendMessage, which
         // re-enters ProcessKeyPreview and never reaches AnnotationCanvas.OnKeyDown.
@@ -1719,6 +1724,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (mod == Keys.Control && key is Keys.Y) { _canvas.Redo(); return true; }
         if (mod == Keys.Control && key is Keys.D) { _canvas.DuplicateSelectionInternal(); return true; }
         if (mod == Keys.Control && key is Keys.A) { _canvas.SelectAll(); return true; }
+
+        if (mod == Keys.None && key == Keys.Delete && !_canvas.IsEditingText)
+        {
+            _canvas.DeleteSelected();
+            return true;
+        }
 
         if (!EditorToolHotkeyHelper.IsReservedEditorChord(key | mod)
             && EditorToolHotkeyHelper.TryActivateTool(_canvas, key | mod))

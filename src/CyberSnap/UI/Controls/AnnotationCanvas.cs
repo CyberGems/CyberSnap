@@ -1193,6 +1193,22 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
 
     internal void DuplicateSelectionInternal() => DuplicateSelection();
 
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool IsEditingText => _inlineTextBox is not null;
+
+    internal void DeleteSelected()
+    {
+        if (_multiSelectedIndices.Count > 1)
+        {
+            DeleteMultiSelectedAnnotations();
+        }
+        else if (_selectedAnnotationIndex >= 0)
+        {
+            DeleteAnnotationAt(_selectedAnnotationIndex);
+        }
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)

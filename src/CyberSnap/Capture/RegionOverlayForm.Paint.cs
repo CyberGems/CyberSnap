@@ -803,21 +803,19 @@ public sealed partial class RegionOverlayForm
         RulerRenderer.Paint(g, from, to, ClientRectangle, UiChrome.IsDark);
     }
 
-    private Graphics GetBlurPreviewGraphics(Size size)
+    private Bitmap GetBlurPreviewBitmap(Size size)
     {
         if (size.Width <= 0 || size.Height <= 0)
             throw new ArgumentOutOfRangeException(nameof(size));
 
         if (_blurPreviewBitmap == null || _blurPreviewSize != size)
         {
-            _blurPreviewGraphics?.Dispose();
             _blurPreviewBitmap?.Dispose();
             _blurPreviewBitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppArgb);
-            _blurPreviewGraphics = Graphics.FromImage(_blurPreviewBitmap);
             _blurPreviewSize = size;
         }
 
-        return _blurPreviewGraphics!;
+        return _blurPreviewBitmap;
     }
 
     private void PaintBlurRect(Graphics g, Rectangle rect)
@@ -825,21 +823,24 @@ public sealed partial class RegionOverlayForm
         if (rect.Width < 3 || rect.Height < 3) return;
         var clamped = Rectangle.Intersect(rect, new Rectangle(0, 0, _bmpW, _bmpH));
         if (clamped.Width < 1 || clamped.Height < 1) return;
-        int blockSize = Math.Clamp(Math.Min(clamped.Width, clamped.Height) / 16, 3, 14);
-        int sw = Math.Max(1, clamped.Width / blockSize);
-        int sh = Math.Max(1, clamped.Height / blockSize);
-        var small = GetBlurPreviewGraphics(new Size(sw, sh));
-        small.Clear(Color.Transparent);
-        small.InterpolationMode = InterpolationMode.HighQualityBilinear;
-        small.PixelOffsetMode = PixelOffsetMode.Half;
-        small.DrawImage(_screenshot, new Rectangle(0, 0, sw, sh), clamped, GraphicsUnit.Pixel);
+        int blockSize = 10;
+        int sw = Math.Max(2, clamped.Width / blockSize);
+        int sh = Math.Max(2, clamped.Height / blockSize);
+        var bmp = GetBlurPreviewBitmap(new Size(sw, sh));
+        using (var small = Graphics.FromImage(bmp))
+        {
+            small.Clear(Color.Transparent);
+            small.InterpolationMode = InterpolationMode.HighQualityBilinear;
+            small.PixelOffsetMode = PixelOffsetMode.Half;
+            small.DrawImage(_screenshot, new Rectangle(0, 0, sw, sh), clamped, GraphicsUnit.Pixel);
+        }
 
         var state = g.Save();
         try
         {
             g.InterpolationMode = InterpolationMode.HighQualityBilinear;
             g.PixelOffsetMode = PixelOffsetMode.Half;
-            g.DrawImage(_blurPreviewBitmap!, clamped);
+            g.DrawImage(bmp, clamped);
         }
         finally
         {

@@ -808,7 +808,7 @@
   "Draw objects inside the canvas": "Draw objects inside the canvas",
   "Guide removed": "Guide removed",
   "All Guides Cleared": "All Guides Cleared",
-  "To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it. (If a combination is not registered, another app on your system may be blocking it.)": "To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Ctrl+Shift+A). Click the × button to clear it. (If a combination is not registered, another app on your system may be blocking it.)",
+  "To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Alt+Shift+A). Click the × button to clear it. (If a combination is not registered, another app on your system may be blocking it.)": "To assign a custom hotkey, click the input box next to a tool and press your desired key combination (e.g., Alt+Shift+A). Click the × button to clear it. (If a combination is not registered, another app on your system may be blocking it.)",
   "Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.": "Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.",
   "Notification Preview": "Notification preview",
   "Move the close notification button": "Move the close notification button",
