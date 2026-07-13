@@ -354,6 +354,13 @@ public sealed class AppSettings
     public string? UploadCustomPassword { get; set; }
     public string UploadCustomRemoteDirectory { get; set; } = "";
     public string UploadCustomPublicUrlBase { get; set; } = "";
+    /// <summary>Full HTTPS endpoint for custom webhook uploads (protocol = Webhook).</summary>
+    public string UploadWebhookUrl { get; set; } = "";
+    /// <summary>Optional Bearer token sent as Authorization header for webhooks.</summary>
+    public string? UploadWebhookBearerToken { get; set; }
+    public UploadWebhookBodyMode UploadWebhookBodyMode { get; set; } = UploadWebhookBodyMode.Multipart;
+    /// <summary>Form field name for multipart webhooks (default image).</summary>
+    public string UploadWebhookFormFieldName { get; set; } = "image";
     public bool UploadFtpPassive { get; set; } = true;
     public bool UploadFtpUseTls { get; set; } = true;
     public bool UploadFtpAllowInsecureCertificate { get; set; }

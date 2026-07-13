@@ -380,6 +380,9 @@ public sealed class SettingsService : IDisposable
             settings.UploadDefaultProvider = UploadProviderKind.CyberGems;
         }
         settings.UploadCustomProtocol = NormalizeEnum(settings.UploadCustomProtocol, UploadCustomProtocol.Sftp);
+        settings.UploadWebhookBodyMode = NormalizeEnum(settings.UploadWebhookBodyMode, UploadWebhookBodyMode.Multipart);
+        if (string.IsNullOrWhiteSpace(settings.UploadWebhookFormFieldName))
+            settings.UploadWebhookFormFieldName = "image";
         settings.UploadImageFormat = NormalizeEnum(settings.UploadImageFormat, UploadImageFormatPreference.Png);
         if (settings.UploadJpegQuality is < 1 or > 100)
             settings.UploadJpegQuality = 90;

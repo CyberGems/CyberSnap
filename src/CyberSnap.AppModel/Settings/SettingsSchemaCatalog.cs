@@ -178,11 +178,12 @@ public static class SettingsSchemaCatalog
                 new SettingsSectionDefinition(
                     "custom_destination",
                     "Custom destination",
-                    "Single FTP, SFTP, or S3-compatible destination.",
+                    "Single FTP, SFTP, S3-compatible, or HTTP webhook destination.",
                     [
-                        new SettingDefinition("custom_protocol", "Protocol", SettingsValueKind.Choice, "FTP, SFTP, or S3.", "UploadCustomProtocol"),
+                        new SettingDefinition("custom_protocol", "Protocol", SettingsValueKind.Choice, "FTP, SFTP, S3, or Webhook.", "UploadCustomProtocol"),
                         new SettingDefinition("custom_host", "Host", SettingsValueKind.Text, "Server host name.", "UploadCustomHost"),
                         new SettingDefinition("custom_public_url_base", "Public URL base", SettingsValueKind.Text, "Optional public base URL for shared links.", "UploadCustomPublicUrlBase"),
+                        new SettingDefinition("webhook_url", "Webhook URL", SettingsValueKind.Text, "HTTPS endpoint for webhook uploads.", "UploadWebhookUrl"),
                     ]),
             ]),
         new(

@@ -42,6 +42,7 @@ internal static class SensitiveSettingsProtection
         settings.UploadImgurClientId = TransformNullable(settings.UploadImgurClientId, transform);
         settings.UploadImgBBApiKey = TransformNullable(settings.UploadImgBBApiKey, transform);
         settings.UploadCyberGemsApiKey = TransformNullable(settings.UploadCyberGemsApiKey, transform);
+        settings.UploadWebhookBearerToken = TransformNullable(settings.UploadWebhookBearerToken, transform);
         settings.UploadCustomPassword = TransformNullable(settings.UploadCustomPassword, transform);
         settings.UploadSftpPrivateKeyPassphrase = TransformNullable(settings.UploadSftpPrivateKeyPassphrase, transform);
         settings.UploadS3AccessKey = TransformNullable(settings.UploadS3AccessKey, transform);

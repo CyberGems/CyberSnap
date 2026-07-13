@@ -108,6 +108,13 @@ public partial class SettingsWindow
             UploadCustomPasswordBox.Password = s.UploadCustomPassword ?? "";
             UploadCustomRemoteDirectoryBox.Text = s.UploadCustomRemoteDirectory ?? "";
             UploadCustomPublicUrlBaseBox.Text = s.UploadCustomPublicUrlBase ?? "";
+            UploadWebhookUrlBox.Text = s.UploadWebhookUrl ?? "";
+            UploadWebhookBearerTokenBox.Password = s.UploadWebhookBearerToken ?? "";
+            SelectComboByTag(UploadWebhookBodyModeCombo,
+                s.UploadWebhookBodyMode == UploadWebhookBodyMode.JsonBase64 ? "JsonBase64" : "Multipart");
+            UploadWebhookFormFieldNameBox.Text = string.IsNullOrWhiteSpace(s.UploadWebhookFormFieldName)
+                ? "image"
+                : s.UploadWebhookFormFieldName;
             UploadUniqueSuffixOnCollisionCheck.IsChecked = s.UploadUniqueSuffixOnCollision;
 
             UploadFtpUseTlsCheck.IsChecked = s.UploadFtpUseTls;
@@ -182,15 +189,25 @@ public partial class SettingsWindow
     private void UpdateCustomProtocolFieldsVisibility(UploadCustomProtocol protocol)
     {
         bool isS3 = protocol == UploadCustomProtocol.S3;
+        bool isWebhook = protocol == UploadCustomProtocol.Webhook;
         UploadFtpFields.Visibility = protocol == UploadCustomProtocol.Ftp ? Visibility.Visible : Visibility.Collapsed;
         UploadSftpFields.Visibility = protocol == UploadCustomProtocol.Sftp ? Visibility.Visible : Visibility.Collapsed;
         UploadS3Fields.Visibility = isS3 ? Visibility.Visible : Visibility.Collapsed;
+        if (UploadWebhookFields is not null)
+            UploadWebhookFields.Visibility = isWebhook ? Visibility.Visible : Visibility.Collapsed;
 
-        // Host/user/password/remote dir are FTP/SFTP only; S3 uses endpoint/bucket/keys.
+        // Host/user/password/remote dir are FTP/SFTP only; S3 and Webhook use their own fields.
         if (UploadCustomServerFields is not null)
-            UploadCustomServerFields.Visibility = isS3 ? Visibility.Collapsed : Visibility.Visible;
+            UploadCustomServerFields.Visibility = (isS3 || isWebhook) ? Visibility.Collapsed : Visibility.Visible;
+        // Public URL base still useful for webhook fallback; unique-suffix is FTP/SFTP/S3-ish.
         if (UploadCustomSharedFields is not null)
             UploadCustomSharedFields.Visibility = Visibility.Visible;
+        if (UploadUniqueSuffixOnCollisionCheck is not null)
+        {
+            var uniqueRow = UploadUniqueSuffixOnCollisionCheck.Parent as FrameworkElement;
+            if (uniqueRow is not null)
+                uniqueRow.Visibility = isWebhook ? Visibility.Collapsed : Visibility.Visible;
+        }
     }
 
     private void UpdateSftpTrustedHostKeyLabel(string? fingerprint)
@@ -590,6 +607,76 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.UploadCustomPublicUrlBase = value,
             value => UploadCustomPublicUrlBaseBox.Text = value);
+    }
+
+    // ── Webhook ──────────────────────────────────────────────────────────
+
+    private void UploadWebhookUrlBox_Changed(object sender, TextChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressUploadPreferenceChange) return;
+        var previous = _settingsService.Settings.UploadWebhookUrl ?? "";
+        var selected = UploadWebhookUrlBox.Text?.Trim() ?? "";
+        if (previous == selected) return;
+        UpdateUploadPreference(
+            "settings.upload-webhook-url",
+            "Webhook URL",
+            previous,
+            selected,
+            value => _settingsService.Settings.UploadWebhookUrl = value,
+            value => UploadWebhookUrlBox.Text = value);
+    }
+
+    private void UploadWebhookBearerTokenBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressUploadPreferenceChange) return;
+        var previous = _settingsService.Settings.UploadWebhookBearerToken;
+        var token = UploadWebhookBearerTokenBox.Password?.Trim();
+        var selected = string.IsNullOrWhiteSpace(token) ? null : token;
+        if (previous == selected) return;
+        UpdateUploadPreference(
+            "settings.upload-webhook-bearer",
+            "Bearer token",
+            previous,
+            selected,
+            value => _settingsService.Settings.UploadWebhookBearerToken = value,
+            value => UploadWebhookBearerTokenBox.Password = value ?? "");
+    }
+
+    private void UploadWebhookBodyModeCombo_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressUploadPreferenceChange) return;
+        var tag = GetUploadComboTag(UploadWebhookBodyModeCombo);
+        var selected = string.Equals(tag, "JsonBase64", StringComparison.OrdinalIgnoreCase)
+            ? UploadWebhookBodyMode.JsonBase64
+            : UploadWebhookBodyMode.Multipart;
+        var previous = _settingsService.Settings.UploadWebhookBodyMode;
+        if (previous == selected) return;
+        UpdateUploadPreference(
+            "settings.upload-webhook-body-mode",
+            "Request body",
+            previous,
+            selected,
+            value => _settingsService.Settings.UploadWebhookBodyMode = value,
+            value => SelectComboByTag(
+                UploadWebhookBodyModeCombo,
+                value == UploadWebhookBodyMode.JsonBase64 ? "JsonBase64" : "Multipart"));
+    }
+
+    private void UploadWebhookFormFieldNameBox_Changed(object sender, TextChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressUploadPreferenceChange) return;
+        var previous = _settingsService.Settings.UploadWebhookFormFieldName ?? "image";
+        var selected = string.IsNullOrWhiteSpace(UploadWebhookFormFieldNameBox.Text)
+            ? "image"
+            : UploadWebhookFormFieldNameBox.Text.Trim();
+        if (previous == selected) return;
+        UpdateUploadPreference(
+            "settings.upload-webhook-field",
+            "Form field name",
+            previous,
+            selected,
+            value => _settingsService.Settings.UploadWebhookFormFieldName = value,
+            value => UploadWebhookFormFieldNameBox.Text = value);
     }
 
     private void UploadUniqueSuffixOnCollisionCheck_Changed(object sender, RoutedEventArgs e)
