@@ -8,7 +8,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CyberSnap", "src\CyberSnap\CyberSnap.csproj", "{586AEBB7-0818-472A-997D-6A42005821D0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CyberSnap.AppModel", "src\CyberSnap.AppModel\CyberSnap.AppModel.csproj", "{2757B9C3-D943-480D-B6AB-77F988CFB58E}"
-EndProjectGlobal
+EndProject
+Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
