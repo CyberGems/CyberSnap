@@ -962,7 +962,7 @@ public partial class SettingsWindow
 
         if (EditorPreviewImagesCaption is not null)
         {
-            string leftCaption = Services.LocalizationService.Translate("System alert");
+            string leftCaption = Services.LocalizationService.Translate("System notifications");
             EditorPreviewImagesCaption.Text = leftCaption;
             AutomationProperties.SetName(EditorPreviewImagesCaption, leftCaption);
         }
@@ -1097,17 +1097,47 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressNotificationsEditorToggle)
             return;
 
-        bool enabled = NotificationsEditorToggle.IsChecked == true;
+        SetSendToEditorMode(NotificationsEditorToggle.IsChecked == true);
+    }
+
+    /// <summary>
+    /// Card click: any interaction with the system-alert card selects auto-open (Send to Editor on).
+    /// Preview tunnel so child visuals still receive the click; we never mark Handled.
+    /// </summary>
+    private void SystemAlertCard_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+        SetSendToEditorMode(enabled: true);
+    }
+
+    /// <summary>
+    /// Card click: any interaction with the capture-design card selects the designed toast
+    /// (Send to Editor off). Preview tunnel so presets/drag/combo keep working.
+    /// </summary>
+    private void EditorButtonsCard_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (!IsLoaded)
+            return;
+        SetSendToEditorMode(enabled: false);
+    }
+
+    /// <summary>
+    /// Shared path for the Enviar a Editor toggle and the two designer cards. No-ops when already
+    /// in the requested state so highlight/toggle do not flicker on repeated clicks.
+    /// </summary>
+    private void SetSendToEditorMode(bool enabled)
+    {
         var s = _settingsService.Settings;
         if (s.OpenEditorAfterCapture == enabled && s.OpenVideoTrimmerAfterCapture == enabled)
-            return; // already in sync
+            return;
 
         s.OpenEditorAfterCapture = enabled;
         s.OpenVideoTrimmerAfterCapture = enabled;
         _settingsService.Save();
-        RefreshEnableEditorCheck();                                 // Widget + Video tab checkboxes
-        ((App)Application.Current).SyncWidgetEnableEditorToggle();  // floating widget toggle
-        RefreshEditorPreviewState();                               // both previews + this toggle
+        RefreshEnableEditorCheck();                                // Widget + Video tab checkboxes
+        ((App)Application.Current).SyncWidgetEnableEditorToggle(); // floating widget toggle
+        RefreshEditorPreviewState();                               // highlight + this toggle
     }
 
     private static string? GetToastButtonDescription(ToastButtonKind button) => button switch

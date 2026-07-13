@@ -3301,29 +3301,24 @@
                                             </Grid>
                                         </Border>
 
-                                        <!-- System-alert card — highlight toggled in RefreshEditorPreviewState.
-                                             Extra padding keeps content clear of the 2px selection stroke. -->
+                                        <!-- System-alert card — click/any interaction selects this mode (Send to Editor on). -->
                                         <Border x:Name="SystemAlertCard" Grid.Row="1"
                                                 CornerRadius="12" Padding="16,16,16,18" BorderThickness="1"
                                                 Background="{DynamicResource ThemeCardBrush}"
                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                                VerticalAlignment="Bottom"
-                                                SnapsToDevicePixels="True" UseLayoutRounding="True">
+                                                VerticalAlignment="Bottom" Cursor="Hand"
+                                                SnapsToDevicePixels="True" UseLayoutRounding="True"
+                                                PreviewMouseLeftButtonDown="SystemAlertCard_PreviewMouseLeftButtonDown"
+                                                Services:LocalizationService.SourceToolTip="Select system notifications (Send to Editor on).">
                                             <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                                     <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="13"
                                                                Margin="0,1,8,0" VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource ThemeMutedBrush}"/>
-                                                    <TextBlock Services:LocalizationService.SourceText="What you see"
-                                                               FontSize="11.5" FontWeight="SemiBold" Opacity="0.75"
-                                                               VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-                                                </StackPanel>
-
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                               Foreground="{DynamicResource ThemeAccentBrush}"/>
                                                     <TextBlock x:Name="EditorPreviewImagesCaption"
-                                                               Services:LocalizationService.SourceText="System alert"
+                                                               Services:LocalizationService.SourceText="System notifications"
                                                                FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                               TextWrapping="Wrap" MaxWidth="160"
                                                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                                     <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
                                                             Background="{DynamicResource ThemeInputBackgroundBrush}"
@@ -3439,14 +3434,15 @@
                                     <Border Grid.Column="1" Width="1" Margin="0,6,16,6" VerticalAlignment="Stretch"
                                             Background="{DynamicResource ThemeSeparatorBrush}"/>
 
-                                    <!-- RIGHT panel: capture notification designer (highlight toggled in code).
-                                         Extra padding keeps presets/mock clear of the selection stroke. -->
+                                    <!-- RIGHT panel: click/any interaction selects this mode (Send to Editor off). -->
                                     <Border x:Name="EditorButtonsCard" Grid.Column="2"
                                             CornerRadius="12" Padding="18,16,18,18" BorderThickness="1"
                                             Background="{DynamicResource ThemeCardBrush}"
                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                            VerticalAlignment="Stretch"
-                                            SnapsToDevicePixels="True" UseLayoutRounding="True">
+                                            VerticalAlignment="Stretch" Cursor="Hand"
+                                            SnapsToDevicePixels="True" UseLayoutRounding="True"
+                                            PreviewMouseLeftButtonDown="EditorButtonsCard_PreviewMouseLeftButtonDown"
+                                            Services:LocalizationService.SourceToolTip="Select the capture notification design (Send to Editor off).">
                                         <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
