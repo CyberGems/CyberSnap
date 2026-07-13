@@ -23,6 +23,14 @@ public sealed class HistoryEntry
     public int Height { get; set; }
     public long FileSizeBytes { get; set; }
     public HistoryKind Kind { get; set; } = HistoryKind.Image;
+    /// <summary>Last successful share URL (if any).</summary>
+    public string? UploadUrl { get; set; }
+    /// <summary>Provider name used for last share (e.g. ImgBB).</summary>
+    public string? UploadProvider { get; set; }
+    /// <summary>UTC ticks of last successful share.</summary>
+    public long? UploadedAtTicks { get; set; }
+    /// <summary>Last share error message, if any.</summary>
+    public string? UploadError { get; set; }
 }
 
 public sealed class OcrHistoryEntry

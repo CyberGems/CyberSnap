@@ -364,6 +364,25 @@ public sealed class SettingsService : IDisposable
         settings.TranslationModel = Enum.IsDefined(typeof(TranslationModel), settings.TranslationModel)
             ? settings.TranslationModel
             : (int)TranslationModel.MyMemory;
+        settings.UploadDefaultProvider = NormalizeEnum(settings.UploadDefaultProvider, UploadProviderKind.ImgBB);
+        // Imgur is user-key-only (no OOTB); do not keep it as default without a Client-ID.
+        if (settings.UploadDefaultProvider == UploadProviderKind.Imgur &&
+            !(settings.UploadUseCustomImgurClientId && !string.IsNullOrWhiteSpace(settings.UploadImgurClientId)))
+        {
+            settings.UploadDefaultProvider = UploadProviderKind.ImgBB;
+        }
+        settings.UploadCustomProtocol = NormalizeEnum(settings.UploadCustomProtocol, UploadCustomProtocol.Sftp);
+        settings.UploadImageFormat = NormalizeEnum(settings.UploadImageFormat, UploadImageFormatPreference.Png);
+        if (settings.UploadJpegQuality is < 1 or > 100)
+            settings.UploadJpegQuality = 90;
+        if (settings.UploadMaxBytes <= 0)
+            settings.UploadMaxBytes = 10 * 1024 * 1024;
+        if (settings.UploadMinIntervalMs < 0)
+            settings.UploadMinIntervalMs = 3000;
+        if (settings.UploadDailyCapOotb < 0)
+            settings.UploadDailyCapOotb = 50;
+        if (settings.UploadHttpTimeoutSeconds is < 15 or > 600)
+            settings.UploadHttpTimeoutSeconds = 120;
     }
 
     private static TEnum NormalizeEnum<TEnum>(TEnum value, TEnum fallback)

@@ -1,11 +1,14 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Navigation;
 using CyberSnap.Helpers;
 using CyberSnap.Native;
 using Button = System.Windows.Controls.Button;
@@ -35,14 +38,29 @@ internal sealed class ThemedConfirmDialog : Window
     private bool _confirmed;
     private bool _suppress;
     private SavePromptResult _saveResult = SavePromptResult.Cancel;
+    private readonly string? _messageLinkUrl;
+    private readonly string? _messageLinkLabel;
 
-    private ThemedConfirmDialog(string title, string message, string primaryText, string? secondaryText, Kind kind, string? iconId = null, bool showSuppressCheck = false)
+    private ThemedConfirmDialog(
+        string title,
+        string message,
+        string primaryText,
+        string? secondaryText,
+        Kind kind,
+        string? iconId = null,
+        bool showSuppressCheck = false,
+        string? messageLinkUrl = null,
+        string? messageLinkLabel = null)
     {
         Theme.Refresh();
         title = Services.LocalizationService.Translate(title);
         message = Services.LocalizationService.Translate(message);
         primaryText = Services.LocalizationService.Translate(primaryText);
         secondaryText = secondaryText is null ? null : Services.LocalizationService.Translate(secondaryText);
+        _messageLinkUrl = messageLinkUrl;
+        _messageLinkLabel = string.IsNullOrWhiteSpace(messageLinkLabel)
+            ? null
+            : Services.LocalizationService.Translate(messageLinkLabel);
 
         Title = title;
         Width = PanelWidth + (GlowMargin * 2);
@@ -151,8 +169,24 @@ internal sealed class ThemedConfirmDialog : Window
         string primaryText = "Yes",
         string secondaryText = "No",
         bool danger = true,
-        string? iconId = null)
-        => Show(null, ownerHandle, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm, iconId, true, out dontShowAgain);
+        string? iconId = null,
+        string? messageLinkUrl = null,
+        string? messageLinkLabel = null)
+        => Show(null, ownerHandle, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm, iconId, true, out dontShowAgain, messageLinkUrl, messageLinkLabel);
+
+    /// <summary>WPF-owner confirm with optional "Don't show again" and optional message hyperlink.</summary>
+    public static bool Confirm(
+        Window? owner,
+        string title,
+        string message,
+        out bool dontShowAgain,
+        string primaryText = "Yes",
+        string secondaryText = "No",
+        bool danger = true,
+        string? iconId = null,
+        string? messageLinkUrl = null,
+        string? messageLinkLabel = null)
+        => Show(owner, IntPtr.Zero, title, message, primaryText, secondaryText, danger ? Kind.Danger : Kind.Confirm, iconId, true, out dontShowAgain, messageLinkUrl, messageLinkLabel);
 
     // Single-button informational / error dialog (replacement for MessageBox.Show with one OK button).
     public static void Alert(Window? owner, string title, string message, bool error = false, string okText = "OK")
@@ -203,10 +237,14 @@ internal sealed class ThemedConfirmDialog : Window
         Kind kind,
         string? iconId,
         bool showSuppressCheck,
-        out bool dontShowAgain)
+        out bool dontShowAgain,
+        string? messageLinkUrl = null,
+        string? messageLinkLabel = null)
     {
         dontShowAgain = false;
-        var dialog = new ThemedConfirmDialog(title, message, primaryText, secondaryText, kind, iconId, showSuppressCheck);
+        var dialog = new ThemedConfirmDialog(
+            title, message, primaryText, secondaryText, kind, iconId, showSuppressCheck,
+            messageLinkUrl, messageLinkLabel);
         AssignDialogOwner(dialog, owner, ownerHandle);
 
         bool result = dialog.ShowDialog() == true && dialog._confirmed;
@@ -215,6 +253,51 @@ internal sealed class ThemedConfirmDialog : Window
     }
 
     // ── Content ────────────────────────────────────────────────────────────
+
+    private TextBlock BuildMessageBlock(string message, WpfColor accent)
+    {
+        var block = new TextBlock
+        {
+            FontSize = 12,
+            Foreground = Theme.Brush(Theme.TextSecondary),
+            TextWrapping = TextWrapping.Wrap,
+            LineHeight = 17,
+            TextAlignment = TextAlignment.Center,
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+
+        block.Inlines.Add(new Run(message));
+
+        if (!string.IsNullOrWhiteSpace(_messageLinkUrl) && !string.IsNullOrWhiteSpace(_messageLinkLabel))
+        {
+            block.Inlines.Add(new Run("\n"));
+            var link = new Hyperlink(new Run(_messageLinkLabel))
+            {
+                NavigateUri = Uri.TryCreate(_messageLinkUrl, UriKind.Absolute, out var uri) ? uri : null,
+                Foreground = Theme.Brush(accent),
+                TextDecorations = TextDecorations.Underline,
+                Cursor = WpfCursors.Hand,
+                ToolTip = _messageLinkUrl,
+            };
+            link.RequestNavigate += OnMessageLinkNavigate;
+            block.Inlines.Add(link);
+        }
+
+        return block;
+    }
+
+    private static void OnMessageLinkNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        e.Handled = true;
+        try
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch
+        {
+            // Ignore navigation failures; dialog remains usable.
+        }
+    }
 
     private FrameworkElement BuildContent(string title, string message, string primaryText, string? secondaryText, Kind kind, string? iconId, bool showSuppressCheck = false)
     {
@@ -269,16 +352,7 @@ internal sealed class ThemedConfirmDialog : Window
             TextWrapping = TextWrapping.Wrap,
             TextAlignment = TextAlignment.Center
         });
-        textPanel.Children.Add(new TextBlock
-        {
-            Text = message,
-            FontSize = 12,
-            Foreground = Theme.Brush(Theme.TextSecondary),
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = 17,
-            TextAlignment = TextAlignment.Center,
-            Margin = new Thickness(0, 5, 0, 0)
-        });
+        textPanel.Children.Add(BuildMessageBlock(message, accent));
         Grid.SetRow(textPanel, 2);
         root.Children.Add(textPanel);
 

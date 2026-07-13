@@ -177,6 +177,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-suppress-paste-confirm", ex); }
     }
 
+    /// <summary>Persists whether the third-party share/upload confirmation was suppressed.</summary>
+    public void PersistUploadSuppressThirdPartyConfirm(bool suppress)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.UploadSuppressThirdPartyConfirm == suppress) return;
+        _settingsService.Settings.UploadSuppressThirdPartyConfirm = suppress;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("upload.persist-suppress-third-party-confirm", ex); }
+    }
+
     /// <summary>Persists the video trimmer preview volume and export-mute preference.</summary>
     public void PersistVideoTrimmerAudio(double volume, bool exportMuted)
     {

@@ -110,6 +110,7 @@ public static class SoundService
     public static void PlayErrorSound() => Play(SoundEvent.Error);
     public static void PlayStartupSound() => Play(SoundEvent.Startup);
     public static void PlayAchievementSound() => Play(SoundEvent.Achievement);
+    public static void PlayUploadSound() => Play(SoundEvent.Upload);
 
     /// <summary>Play a sound by event type. Respects global mute, per-sound mute, and suppression.</summary>
     public static void Play(SoundEvent evt)
@@ -188,6 +189,7 @@ public static class SoundService
             SoundEvent.Error => "error",
             SoundEvent.Startup => "startup",
             SoundEvent.Achievement => "achievement",
+            SoundEvent.Upload => "upload",
             _ => null
         };
         if (name is null) return null;

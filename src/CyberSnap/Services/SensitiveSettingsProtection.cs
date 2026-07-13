@@ -39,6 +39,13 @@ internal static class SensitiveSettingsProtection
     private static void Transform(AppSettings settings, Func<string, string> transform)
     {
         settings.GoogleTranslateApiKey = TransformNullable(settings.GoogleTranslateApiKey, transform);
+        settings.UploadImgurClientId = TransformNullable(settings.UploadImgurClientId, transform);
+        settings.UploadImgBBApiKey = TransformNullable(settings.UploadImgBBApiKey, transform);
+        settings.UploadCustomPassword = TransformNullable(settings.UploadCustomPassword, transform);
+        settings.UploadSftpPrivateKeyPassphrase = TransformNullable(settings.UploadSftpPrivateKeyPassphrase, transform);
+        settings.UploadS3AccessKey = TransformNullable(settings.UploadS3AccessKey, transform);
+        settings.UploadS3SecretKey = TransformNullable(settings.UploadS3SecretKey, transform);
+        settings.UploadS3SessionToken = TransformNullable(settings.UploadS3SessionToken, transform);
     }
 
     private static string? TransformNullable(string? value, Func<string, string> transform)

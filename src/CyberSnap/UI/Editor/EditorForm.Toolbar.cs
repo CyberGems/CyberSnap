@@ -49,6 +49,11 @@ public sealed partial class EditorForm
     private EditorCommandButton _newCommandButton = null!;
     private EditorCommandButton _openCommandButton = null!;
     private EditorCommandButton _exportButton = null!;
+    private EditorCommandButton _shareButton = null!;
+    private EditorCommandButton _shareMenuButton = null!;
+    private ContextMenuStrip? _shareMenu;
+    private CancellationTokenSource? _shareCts;
+    private bool _shareInProgress;
     private EmojiPickerPopup? _emojiPicker;
     private readonly Dictionary<Color, EditorColorButton> _colorButtons = new();
     private EditorColorButton _customColorButton = null!;
@@ -777,6 +782,25 @@ public sealed partial class EditorForm
         _exportButton.Click += (_, _) => DoSaveAs();
         RegisterHoverTooltip(_exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png, .jpg or .pdf format"), "Ctrl+Shift+S"), above: false);
         commandActions.Controls.Add(_exportButton);
+
+        // Share: primary + chevron menu (two adjacent buttons)
+        _shareButton = RegisterLocalizedCommand("share", "Share", false);
+        _shareButton.Click += (_, _) => DoShare();
+        RegisterHoverTooltip(_shareButton, () => WithShortcut(LocalizationService.Translate("Upload and copy a shareable link"), "Ctrl+Shift+U"), above: false);
+        commandActions.Controls.Add(_shareButton);
+
+        _shareMenuButton = new EditorCommandButton
+        {
+            IconId = "chevronDown",
+            Text = "",
+            Primary = false,
+            Width = 32,
+            Height = 62,
+            Margin = new Padding(0, 0, 2, 0),
+        };
+        _shareMenuButton.Click += (_, _) => ShowShareMenu();
+        RegisterHoverTooltip(_shareMenuButton, LocalizationService.Translate("Choose share destination"), above: false);
+        commandActions.Controls.Add(_shareMenuButton);
 
         commandBarPanel.Controls.Add(commandActions, 1, 0);
 
@@ -1593,6 +1617,11 @@ public sealed partial class EditorForm
         var exportItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export"), shortcut: "Ctrl+Shift+S", iconId: "export");
         exportItem.Click += (_, _) => DoSaveAs();
 
+        var shareItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Share"), shortcut: "Ctrl+Shift+U", iconId: "share");
+        shareItem.Click += (_, _) => DoShare();
+
+        var shareToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Share to…"), showImages: true);
+
         var resizeCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         resizeCanvasItem.Click += (_, _) => DoResizeCanvas();
 
@@ -1788,6 +1817,8 @@ public sealed partial class EditorForm
         menu.Items.Add(viewItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(exportItem);
+        menu.Items.Add(shareItem);
+        menu.Items.Add(shareToItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(copyItem);
         menu.Items.Add(pasteItem);
@@ -1799,6 +1830,7 @@ public sealed partial class EditorForm
 
         menu.Opened += (_, _) =>
         {
+            RebuildShareToSubmenu(shareToItem);
             UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, welcomeBannerItem, rulersItem, hintsItem, coordinatesItem, tooltipsItem, scrollbarsItem);
             bool hasSelection = _canvas.SelectedAnnotationIndexInternal >= 0 || _canvas.MultiSelectedIndicesInternal.Count > 0;
             bool multi = _canvas.MultiSelectedIndicesInternal.Count > 1;

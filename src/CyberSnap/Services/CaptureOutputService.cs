@@ -78,6 +78,16 @@ public static class CaptureOutputService
 
     public static void WritePng(Bitmap bitmap, Stream stream) => SavePngCore(bitmap, stream);
 
+    /// <summary>Writes a JPEG-encoded image to <paramref name="stream"/> (caller owns the stream).</summary>
+    public static void WriteJpeg(Bitmap bitmap, Stream stream, int jpegQuality)
+    {
+        var encoder = ImageCodecInfo.GetImageEncoders().FirstOrDefault(e => e.MimeType == "image/jpeg")
+            ?? throw new InvalidOperationException("JPEG encoder is not available.");
+        using var parameters = new EncoderParameters(1);
+        parameters.Param[0] = new EncoderParameter(Encoder.Quality, (long)Math.Clamp(jpegQuality, 1, 100));
+        bitmap.Save(stream, encoder, parameters);
+    }
+
     public static string SaveBitmapToTempPng(Bitmap bitmap, string fileNamePrefix)
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"{fileNamePrefix}_{Guid.NewGuid():N}.png");

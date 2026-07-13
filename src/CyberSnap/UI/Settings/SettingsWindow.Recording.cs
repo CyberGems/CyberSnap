@@ -243,6 +243,7 @@ public partial class SettingsWindow
         (SoundEvent.Scan, "QR / Barcode scan", "scan"),
         (SoundEvent.RecordStart, "Recording start", "record"),
         (SoundEvent.RecordStop, "Recording stop", "stop"),
+        (SoundEvent.Upload, "Upload / Share", "share"),
         (SoundEvent.Achievement, "Achievement", "trophy"),
         (SoundEvent.Error, "Error", "warning"),
     ];
@@ -302,6 +303,8 @@ public partial class SettingsWindow
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center
             };
 
+            var translatedLabel = LocalizationService.Translate(label);
+
             // Preview button
             var previewBtn = new Button
             {
@@ -309,10 +312,11 @@ public partial class SettingsWindow
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = "Preview this sound.",
+                ToolTip = LocalizationService.Translate("Preview this sound."),
                 Style = (Style)FindResource("SoundItemPlayButton")
             };
-            AutomationProperties.SetName(previewBtn, $"Preview {label} sound");
+            AutomationProperties.SetName(previewBtn,
+                string.Format(LocalizationService.Translate("Preview {0} sound"), translatedLabel));
             previewBtn.Click += (_, _) => SoundService.Play(evt);
             controlsPanel.Children.Add(previewBtn);
 
@@ -330,10 +334,11 @@ public partial class SettingsWindow
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Margin = new Thickness(0, 0, 6, 0),
                 Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = "Choose a custom sound file.",
+                ToolTip = LocalizationService.Translate("Choose a custom sound file."),
                 Style = (Style)FindResource("SoundItemActionButton")
             };
-            AutomationProperties.SetName(browseBtn, $"Choose custom sound for {label}");
+            AutomationProperties.SetName(browseBtn,
+                string.Format(LocalizationService.Translate("Choose custom sound for {0}"), translatedLabel));
             controlsPanel.Children.Add(browseBtn);
 
             // Reset button
@@ -344,10 +349,11 @@ public partial class SettingsWindow
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,
                 Visibility = Visibility.Hidden,
-                ToolTip = "Revert to default sound.",
+                ToolTip = LocalizationService.Translate("Revert to default sound."),
                 Style = (Style)FindResource("SoundItemActionButton")
             };
-            AutomationProperties.SetName(resetBtn, $"Reset {label} sound to default");
+            AutomationProperties.SetName(resetBtn,
+                string.Format(LocalizationService.Translate("Reset {0} sound to default"), translatedLabel));
             resetBtn.Click += (_, _) => ResetCustomSound(evt, sourceLabel, sourcePill, resetBtn);
             controlsPanel.Children.Add(resetBtn);
 
@@ -361,9 +367,10 @@ public partial class SettingsWindow
                 Margin = new Thickness(8, 0, 0, 0),
                 IsChecked = !isMuted,
                 Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = $"Enable the {label} sound."
+                ToolTip = string.Format(LocalizationService.Translate("Enable the {0} sound."), translatedLabel),
             };
-            AutomationProperties.SetName(enableCheck, $"Enable {label} sound");
+            AutomationProperties.SetName(enableCheck,
+                string.Format(LocalizationService.Translate("Enable {0} sound"), translatedLabel));
             enableCheck.Checked += (_, _) => { SetSoundMuted(evt, false); card.Opacity = 1.0; };
             enableCheck.Unchecked += (_, _) => { SetSoundMuted(evt, true); card.Opacity = 0.4; };
             Grid.SetColumn(enableCheck, 4);
@@ -428,7 +435,9 @@ public partial class SettingsWindow
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Title = $"Choose custom sound for {evt}",
+            Title = string.Format(
+                LocalizationService.Translate("Choose custom sound for {0}"),
+                LocalizationService.Translate(evt.ToString())),
             Filter = "Audio files (*.mp3;*.wav)|*.mp3;*.wav|MP3 files (*.mp3)|*.mp3|WAV files (*.wav)|*.wav|All files (*.*)|*.*",
             DefaultExt = ".mp3"
         };
