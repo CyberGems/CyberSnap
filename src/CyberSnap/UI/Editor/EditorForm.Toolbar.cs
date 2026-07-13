@@ -783,8 +783,10 @@ public sealed partial class EditorForm
         RegisterHoverTooltip(_exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png, .jpg or .pdf format"), "Ctrl+Shift+S"), above: false);
         commandActions.Controls.Add(_exportButton);
 
-        // Share: primary + chevron menu (two adjacent buttons)
+        // Share: primary + chevron menu (two adjacent buttons grouped into a split-button)
         _shareButton = RegisterLocalizedCommand("share", "Share", false);
+        _shareButton.RoundLeftOnly = true;
+        _shareButton.Margin = new Padding(2, 0, 0, 0); // No right margin
         _shareButton.Click += (_, _) => DoShare();
         RegisterHoverTooltip(_shareButton, () => WithShortcut(LocalizationService.Translate("Upload and copy a shareable link"), "Ctrl+Shift+U"), above: false);
         commandActions.Controls.Add(_shareButton);
@@ -796,11 +798,23 @@ public sealed partial class EditorForm
             Primary = false,
             Width = 32,
             Height = 62,
-            Margin = new Padding(0, 0, 2, 0),
+            RoundRightOnly = true,
+            Margin = new Padding(0, 0, 2, 0), // No left margin
         };
         _shareMenuButton.Click += (_, _) => ShowShareMenu();
         RegisterHoverTooltip(_shareMenuButton, LocalizationService.Translate("Choose share destination"), above: false);
         commandActions.Controls.Add(_shareMenuButton);
+
+        // Link hover and pressed states so they act as a cohesive unit
+        _shareButton.MouseEnter += (_, _) => { _shareMenuButton.HoverOverride = true; };
+        _shareButton.MouseLeave += (_, _) => { _shareMenuButton.HoverOverride = false; };
+        _shareButton.MouseDown += (_, _) => { _shareMenuButton.PressedOverride = true; };
+        _shareButton.MouseUp += (_, _) => { _shareMenuButton.PressedOverride = false; };
+
+        _shareMenuButton.MouseEnter += (_, _) => { _shareButton.HoverOverride = true; };
+        _shareMenuButton.MouseLeave += (_, _) => { _shareButton.HoverOverride = false; };
+        _shareMenuButton.MouseDown += (_, _) => { _shareButton.PressedOverride = true; };
+        _shareMenuButton.MouseUp += (_, _) => { _shareButton.PressedOverride = false; };
 
         commandBarPanel.Controls.Add(commandActions, 1, 0);
 
@@ -2275,6 +2289,38 @@ internal sealed class EditorCommandButton : Button
     private bool _primary;
     private string _iconId = "";
 
+    private bool _hoverOverride;
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool HoverOverride
+    {
+        get => _hoverOverride;
+        set
+        {
+            if (_hoverOverride == value) return;
+            _hoverOverride = value;
+            Invalidate();
+        }
+    }
+
+    private bool _pressedOverride;
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool PressedOverride
+    {
+        get => _pressedOverride;
+        set
+        {
+            if (_pressedOverride == value) return;
+            _pressedOverride = value;
+            Invalidate();
+        }
+    }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool RoundLeftOnly { get; set; }
+
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool RoundRightOnly { get; set; }
+
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Primary
     {
@@ -2345,14 +2391,17 @@ internal sealed class EditorCommandButton : Button
         Color fill = Color.Transparent;
         Color contentColor = Enabled ? EditorColors.TextPrimary : Color.FromArgb(88, 105, 128);
 
+        bool activeHover = _hover || _hoverOverride;
+        bool activePressed = _pressed || _pressedOverride;
+
         if (Enabled)
         {
-            if (_pressed)
+            if (activePressed)
             {
                 fill = Color.FromArgb(36, EditorColors.Accent);
                 contentColor = EditorColors.Accent;
             }
-            else if (_hover)
+            else if (activeHover)
             {
                 fill = Color.FromArgb(20, EditorColors.Accent);
                 contentColor = EditorColors.Accent;
@@ -2365,17 +2414,35 @@ internal sealed class EditorCommandButton : Button
 
         if (fill != Color.Transparent)
         {
-            using (var path = EditorPaint.RoundedRect(rect, 6))
+            bool roundLeft = !RoundRightOnly;
+            bool roundRight = !RoundLeftOnly;
+            using (var path = EditorPaint.RoundedRect(rect, 6, roundLeft, roundRight))
             using (var brush = new SolidBrush(fill))
             {
                 g.FillPath(brush, path);
             }
+
+            // Draw a subtle vertical separator line on the right edge of the left button
+            if (RoundLeftOnly)
+            {
+                Color sepColor = EditorColors.IsDark ? Color.FromArgb(40, EditorColors.Accent) : Color.FromArgb(30, EditorColors.Accent);
+                using (var pen = new Pen(sepColor, 1f))
+                {
+                    g.DrawLine(pen, rect.Right, rect.Top + 8, rect.Right, rect.Bottom - 8);
+                }
+            }
         }
 
-        if (Enabled && _pressed)
+        if (Enabled && activePressed)
         {
             using var underlineBrush = new SolidBrush(EditorColors.Accent);
-            g.FillRectangle(underlineBrush, rect.Left + 12, rect.Bottom - 1, rect.Width - 24, 2);
+            int startX = RoundLeftOnly ? 12 : 4;
+            int endX = RoundRightOnly ? 12 : 4;
+            int underlineWidth = rect.Width - startX - endX;
+            if (underlineWidth > 0)
+            {
+                g.FillRectangle(underlineBrush, rect.Left + startX, rect.Bottom - 1, underlineWidth, 2);
+            }
         }
 
         var iconSize = 34;
@@ -3122,6 +3189,40 @@ internal static class EditorPaint
         path.AddArc(rect.Right - diameter, rect.Top, diameter, diameter, 270, 90);
         path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
         path.AddArc(rect.Left, rect.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    public static GraphicsPath RoundedRect(Rectangle rect, int radius, bool roundLeft, bool roundRight)
+    {
+        var path = new GraphicsPath();
+        int diameter = Math.Max(1, radius * 2);
+        if (rect.Width < diameter || rect.Height < diameter)
+        {
+            path.AddRectangle(rect);
+            return path;
+        }
+
+        if (roundLeft)
+            path.AddArc(rect.Left, rect.Top, diameter, diameter, 180, 90);
+        else
+            path.AddLine(rect.Left, rect.Top, rect.Left, rect.Top);
+
+        if (roundRight)
+            path.AddArc(rect.Right - diameter, rect.Top, diameter, diameter, 270, 90);
+        else
+            path.AddLine(rect.Right, rect.Top, rect.Right, rect.Top);
+
+        if (roundRight)
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+        else
+            path.AddLine(rect.Right, rect.Bottom, rect.Right, rect.Bottom);
+
+        if (roundLeft)
+            path.AddArc(rect.Left, rect.Bottom - diameter, diameter, diameter, 90, 90);
+        else
+            path.AddLine(rect.Left, rect.Bottom, rect.Left, rect.Bottom);
+
         path.CloseFigure();
         return path;
     }

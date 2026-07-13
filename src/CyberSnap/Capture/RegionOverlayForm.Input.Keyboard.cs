@@ -178,7 +178,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // Delete selected annotation
-        if (e.KeyCode == Keys.Delete && _mode == CaptureMode.Move)
+        if (e.KeyCode == Keys.Delete && (_selectedAnnotationIndex >= 0 || _multiSelectedIndices.Count > 0))
         {
             if (_multiSelectedIndices.Count > 1)
             {
@@ -193,15 +193,12 @@ public sealed partial class RegionOverlayForm
         }
 
         // Duplicate selected annotation
-        if (e.KeyCode == Keys.D && e.Control && _mode == CaptureMode.Move)
+        if (e.KeyCode == Keys.D && e.Control && (_selectedAnnotationIndex >= 0 || _multiSelectedIndices.Count > 0))
         {
-            if (_selectedAnnotationIndex >= 0 || _multiSelectedIndices.Count > 0)
-            {
-                DuplicateSelection();
-                e.SuppressKeyPress = true;
-                e.Handled = true;
-                return;
-            }
+            DuplicateSelection();
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+            return;
         }
 
         if (e.KeyCode is Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey

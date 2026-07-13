@@ -26,9 +26,9 @@ public sealed partial class AnnotationCanvas
         var clamped = Rectangle.Intersect(rect, new Rectangle(0, 0, _baseBitmap.Width, _baseBitmap.Height));
         if (clamped.Width < 1 || clamped.Height < 1) return;
 
-        int blockSize = Math.Clamp(Math.Min(clamped.Width, clamped.Height) / 16, 3, 14);
-        int sw = Math.Max(1, clamped.Width / blockSize);
-        int sh = Math.Max(1, clamped.Height / blockSize);
+        int blockSize = 10;
+        int sw = Math.Max(2, clamped.Width / blockSize);
+        int sh = Math.Max(2, clamped.Height / blockSize);
 
         if (_blurScratch == null || _blurScratch.Width != sw || _blurScratch.Height != sh)
         {

@@ -163,7 +163,6 @@ public sealed partial class RegionOverlayForm : Form
     private Point _blurStart;
     private bool _isBlurring;
     private Bitmap? _blurPreviewBitmap;
-    private Graphics? _blurPreviewGraphics;
     private Size _blurPreviewSize;
 
     private Point _arrowStart;
