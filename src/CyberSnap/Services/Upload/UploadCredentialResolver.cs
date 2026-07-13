@@ -48,4 +48,32 @@ internal static class UploadCredentialResolver
             ? new ResolvedCredential(null, IsDefault: false)
             : new ResolvedCredential(ootb, IsDefault: true);
     }
+
+    /// <summary>
+    /// True when the user has stored a personal CyberGems Share API key.
+    /// </summary>
+    public static bool HasUserCyberGemsApiKey(AppSettings settings)
+        => !string.IsNullOrWhiteSpace(settings.UploadCyberGemsApiKey);
+
+    public static ResolvedCredential ResolveCyberGemsApiKey(AppSettings settings)
+    {
+        if (HasUserCyberGemsApiKey(settings))
+            return new ResolvedCredential(settings.UploadCyberGemsApiKey!.Trim(), IsDefault: false);
+
+        if (settings.UploadUseCustomCyberGemsApiKey)
+            return new ResolvedCredential(null, IsDefault: false);
+
+        var ootb = DefaultCredentialVault.TryGetCyberGemsApiKey();
+        return string.IsNullOrWhiteSpace(ootb)
+            ? new ResolvedCredential(null, IsDefault: false)
+            : new ResolvedCredential(ootb, IsDefault: true);
+    }
+
+    public static string ResolveCyberGemsBaseUrl(AppSettings settings)
+    {
+        var custom = settings.UploadCyberGemsBaseUrl?.Trim();
+        if (!string.IsNullOrWhiteSpace(custom))
+            return custom;
+        return Providers.CyberGemsShareProvider.DefaultBaseUrl;
+    }
 }

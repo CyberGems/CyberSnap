@@ -317,15 +317,25 @@ public sealed class AppSettings
     public int EditorNewCanvasBackgroundColorArgb { get; set; }
 
     // ── Upload / Share (core model; Settings UI in PR 2) ──────────────────
-    /// <summary>Default share host. Imgur is only valid when the user supplied a Client-ID.</summary>
-    public UploadProviderKind UploadDefaultProvider { get; set; } = UploadProviderKind.ImgBB;
-    /// <summary>Last selected sub-tab in Settings → Uploads: general | imgbb | imgur | custom.</summary>
+    /// <summary>Default share host. CyberGems Share is preferred when configured; Imgur needs a user Client-ID.</summary>
+    public UploadProviderKind UploadDefaultProvider { get; set; } = UploadProviderKind.CyberGems;
+    /// <summary>
+    /// Upload settings migration marker. 0 = pre CyberGems-as-default (legacy ImgBB default).
+    /// 1 = product default is CyberGems Share.
+    /// </summary>
+    public int UploadSettingsSchemaVersion { get; set; }
+    /// <summary>Last selected sub-tab in Settings → Uploads: general | cybergems | imgbb | imgur | custom.</summary>
     public string UploadSettingsSubTab { get; set; } = "general";
     public UploadCustomProtocol UploadCustomProtocol { get; set; } = UploadCustomProtocol.Sftp;
     public bool UploadUseCustomImgurClientId { get; set; }
     public string? UploadImgurClientId { get; set; }
     public bool UploadUseCustomImgBBApiKey { get; set; }
     public string? UploadImgBBApiKey { get; set; }
+    /// <summary>When true, use <see cref="UploadCyberGemsApiKey"/> instead of the OOTB / env share key.</summary>
+    public bool UploadUseCustomCyberGemsApiKey { get; set; }
+    public string? UploadCyberGemsApiKey { get; set; }
+    /// <summary>Public base URL for CyberGems Share (no trailing slash). Empty = default cybersnap.cybergems.org.</summary>
+    public string UploadCyberGemsBaseUrl { get; set; } = "";
     public UploadImageFormatPreference UploadImageFormat { get; set; } = UploadImageFormatPreference.Png;
     public int UploadJpegQuality { get; set; } = 90;
     public int UploadMaxBytes { get; set; } = 10 * 1024 * 1024;

@@ -1425,6 +1425,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     private void ShowShareMenu()
     {
+        // Chevron tooltip sits under the dropdown and steals hover / z-order — dismiss first.
+        DismissVisibleHoverTooltips();
         _shareMenu?.Dispose();
         _shareMenu = BuildShareMenu();
         var pt = _shareMenuButton.PointToScreen(new Point(0, _shareMenuButton.Height));

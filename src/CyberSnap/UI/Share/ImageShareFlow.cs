@@ -17,16 +17,20 @@ public static class ImageShareFlow
 {
     public const string ImgBbTermsUrl = "https://imgbb.com/tos";
     public const string ImgurTermsUrl = "https://imgur.com/tos";
+    public const string CyberGemsShareHomeUrl = "https://cybersnap.cybergems.org";
 
     public static string? GetTermsOfServiceUrl(UploadProviderKind provider) => provider switch
     {
         UploadProviderKind.ImgBB => ImgBbTermsUrl,
         UploadProviderKind.Imgur => ImgurTermsUrl,
+        UploadProviderKind.CyberGems => CyberGemsShareHomeUrl,
         _ => null,
     };
 
     /// <summary>
-    /// Confirms third-party public upload when required. Returns false if the user cancels.
+    /// Confirms public upload when required (CyberGems Share, ImgBB, Imgur).
+    /// Photopea-style: clear that the link is public, optional "don't ask again".
+    /// Returns false if the user cancels.
     /// </summary>
     public static bool ConfirmThirdPartyUploadIfNeeded(
         Window? ownerWindow,
@@ -34,17 +38,29 @@ public static class ImageShareFlow
         UploadProviderKind provider,
         AppSettings settings)
     {
-        if (provider is not (UploadProviderKind.Imgur or UploadProviderKind.ImgBB))
+        if (provider is not (UploadProviderKind.Imgur or UploadProviderKind.ImgBB or UploadProviderKind.CyberGems))
             return true;
         if (settings.UploadSuppressThirdPartyConfirm)
             return true;
 
-        var hostName = provider == UploadProviderKind.ImgBB ? "ImgBB" : "Imgur";
         var title = LocalizationService.Translate("Share image?");
-        var message = string.Format(
-            LocalizationService.Translate(
-                "This image will be uploaded to {0}. Anyone with the link may view it. You are responsible for complying with the host's terms of service. Continue?"),
-            hostName);
+        string message;
+        string? linkLabel;
+        if (provider == UploadProviderKind.CyberGems)
+        {
+            message = LocalizationService.Translate(
+                "This image will be uploaded to CyberSnap Share. Anyone with the link can view it for up to 48 hours. Continue?");
+            linkLabel = LocalizationService.Translate("About CyberSnap Share");
+        }
+        else
+        {
+            var hostName = provider == UploadProviderKind.ImgBB ? "ImgBB" : "Imgur";
+            message = string.Format(
+                LocalizationService.Translate(
+                    "This image will be uploaded to {0}. Anyone with the link may view it. You are responsible for complying with the host's terms of service. Continue?"),
+                hostName);
+            linkLabel = LocalizationService.Translate("View terms of service");
+        }
 
         var tosUrl = GetTermsOfServiceUrl(provider);
         bool ok = ownerWindow is not null
@@ -58,7 +74,7 @@ public static class ImageShareFlow
                 danger: false,
                 iconId: "share",
                 messageLinkUrl: tosUrl,
-                messageLinkLabel: LocalizationService.Translate("View terms of service"))
+                messageLinkLabel: linkLabel)
             : ThemedConfirmDialog.Confirm(
                 ownerHandle,
                 title,
@@ -69,7 +85,7 @@ public static class ImageShareFlow
                 danger: false,
                 iconId: "share",
                 messageLinkUrl: tosUrl,
-                messageLinkLabel: LocalizationService.Translate("View terms of service"));
+                messageLinkLabel: linkLabel);
 
         if (dontShowAgain && Application.Current is App app)
             app.PersistUploadSuppressThirdPartyConfirm(true);
@@ -135,7 +151,7 @@ public static class ImageShareFlow
         if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
         {
             return UploadResult.Fail(
-                providerOverride ?? UploadProviderKind.ImgBB,
+                providerOverride ?? UploadProviderKind.CyberGems,
                 UploadErrorKind.NotConfigured,
                 LocalizationService.Translate("Upload failed"));
         }

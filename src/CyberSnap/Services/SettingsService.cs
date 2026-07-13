@@ -364,12 +364,20 @@ public sealed class SettingsService : IDisposable
         settings.TranslationModel = Enum.IsDefined(typeof(TranslationModel), settings.TranslationModel)
             ? settings.TranslationModel
             : (int)TranslationModel.MyMemory;
-        settings.UploadDefaultProvider = NormalizeEnum(settings.UploadDefaultProvider, UploadProviderKind.ImgBB);
+        settings.UploadDefaultProvider = NormalizeEnum(settings.UploadDefaultProvider, UploadProviderKind.CyberGems);
+        // One-time: installs from before CyberGems Share still have ImgBB as default.
+        // Promote to CyberGems once; later explicit ImgBB choices are preserved (schema >= 1).
+        if (settings.UploadSettingsSchemaVersion < 1)
+        {
+            if (settings.UploadDefaultProvider == UploadProviderKind.ImgBB)
+                settings.UploadDefaultProvider = UploadProviderKind.CyberGems;
+            settings.UploadSettingsSchemaVersion = 1;
+        }
         // Imgur is user-key-only (no OOTB); do not keep it as default without a Client-ID.
         if (settings.UploadDefaultProvider == UploadProviderKind.Imgur &&
             !(settings.UploadUseCustomImgurClientId && !string.IsNullOrWhiteSpace(settings.UploadImgurClientId)))
         {
-            settings.UploadDefaultProvider = UploadProviderKind.ImgBB;
+            settings.UploadDefaultProvider = UploadProviderKind.CyberGems;
         }
         settings.UploadCustomProtocol = NormalizeEnum(settings.UploadCustomProtocol, UploadCustomProtocol.Sftp);
         settings.UploadImageFormat = NormalizeEnum(settings.UploadImageFormat, UploadImageFormatPreference.Png);

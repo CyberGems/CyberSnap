@@ -68,3 +68,9 @@ src/CyberSnap/Assets/CyberSnap_square - Copy.png
 .kiro/specs/wizard-apariencia/.config.kiro
 .kiro/specs/wizard-apariencia/design.md
 .kiro/specs/wizard-apariencia/tasks.md
+
+## CyberSnap Share service (deploy secrets / runtime)
+services/cybersnap-share/config.php
+services/cybersnap-share/storage/files/
+services/cybersnap-share/storage/meta/
+services/cybersnap-share/storage/rate/

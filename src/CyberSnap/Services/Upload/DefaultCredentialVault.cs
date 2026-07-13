@@ -4,7 +4,7 @@ using System.Text;
 namespace CyberSnap.Services.Upload;
 
 /// <summary>
-/// Resolves out-of-the-box ImgBB credentials for users who never paste their own key.
+/// Resolves out-of-the-box credentials for users who never paste their own key.
 /// Order: environment override → embedded ciphertext (Release) → fail closed.
 /// <para>
 /// Perfect secrecy is impossible in a client-side OSS app. This vault only raises the cost
@@ -14,6 +14,7 @@ namespace CyberSnap.Services.Upload;
 internal static class DefaultCredentialVault
 {
     public const string ImgBBApiKeyEnv = "CYBERSNAP_IMGBB_API_KEY";
+    public const string CyberGemsApiKeyEnv = "CYBERSNAP_SHARE_API_KEY";
 
     /// <summary>
     /// AES-GCM ciphertext (Base64) of the OOTB ImgBB API key.
@@ -27,13 +28,22 @@ internal static class DefaultCredentialVault
         // Maintainer-generated payload. Empty = no OOTB key in this build.
         "5HY5Tb3Apx5MNs4gl+MQr8dFE4htteQ/rWTaGJg4qnA5DTQfSlaq0/f8Es1HJtCvCAZ2pfKLJAHzK5Se";
 
+    /// <summary>
+    /// AES-GCM ciphertext of the OOTB CyberGems Share API key.
+    /// Generate with: <c>scripts/Protect-UploadVaultKey.ps1 -ApiKey "…" -ApiKeyEnv CYBERSNAP_SHARE_API_KEY</c>
+    /// Leave empty until the share server is deployed and the app key is embedded.
+    /// </summary>
+    private const string EmbeddedCyberGemsCiphertextBase64 = "Ni2Lvd01MndJXr7tHIXE0lyhMoWObGaBc2+xBl8oNhtlaXTAl5lPMuX1cPoi0xiqLUIbKctp2juL";
+
     // Multi-part entropy — do not put the whole key in one string.
     private static readonly byte[] EntropyPartA = Encoding.UTF8.GetBytes("CyberSnap.Upload.Vault.v1");
     private static readonly byte[] EntropyPartB = Encoding.UTF8.GetBytes("ImgBB.OOTB.2026");
     private static readonly byte[] EntropyPartC = "CyberGems|CyberSnap|Share"u8.ToArray();
 
     private static string? _cachedImgBB;
-    private static bool _resolved;
+    private static bool _resolvedImgBB;
+    private static string? _cachedCyberGems;
+    private static bool _resolvedCyberGems;
 
     /// <summary>Returns OOTB ImgBB API key, or null if unavailable.</summary>
     public static string? TryGetImgBBApiKey()
@@ -42,17 +52,33 @@ internal static class DefaultCredentialVault
         if (!string.IsNullOrWhiteSpace(fromEnv))
             return fromEnv.Trim();
 
-        if (_resolved)
+        if (_resolvedImgBB)
             return _cachedImgBB;
 
-        _resolved = true;
+        _resolvedImgBB = true;
         _cachedImgBB = TryDecryptEmbedded(EmbeddedImgBBCiphertextBase64);
         return _cachedImgBB;
     }
 
+    /// <summary>Returns OOTB CyberGems Share API key, or null if unavailable.</summary>
+    public static string? TryGetCyberGemsApiKey()
+    {
+        var fromEnv = Environment.GetEnvironmentVariable(CyberGemsApiKeyEnv);
+        if (!string.IsNullOrWhiteSpace(fromEnv))
+            return fromEnv.Trim();
+
+        if (_resolvedCyberGems)
+            return _cachedCyberGems;
+
+        _resolvedCyberGems = true;
+        _cachedCyberGems = TryDecryptEmbedded(EmbeddedCyberGemsCiphertextBase64);
+        return _cachedCyberGems;
+    }
+
     /// <summary>
     /// Encrypts a plaintext API key for embedding. Used by maintainer tooling / tests.
-    /// Output is safe to paste into <see cref="EmbeddedImgBBCiphertextBase64"/>.
+    /// Output is safe to paste into <see cref="EmbeddedImgBBCiphertextBase64"/> or
+    /// <see cref="EmbeddedCyberGemsCiphertextBase64"/>.
     /// </summary>
     internal static string ProtectForEmbed(string plaintextApiKey)
     {

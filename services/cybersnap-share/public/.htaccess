@@ -1,0 +1,31 @@
+# CyberSnap Share — Apache (cPanel) front controller
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Never expose storage or config via HTTP
+    RewriteRule ^storage(/|$) - [F,L]
+    RewriteRule ^config\.php$ - [F,L]
+
+    # Real static files in public/ (logo, favicon, etc.)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Static health
+    RewriteRule ^health$ index.php?route=health [L,QSA]
+
+    # API
+    RewriteRule ^v1/upload$ index.php?route=upload [L,QSA]
+
+    # Viewer / raw file: single opaque id
+    RewriteRule ^f/([A-Za-z0-9_-]+)$ index.php?route=file&id=$1 [L,QSA]
+    RewriteRule ^([A-Za-z0-9_-]+)$ index.php?route=view&id=$1 [L,QSA]
+</IfModule>
+
+# PHP upload limits (may be overridden by host)
+<IfModule mod_php.c>
+    php_value upload_max_filesize 16M
+    php_value post_max_size 18M
+</IfModule>
