@@ -137,6 +137,46 @@ public static class SettingsSchemaCatalog
                     ]),
             ]),
         new(
+            "uploads",
+            "Uploads",
+            "Cloud share destinations, API keys, and custom FTP/SFTP/S3 settings.",
+            [
+                new SettingsSectionDefinition(
+                    "share_defaults",
+                    "Share defaults",
+                    "Default host and encoding for Share.",
+                    [
+                        new SettingDefinition("default_provider", "Default share destination", SettingsValueKind.Choice, "Host used when Share is clicked.", "UploadDefaultProvider"),
+                        new SettingDefinition("upload_format", "Upload image format", SettingsValueKind.Choice, "PNG or JPEG for shared images.", "UploadImageFormat"),
+                        new SettingDefinition("open_url_after_success", "Open link after upload", SettingsValueKind.Toggle, "Open the public URL after a successful share.", "UploadOpenUrlAfterSuccess"),
+                    ]),
+                new SettingsSectionDefinition(
+                    "imgbb",
+                    "ImgBB",
+                    "Recommended anonymous host for public links.",
+                    [
+                        new SettingDefinition("use_custom_imgbb_key", "Use my own ImgBB API key", SettingsValueKind.Toggle, "Override the shared ImgBB key.", "UploadUseCustomImgBBApiKey"),
+                        new SettingDefinition("imgbb_api_key", "ImgBB API key", SettingsValueKind.Text, "Optional personal ImgBB API key.", "UploadImgBBApiKey"),
+                    ]),
+                new SettingsSectionDefinition(
+                    "imgur",
+                    "Imgur (optional)",
+                    "Only available when you supply a Client-ID.",
+                    [
+                        new SettingDefinition("use_custom_imgur_client_id", "Use my own Imgur Client-ID", SettingsValueKind.Toggle, "Show Imgur as a Share option.", "UploadUseCustomImgurClientId"),
+                        new SettingDefinition("imgur_client_id", "Imgur Client-ID", SettingsValueKind.Text, "Your Imgur application Client-ID.", "UploadImgurClientId"),
+                    ]),
+                new SettingsSectionDefinition(
+                    "custom_destination",
+                    "Custom destination",
+                    "Single FTP, SFTP, or S3-compatible destination.",
+                    [
+                        new SettingDefinition("custom_protocol", "Protocol", SettingsValueKind.Choice, "FTP, SFTP, or S3.", "UploadCustomProtocol"),
+                        new SettingDefinition("custom_host", "Host", SettingsValueKind.Text, "Server host name.", "UploadCustomHost"),
+                        new SettingDefinition("custom_public_url_base", "Public URL base", SettingsValueKind.Text, "Optional public base URL for shared links.", "UploadCustomPublicUrlBase"),
+                    ]),
+            ]),
+        new(
             "runtimes",
             "Stickers & Upscale",
             "Local runtime-backed media workflows.",

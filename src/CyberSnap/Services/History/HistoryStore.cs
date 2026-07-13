@@ -76,6 +76,9 @@ internal static class HistoryStore
             """;
         command.ExecuteNonQuery();
         EnsureColumn(connection, "history_entries", "upload_error", "TEXT NULL");
+        EnsureColumn(connection, "history_entries", "upload_url", "TEXT NULL");
+        EnsureColumn(connection, "history_entries", "upload_provider", "TEXT NULL");
+        EnsureColumn(connection, "history_entries", "uploaded_at_ticks", "INTEGER NULL");
     }
 
     public static HistoryLoadResult Load(string databasePath)
@@ -92,7 +95,8 @@ internal static class HistoryStore
         using (var entriesCommand = connection.CreateCommand())
         {
             entriesCommand.CommandText = """
-                SELECT file_name, file_path, captured_at_ticks, width, height, file_size_bytes, kind
+                SELECT file_name, file_path, captured_at_ticks, width, height, file_size_bytes, kind,
+                       upload_url, upload_provider, uploaded_at_ticks, upload_error
                 FROM history_entries
                 ORDER BY captured_at_ticks DESC;
                 """;
@@ -108,7 +112,10 @@ internal static class HistoryStore
                     Height = reader.GetInt32(4),
                     FileSizeBytes = reader.GetInt64(5),
                     Kind = (HistoryKind)reader.GetInt32(6),
-
+                    UploadUrl = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    UploadProvider = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    UploadedAtTicks = reader.IsDBNull(9) ? null : reader.GetInt64(9),
+                    UploadError = reader.IsDBNull(10) ? null : reader.GetString(10),
                 };
 
                 if (!File.Exists(entry.FilePath))
@@ -327,14 +334,19 @@ internal static class HistoryStore
         command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO history_entries(file_path, file_name, captured_at_ticks, width, height, file_size_bytes, kind)
-            VALUES($filePath, $fileName, $capturedAtTicks, $width, $height, $fileSizeBytes, $kind)
+            VALUES($filePath, $fileName, $capturedAtTicks, $width, $height, $fileSizeBytes, $kind,
+                   $uploadUrl, $uploadProvider, $uploadedAtTicks, $uploadError)
             ON CONFLICT(file_path) DO UPDATE SET
                 file_name = excluded.file_name,
                 captured_at_ticks = excluded.captured_at_ticks,
                 width = excluded.width,
                 height = excluded.height,
                 file_size_bytes = excluded.file_size_bytes,
-                kind = excluded.kind;
+                kind = excluded.kind,
+                upload_url = excluded.upload_url,
+                upload_provider = excluded.upload_provider,
+                uploaded_at_ticks = excluded.uploaded_at_ticks,
+                upload_error = excluded.upload_error;
             """;
         command.Parameters.Add("$filePath", SqliteType.Text);
         command.Parameters.Add("$fileName", SqliteType.Text);
@@ -343,6 +355,10 @@ internal static class HistoryStore
         command.Parameters.Add("$height", SqliteType.Integer);
         command.Parameters.Add("$fileSizeBytes", SqliteType.Integer);
         command.Parameters.Add("$kind", SqliteType.Integer);
+        command.Parameters.Add("$uploadUrl", SqliteType.Text);
+        command.Parameters.Add("$uploadProvider", SqliteType.Text);
+        command.Parameters.Add("$uploadedAtTicks", SqliteType.Integer);
+        command.Parameters.Add("$uploadError", SqliteType.Text);
         return command;
     }
 
@@ -355,6 +371,12 @@ internal static class HistoryStore
         command.Parameters["$height"].Value = entry.Height;
         command.Parameters["$fileSizeBytes"].Value = entry.FileSizeBytes;
         command.Parameters["$kind"].Value = (int)entry.Kind;
+        command.Parameters["$uploadUrl"].Value = (object?)entry.UploadUrl ?? DBNull.Value;
+        command.Parameters["$uploadProvider"].Value = (object?)entry.UploadProvider ?? DBNull.Value;
+        command.Parameters["$uploadedAtTicks"].Value = entry.UploadedAtTicks.HasValue
+            ? entry.UploadedAtTicks.Value
+            : DBNull.Value;
+        command.Parameters["$uploadError"].Value = (object?)entry.UploadError ?? DBNull.Value;
 
         command.ExecuteNonQuery();
     }

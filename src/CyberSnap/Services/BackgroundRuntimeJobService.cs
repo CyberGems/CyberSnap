@@ -25,6 +25,8 @@ public sealed record BackgroundRuntimeJobOptions(
 {
     public string? SuccessStatus { get; init; }
     public Func<Exception, string>? FormatError { get; init; }
+    /// <summary>Job area for AppModel snapshots. Defaults to Runtime.</summary>
+    public AppJobArea Area { get; init; } = AppJobArea.Runtime;
 }
 
 public static class BackgroundRuntimeJobService
@@ -41,6 +43,7 @@ public static class BackgroundRuntimeJobService
         public bool? LastSucceeded { get; set; }
         public string? LastError { get; set; }
         public CancellationTokenSource? Cancellation { get; set; }
+        public AppJobArea Area { get; set; } = AppJobArea.Runtime;
     }
 
     private sealed class PersistedJobState
@@ -91,7 +94,8 @@ public static class BackgroundRuntimeJobService
                 Status = options.StartingStatus,
                 LastSucceeded = null,
                 LastError = null,
-                Cancellation = cancellation
+                Cancellation = cancellation,
+                Area = options.Area,
             };
             Persist_NoLock();
         }
@@ -474,7 +478,7 @@ public static class BackgroundRuntimeJobService
         => new(state.Key, state.Label, state.IsRunning, state.Status, state.LastSucceeded, state.LastError);
 
     private static AppJobSnapshot ToAppJobSnapshot(JobState state)
-        => new(state.Key, state.Label, AppJobArea.Runtime, state.IsRunning, state.Status, state.LastSucceeded, state.LastError);
+        => new(state.Key, state.Label, state.Area, state.IsRunning, state.Status, state.LastSucceeded, state.LastError);
 
     private static void NotifyChanged(string key)
     {

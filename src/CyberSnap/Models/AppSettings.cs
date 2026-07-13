@@ -47,7 +47,9 @@ public enum SoundEvent
     RecordStop,
     Error,
     Startup,
-    Achievement
+    Achievement,
+    /// <summary>Successful cloud share / upload (file: Assets/Sounds/upload.mp3).</summary>
+    Upload,
 }
 
 public enum RecordingFormat
@@ -313,6 +315,50 @@ public sealed class AppSettings
     public bool EditorShowScrollbars { get; set; }
     /// <summary>Last solid fill chosen in the New Canvas dialog; 0 = transparent checkerboard.</summary>
     public int EditorNewCanvasBackgroundColorArgb { get; set; }
+
+    // ── Upload / Share (core model; Settings UI in PR 2) ──────────────────
+    /// <summary>Default share host. Imgur is only valid when the user supplied a Client-ID.</summary>
+    public UploadProviderKind UploadDefaultProvider { get; set; } = UploadProviderKind.ImgBB;
+    /// <summary>Last selected sub-tab in Settings → Uploads: general | imgbb | imgur | custom.</summary>
+    public string UploadSettingsSubTab { get; set; } = "general";
+    public UploadCustomProtocol UploadCustomProtocol { get; set; } = UploadCustomProtocol.Sftp;
+    public bool UploadUseCustomImgurClientId { get; set; }
+    public string? UploadImgurClientId { get; set; }
+    public bool UploadUseCustomImgBBApiKey { get; set; }
+    public string? UploadImgBBApiKey { get; set; }
+    public UploadImageFormatPreference UploadImageFormat { get; set; } = UploadImageFormatPreference.Png;
+    public int UploadJpegQuality { get; set; } = 90;
+    public int UploadMaxBytes { get; set; } = 10 * 1024 * 1024;
+    public int UploadMinIntervalMs { get; set; } = 3000;
+    /// <summary>Soft daily cap for OOTB (shared) credentials only; 0 = disabled. Custom keys unlimited.</summary>
+    public int UploadDailyCapOotb { get; set; } = 50;
+    public int UploadHttpTimeoutSeconds { get; set; } = 120;
+    public bool UploadOpenUrlAfterSuccess { get; set; }
+    public bool UploadSuppressThirdPartyConfirm { get; set; }
+    public bool UploadOverwriteOnCollision { get; set; } = true;
+    public bool UploadUniqueSuffixOnCollision { get; set; }
+    public bool UploadAutoCreateRemoteDirectory { get; set; } = true;
+    public string UploadCustomHost { get; set; } = "";
+    public int UploadCustomPort { get; set; }
+    public string UploadCustomUsername { get; set; } = "";
+    public string? UploadCustomPassword { get; set; }
+    public string UploadCustomRemoteDirectory { get; set; } = "";
+    public string UploadCustomPublicUrlBase { get; set; } = "";
+    public bool UploadFtpPassive { get; set; } = true;
+    public bool UploadFtpUseTls { get; set; } = true;
+    public bool UploadFtpAllowInsecureCertificate { get; set; }
+    public string? UploadSftpPrivateKeyPath { get; set; }
+    public string? UploadSftpPrivateKeyPassphrase { get; set; }
+    public string? UploadSftpTrustedHostKeySha256 { get; set; }
+    public string UploadS3Endpoint { get; set; } = "";
+    public string UploadS3Region { get; set; } = "";
+    public string UploadS3Bucket { get; set; } = "";
+    public string? UploadS3AccessKey { get; set; }
+    public string? UploadS3SecretKey { get; set; }
+    public string? UploadS3SessionToken { get; set; }
+    public string UploadS3KeyPrefix { get; set; } = "";
+    public bool UploadS3ForcePathStyle { get; set; }
+    public bool UploadS3MakePublic { get; set; }
 
     /// <summary>Most recently opened files (projects and images) shown in the Editor's
     /// burger "Open recent" submenu. Newest first; capped to 6 entries.</summary>

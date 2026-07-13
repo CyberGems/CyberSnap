@@ -739,6 +739,7 @@ public partial class SettingsWindow
             RecordingPanel.Visibility = Visibility.Collapsed;
             OcrPanel.Visibility = Visibility.Collapsed;
             HistoryPanel.Visibility = Visibility.Collapsed;
+            UploadsPanel.Visibility = Visibility.Collapsed;
             AchievementsPanel.Visibility = Visibility.Collapsed;
             AboutPanel.Visibility = Visibility.Collapsed;
             SearchResultsPanel.Visibility = Visibility.Visible;
@@ -758,6 +759,7 @@ public partial class SettingsWindow
             RecordingPanel.Visibility = RecordingTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            UploadsPanel.Visibility = UploadsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             AchievementsPanel.Visibility = AchievementsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             AboutPanel.Visibility = AboutTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             SearchResultsPanel.Visibility = Visibility.Collapsed;
@@ -767,6 +769,9 @@ public partial class SettingsWindow
 
             if (OcrTab.IsChecked == true)
                 LoadOcrTab();
+
+            if (UploadsTab.IsChecked == true)
+                LoadUploadsTab();
 
             // Reveal the milestone rail + refresh stats/medals when the Achievements tab is shown,
             // so a newly reached milestone gets its one-shot flourish at the moment the user sees it.
@@ -830,6 +835,7 @@ public partial class SettingsWindow
         if (OcrTab.IsChecked == true) return "OCR";
         if (HotkeysTab.IsChecked == true) return "Hotkeys";
         if (HistoryTab.IsChecked == true) return "Gallery";
+        if (UploadsTab.IsChecked == true) return "Uploads";
         if (AchievementsTab.IsChecked == true) return "Achievements";
         if (AboutTab.IsChecked == true) return "About";
         return "General";
@@ -1050,6 +1056,7 @@ public partial class SettingsWindow
     {
         _settingsService.Settings.EditorSuppressResizeConfirm = false;
         _settingsService.Settings.EditorSuppressPasteConfirm = false;
+        _settingsService.Settings.UploadSuppressThirdPartyConfirm = false;
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("settings.reset-suppressed-dialogs", ex); }
         var original = ResetSuppressedDialogsButton.Content?.ToString() ?? "Reset";

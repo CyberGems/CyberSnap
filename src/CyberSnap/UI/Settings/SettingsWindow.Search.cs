@@ -184,6 +184,7 @@ public partial class SettingsWindow
             (OcrPanel,        "ocr",           "OCR & Translation"),
             (HotkeysPanel,    "hotkeys",       "Hotkeys"),
             (HistoryPanel,    "history",       "Gallery"),
+            (UploadsPanel,    "uploads",       "Uploads"),
             (AchievementsPanel, "achievements", "Achievements"),
             (AboutPanel,      "about",         "About"),
         };
@@ -360,7 +361,7 @@ public partial class SettingsWindow
         {
             SettingsPanel, SoundsPanel, WidgetPanel, ToastPanel,
             CapturePanel, EditorPanel, RecordingPanel, OcrPanel,
-            HotkeysPanel, HistoryPanel, AchievementsPanel, AboutPanel
+            HotkeysPanel, HistoryPanel, UploadsPanel, AchievementsPanel, AboutPanel
         };
 
         var originalVisibility = new Visibility[allPanels.Length];
@@ -713,6 +714,19 @@ public partial class SettingsWindow
         }
     }
 
+    /// <summary>Open the Uploads tab. Used by Share menu "Upload settings…".</summary>
+    public void NavigateToUploadsSettings()
+    {
+        try
+        {
+            SelectSettingsTab("uploads");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.uploads-navigate", $"Navigation failed: {ex.Message}");
+        }
+    }
+
     private void SelectSettingsTab(string pageKey)
     {
         var tabMap = new Dictionary<string, System.Windows.Controls.RadioButton>
@@ -726,6 +740,8 @@ public partial class SettingsWindow
             ["ocr"]           = OcrTab,
             ["hotkeys"]       = HotkeysTab,
             ["history"]       = HistoryTab,
+            ["uploads"]       = UploadsTab,
+            ["upload"]        = UploadsTab,
             ["achievements"]  = AchievementsTab,
             ["runtimes"]      = AboutTab,
             ["about"]         = AboutTab,

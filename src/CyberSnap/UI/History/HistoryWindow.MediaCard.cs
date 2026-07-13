@@ -12,6 +12,8 @@ using Image = System.Windows.Controls.Image;
 using CyberSnap.Models;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
+using CyberSnap.Services.Upload;
+using CyberSnap.UI.Share;
 
 namespace CyberSnap.UI;
 
@@ -178,6 +180,12 @@ public partial class HistoryWindow
                     ToastWindow.ShowError("Editor failed", $"Could not open editor: {ex.Message}");
                 }
             }, "Open this image in the Editor.", "compose"));
+
+            actionMenu.Items.Add(CreateCardActionMenuItem("Share", () =>
+            {
+                suppressOpenAction = true;
+                _ = ShareHistoryImageAsync(vm.Entry);
+            }, "Upload and copy a shareable link.", "share"));
         }
         if ((vm.Entry.Kind == HistoryKind.Video || vm.Entry.Kind == HistoryKind.Gif) && HasHistoryFilePath(vm.Entry.FilePath))
         {
@@ -609,6 +617,53 @@ public partial class HistoryWindow
     private static string GetHistoryCopyMenuHelpText(HistoryEntry entry, string kindLabel)
     {
         return $"Copy this {kindLabel} history item.";
+    }
+
+    private async Task ShareHistoryImageAsync(HistoryEntry entry, UploadProviderKind? provider = null)
+    {
+        if (entry.Kind != HistoryKind.Image || !HasHistoryFilePath(entry.FilePath))
+        {
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Upload failed"),
+                LocalizationService.Translate("Upload failed"));
+            return;
+        }
+
+        var settings = SettingsService.LoadStatic() ?? new AppSettings();
+        var resolved = provider ?? ImageUploadService.GetDefaultProvider(settings);
+
+        if (!ImageShareFlow.ConfirmThirdPartyUploadIfNeeded(this, IntPtr.Zero, resolved, settings))
+            return;
+
+        try
+        {
+            var result = await ImageShareFlow.ShareFileAsync(entry.FilePath, resolved).ConfigureAwait(true);
+            ImageShareFlow.PresentResult(result, settings);
+
+            // Best-effort metadata: keep last share URL on the entry for future Gallery filters.
+            if (result.Success)
+            {
+                entry.UploadUrl = result.PublicUrl ?? result.ClipboardText;
+                entry.UploadProvider = result.Provider.ToString();
+                entry.UploadedAtTicks = DateTime.UtcNow.Ticks;
+                entry.UploadError = null;
+                try { _historyService.SaveEntry(entry); }
+                catch (Exception ex) { AppDiagnostics.LogWarning("history.upload-meta", ex.Message, ex); }
+            }
+            else if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+            {
+                entry.UploadError = result.ErrorMessage;
+                try { _historyService.SaveEntry(entry); }
+                catch { /* ignore */ }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("history.share", ex);
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Upload failed"),
+                ex.Message);
+        }
     }
 
     private ContextMenu CreateCardActionMenu()

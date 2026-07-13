@@ -88,6 +88,43 @@
             </Setter>
         </Style>
 
+        <!-- Larger chip-style sub-tabs for Settings → Uploads -->
+        <Style x:Key="UploadSubTab" TargetType="RadioButton">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Padding="14,7" CornerRadius="7" Cursor="Hand"
+                                Background="Transparent" BorderThickness="1" BorderBrush="Transparent"
+                                SnapsToDevicePixels="True">
+                            <TextBlock x:Name="Tb" Text="{TemplateBinding Content}" FontSize="12.5"
+                                       FontFamily="Segoe UI Variable Text"
+                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}" Opacity="0.55"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Tb" Property="Opacity" Value="1"/>
+                                <Setter TargetName="Tb" Property="FontWeight" Value="SemiBold"/>
+                                <Setter TargetName="Tb" Property="Foreground" Value="{DynamicResource ThemeAccentBrush}"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsChecked" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                                <Setter TargetName="Tb" Property="Opacity" Value="0.82"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="SectionLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -499,6 +536,30 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Margin" Value="0,0,10,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Upload panel styles (must follow Card + SettingIconFrame) -->
+        <Style x:Key="UploadCard" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="UploadSettingRow" TargetType="Grid">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Margin" Value="0,1"/>
+        </Style>
+
+        <Style x:Key="UploadSeparator" TargetType="Border">
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeSeparatorBrush}"/>
+            <Setter Property="Margin" Value="0,6,0,6"/>
+        </Style>
+
+        <Style x:Key="UploadFieldIcon" TargetType="Border" BasedOn="{StaticResource SettingIconFrame}">
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Margin" Value="0,1,10,0"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
         </Style>
 
         <Style x:Key="SettingIconGlyph" TargetType="TextBlock">
@@ -938,6 +999,9 @@
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
 
                     <RadioButton x:Name="HistoryTab" Content="Gallery" Tag="Gallery" GroupName="Main"
+                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
+                    <RadioButton x:Name="UploadsTab" Content="Uploads" Tag="Uploads" GroupName="Main"
+                                 Services:LocalizationService.SourceText="Uploads"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
 
                     <!-- Separator between tool sections and personal stats -->
@@ -4374,6 +4438,748 @@
                             </Grid>
                         </StackPanel>
                     </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Uploads / Share -->
+            <ScrollViewer x:Name="UploadsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,18">
+                <StackPanel>
+                    <!-- Browser-style chip sub-tabs (persisted last selection) -->
+                    <Border Background="{DynamicResource ThemeCardBrush}"
+                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                            CornerRadius="10" Padding="5" Margin="0,0,0,12" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="UploadSubTabGeneral" Content="General" Tag="general"
+                                         GroupName="UploadSubTabs" IsChecked="True"
+                                         Style="{StaticResource UploadSubTab}"
+                                         Services:LocalizationService.SourceContent="General"
+                                         Click="UploadSubTab_Click"
+                                         AutomationProperties.Name="Upload general settings"/>
+                            <RadioButton x:Name="UploadSubTabImgBB" Content="ImgBB" Tag="imgbb"
+                                         GroupName="UploadSubTabs"
+                                         Style="{StaticResource UploadSubTab}"
+                                         Services:LocalizationService.SourceContent="ImgBB"
+                                         Click="UploadSubTab_Click"
+                                         AutomationProperties.Name="ImgBB settings"/>
+                            <RadioButton x:Name="UploadSubTabImgur" Content="Imgur" Tag="imgur"
+                                         GroupName="UploadSubTabs"
+                                         Style="{StaticResource UploadSubTab}"
+                                         Services:LocalizationService.SourceContent="Imgur"
+                                         Click="UploadSubTab_Click"
+                                         AutomationProperties.Name="Imgur settings"/>
+                            <RadioButton x:Name="UploadSubTabCustom" Content="Custom destination" Tag="custom"
+                                         GroupName="UploadSubTabs"
+                                         Style="{StaticResource UploadSubTab}"
+                                         Services:LocalizationService.SourceContent="Custom destination"
+                                         Click="UploadSubTab_Click"
+                                         AutomationProperties.Name="Custom destination settings"/>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel x:Name="UploadSectionGeneral">
+                    <TextBlock Text="Share defaults" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"
+                               Services:LocalizationService.SourceText="Share defaults"/>
+                    <Border Style="{StaticResource UploadCard}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE898;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Default share destination" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Default share destination"/>
+                                    <TextBlock Text="Used when you click Share without choosing another host." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Used when you click Share without choosing another host."/>
+                                </StackPanel>
+                                <ComboBox x:Name="UploadDefaultProviderCombo" Grid.Column="2" MinWidth="160"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Default share destination"
+                                          SelectionChanged="UploadDefaultProviderCombo_Changed"/>
+                            </Grid>
+                            <Border Style="{StaticResource UploadSeparator}"/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE8B9;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Upload image format" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Upload image format"/>
+                                    <TextBlock Text="PNG keeps quality. JPEG is smaller for large captures." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="PNG keeps quality. JPEG is smaller for large captures."/>
+                                </StackPanel>
+                                <ComboBox x:Name="UploadImageFormatCombo" Grid.Column="2" MinWidth="140"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Upload image format"
+                                          SelectionChanged="UploadImageFormatCombo_Changed">
+                                    <ComboBoxItem Content="PNG" Tag="Png" Services:LocalizationService.SourceContent="PNG"/>
+                                    <ComboBoxItem Content="JPEG" Tag="Jpeg" Services:LocalizationService.SourceContent="JPEG"/>
+                                </ComboBox>
+                            </Grid>
+                            <Border Style="{StaticResource UploadSeparator}"/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE91B;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="JPEG quality" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="JPEG quality"/>
+                                    <TextBlock Text="Only used when the upload format is JPEG." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Only used when the upload format is JPEG."/>
+                                </StackPanel>
+                                <ComboBox x:Name="UploadJpegQualityCombo" Grid.Column="2" MinWidth="140"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="JPEG quality"
+                                          SelectionChanged="UploadJpegQualityCombo_Changed">
+                                    <ComboBoxItem Content="100 - Best" Tag="100"/>
+                                    <ComboBoxItem Content="90 - High" Tag="90"/>
+                                    <ComboBoxItem Content="85 - Balanced" Tag="85"/>
+                                    <ComboBoxItem Content="75 - Smaller" Tag="75"/>
+                                    <ComboBoxItem Content="60 - Tiny" Tag="60"/>
+                                </ComboBox>
+                            </Grid>
+                            <Border Style="{StaticResource UploadSeparator}"/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE8A7;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Open link after upload" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Open link after upload"/>
+                                    <TextBlock Text="Also open the public URL in your browser after a successful share." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Also open the public URL in your browser after a successful share."/>
+                                </StackPanel>
+                                <CheckBox x:Name="UploadOpenUrlAfterSuccessCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Open link after upload"
+                                          Checked="UploadOpenUrlAfterSuccessCheck_Changed" Unchecked="UploadOpenUrlAfterSuccessCheck_Changed"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock x:Name="UploadPreferenceStatusText"
+                               Style="{StaticResource SettingsStatusText}"
+                               Visibility="Collapsed"
+                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                               AutomationProperties.Name="Upload preference status"
+                               AutomationProperties.LiveSetting="Polite"
+                               Margin="4,8,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="UploadSectionImgBB" Visibility="Collapsed">
+                    <TextBlock Text="ImgBB" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"
+                               Services:LocalizationService.SourceText="ImgBB"/>
+                    <Border Style="{StaticResource UploadCard}">
+                        <StackPanel>
+                            <TextBlock Text="Recommended for quick public links. CyberSnap can use a shared key, or you can paste your own."
+                                       Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                       Services:LocalizationService.SourceText="Recommended for quick public links. CyberSnap can use a shared key, or you can paste your own."/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Use my own ImgBB API key" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Use my own ImgBB API key"/>
+                                    <TextBlock Text="When off, CyberSnap uses its shared key (when available)." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="When off, CyberSnap uses its shared key (when available)."/>
+                                </StackPanel>
+                                <CheckBox x:Name="UploadUseCustomImgBBApiKeyCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Use my own ImgBB API key"
+                                          Checked="UploadUseCustomImgBBApiKeyCheck_Changed" Unchecked="UploadUseCustomImgBBApiKeyCheck_Changed"/>
+                            </Grid>
+                            <Border Style="{StaticResource UploadSeparator}"/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="ImgBB API key" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="ImgBB API key"/>
+                                    <PasswordBox x:Name="UploadImgBBApiKeyBox" MinHeight="28" Margin="0,5,0,0" HorizontalAlignment="Stretch"
+                                                 AutomationProperties.Name="ImgBB API key"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 Services:LocalizationService.SourceToolTip="Hidden for safety. Paste a new value to replace it."
+                                                 PasswordChanged="UploadImgBBApiKeyBox_Changed"/>
+                                    <Button x:Name="UploadTestImgBBBtn" Content="Test ImgBB upload" Margin="0,10,0,0"
+                                            HorizontalAlignment="Left" MinWidth="140" Cursor="Hand"
+                                            Services:LocalizationService.SourceContent="Test ImgBB upload"
+                                            AutomationProperties.Name="Test ImgBB upload"
+                                            Click="UploadTestImgBBBtn_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+
+                    <StackPanel x:Name="UploadSectionImgur" Visibility="Collapsed">
+                    <TextBlock Text="Imgur (optional)" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"
+                               Services:LocalizationService.SourceText="Imgur (optional)"/>
+                    <Border Style="{StaticResource UploadCard}">
+                        <StackPanel>
+                            <TextBlock Text="Optional. Imgur app registration is unreliable for new apps; only needed if you already have a Client-ID."
+                                       Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                       Services:LocalizationService.SourceText="Optional. Imgur app registration is unreliable for new apps; only needed if you already have a Client-ID."/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Use my own Imgur Client-ID" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Use my own Imgur Client-ID"/>
+                                    <TextBlock Text="Only then does Imgur appear as a Share option." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Only then does Imgur appear as a Share option."/>
+                                </StackPanel>
+                                <CheckBox x:Name="UploadUseCustomImgurClientIdCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Use my own Imgur Client-ID"
+                                          Checked="UploadUseCustomImgurClientIdCheck_Changed" Unchecked="UploadUseCustomImgurClientIdCheck_Changed"/>
+                            </Grid>
+                            <Border Style="{StaticResource UploadSeparator}"/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Imgur Client-ID" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Imgur Client-ID"/>
+                                    <PasswordBox x:Name="UploadImgurClientIdBox" MinHeight="28" Margin="0,5,0,0" HorizontalAlignment="Stretch"
+                                                 AutomationProperties.Name="Imgur Client-ID"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 Services:LocalizationService.SourceToolTip="Hidden for safety. Paste a new value to replace it."
+                                                 PasswordChanged="UploadImgurClientIdBox_Changed"/>
+                                    <Button x:Name="UploadTestImgurBtn" Content="Test Imgur upload" Margin="0,10,0,0"
+                                            HorizontalAlignment="Left" MinWidth="140" Cursor="Hand"
+                                            Services:LocalizationService.SourceContent="Test Imgur upload"
+                                            AutomationProperties.Name="Test Imgur upload"
+                                            Click="UploadTestImgurBtn_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+
+                    <StackPanel x:Name="UploadSectionCustom" Visibility="Collapsed">
+                    <TextBlock Text="Custom destination" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"
+                               Services:LocalizationService.SourceText="Custom destination"/>
+                    <Border Style="{StaticResource UploadCard}">
+                        <StackPanel>
+                            <TextBlock Text="One destination: FTP, SFTP, or S3-compatible storage. Connection test arrives with those providers."
+                                       Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                       Services:LocalizationService.SourceText="One destination: FTP, SFTP, or S3-compatible storage. Connection test arrives with those providers."/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE968;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Protocol" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Protocol"/>
+                                    <TextBlock Text="Choose how CyberSnap uploads to your server." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Choose how CyberSnap uploads to your server."/>
+                                </StackPanel>
+                                <ComboBox x:Name="UploadCustomProtocolCombo" Grid.Column="2" MinWidth="140"
+                                          VerticalAlignment="Center"
+                                          AutomationProperties.Name="Upload custom protocol"
+                                          SelectionChanged="UploadCustomProtocolCombo_Changed">
+                                    <ComboBoxItem Content="FTP" Tag="Ftp"/>
+                                    <ComboBoxItem Content="SFTP" Tag="Sftp"/>
+                                    <ComboBoxItem Content="S3" Tag="S3"/>
+                                </ComboBox>
+                            </Grid>
+                            <Border Style="{StaticResource UploadSeparator}"/>
+
+                            <!-- FTP/SFTP server fields (hidden for S3) -->
+                            <StackPanel x:Name="UploadCustomServerFields">
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE774;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Host" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Host"/>
+                                        <TextBox x:Name="UploadCustomHostBox" MinHeight="28" Margin="0,5,0,0"
+                                                 AutomationProperties.Name="Upload custom host"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 TextChanged="UploadCustomHostBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8A5;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Port" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Port"/>
+                                        <TextBlock Text="0 = protocol default" Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="0 = protocol default"/>
+                                    </StackPanel>
+                                    <TextBox x:Name="UploadCustomPortBox" Grid.Column="2" Width="80" MinHeight="28"
+                                             VerticalAlignment="Center" TextAlignment="Right"
+                                             AutomationProperties.Name="Upload custom port"
+                                             Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                             Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                             TextChanged="UploadCustomPortBox_Changed"/>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE77B;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Username" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Username"/>
+                                        <TextBox x:Name="UploadCustomUsernameBox" MinHeight="28" Margin="0,5,0,0"
+                                                 AutomationProperties.Name="Upload custom username"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 TextChanged="UploadCustomUsernameBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Password" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Password"/>
+                                        <PasswordBox x:Name="UploadCustomPasswordBox" MinHeight="28" Margin="0,5,0,0"
+                                                     AutomationProperties.Name="Upload custom password"
+                                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                     Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                     PasswordChanged="UploadCustomPasswordBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Remote directory" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Remote directory"/>
+                                        <TextBox x:Name="UploadCustomRemoteDirectoryBox" MinHeight="28" Margin="0,5,0,0"
+                                                 AutomationProperties.Name="Upload remote directory"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 TextChanged="UploadCustomRemoteDirectoryBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Options shared by all custom protocols -->
+                            <StackPanel x:Name="UploadCustomSharedFields">
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE71B;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Public URL base (optional)" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Public URL base (optional)"/>
+                                        <TextBlock Text="If set, Share copies base + filename as a link." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="If set, Share copies base + filename as a link."/>
+                                        <TextBox x:Name="UploadCustomPublicUrlBaseBox" MinHeight="28" Margin="0,5,0,0"
+                                                 AutomationProperties.Name="Upload public URL base"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 TextChanged="UploadCustomPublicUrlBaseBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8AB;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Unique name if file exists" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Unique name if file exists"/>
+                                        <TextBlock Text="When off, existing files are overwritten." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="When off, existing files are overwritten."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="UploadUniqueSuffixOnCollisionCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Unique name if file exists"
+                                              Checked="UploadUniqueSuffixOnCollisionCheck_Changed" Unchecked="UploadUniqueSuffixOnCollisionCheck_Changed"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- FTP-only -->
+                            <StackPanel x:Name="UploadFtpFields" Visibility="Collapsed">
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE774;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Use FTPS (TLS)" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Use FTPS (TLS)"/>
+                                        <TextBlock Text="Encrypt the FTP control and data channels when the server supports it." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="Encrypt the FTP control and data channels when the server supports it."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="UploadFtpUseTlsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Use FTPS (TLS)"
+                                              Checked="UploadFtpUseTlsCheck_Changed" Unchecked="UploadFtpUseTlsCheck_Changed"/>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Allow insecure certificate" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Allow insecure certificate"/>
+                                        <TextBlock Text="Off by default. Only for servers with self-signed certificates." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="Off by default. Only for servers with self-signed certificates."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="UploadFtpAllowInsecureCertificateCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Allow insecure certificate"
+                                              Checked="UploadFtpAllowInsecureCertificateCheck_Changed" Unchecked="UploadFtpAllowInsecureCertificateCheck_Changed"/>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE895;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Passive mode" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Passive mode"/>
+                                        <TextBlock Text="Usually required behind firewalls and NATs." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="Usually required behind firewalls and NATs."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="UploadFtpPassiveCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Passive mode"
+                                              Checked="UploadFtpPassiveCheck_Changed" Unchecked="UploadFtpPassiveCheck_Changed"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- SFTP-only -->
+                            <StackPanel x:Name="UploadSftpFields" Visibility="Collapsed">
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Private key path (optional)" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Private key path (optional)"/>
+                                        <TextBox x:Name="UploadSftpPrivateKeyPathBox" MinHeight="28" Margin="0,5,0,0"
+                                                 AutomationProperties.Name="SFTP private key path"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 TextChanged="UploadSftpPrivateKeyPathBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Private key passphrase" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Private key passphrase"/>
+                                        <PasswordBox x:Name="UploadSftpPrivateKeyPassphraseBox" MinHeight="28" Margin="0,5,0,0"
+                                                     AutomationProperties.Name="SFTP private key passphrase"
+                                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                     Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                     PasswordChanged="UploadSftpPrivateKeyPassphraseBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Trusted host key (TOFU)" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Trusted host key (TOFU)"/>
+                                        <TextBlock x:Name="UploadSftpTrustedHostKeyText" Style="{StaticResource SettingDescription}"
+                                                   Text="Not stored yet — set on first successful connect."
+                                                   Services:LocalizationService.SourceText="Not stored yet — set on first successful connect."/>
+                                    </StackPanel>
+                                    <Button x:Name="UploadResetSftpHostKeyBtn" Grid.Column="2" Content="Reset"
+                                            MinWidth="80" VerticalAlignment="Center" Cursor="Hand"
+                                            Services:LocalizationService.SourceContent="Reset"
+                                            AutomationProperties.Name="Reset SFTP host key"
+                                            Click="UploadResetSftpHostKeyBtn_Click"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- S3-only -->
+                            <StackPanel x:Name="UploadS3Fields" Visibility="Collapsed">
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE774;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Endpoint" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Endpoint"/>
+                                        <TextBox x:Name="UploadS3EndpointBox" MinHeight="28" Margin="0,5,0,0"
+                                                 AutomationProperties.Name="S3 endpoint"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 TextChanged="UploadS3EndpointBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE909;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Region" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Region"/>
+                                        <TextBox x:Name="UploadS3RegionBox" MinHeight="28" Margin="0,5,0,0"
+                                                 AutomationProperties.Name="S3 region"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 TextChanged="UploadS3RegionBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Bucket" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Bucket"/>
+                                        <TextBox x:Name="UploadS3BucketBox" MinHeight="28" Margin="0,5,0,0"
+                                                 AutomationProperties.Name="S3 bucket"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 TextChanged="UploadS3BucketBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Access key" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Access key"/>
+                                        <PasswordBox x:Name="UploadS3AccessKeyBox" MinHeight="28" Margin="0,5,0,0"
+                                                     AutomationProperties.Name="S3 access key"
+                                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                     Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                     PasswordChanged="UploadS3AccessKeyBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Secret key" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Secret key"/>
+                                        <PasswordBox x:Name="UploadS3SecretKeyBox" MinHeight="28" Margin="0,5,0,0"
+                                                     AutomationProperties.Name="S3 secret key"
+                                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                     Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                     PasswordChanged="UploadS3SecretKeyBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Key prefix" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Key prefix"/>
+                                        <TextBox x:Name="UploadS3KeyPrefixBox" MinHeight="28" Margin="0,5,0,0"
+                                                 AutomationProperties.Name="S3 key prefix"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 TextChanged="UploadS3KeyPrefixBox_Changed"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8A7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Force path-style URLs" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Force path-style URLs"/>
+                                        <TextBlock Text="Often required for MinIO and some S3-compatible hosts." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="Often required for MinIO and some S3-compatible hosts."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="UploadS3ForcePathStyleCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Force path-style URLs"
+                                              Checked="UploadS3ForcePathStyleCheck_Changed" Unchecked="UploadS3ForcePathStyleCheck_Changed"/>
+                                </Grid>
+                                <Border Style="{StaticResource UploadSeparator}"/>
+                                <Grid Style="{StaticResource UploadSettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource UploadFieldIcon}">
+                                        <TextBlock Text="&#xE8F1;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Try ACL public-read" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Try ACL public-read"/>
+                                        <TextBlock Text="Best-effort. Prefer a bucket policy for public read; ACL may fail." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="Best-effort. Prefer a bucket policy for public read; ACL may fail."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="UploadS3MakePublicCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                              AutomationProperties.Name="Try ACL public-read"
+                                              Checked="UploadS3MakePublicCheck_Changed" Unchecked="UploadS3MakePublicCheck_Changed"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Style="{StaticResource UploadSeparator}"/>
+                            <Button x:Name="UploadTestCustomBtn" Content="Test custom destination"
+                                    HorizontalAlignment="Left" MinWidth="180" Cursor="Hand" IsEnabled="True"
+                                    Services:LocalizationService.SourceContent="Test custom destination"
+                                    AutomationProperties.Name="Test custom destination"
+                                    ToolTip="Test custom destination"
+                                    Services:LocalizationService.SourceToolTip="Test custom destination"
+                                    Click="UploadTestCustomBtn_Click"/>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
 

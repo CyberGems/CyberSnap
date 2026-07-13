@@ -103,6 +103,8 @@ public partial class App
             win.NavigateToEditorSettings();
         else if (navigateTo == "gallery")
             win.NavigateToGallerySettings();
+        else if (navigateTo is "uploads" or "upload")
+            win.NavigateToUploadsSettings();
         else if (navigateTo == "about")
             win.NavigateToAboutSettings();
     }

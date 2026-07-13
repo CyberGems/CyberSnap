@@ -6,9 +6,12 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Windows.Media.Imaging;
 using CyberSnap.Helpers;
+using CyberSnap.Models;
 using CyberSnap.Services;
+using CyberSnap.Services.Upload;
 using CyberSnap.UI.Controls;
 using CyberSnap.UI.Editor;
+using CyberSnap.UI.Share;
 
 namespace CyberSnap.UI.Editor;
 
@@ -498,6 +501,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
             _canvasMenu?.Dispose();
             _imageMenu?.Dispose();
             _burgerMenu?.Dispose();
+            _shareMenu?.Dispose();
+            try { _shareCts?.Cancel(); } catch { }
+            _shareCts?.Dispose();
             if (ReferenceEquals(_instance, this)) _instance = null;
             UnregisterCanvasMessageFilter();
         };
@@ -1364,6 +1370,129 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
     }
 
+    private void DoShare(UploadProviderKind? providerOverride = null)
+    {
+        if (_shareInProgress) return;
+        _ = RunShareAsync(providerOverride);
+    }
+
+    private async Task RunShareAsync(UploadProviderKind? providerOverride)
+    {
+        var settings = SettingsService.LoadStatic() ?? new AppSettings();
+        var provider = providerOverride ?? ImageUploadService.GetDefaultProvider(settings);
+
+        if (!ImageShareFlow.ConfirmThirdPartyUploadIfNeeded(null, Handle, provider, settings))
+            return;
+
+        _shareInProgress = true;
+        SetShareButtonsEnabled(false);
+        _shareCts?.Cancel();
+        _shareCts = new CancellationTokenSource();
+        var cts = _shareCts;
+
+        try
+        {
+            using var output = _canvas.RenderFinal();
+            var result = await ImageShareFlow.ShareBitmapAsync(output, provider, cts.Token)
+                .ConfigureAwait(true);
+            ImageShareFlow.PresentResult(result, settings);
+        }
+        catch (OperationCanceledException)
+        {
+            ToastWindow.Show(
+                LocalizationService.Translate("Upload cancelled"),
+                "");
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("editor.share", ex);
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Upload failed"),
+                ex.Message);
+        }
+        finally
+        {
+            _shareInProgress = false;
+            SetShareButtonsEnabled(true);
+        }
+    }
+
+    private void SetShareButtonsEnabled(bool enabled)
+    {
+        if (_shareButton is not null) _shareButton.Enabled = enabled;
+        if (_shareMenuButton is not null) _shareMenuButton.Enabled = enabled;
+    }
+
+    private void ShowShareMenu()
+    {
+        _shareMenu?.Dispose();
+        _shareMenu = BuildShareMenu();
+        var pt = _shareMenuButton.PointToScreen(new Point(0, _shareMenuButton.Height));
+        _shareMenu.Show(pt);
+    }
+
+    private ContextMenuStrip BuildShareMenu()
+    {
+        var menu = WindowsMenuRenderer.Create();
+        PopulateShareMenuItems(menu.Items);
+        WindowsMenuRenderer.NormalizeItemWidths(menu);
+        return menu;
+    }
+
+    private void RebuildShareToSubmenu(ToolStripMenuItem shareToItem)
+    {
+        shareToItem.DropDownItems.Clear();
+        PopulateShareMenuItems(shareToItem.DropDownItems);
+        WindowsMenuRenderer.NormalizeDropDownWidths(shareToItem);
+    }
+
+    private void PopulateShareMenuItems(ToolStripItemCollection items)
+    {
+        var settings = SettingsService.LoadStatic() ?? new AppSettings();
+        var defaultKind = ImageUploadService.GetDefaultProvider(settings);
+        var providers = ImageUploadService.GetMenuProviders(settings);
+
+        foreach (var (kind, available, label) in providers)
+        {
+            if (kind == UploadProviderKind.Custom)
+            {
+                items.Add(new ToolStripSeparator());
+            }
+
+            var display = kind == defaultKind
+                ? label + "  " + LocalizationService.Translate("(default)")
+                : label;
+            var item = WindowsMenuRenderer.Item(display, iconId: kind == UploadProviderKind.Custom ? "folder" : "share");
+            item.Enabled = available || kind == UploadProviderKind.Custom;
+            if (!available)
+            {
+                item.ToolTipText = LocalizationService.Translate("Configure in Settings…");
+                item.Click += (_, _) =>
+                {
+                    if (System.Windows.Application.Current is CyberSnap.App app)
+                        app.ShowSettings("uploads");
+                };
+            }
+            else
+            {
+                var captured = kind;
+                item.Click += (_, _) => DoShare(captured);
+            }
+            items.Add(item);
+        }
+
+        items.Add(new ToolStripSeparator());
+        var settingsItem = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Upload settings…"),
+            iconId: "gear");
+        settingsItem.Click += (_, _) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.ShowSettings("uploads");
+        };
+        items.Add(settingsItem);
+    }
+
     private void DoPaste()
     {
         try
@@ -1475,6 +1604,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (keyData == (Keys.Control | Keys.O)) { DoOpen(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
+        if (keyData == (Keys.Control | Keys.Shift | Keys.U)) { DoShare(); return true; }
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
         if (keyData == (Keys.Control | Keys.V)) { DoPaste(); return true; }
         if (keyData == (Keys.Control | Keys.A)) { _canvas.SelectAll(); return true; }
@@ -1575,6 +1705,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (mod == Keys.Control && key is Keys.O) { DoOpen(); return true; }
         if (mod == Keys.Control && key is Keys.S) { DoSave(); return true; }
         if (mod == (Keys.Control | Keys.Shift) && key is Keys.S) { DoSaveAs(); return true; }
+        if (mod == (Keys.Control | Keys.Shift) && key is Keys.U) { DoShare(); return true; }
         if (mod == Keys.Control && key is Keys.C) { DoCopy(); return true; }
         if (mod == Keys.Control && key is Keys.V) { DoPaste(); return true; }
 
