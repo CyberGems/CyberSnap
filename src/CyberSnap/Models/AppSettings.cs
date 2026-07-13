@@ -306,6 +306,10 @@ public sealed class AppSettings
     public bool EditorShowRulers { get; set; } = true;
     public bool EditorShowFrame { get; set; } = true;
     public bool EditorShowHints { get; set; } = true;
+    /// <summary>Show cursor X,Y coordinates in the editor status bar.</summary>
+    public bool EditorShowCoordinates { get; set; } = true;
+    /// <summary>Show hover tooltips on editor toolbar and status-bar controls.</summary>
+    public bool EditorShowTooltips { get; set; } = true;
     public bool EditorShowScrollbars { get; set; }
     /// <summary>Last solid fill chosen in the New Canvas dialog; 0 = transparent checkerboard.</summary>
     public int EditorNewCanvasBackgroundColorArgb { get; set; }

@@ -12,6 +12,7 @@ public sealed partial class EditorForm
     // hints share its look (rounded cyber surface, soft shadow, themed colors).
     private WindowsToolTip? _hoverToolTip;
     private Control? _hoverAnchor;
+    private bool _showTooltips = true;
 
     /// <summary>
     /// Attaches a CyberSnap-styled hover tooltip to <paramref name="anchor"/>. The text is
@@ -54,6 +55,14 @@ public sealed partial class EditorForm
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 
+    public void SetShowTooltips(bool show)
+    {
+        if (_showTooltips == show) return;
+        _showTooltips = show;
+        if (!show)
+            DismissVisibleHoverTooltips();
+    }
+
     private void TooltipTimer_Tick(object? sender, EventArgs e)
     {
         // Never change tooltip visibility while a mouse button is held. Showing a tooltip
@@ -64,6 +73,12 @@ public sealed partial class EditorForm
         if (Control.MouseButtons != MouseButtons.None)
         {
             HideResizeTip();
+            return;
+        }
+
+        if (!_showTooltips)
+        {
+            DismissVisibleHoverTooltips();
             return;
         }
 

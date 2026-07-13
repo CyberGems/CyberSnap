@@ -235,6 +235,26 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-hints-pref", ex); }
     }
 
+    /// <summary>Persists the annotation editor's "show coordinates" preference.</summary>
+    public void PersistEditorShowCoordinates(bool showCoordinates)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorShowCoordinates == showCoordinates) return;
+        _settingsService.Settings.EditorShowCoordinates = showCoordinates;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-coordinates-pref", ex); }
+    }
+
+    /// <summary>Persists the annotation editor's "show tooltips" preference.</summary>
+    public void PersistEditorShowTooltips(bool showTooltips)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorShowTooltips == showTooltips) return;
+        _settingsService.Settings.EditorShowTooltips = showTooltips;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-tooltips-pref", ex); }
+    }
+
     /// <summary>Persists the annotation editor's "always show scrollbars" preference.</summary>
     public void PersistEditorShowScrollbars(bool show)
     {

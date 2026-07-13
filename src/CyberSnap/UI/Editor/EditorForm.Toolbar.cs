@@ -17,6 +17,7 @@ public sealed partial class EditorForm
     private Panel _toolbarPanel = null!;
     private Bitmap? _brandBitmap;
     private Label _coordsLabel = null!;
+    private Control _coordsPanel = null!;
     private Label _fileNameLabel = null!;
     private Label _liveStatusLabel = null!;
     private Control _hintArea = null!;
@@ -226,6 +227,7 @@ public sealed partial class EditorForm
             AutoSize = true,
             BackColor = Color.Transparent,
             Margin = new Padding(0, 0, 12, 0),
+            Visible = SettingsService.LoadStatic()?.EditorShowCoordinates ?? true,
         };
         var coordsIcon = new DoubleBufferedPanel { Width = 20, Height = 20, Margin = new Padding(0, 11, 6, 11) };
         coordsIcon.Paint += (s, e) => StreamlineIcons.DrawIcon(e.Graphics, "select", new RectangleF(0, 0, 20, 20), EditorColors.Accent, 0f, false);
@@ -244,6 +246,7 @@ public sealed partial class EditorForm
         };
         coordsPanel.Controls.Add(coordsIcon);
         coordsPanel.Controls.Add(_coordsLabel);
+        _coordsPanel = coordsPanel;
 
         // Dimensions info has been moved to the top bar title (filename layout) to maximize space for hints.
 
@@ -443,7 +446,7 @@ public sealed partial class EditorForm
         // RegisterHoverTooltip(_toggleFrameSwitch, "Show a frame around the capture");
         RegisterHoverTooltip(_toggleFitSwitch, "Fit the image to the window when the editor opens");
         RegisterHoverTooltip(_togglePanLockSwitch, "Lock object editing in Pan mode");
-        RegisterHoverTooltip(coordsPanel, "Cursor position over the image (X, Y)");
+        RegisterHoverTooltip(_coordsPanel, "Cursor position over the image (X, Y)");
 
         RegisterHoverTooltip(_resetZoomBtn, () => WithShortcut("Reset zoom to 100%", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomReset") ?? "0"));
         RegisterHoverTooltip(_fitZoomBtn, () => WithShortcut("Zoom to fit the image in the window", EditorToolHotkeyHelper.GetViewHotkeyLabel("editorZoomFit") ?? "9"));
@@ -1322,12 +1325,11 @@ public sealed partial class EditorForm
         foreach (var kv in _toolButtons)
             kv.Value.Checked = kv.Key == _canvas.ActiveTool;
 
+        // Enabled state only: keep icon/text white like the rest of the command bar.
+        // (Primary would tint them cyan and is reserved for hover/pressed feedback.)
         _undoButton.Enabled = _canvas.CanUndo;
-        _undoButton.Primary = _canvas.CanUndo;
         _redoButton.Enabled = _canvas.CanRedo;
-        _redoButton.Primary = _canvas.CanRedo;
         _saveButton.Enabled = _canvas.IsDirty && !_canvas.IsDefaultBlank;
-        _saveButton.Primary = _saveButton.Enabled;
         _pasteButton.Enabled = Clipboard.ContainsImage();
         UpdateColorSwatch();
         UpdateStrokeWidthButtons();
@@ -1640,6 +1642,10 @@ public sealed partial class EditorForm
         rulersItem.ToolTipText = LocalizationService.Translate("Display measurement rulers in the editor canvas.");
         var hintsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show hints"), iconId: null);
         hintsItem.ToolTipText = LocalizationService.Translate("Display tool hints and shortcuts in the editor status bar.");
+        var coordinatesItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show coordinates"), iconId: null);
+        coordinatesItem.ToolTipText = LocalizationService.Translate("Show cursor X, Y coordinates in the editor status bar.");
+        var tooltipsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show tooltips"), iconId: null);
+        tooltipsItem.ToolTipText = LocalizationService.Translate("Show hover tooltips on toolbar and status-bar controls.");
         var scrollbarsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Always show scrollbars"), iconId: null);
         scrollbarsItem.ToolTipText = LocalizationService.Translate("Keep the scroll position indicators visible at all times.");
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
@@ -1728,6 +1734,22 @@ public sealed partial class EditorForm
             if (_hintArea != null)
                 _hintArea.Visible = _canvas.ShowHints && ClientSize.Width >= 950;
         };
+        coordinatesItem.Click += (_, _) =>
+        {
+            SetShowCoordinates(!_coordsPanel.Visible);
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorShowCoordinates(_coordsPanel.Visible);
+            }
+        };
+        tooltipsItem.Click += (_, _) =>
+        {
+            SetShowTooltips(!_showTooltips);
+            if (System.Windows.Application.Current is CyberSnap.App app)
+            {
+                app.PersistEditorShowTooltips(_showTooltips);
+            }
+        };
         scrollbarsItem.Click += (_, _) =>
         {
             _canvas.ShowScrollbarsAlways = !_canvas.ShowScrollbarsAlways;
@@ -1749,6 +1771,8 @@ public sealed partial class EditorForm
         viewItem.DropDownItems.Add(bannersItem);
         viewItem.DropDownItems.Add(welcomeBannerItem);
         viewItem.DropDownItems.Add(hintsItem);
+        viewItem.DropDownItems.Add(coordinatesItem);
+        viewItem.DropDownItems.Add(tooltipsItem);
         viewItem.DropDownItems.Add(new ToolStripSeparator());
         viewItem.DropDownItems.Add(resizeScaleItem);
 
@@ -1775,7 +1799,7 @@ public sealed partial class EditorForm
 
         menu.Opened += (_, _) =>
         {
-            UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, welcomeBannerItem, rulersItem, hintsItem, scrollbarsItem);
+            UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, welcomeBannerItem, rulersItem, hintsItem, coordinatesItem, tooltipsItem, scrollbarsItem);
             bool hasSelection = _canvas.SelectedAnnotationIndexInternal >= 0 || _canvas.MultiSelectedIndicesInternal.Count > 0;
             bool multi = _canvas.MultiSelectedIndicesInternal.Count > 1;
             pasteItem.Enabled = Clipboard.ContainsImage();
@@ -1869,7 +1893,7 @@ public sealed partial class EditorForm
         openRecentItem.DropDownItems.Add(clearItem);
     }
 
-    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem welcomeBannerItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem, ToolStripMenuItem scrollbarsItem)
+    private void UpdateBurgerCheckmarks(ToolStripMenuItem borderItem, ToolStripMenuItem fitItem, ToolStripMenuItem lockObjectsItem, ToolStripMenuItem cropHandlesItem, ToolStripMenuItem resizeHandlesItem, ToolStripMenuItem resizeScaleItem, ToolStripMenuItem bannersItem, ToolStripMenuItem welcomeBannerItem, ToolStripMenuItem rulersItem, ToolStripMenuItem hintsItem, ToolStripMenuItem coordinatesItem, ToolStripMenuItem tooltipsItem, ToolStripMenuItem scrollbarsItem)
     {
         var activeColor = Color.FromArgb(255, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
         borderItem.Image = _toggleFrameSwitch.Checked ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
@@ -1882,6 +1906,8 @@ public sealed partial class EditorForm
         welcomeBannerItem.Image = _canvas.ShowWelcomeBanner ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         rulersItem.Image = (_topRulerContainer != null && _topRulerContainer.Visible) ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         hintsItem.Image = _canvas.ShowHints ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        coordinatesItem.Image = _coordsPanel.Visible ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+        tooltipsItem.Image = _showTooltips ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         scrollbarsItem.Image = _canvas.ShowScrollbarsAlways ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
     }
 }
