@@ -13,6 +13,7 @@ public static class ImageUploadService
 {
     private static readonly IImageUploadProvider[] Providers =
     [
+        new CyberGemsShareProvider(),
         new ImgurAnonymousProvider(),
         new ImgBBAnonymousProvider(),
         new FtpUploadProvider(),
@@ -25,13 +26,30 @@ public static class ImageUploadService
         settings ??= SettingsService.LoadStatic() ?? new AppSettings();
         var preferred = Enum.IsDefined(typeof(UploadProviderKind), settings.UploadDefaultProvider)
             ? settings.UploadDefaultProvider
-            : UploadProviderKind.ImgBB;
+            : UploadProviderKind.CyberGems;
 
         // Imgur is never the effective default unless the user configured a Client-ID.
         if (preferred == UploadProviderKind.Imgur && !UploadCredentialResolver.HasUserImgurClientId(settings))
+            preferred = UploadProviderKind.CyberGems;
+
+        // CyberGems Share is the product default when credentials exist; otherwise fall back to ImgBB.
+        if (preferred == UploadProviderKind.CyberGems && !IsCyberGemsConfigured(settings))
             return UploadProviderKind.ImgBB;
 
+        // If settings still name CyberGems but menu would show it unavailable, already fell back above.
+        // Prefer configured CyberGems over a stale ImgBB default only when schema migration ran
+        // (handled in SettingsService). Honor explicit ImgBB/Custom/Imgur preferences as stored.
         return preferred;
+    }
+
+    /// <summary>True when CyberGems Share has an API key (user or OOTB/env).</summary>
+    public static bool IsCyberGemsConfigured(AppSettings? settings = null)
+    {
+        settings ??= SettingsService.LoadStatic() ?? new AppSettings();
+        var key = UploadCredentialResolver.ResolveCyberGemsApiKey(settings);
+        var baseUrl = CyberGemsShareProvider.NormalizeBaseUrl(
+            UploadCredentialResolver.ResolveCyberGemsBaseUrl(settings));
+        return !string.IsNullOrWhiteSpace(key.Value) && !string.IsNullOrWhiteSpace(baseUrl);
     }
 
     /// <summary>
@@ -55,9 +73,12 @@ public static class ImageUploadService
         settings ??= SettingsService.LoadStatic() ?? new AppSettings();
         var config = BuildRuntimeConfig(settings, GetDefaultProvider(settings), suggestedFileName: null);
 
-        var list = new List<(UploadProviderKind, bool, string)>(4)
+        var list = new List<(UploadProviderKind, bool, string)>(5)
         {
-            // ImgBB first — primary OOTB path.
+            // CyberGems Share first — first-party temporary links.
+            (UploadProviderKind.CyberGems,
+                ResolveProvider(UploadProviderKind.CyberGems, config)?.IsConfigured(config) == true,
+                LocalizationService.Translate("CyberSnap Share")),
             (UploadProviderKind.ImgBB,
                 ResolveProvider(UploadProviderKind.ImgBB, config)?.IsConfigured(config) == true,
                 LocalizationService.Translate("ImgBB")),
@@ -122,7 +143,7 @@ public static class ImageUploadService
                 UploadProviderKind.Imgur,
                 UploadErrorKind.NotConfigured,
                 LocalizationService.Translate(
-                    "Imgur requires your own Client-ID in Settings → Upload. Prefer ImgBB for sharing."));
+                    "Imgur requires your own Client-ID in Settings → Upload. Prefer CyberSnap Share for sharing."));
         }
 
         var config = BuildRuntimeConfig(settings, request.Provider, request.SuggestedFileName ?? fileName);
@@ -145,10 +166,12 @@ public static class ImageUploadService
         {
             var notConfigured = request.Provider switch
             {
+                UploadProviderKind.CyberGems => LocalizationService.Translate(
+                    "CyberSnap Share is not configured. Paste your API key in Settings → Uploads, or set CYBERSNAP_SHARE_API_KEY and restart CyberSnap."),
                 UploadProviderKind.ImgBB => LocalizationService.Translate(
                     "ImgBB is not configured. Paste your API key in Settings → Uploads, or set CYBERSNAP_IMGBB_API_KEY and restart CyberSnap."),
                 UploadProviderKind.Imgur => LocalizationService.Translate(
-                    "Imgur requires your own Client-ID in Settings → Upload. Prefer ImgBB for sharing."),
+                    "Imgur requires your own Client-ID in Settings → Upload. Prefer CyberSnap Share for sharing."),
                 UploadProviderKind.Custom => LocalizationService.Translate(
                     "Configure a custom destination in Settings → Uploads."),
                 _ => LocalizationService.Translate("Upload not configured"),
@@ -255,6 +278,8 @@ public static class ImageUploadService
     {
         var imgur = UploadCredentialResolver.ResolveImgurClientId(settings);
         var imgbb = UploadCredentialResolver.ResolveImgBBApiKey(settings);
+        var cybergems = UploadCredentialResolver.ResolveCyberGemsApiKey(settings);
+        var cyberGemsBase = UploadCredentialResolver.ResolveCyberGemsBaseUrl(settings);
 
         var format = settings.UploadImageFormat == UploadImageFormatPreference.Jpeg ? "jpg" : "png";
         var remoteName = BuildRemoteFileName(suggestedFileName, format);
@@ -280,8 +305,11 @@ public static class ImageUploadService
             CustomProtocol: customProtocol,
             ImgurClientId: imgur.Value,
             ImgBBApiKey: imgbb.Value,
+            CyberGemsApiKey: cybergems.Value,
+            CyberGemsBaseUrl: cyberGemsBase,
             UsingDefaultImgurCredential: imgur.IsDefault,
             UsingDefaultImgBBCredential: imgbb.IsDefault,
+            UsingDefaultCyberGemsCredential: cybergems.IsDefault,
             CustomHost: settings.UploadCustomHost ?? "",
             CustomPort: settings.UploadCustomPort,
             CustomUsername: settings.UploadCustomUsername ?? "",
@@ -331,6 +359,7 @@ public static class ImageUploadService
         {
             UploadProviderKind.Imgur => config.UsingDefaultImgurCredential,
             UploadProviderKind.ImgBB => config.UsingDefaultImgBBCredential,
+            UploadProviderKind.CyberGems => config.UsingDefaultCyberGemsCredential,
             _ => false,
         };
 

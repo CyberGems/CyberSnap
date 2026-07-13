@@ -151,9 +151,18 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("open_url_after_success", "Open link after upload", SettingsValueKind.Toggle, "Open the public URL after a successful share.", "UploadOpenUrlAfterSuccess"),
                     ]),
                 new SettingsSectionDefinition(
+                    "cybergems",
+                    "CyberSnap Share",
+                    "Default temporary public links at cybersnap.cybergems.org (48h TTL).",
+                    [
+                        new SettingDefinition("cybergems_base_url", "Share server URL", SettingsValueKind.Text, "Empty uses the official CyberGems host.", "UploadCyberGemsBaseUrl"),
+                        new SettingDefinition("use_custom_cybergems_key", "Use my own Share API key", SettingsValueKind.Toggle, "Override the shared CyberSnap Share key.", "UploadUseCustomCyberGemsApiKey"),
+                        new SettingDefinition("cybergems_api_key", "CyberSnap Share API key", SettingsValueKind.Text, "Optional personal share API key.", "UploadCyberGemsApiKey"),
+                    ]),
+                new SettingsSectionDefinition(
                     "imgbb",
                     "ImgBB",
-                    "Recommended anonymous host for public links.",
+                    "Alternative anonymous host for public links.",
                     [
                         new SettingDefinition("use_custom_imgbb_key", "Use my own ImgBB API key", SettingsValueKind.Toggle, "Override the shared ImgBB key.", "UploadUseCustomImgBBApiKey"),
                         new SettingDefinition("imgbb_api_key", "ImgBB API key", SettingsValueKind.Text, "Optional personal ImgBB API key.", "UploadImgBBApiKey"),

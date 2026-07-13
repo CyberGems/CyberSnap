@@ -4455,6 +4455,12 @@
                                          Services:LocalizationService.SourceContent="General"
                                          Click="UploadSubTab_Click"
                                          AutomationProperties.Name="Upload general settings"/>
+                            <RadioButton x:Name="UploadSubTabCyberGems" Content="CyberSnap" Tag="cybergems"
+                                         GroupName="UploadSubTabs"
+                                         Style="{StaticResource UploadSubTab}"
+                                         Services:LocalizationService.SourceContent="CyberSnap"
+                                         Click="UploadSubTab_Click"
+                                         AutomationProperties.Name="CyberSnap Share settings"/>
                             <RadioButton x:Name="UploadSubTabImgBB" Content="ImgBB" Tag="imgbb"
                                          GroupName="UploadSubTabs"
                                          Style="{StaticResource UploadSubTab}"
@@ -4583,14 +4589,95 @@
                                Margin="4,8,0,0"/>
                     </StackPanel>
 
+                    <StackPanel x:Name="UploadSectionCyberGems" Visibility="Collapsed">
+                    <TextBlock Text="CyberSnap Share" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"
+                               Services:LocalizationService.SourceText="CyberSnap Share"/>
+                    <Border Style="{StaticResource UploadCard}">
+                        <StackPanel>
+                            <TextBlock Text="Default host for temporary public links at cybersnap.cybergems.org. Links expire after 48 hours."
+                                       Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                       Services:LocalizationService.SourceText="Default host for temporary public links at cybersnap.cybergems.org. Links expire after 48 hours."/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE774;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="Share server URL" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Share server URL"/>
+                                    <TextBlock Text="Leave empty for the official CyberGems host. Change only if you self-host."
+                                               Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Leave empty for the official CyberGems host. Change only if you self-host."/>
+                                    <TextBox x:Name="UploadCyberGemsBaseUrlBox" MinHeight="28" Margin="0,5,0,0" HorizontalAlignment="Stretch"
+                                             AutomationProperties.Name="Share server URL"
+                                             Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                             Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                             Services:LocalizationService.SourceToolTip="https://cybersnap.cybergems.org"
+                                             TextChanged="UploadCyberGemsBaseUrlBox_Changed"/>
+                                </StackPanel>
+                            </Grid>
+                            <Border Style="{StaticResource UploadSeparator}"/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE72E;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Use my own Share API key" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Use my own Share API key"/>
+                                    <TextBlock Text="When off, CyberSnap uses its shared key (when available)." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="When off, CyberSnap uses its shared key (when available)."/>
+                                </StackPanel>
+                                <CheckBox x:Name="UploadUseCustomCyberGemsApiKeyCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Use my own Share API key"
+                                          Checked="UploadUseCustomCyberGemsApiKeyCheck_Changed" Unchecked="UploadUseCustomCyberGemsApiKeyCheck_Changed"/>
+                            </Grid>
+                            <Border Style="{StaticResource UploadSeparator}"/>
+                            <Grid Style="{StaticResource UploadSettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource UploadFieldIcon}">
+                                    <TextBlock Text="&#xE8D7;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="CyberSnap Share API key" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="CyberSnap Share API key"/>
+                                    <PasswordBox x:Name="UploadCyberGemsApiKeyBox" MinHeight="28" Margin="0,5,0,0" HorizontalAlignment="Stretch"
+                                                 AutomationProperties.Name="CyberSnap Share API key"
+                                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                 Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                 Services:LocalizationService.SourceToolTip="Hidden for safety. Paste a new value to replace it."
+                                                 PasswordChanged="UploadCyberGemsApiKeyBox_Changed"/>
+                                    <Button x:Name="UploadTestCyberGemsBtn" Content="Test CyberSnap Share" Margin="0,10,0,0"
+                                            HorizontalAlignment="Left" MinWidth="140" Cursor="Hand"
+                                            Services:LocalizationService.SourceContent="Test CyberSnap Share"
+                                            AutomationProperties.Name="Test CyberSnap Share"
+                                            Click="UploadTestCyberGemsBtn_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+
                     <StackPanel x:Name="UploadSectionImgBB" Visibility="Collapsed">
                     <TextBlock Text="ImgBB" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"
                                Services:LocalizationService.SourceText="ImgBB"/>
                     <Border Style="{StaticResource UploadCard}">
                         <StackPanel>
-                            <TextBlock Text="Recommended for quick public links. CyberSnap can use a shared key, or you can paste your own."
+                            <TextBlock Text="Alternative host for public links. CyberSnap can use a shared key, or you can paste your own."
                                        Style="{StaticResource SettingDescription}" TextWrapping="Wrap" Margin="0,0,0,10"
-                                       Services:LocalizationService.SourceText="Recommended for quick public links. CyberSnap can use a shared key, or you can paste your own."/>
+                                       Services:LocalizationService.SourceText="Alternative host for public links. CyberSnap can use a shared key, or you can paste your own."/>
                             <Grid Style="{StaticResource UploadSettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>

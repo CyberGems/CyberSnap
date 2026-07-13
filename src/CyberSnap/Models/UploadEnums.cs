@@ -7,6 +7,8 @@ public enum UploadProviderKind
     ImgBB = 1,
     /// <summary>Single custom destination; protocol selected via <see cref="UploadCustomProtocol"/>.</summary>
     Custom = 2,
+    /// <summary>CyberGems Share (cybersnap.cybergems.org) — default temporary public links.</summary>
+    CyberGems = 3,
 }
 
 /// <summary>Protocol for the single custom upload destination.</summary>

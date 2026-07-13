@@ -5,12 +5,12 @@ namespace CyberSnap.Services.Upload;
 
 public interface IImageUploadProvider
 {
-    /// <summary>Imgur / ImgBB / Custom. Custom protocol implementations all return <see cref="UploadProviderKind.Custom"/>.</summary>
+    /// <summary>CyberGems / Imgur / ImgBB / Custom. Custom protocol implementations all return <see cref="UploadProviderKind.Custom"/>.</summary>
     UploadProviderKind Kind { get; }
 
     /// <summary>
     /// For <see cref="UploadProviderKind.Custom"/> only: which protocol this implementation handles.
-    /// Imgur/ImgBB return null (dispatch uses Kind alone).
+    /// CyberGems/Imgur/ImgBB return null (dispatch uses Kind alone).
     /// </summary>
     UploadCustomProtocol? CustomProtocol { get; }
 

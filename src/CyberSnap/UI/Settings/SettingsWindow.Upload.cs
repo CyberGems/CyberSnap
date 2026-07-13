@@ -24,11 +24,13 @@ public partial class SettingsWindow
         if (UploadSectionGeneral is null) return;
 
         var tag = "general";
-        if (UploadSubTabImgBB?.IsChecked == true) tag = "imgbb";
+        if (UploadSubTabCyberGems?.IsChecked == true) tag = "cybergems";
+        else if (UploadSubTabImgBB?.IsChecked == true) tag = "imgbb";
         else if (UploadSubTabImgur?.IsChecked == true) tag = "imgur";
         else if (UploadSubTabCustom?.IsChecked == true) tag = "custom";
 
         UploadSectionGeneral.Visibility = tag == "general" ? Visibility.Visible : Visibility.Collapsed;
+        UploadSectionCyberGems.Visibility = tag == "cybergems" ? Visibility.Visible : Visibility.Collapsed;
         UploadSectionImgBB.Visibility = tag == "imgbb" ? Visibility.Visible : Visibility.Collapsed;
         UploadSectionImgur.Visibility = tag == "imgur" ? Visibility.Visible : Visibility.Collapsed;
         UploadSectionCustom.Visibility = tag == "custom" ? Visibility.Visible : Visibility.Collapsed;
@@ -38,7 +40,8 @@ public partial class SettingsWindow
     {
         if (!IsLoaded || _suppressUploadPreferenceChange) return;
         var tag = "general";
-        if (UploadSubTabImgBB?.IsChecked == true) tag = "imgbb";
+        if (UploadSubTabCyberGems?.IsChecked == true) tag = "cybergems";
+        else if (UploadSubTabImgBB?.IsChecked == true) tag = "imgbb";
         else if (UploadSubTabImgur?.IsChecked == true) tag = "imgur";
         else if (UploadSubTabCustom?.IsChecked == true) tag = "custom";
 
@@ -60,10 +63,12 @@ public partial class SettingsWindow
     {
         tag = (tag ?? "general").Trim().ToLowerInvariant();
         UploadSubTabGeneral.IsChecked = tag is "general" or "";
+        UploadSubTabCyberGems.IsChecked = tag is "cybergems" or "cybersnap";
         UploadSubTabImgBB.IsChecked = tag == "imgbb";
         UploadSubTabImgur.IsChecked = tag == "imgur";
         UploadSubTabCustom.IsChecked = tag is "custom" or "ftp" or "sftp" or "s3";
         if (UploadSubTabGeneral.IsChecked != true
+            && UploadSubTabCyberGems.IsChecked != true
             && UploadSubTabImgBB.IsChecked != true
             && UploadSubTabImgur.IsChecked != true
             && UploadSubTabCustom.IsChecked != true)
@@ -84,6 +89,10 @@ public partial class SettingsWindow
             SelectComboByTag(UploadImageFormatCombo, s.UploadImageFormat == UploadImageFormatPreference.Jpeg ? "Jpeg" : "Png");
             SelectComboByTag(UploadJpegQualityCombo, s.UploadJpegQuality.ToString());
             UploadOpenUrlAfterSuccessCheck.IsChecked = s.UploadOpenUrlAfterSuccess;
+
+            UploadCyberGemsBaseUrlBox.Text = s.UploadCyberGemsBaseUrl ?? "";
+            UploadUseCustomCyberGemsApiKeyCheck.IsChecked = s.UploadUseCustomCyberGemsApiKey;
+            UploadCyberGemsApiKeyBox.Password = s.UploadCyberGemsApiKey ?? "";
 
             UploadUseCustomImgBBApiKeyCheck.IsChecked = s.UploadUseCustomImgBBApiKey;
             UploadImgBBApiKeyBox.Password = s.UploadImgBBApiKey ?? "";
@@ -135,6 +144,11 @@ public partial class SettingsWindow
         UploadDefaultProviderCombo.Items.Clear();
         UploadDefaultProviderCombo.Items.Add(new ComboBoxItem
         {
+            Content = LocalizationService.Translate("CyberSnap Share"),
+            Tag = nameof(UploadProviderKind.CyberGems),
+        });
+        UploadDefaultProviderCombo.Items.Add(new ComboBoxItem
+        {
             Content = LocalizationService.Translate("ImgBB"),
             Tag = nameof(UploadProviderKind.ImgBB),
         });
@@ -152,10 +166,17 @@ public partial class SettingsWindow
             Tag = nameof(UploadProviderKind.Custom),
         });
 
-        var effective = ImageUploadService.GetDefaultProvider(s);
-        SelectComboByTag(UploadDefaultProviderCombo, effective.ToString());
-        if (previous != effective)
-            s.UploadDefaultProvider = effective;
+        // Show the user's preference; runtime GetDefaultProvider may fall back (e.g. CyberGems → ImgBB).
+        var display = Enum.IsDefined(typeof(UploadProviderKind), s.UploadDefaultProvider)
+            ? s.UploadDefaultProvider
+            : UploadProviderKind.CyberGems;
+        if (display == UploadProviderKind.Imgur && !UploadCredentialResolver.HasUserImgurClientId(s))
+        {
+            display = UploadProviderKind.CyberGems;
+            if (previous != display)
+                s.UploadDefaultProvider = display;
+        }
+        SelectComboByTag(UploadDefaultProviderCombo, display.ToString());
     }
 
     private void UpdateCustomProtocolFieldsVisibility(UploadCustomProtocol protocol)
@@ -300,6 +321,68 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.UploadOpenUrlAfterSuccess = value,
             value => UploadOpenUrlAfterSuccessCheck.IsChecked = value);
+    }
+
+    // ── CyberGems Share ──────────────────────────────────────────────────
+
+    private void UploadCyberGemsBaseUrlBox_Changed(object sender, TextChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressUploadPreferenceChange) return;
+        var previous = _settingsService.Settings.UploadCyberGemsBaseUrl ?? "";
+        var selected = UploadCyberGemsBaseUrlBox.Text?.Trim() ?? "";
+        if (previous == selected) return;
+        UpdateUploadPreference(
+            "settings.upload-cybergems-base-url",
+            "Share server URL",
+            previous,
+            selected,
+            value => _settingsService.Settings.UploadCyberGemsBaseUrl = value,
+            value => UploadCyberGemsBaseUrlBox.Text = value);
+    }
+
+    private void UploadUseCustomCyberGemsApiKeyCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressUploadPreferenceChange) return;
+        var previous = _settingsService.Settings.UploadUseCustomCyberGemsApiKey;
+        var selected = UploadUseCustomCyberGemsApiKeyCheck.IsChecked == true;
+        if (previous == selected) return;
+        UpdateUploadPreference(
+            "settings.upload-use-custom-cybergems",
+            "Use my own Share API key",
+            previous,
+            selected,
+            value => _settingsService.Settings.UploadUseCustomCyberGemsApiKey = value,
+            value => UploadUseCustomCyberGemsApiKeyCheck.IsChecked = value);
+    }
+
+    private void UploadCyberGemsApiKeyBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressUploadPreferenceChange) return;
+        var previous = _settingsService.Settings.UploadCyberGemsApiKey;
+        var key = UploadCyberGemsApiKeyBox.Password?.Trim();
+        var selected = string.IsNullOrWhiteSpace(key) ? null : key;
+        if (previous == selected) return;
+        UpdateUploadPreference(
+            "settings.upload-cybergems-key",
+            "CyberSnap Share API key",
+            previous,
+            selected,
+            value =>
+            {
+                _settingsService.Settings.UploadCyberGemsApiKey = value;
+                if (!string.IsNullOrWhiteSpace(value))
+                    _settingsService.Settings.UploadUseCustomCyberGemsApiKey = true;
+            },
+            value => UploadCyberGemsApiKeyBox.Password = value ?? "",
+            applyRuntime: value =>
+            {
+                if (!string.IsNullOrWhiteSpace(value) && UploadUseCustomCyberGemsApiKeyCheck.IsChecked != true)
+                {
+                    _suppressUploadPreferenceChange = true;
+                    try { UploadUseCustomCyberGemsApiKeyCheck.IsChecked = true; }
+                    finally { _suppressUploadPreferenceChange = false; }
+                }
+            });
     }
 
     // ── ImgBB ────────────────────────────────────────────────────────────
@@ -739,6 +822,9 @@ public partial class SettingsWindow
 
     // ── Test uploads ─────────────────────────────────────────────────────
 
+    private async void UploadTestCyberGemsBtn_Click(object sender, RoutedEventArgs e)
+        => await RunProviderTestAsync(UploadProviderKind.CyberGems).ConfigureAwait(true);
+
     private async void UploadTestImgBBBtn_Click(object sender, RoutedEventArgs e)
         => await RunProviderTestAsync(UploadProviderKind.ImgBB).ConfigureAwait(true);
 
@@ -752,6 +838,7 @@ public partial class SettingsWindow
     {
         if (_uploadTestInProgress) return;
         _uploadTestInProgress = true;
+        UploadTestCyberGemsBtn.IsEnabled = false;
         UploadTestImgBBBtn.IsEnabled = false;
         UploadTestImgurBtn.IsEnabled = false;
         try
@@ -784,6 +871,7 @@ public partial class SettingsWindow
         finally
         {
             _uploadTestInProgress = false;
+            UploadTestCyberGemsBtn.IsEnabled = true;
             UploadTestImgBBBtn.IsEnabled = true;
             UploadTestImgurBtn.IsEnabled = UploadCredentialResolver.HasUserImgurClientId(_settingsService.Settings);
         }

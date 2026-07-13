@@ -1,0 +1,9 @@
+# Secrets and runtime data — never commit
+config.php
+storage/files/*
+storage/meta/*
+storage/rate/*
+!storage/.gitkeep
+!storage/files/.gitkeep
+!storage/meta/.gitkeep
+!storage/rate/.gitkeep

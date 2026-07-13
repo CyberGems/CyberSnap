@@ -1,11 +1,13 @@
 <#
 .SYNOPSIS
-  Encrypts an ImgBB API key for embedding as CyberSnap OOTB (out-of-the-box) credential.
+  Encrypts an upload API key for embedding as CyberSnap OOTB (out-of-the-box) credential.
 
 .DESCRIPTION
   Produces a Base64 AES-GCM ciphertext compatible with DefaultCredentialVault.
-  Paste the output into EmbeddedImgBBCiphertextBase64 in:
-    src/CyberSnap/Services/Upload/DefaultCredentialVault.cs
+  Paste the output into:
+    - EmbeddedImgBBCiphertextBase64 (ImgBB) — default env CYBERSNAP_IMGBB_API_KEY
+    - EmbeddedCyberGemsCiphertextBase64 (Share) — use -ApiKeyEnv CYBERSNAP_SHARE_API_KEY
+  in: src/CyberSnap/Services/Upload/DefaultCredentialVault.cs
 
   IMPORTANT:
   - Do NOT commit plaintext API keys.
@@ -13,17 +15,18 @@
   - Prefer generating this on a maintainer machine and reviewing the PR carefully.
 
 .PARAMETER ApiKey
-  Plain ImgBB API key (or pass via -ApiKeyEnv / env CYBERSNAP_IMGBB_API_KEY).
+  Plain API key (or pass via -ApiKeyEnv).
 
 .PARAMETER ApiKeyEnv
-  If set, read the key from this environment variable name (default: CYBERSNAP_IMGBB_API_KEY).
+  Environment variable name to read the key from (default: CYBERSNAP_IMGBB_API_KEY).
+  Use CYBERSNAP_SHARE_API_KEY for CyberGems Share.
 
 .EXAMPLE
   $env:CYBERSNAP_IMGBB_API_KEY = "your-real-key"
   .\scripts\Protect-UploadVaultKey.ps1
 
 .EXAMPLE
-  .\scripts\Protect-UploadVaultKey.ps1 -ApiKey "your-real-key"
+  .\scripts\Protect-UploadVaultKey.ps1 -ApiKey "your-share-key" -ApiKeyEnv CYBERSNAP_SHARE_API_KEY
 #>
 [CmdletBinding()]
 param(
@@ -86,11 +89,20 @@ $packed = New-Object byte[] (12 + 16 + $cipher.Length)
 [Buffer]::BlockCopy($cipher, 0, $packed, 28, $cipher.Length)
 $b64 = [Convert]::ToBase64String($packed)
 
+# Same crypto for both; target constant depends on which secret you encrypted.
+$isShare = $ApiKeyEnv -match 'SHARE|CYBERGEMS' -or $env:CYBERSNAP_VAULT_TARGET -match 'SHARE|CYBERGEMS'
+$constName = if ($isShare) { "EmbeddedCyberGemsCiphertextBase64" } else { "EmbeddedImgBBCiphertextBase64" }
+$envHint = if ($isShare) { "CYBERSNAP_SHARE_API_KEY" } else { "CYBERSNAP_IMGBB_API_KEY" }
+
 Write-Host ""
-Write-Host "Paste this into DefaultCredentialVault.cs → EmbeddedImgBBCiphertextBase64:" -ForegroundColor Cyan
+Write-Host "Paste this into DefaultCredentialVault.cs → $constName`:" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "        `"$b64`";" -ForegroundColor Green
 Write-Host ""
+if (-not $isShare) {
+    Write-Host "Tip: for CyberGems Share OOTB, re-run with -ApiKeyEnv CYBERSNAP_SHARE_API_KEY" -ForegroundColor Yellow
+    Write-Host "     (or set `$env:CYBERSNAP_VAULT_TARGET = 'SHARE') so this message names the Share constant." -ForegroundColor Yellow
+}
 Write-Host "Then rebuild Release. Users without a personal key will use this OOTB credential." -ForegroundColor DarkGray
-Write-Host "Env CYBERSNAP_IMGBB_API_KEY still overrides the embedded key for maintainers." -ForegroundColor DarkGray
+Write-Host "Env $envHint still overrides the embedded key for maintainers." -ForegroundColor DarkGray
 Write-Host ""
