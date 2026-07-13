@@ -310,6 +310,8 @@ public partial class SettingsWindow
             EditorShowBannersCheck.IsChecked = s.EditorShowBanners;
             EditorShowWelcomeBannerCheck.IsChecked = s.EditorShowWelcomeBanner;
             EditorShowHintsCheck.IsChecked = s.EditorShowHints;
+            EditorShowCoordinatesCheck.IsChecked = s.EditorShowCoordinates;
+            EditorShowTooltipsCheck.IsChecked = s.EditorShowTooltips;
             EditorShowRulersCheck.IsChecked = s.EditorShowRulers;
             EditorAutoCropCheck.IsChecked = s.EditorAutoCropControls;
             EditorShowResizeHandlesCheck.IsChecked = s.EditorShowResizeHandles;
@@ -902,6 +904,36 @@ public partial class SettingsWindow
             selected,
             value => _settingsService.Settings.EditorShowHints = value,
             value => EditorShowHintsCheck.IsChecked = value);
+    }
+
+    private void EditorShowCoordinatesCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorShowCoordinates;
+        var selected = EditorShowCoordinatesCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-show-coordinates",
+            "Editor show coordinates",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorShowCoordinates = value,
+            value => EditorShowCoordinatesCheck.IsChecked = value,
+            applyRuntime: value => CyberSnap.UI.Editor.EditorForm.ActiveInstance?.SetShowCoordinates(value));
+    }
+
+    private void EditorShowTooltipsCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+        var previous = _settingsService.Settings.EditorShowTooltips;
+        var selected = EditorShowTooltipsCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.editor-show-tooltips",
+            "Editor show tooltips",
+            previous,
+            selected,
+            value => _settingsService.Settings.EditorShowTooltips = value,
+            value => EditorShowTooltipsCheck.IsChecked = value,
+            applyRuntime: value => CyberSnap.UI.Editor.EditorForm.ActiveInstance?.SetShowTooltips(value));
     }
 
     private void EditorShowRulersCheck_Changed(object sender, RoutedEventArgs e)

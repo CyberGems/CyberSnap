@@ -312,6 +312,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         KeyPreview = true;
 
         var settings = Services.SettingsService.LoadStatic();
+        _showTooltips = settings?.EditorShowTooltips ?? true;
         _canvas = new AnnotationCanvas(new Bitmap(captured))
         {
             Dock = DockStyle.Fill,
@@ -566,6 +567,13 @@ public sealed partial class EditorForm : Form, IMessageFilter
         _canvas.Invalidate();
     }
 
+    public void SetShowCoordinates(bool show)
+    {
+        if (_coordsPanel is null) return;
+        if (_coordsPanel.Visible == show) return;
+        _coordsPanel.Visible = show;
+    }
+
     public void ApplyTheme()
     {
         if (InvokeRequired)
@@ -729,6 +737,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     private void OnCanvasMouseMove(object? sender, MouseEventArgs e)
     {
+        if (_coordsPanel is not { Visible: true }) return;
         var img = _canvas.PointFromScreenToImage(e.Location);
         var text = $"{img.X}, {img.Y}";
         if (_coordsLabel.Text != text)
