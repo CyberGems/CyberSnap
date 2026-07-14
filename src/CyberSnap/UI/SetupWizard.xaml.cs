@@ -275,32 +275,8 @@ public partial class SetupWizard : Window
         AddHotkeysFooterNote();
     }
 
-    private void WizHotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)
+    private void ClearWarningState()
     {
-        WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
-        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
-        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
-        _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
-        _tooltip.IsOpen = false;
-        if (_resetWarningTimer != null)
-        {
-            _resetWarningTimer.Stop();
-            _resetWarningTimer = null;
-        }
-        if (Application.Current is App app)
-        {
-            app.UnregisterAllHotkeys();
-        }
-    }
-
-    private void WizHotkeyTextBox_LostFocus(object sender, RoutedEventArgs e)
-    {
-        var (m, k) = _settingsService.Settings.GetToolHotkey("rect");
-        WizHotkeyTextBox.Text = HotkeyFormatter.Format(m, k);
-        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
-        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
-        _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
-        _tooltip.IsOpen = false;
         if (_resetWarningTimer != null)
         {
             _resetWarningTimer.Stop();
@@ -311,6 +287,27 @@ public partial class SetupWizard : Window
             _blockedDetectTimer.Stop();
             _blockedDetectTimer = null;
         }
+        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+        _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+        _tooltip.IsOpen = false;
+    }
+
+    private void WizHotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)
+    {
+        WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
+        ClearWarningState();
+        if (Application.Current is App app)
+        {
+            app.UnregisterAllHotkeys();
+        }
+    }
+
+    private void WizHotkeyTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        var (m, k) = _settingsService.Settings.GetToolHotkey("rect");
+        WizHotkeyTextBox.Text = HotkeyFormatter.Format(m, k);
+        ClearWarningState();
         if (Application.Current is App app)
         {
             app.RegisterHotkeys(showReadyNotification: false);
@@ -329,9 +326,7 @@ public partial class SetupWizard : Window
             _resetWarningTimer = null;
             WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
         }
-        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
-        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
-        _tooltip.IsOpen = false;
+        ClearWarningState();
 
         if (IsModifierOnly(key))
         {
@@ -535,6 +530,7 @@ public partial class SetupWizard : Window
 
     private void WizPrtScBtn_Click(object sender, RoutedEventArgs e)
     {
+        ClearWarningState();
         var (prevMod, prevKey) = _settingsService.Settings.GetToolHotkey("rect");
         var app = Application.Current as App;
 
@@ -569,6 +565,7 @@ public partial class SetupWizard : Window
 
     private void WizClearBtn_Click(object sender, RoutedEventArgs e)
     {
+        ClearWarningState();
         var (prevMod, prevKey) = _settingsService.Settings.GetToolHotkey("rect");
         try
         {
@@ -595,6 +592,7 @@ public partial class SetupWizard : Window
 
     private void WizRestoreBtn_Click(object sender, RoutedEventArgs e)
     {
+        ClearWarningState();
         var (prevMod, prevKey) = _settingsService.Settings.GetToolHotkey("rect");
         uint defaultMod = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
         uint defaultKey = 0x41; // A
