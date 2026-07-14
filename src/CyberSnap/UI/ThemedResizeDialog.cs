@@ -229,7 +229,7 @@ internal sealed class ThemedResizeDialog : Window
 
         // Quick Presets groups
         leftStack.Children.Add(SectionLabel("Resolution", 0));
-        var resWrap = new WrapPanel();
+        var resWrap = new UniformGrid { Columns = 4 };
         _resolutionChipElements.Clear();
         foreach (var (label, w, h) in ResolutionPresets)
         {
@@ -243,7 +243,7 @@ internal sealed class ThemedResizeDialog : Window
         leftStack.Children.Add(resWrap);
 
         leftStack.Children.Add(SectionLabel("Aspect ratio", 10));
-        var aspWrap = new WrapPanel();
+        var aspWrap = new UniformGrid { Columns = 3 };
         _aspectChipElements.Clear();
         foreach (var (label, ratio) in AspectPresets)
         {
@@ -257,7 +257,7 @@ internal sealed class ThemedResizeDialog : Window
         leftStack.Children.Add(aspWrap);
 
         leftStack.Children.Add(SectionLabel("Scale", 10));
-        var scaleWrap = new WrapPanel();
+        var scaleWrap = new UniformGrid { Columns = 3 };
         _scaleChipElements.Clear();
         foreach (var (label, scale) in ScalePresets)
         {
