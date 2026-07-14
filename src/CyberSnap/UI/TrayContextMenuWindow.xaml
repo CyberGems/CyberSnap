@@ -274,17 +274,17 @@
                     </Grid>
                 </Button>
 
-                <!-- Settings & Exit in the same row (compact: short labels + full tooltips) -->
+                <!-- Exit & Settings in the same row (compact: short labels + full tooltips) -->
                 <UniformGrid Columns="2">
-                    <!-- Settings -->
-                    <Button x:Name="SettingsBtn"
-                            Style="{StaticResource BottomButtonStyle}"
-                            Click="Settings_Click"
+                    <!-- Exit (left) -->
+                    <Button x:Name="ExitBtn"
+                            Style="{StaticResource BottomDangerButtonStyle}"
+                            Click="Exit_Click"
                             Padding="8,10"
                             Margin="4,2,2,2">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="SettingsIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="SettingsText"
+                            <Image x:Name="ExitIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="ExitText"
                                        FontSize="12"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
@@ -293,15 +293,15 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- Exit -->
-                    <Button x:Name="ExitBtn"
-                            Style="{StaticResource BottomDangerButtonStyle}"
-                            Click="Exit_Click"
+                    <!-- Settings (right) -->
+                    <Button x:Name="SettingsBtn"
+                            Style="{StaticResource BottomButtonStyle}"
+                            Click="Settings_Click"
                             Padding="8,10"
                             Margin="2,2,4,2">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="ExitIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="ExitText"
+                            <Image x:Name="SettingsIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="SettingsText"
                                        FontSize="12"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
