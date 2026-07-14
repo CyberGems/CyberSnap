@@ -1377,5 +1377,10 @@
   "How to unbind Snipping Tool from the PrtSc key?": "How to unbind Snipping Tool from the PrtSc key?",
   "Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen.": "Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen.",
   "Open Windows Settings": "Open Windows Settings",
-  "Hotkey assignments": "Hotkey assignments"
+  "Hotkey assignments": "Hotkey assignments",
+  "Area": "Area",
+  "Scroll": "Scroll",
+  "Extract text": "Extract text",
+  "QR Codes": "QR Codes",
+  "Exit CyberSnap": "Exit CyberSnap"
 }
