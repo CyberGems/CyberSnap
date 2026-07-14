@@ -927,18 +927,68 @@ public sealed partial class EditorForm : Form, IMessageFilter
         DoSaveAsWithExtension(ext);
     }
 
+    private void ExportAsPdfFlow(Bitmap output)
+    {
+        var options = ThemedPdfExportDialog.Show(Handle, output);
+        if (options == null) return; // Cancelled by user
+
+        string filter = "Portable Document Format (*.pdf)|*.pdf|PNG|*.png|JPEG|*.jpg";
+        string defaultName = string.IsNullOrWhiteSpace(_savedFilePath)
+            ? $"CyberSnap_PDF_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+            : Path.GetFileNameWithoutExtension(_savedFilePath) + ".pdf";
+
+        using var dlg = new SaveFileDialog
+        {
+            Title = LocalizationService.Translate("Export canvas as..."),
+            Filter = filter,
+            FileName = defaultName,
+            DefaultExt = ".pdf",
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        if (dlg.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            SaveAsPdf(output, dlg.FileName, options);
+        }
+        else
+        {
+            try
+            {
+                SaveRenderedBitmap(output, dlg.FileName);
+                _savedFilePath = dlg.FileName;
+                FinishSuccessfulSave(output, dlg.FileName);
+            }
+            catch (Exception ex)
+            {
+                ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
+            }
+        }
+    }
+
     private void DoSaveAsWithExtension(string ext)
     {
         bool isPdf = ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
+        if (isPdf)
+        {
+            try
+            {
+                using var output = _canvas.RenderFinal();
+                ExportAsPdfFlow(output);
+            }
+            catch (Exception ex)
+            {
+                ThemedConfirmDialog.Alert(Handle, "Save failed", ex.Message, error: true);
+            }
+            return;
+        }
+
         bool isJpg = ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase) || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase);
 
-        string filter = isPdf
-            ? "Portable Document Format (*.pdf)|*.pdf|PNG|*.png|JPEG|*.jpg"
-            : (isJpg
-                ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
-                : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf");
+        string filter = isJpg
+            ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
+            : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf";
 
-        string prefix = isPdf ? "PDF" : (isJpg ? "JPG" : "PNG");
+        string prefix = isJpg ? "JPG" : "PNG";
         string defaultName;
         if (string.IsNullOrWhiteSpace(_savedFilePath))
         {
@@ -946,9 +996,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
         else
         {
-            defaultName = isPdf && !_savedFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
-                ? Path.GetFileNameWithoutExtension(_savedFilePath) + ".pdf"
-                : Path.GetFileNameWithoutExtension(_savedFilePath) + $"_edited{ext}";
+            defaultName = Path.GetFileNameWithoutExtension(_savedFilePath) + $"_edited{ext}";
         }
 
         using var dlg = new SaveFileDialog
@@ -1037,7 +1085,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
     {
         var options = ThemedPdfExportDialog.Show(Handle, bitmap);
         if (options == null) return; // Cancelled by user
+        SaveAsPdf(bitmap, filePath, options);
+    }
 
+    private void SaveAsPdf(Bitmap bitmap, string filePath, PdfExportOptions options)
+    {
         try
         {
             using (var document = new PdfSharp.Pdf.PdfDocument())
