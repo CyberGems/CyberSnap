@@ -3,7 +3,7 @@
 <!-- TODO: add real screenshots to docs/screenshots/ and replace the placeholders below -->
 
 <p align="center">
-  <img src="CyberSnap.svg" width="160" alt="CyberSnap logo" />
+  <img src="src/CyberSnap/Assets/CyberSnap_square.png" width="160" alt="CyberSnap logo" />
 </p>
 
 <p align="center">
