@@ -193,7 +193,7 @@ internal sealed class ThemedNewCanvasDialog : Window
 
         // Resolution presets
         bodyStack.Children.Add(SectionLabel("Resolution", 0));
-        var resWrap = new WrapPanel();
+        var resWrap = new UniformGrid { Columns = 4 };
         _resolutionChipElements.Clear();
         foreach (var (label, w, h) in ResolutionPresets)
         {
