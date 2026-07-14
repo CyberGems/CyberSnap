@@ -85,7 +85,14 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             if (_instance._canvas.IsDirty && !_instance._canvas.IsDefaultBlank)
             {
-                if (!_instance.PromptSaveChanges())
+                var docName = string.IsNullOrWhiteSpace(_instance._savedFilePath)
+                    ? LocalizationService.Translate("Untitled")
+                    : TruncateDocName(Path.GetFileName(_instance._savedFilePath), 36);
+                var title = LocalizationService.Translate("New capture received");
+                var message = string.Format(
+                    LocalizationService.Translate("Save changes to {0} before opening the new capture?"), docName);
+
+                if (!_instance.PromptSaveChanges(title, message))
                 {
                     return false;
                 }
@@ -132,7 +139,14 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 {
                     if (_instance._canvas.IsDirty && !_instance._canvas.IsDefaultBlank)
                     {
-                        if (!_instance.PromptSaveChanges())
+                        var docName = string.IsNullOrWhiteSpace(_instance._savedFilePath)
+                            ? LocalizationService.Translate("Untitled")
+                            : TruncateDocName(Path.GetFileName(_instance._savedFilePath), 36);
+                        var title = LocalizationService.Translate("Unsaved changes");
+                        var message = string.Format(
+                            LocalizationService.Translate("Save changes to {0} before opening the selected file?"), docName);
+
+                        if (!_instance.PromptSaveChanges(title, message))
                         {
                             baseBitmap.Dispose();
                             return;
@@ -825,7 +839,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
     /// Returns true when the caller should proceed (user saved or chose Don't Save),
     /// false when the user cancelled.
     /// </summary>
-    private bool PromptSaveChanges()
+    private bool PromptSaveChanges(string? customTitle = null, string? customMessage = null)
     {
         if (WindowState == FormWindowState.Minimized)
             WindowState = FormWindowState.Normal;
@@ -833,12 +847,14 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var docName = string.IsNullOrWhiteSpace(_savedFilePath)
             ? LocalizationService.Translate("Untitled")
             : TruncateDocName(Path.GetFileName(_savedFilePath), 36);
-        var message = string.Format(
+        
+        var title = customTitle ?? LocalizationService.Translate("Unsaved changes");
+        var message = customMessage ?? string.Format(
             LocalizationService.Translate("Save changes to {0}?"), docName);
 
         var result = ThemedConfirmDialog.SavePrompt(
             Handle,
-            LocalizationService.Translate("Unsaved changes"),
+            title,
             message);
 
         switch (result)
