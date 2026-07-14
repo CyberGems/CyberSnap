@@ -210,7 +210,7 @@ public partial class CaptureWidgetWindow : Window
             ? System.Drawing.Color.FromArgb(230, 240, 255) 
             : System.Drawing.Color.FromArgb(26, 26, 26);
 
-        string captureIconId = (_settings.DefaultCaptureMode == Models.CaptureMode.Center) ? "center" : "captureRect";
+        string captureIconId = (_settings.DefaultCaptureMode == Models.CaptureMode.Center) ? "center" : "captureDot";
         BigCaptureIcon.Source = Helpers.FluentIcons.RenderWpf(captureIconId, accentColor, 20);
 
         ScrollCaptureIcon.Source = Helpers.FluentIcons.RenderWpf("scrollCapture", normalIconColor, 22);
