@@ -160,8 +160,20 @@ internal sealed class ThemedPdfExportDialog : Window
         _authorBox = BuildTextField("Author", _options.Author, v => { _options.Author = v; UpdatePreview(); });
         _tagsBox = BuildTextField("Tags / Keywords", _options.Tags, v => { _options.Tags = v; UpdatePreview(); });
         leftStack.Children.Add(WrapField("Title", _titleBox));
-        leftStack.Children.Add(WrapField("Author", _authorBox));
-        leftStack.Children.Add(WrapField("Tags", _tagsBox));
+
+        var metaGrid = new Grid();
+        metaGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        metaGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) }); // gap
+        metaGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var authorField = WrapField("Author", _authorBox);
+        var tagsField = WrapField("Tags", _tagsBox);
+        Grid.SetColumn(authorField, 0);
+        Grid.SetColumn(tagsField, 2);
+
+        metaGrid.Children.Add(authorField);
+        metaGrid.Children.Add(tagsField);
+        leftStack.Children.Add(metaGrid);
 
         // 2. Page Setup Section
         leftStack.Children.Add(SectionLabel("Page Size", 8));
@@ -219,8 +231,15 @@ internal sealed class ThemedPdfExportDialog : Window
         UpdateChipSelection(_layoutChips, _options.ImageLayout);
         leftStack.Children.Add(layoutWrap);
 
-        Grid.SetColumn(leftStack, 0);
-        bodyGrid.Children.Add(leftStack);
+        var settingsScroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = leftStack,
+            MaxHeight = 350
+        };
+        Grid.SetColumn(settingsScroll, 0);
+        bodyGrid.Children.Add(settingsScroll);
 
         // RIGHT COLUMN (Preview Panel)
         var previewContainer = new Border

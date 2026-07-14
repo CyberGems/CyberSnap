@@ -1570,9 +1570,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 items.Add(new ToolStripSeparator());
             }
 
-            var display = kind == defaultKind
-                ? label + "  " + LocalizationService.Translate("(default)")
-                : label;
+            var display = label;
             var item = WindowsMenuRenderer.Item(display);
             item.Enabled = available || kind == UploadProviderKind.Custom;
             if (kind == defaultKind)
