@@ -29,9 +29,9 @@ public partial class CaptureWidgetWindow : Window
     private double _dragStartOffset;
     private bool _mouseInWindow;
 
-    // Fields to hold original state to restore when capture completes
-    private AfterCaptureAction? _restorableAfterCapture;
-    private RecordingFormat? _restorableRecordFormat;
+    // Hide → launch → re-show lifecycle (capture overlay or standalone tool)
+    private DispatcherTimer? _hideLaunchTimer;
+    private bool _awaitingSessionRestore;
 
     // Layout constants
     private const double PanelWidth = 196;
@@ -75,6 +75,7 @@ public partial class CaptureWidgetWindow : Window
 
         Loaded += OnLoaded;
         SourceInitialized += OnSourceInitialized;
+        Closed += OnClosed;
 
         Topmost = _settings.WidgetAlwaysOnTop;
 
@@ -82,6 +83,12 @@ public partial class CaptureWidgetWindow : Window
         RefreshLayout();
         UpdateEnableEditorState();
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        CancelHideLaunch();
+        CancelSessionRestore();
     }
 
     public void RefreshLocalization()
@@ -1096,12 +1103,12 @@ public partial class CaptureWidgetWindow : Window
 
     private void ScreenRecord_Click(object sender, RoutedEventArgs e)
     {
-        TriggerAppCapture(Models.CaptureMode.Record, forceMp4: true);
+        TriggerAppCapture(Models.CaptureMode.Record, RecordingFormat.MP4);
     }
 
     private void GifRecord_Click(object sender, RoutedEventArgs e)
     {
-        TriggerAppCapture(Models.CaptureMode.Record, forceGif: true);
+        TriggerAppCapture(Models.CaptureMode.Record, RecordingFormat.GIF);
     }
 
     private void Ruler_Click(object sender, RoutedEventArgs e)
@@ -1128,32 +1135,11 @@ public partial class CaptureWidgetWindow : Window
         ShowConfigMenu();
     }
 
-    private void TriggerAppCapture(CyberSnap.Models.CaptureMode mode, bool forceMp4 = false, bool forceGif = false)
+    private void TriggerAppCapture(Models.CaptureMode mode, RecordingFormat? recordingFormat = null)
     {
-        // Hide panel so it doesn't get captured
-        Hide();
-
-        // Perform temporary settings bypass (recording format only)
-        _restorableAfterCapture = _settings.AfterCapture;
-        _restorableRecordFormat = _settings.RecordingFormat;
-
-        if (forceMp4)
+        // Hide so the widget is not included in the capture, then launch after a brief delay.
+        HideAndLaunch(app =>
         {
-            _settings.RecordingFormat = RecordingFormat.MP4;
-        }
-        else if (forceGif)
-        {
-            _settings.RecordingFormat = RecordingFormat.GIF;
-        }
-
-        // Delay to allow window fade/hide animation to finish
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
-        timer.Tick += (s, ev) =>
-        {
-            timer.Stop();
-
-            var app = (App)System.Windows.Application.Current;
-            // Launch capture
             switch (mode)
             {
                 case Models.CaptureMode.Rectangle:
@@ -1175,68 +1161,89 @@ public partial class CaptureWidgetWindow : Window
                     app.OnPickerHotkeyPressedProxy();
                     break;
                 case Models.CaptureMode.Record:
-                    app.OnGifHotkeyPressedProxy();
+                    if (recordingFormat.HasValue)
+                        app.OnRecordWithFormatProxy(recordingFormat.Value);
+                    else
+                        app.OnGifHotkeyPressedProxy();
                     break;
                 case Models.CaptureMode.Ruler:
                     app.OnRulerHotkeyPressedProxy();
                     break;
             }
-
-            // Wait until capturing ends to show again.
-            CheckCaptureFinishedAndRestore();
-        };
-        timer.Start();
+        });
     }
 
     /// <summary>
-    /// Launches a standalone tool (Color Picker, OCR, Ruler) that runs as its own form
+    /// Launches a standalone tool (Color Picker, OCR, Ruler, Scan) that runs as its own form
     /// and bypasses the capture overlay entirely.
     /// </summary>
-    private void TriggerStandaloneTool(Action<App> launch)
+    private void TriggerStandaloneTool(Action<App> launch) => HideAndLaunch(launch);
+
+    /// <summary>
+    /// Hides the widget, waits for the hide to settle, launches the action, then re-shows
+    /// when the app session (capture and/or standalone tool) becomes idle again.
+    /// </summary>
+    private void HideAndLaunch(Action<App> launch)
     {
+        CancelHideLaunch();
+        CancelSessionRestore();
+
         Hide();
 
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
-        timer.Tick += (s, ev) =>
+        _hideLaunchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        _hideLaunchTimer.Tick += (_, _) =>
         {
-            timer.Stop();
+            CancelHideLaunch();
 
             var app = (App)System.Windows.Application.Current;
+            BeginSessionRestore(app);
             launch(app);
 
-            CheckCaptureFinishedAndRestore();
+            // If the launch did not open a session (e.g. busy gate rejected it), re-show now.
+            if (!app.IsSessionBusy())
+                FinishSessionRestore();
         };
-        timer.Start();
+        _hideLaunchTimer.Start();
     }
 
-    private void CheckCaptureFinishedAndRestore()
+    private void CancelHideLaunch()
     {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
-        timer.Tick += (s, ev) =>
-        {
-            var app = (App)System.Windows.Application.Current;
-            if (!app.IsCapturingActive())
-            {
-                timer.Stop();
+        if (_hideLaunchTimer == null) return;
+        _hideLaunchTimer.Stop();
+        _hideLaunchTimer = null;
+    }
 
-                // Restore settings after capture completes
-                if (_restorableAfterCapture.HasValue)
-                {
-                    _settings.AfterCapture = _restorableAfterCapture.Value;
-                    _restorableAfterCapture = null;
-                }
-                if (_restorableRecordFormat.HasValue)
-                {
-                    _settings.RecordingFormat = _restorableRecordFormat.Value;
-                    _restorableRecordFormat = null;
-                }
+    private void BeginSessionRestore(App app)
+    {
+        CancelSessionRestore();
+        _awaitingSessionRestore = true;
+        app.SessionBecameIdle += OnAppSessionBecameIdleAction;
+    }
 
-                // Safe restore position and show
-                CollapseImmediately();
-                Show();
-            }
-        };
-        timer.Start();
+    private void CancelSessionRestore()
+    {
+        _awaitingSessionRestore = false;
+        if (System.Windows.Application.Current is App app)
+            app.SessionBecameIdle -= OnAppSessionBecameIdleAction;
+    }
+
+    // Named method (not a lambda) so -= reliably unsubscribes the same delegate instance.
+    private void OnAppSessionBecameIdleAction() => OnAppSessionBecameIdle();
+
+    private void OnAppSessionBecameIdle()
+    {
+        if (!_awaitingSessionRestore) return;
+        if (System.Windows.Application.Current is App app && app.IsSessionBusy()) return;
+        FinishSessionRestore();
+    }
+
+    private void FinishSessionRestore()
+    {
+        if (!_awaitingSessionRestore) return;
+        CancelSessionRestore();
+
+        CollapseImmediately();
+        Show();
     }
 
     [DllImport("user32.dll")]

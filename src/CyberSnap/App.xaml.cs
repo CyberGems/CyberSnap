@@ -26,6 +26,8 @@ public partial class App : Application
     private CaptureWidgetWindow? _widgetWindow;
     private DispatcherTimer? _idleTrimTimer;
     private int _isCapturing;
+    /// <summary>Standalone tools (OCR/picker/ruler/scan) that run outside the capture overlay.</summary>
+    private int _activeStandaloneTools;
     private bool _historyRecovered;
     private bool _historyChangedHooked;
     private bool _historyMaintenanceScheduled;
