@@ -157,20 +157,26 @@ public sealed partial class RegionOverlayForm
             _textBox = new TextBox
             {
                 BorderStyle = BorderStyle.None,
-                Multiline = false,
+                Multiline = true,
+                AcceptsReturn = true,
                 ScrollBars = ScrollBars.None,
                 // Hidden off-screen - we only use it for input handling, not display
                 Size = new Size(1, 1),
             };
             _textBox.KeyDown += (_, e) =>
             {
-                if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; CommitText(); }
+                // Enter commits; Shift+Enter inserts a newline (AcceptsReturn handles Shift path).
+                if (e.KeyCode == Keys.Enter && !e.Shift)
+                {
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    CommitText();
+                }
                 if (e.KeyCode == Keys.Escape)
                 {
                     e.SuppressKeyPress = true;
                     e.Handled = true;
-                    bool hasText = !string.IsNullOrWhiteSpace(_textBox?.Text);
-                    CommitOrCancelInlineText(commit: hasText);
+                    CommitOrCancelInlineText(commit: false);
                 }
             };
             _textBox.TextChanged += (_, _) =>
@@ -186,7 +192,8 @@ public sealed partial class RegionOverlayForm
                 var dirty = Rectangle.Union(
                     Rectangle.Union(InflateForRepaint(oldRect, 16), InflateForRepaint(newRect, 16)),
                     Rectangle.Union(InflateForRepaint(oldToolbarRect, 16), InflateForRepaint(newToolbarRect, 16)));
-                RefreshOverlayUiChrome();
+                // Text chrome is painted on the overlay form — no need to re-layout
+                // ToolbarForm on every keystroke (that was expanding/jumping the dock).
                 Invalidate(dirty);
             };
             Controls.Add(_textBox);
@@ -217,11 +224,8 @@ public sealed partial class RegionOverlayForm
         if (_textBox == null)
             return;
 
-        var fontStyle = FontStyle.Regular;
-        if (_textBold) fontStyle |= FontStyle.Bold;
-        if (_textItalic) fontStyle |= FontStyle.Italic;
-
-        _textBox.Font = GetAnnotationFont(_textFontFamily, _textFontSize, fontStyle);
+        // Match shared painter metrics (pixel units) so caret/selection stay aligned.
+        _textBox.Font = TextAnnotationPainter.GetFont(_textFontFamily, _textFontSize, _textBold, _textItalic);
     }
 
     private void SyncTextBoxSize()
@@ -334,7 +338,8 @@ public sealed partial class RegionOverlayForm
             {
                 if (_fontSearchBox == null) return;
                 _fontSearch = _fontSearchBox.Text;
-                _filteredFonts = null; _fontPickerScroll = 0;
+                InvalidateFontListCache();
+                _fontPickerScroll = 0;
                 RefreshToolbar();
             };
             _fontSearchBox.KeyDown += (_, e) =>

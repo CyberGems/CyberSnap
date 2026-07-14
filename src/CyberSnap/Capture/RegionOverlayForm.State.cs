@@ -82,38 +82,59 @@ public sealed partial class RegionOverlayForm
         RefreshToolbar();
     }
 
-    // All system fonts, cached once
-    private static string[]? _allSystemFonts;
-    private static string[] GetSystemFonts()
+    private static string[] GetSystemFonts() => TextAnnotationPainter.GetSystemFonts();
+
+    private int _pinnedFontCount;
+    private TextAnnotationPainter.FontListEntry[]? _fontListEntries;
+
+    private (List<string> recents, List<string> favorites) LoadFontListsFromSettings()
     {
-        if (_allSystemFonts != null) return _allSystemFonts;
-        using var fonts = new System.Drawing.Text.InstalledFontCollection();
-        _allSystemFonts = fonts.Families
-            .Select(f => f.Name)
-            .Where(n => !string.IsNullOrWhiteSpace(n))
-            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        return _allSystemFonts;
+        try
+        {
+            var s = Services.SettingsService.LoadStatic();
+            return (
+                TextAnnotationPainter.ParseRecentFonts(s?.EditorTextRecentFonts),
+                TextAnnotationPainter.ParseFavoriteFonts(s?.EditorTextFavoriteFonts));
+        }
+        catch
+        {
+            return (new List<string>(), new List<string>());
+        }
+    }
+
+    private List<string> GetRecentFonts() => LoadFontListsFromSettings().recents;
+    private List<string> GetFavoriteFonts() => LoadFontListsFromSettings().favorites;
+
+    private TextAnnotationPainter.FontListEntry[] GetFontListEntries()
+    {
+        if (_fontListEntries != null) return _fontListEntries;
+        var (recents, favorites) = LoadFontListsFromSettings();
+        _fontListEntries = TextAnnotationPainter.GetOrderedFontEntries(
+            _fontSearch, favorites, recents, out _pinnedFontCount);
+        return _fontListEntries;
     }
 
     private string[] GetFilteredFonts()
     {
         if (_filteredFonts != null) return _filteredFonts;
-        var all = GetSystemFonts();
-        if (string.IsNullOrEmpty(_fontSearch))
-        {
-            _filteredFonts = all;
-            return _filteredFonts;
-        }
-        var terms = _fontSearch.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        _filteredFonts = all.Where(f =>
-        {
-            foreach (var term in terms)
-                if (f.IndexOf(term, StringComparison.OrdinalIgnoreCase) < 0)
-                    return false;
-            return true;
-        }).ToArray();
+        _filteredFonts = GetFontListEntries().Select(e => e.Name).ToArray();
         return _filteredFonts;
+    }
+
+    private void InvalidateFontListCache()
+    {
+        _filteredFonts = null;
+        _fontListEntries = null;
+    }
+
+    private void ToggleFavoriteFontAndPersist(string family)
+    {
+        var favorites = GetFavoriteFonts();
+        favorites = TextAnnotationPainter.ToggleFavoriteFont(favorites, family);
+        var serialized = TextAnnotationPainter.SerializeFavoriteFonts(favorites);
+        if (System.Windows.Application.Current is App app)
+            app.PersistEditorTextFavoriteFonts(serialized);
+        InvalidateFontListCache();
     }
 
     private Rectangle GetOverlayUiBounds()
@@ -132,12 +153,16 @@ public sealed partial class RegionOverlayForm
             bounds = bounds.IsEmpty ? r : Rectangle.Union(bounds, r);
         }
 
+        // ToolbarForm only hosts the main dock + its popups (color/emoji/font).
+        // The inline text chrome (text frame + formatting toolbar) is painted on the
+        // overlay itself. Including it here made ToolbarForm jump/resize to cover
+        // mid-screen text every time typing started — a visible glitch.
         Add(InflateIfNeeded(_toolbarRect, Helpers.UiChrome.ScaleInt(12)));
-        Add(InflateForRepaint(Rectangle.Round(GetTextToolbarBounds())));
-        Add(InflateForRepaint(Rectangle.Round(GetActiveTextRect())));
         Add(InflateIfNeeded(GetColorPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
-        Add(InflateIfNeeded(GetFontPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
         Add(InflateIfNeeded(GetEmojiPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
+        // Font picker is painted on ToolbarForm near the text; expand only while open.
+        if (_fontPickerOpen)
+            Add(InflateIfNeeded(GetFontPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
         if (_altCapturePopupOpen)
         {
             Add(InflateIfNeeded(_altCaptureButtonRect, Helpers.UiChrome.ScaleInt(12)));
@@ -425,15 +450,8 @@ public sealed partial class RegionOverlayForm
         return new Rectangle(minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2);
     }
 
-    private static Rectangle GetTextBounds(TextAnnotation ta)
-    {
-        using var font = new Font(ta.FontFamily, ta.FontSize,
-            (ta.Bold ? FontStyle.Bold : 0) | (ta.Italic ? FontStyle.Italic : 0));
-        var sz = System.Windows.Forms.TextRenderer.MeasureText(ta.Text, font);
-        int padX = ta.Background ? 16 : 10;
-        int padY = ta.Background ? 12 : 6;
-        return new Rectangle(ta.Pos.X - (padX / 2), ta.Pos.Y - (padY / 2), sz.Width + padX, sz.Height + padY);
-    }
+    private static Rectangle GetTextBounds(TextAnnotation ta) =>
+        Rectangle.Round(TextAnnotationPainter.Measure(ta));
 
     /// <summary>Hit-tests all annotations in reverse order (top-most first). Returns index or -1.</summary>
     private int HitTestAnnotation(Point p)

@@ -353,10 +353,33 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 app.PersistEditorSuppressResizeConfirm(true);
             return confirmed;
         };
+        if (settings != null)
+        {
+            _canvas.ApplyTextStyle(
+                settings.EditorTextFontSize,
+                settings.EditorTextFontFamily ?? "Segoe UI",
+                settings.EditorTextBold,
+                settings.EditorTextItalic,
+                settings.EditorTextStroke,
+                settings.EditorTextShadow,
+                settings.EditorTextBackground,
+                settings.EditorTextAlignment);
+            _canvas.LoadRecentFonts(settings.EditorTextRecentFonts, settings.EditorTextFavoriteFonts);
+        }
         _canvas.TextFontSizeChanged += size =>
         {
             if (System.Windows.Application.Current is CyberSnap.App app)
                 app.PersistEditorTextFontSize(size);
+        };
+        _canvas.TextStyleChanged += (size, family, bold, italic, stroke, shadow, bg, align) =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.PersistEditorTextStyle(size, family, bold, italic, stroke, shadow, bg, align);
+        };
+        _canvas.FavoriteFontsChanged += serialized =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.PersistEditorTextFavoriteFonts(serialized);
         };
         _canvas.MouseMove += OnCanvasMouseMove;
         _canvas.MouseUp += OnCanvasMouseUp;
@@ -1559,11 +1582,14 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     private void OnCanvasDoubleClick(object? sender, EventArgs e)
     {
-        if (_canvas.IsDefaultBlank)
-        {
-            _canvas.DismissWelcomeOverlay();
-            DoOpen();
-        }
+        // Never open a document while editing text (double-click selects a word instead),
+        // or when the click landed on an annotation / non-pristine canvas.
+        if (_canvas.IsEditingText) return;
+        if (!_canvas.IsDefaultBlank) return;
+
+        // Only the empty welcome canvas uses double-click-to-browse.
+        _canvas.DismissWelcomeOverlay();
+        DoOpen();
     }
 
     private void RegisterCanvasMessageFilter()

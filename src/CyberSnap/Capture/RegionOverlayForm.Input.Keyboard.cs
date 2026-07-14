@@ -13,8 +13,8 @@ public sealed partial class RegionOverlayForm
     {
         if (_isTyping)
         {
-            bool hasText = !string.IsNullOrWhiteSpace(_textBox?.Text ?? _textBuffer);
-            CommitOrCancelInlineText(commit: hasText);
+            // Escape always cancels (never auto-commits). Enter / click-outside commit.
+            CommitOrCancelInlineText(commit: false);
             return;
         }
 

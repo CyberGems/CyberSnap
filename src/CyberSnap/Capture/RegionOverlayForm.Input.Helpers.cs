@@ -511,8 +511,9 @@ public sealed partial class RegionOverlayForm
 
     private Rectangle GetFontPickerBounds()
     {
-        int pad = 6, visibleCount = 8, itemH = 28, searchBarH = 28;
-        int pw = 240, ph = searchBarH + pad + visibleCount * itemH + pad * 2;
+        // Keep in sync with PaintFontPicker layout constants.
+        int pad = 10, visibleCount = 10, itemH = 34, searchBarH = 34;
+        int pw = 300, ph = searchBarH + pad + visibleCount * itemH + pad * 2;
         int px, py;
         if (_isTyping)
         {

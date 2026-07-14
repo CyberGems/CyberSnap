@@ -13,35 +13,45 @@ public sealed partial class RegionOverlayForm
     {
         if (e.Button != MouseButtons.Left) return;
 
-        if (_mode == CaptureMode.Move)
-        {
-            SelectAll();
-            return;
-        }
-
-        // Double-click on any committed text to edit it (works in any mode)
+        // Text under the cursor always wins — including Move/Pick (select-all).
+        // Note: often this path never runs after Move starts a drag on the first click;
+        // the timed check in OnMouseDown is the reliable path.
         int hitIdx = HitTestText(e.Location);
         if (hitIdx >= 0)
         {
-            var ta = GetTextAnnotations()[hitIdx];
-            var oldTextRect = InflateForRepaint(Rectangle.Round(MeasureTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background)));
-            RemoveAnnotation(ta);
-            _mode = CaptureMode.Text;
-            _isTyping = true;
-            _textPos = ta.Pos;
-            _textBuffer = ta.Text;
-            _textFontSize = ta.FontSize;
-            _toolColor = ta.Color;
-            _textBold = ta.Bold;
-            _textItalic = ta.Italic;
-            _textStroke = ta.Stroke;
-            _textShadow = ta.Shadow;
-            _textBackground = ta.Background;
-            _textFontFamily = ta.FontFamily;
-            InvalidateActiveTextLayout();
-            ShowTextBox();
-            Invalidate();
+            // Cancel any select-drag started by the first click of the double-click.
+            _isSelectDragging = false;
+            _isSelectResizing = false;
+            _selectPreviewAnnotation = null;
+            if (_renderSkipIndex >= 0 && _textEditStackIndex < 0)
+            {
+                _renderSkipIndex = -1;
+                MarkCommittedAnnotationsDirty();
+            }
+            BeginReEditText(hitIdx);
+            return;
         }
+
+        if (_mode == CaptureMode.Move)
+            SelectAll();
+    }
+
+    /// <summary>Timed double-click detection for text re-edit under Pick/Move.</summary>
+    private bool IsCaptureTextDoubleClick(MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left) return false;
+        if (e.Clicks >= 2) return true;
+
+        int now = Environment.TickCount;
+        var size = SystemInformation.DoubleClickSize;
+        bool isDouble = _lastTextDblClickTick != 0
+            && unchecked(now - _lastTextDblClickTick) <= SystemInformation.DoubleClickTime
+            && Math.Abs(e.Location.X - _lastTextDblClickLocation.X) <= size.Width
+            && Math.Abs(e.Location.Y - _lastTextDblClickLocation.Y) <= size.Height;
+
+        _lastTextDblClickTick = now;
+        _lastTextDblClickLocation = e.Location;
+        return isDouble;
     }
 
 
@@ -200,12 +210,14 @@ public sealed partial class RegionOverlayForm
 
         if (_textSelecting && _isTyping && _textBox != null)
         {
+            // Keep buffer in sync for caret/selection measure
+            _textBuffer = _textBox.Text ?? "";
             int idx = GetTextCharIndexAt(e.Location);
             int start = Math.Min(_textSelectionAnchor, idx);
             int end = Math.Max(_textSelectionAnchor, idx);
             _textBox.SelectionStart = start;
-            _textBox.SelectionLength = end - start;
-            Invalidate(InflateForRepaint(Rectangle.Round(GetActiveTextRect()), 16));
+            _textBox.SelectionLength = Math.Max(0, end - start);
+            Invalidate(InflateForRepaint(Rectangle.Round(GetActiveTextRect()), 24));
             return;
         }
 
@@ -329,13 +341,18 @@ public sealed partial class RegionOverlayForm
             else if (_textSizeMinusBtnRect.Contains(e.Location)) _hoveredTextBtn = 6;
             else if (_textSizePlusBtnRect.Contains(e.Location)) _hoveredTextBtn = 7;
             else if (_textGripRect.Contains(e.Location)) _hoveredTextBtn = 8;
+            else if (_textAlignLeftBtnRect.Contains(e.Location)) _hoveredTextBtn = 9;
+            else if (_textAlignCenterBtnRect.Contains(e.Location)) _hoveredTextBtn = 10;
+            else if (_textAlignRightBtnRect.Contains(e.Location)) _hoveredTextBtn = 11;
         }
         if (_hoveredTextBtn != prevTextBtn)
         {
             _textBtnTooltip = _hoveredTextBtn switch
             {
                 0 => "Bold", 1 => "Italic", 2 => "Stroke", 3 => "Shadow", 4 => "Background",
-                5 => _textFontFamily, 6 => "Decrease size", 7 => "Increase size", 8 => "Move", _ => ""
+                5 => _textFontFamily, 6 => "Decrease size", 7 => "Increase size", 8 => "Move",
+                9 => "Align left", 10 => "Align center", 11 => "Align right",
+                _ => ""
             };
             UpdateTextToolbarTooltip();
             needsRepaint = true;
@@ -456,7 +473,8 @@ public sealed partial class RegionOverlayForm
         {
             int h = GetTextHandle(e.Location);
             if (h >= 0) target = h is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
-            else if (GetActiveTextRect().Contains(e.Location)) target = Cursors.SizeAll;
+            // Over the glyphs: I-beam for caret/selection. Move is only via the grip (handled above).
+            else if (GetActiveTextRect().Contains(e.Location)) target = Cursors.IBeam;
             else target = Cursors.Default;
         }
         else if (IsDrawingOrMoveMode(_mode))
@@ -700,7 +718,7 @@ public sealed partial class RegionOverlayForm
         // Font picker hover
         if (_fontPickerOpen)
         {
-            int itemH = 30, pad = 8, searchBarH = 32;
+            int itemH = 34, pad = 10, searchBarH = 34;
             int listY = _fontPickerRect.Y + pad + searchBarH + pad;
             int relY = e.Location.Y - listY;
             int idx = _fontPickerScroll + relY / itemH;
@@ -875,7 +893,14 @@ public sealed partial class RegionOverlayForm
         }
         if (_isSelectDragging) { CommitSelectTransform(); _isSelectDragging = false; UpdateCrosshairGuides(_lastCursorPos); Invalidate(); return; }
         // End text move/resize
-        if (_textSelecting) { _textSelecting = false; UpdateCrosshairGuides(_lastCursorPos); return; }
+        if (_textSelecting)
+        {
+            _textSelecting = false;
+            if (Capture) Capture = false;
+            UpdateCrosshairGuides(_lastCursorPos);
+            Invalidate(InflateForRepaint(Rectangle.Round(GetActiveTextRect()), 24));
+            return;
+        }
         if (_textDragging) { _textDragging = false; UpdateCrosshairGuides(_lastCursorPos); RefreshOverlayUiChrome(); return; }
         if (_textResizing) { _textResizing = false; _textResizeHandle = -1; UpdateCrosshairGuides(_lastCursorPos); RefreshOverlayUiChrome(); return; }
         switch (_mode)
@@ -1080,7 +1105,7 @@ public sealed partial class RegionOverlayForm
     {
         if (_fontPickerOpen)
         {
-            int visibleCount = 8;
+            int visibleCount = 10;
             int maxScroll = Math.Max(0, GetFilteredFonts().Length - visibleCount);
             _fontPickerScroll = Math.Clamp(_fontPickerScroll + (e.Delta > 0 ? -1 : 1), 0, maxScroll);
             RefreshToolbar();
@@ -1147,6 +1172,9 @@ public sealed partial class RegionOverlayForm
             6 => _textSizeMinusBtnRect,
             7 => _textSizePlusBtnRect,
             8 => _textGripRect,
+            9 => _textAlignLeftBtnRect,
+            10 => _textAlignCenterBtnRect,
+            11 => _textAlignRightBtnRect,
             _ => RectangleF.Empty,
         };
         if (rect.IsEmpty)

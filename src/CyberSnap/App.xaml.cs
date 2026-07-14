@@ -315,6 +315,54 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-text-font-size", ex); }
     }
 
+    /// <summary>Persists the full Text-tool style last chosen in the editor (or capture).</summary>
+    public void PersistEditorTextStyle(
+        float size, string fontFamily, bool bold, bool italic,
+        bool stroke, bool shadow, bool background, int alignment)
+    {
+        if (_settingsService is null) return;
+        var s = _settingsService.Settings;
+        bool changed = false;
+        if (Math.Abs(s.EditorTextFontSize - size) >= 0.01f) { s.EditorTextFontSize = size; changed = true; }
+        if (!string.Equals(s.EditorTextFontFamily, fontFamily, StringComparison.Ordinal))
+        { s.EditorTextFontFamily = fontFamily; changed = true; }
+        if (s.EditorTextBold != bold) { s.EditorTextBold = bold; changed = true; }
+        if (s.EditorTextItalic != italic) { s.EditorTextItalic = italic; changed = true; }
+        if (s.EditorTextStroke != stroke) { s.EditorTextStroke = stroke; changed = true; }
+        if (s.EditorTextShadow != shadow) { s.EditorTextShadow = shadow; changed = true; }
+        if (s.EditorTextBackground != background) { s.EditorTextBackground = background; changed = true; }
+        if (s.EditorTextAlignment != alignment) { s.EditorTextAlignment = alignment; changed = true; }
+
+        // Keep the chosen family at the front of the recent-fonts list.
+        if (!string.IsNullOrWhiteSpace(fontFamily))
+        {
+            var recents = Helpers.TextAnnotationPainter.ParseRecentFonts(s.EditorTextRecentFonts);
+            var updated = Helpers.TextAnnotationPainter.PushRecentFont(recents, fontFamily);
+            var serialized = Helpers.TextAnnotationPainter.SerializeRecentFonts(updated);
+            if (!string.Equals(s.EditorTextRecentFonts, serialized, StringComparison.Ordinal))
+            {
+                s.EditorTextRecentFonts = serialized;
+                changed = true;
+            }
+        }
+
+        if (!changed) return;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-text-style", ex); }
+    }
+
+    /// <summary>Persists the favorite-fonts list for the Text tool.</summary>
+    public void PersistEditorTextFavoriteFonts(string serialized)
+    {
+        if (_settingsService is null) return;
+        serialized ??= "";
+        if (string.Equals(_settingsService.Settings.EditorTextFavoriteFonts, serialized, StringComparison.Ordinal))
+            return;
+        _settingsService.Settings.EditorTextFavoriteFonts = serialized;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-text-favorites", ex); }
+    }
+
     /// <summary>Persists the canvas background color last chosen in the New Canvas dialog (0 = checkerboard).</summary>
     public void PersistEditorNewCanvasBackgroundColor(int argb)
     {

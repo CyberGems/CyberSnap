@@ -272,7 +272,7 @@ public sealed partial class RegionOverlayForm
             if (_textFontBtnRect.Contains(e.Location))
             {
                 _fontPickerOpen = !_fontPickerOpen;
-                _fontPickerScroll = 0; _fontSearch = ""; _filteredFonts = null;
+                _fontPickerScroll = 0; _fontSearch = ""; InvalidateFontListCache();
                 if (_fontPickerOpen) ShowFontSearchBox(); else HideFontSearchBox();
                 Invalidate();
                 RefreshToolbar();
@@ -286,6 +286,27 @@ public sealed partial class RegionOverlayForm
             if (_textSizePlusBtnRect.Contains(e.Location))
             {
                 AdjustTextFontSize(+TextSizeStep);
+                return;
+            }
+            if (_textAlignLeftBtnRect.Contains(e.Location))
+            {
+                _textAlign = TextHAlign.Left;
+                InvalidateActiveTextLayout();
+                Invalidate();
+                return;
+            }
+            if (_textAlignCenterBtnRect.Contains(e.Location))
+            {
+                _textAlign = TextHAlign.Center;
+                InvalidateActiveTextLayout();
+                Invalidate();
+                return;
+            }
+            if (_textAlignRightBtnRect.Contains(e.Location))
+            {
+                _textAlign = TextHAlign.Right;
+                InvalidateActiveTextLayout();
+                Invalidate();
                 return;
             }
             if (_textGripRect.Contains(e.Location))
@@ -315,16 +336,34 @@ public sealed partial class RegionOverlayForm
                 Invalidate();
                 return;
             }
-            // Check if clicking inside the text box -- start dragging to move
+            // Click inside the text frame: place caret (and allow drag-select).
+            // Double-click: select the word under the cursor.
+            // Move the block via the grip handle — not by clicking the glyphs.
             var textBox = GetActiveTextRect();
             if (textBox.Contains(e.Location))
             {
-                _textDragging = true;
-                _lastTextDragLocation = Point.Empty;
-                _lastTextDragFrameUtc = default;
-                _textDragOffset = new Point(e.Location.X - _textPos.X, e.Location.Y - _textPos.Y);
+                int idx = GetTextCharIndexAt(e.Location);
+                if (_textBox != null)
+                {
+                    _textBuffer = _textBox.Text ?? "";
+                    if (e.Clicks >= 2)
+                    {
+                        SelectWordAtCapture(_textBox, idx);
+                        _textSelecting = false;
+                        _textBox.Focus();
+                    }
+                    else
+                    {
+                        _textBox.SelectionStart = idx;
+                        _textBox.SelectionLength = 0;
+                        _textSelectionAnchor = idx;
+                        _textSelecting = true;
+                        _textBox.Focus();
+                        Capture = true;
+                    }
+                }
                 ClearCrosshairGuides();
-                Invalidate();
+                Invalidate(InflateForRepaint(Rectangle.Round(textBox), 20));
                 return;
             }
             // Clicked outside -- commit
@@ -338,28 +377,16 @@ public sealed partial class RegionOverlayForm
             int hitIdx = HitTestText(e.Location);
             if (hitIdx >= 0)
             {
-                var ta = GetTextAnnotations()[hitIdx];
-                var oldTextRect = InflateForRepaint(Rectangle.Round(MeasureTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background)));
-                RemoveAnnotation(ta);
-                _isTyping = true;
-                _textPos = ta.Pos;
-                _textBuffer = ta.Text;
-                _textFontSize = ta.FontSize;
-                _toolColor = ta.Color;
-                _textBold = ta.Bold;
-                _textItalic = ta.Italic;
-                _textStroke = ta.Stroke;
-                _textShadow = ta.Shadow;
-                _textBackground = ta.Background;
-                _textFontFamily = ta.FontFamily;
-                InvalidateActiveTextLayout();
-                ShowTextBox();
-                _textDragging = true;
-                _lastTextDragLocation = Point.Empty;
-                _lastTextDragFrameUtc = default;
-                _textDragOffset = new Point(e.Location.X - _textPos.X, e.Location.Y - _textPos.Y);
-                RefreshOverlayUiChrome();
-                Invalidate();
+                BeginReEditText(hitIdx);
+                // Place caret at the click (same as while already editing)
+                int caretIdx = GetTextCharIndexAt(e.Location);
+                if (_textBox != null)
+                {
+                    _textBox.SelectionStart = caretIdx;
+                    _textBox.SelectionLength = 0;
+                    _textSelectionAnchor = caretIdx;
+                    _textBox.Focus();
+                }
                 return;
             }
         }
@@ -438,6 +465,30 @@ public sealed partial class RegionOverlayForm
         // Select tool: check resize handles first, then hit-test annotations
         if (_mode == CaptureMode.Move)
         {
+            // Double-click text to re-edit MUST run before select-drag. Starting a drag on the
+            // first click of a double-click suppresses OnMouseDoubleClick, so detect here.
+            // Also: the first click of a double-click sets _renderSkipIndex for drag, which would
+            // make HitTestText miss the same annotation — temporarily clear it for the hit-test.
+            if (IsCaptureTextDoubleClick(e))
+            {
+                int textHit = HitTestTextForDoubleClick(e.Location);
+                if (textHit >= 0)
+                {
+                    // Cancel any select-drag started by the first click of this double-click.
+                    _isSelectDragging = false;
+                    _isSelectResizing = false;
+                    _selectPreviewAnnotation = null;
+                    _selectResizeOriginalAnnotation = null;
+                    if (_renderSkipIndex >= 0)
+                    {
+                        _renderSkipIndex = -1;
+                        MarkCommittedAnnotationsDirty();
+                    }
+                    BeginReEditText(textHit);
+                    return;
+                }
+            }
+
             // Check resize/move handles on either the already-selected or the currently hovered annotation
             int handle = -1;
             int clickedIdx = -1;
@@ -576,13 +627,19 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Text:
                 HideToolbarForCaptureTool();
+                // New text instance (not a re-edit)
+                if (_isTyping)
+                    CommitOrCancelInlineText(commit: true);
+                _textEditStackIndex = -1;
+                _textEditOriginal = null;
                 _isTyping = true;
                 _textPos = e.Location;
                 _textBuffer = "";
                 InvalidateActiveTextLayout();
                 ShowTextBox();
                 RefreshOverlayUiChrome();
-                Invalidate(InflateForRepaint(Rectangle.Round(MeasureTextRect(_textPos, "", _textFontSize, _textFontFamily, _textBold, _textItalic, _textBackground))));
+                Invalidate(InflateForRepaint(Rectangle.Round(MeasureTextRect(
+                    _textPos, "", _textFontSize, _textFontFamily, _textBold, _textItalic, _textBackground, _textMaxWidth, _textAlign))));
                 break;
             case CaptureMode.Highlight:
                 HideToolbarForCaptureTool();

@@ -1688,5 +1688,21 @@
   "Wizard outcome: show notification and copy to clipboard.": "Resultado: mostrar notificación y copiar al portapapeles.",
   "Wizard outcome: show notification only.": "Resultado: mostrar solo la notificación.",
   "Enable sounds": "Activar sonidos",
-  "Files won't be saved to disk.": "No se guardarán archivos en disco."
+  "Files won't be saved to disk.": "No se guardarán archivos en disco.",
+  "Type here...": "Escribe aquí...",
+  "Bold": "Negrita",
+  "Italic": "Cursiva",
+  "Stroke": "Contorno",
+  "Shadow": "Sombra",
+  "Background": "Fondo",
+  "Decrease size": "Reducir tamaño",
+  "Increase size": "Aumentar tamaño",
+  "Align left": "Alinear a la izquierda",
+  "Align center": "Centrar",
+  "Align right": "Alinear a la derecha",
+  "Enter to confirm · Shift+Enter for new line": "Enter confirma · Shift+Enter nueva línea",
+  "Click to select · Drag to move · Double-click text to edit · Double-click empty to select all": "Clic para seleccionar · Arrastrar para mover · Doble clic en texto para editar · Doble clic en vacío para seleccionar todo",
+  "Click to place · Click text to re-edit · Enter confirms · Shift+Enter new line": "Clic para colocar · Clic en texto para re-editar · Enter confirma · Shift+Enter nueva línea",
+  "Enter to confirm · Shift+Enter for new line · Esc to cancel": "Enter confirma · Shift+Enter nueva línea · Esc cancela",
+  "Toggle favorite font": "Marcar/desmarcar favorito"
 }

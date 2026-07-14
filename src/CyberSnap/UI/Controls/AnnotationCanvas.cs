@@ -552,8 +552,26 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         set => _textFontSize = Math.Clamp(value, 10f, 120f);
     }
 
+    /// <summary>Applies a full text-tool style snapshot (from settings).</summary>
+    public void ApplyTextStyle(float size, string fontFamily, bool bold, bool italic,
+        bool stroke, bool shadow, bool background, int alignment)
+    {
+        _textFontSize = Math.Clamp(size, 10f, 120f);
+        if (!string.IsNullOrWhiteSpace(fontFamily))
+            _textFontFamily = fontFamily;
+        _textBold = bold;
+        _textItalic = italic;
+        _textStroke = stroke;
+        _textShadow = shadow;
+        _textBackground = background;
+        _textAlign = (TextHAlign)Math.Clamp(alignment, 0, 2);
+    }
+
     /// <summary>Raised when the user changes the Text-tool font size (toolbar buttons or wheel).</summary>
     public event Action<float>? TextFontSizeChanged;
+
+    /// <summary>Raised when any Text-tool style property changes (for settings persistence).</summary>
+    public event Action<float, string, bool, bool, bool, bool, bool, int>? TextStyleChanged;
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool CanUndo => _undoStack.Count > 0;
@@ -599,10 +617,32 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         OnStateChanged();
     }
 
-    /// <summary>Pick-tool double-click entry point (mirrors capture overlay Move mode).</summary>
+    /// <summary>
+    /// Pick-tool double-click entry point. Text under the cursor takes priority over select-all
+    /// (so a single double-click edits text without fighting select-all).
+    /// </summary>
     internal void SelectAllFromDoubleClick()
     {
-        if (_activeTool != CanvasTool.Move || _preSpaceTool != null) return;
+        if (_preSpaceTool != null) return;
+        // Already in text edit from an earlier path of the same gesture — do nothing.
+        if (_inlineTextBox is not null) return;
+        if (_activeTool != CanvasTool.Move) return;
+
+        // Prefer re-edit when the double-click lands on text — must be centralized because
+        // WndProc (WM_LBUTTONDBLCLK), OnMouseDown timing, and OnMouseDoubleClick all converge here.
+        Point client;
+        try { client = PointToClient(Cursor.Position); }
+        catch { client = Point.Empty; }
+        var imgPt = ScreenToImage(client);
+        int textHit = HitTestTextAnnotation(imgPt);
+        if (textHit >= 0)
+        {
+            CancelSelectAllDoubleClickSideEffects();
+            ActiveTool = CanvasTool.Text;
+            BeginReEditText(textHit);
+            return;
+        }
+
         CancelSelectAllDoubleClickSideEffects();
         SelectAll();
     }
@@ -1237,6 +1277,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         // prevent OnMouseDoubleClick from firing even when the OS sends WM_LBUTTONDBLCLK.
         if (m.Msg == WM_LBUTTONDBLCLK && _activeTool == CanvasTool.Move && _preSpaceTool == null)
         {
+            // Same entry as MouseDown timing path — text under cursor re-edits; else select-all.
             SelectAllFromDoubleClick();
             m.Result = IntPtr.Zero;
             return;

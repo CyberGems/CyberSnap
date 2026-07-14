@@ -65,6 +65,9 @@ public sealed partial class AnnotationCanvas
     // Inline text editor
     private TextBox? _inlineTextBox;
     private Point _inlineTextOrigin;
+    // (re-edit state lives in TextToolbar partial: _textEditIndex / _textEditOriginal)
+    private bool _inlineTextSelecting;
+    private int _inlineTextSelectionAnchor;
 
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool HasPendingCrop => _activeTool == CanvasTool.Crop && _cropHasRect;
@@ -325,9 +328,58 @@ public sealed partial class AnnotationCanvas
 
         // While editing text, the floating toolbar gets first dibs on left clicks so
         // toggling format doesn't steal focus from the text box or commit the text.
-        if (e.Button == MouseButtons.Left && HandleTextToolbarMouseDown(e.Location))
+        if (e.Button == MouseButtons.Left && _inlineTextBox is not null)
         {
-            _inlineTextBox?.Focus();
+            if (HandleTextToolbarMouseDown(e.Location))
+            {
+                _inlineTextBox.Focus();
+                return;
+            }
+            int th = HitTestInlineTextHandle(e.Location);
+            if (th >= 0)
+            {
+                _textResizing = true;
+                _textResizeHandle = th;
+                _textResizeStartScreen = e.Location;
+                _textResizeStartFontSize = _textFontSize;
+                return;
+            }
+
+            // Click inside the live text frame → place caret / start drag-select.
+            // Double-click → select the word under the caret (standard text UX).
+            var imgForCaret = ScreenToImage(e.Location);
+            var liveRect = MeasureInlineTextRect(
+                _inlineTextOrigin, _inlineTextBox.Text, _textFontSize, _textFontFamily,
+                _textBold, _textItalic, _textBackground, _textMaxWidth, _textAlign);
+            if (liveRect.Contains(imgForCaret) || GetInlineTextScreenBounds().Contains(e.Location))
+            {
+                int caretIdx = TextAnnotationPainter.GetCharIndexAt(
+                    _inlineTextOrigin, imgForCaret, _inlineTextBox.Text,
+                    _textFontSize, _textFontFamily, _textBold, _textItalic,
+                    _textMaxWidth, _textAlign);
+
+                if (e.Clicks >= 2)
+                {
+                    SelectWordAt(_inlineTextBox, caretIdx);
+                    _inlineTextSelecting = false;
+                    _inlineTextBox.Focus();
+                    Invalidate();
+                    return;
+                }
+
+                _inlineTextBox.SelectionStart = caretIdx;
+                _inlineTextBox.SelectionLength = 0;
+                _inlineTextSelectionAnchor = caretIdx;
+                _inlineTextSelecting = true;
+                _inlineTextBox.Focus();
+                Capture = true;
+                Invalidate();
+                return;
+            }
+
+            // Click outside the live frame while editing → commit and stop.
+            // Don't open "browse file" or place new text on the same click.
+            CommitOrCancelInlineText(commit: true);
             return;
         }
 
@@ -463,17 +515,13 @@ public sealed partial class AnnotationCanvas
             // Click on empty area with a drawing tool: clear any active selection before
             // starting to draw (same as Pick/Move behaviour). Emoji and Magnifier are
             // excluded because they place objects on click, not draw shapes.
-            // Text tool returns early: commit + deselect only, no new text instance.
-            if (clickedIdx < 0 && (_selectedAnnotationIndex >= 0 || _inlineTextBox is not null)
+            // Inline text editing is fully handled above (caret / commit) — never reach here
+            // while _inlineTextBox is active.
+            if (clickedIdx < 0 && _selectedAnnotationIndex >= 0
                 && _activeTool != CanvasTool.Magnifier && _activeTool != CanvasTool.Emoji)
             {
                 _selectedAnnotationIndex = -1;
                 ClearMultiSelection();
-                if (_activeTool == CanvasTool.Text)
-                {
-                    CommitOrCancelInlineText(commit: true);
-                    return;
-                }
                 Invalidate();
             }
 
@@ -692,8 +740,16 @@ public sealed partial class AnnotationCanvas
                 OnStateChanged();
                 break;
             case CanvasTool.Text:
-                BeginInlineText(img);
+            {
+                // Click on existing committed text → re-edit; empty canvas → new text.
+                // (While already editing, caret/commit are handled earlier and never reach here.)
+                int textHit = HitTestTextAnnotation(img);
+                if (textHit >= 0 && textHit != _renderSkipAnnotationIndex)
+                    BeginReEditText(textHit);
+                else
+                    BeginInlineText(img);
                 break;
+            }
             case CanvasTool.StepNumber:
                 Push(new AddAnnotationCommand(new StepNumberAnnotation(img, NextStepNumber(), ToolColor)));
                 SuppressHoverForLastPlaced();
@@ -802,6 +858,22 @@ public sealed partial class AnnotationCanvas
             return;
         }
 
+        // Drag-select while editing text
+        if (_inlineTextSelecting && _inlineTextBox is not null)
+        {
+            var imgSel = ScreenToImage(e.Location);
+            int idx = TextAnnotationPainter.GetCharIndexAt(
+                _inlineTextOrigin, imgSel, _inlineTextBox.Text,
+                _textFontSize, _textFontFamily, _textBold, _textItalic,
+                _textMaxWidth, _textAlign);
+            int start = Math.Min(_inlineTextSelectionAnchor, idx);
+            int end = Math.Max(_inlineTextSelectionAnchor, idx);
+            _inlineTextBox.SelectionStart = start;
+            _inlineTextBox.SelectionLength = Math.Max(0, end - start);
+            Invalidate();
+            return;
+        }
+
         // Dragging the inline text box by its toolbar grip
         if (_textGripDragging && _inlineTextBox is not null)
         {
@@ -809,6 +881,25 @@ public sealed partial class AnnotationCanvas
             int ny = e.Y - _textGripDragOffset.Y;
             _inlineTextOrigin = ScreenToImage(new Point(nx, ny));
             Invalidate();
+            return;
+        }
+
+        // Corner-handle resize of font size while typing
+        if (_textResizing && _inlineTextBox is not null)
+        {
+            float dx = e.X - _textResizeStartScreen.X;
+            float dy = e.Y - _textResizeStartScreen.Y;
+            // Outward drag on any corner grows the text
+            float delta = (Math.Abs(dx) > Math.Abs(dy) ? dx : dy) * 0.15f;
+            if (_textResizeHandle is 0 or 2) delta = -delta; // left corners: drag left grows
+            float ns = Math.Clamp(_textResizeStartFontSize + delta, 10f, 120f);
+            if (Math.Abs(ns - _textFontSize) >= 0.01f)
+            {
+                _textFontSize = ns;
+                UpdateInlineTextBoxStyle();
+                TextFontSizeChanged?.Invoke(ns);
+                Invalidate();
+            }
             return;
         }
 
@@ -1153,9 +1244,25 @@ public sealed partial class AnnotationCanvas
             }
         }
 
+        if (_inlineTextSelecting)
+        {
+            _inlineTextSelecting = false;
+            if (Capture) Capture = false;
+            Invalidate();
+            return;
+        }
+
         if (_textGripDragging)
         {
             _textGripDragging = false;
+            return;
+        }
+
+        if (_textResizing)
+        {
+            _textResizing = false;
+            _textResizeHandle = -1;
+            NotifyTextStyleChanged();
             return;
         }
 
@@ -1398,9 +1505,17 @@ public sealed partial class AnnotationCanvas
         // Flash scrollbars on any wheel action (zoom or tool-specific).
         NotifyScrollbarActivity();
 
-        // While editing text, the wheel adjusts the font size instead of zooming.
+        // While editing text: scroll the font list if open, otherwise adjust font size.
         if (_inlineTextBox is not null)
         {
+            if (_fontDropdownOpen)
+            {
+                EnsureFontDropdownData();
+                int maxScroll = Math.Max(0, _fontDropdownEntries.Length - FontDropdownVisible);
+                _fontDropdownScroll = Math.Clamp(_fontDropdownScroll + (e.Delta > 0 ? -1 : 1), 0, maxScroll);
+                Invalidate();
+                return;
+            }
             AdjustTextFontSize(e.Delta > 0 ? 2f : -2f);
             return;
         }
@@ -2159,28 +2274,122 @@ public sealed partial class AnnotationCanvas
 
     // ── Inline text editor ─────────────────────────────────────────────────
 
-    private void BeginInlineText(Point imgOrigin)
+    private int HitTestTextAnnotation(Point imgPt)
+    {
+        for (int i = _annotations.Count - 1; i >= 0; i--)
+        {
+            if (i == _renderSkipAnnotationIndex) continue;
+            if (_annotations[i] is not TextAnnotation ta) continue;
+            if (TextAnnotationPainter.Measure(ta).Contains(imgPt))
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Selects the word (or contiguous non-whitespace run) around <paramref name="index"/>.</summary>
+    private static void SelectWordAt(TextBox box, int index)
+    {
+        string t = box.Text ?? "";
+        if (t.Length == 0)
+        {
+            box.SelectionStart = 0;
+            box.SelectionLength = 0;
+            return;
+        }
+
+        index = Math.Clamp(index, 0, t.Length);
+        // If caret is at end or on whitespace, nudge left into the previous word when possible.
+        if (index >= t.Length || char.IsWhiteSpace(t[index]))
+        {
+            if (index > 0 && !char.IsWhiteSpace(t[index - 1]))
+                index--;
+            else
+            {
+                box.SelectionStart = index;
+                box.SelectionLength = 0;
+                return;
+            }
+        }
+
+        int start = index;
+        int end = index;
+        while (start > 0 && IsWordChar(t[start - 1])) start--;
+        while (end < t.Length && IsWordChar(t[end])) end++;
+        box.SelectionStart = start;
+        box.SelectionLength = Math.Max(0, end - start);
+    }
+
+    private static bool IsWordChar(char c) =>
+        char.IsLetterOrDigit(c) || c == '_' || c == '\'' || char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.ConnectorPunctuation;
+
+    private void BeginInlineText(Point imgOrigin, string? initialText = null)
     {
         CommitOrCancelInlineText(commit: true);
 
+        _textEditIndex = -1;
+        _textEditOriginal = null;
         _inlineTextOrigin = imgOrigin;
+        CreateInlineTextBox(initialText ?? "");
+    }
 
+    private void BeginReEditText(int index)
+    {
+        if (index < 0 || index >= _annotations.Count) return;
+        if (_annotations[index] is not TextAnnotation ta) return;
+
+        CommitOrCancelInlineText(commit: true);
+
+        // Drop object-selection chrome so only the live edit frame is shown.
+        // Otherwise the cyan selection box stays locked to the original bounds
+        // while the dashed inline frame grows with the text.
+        _selectedAnnotationIndex = -1;
+        ClearMultiSelection();
+        _moveHoverIndex = -1;
+
+        _textEditIndex = index;
+        _textEditOriginal = ta;
+        _inlineTextOrigin = ta.Pos;
+        _textFontSize = ta.FontSize;
+        _textFontFamily = ta.FontFamily;
+        _textBold = ta.Bold;
+        _textItalic = ta.Italic;
+        _textStroke = ta.Stroke;
+        _textShadow = ta.Shadow;
+        _textBackground = ta.Background;
+        _textAlign = ta.Alignment;
+        _textMaxWidth = ta.MaxWidth;
+        ToolColor = ta.Color;
+
+        // Hide original while editing (skip in paint)
+        _renderSkipAnnotationIndex = index;
+        CreateInlineTextBox(ta.Text);
+    }
+
+    private int _renderSkipAnnotationIndex = -1;
+
+    private void CreateInlineTextBox(string text)
+    {
         _inlineTextBox = new TextBox
         {
             Multiline = true,
+            AcceptsReturn = true,
             BorderStyle = BorderStyle.None,
             BackColor = BackColor,
             ForeColor = ToolColor,
             Location = new Point(-100, -100),
             Size = new Size(1, 1),
             TabStop = false,
+            Text = text,
         };
         _inlineTextBox.KeyDown += InlineTextBox_KeyDown;
         _inlineTextBox.TextChanged += (_, _) => Invalidate();
         Controls.Add(_inlineTextBox);
-        UpdateInlineTextBoxStyle(); // apply current bold/italic/font/size to the editor box
+        UpdateInlineTextBoxStyle();
         _inlineTextBox.Focus();
-        Invalidate();               // show the floating toolbar
+        _inlineTextBox.SelectionStart = _inlineTextBox.TextLength;
+        _inlineTextBox.SelectionLength = 0;
+        Invalidate();
+        OnStateChanged(); // refresh status-bar hint for live text editing
     }
 
     /// <summary>
@@ -2206,8 +2415,8 @@ public sealed partial class AnnotationCanvas
     private bool TryFinishInlineTextFromEscape()
     {
         if (_inlineTextBox is null) return false;
-        bool hasText = !string.IsNullOrWhiteSpace(_inlineTextBox.Text);
-        CommitOrCancelInlineText(commit: hasText);
+        // Escape always cancels (never auto-commits).
+        CommitOrCancelInlineText(commit: false);
         return true;
     }
 
@@ -2221,11 +2430,27 @@ public sealed partial class AnnotationCanvas
         }
         else if (e.KeyCode == Keys.Enter && !e.Shift)
         {
+            // Enter commits; Shift+Enter inserts a newline.
             CommitOrCancelInlineText(commit: true);
             e.Handled = true;
             e.SuppressKeyPress = true;
         }
     }
+
+    private TextAnnotation BuildCurrentTextAnnotation(Point origin, string text) =>
+        new(
+            Pos: origin,
+            Text: TextAnnotationPainter.NormalizeNewlines(text),
+            FontSize: _textFontSize,
+            Color: ToolColor,
+            Bold: _textBold,
+            Italic: _textItalic,
+            Stroke: _textStroke,
+            Shadow: _textShadow,
+            Background: _textBackground,
+            FontFamily: _textFontFamily,
+            Alignment: _textAlign,
+            MaxWidth: _textMaxWidth);
 
     private void CommitOrCancelInlineText(bool commit)
     {
@@ -2233,33 +2458,49 @@ public sealed partial class AnnotationCanvas
         var text = _inlineTextBox.Text;
         var origin = _inlineTextOrigin;
         var dirty = GetInlineTextEditingRepaintBounds();
+        int editIndex = _textEditIndex;
+        var original = _textEditOriginal;
 
         Controls.Remove(_inlineTextBox);
         _inlineTextBox.Dispose();
         _inlineTextBox = null;
 
-        if (commit && !string.IsNullOrWhiteSpace(text))
+        _renderSkipAnnotationIndex = -1;
+
+        bool hasText = !string.IsNullOrWhiteSpace(text);
+        if (commit && hasText)
         {
-            Push(new AddAnnotationCommand(new TextAnnotation(
-                Pos: origin,
-                Text: text,
-                FontSize: _textFontSize,
-                Color: ToolColor,
-                Bold: _textBold,
-                Italic: _textItalic,
-                Stroke: _textStroke,
-                Shadow: _textShadow,
-                Background: _textBackground,
-                FontFamily: _textFontFamily)));
+            var neu = BuildCurrentTextAnnotation(origin, text);
+            if (editIndex >= 0 && original is not null && editIndex < _annotations.Count)
+            {
+                if (!Equals(original, neu))
+                    Push(new ReplaceAnnotationCommand(editIndex, original, neu));
+            }
+            else if (editIndex < 0)
+            {
+                Push(new AddAnnotationCommand(neu));
+            }
         }
+        else if (commit && !hasText && editIndex >= 0 && original is not null)
+        {
+            Push(new DeleteAnnotationCommand(editIndex, original));
+        }
+        // cancel: original stays (was never removed)
+
+        _textEditIndex = -1;
+        _textEditOriginal = null;
         _fontDropdownOpen = false;
         _hoveredTextBtn = -1;
         _textGripDragging = false;
+        _textResizing = false;
+        _inlineTextSelecting = false;
+        NotifyTextStyleChanged();
         Focus();
         if (dirty != Rectangle.Empty)
             Invalidate(dirty);
         else
             Invalidate();
+        OnStateChanged(); // restore tool hint after leaving text edit
     }
 
     private Rectangle GetInlineTextEditingRepaintBounds()
@@ -2286,6 +2527,7 @@ public sealed partial class AnnotationCanvas
         const int tolerance = 10;
         for (int i = _annotations.Count - 1; i >= 0; i--)
         {
+            if (i == _renderSkipAnnotationIndex) continue;
             if (HitTestSingle(_annotations[i], pt, tolerance))
                 return i;
         }
@@ -2299,6 +2541,7 @@ public sealed partial class AnnotationCanvas
     {
         for (int i = _annotations.Count - 1; i >= 0; i--)
         {
+            if (i == _renderSkipAnnotationIndex) continue;
             if (IsOverAnnotationSurface(_annotations[i], pt))
                 return i;
         }
@@ -2466,7 +2709,7 @@ public sealed partial class AnnotationCanvas
                 || RulerRenderer.GetLabelBounds(ru.From, ru.To, ClientRectangle).Contains(pt),
             CurvedArrowAnnotation ca => ca.Points.Any(p => Distance(p, pt) <= tol * 2),
             DrawStroke ds => ds.Points.Any(p => Distance(p, pt) <= tol),
-            TextAnnotation ta => MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background).Contains(pt),
+            TextAnnotation ta => TextAnnotationPainter.Measure(ta).Contains(pt),
             StepNumberAnnotation sn => Distance(sn.Pos, pt) <= tol * 3,
             EmojiAnnotation em => InflateRect(GetAnnotationBounds(em), tol, tol).Contains(pt),
             MagnifierAnnotation mg => Distance(mg.Pos, pt) <= tol * 4,
@@ -2607,6 +2850,7 @@ public sealed partial class AnnotationCanvas
 
         if (!isDoubleClick || !IsPickToolActiveForSelectAll()) return false;
 
+        // Centralized: text re-edit wins over select-all (also used by WndProc DBLCLK).
         SelectAllFromDoubleClick();
         return true;
     }
@@ -2614,6 +2858,45 @@ public sealed partial class AnnotationCanvas
     protected override void OnMouseDoubleClick(MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Left) return;
+
+        // Already editing: word-select is handled in OnMouseDown (e.Clicks >= 2).
+        // Swallow the event so EditorForm's blank-canvas "open file" handler never runs.
+        if (_inlineTextBox is not null)
+        {
+            var imgPtEdit = ScreenToImage(e.Location);
+            var liveRect = MeasureInlineTextRect(
+                _inlineTextOrigin, _inlineTextBox.Text, _textFontSize, _textFontFamily,
+                _textBold, _textItalic, _textBackground, _textMaxWidth, _textAlign);
+            if (liveRect.Contains(imgPtEdit) || GetInlineTextScreenBounds().Contains(e.Location))
+            {
+                int caretIdx = TextAnnotationPainter.GetCharIndexAt(
+                    _inlineTextOrigin, imgPtEdit, _inlineTextBox.Text,
+                    _textFontSize, _textFontFamily, _textBold, _textItalic,
+                    _textMaxWidth, _textAlign);
+                SelectWordAt(_inlineTextBox, caretIdx);
+                _inlineTextBox.Focus();
+                Invalidate();
+            }
+            return;
+        }
+
+        // Any tool: double-click text to re-edit. Pick's select-all is handled via
+        // SelectAllFromDoubleClick (which itself prefers text when present).
+        var imgPt = ScreenToImage(e.Location);
+        int textHit = HitTestTextAnnotation(imgPt);
+        if (textHit >= 0)
+        {
+            // Skip if Pick already handled this via MouseDown/WndProc (IsEditingText true above).
+            if (_activeTool == CanvasTool.Move)
+            {
+                // WndProc/MouseDown usually already handled Pick; if we get here, do it once.
+                SelectAllFromDoubleClick();
+                return;
+            }
+            ActiveTool = CanvasTool.Text;
+            BeginReEditText(textHit);
+            return;
+        }
 
         if (_activeTool == CanvasTool.Move)
         {
@@ -2623,7 +2906,6 @@ public sealed partial class AnnotationCanvas
 
         if (_activeTool == CanvasTool.Crop && _cropHasRect)
         {
-            var imgPt = ScreenToImage(e.Location);
             if (_cropRect.Contains(imgPt))
                 TryConfirmCrop();
         }
@@ -2704,7 +2986,7 @@ public sealed partial class AnnotationCanvas
             RulerAnnotation ru => GetSegmentBounds(ru.From, ru.To, 6f), // Ruler stroke width ~6px
             CurvedArrowAnnotation ca => GetPointsBounds(ca.Points, GetScaledStrokeWidth(ca.StrokeWidth)),
             DrawStroke ds => GetPointsBounds(ds.Points, GetScaledStrokeWidth(ds.StrokeWidth)),
-            TextAnnotation ta => MeasureInlineTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background),
+            TextAnnotation ta => TextAnnotationPainter.Measure(ta),
             StepNumberAnnotation sn => new RectangleF(sn.Pos.X - 16, sn.Pos.Y - 16, 32, 32),
             EmojiAnnotation em => new RectangleF(em.Pos.X - em.Size / 2f, em.Pos.Y - em.Size / 2f, em.Size, em.Size),
             MagnifierAnnotation mg => new RectangleF(mg.Pos.X - 60, mg.Pos.Y - 60, 120, 120),

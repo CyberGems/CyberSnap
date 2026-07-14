@@ -214,6 +214,18 @@ public sealed class AppSettings
     // Font size last chosen for the Text tool in the post-capture Editor (pixels). Editor-specific,
     // like EditorToolColorArgb. Clamped to the same 10..120 range the Text toolbar enforces.
     public float EditorTextFontSize { get; set; } = 24f;
+    // Last Text-tool style (shared defaults for Editor; also seed Capture when available).
+    public string EditorTextFontFamily { get; set; } = "Segoe UI";
+    public bool EditorTextBold { get; set; } = true;
+    public bool EditorTextItalic { get; set; }
+    public bool EditorTextStroke { get; set; } = true;
+    public bool EditorTextShadow { get; set; } = true;
+    public bool EditorTextBackground { get; set; }
+    public int EditorTextAlignment { get; set; } // TextHAlign as int
+    /// <summary>Semicolon-separated recent font families for the Text tool (most recent first).</summary>
+    public string EditorTextRecentFonts { get; set; } = "";
+    /// <summary>Semicolon-separated favorite font families (user-pinned, most recent pin first).</summary>
+    public string EditorTextFavoriteFonts { get; set; } = "";
 
     // Color picker hotkey: unbound by default
     public uint PickerHotkeyModifiers { get; set; }

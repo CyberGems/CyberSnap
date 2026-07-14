@@ -79,69 +79,58 @@ public sealed partial class RegionOverlayForm
         // Active text input (TextBox is off-screen for input, we paint visually here)
         if (_isTyping)
         {
-            var fontStyle = FontStyle.Regular;
-            if (_textBold) fontStyle |= FontStyle.Bold;
-            if (_textItalic) fontStyle |= FontStyle.Italic;
-            var font = GetAnnotationFont(_textFontFamily, _textFontSize, fontStyle);
-            string display = _textBuffer.Length > 0 ? _textBuffer : "Type here...";
-            var textSize = g.MeasureString(display, font);
             int selectionStart = _textBox?.SelectionStart ?? 0;
             int selectionLength = _textBox?.SelectionLength ?? 0;
 
-            // Dashed selection border â€” use cached rect so handles match hit areas
+            // Dashed selection border — use cached rect so handles match hit areas
             var textRect = GetActiveTextRect();
             g.DrawRectangle(GetThemeDashPen(), textRect.X, textRect.Y, textRect.Width, textRect.Height);
 
             foreach (var h in _activeTextHandleCache)
                 WindowsHandleRenderer.Paint(g, h);
 
-            if (_textBuffer.Length > 0 && selectionLength > 0)
+            // Sync buffer for measure when the off-screen TextBox is the source of truth
+            string liveText = _textBox?.Text ?? _textBuffer;
+            if (!string.Equals(liveText, _textBuffer, StringComparison.Ordinal))
             {
-                float selX = _textPos.X + MeasureTextPrefixWidth(_textBuffer, selectionStart, font);
-                float selW = Math.Max(2f, MeasureTextPrefixWidth(_textBuffer, selectionStart + selectionLength, font) - MeasureTextPrefixWidth(_textBuffer, selectionStart, font));
-                var selRect = new RectangleF(selX - 1, textRect.Y + 3, selW + 2, Math.Max(16f, textRect.Height - 6));
-                g.FillRectangle(GetTextSelectionBrush(), selRect);
+                _textBuffer = liveText;
+                InvalidateActiveTextLayout();
             }
 
-            // Render text with stroke/shadow
-            if (_textBuffer.Length > 0)
+            // Selection highlight UNDER glyphs (bright accent so it reads over dark/light captures)
+            if (liveText.Length > 0 && selectionLength > 0)
             {
-                PaintExcalidrawText(g, _textPos, _textBuffer, _textFontSize, _toolColor,
-                    _textBold, _textItalic, _textStroke, _textShadow, _textBackground, _textFontFamily);
+                PaintTextSelectionHighlight(g, _textPos, liveText, selectionStart, selectionLength,
+                    _textFontSize, _textFontFamily, _textBold, _textItalic, _textMaxWidth, _textAlign, textRect);
+            }
+
+            // Render text with stroke/shadow (shared painter)
+            if (liveText.Length > 0)
+            {
+                TextAnnotationPainter.Paint(g, _textPos, liveText, _textFontSize, _toolColor,
+                    _textBold, _textItalic, _textStroke, _textShadow, _textBackground, _textFontFamily,
+                    _textMaxWidth, _textAlign);
             }
             else
             {
-                if (_textBackground)
-                {
-                    var bgRect = GetActiveTextRect();
-                    using var bgPath = SketchRenderer.RoundedRect(bgRect, 8f);
-                    g.FillPath(SketchRenderer.GetToolColorBrush(_toolColor), bgPath);
-                    g.DrawPath(TextBackgroundStrokePen, bgPath);
-                }
-                g.DrawString(display, font, GetPlaceholderBrush(), _textPos.X, _textPos.Y);
+                TextAnnotationPainter.Paint(g, _textPos, "", _textFontSize, _toolColor,
+                    _textBold, _textItalic, _textStroke, _textShadow, _textBackground, _textFontFamily,
+                    _textMaxWidth, _textAlign, isPlaceholder: true);
             }
 
-            // Blinking caret: draw a standard I-beam inside the text frame, not inside glyph strokes.
+            // Blinking caret (hidden while a range is selected)
             if (selectionLength == 0)
             {
-                float cursorX;
-                int caretIndex = _textBox?.SelectionStart ?? _textBuffer.Length;
-                if (_textBuffer.Length > 0)
-                {
-                    cursorX = _textPos.X + MeasureTextPrefixWidth(_textBuffer, caretIndex, font) - 1;
-                }
-                else
-                {
-                    cursorX = _textPos.X;
-                }
-
+                int caretIndex = _textBox?.SelectionStart ?? liveText.Length;
+                var caret = TextAnnotationPainter.GetCaretPoint(
+                    _textPos, liveText, caretIndex, _textFontSize, _textFontFamily,
+                    _textBold, _textItalic, _textMaxWidth, _textAlign);
+                float lineH = TextAnnotationPainter.GetFont(_textFontFamily, _textFontSize, _textBold, _textItalic).GetHeight(g);
                 float blinkAlpha = (float)(Math.Sin(Environment.TickCount64 / 400.0 * Math.PI) * 0.5 + 0.5);
                 int alpha = (int)(blinkAlpha * 220);
                 var caretColor = Color.FromArgb(alpha, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B);
-                float caretTop = textRect.Y + 3;
-                float caretBottom = textRect.Bottom - 3;
                 _caretPen.Color = caretColor;
-                g.DrawLine(_caretPen, cursorX, caretTop, cursorX, caretBottom);
+                g.DrawLine(_caretPen, caret.X, caret.Y + 1, caret.X, caret.Y + lineH - 1);
             }
 
             // Inline text formatting toolbar above text
@@ -265,9 +254,57 @@ public sealed partial class RegionOverlayForm
             DashPattern = new[] { 6f, 4f }
         };
         _themeDashPen = new Pen(c, 1f) { DashStyle = DashStyle.Dash };
-        _textSelectionBrush = new SolidBrush(Color.FromArgb(90, c.R, c.G, c.B));
+        // Strong accent fill so selection is obvious under cyan/white text + stroke
+        var accent = UiChrome.AccentColor;
+        _textSelectionBrush = new SolidBrush(Color.FromArgb(150, accent.R, accent.G, accent.B));
         _placeholderBrush = new SolidBrush(UiChrome.SurfaceTextMuted);
         _themeChromeKey = key;
+    }
+
+    /// <summary>Paints the text selection range (single- or multi-line) under the glyphs.</summary>
+    private static void PaintTextSelectionHighlight(
+        Graphics g, Point pos, string text, int start, int length,
+        float fontSize, string fontFamily, bool bold, bool italic,
+        float maxWidth, TextHAlign align, RectangleF textRect)
+    {
+        if (length <= 0 || string.IsNullOrEmpty(text)) return;
+        start = Math.Clamp(start, 0, text.Length);
+        int end = Math.Clamp(start + length, 0, text.Length);
+        if (end <= start) return;
+
+        var a = TextAnnotationPainter.GetCaretPoint(pos, text, start, fontSize, fontFamily, bold, italic, maxWidth, align);
+        var b = TextAnnotationPainter.GetCaretPoint(pos, text, end, fontSize, fontFamily, bold, italic, maxWidth, align);
+        float lineH = TextAnnotationPainter.GetFont(fontFamily, fontSize, bold, italic).GetHeight(g);
+        lineH = Math.Max(lineH, 14f);
+
+        var brush = GetTextSelectionBrush();
+        if (Math.Abs(a.Y - b.Y) < 1.5f)
+        {
+            // Same line
+            float x0 = Math.Min(a.X, b.X);
+            float x1 = Math.Max(a.X, b.X);
+            g.FillRectangle(brush, x0 - 1, a.Y, Math.Max(3f, x1 - x0 + 2), lineH);
+        }
+        else
+        {
+            // Multi-line: first partial, middle full rows, last partial
+            float topY = Math.Min(a.Y, b.Y);
+            float botY = Math.Max(a.Y, b.Y);
+            PointF topPt = a.Y <= b.Y ? a : b;
+            PointF botPt = a.Y <= b.Y ? b : a;
+
+            float contentLeft = textRect.X + 2;
+            float contentRight = textRect.Right - 2;
+            float contentW = Math.Max(4f, contentRight - contentLeft);
+
+            // First line: from start caret to right edge
+            g.FillRectangle(brush, topPt.X - 1, topY, Math.Max(3f, contentRight - topPt.X + 1), lineH);
+            // Middle full lines
+            for (float y = topY + lineH; y < botY - 0.5f; y += lineH)
+                g.FillRectangle(brush, contentLeft, y, contentW, lineH);
+            // Last line: from left edge to end caret
+            g.FillRectangle(brush, contentLeft, botY, Math.Max(3f, botPt.X - contentLeft + 2), lineH);
+        }
     }
 
     private static Pen GetSnapGuideDashPen()
