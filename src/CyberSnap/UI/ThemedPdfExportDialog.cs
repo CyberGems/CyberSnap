@@ -684,7 +684,8 @@ internal sealed class ThemedPdfExportDialog : Window
 
         border.MouseEnter += (_, _) =>
         {
-            if (border.Background != Theme.Brush(Theme.Accent))
+            bool isActive = border.BorderBrush is SolidColorBrush scb && scb.Color == Theme.Accent;
+            if (!isActive)
             {
                 border.Background = Theme.Brush(Theme.TabHoverBg);
                 if (border.Child is TextBlock tb)
@@ -693,7 +694,8 @@ internal sealed class ThemedPdfExportDialog : Window
         };
         border.MouseLeave += (_, _) =>
         {
-            if (border.Background != Theme.Brush(Theme.Accent))
+            bool isActive = border.BorderBrush is SolidColorBrush scb && scb.Color == Theme.Accent;
+            if (!isActive)
             {
                 border.Background = Theme.Brush(SecondaryButtonBg);
                 if (border.Child is TextBlock tb)
@@ -717,10 +719,10 @@ internal sealed class ThemedPdfExportDialog : Window
                 }
             }
 
-            border.Background = Theme.Brush(Theme.Accent);
+            border.Background = Theme.Brush(SecondaryButtonBg);
             border.BorderBrush = Theme.Brush(Theme.Accent);
             if (border.Child is TextBlock textBlock)
-                textBlock.Foreground = Theme.Brush(Theme.IsDark ? Colors.Black : Colors.White);
+                textBlock.Foreground = Theme.Brush(Theme.TextPrimary);
         };
 
         parent.Children.Add(border);
@@ -732,10 +734,10 @@ internal sealed class ThemedPdfExportDialog : Window
         foreach (var (border, val) in chips)
         {
             bool active = val == currentVal;
-            border.Background = Theme.Brush(active ? Theme.Accent : SecondaryButtonBg);
+            border.Background = Theme.Brush(SecondaryButtonBg);
             border.BorderBrush = Theme.Brush(active ? Theme.Accent : SecondaryButtonBorder);
             if (border.Child is TextBlock tb)
-                tb.Foreground = Theme.Brush(active ? (Theme.IsDark ? Colors.Black : Colors.White) : Theme.TextSecondary);
+                tb.Foreground = Theme.Brush(active ? Theme.TextPrimary : Theme.TextSecondary);
         }
     }
 

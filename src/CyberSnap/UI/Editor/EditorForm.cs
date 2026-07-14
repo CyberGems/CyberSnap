@@ -1195,11 +1195,31 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 ? LocalizationService.Translate("PDF saved")
                 : LocalizationService.Translate("Image saved");
         var toastBody = string.Format(LocalizationService.Translate("Saved: {0}"), fileName);
-        if (isPdf)
+        bool isPngOrJpg = filePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                          filePath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                          filePath.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase);
+
+        if (isPdf || isPngOrJpg)
         {
             toastBody += "\n" + LocalizationService.Translate("Click to open");
         }
-        ToastWindow.Show(toastTitle, toastBody, filePath);
+
+        if (isPngOrJpg)
+        {
+            ToastWindow.Show(new ToastSpec
+            {
+                Title = toastTitle,
+                Body = toastBody,
+                FilePath = filePath,
+                ClickActionUrl = filePath,
+                ClickActionLabel = "Click to open in default viewer",
+                IsSystemMessage = true
+            });
+        }
+        else
+        {
+            ToastWindow.Show(toastTitle, toastBody, filePath);
+        }
 
         // Show native action banner
         string bannerMsg = isPdf 
