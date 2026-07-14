@@ -56,7 +56,9 @@ internal sealed class ThemedPdfExportDialog : Window
     private readonly System.Collections.Generic.List<(Border Border, string Value)> _pageSizeChips = new();
     private readonly System.Collections.Generic.List<(Border Border, string Value)> _orientationChips = new();
     private readonly System.Collections.Generic.List<(Border Border, string Value)> _layoutChips = new();
-    private readonly System.Collections.Generic.List<(Border Border, string Value)> _scalingChips = new();
+
+    private Border _fitToggleTrack = null!;
+    private Border _fitToggleKnob = null!;
 
     private Border _previewPaper = null!;
     private Border _previewMargin = null!;
@@ -301,13 +303,52 @@ internal sealed class ThemedPdfExportDialog : Window
         UpdateChipSelection(_layoutChips, _options.ImageLayout);
         leftStack.Children.Add(layoutWrap);
 
-        // 4. Content Scaling Section
-        leftStack.Children.Add(SectionLabel("Content Scaling", 8));
-        var scalingWrap = new WrapPanel();
-        _scalingChips.Add((MakeSelectableChip("Fit to page", scalingWrap, "True", v => { _options.FitToPage = bool.Parse(v); UpdatePreview(); }), "True"));
-        _scalingChips.Add((MakeSelectableChip("Actual size", scalingWrap, "False", v => { _options.FitToPage = bool.Parse(v); UpdatePreview(); }), "False"));
-        UpdateChipSelection(_scalingChips, _options.FitToPage ? "True" : "False");
-        leftStack.Children.Add(scalingWrap);
+        // 4. Fit-to-page toggle (visually distinct from the chips above)
+        bool fitState = _options.FitToPage;
+        _fitToggleTrack = new Border
+        {
+            Width = 38,
+            Height = 20,
+            CornerRadius = new CornerRadius(10),
+            Background = Theme.Brush(fitState ? Theme.Accent : TrackOff),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        _fitToggleKnob = new Border
+        {
+            Width = 14,
+            Height = 14,
+            CornerRadius = new CornerRadius(7),
+            Background = WpfBrushes.White,
+            HorizontalAlignment = fitState ? WpfHorizontalAlignment.Right : WpfHorizontalAlignment.Left,
+            Margin = new Thickness(3, 0, 3, 0),
+        };
+        _fitToggleTrack.Child = _fitToggleKnob;
+
+        var fitLabel = new TextBlock
+        {
+            Text = Services.LocalizationService.Translate("Fit content to page"),
+            FontSize = 12,
+            Foreground = Theme.Brush(Theme.TextSecondary),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(10, 0, 0, 0),
+        };
+
+        var fitRow = new StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            Margin = new Thickness(0, 6, 0, 4),
+            Cursor = WpfCursors.Hand,
+            Background = WpfBrushes.Transparent,
+        };
+        fitRow.Children.Add(_fitToggleTrack);
+        fitRow.Children.Add(fitLabel);
+        fitRow.MouseLeftButtonDown += (_, e) =>
+        {
+            e.Handled = true;
+            _options.FitToPage = !_options.FitToPage;
+            UpdatePreview();
+        };
+        leftStack.Children.Add(fitRow);
 
         var settingsScroll = new ScrollViewer
         {
@@ -545,7 +586,12 @@ internal sealed class ThemedPdfExportDialog : Window
             }
         }
 
-        UpdateChipSelection(_scalingChips, _options.FitToPage ? "True" : "False");
+        // Sync the fit-to-page toggle visual
+        if (_fitToggleTrack != null && _fitToggleKnob != null)
+        {
+            _fitToggleTrack.Background = Theme.Brush(_options.FitToPage ? Theme.Accent : TrackOff);
+            _fitToggleKnob.HorizontalAlignment = _options.FitToPage ? WpfHorizontalAlignment.Right : WpfHorizontalAlignment.Left;
+        }
     }
 
     // ── Dialog element builders ──────────────────────────────────────────────
