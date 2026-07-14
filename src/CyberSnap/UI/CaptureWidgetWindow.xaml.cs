@@ -2,10 +2,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
 using System.Windows.Forms;
 using System.Linq;
+using Microsoft.Win32;
 using CyberSnap.Models;
 using CyberSnap.Services;
 
@@ -43,6 +45,13 @@ public partial class CaptureWidgetWindow : Window
     // 2x this; the content is inset by the same amount via RootGrid.Margin, so the visible widget
     // stays put. Drag-travel and hover hit-testing compensate for this margin.
     private const double ShadowMargin = 22;
+
+    // Expand/collapse: short and snappy so the panel feels responsive, not ornamental.
+    private const int ExpandAnimMs = 110;
+    private const int CollapseAnimMs = 90;
+
+    private int _layoutAnimGeneration;
+    private bool _displayEventsHooked;
 
     public CaptureWidgetWindow(SettingsService settingsService)
     {
@@ -89,6 +98,54 @@ public partial class CaptureWidgetWindow : Window
     {
         CancelHideLaunch();
         CancelSessionRestore();
+        UnhookDisplayEvents();
+        StopLayoutAnimations();
+    }
+
+    private void HookDisplayEvents()
+    {
+        if (_displayEventsHooked) return;
+        try
+        {
+            SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+            _displayEventsHooked = true;
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("widget.display-events", ex.Message, ex);
+        }
+    }
+
+    private void UnhookDisplayEvents()
+    {
+        if (!_displayEventsHooked) return;
+        try { SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged; }
+        catch { /* best-effort on teardown */ }
+        _displayEventsHooked = false;
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        // SystemEvents may fire off the UI thread.
+        _ = Dispatcher.BeginInvoke(() =>
+        {
+            if (!IsLoaded) return;
+            ClampMonitorIndexToAvailableScreens();
+            // Snap layout after resolution / monitor topology changes so the widget
+            // never stays parked on a vanished display.
+            PositionWindow();
+        });
+    }
+
+    private void ClampMonitorIndexToAvailableScreens()
+    {
+        var screens = PopupWindowHelper.GetSortedScreens();
+        if (_settings.WidgetMonitorIndex >= 0 && _settings.WidgetMonitorIndex >= screens.Length)
+        {
+            _settings.WidgetMonitorIndex = -1;
+            try { _settingsService.Save(); }
+            catch (Exception ex) { AppDiagnostics.LogWarning("widget.clamp-monitor", ex.Message, ex); }
+        }
     }
 
     public void RefreshLocalization()
@@ -175,6 +232,8 @@ public partial class CaptureWidgetWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        HookDisplayEvents();
+        ClampMonitorIndexToAvailableScreens();
         PositionWindow();
     }
 
@@ -203,8 +262,6 @@ public partial class CaptureWidgetWindow : Window
         // Apply scaling
         UiScale.ApplyToWindow(this, RootGrid, scaleWindowBounds: false);
 
-        LayoutGrid.RowDefinitions.Clear();
-        LayoutGrid.ColumnDefinitions.Clear();
         var edge = _settings.WidgetDockEdge;
 
         if (!LayoutGrid.Children.Contains(MainPanelBorder))
@@ -329,8 +386,27 @@ public partial class CaptureWidgetWindow : Window
     public void PositionWindow()
     {
         if (!IsLoaded) return;
+        if (!TryGetWindowPlacement(_isExpanded, out var left, out var top, out var width, out var height, out var halo))
+            return;
 
-        ControlsGrid.Visibility = _isExpanded ? Visibility.Visible : Visibility.Collapsed;
+        ApplyWindowPlacement(left, top, width, height, halo, _isExpanded, animate: false);
+    }
+
+    /// <summary>
+    /// Ensures the HWND is on the target monitor (for correct per-monitor DPI) and computes
+    /// the window placement for the current dock edge/offset, including the shadow halo.
+    /// </summary>
+    private bool TryGetWindowPlacement(
+        bool expanded,
+        out double left,
+        out double top,
+        out double width,
+        out double height,
+        out Thickness halo)
+    {
+        left = top = width = height = 0;
+        halo = default;
+        if (!IsLoaded) return false;
 
         var screens = PopupWindowHelper.GetSortedScreens();
         var targetScreen = ResolveTargetScreen(screens, _settings.WidgetMonitorIndex);
@@ -367,24 +443,121 @@ public partial class CaptureWidgetWindow : Window
             workingArea,
             _settings.WidgetDockEdge,
             _settings.WidgetDockPositionOffset,
-            _isExpanded,
+            expanded,
             UiScale.Current);
 
         // Grow the window by the shadow halo; the content is inset by the same amounts
         // (RootGrid.Margin), so the visible widget lands exactly on 'bounds'. The docked side has
         // no halo (ShadowHalo), so that edge sits flush against the screen and the peek stays
         // interactive right at the screen-edge pixel.
-        var halo = ShadowHalo(_settings.WidgetDockEdge);
+        halo = ShadowHalo(_settings.WidgetDockEdge);
+        width = bounds.Width + halo.Left + halo.Right;
+        height = bounds.Height + halo.Top + halo.Bottom;
+        left = bounds.Left - halo.Left;
+        top = bounds.Top - halo.Top;
+        return true;
+    }
+
+    private void ApplyWindowPlacement(
+        double left,
+        double top,
+        double width,
+        double height,
+        Thickness halo,
+        bool expanded,
+        bool animate)
+    {
+        StopLayoutAnimations();
         RootGrid.Margin = halo;
-        Width = bounds.Width + halo.Left + halo.Right;
-        Height = bounds.Height + halo.Top + halo.Bottom;
-        Left = bounds.Left - halo.Left;
-        Top = bounds.Top - halo.Top;
 
-        // Shadow only when expanded; the thin peek looks cleaner without it.
-        MainPanelBorder.Effect = _isExpanded ? _panelShadow : null;
+        if (!animate || Motion.Disabled)
+        {
+            ControlsGrid.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+            MainPanelBorder.Effect = expanded ? _panelShadow : null;
+            UpdateMainPanelBorderAlignment();
+            Left = left;
+            Top = top;
+            Width = width;
+            Height = height;
+            return;
+        }
 
-        UpdateMainPanelBorderAlignment();
+        // Expand: show chrome immediately. Collapse: keep it painted until the shrink ends
+        // so the panel never flashes empty mid-animation.
+        if (expanded)
+        {
+            ControlsGrid.Visibility = Visibility.Visible;
+            MainPanelBorder.Effect = _panelShadow;
+            UpdateMainPanelBorderAlignment();
+        }
+
+        var fromLeft = Left;
+        var fromTop = Top;
+        var fromWidth = Width;
+        var fromHeight = Height;
+        var ms = expanded ? ExpandAnimMs : CollapseAnimMs;
+        var gen = ++_layoutAnimGeneration;
+        var pending = 0;
+
+        void Finish()
+        {
+            if (gen != _layoutAnimGeneration) return;
+            // Freeze final values so drag/hover can write Left/Top freely again.
+            StopLayoutAnimations();
+            Left = left;
+            Top = top;
+            Width = width;
+            Height = height;
+            if (!expanded)
+            {
+                ControlsGrid.Visibility = Visibility.Collapsed;
+                MainPanelBorder.Effect = null;
+                UpdateMainPanelBorderAlignment();
+            }
+        }
+
+        // Keep starting geometry; animate toward the target. Animating Left/Width together
+        // on the free edge produces a natural "slide out of the dock" motion.
+        void Start(DependencyProperty property, double from, double to)
+        {
+            if (Math.Abs(from - to) < 0.25)
+            {
+                SetValue(property, to);
+                return;
+            }
+
+            pending++;
+            var anim = Motion.FromTo(from, to, ms, Motion.SoftOut);
+            anim.FillBehavior = FillBehavior.Stop;
+            anim.Completed += (_, _) =>
+            {
+                if (gen != _layoutAnimGeneration) return;
+                pending--;
+                if (pending <= 0) Finish();
+            };
+            BeginAnimation(property, anim);
+        }
+
+        Start(LeftProperty, fromLeft, left);
+        Start(TopProperty, fromTop, top);
+        Start(WidthProperty, fromWidth, width);
+        Start(HeightProperty, fromHeight, height);
+
+        if (pending == 0)
+            Finish();
+    }
+
+    private void StopLayoutAnimations()
+    {
+        _layoutAnimGeneration++;
+        BeginAnimation(LeftProperty, null);
+        BeginAnimation(TopProperty, null);
+        BeginAnimation(WidthProperty, null);
+        BeginAnimation(HeightProperty, null);
+        SlideTransform.BeginAnimation(TranslateTransform.XProperty, null);
+        SlideTransform.BeginAnimation(TranslateTransform.YProperty, null);
+        SlideTransform.X = 0;
+        SlideTransform.Y = 0;
     }
 
     private void UpdateMainPanelBorderAlignment()
@@ -604,8 +777,15 @@ public partial class CaptureWidgetWindow : Window
 
         MainPanelBorder.Cursor = System.Windows.Input.Cursors.Arrow;
         MainPanelBorder.Visibility = Visibility.Visible;
-        PositionWindow();
         UpdateGripVisibility();
+
+        if (!TryGetWindowPlacement(expanded: true, out var left, out var top, out var width, out var height, out var halo))
+        {
+            PositionWindow();
+            return;
+        }
+
+        ApplyWindowPlacement(left, top, width, height, halo, expanded: true, animate: true);
     }
 
     private void CollapseWidget()
@@ -615,10 +795,16 @@ public partial class CaptureWidgetWindow : Window
         _isExpanded = false;
         MainPanelBorder.Visibility = Visibility.Visible;
         MainPanelBorder.Cursor = System.Windows.Input.Cursors.Hand;
-
-        StopWidgetAnimations();
-        PositionWindow();
         UpdateGripVisibility();
+
+        if (!TryGetWindowPlacement(expanded: false, out var left, out var top, out var width, out var height, out var halo))
+        {
+            PositionWindow();
+            return;
+        }
+
+        // Keep controls painted until the shrink finishes so the panel doesn't flash empty.
+        ApplyWindowPlacement(left, top, width, height, halo, expanded: false, animate: true);
     }
 
     public void CollapseImmediately()
@@ -626,18 +812,9 @@ public partial class CaptureWidgetWindow : Window
         _isExpanded = false;
         MainPanelBorder.Visibility = Visibility.Visible;
         MainPanelBorder.Cursor = System.Windows.Input.Cursors.Hand;
-
-        StopWidgetAnimations();
+        StopLayoutAnimations();
         PositionWindow();
         UpdateGripVisibility();
-    }
-
-    private void StopWidgetAnimations()
-    {
-        SlideTransform.BeginAnimation(TranslateTransform.XProperty, null);
-        SlideTransform.BeginAnimation(TranslateTransform.YProperty, null);
-        SlideTransform.X = 0;
-        SlideTransform.Y = 0;
     }
 
     private void UpdateGripVisibility()
@@ -911,27 +1088,6 @@ public partial class CaptureWidgetWindow : Window
             _settingsService.Save();
         };
         return item;
-    }
-
-    private System.Windows.Forms.ToolStripMenuItem BuildDockEdgeSubmenu()
-    {
-        var edgeMenu = Helpers.WindowsMenuRenderer.Submenu(LocalizationService.Translate("Dock edge"));
-        var edges = new[] { CaptureDockSide.Top, CaptureDockSide.Bottom, CaptureDockSide.Left, CaptureDockSide.Right };
-        var edgeLabels = new[] { "Top", "Bottom", "Left", "Right" };
-        for (int i = 0; i < edges.Length; i++)
-        {
-            var ed = edges[i];
-            var item = Helpers.WindowsMenuRenderer.Item(edgeLabels[i], active: _settings.WidgetDockEdge == ed);
-            item.Click += (s, ev) =>
-            {
-                _settings.WidgetDockEdge = ed;
-                _settingsService.Save();
-                RefreshLayout();
-            };
-            edgeMenu.DropDownItems.Add(item);
-        }
-        Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(edgeMenu, minWidth: 150);
-        return edgeMenu;
     }
 
     private System.Windows.Forms.ToolStripMenuItem? BuildScreenSubmenu()

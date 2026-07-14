@@ -516,7 +516,6 @@ public sealed class AppSettings
     public CaptureDockSide WidgetDockEdge { get; set; } = CaptureDockSide.Top;
     public int WidgetMonitorIndex { get; set; } = -1;
     public double WidgetDockPositionOffset { get; set; } = 0.5;
-    public bool WidgetOpenEditor { get; set; }
     public int WidgetHoverDelayMs { get; set; } = 250;
 
     // Window bounds
