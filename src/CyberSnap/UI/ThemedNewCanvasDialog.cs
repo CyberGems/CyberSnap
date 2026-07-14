@@ -619,6 +619,8 @@ internal sealed class ThemedNewCanvasDialog : Window
             Text = text,
             FontSize = 10.2,
             Foreground = Theme.Brush(Theme.TextSecondary),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
         };
         var chip = new Border
         {
