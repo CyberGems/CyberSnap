@@ -282,7 +282,6 @@ public sealed partial class EditorForm
         _toggleFitSwitch.CheckedChanged += (_, _) =>
         {
             _canvas.FitToWindowOnLoad = _toggleFitSwitch.Checked;
-            _canvas.ApplyInitialView(); // re-frame the current image immediately for instant feedback
             if (System.Windows.Application.Current is CyberSnap.App app)
                 app.PersistEditorFitPreference(_toggleFitSwitch.Checked);
         };
@@ -451,7 +450,7 @@ public sealed partial class EditorForm
         // CyberSnap-styled hover hints for the bottom bar, matching the capture toolbar.
         // The bar sits at the bottom of the window, so the bubbles open upward (above: true).
         // RegisterHoverTooltip(_toggleFrameSwitch, "Show a frame around the capture");
-        RegisterHoverTooltip(_toggleFitSwitch, "Fit the image to the window");
+        RegisterHoverTooltip(_toggleFitSwitch, "Fit the image to the window when the editor opens");
         RegisterHoverTooltip(_togglePanLockSwitch, "Lock object editing in Pan mode");
         RegisterHoverTooltip(_coordsPanel, "Cursor position over the image (X, Y)");
 
@@ -1714,7 +1713,7 @@ public sealed partial class EditorForm
         var borderItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Show frame border"), iconId: null);
         borderItem.ToolTipText = LocalizationService.Translate("Show a frame around the capture in the editor.");
         var fitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-fit image to window"), iconId: null);
-        fitItem.ToolTipText = LocalizationService.Translate("Fit the image to the window.");
+        fitItem.ToolTipText = LocalizationService.Translate("Fit the image to the window when the editor opens.");
         var lockObjectsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Lock object editing in Pan mode"), iconId: null);
         lockObjectsItem.ToolTipText = LocalizationService.Translate("Prevent moving or resizing annotations while the Pan tool is active.");
         var cropHandlesItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Auto-show crop handles"), iconId: null);

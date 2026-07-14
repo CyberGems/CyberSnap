@@ -617,7 +617,7 @@ internal sealed class ThemedNewCanvasDialog : Window
         var textBlock = new TextBlock
         {
             Text = text,
-            FontSize = 11.5,
+            FontSize = 10.2,
             Foreground = Theme.Brush(Theme.TextSecondary),
         };
         var chip = new Border
@@ -627,7 +627,7 @@ internal sealed class ThemedNewCanvasDialog : Window
             BorderBrush = Theme.Brush(WithAlpha(Theme.Accent, 60)),
             BorderThickness = new Thickness(1),
             Margin = new Thickness(0, 0, 6, 6),
-            Padding = new Thickness(10, 5, 10, 5),
+            Padding = new Thickness(6, 5, 6, 5),
             Cursor = WpfCursors.Hand,
             Child = textBlock
         };
