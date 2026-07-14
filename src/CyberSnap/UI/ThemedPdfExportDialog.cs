@@ -64,6 +64,71 @@ internal sealed class ThemedPdfExportDialog : Window
     private ThemedPdfExportDialog(System.Drawing.Bitmap? previewBitmap)
     {
         Theme.Refresh();
+        try
+        {
+            var xaml = @"
+<ResourceDictionary xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
+                    xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"">
+    <Style x:Key=""SettingsScrollThumbStyle"" TargetType=""{x:Type Thumb}"">
+        <Setter Property=""OverridesDefaultStyle"" Value=""True""/>
+        <Setter Property=""Focusable"" Value=""False""/>
+        <Setter Property=""Opacity"" Value=""0.35""/>
+        <Setter Property=""Template"">
+            <Setter.Value>
+                <ControlTemplate TargetType=""{x:Type Thumb}"">
+                    <Border CornerRadius=""3"" Background=""{DynamicResource ThemeTextSecondaryBrush}"" Margin=""0,2,8,2""/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property=""IsMouseOver"" Value=""True"">
+                <Setter Property=""Opacity"" Value=""1""/>
+            </Trigger>
+            <Trigger Property=""IsDragging"" Value=""True"">
+                <Setter Property=""Opacity"" Value=""1""/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key=""SettingsScrollBarStyle"" TargetType=""{x:Type ScrollBar}"">
+        <Setter Property=""Width"" Value=""12""/>
+        <Setter Property=""Background"" Value=""Transparent""/>
+        <Setter Property=""Opacity"" Value=""0.5""/>
+        <Setter Property=""Template"">
+            <Setter.Value>
+                <ControlTemplate TargetType=""{x:Type ScrollBar}"">
+                    <Grid Background=""Transparent"" Width=""{TemplateBinding Width}"">
+                        <Track x:Name=""PART_Track"" IsDirectionReversed=""True"" Margin=""0,6,0,6"">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command=""ScrollBar.PageUpCommand"" Background=""Transparent"" BorderThickness=""0"" Focusable=""False"" IsTabStop=""False""/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style=""{StaticResource SettingsScrollThumbStyle}""/>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command=""ScrollBar.PageDownCommand"" Background=""Transparent"" BorderThickness=""0"" Focusable=""False"" IsTabStop=""False""/>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property=""IsMouseOver"" Value=""True"">
+                <Setter Property=""Opacity"" Value=""1""/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style TargetType=""{x:Type ScrollBar}"" BasedOn=""{StaticResource SettingsScrollBarStyle}""/>
+</ResourceDictionary>";
+
+            var dict = (ResourceDictionary)System.Windows.Markup.XamlReader.Parse(xaml);
+            Resources.MergedDictionaries.Add(dict);
+        }
+        catch (Exception ex)
+        {
+            CyberSnap.Services.AppDiagnostics.LogError("pdf.scroll.style", ex);
+        }
+
         Title = Services.LocalizationService.Translate("PDF Export Options");
         Width = PanelWidth + (GlowMargin * 2);
         SizeToContent = SizeToContent.Height;
@@ -152,7 +217,7 @@ internal sealed class ThemedPdfExportDialog : Window
         bodyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.0, GridUnitType.Star) }); // Right preview
 
         // LEFT COLUMN (Settings)
-        var leftStack = new StackPanel();
+        var leftStack = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
 
         // 1. Metadata Section
         leftStack.Children.Add(SectionLabel("Document Metadata", 0));
