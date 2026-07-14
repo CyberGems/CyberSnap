@@ -311,10 +311,6 @@ public partial class CaptureWidgetWindow : Window
             _ => new CornerRadius(r),
         };
 
-        GripPanel.Orientation = horizontal
-            ? System.Windows.Controls.Orientation.Horizontal
-            : System.Windows.Controls.Orientation.Vertical;
-
         // Nudge the grip bars toward the docked (screen) edge with a tiny overflow, so they
         // appear to emerge from the edge instead of hugging the free rounded edge.
         const double overflow = 2;
@@ -339,17 +335,9 @@ public partial class CaptureWidgetWindow : Window
             _ => new Thickness(0),
         };
 
-        SetGripRect(GripRect1, horizontal);
-        SetGripRect(GripRect2, horizontal);
-        SetGripRect(GripRect3, horizontal);
+        GripPill.Width = horizontal ? 24 : 3;
+        GripPill.Height = horizontal ? 3 : 24;
         PeekGrip.Visibility = _isExpanded ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    private static void SetGripRect(System.Windows.Shapes.Rectangle rect, bool horizontal)
-    {
-        rect.Width = horizontal ? 2 : 6;
-        rect.Height = horizontal ? 6 : 2;
-        rect.Margin = horizontal ? new Thickness(1, 0, 1, 0) : new Thickness(0, 1, 0, 1);
     }
 
     private void UpdateEnableEditorState()

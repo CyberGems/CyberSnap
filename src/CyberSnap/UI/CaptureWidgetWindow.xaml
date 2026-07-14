@@ -127,12 +127,11 @@
                             BorderThickness="0" Panel.ZIndex="2" IsHitTestVisible="False">
                         <!-- No own glow: the panel's drop shadow covers the peek. Its own effect
                              (clipped before the shadow margin existed) now rendered as a corner ghost. -->
-                        <StackPanel x:Name="GripPanel" Orientation="Horizontal"
-                                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Rectangle x:Name="GripRect1" Width="2" Height="6" Fill="{DynamicResource WidgetTextMuted}" Margin="1,0"/>
-                            <Rectangle x:Name="GripRect2" Width="2" Height="6" Fill="{DynamicResource WidgetTextMuted}" Margin="1,0"/>
-                            <Rectangle x:Name="GripRect3" Width="2" Height="6" Fill="{DynamicResource WidgetTextMuted}" Margin="1,0"/>
-                        </StackPanel>
+                        <Border x:Name="GripPanel" Background="Transparent"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border x:Name="GripPill" CornerRadius="1.5" Background="{DynamicResource WidgetTextMuted}"
+                                    Width="24" Height="3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
                     </Border>
 
                 <Grid x:Name="ControlsGrid" Margin="12">
