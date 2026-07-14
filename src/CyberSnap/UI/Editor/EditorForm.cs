@@ -1035,7 +1035,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     private void SaveAsPdf(Bitmap bitmap, string filePath)
     {
-        var options = ThemedPdfExportDialog.Show(Handle);
+        var options = ThemedPdfExportDialog.Show(Handle, bitmap);
         if (options == null) return; // Cancelled by user
 
         try

@@ -1731,5 +1731,8 @@
   "1 Page": "1 página",
   "1 Page (Auto-fit size)": "1 página (tamaño ajustado automáticamente)",
   "Multiple Pages (Slices)": "Varias páginas (rebanadas)",
-  "1 Page (Scale to fit)": "1 página (escala para ajustar)"
+  "1 Page (Scale to fit)": "1 página (escala para ajustar)",
+  "Export as PNG": "Exportar como PNG",
+  "Export as JPEG": "Exportar como JPEG",
+  "Export as PDF": "Exportar como PDF"
 }

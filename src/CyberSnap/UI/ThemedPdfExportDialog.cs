@@ -61,7 +61,7 @@ internal sealed class ThemedPdfExportDialog : Window
     private Border _previewImage = null!;
     private TextBlock _previewPageCount = null!;
 
-    private ThemedPdfExportDialog()
+    private ThemedPdfExportDialog(System.Drawing.Bitmap? previewBitmap)
     {
         Theme.Refresh();
         Title = Services.LocalizationService.Translate("PDF Export Options");
@@ -76,7 +76,7 @@ internal sealed class ThemedPdfExportDialog : Window
         FontFamily = new WpfFontFamily(UiChrome.PreferredFamilyName);
         Foreground = Theme.Brush(Theme.TextPrimary);
 
-        var content = BuildContent();
+        var content = BuildContent(previewBitmap);
         Content = content;
         UiScale.ApplyToWindow(this, content, scaleWindowBounds: true);
 
@@ -91,9 +91,9 @@ internal sealed class ThemedPdfExportDialog : Window
         UpdatePreview();
     }
 
-    public static PdfExportOptions? Show(IntPtr ownerHandle)
+    public static PdfExportOptions? Show(IntPtr ownerHandle, System.Drawing.Bitmap? previewBitmap = null)
     {
-        var dialog = new ThemedPdfExportDialog();
+        var dialog = new ThemedPdfExportDialog(previewBitmap);
         if (ownerHandle != IntPtr.Zero)
         {
             new WindowInteropHelper(dialog).Owner = ownerHandle;
@@ -106,7 +106,7 @@ internal sealed class ThemedPdfExportDialog : Window
         return null;
     }
 
-    private FrameworkElement BuildContent()
+    private FrameworkElement BuildContent(System.Drawing.Bitmap? previewBitmap)
     {
         var accent = Theme.Accent;
 
@@ -120,7 +120,7 @@ internal sealed class ThemedPdfExportDialog : Window
             Effect = Glow(accent, Theme.IsDark ? 10 : 7, Theme.IsDark ? 0.18 : 0.11)
         };
 
-        var root = new StackPanel { Margin = new Thickness(22) };
+        var root = new StackPanel { Margin = new Thickness(18) };
 
         // Title row: icon badge + title + close.
         var titleGrid = new Grid();
@@ -146,7 +146,7 @@ internal sealed class ThemedPdfExportDialog : Window
         root.Children.Add(titleGrid);
 
         // Body Grid: Left Stack (Settings), Right Stack (Preview & Save/Cancel)
-        var bodyGrid = new Grid { Margin = new Thickness(0, 20, 0, 0) };
+        var bodyGrid = new Grid { Margin = new Thickness(0, 14, 0, 0) };
         bodyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) }); // Left settings
         bodyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });                       // Spacer
         bodyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.0, GridUnitType.Star) }); // Right preview
@@ -164,7 +164,7 @@ internal sealed class ThemedPdfExportDialog : Window
         leftStack.Children.Add(WrapField("Tags", _tagsBox));
 
         // 2. Page Setup Section
-        leftStack.Children.Add(SectionLabel("Page Size", 12));
+        leftStack.Children.Add(SectionLabel("Page Size", 8));
         var sizeWrap = new WrapPanel();
         _pageSizeChips.Add((MakeSelectableChip("Letter", sizeWrap, "Letter", v => { _options.PageSize = v; UpdatePreview(); }), "Letter"));
         _pageSizeChips.Add((MakeSelectableChip("A4", sizeWrap, "A4", v => { _options.PageSize = v; UpdatePreview(); }), "A4"));
@@ -172,7 +172,7 @@ internal sealed class ThemedPdfExportDialog : Window
         UpdateChipSelection(_pageSizeChips, _options.PageSize);
         leftStack.Children.Add(sizeWrap);
 
-        leftStack.Children.Add(SectionLabel("Orientation", 10));
+        leftStack.Children.Add(SectionLabel("Orientation", 6));
         var orientWrap = new WrapPanel();
         _orientationChips.Add((MakeSelectableChip("Portrait", orientWrap, "Portrait", v => { _options.Orientation = v; UpdatePreview(); }), "Portrait"));
         _orientationChips.Add((MakeSelectableChip("Landscape", orientWrap, "Landscape", v => { _options.Orientation = v; UpdatePreview(); }), "Landscape"));
@@ -180,7 +180,7 @@ internal sealed class ThemedPdfExportDialog : Window
         leftStack.Children.Add(orientWrap);
 
         // Margins Row (Top, Bottom, Left, Right)
-        leftStack.Children.Add(SectionLabel("Margins (cm)", 10));
+        leftStack.Children.Add(SectionLabel("Margins (cm)", 6));
         var marginsGrid = new Grid();
         marginsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         marginsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6) });
@@ -212,7 +212,7 @@ internal sealed class ThemedPdfExportDialog : Window
         leftStack.Children.Add(marginsGrid);
 
         // 3. Image Layout Section
-        leftStack.Children.Add(SectionLabel("Image Layout", 12));
+        leftStack.Children.Add(SectionLabel("Image Layout", 8));
         var layoutWrap = new WrapPanel();
         _layoutChips.Add((MakeSelectableChip("Fit on page (shrink)", layoutWrap, "Fit", v => { _options.ImageLayout = v; UpdatePreview(); }), "Fit"));
         _layoutChips.Add((MakeSelectableChip("Allow to span multiple pages", layoutWrap, "Span", v => { _options.ImageLayout = v; UpdatePreview(); }), "Span"));
@@ -230,7 +230,6 @@ internal sealed class ThemedPdfExportDialog : Window
             Background = Theme.Brush(FieldBackground),
             BorderBrush = Theme.Brush(Theme.IsDark ? WpfColor.FromArgb(20, 255, 255, 255) : WpfColor.FromArgb(12, 0, 0, 0)),
             BorderThickness = new Thickness(1),
-            Height = 360,
             VerticalAlignment = VerticalAlignment.Stretch
         };
 
@@ -282,17 +281,30 @@ internal sealed class ThemedPdfExportDialog : Window
             Background = Theme.Brush(WithAlpha(Theme.Accent, 75)),
             BorderBrush = Theme.Brush(Theme.Accent),
             BorderThickness = new Thickness(1),
-            Margin = new Thickness(15),
-            Child = new TextBlock
-            {
-                Text = Services.LocalizationService.Translate("IMAGE"),
-                FontSize = 10,
-                FontWeight = FontWeights.Bold,
-                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 30, 46)),
-                HorizontalAlignment = WpfHorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            }
+            Margin = new Thickness(15)
         };
+
+        if (previewBitmap != null)
+        {
+            try
+            {
+                var bmpSource = BitmapToBitmapSource(previewBitmap);
+                _previewImage.Child = new System.Windows.Controls.Image
+                {
+                    Source = bmpSource,
+                    Stretch = Stretch.Uniform
+                };
+            }
+            catch (Exception ex)
+            {
+                CyberSnap.Services.AppDiagnostics.LogError("pdf.preview.image-convert", ex);
+                SetFallbackPreviewImage();
+            }
+        }
+        else
+        {
+            SetFallbackPreviewImage();
+        }
 
         var paperGrid = new Grid();
         paperGrid.Children.Add(marginShape);
@@ -323,7 +335,7 @@ internal sealed class ThemedPdfExportDialog : Window
         {
             Orientation = WpfOrientation.Horizontal,
             HorizontalAlignment = WpfHorizontalAlignment.Right,
-            Margin = new Thickness(0, 20, 0, 0)
+            Margin = new Thickness(0, 14, 0, 0)
         };
         buttons.Children.Add(BuildButton("Cancel", isPrimary: false, () => Close()));
         buttons.Children.Add(BuildButton("Export", isPrimary: true, Commit));
@@ -397,7 +409,7 @@ internal sealed class ThemedPdfExportDialog : Window
 
     private FrameworkElement WrapField(string label, FrameworkElement field)
     {
-        var stack = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+        var stack = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
         stack.Children.Add(new TextBlock
         {
             Text = Services.LocalizationService.Translate(label),
@@ -673,4 +685,40 @@ internal sealed class ThemedPdfExportDialog : Window
 
     private static WpfColor TrackOff =>
         Theme.IsDark ? WpfColor.FromRgb(46, 50, 66) : WpfColor.FromRgb(219, 222, 228);
+
+    private void SetFallbackPreviewImage()
+    {
+        _previewImage.Child = new TextBlock
+        {
+            Text = Services.LocalizationService.Translate("IMAGE"),
+            FontSize = 10,
+            FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 30, 46)),
+            HorizontalAlignment = WpfHorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+    }
+
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool DeleteObject(IntPtr hObject);
+
+    private static System.Windows.Media.Imaging.BitmapSource BitmapToBitmapSource(System.Drawing.Bitmap bitmap)
+    {
+        var hBitmap = bitmap.GetHbitmap();
+        try
+        {
+            var source = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                hBitmap,
+                IntPtr.Zero,
+                Int32Rect.Empty,
+                System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+            source.Freeze();
+            return source;
+        }
+        finally
+        {
+            DeleteObject(hBitmap);
+        }
+    }
 }
