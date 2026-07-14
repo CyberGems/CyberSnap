@@ -973,6 +973,8 @@
   "Screen": "Pantalla",
   "Primary": "Principal",
   "Secondary": "Secundario",
+  "Monitor {0} ({1})": "Monitor {0} ({1})",
+  "Quick screenshot (From center)": "Captura rápida (Desde el centro)",
   "Activation delay": "Retardo de activación",
   "Widget": "Widget",
   "Widget settings": "Ajustes del widget",

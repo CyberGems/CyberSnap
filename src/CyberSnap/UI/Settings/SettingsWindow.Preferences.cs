@@ -1176,12 +1176,9 @@ public partial class SettingsWindow
         });
         for (int i = 0; i < screens.Length; i++)
         {
-            var primarySecondary = screens[i].Primary
-                ? LocalizationService.Translate("Primary")
-                : LocalizationService.Translate("Secondary");
             WidgetMonitorCombo.Items.Add(new ComboBoxItem
             {
-                Content = $"Monitor {i + 1} ({primarySecondary})",
+                Content = CaptureWidgetWindow.FormatMonitorLabel(i, screens[i].Primary),
                 Tag = i
             });
         }

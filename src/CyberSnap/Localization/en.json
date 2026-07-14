@@ -724,6 +724,8 @@
   "Screen": "Screen",
   "Primary": "Primary",
   "Secondary": "Secondary",
+  "Monitor {0} ({1})": "Monitor {0} ({1})",
+  "Quick screenshot (From center)": "Quick screenshot (From center)",
   "Activation delay": "Activation delay",
   "Widget": "Widget",
   "Widget settings": "Widget settings",
