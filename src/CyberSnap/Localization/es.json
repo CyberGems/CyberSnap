@@ -1756,5 +1756,10 @@
   "How to unbind Snipping Tool from the PrtSc key?": "¿Cómo desasignar la herramienta Recortes de la tecla PrtSc?",
   "Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen.": "Abre Configuración de Windows > Accesibilidad > Teclado y desactiva la opción que abre Recortes con Print Screen.",
   "Open Windows Settings": "Abrir Configuración de Windows",
-  "Hotkey assignments": "Asignación de atajos"
+  "Hotkey assignments": "Asignación de atajos",
+  "Area": "Área",
+  "Scroll": "Desplazamiento",
+  "Extract text": "Extraer texto",
+  "QR Codes": "Códigos QR",
+  "Exit CyberSnap": "Salir de CyberSnap"
 }

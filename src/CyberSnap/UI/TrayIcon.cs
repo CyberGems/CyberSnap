@@ -18,6 +18,7 @@ public sealed class TrayIcon : IDisposable
     private ContextMenuStrip? _menu;
     private ToolStripMenuItem? _recordItem;
     private bool _isShowingRecording;
+    private TrayContextMenuWindow? _activeWpfMenu;
 
     public event Action? OnCapture;
     public event Action? OnScrollCapture;
@@ -63,12 +64,17 @@ public sealed class TrayIcon : IDisposable
         };
 
         _menu = CreateThemedMenu();
-        _notifyIcon.ContextMenuStrip = _menu;
+        _notifyIcon.ContextMenuStrip = null; // Use custom WPF menu instead
     }
 
     public void CloseContextMenu()
     {
         _menu?.Close();
+        try
+        {
+            _activeWpfMenu?.Close();
+        }
+        catch { }
     }
 
     public void UpdateRecordingState(bool isRecording)
@@ -96,7 +102,7 @@ public sealed class TrayIcon : IDisposable
 
         var oldMenu = _menu;
         _menu = CreateThemedMenu();
-        _notifyIcon.ContextMenuStrip = _menu;
+        _notifyIcon.ContextMenuStrip = null; // Use custom WPF menu instead
         oldMenu?.Dispose();
     }
 
@@ -138,7 +144,7 @@ public sealed class TrayIcon : IDisposable
         var annotationEditorItem = WindowsMenuRenderer.Item(T("Annotations Editor..."), iconId: "compose");
         var historyItem        = WindowsMenuRenderer.Item(T("Capture Gallery..."), iconId: "history");
         var settingsItem       = WindowsMenuRenderer.Item(T("Configuration..."), iconId: "gear");
-        var quitItem           = WindowsMenuRenderer.Item(T("Exit"), iconId: "close", danger: true);
+        var quitItem           = WindowsMenuRenderer.Item(T("Exit"), iconId: "signOut", danger: true);
 
         captureItem.Click += (_, _) => OnCapture?.Invoke();
         ocrItem.Click     += (_, _) => OnStandaloneOcr?.Invoke();
@@ -214,15 +220,30 @@ public sealed class TrayIcon : IDisposable
 
     private void ShowMenu()
     {
-        var oldMenu = _menu;
-        _menu = CreateThemedMenu();
-        _notifyIcon.ContextMenuStrip = _menu;
-        oldMenu?.Dispose();
+        try
+        {
+            _activeWpfMenu?.Close();
+        }
+        catch { }
 
-        var showMethod = typeof(NotifyIcon).GetMethod("ShowContextMenu",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        showMethod?.Invoke(_notifyIcon, null);
+        // Capture physical cursor position immediately upon tray click
+        var clickPoint = System.Windows.Forms.Cursor.Position;
+
+        _activeWpfMenu = new TrayContextMenuWindow(this, clickPoint);
+        _activeWpfMenu.Show();
     }
+
+    public void TriggerCapture() => OnCapture?.Invoke();
+    public void TriggerScrollCapture() => OnScrollCapture?.Invoke();
+    public void TriggerRuler() => OnRuler?.Invoke();
+    public void TriggerColorPicker() => OnStandaloneColorPicker?.Invoke();
+    public void TriggerOcr() => OnStandaloneOcr?.Invoke();
+    public void TriggerScan() => OnStandaloneScan?.Invoke();
+    public void TriggerAnnotationEditor() => OnAnnotationEditor?.Invoke();
+    public void TriggerSettings() => OnSettings?.Invoke();
+    public void TriggerHistory() => OnHistory?.Invoke();
+    public void TriggerQuit() => OnQuit?.Invoke();
+    public void TriggerRecord(RecordingFormat format) => OnRecordRequested?.Invoke(format);
 
     private static string T(string text) => LocalizationService.Translate(text);
 
@@ -346,6 +367,11 @@ public sealed class TrayIcon : IDisposable
         _notifyIcon.Visible = false;
         _notifyIcon.ContextMenuStrip = null;
         _menu?.Dispose();
+        try
+        {
+            _activeWpfMenu?.Close();
+        }
+        catch { }
         _notifyIcon.Dispose();
         _defaultIcon?.Dispose();
         _recordingIcon?.Dispose();
