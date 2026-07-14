@@ -1111,6 +1111,23 @@ public partial class SetupWizard : Window
         if (e.ChangedButton == MouseButton.Left) DragMove();
     }
 
+    private void WizOpenWinSettingsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ms-settings:easeofaccess-keyboard") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("setup.open-windows-keyboard-settings", ex.Message, ex);
+        }
+    }
+
+    private void CloseWizPrtScWarnBanner_Click(object sender, RoutedEventArgs e)
+    {
+        WizPrtScWarnBanner.Visibility = Visibility.Collapsed;
+    }
+
     private sealed class WindowHandleWrapper : System.Windows.Forms.IWin32Window
     {
         public WindowHandleWrapper(IntPtr handle) => Handle = handle;
