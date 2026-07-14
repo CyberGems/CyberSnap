@@ -72,6 +72,7 @@ public sealed class SettingsService : IDisposable
             svc.Load();
             svc.Settings.EditorExportFormat = format;
             svc.Save();
+            svc.FlushPendingWrites();
         }
         catch (Exception ex)
         {
