@@ -56,6 +56,29 @@ public sealed class SettingsService : IDisposable
         OcrAutoCopyToClipboardChanged?.Invoke(value);
     }
 
+    public static void SetEditorExportFormat(int format)
+    {
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+            {
+                s_cachedSettings.EditorExportFormat = format;
+            }
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.EditorExportFormat = format;
+            svc.Save();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.editor-export-format.static-save", ex);
+        }
+    }
+
     public SettingsService(string? settingsPath = null, TimeSpan? saveDelay = null)
     {
         _settingsPath = ResolveSettingsPath(settingsPath);

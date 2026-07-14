@@ -97,7 +97,8 @@ public sealed partial class EditorForm
             || (_canvasMenu != null && _canvasMenu.Visible)
             || (_imageMenu != null && _imageMenu.Visible)
             || (_emojiPicker != null && _emojiPicker.Visible)
-            || (_shareMenu != null && _shareMenu.Visible);
+            || (_shareMenu != null && _shareMenu.Visible)
+            || (_exportMenu != null && _exportMenu.Visible);
 
         if (IsDisposed || !Visible || !isWindowActive || isAnyMenuOpen)
         {

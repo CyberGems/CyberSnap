@@ -1519,16 +1519,31 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         menu.Items.Add(new ToolStripSeparator());
 
+        var s = Services.SettingsService.LoadStatic();
+        int activeFormat = s?.EditorExportFormat ?? 0;
+
         var pngItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export as PNG"));
-        pngItem.Click += (_, _) => DoSaveAsWithExtension(".png");
+        pngItem.Click += (_, _) => {
+            Services.SettingsService.SetEditorExportFormat(0);
+            DoSaveAsWithExtension(".png");
+        };
+        if (activeFormat == 0) pngItem.Checked = true;
         menu.Items.Add(pngItem);
 
         var jpgItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export as JPEG"));
-        jpgItem.Click += (_, _) => DoSaveAsWithExtension(".jpg");
+        jpgItem.Click += (_, _) => {
+            Services.SettingsService.SetEditorExportFormat(1);
+            DoSaveAsWithExtension(".jpg");
+        };
+        if (activeFormat == 1) jpgItem.Checked = true;
         menu.Items.Add(jpgItem);
 
         var pdfItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export as PDF"));
-        pdfItem.Click += (_, _) => DoSaveAsWithExtension(".pdf");
+        pdfItem.Click += (_, _) => {
+            Services.SettingsService.SetEditorExportFormat(2);
+            DoSaveAsWithExtension(".pdf");
+        };
+        if (activeFormat == 2) pdfItem.Checked = true;
         menu.Items.Add(pdfItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu);
