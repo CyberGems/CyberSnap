@@ -311,29 +311,10 @@ public partial class CaptureWidgetWindow : Window
             _ => new CornerRadius(r),
         };
 
-        // Nudge the grip bars toward the docked (screen) edge with a tiny overflow, so they
-        // appear to emerge from the edge instead of hugging the free rounded edge.
-        const double overflow = 2;
-        GripPanel.HorizontalAlignment = edge switch
-        {
-            CaptureDockSide.Left => System.Windows.HorizontalAlignment.Left,
-            CaptureDockSide.Right => System.Windows.HorizontalAlignment.Right,
-            _ => System.Windows.HorizontalAlignment.Center,
-        };
-        GripPanel.VerticalAlignment = edge switch
-        {
-            CaptureDockSide.Top => System.Windows.VerticalAlignment.Top,
-            CaptureDockSide.Bottom => System.Windows.VerticalAlignment.Bottom,
-            _ => System.Windows.VerticalAlignment.Center,
-        };
-        GripPanel.Margin = edge switch
-        {
-            CaptureDockSide.Top => new Thickness(0, -overflow, 0, 0),
-            CaptureDockSide.Bottom => new Thickness(0, 0, 0, -overflow),
-            CaptureDockSide.Left => new Thickness(-overflow, 0, 0, 0),
-            CaptureDockSide.Right => new Thickness(0, 0, -overflow, 0),
-            _ => new Thickness(0),
-        };
+        // Center the pill within the activator bar so it renders as a fully rounded, visible pill.
+        GripPanel.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+        GripPanel.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+        GripPanel.Margin = new Thickness(0);
 
         GripPill.Width = horizontal ? 24 : 3;
         GripPill.Height = horizontal ? 3 : 24;
