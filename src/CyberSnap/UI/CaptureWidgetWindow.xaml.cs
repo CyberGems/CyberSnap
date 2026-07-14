@@ -1436,6 +1436,14 @@ public partial class CaptureWidgetWindow : Window
         CancelHideLaunch();
         CancelSessionRestore();
 
+        _hoverDelayTimer.Stop();
+        _collapseTimer.Stop();
+
+        // Drop opacity first so the expand→peek snap is invisible, then store peek geometry
+        // before Hide(). Otherwise WPF/DWM can re-show a leftover expanded frame (the brief
+        // ~30% panel flash users saw when a standalone tool closed).
+        Opacity = 0;
+        CollapseImmediately();
         Hide();
 
         _hideLaunchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
@@ -1490,8 +1498,23 @@ public partial class CaptureWidgetWindow : Window
         if (!_awaitingSessionRestore) return;
         CancelSessionRestore();
 
+        _hoverDelayTimer.Stop();
+        _collapseTimer.Stop();
+
+        // Still Hidden + Opacity 0: lock peek geometry before the first composed frame.
         CollapseImmediately();
         Show();
+        // After Show, DPI/work-area math is definitive — snap again, then reveal on the
+        // next render pass so layout has flushed (avoids a one-frame expanded ghost).
+        CollapseImmediately();
+        BeginPostDragGrace(); // cursor may rest on the peek; don't auto-expand for a beat
+
+        _ = Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (!IsLoaded) return;
+            PositionWindow();
+            Opacity = 1;
+        }), DispatcherPriority.Render);
     }
 
     [DllImport("user32.dll")]
