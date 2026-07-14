@@ -196,6 +196,7 @@ public partial class App
     {
         // Dismiss tray context menu so it doesn't appear frozen in the screenshot
         _trayIcon?.CloseContextMenu();
+        BeginStandaloneToolSession();
 
         var thread = new Thread(() =>
         {
@@ -221,6 +222,10 @@ public partial class App
             {
                 AppDiagnostics.LogError("standalone-ruler", ex);
             }
+            finally
+            {
+                EndStandaloneToolSession();
+            }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.IsBackground = true;
@@ -230,6 +235,7 @@ public partial class App
     private void OnStandaloneOcrHotkeyPressed()
     {
         _trayIcon?.CloseContextMenu();
+        BeginStandaloneToolSession();
 
         var thread = new Thread(() =>
         {
@@ -243,6 +249,10 @@ public partial class App
             {
                 AppDiagnostics.LogError("standalone-ocr", ex);
             }
+            finally
+            {
+                EndStandaloneToolSession();
+            }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.IsBackground = true;
@@ -252,6 +262,7 @@ public partial class App
     private void OnStandaloneColorPickerHotkeyPressed()
     {
         _trayIcon?.CloseContextMenu();
+        BeginStandaloneToolSession();
 
         var thread = new Thread(() =>
         {
@@ -265,6 +276,10 @@ public partial class App
             {
                 AppDiagnostics.LogError("standalone-colorpicker", ex);
             }
+            finally
+            {
+                EndStandaloneToolSession();
+            }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.IsBackground = true;
@@ -274,6 +289,7 @@ public partial class App
     private void OnStandaloneScanHotkeyPressed()
     {
         _trayIcon?.CloseContextMenu();
+        BeginStandaloneToolSession();
 
         var thread = new Thread(() =>
         {
@@ -286,6 +302,10 @@ public partial class App
             catch (Exception ex)
             {
                 AppDiagnostics.LogError("standalone-scan", ex);
+            }
+            finally
+            {
+                EndStandaloneToolSession();
             }
         });
         thread.SetApartmentState(ApartmentState.STA);
@@ -307,6 +327,10 @@ public partial class App
         HideSettingsForCapture();
         LaunchGifRecording();
     }
+
+    /// <summary>Start (or stop) a recording with an explicit format, without mutating settings.</summary>
+    public void OnRecordWithFormatProxy(RecordingFormat format) => LaunchRecordingWithFormat(format);
+
     public void OnScrollCaptureHotkeyPressedProxy() => OnScrollCaptureHotkeyPressed();
     public void OnScanHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Scan);
     public void OnCenterHotkeyPressedProxy() => OnToolHotkeyPressed(CaptureMode.Center);

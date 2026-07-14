@@ -19,6 +19,46 @@ public partial class App
     {
         Volatile.Write(ref _isCapturing, 0);
         RestoreSettingsAfterCapture();
+        NotifySessionBecameIdleIfQuiet();
+    }
+
+    /// <summary>
+    /// True while a capture overlay/recording is active or a standalone tool form is open.
+    /// Used by the floating widget to know when it is safe to re-show itself.
+    /// </summary>
+    public bool IsSessionBusy() =>
+        Volatile.Read(ref _isCapturing) != 0 || Volatile.Read(ref _activeStandaloneTools) != 0;
+
+    /// <summary>
+    /// Raised on the UI dispatcher when the app transitions from busy to idle
+    /// (capture ended and no standalone tool is open).
+    /// </summary>
+    public event Action? SessionBecameIdle;
+
+    private void BeginStandaloneToolSession() => Interlocked.Increment(ref _activeStandaloneTools);
+
+    private void EndStandaloneToolSession()
+    {
+        var remaining = Interlocked.Decrement(ref _activeStandaloneTools);
+        if (remaining < 0)
+            Interlocked.Exchange(ref _activeStandaloneTools, 0);
+        NotifySessionBecameIdleIfQuiet();
+    }
+
+    private void NotifySessionBecameIdleIfQuiet()
+    {
+        if (IsSessionBusy()) return;
+
+        void Raise()
+        {
+            try { SessionBecameIdle?.Invoke(); }
+            catch (Exception ex) { AppDiagnostics.LogError("session.became-idle", ex); }
+        }
+
+        if (Dispatcher.CheckAccess())
+            Raise();
+        else
+            _ = Dispatcher.BeginInvoke(Raise);
     }
 
     private void HideSettingsForCapture()
