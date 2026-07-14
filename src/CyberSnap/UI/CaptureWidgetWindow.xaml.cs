@@ -249,15 +249,11 @@ public partial class CaptureWidgetWindow : Window
         UpdateEnableEditorState();
         LoadIcons();
 
-        // Update tooltip based on the default capture mode
-        string originalTooltip = LocalizationService.Translate(_settings.InterfaceLanguage, "Quick screenshot (Area Capture)");
-        int openParen = originalTooltip.LastIndexOf('(');
-        if (openParen >= 0 && _settings.DefaultCaptureMode == Models.CaptureMode.Center)
-        {
-            string translatedCenter = LocalizationService.Translate(_settings.InterfaceLanguage, "From center");
-            originalTooltip = originalTooltip.Substring(0, openParen) + "(" + translatedCenter + ")";
-        }
-        CaptureButton.ToolTip = originalTooltip;
+        // Tooltip reflects the configured default capture mode (area vs from-center).
+        var lang = _settings.InterfaceLanguage;
+        CaptureButton.ToolTip = _settings.DefaultCaptureMode == Models.CaptureMode.Center
+            ? LocalizationService.Translate(lang, "Quick screenshot (From center)")
+            : LocalizationService.Translate(lang, "Quick screenshot (Area Capture)");
 
         // Apply scaling
         UiScale.ApplyToWindow(this, RootGrid, scaleWindowBounds: false);
@@ -843,31 +839,119 @@ public partial class CaptureWidgetWindow : Window
 
             var curPos = GetCursorPositionInDips();
 
-            // Window is inflated by the shadow halo; travel is over the visible content size.
-            var halo = ShadowHalo(_settings.WidgetDockEdge);
-            var contentWidth = Width - halo.Left - halo.Right;
-            var contentHeight = Height - halo.Top - halo.Bottom;
-            if (_settings.WidgetDockEdge == CaptureDockSide.Top || _settings.WidgetDockEdge == CaptureDockSide.Bottom)
+            // Snap to a different screen edge when the cursor is clearly nearer to it.
+            // Hysteresis in ResolvePreferredDockEdge prevents flicker near corners.
+            var preferredEdge = ResolvePreferredDockEdge(workingArea, curPos, _settings.WidgetDockEdge);
+            if (preferredEdge != _settings.WidgetDockEdge)
             {
-                var travel = workingArea.Width - contentWidth;
-                if (travel > 0)
-                {
-                    var delta = curPos.X - _dragStartPoint.X;
-                    _settings.WidgetDockPositionOffset = Math.Clamp(_dragStartOffset + delta / travel, 0.0, 1.0);
-                }
+                _settings.WidgetDockEdge = preferredEdge;
+                _settings.WidgetDockPositionOffset = OffsetAlongEdgeFromCursor(
+                    workingArea, preferredEdge, curPos);
+                _dragStartPoint = curPos;
+                _dragStartOffset = _settings.WidgetDockPositionOffset;
+                UpdatePeekGrip(preferredEdge);
+                UpdateGripVisibility();
             }
             else
             {
-                var travel = workingArea.Height - contentHeight;
-                if (travel > 0)
+                // Slide along the current dock edge.
+                var halo = ShadowHalo(_settings.WidgetDockEdge);
+                var contentWidth = Width - halo.Left - halo.Right;
+                var contentHeight = Height - halo.Top - halo.Bottom;
+                if (_settings.WidgetDockEdge == CaptureDockSide.Top || _settings.WidgetDockEdge == CaptureDockSide.Bottom)
                 {
-                    var delta = curPos.Y - _dragStartPoint.Y;
-                    _settings.WidgetDockPositionOffset = Math.Clamp(_dragStartOffset + delta / travel, 0.0, 1.0);
+                    var travel = workingArea.Width - contentWidth;
+                    if (travel > 0)
+                    {
+                        var delta = curPos.X - _dragStartPoint.X;
+                        _settings.WidgetDockPositionOffset = Math.Clamp(_dragStartOffset + delta / travel, 0.0, 1.0);
+                    }
+                }
+                else
+                {
+                    var travel = workingArea.Height - contentHeight;
+                    if (travel > 0)
+                    {
+                        var delta = curPos.Y - _dragStartPoint.Y;
+                        _settings.WidgetDockPositionOffset = Math.Clamp(_dragStartOffset + delta / travel, 0.0, 1.0);
+                    }
                 }
             }
 
             PositionWindow();
         }
+    }
+
+    /// <summary>
+    /// Pick the nearest dock edge under the cursor, with a proximity zone and hysteresis so
+    /// the widget does not thrash between edges at corners.
+    /// </summary>
+    private static CaptureDockSide ResolvePreferredDockEdge(
+        Rect workingArea,
+        System.Windows.Point cursor,
+        CaptureDockSide current)
+    {
+        double dTop = cursor.Y - workingArea.Top;
+        double dBottom = workingArea.Bottom - cursor.Y;
+        double dLeft = cursor.X - workingArea.Left;
+        double dRight = workingArea.Right - cursor.X;
+
+        double Dist(CaptureDockSide edge) => edge switch
+        {
+            CaptureDockSide.Top => dTop,
+            CaptureDockSide.Bottom => dBottom,
+            CaptureDockSide.Left => dLeft,
+            CaptureDockSide.Right => dRight,
+            _ => dTop,
+        };
+
+        var best = CaptureDockSide.Top;
+        var bestDist = dTop;
+        void Consider(CaptureDockSide edge, double dist)
+        {
+            if (dist < bestDist)
+            {
+                best = edge;
+                bestDist = dist;
+            }
+        }
+        Consider(CaptureDockSide.Bottom, dBottom);
+        Consider(CaptureDockSide.Left, dLeft);
+        Consider(CaptureDockSide.Right, dRight);
+
+        if (best == current) return current;
+
+        // Zone scales with the smaller working-area side (clamped for tiny/huge screens).
+        double zone = Math.Clamp(Math.Min(workingArea.Width, workingArea.Height) * 0.08, 40, 80);
+        if (bestDist > zone) return current;
+
+        // Stay put unless the new edge is clearly closer (corner hysteresis).
+        const double hysteresis = 24;
+        if (bestDist + hysteresis >= Dist(current)) return current;
+
+        return best;
+    }
+
+    private static double OffsetAlongEdgeFromCursor(
+        Rect workingArea,
+        CaptureDockSide edge,
+        System.Windows.Point cursor)
+    {
+        var scale = UiScale.Normalize(UiScale.Current);
+        var panelWidth = PanelWidth * scale;
+        var panelHeight = PanelHeight * scale;
+        // Use the expanded panel footprint for offset so the grip lands under the cursor
+        // even when the widget is still collapsed (peek-sized).
+        if (edge == CaptureDockSide.Top || edge == CaptureDockSide.Bottom)
+        {
+            var travel = Math.Max(0, workingArea.Width - panelWidth);
+            if (travel <= 0) return 0.5;
+            return Math.Clamp((cursor.X - workingArea.Left - panelWidth / 2) / travel, 0.0, 1.0);
+        }
+
+        var vTravel = Math.Max(0, workingArea.Height - panelHeight);
+        if (vTravel <= 0) return 0.5;
+        return Math.Clamp((cursor.Y - workingArea.Top - panelHeight / 2) / vTravel, 0.0, 1.0);
     }
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
@@ -1101,8 +1185,7 @@ public partial class CaptureWidgetWindow : Window
         {
             var idx = i;
             var s = screens[i];
-            var primarySecondary = s.Primary ? LocalizationService.Translate("Primary") : LocalizationService.Translate("Secondary");
-            var label = $"Monitor {i + 1} ({primarySecondary})";
+            var label = FormatMonitorLabel(i, s.Primary);
             var item = Helpers.WindowsMenuRenderer.Item(label, active: _settings.WidgetMonitorIndex == idx);
             item.Click += (s, ev) =>
             {
@@ -1114,6 +1197,15 @@ public partial class CaptureWidgetWindow : Window
         }
         Helpers.WindowsMenuRenderer.NormalizeDropDownWidths(monitorMenu, minWidth: 200);
         return monitorMenu;
+    }
+
+    internal static string FormatMonitorLabel(int zeroBasedIndex, bool isPrimary)
+    {
+        var role = LocalizationService.Translate(isPrimary ? "Primary" : "Secondary");
+        return string.Format(
+            LocalizationService.Translate("Monitor {0} ({1})"),
+            zeroBasedIndex + 1,
+            role);
     }
 
     private System.Windows.Forms.ToolStripMenuItem BuildActivationDelaySubmenu()
