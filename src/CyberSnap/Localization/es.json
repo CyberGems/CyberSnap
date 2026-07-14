@@ -576,7 +576,7 @@
   "New from clipboard": "Nuevo desde el portapapeles",
   "New canvas": "Nuevo lienzo",
   "Canvas background": "Fondo del lienzo",
-  "Canvas size exceeds 4K resolution": "El tamaño del lienzo excede {0} × {1} px (4K)",
+  "Canvas size exceeds maximum limit": "El tamaño del lienzo excede {0} × {1} px",
   "Pick from screen": "Elegir de la pantalla",
   "Clear": "Limpiar",
   "Accept": "Aceptar",
@@ -1740,5 +1740,8 @@
   "1 Page (Scale to fit)": "1 página (escala para ajustar)",
   "Export as PNG": "Exportar como PNG",
   "Export as JPEG": "Exportar como JPEG",
-  "Export as PDF": "Exportar como PDF"
+  "Export as PDF": "Exportar como PDF",
+  "New capture received": "Nueva captura en cola",
+  "Save changes to {0} before opening the new capture?": "¿Deseas guardar los cambios de {0} antes de abrir la nueva captura?",
+  "Save changes to {0} before opening the selected file?": "¿Deseas guardar los cambios de {0} antes de abrir el archivo seleccionado?"
 }

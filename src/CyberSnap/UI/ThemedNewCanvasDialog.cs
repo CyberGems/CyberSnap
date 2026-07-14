@@ -39,8 +39,8 @@ internal sealed class ThemedNewCanvasDialog : Window
     private const double GlowMargin = 16;
     private const double PanelWidth = 400;
 
-    private const int MaxManualWidth = 3840;   // 4K UHD
-    private const int MaxManualHeight = 2160;  // 4K UHD
+    private const int MaxManualWidth = Controls.AnnotationCanvas.MaxCanvasSize;
+    private const int MaxManualHeight = Controls.AnnotationCanvas.MaxCanvasSize;
 
     private static readonly (string Label, int W, int H)[] ResolutionPresets =
     {
@@ -326,7 +326,7 @@ internal sealed class ThemedNewCanvasDialog : Window
         {
             _warningText.BeginAnimation(OpacityProperty, null);
             _warningText.Text = string.Format(
-                Services.LocalizationService.Translate("Canvas size exceeds 4K resolution"),
+                Services.LocalizationService.Translate("Canvas size exceeds maximum limit"),
                 MaxManualWidth, MaxManualHeight);
             _warningText.Visibility = Visibility.Visible;
             _warningText.Opacity = 1.0;
