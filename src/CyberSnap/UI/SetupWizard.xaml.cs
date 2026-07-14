@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
@@ -23,6 +23,9 @@ public partial class SetupWizard : Window
     private bool _suppressAfterCaptureChange;
     private bool _suppressThemeChange;
     private readonly Dictionary<string, string> _languageItemSources = new(StringComparer.OrdinalIgnoreCase);
+    private System.Windows.Threading.DispatcherTimer? _blockedDetectTimer;
+    private System.Windows.Threading.DispatcherTimer? _resetWarningTimer;
+    private System.Windows.Controls.ToolTip _tooltip = null!;
 
     public SetupWizard(SettingsService settingsService)
     {
@@ -39,7 +42,7 @@ public partial class SetupWizard : Window
         _stepLabels = new[] { StepLabel1, StepLabel2, StepLabel3, StepLabel4, StepLabel5 };
         _stepSubs = new[] { StepSub1, StepSub2, StepSub3, StepSub4, StepSub5 };
 
-        BuildHotkeyRows();
+        InitializeMainHotkey();
         LoadDefaults();
         UpdateSteps(_page);
         PopulateLanguages();
@@ -253,13 +256,380 @@ public partial class SetupWizard : Window
         }
     }
 
-    private void BuildHotkeyRows()
+    private void InitializeMainHotkey()
     {
-        // Keep this step uncluttered: the wizard shows only the capture hotkeys and
-        // points users to Configuration -> Hotkeys for the rest (annotation tools, etc.).
-        ToolListBuilder.Build(WizCapturePanelHotkeys, WizAnnotationPanelHotkeys, _settingsService, this,
-            includeAnnotationTools: false);
+        _tooltip = new System.Windows.Controls.ToolTip();
+        WizHotkeyTextBox.ToolTip = _tooltip;
+
+        var (mod, key) = _settingsService.Settings.GetToolHotkey("rect");
+        WizHotkeyTextBox.Text = HotkeyFormatter.Format(mod, key);
+
+        // Wire up TextBox events
+        WizHotkeyTextBox.GotFocus += WizHotkeyTextBox_GotFocus;
+        WizHotkeyTextBox.LostFocus += WizHotkeyTextBox_LostFocus;
+        WizHotkeyTextBox.PreviewKeyDown += WizHotkeyTextBox_PreviewKeyDown;
+        WizHotkeyTextBox.PreviewKeyUp += WizHotkeyTextBox_PreviewKeyUp;
+        WizHotkeyTextBox.PreviewTextInput += (s, e) => { e.Handled = true; };
+
+        // Add footer note under card
         AddHotkeysFooterNote();
+    }
+
+    private void WizHotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)
+    {
+        WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
+        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+        _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+        _tooltip.IsOpen = false;
+        if (_resetWarningTimer != null)
+        {
+            _resetWarningTimer.Stop();
+            _resetWarningTimer = null;
+        }
+        if (Application.Current is App app)
+        {
+            app.UnregisterAllHotkeys();
+        }
+    }
+
+    private void WizHotkeyTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        var (m, k) = _settingsService.Settings.GetToolHotkey("rect");
+        WizHotkeyTextBox.Text = HotkeyFormatter.Format(m, k);
+        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+        _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+        _tooltip.IsOpen = false;
+        if (_resetWarningTimer != null)
+        {
+            _resetWarningTimer.Stop();
+            _resetWarningTimer = null;
+        }
+        if (_blockedDetectTimer != null)
+        {
+            _blockedDetectTimer.Stop();
+            _blockedDetectTimer = null;
+        }
+        if (Application.Current is App app)
+        {
+            app.RegisterHotkeys(showReadyNotification: false);
+        }
+    }
+
+    private void WizHotkeyTextBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        e.Handled = true;
+        var key = NormalizeHotkeyKey(e);
+        
+        if (IsModifierOnly(key))
+        {
+            if (_resetWarningTimer != null)
+            {
+                _resetWarningTimer.Stop();
+                _resetWarningTimer = null;
+                WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
+                WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+                WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+                _tooltip.IsOpen = false;
+            }
+
+            if (_blockedDetectTimer == null)
+            {
+                _blockedDetectTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+                _blockedDetectTimer.Tick += (s, args) =>
+                {
+                    if (IsAnyNonModifierKeyPhysicallyDown())
+                    {
+                        _blockedDetectTimer.Stop();
+                        WizHotkeyTextBox.Text = LocalizationService.Translate("Taken");
+                        WizHotkeyTextBox.Foreground = System.Windows.Media.Brushes.Red;
+                        WizHotkeyTextBox.FontWeight = FontWeights.Bold;
+                        _tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
+                        _tooltip.IsOpen = true;
+                    }
+                };
+            }
+            _blockedDetectTimer.Stop();
+            _blockedDetectTimer.Start();
+            return;
+        }
+
+        if (_blockedDetectTimer != null)
+        {
+            _blockedDetectTimer.Stop();
+            _blockedDetectTimer = null;
+        }
+        if (_resetWarningTimer != null)
+        {
+            _resetWarningTimer.Stop();
+            _resetWarningTimer = null;
+        }
+        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+        _tooltip.IsOpen = false;
+
+        uint mod = (uint)Keyboard.Modifiers;
+        uint vk = (uint)KeyInterop.VirtualKeyFromKey(key);
+
+        if (mod == 0 && vk == 0) return;
+        if (mod == 0 && vk != Native.User32.VK_SNAPSHOT)
+        {
+            ShowModifierRequiredWarning();
+            return;
+        }
+
+        var conflict = ToolListBuilder.FindHotkeyConflict(_settingsService.Settings, "rect", mod, vk);
+        if (conflict is not null)
+        {
+            ShowInternalHotkeyConflictWarning(mod, vk, conflict.Label);
+            return;
+        }
+
+        var (prevMod, prevKey) = _settingsService.Settings.GetToolHotkey("rect");
+
+        try
+        {
+            _settingsService.Settings.SetToolHotkey("rect", mod, vk);
+            _settingsService.Save();
+            WizHotkeyTextBox.Text = HotkeyFormatter.Format(mod, vk);
+
+            var interceptors = mod == 0 && vk == Native.User32.VK_SNAPSHOT
+                ? HotkeyConflictProbe.DetectPrintScreenInterceptors()
+                : System.Array.Empty<string>();
+            if (interceptors.Count > 0)
+                ApplyPrintScreenFeedback(canRegister: true, interceptors);
+            else
+                Keyboard.ClearFocus();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("setup.rect-hotkey-save", ex);
+            _settingsService.Settings.SetToolHotkey("rect", prevMod, prevKey);
+            try { _settingsService.Save(); } catch { }
+            WizHotkeyTextBox.Text = HotkeyFormatter.Format(prevMod, prevKey);
+            ToastWindow.ShowError(
+                "Hotkey failed",
+                $"The previous hotkey was restored after the failed save. Check your input and try again.\n{ex.Message}");
+        }
+    }
+
+    private void WizHotkeyTextBox_PreviewKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        var key = NormalizeHotkeyKey(e);
+        if (IsModifierOnly(key))
+        {
+            if (Keyboard.Modifiers == ModifierKeys.None)
+            {
+                if (_blockedDetectTimer != null)
+                {
+                    _blockedDetectTimer.Stop();
+                    _blockedDetectTimer = null;
+                }
+
+                if (WizHotkeyTextBox.Text == LocalizationService.Translate("Taken"))
+                {
+                    if (_resetWarningTimer != null) _resetWarningTimer.Stop();
+                    _resetWarningTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };
+                    _resetWarningTimer.Tick += (s, args) =>
+                    {
+                        _resetWarningTimer.Stop();
+                        _resetWarningTimer = null;
+                        if (WizHotkeyTextBox.IsFocused)
+                        {
+                            WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
+                            WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+                            WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+                            _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                            _tooltip.IsOpen = false;
+                        }
+                    };
+                    _resetWarningTimer.Start();
+                }
+                else
+                {
+                    WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+                    WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+                    _tooltip.IsOpen = false;
+                }
+            }
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    private static bool IsAnyNonModifierKeyPhysicallyDown()
+    {
+        for (int vk = 0x41; vk <= 0x5A; vk++) // A-Z
+        {
+            if ((GetAsyncKeyState(vk) & 0x8000) != 0) return true;
+        }
+        for (int vk = 0x30; vk <= 0x39; vk++) // 0-9
+        {
+            if ((GetAsyncKeyState(vk) & 0x8000) != 0) return true;
+        }
+        for (int vk = 0x70; vk <= 0x7B; vk++) // F1-F12
+        {
+            if ((GetAsyncKeyState(vk) & 0x8000) != 0) return true;
+        }
+        return false;
+    }
+
+    private static Key NormalizeHotkeyKey(System.Windows.Input.KeyEventArgs e)
+    {
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.ImeProcessed)
+            key = e.ImeProcessedKey;
+        if (key == Key.DeadCharProcessed)
+            key = e.DeadCharProcessedKey;
+        return key;
+    }
+
+    private static bool IsModifierOnly(Key key) =>
+        key is Key.LeftAlt or Key.RightAlt or Key.LeftCtrl or Key.RightCtrl
+            or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin;
+
+    private static readonly System.Windows.Media.SolidColorBrush HotkeyWarningBrush =
+        new(System.Windows.Media.Color.FromRgb(245, 158, 11));
+
+    private void ShowModifierRequiredWarning()
+    {
+        WizHotkeyTextBox.Text = LocalizationService.Translate("Modifier required");
+        WizHotkeyTextBox.Foreground = HotkeyWarningBrush;
+        WizHotkeyTextBox.FontWeight = FontWeights.SemiBold;
+        _tooltip.Content = LocalizationService.Translate("Global hotkeys require a modifier (Ctrl, Alt, or Shift).");
+        _tooltip.IsOpen = true;
+    }
+
+    private void ShowInternalHotkeyConflictWarning(uint mod, uint vk, string conflictLabelKey)
+    {
+        WizHotkeyTextBox.Text = LocalizationService.Translate("Taken");
+        WizHotkeyTextBox.Foreground = HotkeyWarningBrush;
+        WizHotkeyTextBox.FontWeight = FontWeights.SemiBold;
+        var conflictLabel = LocalizationService.Translate(conflictLabelKey);
+        _tooltip.Content = string.Format(
+            LocalizationService.Translate("\"{0}\" is already assigned to {1}. Enable \"Allow hotkey override\" to reassign."),
+            HotkeyFormatter.Format(mod, vk),
+            conflictLabel);
+        _tooltip.IsOpen = true;
+    }
+
+    private void ApplyPrintScreenFeedback(bool canRegister, IReadOnlyList<string> interceptors)
+    {
+        if (!canRegister)
+        {
+            WizHotkeyTextBox.Text = LocalizationService.Translate("Taken");
+            WizHotkeyTextBox.Foreground = System.Windows.Media.Brushes.Red;
+            WizHotkeyTextBox.FontWeight = FontWeights.Bold;
+            _tooltip.Content = LocalizationService.Translate("This hotkey is registered by another application.");
+            _tooltip.IsOpen = true;
+            return;
+        }
+
+        if (interceptors.Count > 0)
+        {
+            WizHotkeyTextBox.Foreground = HotkeyWarningBrush;
+            WizHotkeyTextBox.FontWeight = FontWeights.SemiBold;
+            _tooltip.Content = string.Format(
+                LocalizationService.Translate("Print Screen assigned, but {0} may intercept it. Close it or change its shortcut."),
+                string.Join(", ", interceptors));
+            _tooltip.IsOpen = true;
+            return;
+        }
+
+        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+        _tooltip.IsOpen = false;
+    }
+
+    private void WizPrtScBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var (prevMod, prevKey) = _settingsService.Settings.GetToolHotkey("rect");
+        var app = Application.Current as App;
+
+        bool canReg = true;
+        if (app is not null)
+        {
+            app.UnregisterAllHotkeys();
+            canReg = HotkeyConflictProbe.CanRegister(0, Native.User32.VK_SNAPSHOT);
+        }
+        var interceptors = HotkeyConflictProbe.DetectPrintScreenInterceptors();
+
+        try
+        {
+            _settingsService.Settings.SetToolHotkey("rect", 0, Native.User32.VK_SNAPSHOT);
+            _settingsService.Save();
+            WizHotkeyTextBox.Text = HotkeyFormatter.Format(0, Native.User32.VK_SNAPSHOT);
+            app?.RegisterHotkeys(showReadyNotification: false);
+            ApplyPrintScreenFeedback(canReg, interceptors);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("setup.rect-hotkey-prtsc", ex);
+            _settingsService.Settings.SetToolHotkey("rect", prevMod, prevKey);
+            try { _settingsService.Save(); } catch { }
+            WizHotkeyTextBox.Text = HotkeyFormatter.Format(prevMod, prevKey);
+            app?.RegisterHotkeys(showReadyNotification: false);
+            ToastWindow.ShowError(
+                "Hotkey failed",
+                $"The previous hotkey was restored after the failed assignment.\n{ex.Message}");
+        }
+    }
+
+    private void WizClearBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var (prevMod, prevKey) = _settingsService.Settings.GetToolHotkey("rect");
+        try
+        {
+            _settingsService.Settings.SetToolHotkey("rect", 0, 0);
+            _settingsService.Save();
+            WizHotkeyTextBox.Text = HotkeyFormatter.Format(0, 0);
+            if (Application.Current is App app)
+            {
+                app.RegisterHotkeys(showReadyNotification: false);
+            }
+            Keyboard.ClearFocus();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("setup.rect-hotkey-clear", ex);
+            _settingsService.Settings.SetToolHotkey("rect", prevMod, prevKey);
+            try { _settingsService.Save(); } catch { }
+            WizHotkeyTextBox.Text = HotkeyFormatter.Format(prevMod, prevKey);
+            ToastWindow.ShowError(
+                "Hotkey failed",
+                $"The previous hotkey was restored after the failed clear.\n{ex.Message}");
+        }
+    }
+
+    private void WizRestoreBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var (prevMod, prevKey) = _settingsService.Settings.GetToolHotkey("rect");
+        uint defaultMod = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;
+        uint defaultKey = 0x41; // A
+
+        try
+        {
+            _settingsService.Settings.SetToolHotkey("rect", defaultMod, defaultKey);
+            _settingsService.Save();
+            WizHotkeyTextBox.Text = HotkeyFormatter.Format(defaultMod, defaultKey);
+            if (Application.Current is App app)
+            {
+                app.RegisterHotkeys(showReadyNotification: false);
+            }
+            Keyboard.ClearFocus();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("setup.rect-hotkey-restore", ex);
+            _settingsService.Settings.SetToolHotkey("rect", prevMod, prevKey);
+            try { _settingsService.Save(); } catch { }
+            WizHotkeyTextBox.Text = HotkeyFormatter.Format(prevMod, prevKey);
+            ToastWindow.ShowError(
+                "Hotkey failed",
+                $"The previous hotkey was restored after the failed restore.\n{ex.Message}");
+        }
     }
 
     private void AddHotkeysFooterNote()

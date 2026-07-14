@@ -1366,5 +1366,8 @@
   "1 Page (Scale to fit)": "1 Page (Scale to fit)",
   "Export as PNG": "Export as PNG",
   "Export as JPEG": "Export as JPEG",
-  "Export as PDF": "Export as PDF"
+  "Export as PDF": "Export as PDF",
+  "The main shortcut to start a screenshot selection": "The main shortcut to start a screenshot selection",
+  "Restore default shortcut": "Restore default shortcut",
+  "Clear shortcut": "Clear shortcut"
 }
