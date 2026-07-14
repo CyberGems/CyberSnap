@@ -355,7 +355,7 @@ internal sealed class ThemedPdfExportDialog : Window
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Content = leftStack,
-            MaxHeight = 350,
+            MaxHeight = 480,
             Padding = new Thickness(0, 0, 16, 0),
             Focusable = false,
             FocusVisualStyle = null
@@ -363,7 +363,7 @@ internal sealed class ThemedPdfExportDialog : Window
         Grid.SetColumn(settingsScroll, 0);
         bodyGrid.Children.Add(settingsScroll);
 
-        // RIGHT COLUMN (Preview Panel)
+        // RIGHT COLUMN (Preview Panel & Buttons)
         var previewContainer = new Border
         {
             Padding = new Thickness(16),
@@ -468,12 +468,15 @@ internal sealed class ThemedPdfExportDialog : Window
         previewStack.Children.Add(_previewPageCount);
 
         previewContainer.Child = previewStack;
-        Grid.SetColumn(previewContainer, 2);
-        bodyGrid.Children.Add(previewContainer);
 
-        root.Children.Add(bodyGrid);
+        // Build right column layout with preview container on top and action buttons underneath
+        var rightGrid = new Grid { VerticalAlignment = VerticalAlignment.Stretch };
+        rightGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        rightGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        // Footer buttons
+        Grid.SetRow(previewContainer, 0);
+        rightGrid.Children.Add(previewContainer);
+
         var buttons = new StackPanel
         {
             Orientation = WpfOrientation.Horizontal,
@@ -482,7 +485,13 @@ internal sealed class ThemedPdfExportDialog : Window
         };
         buttons.Children.Add(BuildButton("Cancel", isPrimary: false, () => Close()));
         buttons.Children.Add(BuildButton("Export", isPrimary: true, Commit));
-        root.Children.Add(buttons);
+        Grid.SetRow(buttons, 1);
+        rightGrid.Children.Add(buttons);
+
+        Grid.SetColumn(rightGrid, 2);
+        bodyGrid.Children.Add(rightGrid);
+
+        root.Children.Add(bodyGrid);
 
         shell.Child = root;
         shell.MouseLeftButtonDown += (_, e) =>
