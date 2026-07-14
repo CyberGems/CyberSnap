@@ -100,7 +100,13 @@ public sealed partial class AnnotationCanvas
 
         ClearCropPending();
         Push(new CropCommand(clamped));
-        ZoomFit();
+        
+        // Calculate new pan to keep the cropped region at the same screen position
+        _pan.X += (float)(clamped.X * _zoom);
+        _pan.Y += (float)(clamped.Y * _zoom);
+        _viewFitsWindow = false;
+        _userPanned = true;
+
         HideToolBanner();
 
         if (_activeTool == CanvasTool.Crop)

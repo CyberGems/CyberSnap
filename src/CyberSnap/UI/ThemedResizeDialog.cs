@@ -46,9 +46,11 @@ internal sealed class ThemedResizeDialog : Window
         ("640 × 480", 640, 480),
         ("800 × 600", 800, 600),
         ("1024 × 768", 1024, 768),
+        ("1280 × 720", 1280, 720),
         ("1366 × 768", 1366, 768),
         ("1920 × 1080", 1920, 1080),
         ("2560 × 1440", 2560, 1440),
+        ("3840 × 2160", 3840, 2160),
     };
 
     private static readonly (string Label, double Ratio)[] AspectPresets =
