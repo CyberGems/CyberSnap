@@ -83,6 +83,13 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         if (_instance is not null && !_instance.IsDisposed)
         {
+            if (_instance._canvas.IsDirty && !_instance._canvas.IsDefaultBlank)
+            {
+                if (!_instance.PromptSaveChanges())
+                {
+                    return false;
+                }
+            }
             _instance.LoadCapture(captured, savedFilePath, performanceWarning: eval.ShouldWarn);
             _instance.RestoreAndActivate();
             App.NotifyFirstTimeTool("editor");
@@ -123,6 +130,14 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
                 if (_instance is not null && !_instance.IsDisposed)
                 {
+                    if (_instance._canvas.IsDirty && !_instance._canvas.IsDefaultBlank)
+                    {
+                        if (!_instance.PromptSaveChanges())
+                        {
+                            baseBitmap.Dispose();
+                            return;
+                        }
+                    }
                     _instance.LoadCaptureProject(baseBitmap, projectData, filePath, performanceWarning: dimEval.ShouldWarn);
                     _instance.RestoreAndActivate();
                     return;
