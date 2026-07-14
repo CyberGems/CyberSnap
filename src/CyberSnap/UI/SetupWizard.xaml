@@ -898,10 +898,10 @@
             <Grid x:Name="Page3" Grid.Row="0" Margin="40,52,40,0" Visibility="Collapsed">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,14,0">
                     <StackPanel>
-                        <TextBlock Services:LocalizationService.SourceText="Set your hotkeys" FontSize="24" FontWeight="SemiBold"
+                        <TextBlock Services:LocalizationService.SourceText="Configure your main shortcut" FontSize="24" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Display"
                                    Foreground="{DynamicResource WizFg}"/>
-                        <TextBlock Services:LocalizationService.SourceText="Click a box and press your preferred shortcut" FontSize="13"
+                        <TextBlock Services:LocalizationService.SourceText="Define the primary shortcut used to start a capture" FontSize="13"
                                    FontFamily="Segoe UI Variable Text"
                                    Foreground="{DynamicResource WizFgMuted}" Margin="0,4,0,20"/>
 
@@ -926,7 +926,7 @@
                                     <!-- Decorative Icon Container -->
                                     <Border Width="44" Height="44" CornerRadius="22" Background="{DynamicResource ThemeAccentBrush}"
                                             Opacity="0.15" VerticalAlignment="Center"/>
-                                    <TextBlock Text="&#xE7B4;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="20"
+                                    <TextBlock Text="&#xE257;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="20"
                                                Foreground="{DynamicResource WizAccent}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                Width="44" Height="44" TextAlignment="Center" Padding="0,11,0,0" LineHeight="44"/>
 

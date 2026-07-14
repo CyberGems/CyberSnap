@@ -1369,5 +1369,7 @@
   "Export as PDF": "Export as PDF",
   "The main shortcut to start a screenshot selection": "The main shortcut to start a screenshot selection",
   "Restore default shortcut": "Restore default shortcut",
-  "Clear shortcut": "Clear shortcut"
+  "Clear shortcut": "Clear shortcut",
+  "Configure your main shortcut": "Configure your main shortcut",
+  "Define the primary shortcut used to start a capture": "Define the primary shortcut used to start a capture"
 }
