@@ -323,7 +323,12 @@ public static class RulerRenderer
         float w = totalW + LabelPadH * 2;
         float h = maxH + LabelPadV * 2;
         float ext = MathF.Abs(lnx * w / 2f) + MathF.Abs(lny * h / 2f);
-        float d = ext + 14f;
+        // Clearance from the ruler line to the nearest edge of the pill.
+        // When the ruler is horizontal the normal is vertical (|lny|≈1) and the wide
+        // chip sits parallel to the line — give it extra room so it does not crowd the measure.
+        // Vertical rulers keep the tighter 14px gap (pill sits to the side).
+        float lineClearance = 14f + MathF.Abs(lny) * 16f;
+        float d = ext + lineClearance;
 
         var labelCenter = new PointF(mid.X + lnx * d, mid.Y + lny * d);
         var label = new RectangleF(labelCenter.X - w / 2f, labelCenter.Y - h / 2f, w, h);

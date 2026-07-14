@@ -285,7 +285,9 @@ internal static class CursorFactory
 
     private static Cursor CreatePrecisionCursor()
     {
-        const int size = 32;
+        // Larger canvas + longer arms so the cross is easier to find on high-DPI
+        // displays, while stroke widths stay thin so the center stays precise.
+        const int size = 40;
         const int c = size / 2;
 
         using var bmp = new Bitmap(size, size);
@@ -294,8 +296,8 @@ internal static class CursorFactory
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-        const float gap = 3.5f;   // clear space around the exact center
-        const float arm = 7f;     // length of each crosshair arm
+        const float gap = 4f;     // clear space around the exact center (target pixel visible)
+        const float arm = 10.5f;  // length of each crosshair arm (was 7 on a 32px cursor)
 
         void Arms(Graphics gr, Pen p)
         {
@@ -305,14 +307,16 @@ internal static class CursorFactory
             gr.DrawLine(p, c + gap, c, c + gap + arm, c); // right
         }
 
-        using (var halo = new Pen(Color.FromArgb(150, 0, 0, 0), 3f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+        // Soft dark halo for contrast on light backgrounds — kept thinner/lighter so it
+        // doesn't grey out the arms. White stroke is fully opaque for maximum brightness.
+        using (var halo = new Pen(Color.FromArgb(110, 0, 0, 0), 2.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
             Arms(g, halo);
-        using (var line = new Pen(Color.FromArgb(245, 255, 255, 255), 1.4f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+        using (var line = new Pen(Color.FromArgb(255, 255, 255, 255), 1.55f) { StartCap = LineCap.Round, EndCap = LineCap.Round })
             Arms(g, line);
 
-        // A 1px center pip marks the precise hotspot without filling the gap.
-        using (var pip = new SolidBrush(Color.FromArgb(235, 255, 255, 255)))
-            g.FillEllipse(pip, c - 0.7f, c - 0.7f, 1.4f, 1.4f);
+        // Bright center pip marks the hotspot without filling the gap.
+        using (var pip = new SolidBrush(Color.FromArgb(255, 255, 255, 255)))
+            g.FillEllipse(pip, c - 0.8f, c - 0.8f, 1.6f, 1.6f);
 
         IntPtr hIcon = bmp.GetHicon();
         try
