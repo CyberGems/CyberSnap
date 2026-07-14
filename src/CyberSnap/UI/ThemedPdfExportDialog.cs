@@ -63,6 +63,9 @@ internal sealed class ThemedPdfExportDialog : Window
     private Border _previewImage = null!;
     private TextBlock _previewPageCount = null!;
 
+    private int _bitmapWidth;
+    private int _bitmapHeight;
+
     private ThemedPdfExportDialog(System.Drawing.Bitmap? previewBitmap)
     {
         Theme.Refresh();
@@ -312,7 +315,9 @@ internal sealed class ThemedPdfExportDialog : Window
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Content = leftStack,
             MaxHeight = 350,
-            Padding = new Thickness(0, 0, 16, 0)
+            Padding = new Thickness(0, 0, 16, 0),
+            Focusable = false,
+            FocusVisualStyle = null
         };
         Grid.SetColumn(settingsScroll, 0);
         bodyGrid.Children.Add(settingsScroll);
@@ -381,6 +386,8 @@ internal sealed class ThemedPdfExportDialog : Window
 
         if (previewBitmap != null)
         {
+            _bitmapWidth = previewBitmap.Width;
+            _bitmapHeight = previewBitmap.Height;
             try
             {
                 var bmpSource = BitmapToBitmapSource(previewBitmap);
@@ -500,7 +507,42 @@ internal sealed class ThemedPdfExportDialog : Window
 
         if (_previewImage.Child is System.Windows.Controls.Image img)
         {
-            img.Stretch = _options.FitToPage ? Stretch.Uniform : Stretch.None;
+            // Always use Uniform stretch in the preview — for "Actual size", constrain
+            // the image's MaxWidth/MaxHeight proportionally so it appears smaller on the page
+            // just like the real PDF would render it.
+            img.Stretch = Stretch.Uniform;
+
+            if (_options.FitToPage || _options.PageSize == "Fit")
+            {
+                // Fill the available preview area
+                img.MaxWidth = double.PositiveInfinity;
+                img.MaxHeight = double.PositiveInfinity;
+            }
+            else if (_bitmapWidth > 0 && _bitmapHeight > 0)
+            {
+                // Compute what fraction of the page the image occupies at actual size
+                double imgWPoints = _bitmapWidth * 0.75;
+                double imgHPoints = _bitmapHeight * 0.75;
+
+                // Get page dimensions in points
+                double pageWPoints, pageHPoints;
+                if (_options.PageSize == "A4")
+                { pageWPoints = 595.28; pageHPoints = 841.89; }
+                else // Letter
+                { pageWPoints = 612; pageHPoints = 792; }
+
+                if (_options.Orientation == "Landscape")
+                    (pageWPoints, pageHPoints) = (pageHPoints, pageWPoints);
+
+                double ratioW = Math.Min(1.0, imgWPoints / pageWPoints);
+                double ratioH = Math.Min(1.0, imgHPoints / pageHPoints);
+
+                // Apply ratio to the preview paper dimensions (minus margins)
+                double paperW = _previewPaper.Width;
+                double paperH = _previewPaper.Height;
+                img.MaxWidth = paperW * ratioW;
+                img.MaxHeight = paperH * ratioH;
+            }
         }
 
         UpdateChipSelection(_scalingChips, _options.FitToPage ? "True" : "False");
