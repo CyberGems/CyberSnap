@@ -160,7 +160,7 @@
                                                 <ScaleTransform x:Name="CenterScale" ScaleX="1" ScaleY="1"/>
                                             </ContentPresenter.RenderTransform>
                                             <ContentPresenter.Effect>
-                                                <DropShadowEffect x:Name="CenterGlow" Color="{DynamicResource WidgetAccentColor}" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/>
+                                                <DropShadowEffect x:Name="CenterGlow" Color="{DynamicResource WidgetAccentColor}" BlurRadius="10" ShadowDepth="0" Opacity="0.8"/>
                                             </ContentPresenter.Effect>
                                         </ContentPresenter>
                                     </Grid>
@@ -172,16 +172,16 @@
                                                     <Storyboard>
                                                         <!-- A: subtle pop -->
                                                         <DoubleAnimation Storyboard.TargetName="CenterScale" Storyboard.TargetProperty="ScaleX"
-                                                                         To="1.12" Duration="0:0:0.12">
+                                                                         To="1.25" Duration="0:0:0.12">
                                                             <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                                         </DoubleAnimation>
                                                         <DoubleAnimation Storyboard.TargetName="CenterScale" Storyboard.TargetProperty="ScaleY"
-                                                                         To="1.12" Duration="0:0:0.12">
+                                                                         To="1.25" Duration="0:0:0.12">
                                                             <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                                         </DoubleAnimation>
                                                         <!-- B: center glow intensifies -->
                                                         <DoubleAnimation Storyboard.TargetName="CenterGlow" Storyboard.TargetProperty="BlurRadius"
-                                                                         To="16" Duration="0:0:0.12"/>
+                                                                         To="20" Duration="0:0:0.12"/>
                                                         <DoubleAnimation Storyboard.TargetName="CenterGlow" Storyboard.TargetProperty="Opacity"
                                                                          To="1" Duration="0:0:0.12"/>
                                                     </Storyboard>
@@ -199,9 +199,9 @@
                                                             <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
                                                         </DoubleAnimation>
                                                         <DoubleAnimation Storyboard.TargetName="CenterGlow" Storyboard.TargetProperty="BlurRadius"
-                                                                         To="8" Duration="0:0:0.18"/>
+                                                                         To="10" Duration="0:0:0.18"/>
                                                         <DoubleAnimation Storyboard.TargetName="CenterGlow" Storyboard.TargetProperty="Opacity"
-                                                                         To="0.7" Duration="0:0:0.18"/>
+                                                                         To="0.8" Duration="0:0:0.18"/>
                                                     </Storyboard>
                                                 </BeginStoryboard>
                                             </Trigger.ExitActions>
