@@ -33,6 +33,7 @@ internal sealed class PdfExportOptions
     public double MarginLeft = 1.0;
     public double MarginRight = 1.0;
     public string ImageLayout = "Fit"; // "Fit", "Span"
+    public bool FitToPage = true;
 }
 
 internal sealed class ThemedPdfExportDialog : Window
@@ -55,6 +56,7 @@ internal sealed class ThemedPdfExportDialog : Window
     private readonly System.Collections.Generic.List<(Border Border, string Value)> _pageSizeChips = new();
     private readonly System.Collections.Generic.List<(Border Border, string Value)> _orientationChips = new();
     private readonly System.Collections.Generic.List<(Border Border, string Value)> _layoutChips = new();
+    private readonly System.Collections.Generic.List<(Border Border, string Value)> _scalingChips = new();
 
     private Border _previewPaper = null!;
     private Border _previewMargin = null!;
@@ -296,6 +298,14 @@ internal sealed class ThemedPdfExportDialog : Window
         UpdateChipSelection(_layoutChips, _options.ImageLayout);
         leftStack.Children.Add(layoutWrap);
 
+        // 4. Content Scaling Section
+        leftStack.Children.Add(SectionLabel("Content Scaling", 8));
+        var scalingWrap = new WrapPanel();
+        _scalingChips.Add((MakeSelectableChip("Fit to page", scalingWrap, "True", v => { _options.FitToPage = bool.Parse(v); UpdatePreview(); }), "True"));
+        _scalingChips.Add((MakeSelectableChip("Actual size", scalingWrap, "False", v => { _options.FitToPage = bool.Parse(v); UpdatePreview(); }), "False"));
+        UpdateChipSelection(_scalingChips, _options.FitToPage ? "True" : "False");
+        leftStack.Children.Add(scalingWrap);
+
         var settingsScroll = new ScrollViewer
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -475,10 +485,25 @@ internal sealed class ThemedPdfExportDialog : Window
             // Set margin thicknesses relative to page dimensions
             double marginVal = Math.Clamp(_options.MarginLeft, 0, 5) * 5; // scaled down visual scale
             _previewImage.Margin = new Thickness(marginVal + 4);
-            _previewPageCount.Text = _options.ImageLayout == "Span" 
-                ? Services.LocalizationService.Translate("Multiple Pages (Slices)") 
-                : Services.LocalizationService.Translate("1 Page (Scale to fit)");
+
+            if (_options.FitToPage)
+            {
+                _previewPageCount.Text = _options.ImageLayout == "Span" 
+                    ? Services.LocalizationService.Translate("Multiple Pages (Slices)") 
+                    : Services.LocalizationService.Translate("1 Page (Scale to fit)");
+            }
+            else
+            {
+                _previewPageCount.Text = Services.LocalizationService.Translate("1 Page (Actual size)");
+            }
         }
+
+        if (_previewImage.Child is System.Windows.Controls.Image img)
+        {
+            img.Stretch = _options.FitToPage ? Stretch.Uniform : Stretch.None;
+        }
+
+        UpdateChipSelection(_scalingChips, _options.FitToPage ? "True" : "False");
     }
 
     // ── Dialog element builders ──────────────────────────────────────────────

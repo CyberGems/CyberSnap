@@ -1093,10 +1093,13 @@ public sealed partial class EditorForm : Form, IMessageFilter
                         double imgWPoints = bitmap.Width * 0.75;
                         double imgHPoints = bitmap.Height * 0.75;
 
-                        if (options.PageSize != "Fit" && options.ImageLayout == "Span" && imgHPoints * (printableW / imgWPoints) > printableH)
+                        bool shouldSpan = options.PageSize != "Fit" && options.ImageLayout == "Span" && 
+                            (options.FitToPage ? (imgHPoints * (printableW / imgWPoints) > printableH) : (imgHPoints > printableH));
+
+                        if (shouldSpan)
                         {
                             // Slice vertically across pages
-                            double scale = printableW / imgWPoints;
+                            double scale = options.FitToPage ? (printableW / imgWPoints) : 1.0;
                             double yOffset = 0;
                             bool firstPage = true;
 
@@ -1114,7 +1117,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                                 double maxSliceHImage = printableH / scale;
                                 double currentSliceHImage = Math.Min(imgHPoints - yOffset, maxSliceHImage);
 
-                                double destW = printableW;
+                                double destW = options.FitToPage ? printableW : imgWPoints;
                                 double destH = currentSliceHImage * scale;
 
                                 gfx.DrawImage(xImage,
@@ -1127,19 +1130,16 @@ public sealed partial class EditorForm : Form, IMessageFilter
                         }
                         else
                         {
-                            // Fit to page
+                            // Fit/Draw on page
                             var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);
                             double drawW = imgWPoints;
                             double drawH = imgHPoints;
 
-                            if (options.PageSize != "Fit")
+                            if (options.PageSize != "Fit" && options.FitToPage)
                             {
                                 double scale = Math.Min(printableW / imgWPoints, printableH / imgHPoints);
-                                if (scale < 1.0)
-                                {
-                                    drawW *= scale;
-                                    drawH *= scale;
-                                }
+                                drawW *= scale;
+                                drawH *= scale;
                             }
 
                             double destX = leftMargin + (printableW - drawW) / 2;
@@ -1195,6 +1195,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 ? LocalizationService.Translate("PDF saved")
                 : LocalizationService.Translate("Image saved");
         var toastBody = string.Format(LocalizationService.Translate("Saved: {0}"), fileName);
+        if (isPdf)
+        {
+            toastBody += "\n" + LocalizationService.Translate("Click to open");
+        }
         ToastWindow.Show(toastTitle, toastBody, filePath);
 
         // Show native action banner
