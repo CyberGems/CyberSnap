@@ -76,7 +76,7 @@ internal sealed class ThemedPdfExportDialog : Window
         <Setter Property=""Template"">
             <Setter.Value>
                 <ControlTemplate TargetType=""{x:Type Thumb}"">
-                    <Border CornerRadius=""3"" Background=""{DynamicResource ThemeTextSecondaryBrush}"" Margin=""0,2,8,2""/>
+                    <Border CornerRadius=""3"" Background=""{DynamicResource ThemeTextSecondaryBrush}"" Margin=""4,2,4,2""/>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -217,7 +217,7 @@ internal sealed class ThemedPdfExportDialog : Window
         bodyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.0, GridUnitType.Star) }); // Right preview
 
         // LEFT COLUMN (Settings)
-        var leftStack = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
+        var leftStack = new StackPanel();
 
         // 1. Metadata Section
         leftStack.Children.Add(SectionLabel("Document Metadata", 0));
@@ -301,7 +301,8 @@ internal sealed class ThemedPdfExportDialog : Window
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Content = leftStack,
-            MaxHeight = 350
+            MaxHeight = 350,
+            Padding = new Thickness(0, 0, 16, 0)
         };
         Grid.SetColumn(settingsScroll, 0);
         bodyGrid.Children.Add(settingsScroll);
