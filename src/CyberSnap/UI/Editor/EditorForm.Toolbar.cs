@@ -52,6 +52,8 @@ public sealed partial class EditorForm
     private EditorCommandButton _shareButton = null!;
     private EditorCommandButton _shareMenuButton = null!;
     private ContextMenuStrip? _shareMenu;
+    private EditorCommandButton _exportMenuButton = null!;
+    private ContextMenuStrip? _exportMenu;
     private CancellationTokenSource? _shareCts;
     private bool _shareInProgress;
     private EmojiPickerPopup? _emojiPicker;
@@ -777,11 +779,38 @@ public sealed partial class EditorForm
 
         commandActions.Controls.Add(MakeSeparator());
 
-        // Export (Flat image I/O)
+        // Export: primary + chevron menu (two adjacent buttons grouped into a split-button)
         _exportButton = RegisterLocalizedCommand("export", "Export", false);
+        _exportButton.RoundLeftOnly = true;
+        _exportButton.Margin = new Padding(2, 0, 0, 0); // No right margin
         _exportButton.Click += (_, _) => DoSaveAs();
         RegisterHoverTooltip(_exportButton, () => WithShortcut(LocalizationService.Translate("Save a duplicate of the document to .png, .jpg or .pdf format"), "Ctrl+Shift+S"), above: false);
         commandActions.Controls.Add(_exportButton);
+
+        _exportMenuButton = new EditorCommandButton
+        {
+            IconId = "chevronDown",
+            Text = "",
+            Primary = false,
+            Width = 32,
+            Height = 62,
+            RoundRightOnly = true,
+            Margin = new Padding(0, 0, 2, 0), // No left margin
+        };
+        _exportMenuButton.Click += (_, _) => ShowExportMenu();
+        RegisterHoverTooltip(_exportMenuButton, LocalizationService.Translate("Choose export format"), above: false);
+        commandActions.Controls.Add(_exportMenuButton);
+
+        // Link hover and pressed states so they act as a cohesive unit
+        _exportButton.MouseEnter += (_, _) => { _exportMenuButton.HoverOverride = true; };
+        _exportButton.MouseLeave += (_, _) => { _exportMenuButton.HoverOverride = false; };
+        _exportButton.MouseDown += (_, _) => { _exportMenuButton.PressedOverride = true; };
+        _exportButton.MouseUp += (_, _) => { _exportMenuButton.PressedOverride = false; };
+
+        _exportMenuButton.MouseEnter += (_, _) => { _exportButton.HoverOverride = true; };
+        _exportMenuButton.MouseLeave += (_, _) => { _exportButton.HoverOverride = false; };
+        _exportMenuButton.MouseDown += (_, _) => { _exportButton.PressedOverride = true; };
+        _exportMenuButton.MouseUp += (_, _) => { _exportButton.PressedOverride = false; };
 
         // Share: primary + chevron menu (two adjacent buttons grouped into a split-button)
         _shareButton = RegisterLocalizedCommand("share", "Share", false);
@@ -822,6 +851,8 @@ public sealed partial class EditorForm
         _topBarPanel.Controls.Add(_titleBarPanel);
 
         UpdateWindowStateButton();
+
+        InitializeMenuHoverTriggers();
 
         return _topBarPanel;
     }
@@ -1970,6 +2001,146 @@ public sealed partial class EditorForm
         coordinatesItem.Image = _coordsPanel.Visible ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         tooltipsItem.Image = _showTooltips ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
         scrollbarsItem.Image = _canvas.ShowScrollbarsAlways ? FluentIcons.RenderBitmap("check", activeColor, 20, true) : null;
+    }
+
+    private System.Windows.Forms.Timer? _shareMenuHoverTimer;
+    private System.Windows.Forms.Timer? _shareMenuOpenTimer;
+    private System.Windows.Forms.Timer? _exportMenuHoverTimer;
+    private System.Windows.Forms.Timer? _exportMenuOpenTimer;
+
+    private void InitializeMenuHoverTriggers()
+    {
+        // Share hover trigger
+        _shareMenuButton.MouseEnter += (s, e) =>
+        {
+            if (_shareMenu != null && _shareMenu.Visible)
+                return;
+
+            _shareMenuOpenTimer?.Stop();
+            _shareMenuOpenTimer = new System.Windows.Forms.Timer { Interval = 150 };
+            _shareMenuOpenTimer.Tick += (sender, args) =>
+            {
+                _shareMenuOpenTimer.Stop();
+                var mousePos = Cursor.Position;
+                var btnRect = _shareMenuButton.RectangleToScreen(_shareMenuButton.ClientRectangle);
+                if (btnRect.Contains(mousePos))
+                {
+                    ShowShareMenu();
+                    StartShareMenuHoverTimer();
+                }
+            };
+            _shareMenuOpenTimer.Start();
+        };
+
+        _shareMenuButton.MouseLeave += (s, e) =>
+        {
+            _shareMenuOpenTimer?.Stop();
+        };
+
+        // Export hover trigger
+        _exportMenuButton.MouseEnter += (s, e) =>
+        {
+            if (_exportMenu != null && _exportMenu.Visible)
+                return;
+
+            _exportMenuOpenTimer?.Stop();
+            _exportMenuOpenTimer = new System.Windows.Forms.Timer { Interval = 150 };
+            _exportMenuOpenTimer.Tick += (sender, args) =>
+            {
+                _exportMenuOpenTimer.Stop();
+                var mousePos = Cursor.Position;
+                var btnRect = _exportMenuButton.RectangleToScreen(_exportMenuButton.ClientRectangle);
+                if (btnRect.Contains(mousePos))
+                {
+                    ShowExportMenu();
+                    StartExportMenuHoverTimer();
+                }
+            };
+            _exportMenuOpenTimer.Start();
+        };
+
+        _exportMenuButton.MouseLeave += (s, e) =>
+        {
+            _exportMenuOpenTimer?.Stop();
+        };
+    }
+
+    private void StartShareMenuHoverTimer()
+    {
+        if (_shareMenuHoverTimer == null)
+        {
+            _shareMenuHoverTimer = new System.Windows.Forms.Timer { Interval = 100 };
+            _shareMenuHoverTimer.Tick += ShareMenuHoverTimer_Tick;
+        }
+        _shareMenuHoverTimer.Start();
+    }
+
+    private void StopShareMenuHoverTimer()
+    {
+        _shareMenuHoverTimer?.Stop();
+    }
+
+    private void ShareMenuHoverTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_shareMenu == null || !_shareMenu.Visible)
+        {
+            StopShareMenuHoverTimer();
+            return;
+        }
+
+        var mousePos = Cursor.Position;
+        var btnRect = _shareMenuButton.RectangleToScreen(_shareMenuButton.ClientRectangle);
+        var mainBtnRect = _shareButton.RectangleToScreen(_shareButton.ClientRectangle);
+        var menuRect = _shareMenu.Bounds;
+
+        btnRect.Inflate(4, 4);
+        mainBtnRect.Inflate(4, 4);
+        menuRect.Inflate(4, 4);
+
+        if (!btnRect.Contains(mousePos) && !mainBtnRect.Contains(mousePos) && !menuRect.Contains(mousePos))
+        {
+            _shareMenu.Close();
+            StopShareMenuHoverTimer();
+        }
+    }
+
+    private void StartExportMenuHoverTimer()
+    {
+        if (_exportMenuHoverTimer == null)
+        {
+            _exportMenuHoverTimer = new System.Windows.Forms.Timer { Interval = 100 };
+            _exportMenuHoverTimer.Tick += ExportMenuHoverTimer_Tick;
+        }
+        _exportMenuHoverTimer.Start();
+    }
+
+    private void StopExportMenuHoverTimer()
+    {
+        _exportMenuHoverTimer?.Stop();
+    }
+
+    private void ExportMenuHoverTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_exportMenu == null || !_exportMenu.Visible)
+        {
+            StopExportMenuHoverTimer();
+            return;
+        }
+
+        var mousePos = Cursor.Position;
+        var btnRect = _exportMenuButton.RectangleToScreen(_exportMenuButton.ClientRectangle);
+        var mainBtnRect = _exportButton.RectangleToScreen(_exportButton.ClientRectangle);
+        var menuRect = _exportMenu.Bounds;
+
+        btnRect.Inflate(4, 4);
+        mainBtnRect.Inflate(4, 4);
+        menuRect.Inflate(4, 4);
+
+        if (!btnRect.Contains(mousePos) && !mainBtnRect.Contains(mousePos) && !menuRect.Contains(mousePos))
+        {
+            _exportMenu.Close();
+            StopExportMenuHoverTimer();
+        }
     }
 }
 

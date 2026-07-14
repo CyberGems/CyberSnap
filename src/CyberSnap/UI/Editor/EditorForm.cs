@@ -924,13 +924,21 @@ public sealed partial class EditorForm : Form, IMessageFilter
         bool prefJpg = s?.EditorExportFormat == 1;
         bool prefPdf = s?.EditorExportFormat == 2;
         string ext = prefPdf ? ".pdf" : (prefJpg ? ".jpg" : ".png");
-        string filter = prefPdf
+        DoSaveAsWithExtension(ext);
+    }
+
+    private void DoSaveAsWithExtension(string ext)
+    {
+        bool isPdf = ext.Equals(".pdf", StringComparison.OrdinalIgnoreCase);
+        bool isJpg = ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase) || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase);
+
+        string filter = isPdf
             ? "Portable Document Format (*.pdf)|*.pdf|PNG|*.png|JPEG|*.jpg"
-            : (prefJpg
+            : (isJpg
                 ? "JPEG|*.jpg|PNG|*.png|Portable Document Format (*.pdf)|*.pdf"
                 : "PNG|*.png|JPEG|*.jpg|Portable Document Format (*.pdf)|*.pdf");
 
-        string prefix = prefPdf ? "PDF" : (prefJpg ? "JPG" : "PNG");
+        string prefix = isPdf ? "PDF" : (isJpg ? "JPG" : "PNG");
         string defaultName;
         if (string.IsNullOrWhiteSpace(_savedFilePath))
         {
@@ -938,7 +946,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         }
         else
         {
-            defaultName = prefPdf && !_savedFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+            defaultName = isPdf && !_savedFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
                 ? Path.GetFileNameWithoutExtension(_savedFilePath) + ".pdf"
                 : Path.GetFileNameWithoutExtension(_savedFilePath) + $"_edited{ext}";
         }
@@ -1452,6 +1460,18 @@ public sealed partial class EditorForm : Form, IMessageFilter
         DismissVisibleHoverTooltips();
         _shareMenu?.Dispose();
         _shareMenu = BuildShareMenu();
+
+        _shareMenuButton.PressedOverride = true;
+        _shareButton.HoverOverride = true;
+
+        _shareMenu.Closed += (s, e) =>
+        {
+            _shareMenuButton.PressedOverride = false;
+            _shareButton.HoverOverride = false;
+            _shareButton.PressedOverride = false;
+            StopShareMenuHoverTimer();
+        };
+
         var pt = _shareMenuButton.PointToScreen(new Point(0, _shareMenuButton.Height));
         _shareMenu.Show(pt);
     }
@@ -1460,6 +1480,57 @@ public sealed partial class EditorForm : Form, IMessageFilter
     {
         var menu = WindowsMenuRenderer.Create();
         PopulateShareMenuItems(menu.Items);
+        WindowsMenuRenderer.NormalizeItemWidths(menu);
+        return menu;
+    }
+
+    private void ShowExportMenu()
+    {
+        DismissVisibleHoverTooltips();
+        _exportMenu?.Dispose();
+        _exportMenu = BuildExportMenu();
+
+        _exportMenuButton.PressedOverride = true;
+        _exportButton.HoverOverride = true;
+
+        _exportMenu.Closed += (s, e) =>
+        {
+            _exportMenuButton.PressedOverride = false;
+            _exportButton.HoverOverride = false;
+            _exportButton.PressedOverride = false;
+            StopExportMenuHoverTimer();
+        };
+
+        var pt = _exportMenuButton.PointToScreen(new Point(0, _exportMenuButton.Height));
+        _exportMenu.Show(pt);
+    }
+
+    private ContextMenuStrip BuildExportMenu()
+    {
+        var menu = WindowsMenuRenderer.Create();
+
+        var saveItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save"), shortcut: "Ctrl+S");
+        saveItem.Click += (_, _) => DoSave();
+        menu.Items.Add(saveItem);
+
+        var saveAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save as..."), shortcut: "Ctrl+Shift+S");
+        saveAsItem.Click += (_, _) => DoSaveAs();
+        menu.Items.Add(saveAsItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        var pngItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export as PNG"));
+        pngItem.Click += (_, _) => DoSaveAsWithExtension(".png");
+        menu.Items.Add(pngItem);
+
+        var jpgItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export as JPEG"));
+        jpgItem.Click += (_, _) => DoSaveAsWithExtension(".jpg");
+        menu.Items.Add(jpgItem);
+
+        var pdfItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export as PDF"));
+        pdfItem.Click += (_, _) => DoSaveAsWithExtension(".pdf");
+        menu.Items.Add(pdfItem);
+
         WindowsMenuRenderer.NormalizeItemWidths(menu);
         return menu;
     }
