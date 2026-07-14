@@ -77,8 +77,12 @@ public sealed partial class RegionOverlayForm
 
         RenderCursorToolPreview(g);
 
-        // Move tool: hover highlight
-        if (IsDrawingOrMoveMode(_mode) && !IsDraggingAnyAnnotation() && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count && _moveHoverIndex != _selectedAnnotationIndex && !_multiSelectedIndices.Contains(_moveHoverIndex))
+        // Move tool: hover highlight (skip annotation currently being re-edited)
+        if (IsDrawingOrMoveMode(_mode) && !IsDraggingAnyAnnotation()
+            && _moveHoverIndex >= 0 && _moveHoverIndex < _undoStack.Count
+            && _moveHoverIndex != _selectedAnnotationIndex
+            && _moveHoverIndex != _renderSkipIndex
+            && !_multiSelectedIndices.Contains(_moveHoverIndex))
         {
             var hovered = _undoStack[_moveHoverIndex];
             var hoverBounds = GetAnnotationBounds(hovered);
@@ -91,6 +95,7 @@ public sealed partial class RegionOverlayForm
         {
             foreach (int idx in _multiSelectedIndices)
             {
+                if (idx == _renderSkipIndex) continue;
                 if (idx >= 0 && idx < _undoStack.Count)
                 {
                     var ann = _undoStack[idx];
@@ -99,7 +104,10 @@ public sealed partial class RegionOverlayForm
                 }
             }
         }
-        else if (showSelectionFrame && _selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _undoStack.Count)
+        else if (showSelectionFrame
+            && _selectedAnnotationIndex >= 0
+            && _selectedAnnotationIndex < _undoStack.Count
+            && _selectedAnnotationIndex != _renderSkipIndex)
         {
             var selected = _selectPreviewAnnotation ?? _undoStack[_selectedAnnotationIndex];
             var bounds = GetAnnotationBounds(selected);

@@ -13,9 +13,25 @@ public sealed partial class RegionOverlayForm
 
     private void CommitText() => CommitOrCancelInlineText(commit: true);
 
+    private TextAnnotation BuildCurrentTextAnnotation() =>
+        new(
+            _textPos,
+            TextAnnotationPainter.NormalizeNewlines(_textBuffer),
+            _textFontSize,
+            _toolColor,
+            _textBold,
+            _textItalic,
+            _textStroke,
+            _textShadow,
+            _textBackground,
+            _textFontFamily,
+            _textAlign,
+            _textMaxWidth);
+
     /// <summary>
-    /// Ends inline text editing. Commits the annotation when <paramref name="commit"/> is true
-    /// and there is non-whitespace text; otherwise discards. Stays in Text tool either way.
+    /// Ends inline text editing. Commits when <paramref name="commit"/> is true and there is
+    /// non-whitespace text. Escape should call with <c>commit: false</c> (cancel — never auto-commit).
+    /// Re-edits use a single <see cref="Models.Commands.ReplaceAnnotationCommand"/> for clean undo.
     /// </summary>
     private void CommitOrCancelInlineText(bool commit)
     {
@@ -24,63 +40,95 @@ public sealed partial class RegionOverlayForm
         if (_textBox != null && _textBox.Visible)
             _textBuffer = _textBox.Text;
 
-        if (commit && !string.IsNullOrWhiteSpace(_textBuffer))
-            AddAnnotation(new TextAnnotation(_textPos, _textBuffer, _textFontSize, _toolColor, _textBold, _textItalic, _textStroke, _textShadow, _textBackground, _textFontFamily));
+        bool hasText = !string.IsNullOrWhiteSpace(_textBuffer);
+        int editIndex = _textEditStackIndex;
+        var original = _textEditOriginal;
+
+        // Clear skip so the stack annotation is visible again after we're done.
+        if (_renderSkipIndex == editIndex)
+            _renderSkipIndex = -1;
+
+        if (commit && hasText)
+        {
+            var neu = BuildCurrentTextAnnotation();
+            if (editIndex >= 0 && original is not null && editIndex < _undoStack.Count)
+            {
+                if (!Equals(original, neu))
+                    PushEditCommand(new Models.Commands.ReplaceAnnotationCommand(editIndex, original, neu));
+            }
+            else if (editIndex < 0)
+            {
+                AddAnnotation(neu);
+            }
+        }
+        else if (commit && !hasText && editIndex >= 0 && original is not null)
+        {
+            // User cleared all text and confirmed → delete the original.
+            PushEditCommand(new Models.Commands.DeleteAnnotationCommand(editIndex, original));
+        }
+        // cancel (commit:false): leave original in place (never removed from stack)
 
         _isTyping = false;
+        _textEditStackIndex = -1;
+        _textEditOriginal = null;
         _hoveredTextBtn = -1;
         HideToolbarTooltip();
         SetSnapGuides(false, false);
         _textBuffer = "";
         InvalidateActiveTextLayout();
         _fontPickerOpen = false;
+        HideFontSearchBox();
         HideTextBox();
+        PersistCaptureTextStyle();
+        MarkCommittedAnnotationsDirty();
         RefreshOverlayUiChrome();
         Invalidate();
     }
 
-    private static RectangleF MeasureTextRect(Point pos, string text, float fontSize, string fontFamily, bool bold, bool italic, bool background = false)
+    private void PersistCaptureTextStyle()
     {
-        var style = FontStyle.Regular;
-        if (bold) style |= FontStyle.Bold;
-        if (italic) style |= FontStyle.Italic;
-        var font = GetAnnotationFont(fontFamily, fontSize, style);
-        string display = text.Length > 0 ? text : "Type here...";
-
-        // Measure with the SAME metrics DrawString uses to render the glyphs (full line
-        // box, anchored at pos), so the frame and background wrap the text exactly.
-        // GraphicsPath ink bounds were ~30% smaller than the rendered text.
-        SizeF size;
-        using (var bmp = new Bitmap(1, 1))
-        using (var mg = Graphics.FromImage(bmp))
+        if (System.Windows.Application.Current is App app)
         {
-            mg.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-            size = mg.MeasureString(display, font);
+            app.PersistEditorTextStyle(
+                _textFontSize, _textFontFamily, _textBold, _textItalic,
+                _textStroke, _textShadow, _textBackground, (int)_textAlign);
         }
-
-        int padX = background ? 16 : 8;
-        int padY = background ? 12 : 8;
-        return new RectangleF(
-            pos.X - (padX / 2f),
-            pos.Y - (padY / 2f),
-            size.Width + padX,
-            size.Height + padY);
     }
+
+    private void LoadTextStyleFromSettings()
+    {
+        try
+        {
+            var s = Services.SettingsService.LoadStatic();
+            if (s is null) return;
+            _textFontSize = Math.Clamp(s.EditorTextFontSize, 10f, 120f);
+            if (!string.IsNullOrWhiteSpace(s.EditorTextFontFamily))
+                _textFontFamily = s.EditorTextFontFamily;
+            _textBold = s.EditorTextBold;
+            _textItalic = s.EditorTextItalic;
+            _textStroke = s.EditorTextStroke;
+            _textShadow = s.EditorTextShadow;
+            _textBackground = s.EditorTextBackground;
+            _textAlign = (TextHAlign)Math.Clamp(s.EditorTextAlignment, 0, 2);
+        }
+        catch { /* keep defaults */ }
+    }
+
+    private static RectangleF MeasureTextRect(
+        Point pos, string text, float fontSize, string fontFamily,
+        bool bold, bool italic, bool background = false,
+        float maxWidth = 0, TextHAlign align = TextHAlign.Left) =>
+        TextAnnotationPainter.Measure(pos, text, fontSize, fontFamily, bold, italic, background, maxWidth, align);
 
     private RectangleF GetActiveTextRect()
     {
         if (!_isTyping) return RectangleF.Empty;
         if (_activeTextLayoutDirty)
         {
-            var style = FontStyle.Regular;
-            if (_textBold) style |= FontStyle.Bold;
-            if (_textItalic) style |= FontStyle.Italic;
-            var font = GetAnnotationFont(_textFontFamily, _textFontSize, style);
-            string display = _textBuffer.Length > 0 ? _textBuffer : "Type here...";
-            var measured = TextRenderer.MeasureText(display, font, Size.Empty,
-                TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
-            _activeTextRectCache = MeasureTextRect(_textPos, _textBuffer, _textFontSize, _textFontFamily, _textBold, _textItalic, _textBackground);
-            _activeTextMeasureWidth = measured.Width;
+            _activeTextRectCache = MeasureTextRect(
+                _textPos, _textBuffer, _textFontSize, _textFontFamily,
+                _textBold, _textItalic, _textBackground, _textMaxWidth, _textAlign);
+            _activeTextMeasureWidth = _activeTextRectCache.Width;
             _activeTextHandleCache[0] = WindowsHandleRenderer.CenteredAt(new PointF(_activeTextRectCache.X, _activeTextRectCache.Y));
             _activeTextHandleCache[1] = WindowsHandleRenderer.CenteredAt(new PointF(_activeTextRectCache.Right, _activeTextRectCache.Y));
             _activeTextHandleCache[2] = WindowsHandleRenderer.CenteredAt(new PointF(_activeTextRectCache.X, _activeTextRectCache.Bottom));
@@ -103,55 +151,107 @@ public sealed partial class RegionOverlayForm
         return -1;
     }
 
-    private List<TextAnnotation> GetTextAnnotations() =>
-        _undoStack.OfType<TextAnnotation>().ToList();
-
-    private int HitTestText(Point p)
+    /// <summary>Hit-tests committed text annotations. Returns index into <c>_undoStack</c>, or −1.</summary>
+    private int HitTestText(Point p, bool includeRenderSkipped = false)
     {
-        var texts = GetTextAnnotations();
-        for (int i = texts.Count - 1; i >= 0; i--)
+        for (int i = _undoStack.Count - 1; i >= 0; i--)
         {
-            var ta = texts[i];
-            var rect = MeasureTextRect(ta.Pos, ta.Text, ta.FontSize, ta.FontFamily, ta.Bold, ta.Italic, ta.Background);
+            if (!includeRenderSkipped && i == _renderSkipIndex) continue;
+            if (_undoStack[i] is not TextAnnotation ta) continue;
+            var rect = TextAnnotationPainter.Measure(ta);
+            // Inflate slightly so double-clicks near edges still land
+            rect.Inflate(4, 4);
             if (rect.Contains(p)) return i;
         }
         return -1;
     }
 
-    private float MeasureTextPrefixWidth(string text, int length, Font font)
-    {
-        if (length <= 0 || string.IsNullOrEmpty(text))
-            return 0f;
-
-        length = Math.Min(length, text.Length);
-        var size = TextRenderer.MeasureText(text[..length], font, Size.Empty,
-            TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
-        return size.Width;
-    }
+    /// <summary>
+    /// Hit-test for double-click re-edit. Includes the annotation currently being drag-moved
+    /// (skipped in paint) so the second click of a Pick double-click still finds it.
+    /// </summary>
+    private int HitTestTextForDoubleClick(Point p) => HitTestText(p, includeRenderSkipped: true);
 
     private int GetTextCharIndexAt(Point p)
     {
-        if (!_isTyping)
-            return 0;
+        if (!_isTyping) return 0;
+        return TextAnnotationPainter.GetCharIndexAt(
+            _textPos, p, _textBuffer ?? "", _textFontSize, _textFontFamily,
+            _textBold, _textItalic, _textMaxWidth, _textAlign);
+    }
 
-        var style = FontStyle.Regular;
-        if (_textBold) style |= FontStyle.Bold;
-        if (_textItalic) style |= FontStyle.Italic;
-        var font = GetAnnotationFont(_textFontFamily, _textFontSize, style);
-        string text = _textBuffer ?? string.Empty;
-        float x = p.X - _textPos.X;
-        if (x <= 0 || text.Length == 0)
-            return 0;
-
-        for (int i = 1; i <= text.Length; i++)
+    /// <summary>Selects the word (or contiguous non-whitespace run) around <paramref name="index"/>.</summary>
+    private static void SelectWordAtCapture(TextBox box, int index)
+    {
+        string t = box.Text ?? "";
+        if (t.Length == 0)
         {
-            float width = MeasureTextPrefixWidth(text, i, font);
-            float prevWidth = MeasureTextPrefixWidth(text, i - 1, font);
-            if (x <= ((prevWidth + width) / 2f))
-                return i - 1;
+            box.SelectionStart = 0;
+            box.SelectionLength = 0;
+            return;
         }
 
-        return text.Length;
+        index = Math.Clamp(index, 0, t.Length);
+        if (index >= t.Length || char.IsWhiteSpace(t[index]))
+        {
+            if (index > 0 && !char.IsWhiteSpace(t[index - 1]))
+                index--;
+            else
+            {
+                box.SelectionStart = index;
+                box.SelectionLength = 0;
+                return;
+            }
+        }
+
+        int start = index;
+        int end = index;
+        while (start > 0 && IsCaptureWordChar(t[start - 1])) start--;
+        while (end < t.Length && IsCaptureWordChar(t[end])) end++;
+        box.SelectionStart = start;
+        box.SelectionLength = Math.Max(0, end - start);
+    }
+
+    private static bool IsCaptureWordChar(char c) =>
+        char.IsLetterOrDigit(c) || c == '_' || c == '\'';
+
+    /// <summary>Starts re-editing a committed text annotation without deleting it from the undo stack.</summary>
+    private void BeginReEditText(int stackIndex)
+    {
+        if (stackIndex < 0 || stackIndex >= _undoStack.Count) return;
+        if (_undoStack[stackIndex] is not TextAnnotation ta) return;
+
+        // Commit any other in-progress text first
+        if (_isTyping)
+            CommitOrCancelInlineText(commit: true);
+
+        _textEditStackIndex = stackIndex;
+        _textEditOriginal = ta;
+        _renderSkipIndex = stackIndex; // hide original while editing (no Delete command)
+        _mode = CaptureMode.Text;
+        _isTyping = true;
+        _textPos = ta.Pos;
+        _textBuffer = ta.Text;
+        _textFontSize = ta.FontSize;
+        _toolColor = ta.Color;
+        _textBold = ta.Bold;
+        _textItalic = ta.Italic;
+        _textStroke = ta.Stroke;
+        _textShadow = ta.Shadow;
+        _textBackground = ta.Background;
+        _textFontFamily = ta.FontFamily;
+        _textAlign = ta.Alignment;
+        _textMaxWidth = ta.MaxWidth;
+        // Drop object selection so only the live text frame is shown
+        _selectedAnnotationIndex = -1;
+        _multiSelectedIndices.Clear();
+        InvalidateActiveTextLayout();
+        ShowTextBox();
+        MarkCommittedAnnotationsDirty();
+        // Reposition ToolbarForm only if needed (font picker, etc.) — text chrome
+        // no longer expands it, so this should not jump the main dock.
+        RefreshOverlayUiChrome();
+        Invalidate();
     }
 
     private void ToggleColorPicker()
@@ -192,19 +292,20 @@ public sealed partial class RegionOverlayForm
     {
         if (!_fontPickerRect.Contains(p)) return false;
 
-        int itemH = 30, pad = 8, searchBarH = 32;
+        int itemH = 34, pad = 10, searchBarH = 34;
+        const int starColW = 22;
         int listY = _fontPickerRect.Y + pad + searchBarH + pad;
         int relY = p.Y - listY;
-        var fonts = GetFilteredFonts();
-        int visibleCount = 8;
-        int maxScroll = Math.Max(0, fonts.Length - visibleCount);
+        var entries = GetFontListEntries();
+        int visibleCount = 10;
+        int maxScroll = Math.Max(0, entries.Length - visibleCount);
         int trackH = visibleCount * itemH - 8;
         int trackX = _fontPickerRect.Right - pad - 4;
         int trackY = listY + 4;
         var trackRect = new Rectangle(trackX - 4, trackY, 12, trackH);
-        if (trackRect.Contains(p) && fonts.Length > visibleCount)
+        if (trackRect.Contains(p) && entries.Length > visibleCount)
         {
-            int thumbH = Math.Max(12, trackH * visibleCount / fonts.Length);
+            int thumbH = Math.Max(12, trackH * visibleCount / entries.Length);
             int thumbTravel = Math.Max(1, trackH - thumbH);
             int target = p.Y - trackY - (thumbH / 2);
             target = Math.Clamp(target, 0, thumbTravel);
@@ -215,14 +316,29 @@ public sealed partial class RegionOverlayForm
 
         int idx = _fontPickerScroll + relY / itemH;
 
-        if (relY >= 0 && idx >= 0 && idx < fonts.Length)
+        if (relY >= 0 && idx >= 0 && idx < entries.Length)
         {
+            // Click on star column (right side) → toggle favorite (keep picker open)
+            int rowTop = listY + (idx - _fontPickerScroll) * itemH;
+            var starHit = new Rectangle(
+                _fontPickerRect.Right - pad - starColW - 4, rowTop, starColW + 8, itemH);
+            if (starHit.Contains(p))
+            {
+                ToggleFavoriteFontAndPersist(entries[idx].Name);
+                RefreshToolbar();
+                Invalidate(InflateForRepaint(GetFontPickerBounds(), 12));
+                return true;
+            }
+
             var oldTextRect = Rectangle.Round(GetActiveTextRect());
             var oldToolbarRect = Rectangle.Round(GetTextToolbarBounds());
             var oldPickerRect = InflateForRepaint(GetFontPickerBounds(), 12);
-            _textFontFamily = fonts[idx];
+            _textFontFamily = entries[idx].Name;
             _fontPickerOpen = false;
-            _fontSearch = ""; _filteredFonts = null;
+            _fontSearch = "";
+            InvalidateFontListCache();
+            // Promote to recents immediately so the next open shows it near the top.
+            PersistCaptureTextStyle();
             InvalidateActiveTextLayout();
             UpdateTextBoxStyle(); SyncTextBoxSize();
             var newTextRect = Rectangle.Round(GetActiveTextRect());
@@ -240,7 +356,7 @@ public sealed partial class RegionOverlayForm
     private bool IsPointInFontPickerSearch(Point p)
     {
         if (!_fontPickerRect.Contains(p)) return false;
-        int searchBarH = 32, pad = 8;
+        int searchBarH = 34, pad = 10;
         int searchBottom = _fontPickerRect.Y + pad + searchBarH;
         return p.Y < searchBottom;
     }
@@ -249,10 +365,10 @@ public sealed partial class RegionOverlayForm
     {
         if (!_fontPickerRect.Contains(p)) return false;
         var fonts = GetFilteredFonts();
-        int visibleCount = 8;
+        int visibleCount = 10;
         if (fonts.Length <= visibleCount) return false;
 
-        int itemH = 30, pad = 8, searchBarH = 32;
+        int itemH = 34, pad = 10, searchBarH = 34;
         int listY = _fontPickerRect.Y + pad + searchBarH + pad;
         int trackH = visibleCount * itemH - 8;
         int trackX = _fontPickerRect.Right - pad - 4;
@@ -264,7 +380,7 @@ public sealed partial class RegionOverlayForm
     private bool IsPointInFontPickerList(Point p)
     {
         if (!_fontPickerRect.Contains(p)) return false;
-        int itemH = 30, pad = 8, searchBarH = 32;
+        int itemH = 34, pad = 10, searchBarH = 34;
         int listY = _fontPickerRect.Y + pad + searchBarH + pad;
         int relY = p.Y - listY;
         int idx = _fontPickerScroll + relY / itemH;

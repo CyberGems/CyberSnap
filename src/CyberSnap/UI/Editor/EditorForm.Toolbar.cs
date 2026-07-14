@@ -1506,20 +1506,35 @@ public sealed partial class EditorForm
             return;
         }
 
-        string hint = LocalizationService.Translate(GetToolStatusLabelKey(_canvas.ActiveTool));
+        string hint;
 
-        if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Move)
+        if (_canvas.IsEditingText)
         {
-            hint += $"  ·  {LocalizationService.Translate("Click to select · Drag to move · Double-click Pick or canvas to select all")}";
-        }
-        else if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Pan)
-        {
-            if (EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
-                hint += $"  ·  {LocalizationService.Translate("Tap to select · hold for temporary pan")}";
+            // Live editing: show confirm / newline / cancel shortcuts only.
+            hint = LocalizationService.Translate("Text")
+                + $"  ·  {LocalizationService.Translate("Enter to confirm · Shift+Enter for new line · Esc to cancel")}";
         }
         else
         {
-            hint += $"  ·  {LocalizationService.Translate("Hold Space to pan")}";
+            hint = LocalizationService.Translate(GetToolStatusLabelKey(_canvas.ActiveTool));
+
+            if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Move)
+            {
+                hint += $"  ·  {LocalizationService.Translate("Click to select · Drag to move · Double-click text to edit · Double-click empty to select all")}";
+            }
+            else if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Text)
+            {
+                hint += $"  ·  {LocalizationService.Translate("Click to place · Click text to re-edit · Enter confirms · Shift+Enter new line")}";
+            }
+            else if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Pan)
+            {
+                if (EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
+                    hint += $"  ·  {LocalizationService.Translate("Tap to select · hold for temporary pan")}";
+            }
+            else
+            {
+                hint += $"  ·  {LocalizationService.Translate("Hold Space to pan")}";
+            }
         }
 
         if (_liveStatusLabel.Text != hint)

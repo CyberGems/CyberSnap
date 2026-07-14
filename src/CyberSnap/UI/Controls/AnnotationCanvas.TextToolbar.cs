@@ -4,6 +4,8 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Windows.Forms;
 using CyberSnap.Capture;       // SketchRenderer.RoundedRect
+using CyberSnap.Helpers;
+using CyberSnap.Models;
 using CyberSnap.Services;      // LocalizationService
 using CyberSnap.UI.Editor;     // EditorColors
 
@@ -19,23 +21,43 @@ public sealed partial class AnnotationCanvas
     private bool _textBackground;
     private float _textFontSize = 24f;
     private string _textFontFamily = "Segoe UI";
+    private TextHAlign _textAlign = TextHAlign.Left;
+    private float _textMaxWidth;
+
+    // Re-edit of a committed annotation (−1 = new text)
+    private int _textEditIndex = -1;
+    private TextAnnotation? _textEditOriginal;
+
+    // Resize-by-handle while typing
+    private bool _textResizing;
+    private int _textResizeHandle = -1;
+    private float _textResizeStartFontSize;
+    private Point _textResizeStartScreen;
 
     // Toolbar hit rects (screen/client-space, recomputed each paint)
     private RectangleF _textToolbarRect;
     private RectangleF _textBoldBtnRect, _textItalicBtnRect, _textStrokeBtnRect,
                        _textShadowBtnRect, _textBackgroundBtnRect, _textFontBtnRect,
-                       _textSizeMinusBtnRect, _textSizePlusBtnRect, _textGripRect;
-    private int _hoveredTextBtn = -1; // 0=B 1=I 2=Stroke 3=Shadow 4=Bg 5=Font 6=Size- 7=Size+ 8=Grip
+                       _textSizeMinusBtnRect, _textSizePlusBtnRect, _textGripRect,
+                       _textAlignLeftBtnRect, _textAlignCenterBtnRect, _textAlignRightBtnRect;
+    // 0=B 1=I 2=Stroke 3=Shadow 4=Bg 5=Font 6=Size- 7=Size+ 8=Grip 9=AlignL 10=AlignC 11=AlignR
+    private int _hoveredTextBtn = -1;
 
-    // Font dropdown
+    // Font dropdown (system fonts + favorites + recents, scrollable)
     private bool _fontDropdownOpen;
     private RectangleF _fontDropdownRect;
     private RectangleF[] _fontDropdownItemRects = Array.Empty<RectangleF>();
-    private static readonly string[] CommonFonts =
-    {
-        "Segoe UI", "Arial", "Calibri", "Consolas", "Times New Roman", "Georgia",
-        "Verdana", "Tahoma", "Trebuchet MS", "Courier New", "Comic Sans MS", "Impact",
-    };
+    private RectangleF[] _fontDropdownStarRects = Array.Empty<RectangleF>();
+    private int _fontDropdownScroll;
+    private int _fontDropdownPinnedCount;
+    private TextAnnotationPainter.FontListEntry[] _fontDropdownEntries = Array.Empty<TextAnnotationPainter.FontListEntry>();
+    private List<string> _recentFonts = new();
+    private List<string> _favoriteFonts = new();
+    private const int FontDropdownVisible = 12;
+    private const float FontStarColW = 22f;
+    private const float FontListMinW = 280f;
+    private const float FontListItemH = 32f;
+    private const float FontListNamePx = 15f;
 
     // Grip drag (moves the inline text box + toolbar together)
     private bool _textGripDragging;
@@ -65,7 +87,9 @@ public sealed partial class AnnotationCanvas
     private RectangleF GetInlineTextScreenBounds()
     {
         if (_inlineTextBox is null) return RectangleF.Empty;
-        var rect = MeasureInlineTextRect(_inlineTextOrigin, _inlineTextBox.Text, _textFontSize, _textFontFamily, _textBold, _textItalic, _textBackground);
+        var rect = MeasureInlineTextRect(
+            _inlineTextOrigin, _inlineTextBox.Text, _textFontSize, _textFontFamily,
+            _textBold, _textItalic, _textBackground, _textMaxWidth, _textAlign);
         return ImageToScreenRect(rect);
     }
 
@@ -85,6 +109,7 @@ public sealed partial class AnnotationCanvas
         float totalW = TbBtnW * 5 + TbBtnPad * 4          // B I Stroke Shadow Bg
                      + TbSepW + fontW                      // | font
                      + TbSepW + TbBtnW + TbSizeW + TbBtnW  // | [-] size [+]
+                     + TbSepW + TbBtnW * 3 + TbBtnPad * 2  // | align
                      + TbSepW + TbGripW                    // | grip
                      + TbPad * 2;
         float totalH = TbBtnH + TbPad * 2;
@@ -148,6 +173,13 @@ public sealed partial class AnnotationCanvas
         DrawCenteredText(g, ((int)Math.Round(_textFontSize)).ToString(), TbFont, EditorColors.TextPrimary, sizeRect, 235);
         cx += TbSizeW;
         Btn(ref _textSizePlusBtnRect, cx, "+", TbFontBold, false, 7); cx += TbBtnW;
+
+        cx = Sep(cx);
+
+        // Alignment
+        Btn(ref _textAlignLeftBtnRect, cx, "⫷", TbFontBold, _textAlign == TextHAlign.Left, 9); cx += TbBtnW + TbBtnPad;
+        Btn(ref _textAlignCenterBtnRect, cx, "≡", TbFontBold, _textAlign == TextHAlign.Center, 10); cx += TbBtnW + TbBtnPad;
+        Btn(ref _textAlignRightBtnRect, cx, "⫸", TbFontBold, _textAlign == TextHAlign.Right, 11); cx += TbBtnW;
 
         cx = Sep(cx);
 
@@ -268,6 +300,9 @@ public sealed partial class AnnotationCanvas
             6 => LocalizationService.Translate("Decrease size"),
             7 => LocalizationService.Translate("Increase size"),
             8 => LocalizationService.Translate("Move"),
+            9 => LocalizationService.Translate("Align left"),
+            10 => LocalizationService.Translate("Align center"),
+            11 => LocalizationService.Translate("Align right"),
             _ => "",
         };
         if (string.IsNullOrEmpty(txt)) return;
@@ -283,6 +318,9 @@ public sealed partial class AnnotationCanvas
             6 => _textSizeMinusBtnRect,
             7 => _textSizePlusBtnRect,
             8 => _textGripRect,
+            9 => _textAlignLeftBtnRect,
+            10 => _textAlignCenterBtnRect,
+            11 => _textAlignRightBtnRect,
             _ => RectangleF.Empty,
         };
         if (anchor.IsEmpty) return;
@@ -304,21 +342,57 @@ public sealed partial class AnnotationCanvas
         DrawCenteredText(g, txt, TbFont, EditorColors.TextPrimary, rect, 235);
     }
 
+    private void EnsureFontDropdownData()
+    {
+        _fontDropdownEntries = TextAnnotationPainter.GetOrderedFontEntries(
+            null, _favoriteFonts, _recentFonts, out _fontDropdownPinnedCount);
+    }
+
+    private void RememberRecentFont(string family)
+    {
+        if (string.IsNullOrWhiteSpace(family)) return;
+        _recentFonts = TextAnnotationPainter.PushRecentFont(_recentFonts, family);
+    }
+
+    private void ToggleFavoriteFont(string family)
+    {
+        if (string.IsNullOrWhiteSpace(family)) return;
+        _favoriteFonts = TextAnnotationPainter.ToggleFavoriteFont(_favoriteFonts, family);
+        FavoriteFontsChanged?.Invoke(TextAnnotationPainter.SerializeFavoriteFonts(_favoriteFonts));
+        EnsureFontDropdownData();
+    }
+
+    /// <summary>Seeds recent + favorite fonts from settings (called when the editor opens).</summary>
+    public void LoadRecentFonts(string? recentSerialized, string? favoriteSerialized = null)
+    {
+        _recentFonts = TextAnnotationPainter.ParseRecentFonts(recentSerialized);
+        _favoriteFonts = TextAnnotationPainter.ParseFavoriteFonts(favoriteSerialized);
+    }
+
+    /// <summary>Raised when the user pins/unpins a favorite font (serialized list).</summary>
+    public event Action<string>? FavoriteFontsChanged;
+
     private void RenderFontDropdown(Graphics g)
     {
-        const float itemH = 24f;
-        float w = Math.Max(_textFontBtnRect.Width, 150f);
-        float x = _textFontBtnRect.X;
-        float h = CommonFonts.Length * itemH + 6f;
+        float itemH = FontListItemH;
+        EnsureFontDropdownData();
+        var entries = _fontDropdownEntries;
+        if (entries.Length == 0) return;
 
-        // The inline TextBox is a native child control that paints OVER the canvas, so the
-        // list must open AWAY from it (otherwise it would be hidden behind the box). The
-        // toolbar sits above the text → open upward; if it's below the text → open downward.
+        int visible = Math.Min(FontDropdownVisible, entries.Length);
+        float w = Math.Max(_textFontBtnRect.Width + 40f, FontListMinW);
+        float x = MathF.Round(_textFontBtnRect.X);
+        float h = visible * itemH + 8f;
+
+        // Open away from the inline text so the list isn't covered by the off-screen TextBox chrome.
         bool toolbarAboveText = _inlineTextBox is not null && _textToolbarRect.Top < GetInlineTextScreenBounds().Top;
         float y = toolbarAboveText ? _textFontBtnRect.Top - h - 3f : _textFontBtnRect.Bottom + 3f;
-        y = Math.Clamp(y, 4f, Math.Max(4f, ClientSize.Height - h - 4f));
+        y = MathF.Round(Math.Clamp(y, 4f, Math.Max(4f, ClientSize.Height - h - 4f)));
         x = Math.Clamp(x, 4f, Math.Max(4f, ClientSize.Width - w - 4f));
         _fontDropdownRect = new RectangleF(x, y, w, h);
+
+        int maxScroll = Math.Max(0, entries.Length - visible);
+        _fontDropdownScroll = Math.Clamp(_fontDropdownScroll, 0, maxScroll);
 
         using (var sp = SketchRenderer.RoundedRect(new RectangleF(x, y + 2, w, h), 8f))
         using (var sb = new SolidBrush(Color.FromArgb(70, 0, 0, 0)))
@@ -331,24 +405,74 @@ public sealed partial class AnnotationCanvas
                 g.DrawPath(border, path);
         }
 
-        _fontDropdownItemRects = new RectangleF[CommonFonts.Length];
+        _fontDropdownItemRects = new RectangleF[visible];
+        _fontDropdownStarRects = new RectangleF[visible];
         var mouse = PointToClient(Cursor.Position);
-        using var itemFmt = new StringFormat(StringFormat.GenericTypographic) { LineAlignment = StringAlignment.Center };
-        for (int i = 0; i < CommonFonts.Length; i++)
+        using var itemFmt = new StringFormat(StringFormat.GenericTypographic)
         {
-            var ir = new RectangleF(x + 3, y + 3 + i * itemH, w - 6, itemH);
+            LineAlignment = StringAlignment.Center,
+            FormatFlags = StringFormatFlags.NoWrap | StringFormatFlags.NoClip,
+            Trimming = StringTrimming.EllipsisCharacter,
+        };
+
+        TextAnnotationPainter.ApplyCrispListText(g);
+
+        for (int i = 0; i < visible; i++)
+        {
+            int fontIdx = _fontDropdownScroll + i;
+            var entry = entries[fontIdx];
+            var ir = new RectangleF(x + 4, y + 4 + i * itemH, w - 8, itemH);
+            ir = new RectangleF(MathF.Round(ir.X), MathF.Round(ir.Y), ir.Width, ir.Height);
             _fontDropdownItemRects[i] = ir;
+
             bool hov = ir.Contains(mouse);
-            bool sel = string.Equals(CommonFonts[i], _textFontFamily, StringComparison.OrdinalIgnoreCase);
+            bool sel = string.Equals(entry.Name, _textFontFamily, StringComparison.OrdinalIgnoreCase);
             if (hov || sel)
             {
                 using var hb = new SolidBrush(Color.FromArgb(hov ? 40 : 22, EditorColors.Accent));
-                using var hp = SketchRenderer.RoundedRect(ir, 4f);
+                using var hp = SketchRenderer.RoundedRect(ir, 5f);
                 g.FillPath(hb, hp);
             }
-            using var itemFont = new Font(CommonFonts[i], 10f);
-            using var tbr = new SolidBrush(sel ? EditorColors.Accent : EditorColors.TextPrimary);
-            g.DrawString(CommonFonts[i], itemFont, tbr, new RectangleF(ir.X + 8, ir.Y, ir.Width - 8, ir.Height), itemFmt);
+
+            // Star on the RIGHT — keeps the name flush-left and easy to scan
+            var starRect = new RectangleF(ir.Right - FontStarColW - 2, ir.Y, FontStarColW, ir.Height);
+            _fontDropdownStarRects[i] = starRect;
+            bool showStar = entry.IsFavorite || entry.IsRecent || starRect.Contains(mouse) || hov;
+            if (showStar)
+            {
+                var starColor = entry.IsFavorite
+                    ? EditorColors.Accent
+                    : Color.FromArgb(hov || entry.IsRecent ? 170 : 110, EditorColors.TextMuted);
+                TextAnnotationPainter.DrawSmallStar(g,
+                    starRect.X + starRect.Width / 2f,
+                    starRect.Y + starRect.Height / 2f,
+                    radius: 5f,
+                    filled: entry.IsFavorite,
+                    color: starColor);
+            }
+
+            // Name takes the left portion up to the star
+            var textRect = new RectangleF(ir.X + 10, ir.Y, starRect.X - ir.X - 12, ir.Height);
+            var nameColor = sel ? EditorColors.Accent : EditorColors.TextPrimary;
+            try
+            {
+                using var itemFont = new Font(entry.Name, FontListNamePx, FontStyle.Regular, GraphicsUnit.Pixel);
+                using var tbr = new SolidBrush(nameColor);
+                g.DrawString(entry.Name, itemFont, tbr, textRect, itemFmt);
+            }
+            catch
+            {
+                using var fallback = new Font("Segoe UI", FontListNamePx, FontStyle.Regular, GraphicsUnit.Pixel);
+                using var tbr = new SolidBrush(nameColor);
+                g.DrawString(entry.Name, fallback, tbr, textRect, itemFmt);
+            }
+
+            if (fontIdx == _fontDropdownPinnedCount - 1 && i + 1 < visible)
+            {
+                using var sepPen = new Pen(EditorColors.BorderSubtle, 1f);
+                float sepY = MathF.Round(ir.Bottom) - 0.5f;
+                g.DrawLine(sepPen, ir.X + 8, sepY, ir.Right - 8, sepY);
+            }
         }
     }
 
@@ -372,6 +496,14 @@ public sealed partial class AnnotationCanvas
         UpdateInlineTextBoxStyle();
         Invalidate();
         TextFontSizeChanged?.Invoke(ns);
+        NotifyTextStyleChanged();
+    }
+
+    private void NotifyTextStyleChanged()
+    {
+        TextStyleChanged?.Invoke(
+            _textFontSize, _textFontFamily, _textBold, _textItalic,
+            _textStroke, _textShadow, _textBackground, (int)_textAlign);
     }
 
     /// <summary>Handles a left click while editing text. Returns true if the toolbar consumed it.</summary>
@@ -381,28 +513,61 @@ public sealed partial class AnnotationCanvas
 
         if (_fontDropdownOpen)
         {
+            EnsureFontDropdownData();
+            var entries = _fontDropdownEntries;
             for (int i = 0; i < _fontDropdownItemRects.Length; i++)
-                if (_fontDropdownItemRects[i].Contains(loc))
+            {
+                int fontIdx = _fontDropdownScroll + i;
+                if (fontIdx < 0 || fontIdx >= entries.Length) continue;
+
+                // Star column toggles favorite without selecting the font
+                if (i < _fontDropdownStarRects.Length && _fontDropdownStarRects[i].Contains(loc))
                 {
-                    _textFontFamily = CommonFonts[i];
-                    _fontDropdownOpen = false;
-                    UpdateInlineTextBoxStyle();
+                    ToggleFavoriteFont(entries[fontIdx].Name);
                     Invalidate();
                     return true;
                 }
-            if (_fontDropdownRect.Contains(loc)) return true; // absorb clicks inside the open list
-            _fontDropdownOpen = false; // click elsewhere closes it, then falls through to toolbar checks
+
+                if (_fontDropdownItemRects[i].Contains(loc))
+                {
+                    _textFontFamily = entries[fontIdx].Name;
+                    RememberRecentFont(_textFontFamily);
+                    _fontDropdownOpen = false;
+                    UpdateInlineTextBoxStyle();
+                    NotifyTextStyleChanged();
+                    Invalidate();
+                    return true;
+                }
+            }
+            if (_fontDropdownRect.Contains(loc)) return true;
+            _fontDropdownOpen = false;
             Invalidate();
         }
 
-        if (_textBoldBtnRect.Contains(loc)) { _textBold = !_textBold; UpdateInlineTextBoxStyle(); Invalidate(); return true; }
-        if (_textItalicBtnRect.Contains(loc)) { _textItalic = !_textItalic; UpdateInlineTextBoxStyle(); Invalidate(); return true; }
-        if (_textStrokeBtnRect.Contains(loc)) { _textStroke = !_textStroke; Invalidate(); return true; }
-        if (_textShadowBtnRect.Contains(loc)) { _textShadow = !_textShadow; Invalidate(); return true; }
-        if (_textBackgroundBtnRect.Contains(loc)) { _textBackground = !_textBackground; Invalidate(); return true; }
-        if (_textFontBtnRect.Contains(loc)) { _fontDropdownOpen = !_fontDropdownOpen; Invalidate(); return true; }
+        if (_textBoldBtnRect.Contains(loc)) { _textBold = !_textBold; UpdateInlineTextBoxStyle(); NotifyTextStyleChanged(); Invalidate(); return true; }
+        if (_textItalicBtnRect.Contains(loc)) { _textItalic = !_textItalic; UpdateInlineTextBoxStyle(); NotifyTextStyleChanged(); Invalidate(); return true; }
+        if (_textStrokeBtnRect.Contains(loc)) { _textStroke = !_textStroke; NotifyTextStyleChanged(); Invalidate(); return true; }
+        if (_textShadowBtnRect.Contains(loc)) { _textShadow = !_textShadow; NotifyTextStyleChanged(); Invalidate(); return true; }
+        if (_textBackgroundBtnRect.Contains(loc)) { _textBackground = !_textBackground; NotifyTextStyleChanged(); Invalidate(); return true; }
+        if (_textFontBtnRect.Contains(loc))
+        {
+            _fontDropdownOpen = !_fontDropdownOpen;
+            if (_fontDropdownOpen)
+            {
+                EnsureFontDropdownData();
+                int idx = Array.FindIndex(_fontDropdownEntries,
+                    e => string.Equals(e.Name, _textFontFamily, StringComparison.OrdinalIgnoreCase));
+                if (idx >= 0)
+                    _fontDropdownScroll = Math.Max(0, idx - FontDropdownVisible / 2);
+            }
+            Invalidate();
+            return true;
+        }
         if (_textSizeMinusBtnRect.Contains(loc)) { AdjustTextFontSize(-2f); return true; }
         if (_textSizePlusBtnRect.Contains(loc)) { AdjustTextFontSize(+2f); return true; }
+        if (_textAlignLeftBtnRect.Contains(loc)) { _textAlign = TextHAlign.Left; NotifyTextStyleChanged(); Invalidate(); return true; }
+        if (_textAlignCenterBtnRect.Contains(loc)) { _textAlign = TextHAlign.Center; NotifyTextStyleChanged(); Invalidate(); return true; }
+        if (_textAlignRightBtnRect.Contains(loc)) { _textAlign = TextHAlign.Right; NotifyTextStyleChanged(); Invalidate(); return true; }
         if (_textGripRect.Contains(loc))
         {
             _textGripDragging = true;
@@ -410,7 +575,7 @@ public sealed partial class AnnotationCanvas
             _textGripDragOffset = new Point(loc.X - (int)textScreen.X, loc.Y - (int)textScreen.Y);
             return true;
         }
-        if (_textToolbarRect.Contains(loc)) return true; // absorb background clicks
+        if (_textToolbarRect.Contains(loc)) return true;
         return false;
     }
 
@@ -423,7 +588,7 @@ public sealed partial class AnnotationCanvas
         if (_fontDropdownOpen && _fontDropdownRect.Contains(loc))
         {
             Cursor = Cursors.Hand;
-            Invalidate(); // repaint so the hovered item highlights
+            Invalidate();
             return true;
         }
 
@@ -438,6 +603,9 @@ public sealed partial class AnnotationCanvas
         else if (_textSizeMinusBtnRect.Contains(loc)) h = 6;
         else if (_textSizePlusBtnRect.Contains(loc)) h = 7;
         else if (_textGripRect.Contains(loc)) h = 8;
+        else if (_textAlignLeftBtnRect.Contains(loc)) h = 9;
+        else if (_textAlignCenterBtnRect.Contains(loc)) h = 10;
+        else if (_textAlignRightBtnRect.Contains(loc)) h = 11;
 
         if (h != prev)
         {
@@ -455,7 +623,28 @@ public sealed partial class AnnotationCanvas
             Cursor = Cursors.Default;
             return true;
         }
-        if (prev >= 0) Cursor = Cursors.Default; // just left the toolbar
+        if (prev >= 0) Cursor = Cursors.Default;
         return false;
+    }
+
+    /// <summary>Hit-test corner handles of the inline text (screen space). Returns 0..3 or −1.</summary>
+    private int HitTestInlineTextHandle(Point screenPt)
+    {
+        if (_inlineTextBox is null) return -1;
+        var tb = GetInlineTextScreenBounds();
+        PointF[] pts =
+        {
+            new(tb.X, tb.Y),
+            new(tb.Right, tb.Y),
+            new(tb.X, tb.Bottom),
+            new(tb.Right, tb.Bottom),
+        };
+        const float hit = 8f;
+        for (int i = 0; i < pts.Length; i++)
+        {
+            if (Math.Abs(screenPt.X - pts[i].X) <= hit && Math.Abs(screenPt.Y - pts[i].Y) <= hit)
+                return i;
+        }
+        return -1;
     }
 }

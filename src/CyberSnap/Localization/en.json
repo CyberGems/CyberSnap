@@ -1320,5 +1320,21 @@
   "Wizard outcome: show notification only.": "Outcome: show notification only.",
   "Choose what CyberSnap does after saving the selection.": "Choose what CyberSnap does after saving the selection.",
   "Enable sounds": "Enable sounds",
-  "Files won't be saved to disk.": "Files won't be saved to disk."
+  "Files won't be saved to disk.": "Files won't be saved to disk.",
+  "Type here...": "Type here...",
+  "Bold": "Bold",
+  "Italic": "Italic",
+  "Stroke": "Stroke",
+  "Shadow": "Shadow",
+  "Background": "Background",
+  "Decrease size": "Decrease size",
+  "Increase size": "Increase size",
+  "Align left": "Align left",
+  "Align center": "Align center",
+  "Align right": "Align right",
+  "Enter to confirm · Shift+Enter for new line": "Enter to confirm · Shift+Enter for new line",
+  "Click to select · Drag to move · Double-click text to edit · Double-click empty to select all": "Click to select · Drag to move · Double-click text to edit · Double-click empty to select all",
+  "Click to place · Click text to re-edit · Enter confirms · Shift+Enter new line": "Click to place · Click text to re-edit · Enter confirms · Shift+Enter new line",
+  "Enter to confirm · Shift+Enter for new line · Esc to cancel": "Enter to confirm · Shift+Enter for new line · Esc to cancel",
+  "Toggle favorite font": "Toggle favorite font"
 }

@@ -173,11 +173,12 @@ public sealed partial class RegionOverlayForm
 
     private void PaintFontPicker(Graphics g)
     {
-        var fonts = GetFilteredFonts();
-        int itemH = 30, pad = 8, visibleCount = 8;
-        int searchBarH = 32;
+        var entries = GetFontListEntries();
+        int itemH = 34, pad = 10, visibleCount = 10;
+        int searchBarH = 34;
         int bottomPad = pad + 4; // extra space so last item doesn't clip against rounded corners
-        int pw = 240, ph = searchBarH + pad + visibleCount * itemH + pad + bottomPad;
+        int pw = 300, ph = searchBarH + pad + visibleCount * itemH + pad + bottomPad;
+        const int starColW = 22;
 
         // Position near the text input area
         int px, py;
@@ -206,7 +207,7 @@ public sealed partial class RegionOverlayForm
             g.FillPath(_pickerSearchBg!, searchPath);
             g.DrawPath(_pickerFocusBorder!, searchPath);
         }
-        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+        TextAnnotationPainter.ApplyCrispListText(g);
         string searchDisplay = _fontSearch.Length > 0 ? _fontSearch : "Search fonts...";
         var searchBrush = SketchRenderer.GetToolColorBrush(_fontSearch.Length > 0
             ? UiChrome.SurfaceTextPrimary : UiChrome.SurfaceTextMuted);
@@ -217,23 +218,29 @@ public sealed partial class RegionOverlayForm
             float cursorX = searchRect.X + 10 + g.MeasureString(_fontSearch, searchFont).Width - 2;
             g.DrawLine(_pickerCursorPen!, cursorX, searchRect.Y + 8, cursorX, searchRect.Bottom - 8);
         }
-        g.TextRenderingHint = TextRenderingHint.SystemDefault;
 
-        // Font list â€” clip to popup bounds so items don't bleed outside rounded corners
+        // Font list — favorites + recents pinned at top, then A–Z.
         int listY = py + pad + searchBarH + pad;
-        int maxScroll = Math.Max(0, fonts.Length - visibleCount);
-        var listClipRect = new Rectangle(px, listY, pw, _fontPickerRect.Bottom - listY);
+        int maxScroll = Math.Max(0, entries.Length - visibleCount);
         var clipState = g.Save();
         using (var clipPath = RRect(_fontPickerRect, UiChrome.ScaledPopupRadius))
         {
             g.SetClip(clipPath);
         }
-        for (int i = 0; i < visibleCount && (_fontPickerScroll + i) < fonts.Length; i++)
+
+        using var itemFmt = new StringFormat(StringFormat.GenericTypographic)
+        {
+            LineAlignment = StringAlignment.Center,
+            FormatFlags = StringFormatFlags.NoWrap | StringFormatFlags.NoClip,
+            Trimming = StringTrimming.EllipsisCharacter,
+        };
+
+        for (int i = 0; i < visibleCount && (_fontPickerScroll + i) < entries.Length; i++)
         {
             int idx = _fontPickerScroll + i;
-            string name = fonts[idx];
+            var entry = entries[idx];
             int iy = listY + i * itemH;
-            bool active = name == _textFontFamily;
+            bool active = string.Equals(entry.Name, _textFontFamily, StringComparison.OrdinalIgnoreCase);
             bool hovered = idx == _fontPickerHovered;
 
             if (active || hovered)
@@ -244,34 +251,56 @@ public sealed partial class RegionOverlayForm
                 var itemBg = SketchRenderer.GetToolColorBrush(Color.FromArgb(alpha, UiChrome.SurfaceHover.R, UiChrome.SurfaceHover.G, UiChrome.SurfaceHover.B));
                 g.FillPath(itemBg, itemPath);
                 if (active)
-                {
                     g.DrawPath(_pickerActiveBorder!, itemPath);
-                }
             }
 
-            // Cache font objects for perf
-            if (!_fontCache.TryGetValue(name, out var font))
+            // Star on the RIGHT so names stay left-aligned and easy to scan
+            float starCx = px + pw - pad - starColW / 2f;
+            float starCy = iy + itemH / 2f;
+            bool showStar = entry.IsFavorite || entry.IsRecent || hovered;
+            if (showStar)
             {
-                try { font = new Font(name, 11f); }
-                catch { font = UiChrome.ChromeFont(11f); }
-                _fontCache[name] = font;
+                var starColor = entry.IsFavorite
+                    ? UiChrome.AccentColor
+                    : Color.FromArgb(entry.IsRecent || hovered ? 170 : 110,
+                        UiChrome.SurfaceTextMuted.R, UiChrome.SurfaceTextMuted.G, UiChrome.SurfaceTextMuted.B);
+                TextAnnotationPainter.DrawSmallStar(g, starCx, starCy, radius: 5f,
+                    filled: entry.IsFavorite, color: starColor);
             }
-            int textAlpha = active ? 255 : hovered ? 220 : 160;
-            var brush = SketchRenderer.GetToolColorBrush(Color.FromArgb(textAlpha, UiChrome.SurfaceTextPrimary.R, UiChrome.SurfaceTextPrimary.G, UiChrome.SurfaceTextPrimary.B));
-            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
-            g.DrawString(name, font, brush, px + pad + 8, iy + 6);
-            g.TextRenderingHint = TextRenderingHint.SystemDefault;
+
+            // Pixel-unit font + ClearType for crisper names on dark chrome
+            string cacheKey = entry.Name + "|px16";
+            if (!_fontCache.TryGetValue(cacheKey, out var font))
+            {
+                try { font = new Font(entry.Name, 16f, FontStyle.Regular, GraphicsUnit.Pixel); }
+                catch { font = UiChrome.ChromeFont(12f); }
+                _fontCache[cacheKey] = font;
+            }
+            int textAlpha = active ? 255 : hovered ? 235 : 185;
+            var brush = SketchRenderer.GetToolColorBrush(Color.FromArgb(textAlpha,
+                active ? UiChrome.AccentColor.R : UiChrome.SurfaceTextPrimary.R,
+                active ? UiChrome.AccentColor.G : UiChrome.SurfaceTextPrimary.G,
+                active ? UiChrome.AccentColor.B : UiChrome.SurfaceTextPrimary.B));
+            var nameRect = new RectangleF(px + pad + 10, iy, pw - pad * 2 - starColW - 14, itemH);
+            TextAnnotationPainter.ApplyCrispListText(g);
+            g.DrawString(entry.Name, font, brush, nameRect, itemFmt);
+
+            if (idx == _pinnedFontCount - 1 && i + 1 < visibleCount)
+            {
+                int sepY = iy + itemH - 1;
+                g.DrawLine(_pickerSeparatorPen!, px + pad + 4, sepY, px + pw - pad - 4, sepY);
+            }
         }
 
         // Scroll indicator (rounded)
-        if (fonts.Length > visibleCount)
+        if (entries.Length > visibleCount)
         {
             int trackH = visibleCount * itemH - 8;
             int trackX = px + pw - pad - 4;
             int trackY = listY + 4;
             using var trackPath = RRect(new RectangleF(trackX, trackY, 4, trackH), 2);
             g.FillPath(_pickerScrollTrackBrush!, trackPath);
-            int thumbH = Math.Max(12, trackH * visibleCount / fonts.Length);
+            int thumbH = Math.Max(12, trackH * visibleCount / entries.Length);
             int thumbY = maxScroll > 0 ? trackY + (int)((float)_fontPickerScroll / maxScroll * (trackH - thumbH)) : trackY;
             using var thumbPath = RRect(new RectangleF(trackX, thumbY, 4, thumbH), 2);
             g.FillPath(_pickerScrollThumbBrush!, thumbPath);
@@ -306,8 +335,7 @@ public sealed partial class RegionOverlayForm
     private string TextFontLabel()
         => _textFontFamily.Length > 14 ? _textFontFamily[..13] + ".." : _textFontFamily;
 
-    // Single source of truth for the toolbar's total size. Layout: B I [Stroke] [Shadow]
-    // [Bg] | Font | [-] size [+] | grip
+    // Layout: B I [Stroke] [Shadow] [Bg] | Font | [-] size [+] | [≡L ≡C ≡R] | grip
     private void MeasureTextToolbar(out float totalW, out float totalH)
     {
         var (uiFont, _, _, _) = GetTextToolbarFonts();
@@ -318,6 +346,7 @@ public sealed partial class RegionOverlayForm
         totalW = TextTbBtnW * 5 + TextTbBtnPad * 4                       // B I Stroke Shadow Bg
                + TextTbSepW + fontW                                      // | font selector
                + TextTbSepW + TextTbBtnW + TextTbSizeW + TextTbBtnW      // | [-] size [+]
+               + TextTbSepW + TextTbBtnW * 3 + TextTbBtnPad * 2       // | align L C R
                + TextTbSepW + TextTbGripW                                // | grip
                + TextTbPad * 2;
         totalH = TextTbBtnH + TextTbPad * 2;
@@ -339,7 +368,6 @@ public sealed partial class RegionOverlayForm
         float ty = _textToolbarRect.Y;
 
         WindowsDockRenderer.PaintSurface(g, _textToolbarRect);
-        // Outline so the bar stays legible over dark backgrounds (matches tooltip chrome).
         using (var borderPath = WindowsDockRenderer.RoundedRect(_textToolbarRect, WindowsDockRenderer.SurfaceRadius))
         using (var borderPen = new Pen(UiChrome.SurfaceBorderStrong, 1f))
             g.DrawPath(borderPen, borderPath);
@@ -374,7 +402,7 @@ public sealed partial class RegionOverlayForm
             cx += TextTbSepW;
         }
 
-        // B, I, then the three effect previews (self-documenting sample "A")
+        // B, I, effects
         DrawToggleBtn(ref _textBoldBtnRect, cx, "B", uiFontBold, _textBold);
         cx += TextTbBtnW + TextTbBtnPad;
         DrawToggleBtn(ref _textItalicBtnRect, cx, "I", uiFontItalic, _textItalic);
@@ -397,19 +425,31 @@ public sealed partial class RegionOverlayForm
 
         DrawSeparator();
 
-        // Size group: [-] <size px> [+]
-        btnIdx = 6; // minus
+        // Size group: [-] <size px> [+]  (indices 6, 12 for label, 7)
+        btnIdx = 6;
         DrawToggleBtn(ref _textSizeMinusBtnRect, cx, "−", uiFontBold, false);
         cx += TextTbBtnW;
-        var sizeRect = new RectangleF(cx, cy, TextTbSizeW, TextTbBtnH);
-        g.DrawString(((int)Math.Round(_textFontSize)).ToString(), uiFont, LabelBrush(230), sizeRect, _iconFmt);
+        _textSizeLabelRect = new RectangleF(cx, cy, TextTbSizeW, TextTbBtnH);
+        g.DrawString(((int)Math.Round(_textFontSize)).ToString(), uiFont, LabelBrush(230), _textSizeLabelRect, _iconFmt);
         cx += TextTbSizeW;
+        btnIdx = 7;
         DrawToggleBtn(ref _textSizePlusBtnRect, cx, "+", uiFontBold, false);
         cx += TextTbBtnW;
 
         DrawSeparator();
 
-        // Drag grip (index 8): drags the toolbar and the text together
+        // Alignment L / C / R (indices 9, 10, 11)
+        btnIdx = 9;
+        DrawToggleBtn(ref _textAlignLeftBtnRect, cx, "⫷", uiFontBold, _textAlign == TextHAlign.Left);
+        cx += TextTbBtnW + TextTbBtnPad;
+        DrawToggleBtn(ref _textAlignCenterBtnRect, cx, "≡", uiFontBold, _textAlign == TextHAlign.Center);
+        cx += TextTbBtnW + TextTbBtnPad;
+        DrawToggleBtn(ref _textAlignRightBtnRect, cx, "⫸", uiFontBold, _textAlign == TextHAlign.Right);
+        cx += TextTbBtnW;
+
+        DrawSeparator();
+
+        // Drag grip (index 8)
         _textGripRect = new RectangleF(cx, cy, TextTbGripW, TextTbBtnH);
         DrawGrip(g, _textGripRect, _hoveredTextBtn == 8);
 

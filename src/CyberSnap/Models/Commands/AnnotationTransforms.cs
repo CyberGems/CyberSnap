@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using CyberSnap.Helpers;
 
 namespace CyberSnap.Models.Commands;
 
@@ -72,7 +73,7 @@ internal static class AnnotationTransforms
         StepNumberAnnotation sn => new Rectangle(sn.Pos.X - 20, sn.Pos.Y - 20, 40, 40),
         EmojiAnnotation em => new Rectangle(em.Pos.X, em.Pos.Y, (int)(em.Size * 1.4f) + 4, (int)(em.Size * 1.4f) + 4),
         MagnifierAnnotation mg => new Rectangle(mg.Pos.X - 30, mg.Pos.Y - 30, 60, 60),
-        TextAnnotation ta => new Rectangle(ta.Pos.X - 8, ta.Pos.Y - 6, (int)(ta.Text.Length * ta.FontSize * 0.7) + 16, (int)ta.FontSize + 12),
+        TextAnnotation ta => Rectangle.Round(TextAnnotationPainter.Measure(ta)),
         _ => Rectangle.Empty
     };
 

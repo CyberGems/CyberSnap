@@ -262,7 +262,12 @@ public sealed partial class RegionOverlayForm : Form
     private bool _textShadow = true; // shadow enabled by default
     private bool _textBackground;
     private string _textFontFamily = UiChrome.FallbackFamilyName;
+    private TextHAlign _textAlign = TextHAlign.Left;
+    private float _textMaxWidth; // 0 = auto
     private TextBox? _textBox; // real textbox for native text editing
+    /// <summary>When re-editing, index in <c>_undoStack</c> of the original annotation (−1 = new).</summary>
+    private int _textEditStackIndex = -1;
+    private TextAnnotation? _textEditOriginal;
 
     // Inline text formatting toolbar hit rects (computed during paint)
     private RectangleF _textToolbarRect;
@@ -273,9 +278,14 @@ public sealed partial class RegionOverlayForm : Form
     private RectangleF _textBackgroundBtnRect;
     private RectangleF _textFontBtnRect;
     private RectangleF _textSizeMinusBtnRect;
+    private RectangleF _textSizeLabelRect; // clickable size readout
     private RectangleF _textSizePlusBtnRect;
+    private RectangleF _textAlignLeftBtnRect;
+    private RectangleF _textAlignCenterBtnRect;
+    private RectangleF _textAlignRightBtnRect;
     private RectangleF _textGripRect; // drag handle that moves toolbar + text together
-    private int _hoveredTextBtn = -1; // 0=B 1=I 2=Stroke 3=Shadow 4=Background 5=Font 6=Size- 7=Size+ 8=Grip, -1=none
+    // 0=B 1=I 2=Stroke 3=Shadow 4=Bg 5=Font 6=Size- 7=Size+ 8=Grip 9=AlignL 10=AlignC 11=AlignR 12=SizeLabel
+    private int _hoveredTextBtn = -1;
     private string _textBtnTooltip = "";
     private int _textResizeHandle = -1;
     private bool _textResizing;
@@ -287,6 +297,9 @@ public sealed partial class RegionOverlayForm : Form
     private DateTime _lastTextDragFrameUtc;
     private bool _textSelecting;
     private int _textSelectionAnchor;
+    // Timed double-click tracking for Pick/Move (OS double-click often lost after select-drag)
+    private int _lastTextDblClickTick;
+    private Point _lastTextDblClickLocation = Point.Empty;
     private RectangleF _activeTextRectCache;
     private float _activeTextMeasureWidth;
     private readonly RectangleF[] _activeTextHandleCache = new RectangleF[4];
@@ -386,6 +399,7 @@ public sealed partial class RegionOverlayForm : Form
         _mode = initialMode;
         _activeToolId = ToolDef.AllTools.FirstOrDefault(t => t.Mode == _mode)?.Id;
         _showTime = DateTime.UtcNow;
+        LoadTextStyleFromSettings();
 
         // Magnifier bitmap for color picker
         _magBitmap = new Bitmap(PW, PH, PixelFormat.Format32bppArgb);
@@ -541,7 +555,9 @@ public sealed partial class RegionOverlayForm : Form
         SetStyle(ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer |
-                 ControlStyles.Opaque, true);
+                 ControlStyles.Opaque |
+                 ControlStyles.StandardDoubleClick |
+                 ControlStyles.UserMouse, true);
         KeyPreview = true;
     }
 
