@@ -918,6 +918,10 @@ public partial class ToastWindow : Window
                 var trimmer = new VideoTrimmerWindow(_savedFilePath!, ((App)Application.Current).SettingsService);
                 trimmer.Show();
             }
+            else if (_savedFilePath is not null && _savedFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenWithDefaultViewer();
+            }
             else if (_previewBitmap is not null)
             {
                 CyberSnap.UI.Editor.EditorForm.ShowEditor(new Bitmap(_previewBitmap), _savedFilePath);
@@ -1467,15 +1471,18 @@ public partial class ToastWindow : Window
             action = ToastPreviewClickAction.OpenInEditor;
         }
 
-        string tipKey = action switch
-        {
-            ToastPreviewClickAction.OpenInDefaultViewer => "Click to open in default viewer",
-            ToastPreviewClickAction.CopyToClipboard => "Click to copy",
-            ToastPreviewClickAction.Save => "Click to save",
-            ToastPreviewClickAction.OpenInGallery => "Click to open in Gallery",
-            ToastPreviewClickAction.Close => "Click to close",
-            _ => "Click to open in editor"
-        };
+        bool isPdf = !string.IsNullOrWhiteSpace(spec.FilePath) && spec.FilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+        string tipKey = isPdf
+            ? "Click to open in default viewer"
+            : action switch
+            {
+                ToastPreviewClickAction.OpenInDefaultViewer => "Click to open in default viewer",
+                ToastPreviewClickAction.CopyToClipboard => "Click to copy",
+                ToastPreviewClickAction.Save => "Click to save",
+                ToastPreviewClickAction.OpenInGallery => "Click to open in Gallery",
+                ToastPreviewClickAction.Close => "Click to close",
+                _ => "Click to open in editor"
+            };
         string actionLine = LocalizationService.Translate(tipKey);
 
         if (string.IsNullOrWhiteSpace(spec.FilePath))
@@ -1967,6 +1974,8 @@ public partial class ToastWindow : Window
             return;
         }
 
+        bool isPdf = _savedFilePath is not null && _savedFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+
         try
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -1978,7 +1987,7 @@ public partial class ToastWindow : Window
         catch (Exception ex)
         {
             AppDiagnostics.LogWarning("toast.open-default-viewer", $"Failed to open with default viewer: {ex.Message}", ex);
-            ShowToastOpenError("Could not open the image with the default viewer.");
+            ShowToastOpenError(isPdf ? "Could not open the PDF with the default viewer." : "Could not open the image with the default viewer.");
         }
     }
 
@@ -2114,7 +2123,10 @@ public partial class ToastWindow : Window
 
     private void ShowToastOpenError(string message)
     {
-        Show(ToastSpec.Error("Open failed", message, _savedFilePath));
+        Show(ToastSpec.Error(
+            LocalizationService.Translate("Open failed"),
+            LocalizationService.Translate(message),
+            _savedFilePath));
     }
 
     private void ShowToastDragError(string message)
