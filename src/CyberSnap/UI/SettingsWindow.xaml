@@ -1147,8 +1147,7 @@
                         </Grid>
                     </Border>
                     
-                    <!-- PrtSc Snipping Tool Warn Banner (removable warning) -->
-                    <Border x:Name="PrtScWarnBanner" CornerRadius="6" Padding="14,12" Margin="0,12,0,0"
+                    <Border x:Name="PrtScWarnBanner" CornerRadius="6" Padding="14,12" Margin="0,12,0,16"
                             Background="#2E2207" BorderBrush="#4D3A12" BorderThickness="1" Visibility="Visible">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -1177,7 +1176,7 @@
                             </StackPanel>
                             
                             <!-- Close Button -->
-                            <Button Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"
+                            <Button Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right"
                                     Width="24" Height="24" Content="×" FontSize="20" Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
                                     Click="ClosePrtScWarnBanner_Click" ToolTip="Dismiss" Margin="8,0,0,0">
                                 <Button.Style>
