@@ -8,7 +8,7 @@
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
-        SizeToContent="WidthAndHeight"
+        SizeToContent="Manual"
         SnapsToDevicePixels="True"
         UseLayoutRounding="True"
         MouseEnter="Window_MouseEnter"

@@ -404,7 +404,10 @@ public partial class App : Application
             {
                 _widgetWindow.Close();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("widget.close", ex.Message, ex);
+            }
             _widgetWindow = null;
         }
     }
