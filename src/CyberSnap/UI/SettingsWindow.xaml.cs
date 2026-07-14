@@ -1046,4 +1046,21 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void OpenWinSettingsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ms-settings:easeofaccess-keyboard") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.open-windows-keyboard-settings", ex.Message, ex);
+        }
+    }
+
+    private void ClosePrtScWarnBanner_Click(object sender, RoutedEventArgs e)
+    {
+        PrtScWarnBanner.Visibility = Visibility.Collapsed;
+    }
+
 }

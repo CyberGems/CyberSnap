@@ -1373,5 +1373,8 @@
   "Restore default shortcut": "Restore default shortcut",
   "Clear shortcut": "Clear shortcut",
   "Configure your main shortcut": "Configure your main shortcut",
-  "Define the primary shortcut used to start a capture": "Define the primary shortcut used to start a capture"
+  "Define the primary shortcut used to start a capture": "Define the primary shortcut used to start a capture",
+  "How to unbind Snipping Tool from the PrtSc key?": "How to unbind Snipping Tool from the PrtSc key?",
+  "Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen.": "Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen.",
+  "Open Windows Settings": "Open Windows Settings"
 }

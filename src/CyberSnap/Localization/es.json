@@ -1752,5 +1752,8 @@
   "Restore default shortcut": "Restaurar atajo predeterminado",
   "Clear shortcut": "Limpiar atajo",
   "Configure your main shortcut": "Configura tu atajo principal",
-  "Define the primary shortcut used to start a capture": "Define el atajo principal para iniciar tus capturas"
+  "Define the primary shortcut used to start a capture": "Define el atajo principal para iniciar tus capturas",
+  "How to unbind Snipping Tool from the PrtSc key?": "¿Cómo desasignar la herramienta Recortes de la tecla PrtSc?",
+  "Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen.": "Abre Configuración de Windows > Accesibilidad > Teclado y desactiva la opción que abre Recortes con Print Screen.",
+  "Open Windows Settings": "Abrir Configuración de Windows"
 }
