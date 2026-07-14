@@ -295,6 +295,29 @@ public static class WindowsMenuRenderer
             e.Graphics.DrawImage(e.Image, new Rectangle(x, y, size, size));
         }
 
+        protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            var r = e.ImageRectangle;
+            int cx = r.X + r.Width / 2;
+            int cy = r.Y + r.Height / 2;
+
+            using (var pen = new Pen(_accent, 2f)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round
+            })
+            {
+                e.Graphics.DrawLines(pen, new[]
+                {
+                    new Point(cx - 5, cy),
+                    new Point(cx - 1, cy + 4),
+                    new Point(cx + 5, cy - 4)
+                });
+            }
+        }
+
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
         {
             if (e.Item is not ToolStripMenuItem item)

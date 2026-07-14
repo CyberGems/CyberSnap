@@ -79,6 +79,29 @@ public sealed class SettingsService : IDisposable
         }
     }
 
+    public static void SetUploadDefaultProvider(UploadProviderKind kind)
+    {
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+            {
+                s_cachedSettings.UploadDefaultProvider = kind;
+            }
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.UploadDefaultProvider = kind;
+            svc.Save();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.upload-default-provider.static-save", ex);
+        }
+    }
+
     public SettingsService(string? settingsPath = null, TimeSpan? saveDelay = null)
     {
         _settingsPath = ResolveSettingsPath(settingsPath);

@@ -1575,6 +1575,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 : label;
             var item = WindowsMenuRenderer.Item(display, iconId: kind == UploadProviderKind.Custom ? "folder" : "share");
             item.Enabled = available || kind == UploadProviderKind.Custom;
+            if (kind == defaultKind)
+            {
+                item.Checked = true;
+            }
+
             if (!available)
             {
                 item.ToolTipText = LocalizationService.Translate("Configure in Settings…");
@@ -1587,7 +1592,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
             else
             {
                 var captured = kind;
-                item.Click += (_, _) => DoShare(captured);
+                item.Click += (_, _) =>
+                {
+                    Services.SettingsService.SetUploadDefaultProvider(captured);
+                    DoShare(captured);
+                };
             }
             items.Add(item);
         }
