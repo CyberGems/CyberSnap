@@ -1165,7 +1165,7 @@
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="How to unbind Snipping Tool from the PrtSc key?"
                                            Services:LocalizationService.SourceText="How to unbind Snipping Tool from the PrtSc key?"
-                                           FontWeight="SemiBold" FontSize="13" Foreground="#FFFFFFFF" FontFamily="Segoe UI Variable Text"/>
+                                           FontWeight="SemiBold" FontSize="13" Foreground="#FFFFFFFF" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"/>
                                 <TextBlock Text="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
                                            Services:LocalizationService.SourceText="Open Windows Settings > Accessibility > Keyboard and turn off the option that opens Snipping Tool with Print Screen."
                                            FontSize="11.5" Foreground="#FFDFB9" FontFamily="Segoe UI Variable Text" TextWrapping="Wrap" Margin="0,4,0,10" Opacity="0.9"/>
@@ -1177,14 +1177,20 @@
                             </StackPanel>
                             
                             <!-- Close Button -->
-                            <Button Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right"
-                                    Width="24" Height="24" MinWidth="24" MinHeight="24" Background="Transparent" BorderThickness="0"
-                                    Content="×" FontSize="16" Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
-                                    Click="ClosePrtScWarnBanner_Click" ToolTip="Dismiss" Margin="6,0,0,0">
+                            <Button Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                    Width="24" Height="24" Content="×" FontSize="20" Foreground="#FFFFFFFF" Opacity="0.55" Cursor="Hand"
+                                    Click="ClosePrtScWarnBanner_Click" ToolTip="Dismiss" Margin="8,0,0,0">
                                 <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
-                                        <Setter Property="Background" Value="Transparent"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="Transparent">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter Property="Opacity" Value="1"/>

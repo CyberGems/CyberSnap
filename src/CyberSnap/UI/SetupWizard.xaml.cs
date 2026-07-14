@@ -624,7 +624,7 @@ public partial class SetupWizard : Window
     {
         var card = new Border
         {
-            Margin = new Thickness(0, 10, 0, 4),
+            Margin = new Thickness(0, 8, 0, 0),
             Background = (System.Windows.Media.Brush)FindResource("ThemeInputBackgroundBrush"),
             BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush"),
             BorderThickness = new Thickness(1),
