@@ -303,7 +303,7 @@ internal sealed class ThemedPdfExportDialog : Window
 
         _previewPageCount = new TextBlock
         {
-            Text = "1 Page",
+            Text = Services.LocalizationService.Translate("1 Page"),
             FontSize = 11,
             FontWeight = FontWeights.Bold,
             Foreground = Theme.Brush(Theme.TextSecondary),

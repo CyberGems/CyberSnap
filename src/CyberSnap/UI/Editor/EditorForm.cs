@@ -1573,7 +1573,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
             var display = kind == defaultKind
                 ? label + "  " + LocalizationService.Translate("(default)")
                 : label;
-            var item = WindowsMenuRenderer.Item(display, iconId: kind == UploadProviderKind.Custom ? "folder" : "share");
+            var item = WindowsMenuRenderer.Item(display);
             item.Enabled = available || kind == UploadProviderKind.Custom;
             if (kind == defaultKind)
             {
