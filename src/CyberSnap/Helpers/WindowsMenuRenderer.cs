@@ -299,7 +299,8 @@ public static class WindowsMenuRenderer
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             var r = e.ImageRectangle;
-            int cx = r.X + r.Width / 2;
+            int indent = e.Item.Padding.Left;
+            int cx = 22 + indent;
             int cy = r.Y + r.Height / 2;
 
             using (var pen = new Pen(_accent, 2f)
@@ -311,9 +312,9 @@ public static class WindowsMenuRenderer
             {
                 e.Graphics.DrawLines(pen, new[]
                 {
-                    new Point(cx - 5, cy),
-                    new Point(cx - 1, cy + 4),
-                    new Point(cx + 5, cy - 4)
+                    new Point(cx - 5, cy - 1),
+                    new Point(cx - 1, cy + 3),
+                    new Point(cx + 5, cy - 5)
                 });
             }
         }
