@@ -1748,5 +1748,7 @@
   "Save changes to {0} before opening the selected file?": "¿Deseas guardar los cambios de {0} antes de abrir el archivo seleccionado?",
   "The main shortcut to start a screenshot selection": "El atajo principal para iniciar una selección de captura",
   "Restore default shortcut": "Restaurar atajo predeterminado",
-  "Clear shortcut": "Limpiar atajo"
+  "Clear shortcut": "Limpiar atajo",
+  "Configure your main shortcut": "Configura tu atajo principal",
+  "Define the primary shortcut used to start a capture": "Define el atajo principal para iniciar tus capturas"
 }

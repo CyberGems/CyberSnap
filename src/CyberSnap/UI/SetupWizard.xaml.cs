@@ -322,18 +322,19 @@ public partial class SetupWizard : Window
         e.Handled = true;
         var key = NormalizeHotkeyKey(e);
         
+        // Stop any active reset/warning timers and clear previous error state on any new key press
+        if (_resetWarningTimer != null)
+        {
+            _resetWarningTimer.Stop();
+            _resetWarningTimer = null;
+            WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
+        }
+        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+        _tooltip.IsOpen = false;
+
         if (IsModifierOnly(key))
         {
-            if (_resetWarningTimer != null)
-            {
-                _resetWarningTimer.Stop();
-                _resetWarningTimer = null;
-                WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
-                WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
-                WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
-                _tooltip.IsOpen = false;
-            }
-
             if (_blockedDetectTimer == null)
             {
                 _blockedDetectTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -360,14 +361,6 @@ public partial class SetupWizard : Window
             _blockedDetectTimer.Stop();
             _blockedDetectTimer = null;
         }
-        if (_resetWarningTimer != null)
-        {
-            _resetWarningTimer.Stop();
-            _resetWarningTimer = null;
-        }
-        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
-        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
-        _tooltip.IsOpen = false;
 
         uint mod = (uint)Keyboard.Modifiers;
         uint vk = (uint)KeyInterop.VirtualKeyFromKey(key);
@@ -416,42 +409,39 @@ public partial class SetupWizard : Window
 
     private void WizHotkeyTextBox_PreviewKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        var key = NormalizeHotkeyKey(e);
-        if (IsModifierOnly(key))
+        if (Keyboard.Modifiers == ModifierKeys.None)
         {
-            if (Keyboard.Modifiers == ModifierKeys.None)
+            if (_blockedDetectTimer != null)
             {
-                if (_blockedDetectTimer != null)
-                {
-                    _blockedDetectTimer.Stop();
-                    _blockedDetectTimer = null;
-                }
+                _blockedDetectTimer.Stop();
+                _blockedDetectTimer = null;
+            }
 
-                if (WizHotkeyTextBox.Text == LocalizationService.Translate("Taken"))
+            var text = WizHotkeyTextBox.Text;
+            if (text == LocalizationService.Translate("Taken") || text == LocalizationService.Translate("Modifier required"))
+            {
+                if (_resetWarningTimer != null) _resetWarningTimer.Stop();
+                _resetWarningTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };
+                _resetWarningTimer.Tick += (s, args) =>
                 {
-                    if (_resetWarningTimer != null) _resetWarningTimer.Stop();
-                    _resetWarningTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };
-                    _resetWarningTimer.Tick += (s, args) =>
+                    _resetWarningTimer.Stop();
+                    _resetWarningTimer = null;
+                    if (WizHotkeyTextBox.IsFocused)
                     {
-                        _resetWarningTimer.Stop();
-                        _resetWarningTimer = null;
-                        if (WizHotkeyTextBox.IsFocused)
-                        {
-                            WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
-                            WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
-                            WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
-                            _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
-                            _tooltip.IsOpen = false;
-                        }
-                    };
-                    _resetWarningTimer.Start();
-                }
-                else
-                {
-                    WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
-                    WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
-                    _tooltip.IsOpen = false;
-                }
+                        WizHotkeyTextBox.Text = LocalizationService.Translate("Press keys...");
+                        WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+                        WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+                        _tooltip.Content = LocalizationService.Translate("Click and press your shortcut. If a combination is not captured, it is likely blocked by another running application.");
+                        _tooltip.IsOpen = false;
+                    }
+                };
+                _resetWarningTimer.Start();
+            }
+            else
+            {
+                WizHotkeyTextBox.ClearValue(TextBox.ForegroundProperty);
+                WizHotkeyTextBox.ClearValue(TextBox.FontWeightProperty);
+                _tooltip.IsOpen = false;
             }
         }
     }
