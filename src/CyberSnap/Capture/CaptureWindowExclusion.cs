@@ -1,4 +1,4 @@
-﻿using System.Windows.Forms;
+using System.Windows.Forms;
 using CyberSnap.Native;
 
 namespace CyberSnap.Capture;
@@ -90,7 +90,7 @@ internal static class CaptureWindowExclusion
         }
     }
 
-    private static void Register(IntPtr handle)
+    public static void Register(IntPtr handle)
     {
         lock (Sync)
         {
