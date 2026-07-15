@@ -470,7 +470,7 @@ public sealed partial class RecordingForm : Form
 
     private void UpdateChromeToolTip()
     {
-        if (_state is not (State.PreRecording or State.Recording))
+        if (_state is not State.PreRecording)
         {
             HideChromeToolTip();
             return;
