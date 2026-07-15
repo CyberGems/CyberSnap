@@ -181,71 +181,78 @@
             </Grid>
 
             <!-- Grid Tools -->
-            <UniformGrid Grid.Row="1" Columns="2">
-                <!-- Area Capture -->
-                <Button x:Name="AreaCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="AreaCaptureIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="AreaCaptureText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+            <StackPanel Grid.Row="1">
+                <UniformGrid Columns="2">
+                    <!-- Area Capture -->
+                    <Button x:Name="AreaCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image x:Name="AreaCaptureIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <TextBlock x:Name="AreaCaptureText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
 
-                <!-- Scroll Capture -->
-                <Button x:Name="ScrollCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="ScrollCapture_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="ScrollCaptureIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="ScrollCaptureText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                    <!-- Scroll Capture -->
+                    <Button x:Name="ScrollCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="ScrollCapture_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image x:Name="ScrollCaptureIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <TextBlock x:Name="ScrollCaptureText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
 
-                <!-- Screen Recorder (MP4) -->
-                <Button x:Name="VideoRecordBtn" Style="{StaticResource GridButtonStyle}" Click="VideoRecord_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="VideoRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="VideoRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                    <!-- Screen Recorder (MP4) -->
+                    <Button x:Name="VideoRecordBtn" Style="{StaticResource GridButtonStyle}" Click="VideoRecord_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image x:Name="VideoRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <TextBlock x:Name="VideoRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
 
-                <!-- Screen Recorder (GIF) -->
-                <Button x:Name="GifRecordBtn" Style="{StaticResource GridButtonStyle}" Click="GifRecord_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="GifRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="GifRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                    <!-- Screen Recorder (GIF) -->
+                    <Button x:Name="GifRecordBtn" Style="{StaticResource GridButtonStyle}" Click="GifRecord_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image x:Name="GifRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <TextBlock x:Name="GifRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </UniformGrid>
 
-                <!-- OCR -->
-                <Button x:Name="OcrBtn" Style="{StaticResource GridButtonStyle}" Click="Ocr_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="OcrIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="OcrText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <!-- Separator between capture tools and standalone utility tools -->
+                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
 
-                <!-- QR & Barcodes -->
-                <Button x:Name="QrBtn" Style="{StaticResource GridButtonStyle}" Click="QrScan_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="QrIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="QrText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <UniformGrid Columns="2">
+                    <!-- OCR -->
+                    <Button x:Name="OcrBtn" Style="{StaticResource GridButtonStyle}" Click="Ocr_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image x:Name="OcrIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <TextBlock x:Name="OcrText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
 
-                <!-- Color Picker -->
-                <Button x:Name="ColorPickerBtn" Style="{StaticResource GridButtonStyle}" Click="ColorPicker_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="ColorPickerIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="ColorPickerText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                    <!-- QR & Barcodes -->
+                    <Button x:Name="QrBtn" Style="{StaticResource GridButtonStyle}" Click="QrScan_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image x:Name="QrIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <TextBlock x:Name="QrText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
 
-                <!-- Ruler -->
-                <Button x:Name="RulerBtn" Style="{StaticResource GridButtonStyle}" Click="Ruler_Click">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="RulerIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="RulerText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </UniformGrid>
+                    <!-- Color Picker -->
+                    <Button x:Name="ColorPickerBtn" Style="{StaticResource GridButtonStyle}" Click="ColorPicker_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image x:Name="ColorPickerIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <TextBlock x:Name="ColorPickerText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Ruler -->
+                    <Button x:Name="RulerBtn" Style="{StaticResource GridButtonStyle}" Click="Ruler_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image x:Name="RulerIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <TextBlock x:Name="RulerText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </UniformGrid>
+            </StackPanel>
 
             <!-- Separator -->
             <Border Grid.Row="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
