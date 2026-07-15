@@ -494,7 +494,7 @@ public sealed class SettingsService : IDisposable
         settings.PinSlot = TakeSlot(settings.PinSlot, ToastButtonSlot.TopLeft, used);
         settings.SaveSlot = TakeSlot(settings.SaveSlot, ToastButtonSlot.TopInnerRight, used);
         settings.CopySlot = TakeSlot(settings.CopySlot, ToastButtonSlot.BottomInnerRight, used);
-        settings.OfficeSlot = TakeSlot(settings.OfficeSlot, ToastButtonSlot.BottomLeft, used);
+        settings.ShareSlot = TakeSlot(settings.ShareSlot, ToastButtonSlot.BottomLeft, used);
         settings.HistorySlot = TakeSlot(settings.HistorySlot, ToastButtonSlot.TopInnerLeft, used);
         settings.DeleteSlot = TakeSlot(settings.DeleteSlot, ToastButtonSlot.BottomLeft, used);
     }

@@ -1681,6 +1681,8 @@ public sealed partial class EditorForm
 
         var shareToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Share to…"), showImages: true);
 
+        var sendToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Send to…"), showImages: true);
+
         var resizeCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         resizeCanvasItem.Click += (_, _) => DoResizeCanvas();
 
@@ -1878,6 +1880,7 @@ public sealed partial class EditorForm
         menu.Items.Add(exportItem);
         menu.Items.Add(shareItem);
         menu.Items.Add(shareToItem);
+        menu.Items.Add(sendToItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(copyItem);
         menu.Items.Add(pasteItem);
@@ -1890,6 +1893,7 @@ public sealed partial class EditorForm
         menu.Opened += (_, _) =>
         {
             RebuildShareToSubmenu(shareToItem);
+            RebuildSendToSubmenu(sendToItem);
             UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, welcomeBannerItem, rulersItem, hintsItem, coordinatesItem, tooltipsItem, scrollbarsItem);
             bool hasSelection = _canvas.SelectedAnnotationIndexInternal >= 0 || _canvas.MultiSelectedIndicesInternal.Count > 0;
             bool multi = _canvas.MultiSelectedIndicesInternal.Count > 1;

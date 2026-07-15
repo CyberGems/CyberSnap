@@ -3853,14 +3853,14 @@
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                                <Border x:Name="ToastLayoutOfficeBtn"
+                                                <Border x:Name="ToastLayoutShareBtn"
                                                         Width="30" Height="30" CornerRadius="9"
                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                        Services:LocalizationService.SourceToolTip="Move the send to notification button"
-                                                        AutomationProperties.Name="Send to notification button" Tag="Office">
-                                                    <Image x:Name="ToastLayoutOfficeIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                        Services:LocalizationService.SourceToolTip="Move the share notification button"
+                                                        AutomationProperties.Name="Share notification button" Tag="Share">
+                                                    <Image x:Name="ToastLayoutShareIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
