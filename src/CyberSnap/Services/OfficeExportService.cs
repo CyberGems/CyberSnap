@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using CyberSnap.Models;
@@ -229,12 +229,14 @@ public static class OfficeExportService
         return -1;
     }
 
-    public static void SendBitmap(Bitmap bitmap, string? existingImagePath, OfficeExportTarget target)
+    public static void SendBitmap(Bitmap? bitmap, string? existingImagePath, OfficeExportTarget target)
     {
         string? tempPath = null;
         var imagePath = existingImagePath;
         if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
         {
+            if (bitmap == null)
+                throw new ArgumentNullException(nameof(bitmap), "Bitmap cannot be null when no existing image path is provided.");
             tempPath = CaptureOutputService.SaveBitmapToTempPng(bitmap, "CyberSnap_office");
             imagePath = tempPath;
         }
