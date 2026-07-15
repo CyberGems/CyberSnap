@@ -21,6 +21,10 @@ public static class ClipboardService
         if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
         {
             dataObject.SetData(System.Windows.Forms.DataFormats.FileDrop, new string[] { filePath });
+            dataObject.SetData("FileNameW", filePath);
+            dataObject.SetData("FileName", filePath);
+            var ms = new MemoryStream(new byte[] { 1, 0, 0, 0 }); // DragDropEffects.Copy
+            dataObject.SetData("Preferred DropEffect", ms);
         }
 
         SetClipboardWithRetry(dataObject);
@@ -33,6 +37,10 @@ public static class ClipboardService
 
         var dataObject = new System.Windows.Forms.DataObject();
         dataObject.SetData(System.Windows.Forms.DataFormats.FileDrop, new string[] { filePath });
+        dataObject.SetData("FileNameW", filePath);
+        dataObject.SetData("FileName", filePath);
+        var ms = new MemoryStream(new byte[] { 1, 0, 0, 0 }); // DragDropEffects.Copy
+        dataObject.SetData("Preferred DropEffect", ms);
 
         SetClipboardWithRetry(dataObject);
     }
