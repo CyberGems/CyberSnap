@@ -18,15 +18,15 @@
     <Window.Resources>
         <!-- Grid button style -->
         <Style x:Key="GridButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="8,10"/>
+            <Setter Property="Padding" Value="8,12"/>
             <Setter Property="Margin" Value="4"/>
-            <Setter Property="Height" Value="76"/>
+            <Setter Property="Height" Value="88"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -54,7 +54,7 @@
 
         <!-- Bottom general button style -->
         <Style x:Key="BottomButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
@@ -120,7 +120,7 @@
     <Border BorderBrush="{DynamicResource ThemeWindowBorderBrush}"
             BorderThickness="1"
             CornerRadius="12"
-            Background="{DynamicResource ThemeCardBrush}"
+            Background="{DynamicResource ThemeInputBackgroundBrush}"
             Margin="10">
         <Border.Effect>
             <DropShadowEffect BlurRadius="15" Direction="-90" RenderingBias="Quality" ShadowDepth="3" Opacity="0.4" Color="Black"/>
@@ -183,64 +183,64 @@
                 <!-- Area Capture -->
                 <Button x:Name="AreaCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="AreaCaptureIcon" Width="24" Height="24" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="AreaCaptureText" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="AreaCaptureIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="AreaCaptureText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
                 <!-- Scroll Capture -->
                 <Button x:Name="ScrollCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="ScrollCapture_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="ScrollCaptureIcon" Width="24" Height="24" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="ScrollCaptureText" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="ScrollCaptureIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="ScrollCaptureText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
                 <!-- OCR -->
                 <Button x:Name="OcrBtn" Style="{StaticResource GridButtonStyle}" Click="Ocr_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="OcrIcon" Width="24" Height="24" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="OcrText" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="OcrIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="OcrText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
                 <!-- QR & Barcodes -->
                 <Button x:Name="QrBtn" Style="{StaticResource GridButtonStyle}" Click="QrScan_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="QrIcon" Width="24" Height="24" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="QrText" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="QrIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="QrText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
                 <!-- Color Picker -->
                 <Button x:Name="ColorPickerBtn" Style="{StaticResource GridButtonStyle}" Click="ColorPicker_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="ColorPickerIcon" Width="24" Height="24" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="ColorPickerText" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="ColorPickerIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="ColorPickerText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
                 <!-- Ruler -->
                 <Button x:Name="RulerBtn" Style="{StaticResource GridButtonStyle}" Click="Ruler_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="RulerIcon" Width="24" Height="24" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="RulerText" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="RulerIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="RulerText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
                 <!-- Annotations Editor -->
                 <Button x:Name="AnnotationsBtn" Style="{StaticResource GridButtonStyle}" Click="Annotations_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="AnnotationsIcon" Width="24" Height="24" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="AnnotationsText" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="AnnotationsIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="AnnotationsText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
                 <!-- Gallery -->
                 <Button x:Name="GalleryBtn" Style="{StaticResource GridButtonStyle}" Click="Gallery_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="GalleryIcon" Width="24" Height="24" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="GalleryText" FontSize="11.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="GalleryIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="GalleryText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </UniformGrid>

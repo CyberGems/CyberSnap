@@ -149,7 +149,7 @@ public partial class TrayContextMenuWindow : Window
 
         // Shorter labels for buttons
         AreaCaptureText.Text = T("Area");
-        ScrollCaptureText.Text = T("Scroll");
+        ScrollCaptureText.Text = "Scrolling";
         OcrText.Text = T("Extract text");
         QrText.Text = T("QR Codes");
         ColorPickerText.Text = T("Color");
@@ -194,14 +194,14 @@ public partial class TrayContextMenuWindow : Window
     {
         var fgColor = Theme.TextPrimary;
 
-        AreaCaptureIcon.Source = GetIcon("captureRect", fgColor, 24);
-        ScrollCaptureIcon.Source = GetIcon("scrollCapture", fgColor, 24);
-        OcrIcon.Source = GetIcon("ocr", fgColor, 24);
-        QrIcon.Source = GetIcon("scan", fgColor, 24);
-        ColorPickerIcon.Source = GetIcon("picker", fgColor, 24);
-        RulerIcon.Source = GetIcon("ruler", fgColor, 24);
-        AnnotationsIcon.Source = GetIcon("compose", fgColor, 24);
-        GalleryIcon.Source = GetIcon("history", fgColor, 24);
+        AreaCaptureIcon.Source = GetIcon("captureRect", fgColor, 32);
+        ScrollCaptureIcon.Source = GetIcon("scrollCapture", fgColor, 32);
+        OcrIcon.Source = GetIcon("ocr", fgColor, 32);
+        QrIcon.Source = GetIcon("scan", fgColor, 32);
+        ColorPickerIcon.Source = GetIcon("picker", fgColor, 32);
+        RulerIcon.Source = GetIcon("ruler", fgColor, 32);
+        AnnotationsIcon.Source = GetIcon("compose", fgColor, 32);
+        GalleryIcon.Source = GetIcon("history", fgColor, 32);
 
         SettingsIcon.Source = GetIcon("gear", fgColor, 16);
         ExitIcon.Source = GetDangerIcon("signOut", 16);
