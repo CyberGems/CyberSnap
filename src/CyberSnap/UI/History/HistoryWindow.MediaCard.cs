@@ -186,6 +186,76 @@ public partial class HistoryWindow
                 suppressOpenAction = true;
                 _ = ShareHistoryImageAsync(vm.Entry);
             }, "Upload and copy a shareable link.", "share"));
+
+            var sendToSub = new MenuItem { Header = LocalizationService.Translate("Send to…") };
+            sendToSub.SetResourceReference(MenuItem.StyleProperty, "HistoryActionsMenuItem");
+            
+            var wordInstalled = OfficeExportService.IsTargetInstalled(OfficeExportTarget.Word);
+            var pptInstalled = OfficeExportService.IsTargetInstalled(OfficeExportTarget.PowerPoint);
+            var excelInstalled = OfficeExportService.IsTargetInstalled(OfficeExportTarget.Excel);
+
+            var wordItem = CreateCardActionMenuItem("Word", () =>
+            {
+                suppressOpenAction = true;
+                try
+                {
+                    OfficeExportService.SendBitmap(null, vm.Entry.FilePath, OfficeExportTarget.Word);
+                }
+                catch (Exception ex)
+                {
+                    ToastWindow.ShowError("Send to failed", $"Could not send to Word: {ex.Message}");
+                }
+            }, "Insert into Word.", "arrow");
+            wordItem.IsEnabled = wordInstalled;
+            sendToSub.Items.Add(wordItem);
+
+            var pptItem = CreateCardActionMenuItem("PowerPoint", () =>
+            {
+                suppressOpenAction = true;
+                try
+                {
+                    OfficeExportService.SendBitmap(null, vm.Entry.FilePath, OfficeExportTarget.PowerPoint);
+                }
+                catch (Exception ex)
+                {
+                    ToastWindow.ShowError("Send to failed", $"Could not send to PowerPoint: {ex.Message}");
+                }
+            }, "Insert into PowerPoint.", "arrow");
+            pptItem.IsEnabled = pptInstalled;
+            sendToSub.Items.Add(pptItem);
+
+            var excelItem = CreateCardActionMenuItem("Excel", () =>
+            {
+                suppressOpenAction = true;
+                try
+                {
+                    OfficeExportService.SendBitmap(null, vm.Entry.FilePath, OfficeExportTarget.Excel);
+                }
+                catch (Exception ex)
+                {
+                    ToastWindow.ShowError("Send to failed", $"Could not send to Excel: {ex.Message}");
+                }
+            }, "Insert into Excel.", "arrow");
+            excelItem.IsEnabled = excelInstalled;
+            sendToSub.Items.Add(excelItem);
+
+            sendToSub.Items.Add(new Separator());
+
+            var openWithPickerItem = CreateCardActionMenuItem("Open with...", () =>
+            {
+                suppressOpenAction = true;
+                try
+                {
+                    OfficeExportService.ShowOpenWithDialog(vm.Entry.FilePath);
+                }
+                catch (Exception ex)
+                {
+                    ToastWindow.ShowError("Open with failed", ex.Message);
+                }
+            }, "Open the screenshot with another app.", "arrow");
+            sendToSub.Items.Add(openWithPickerItem);
+
+            actionMenu.Items.Add(sendToSub);
         }
         if ((vm.Entry.Kind == HistoryKind.Video || vm.Entry.Kind == HistoryKind.Gif) && HasHistoryFilePath(vm.Entry.FilePath))
         {

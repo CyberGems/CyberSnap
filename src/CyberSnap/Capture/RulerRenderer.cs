@@ -79,6 +79,10 @@ public static class RulerRenderer
     {
         EnsureChrome(isDark);
 
+        // Tip-to-tip calibration: `from` / `to` ARE the measurement endpoints (arrow tips).
+        // Distance is the Euclidean length between those integer client points — same values
+        // used for hit-testing, commit, and the W/H readout. The shaft is drawn only between
+        // the arrow bases so the stroke never bleeds past the tips and softens them.
         float dx = to.X - from.X;
         float dy = to.Y - from.Y;
         float dist = MathF.Sqrt(dx * dx + dy * dy);
@@ -87,26 +91,40 @@ public static class RulerRenderer
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
 
-        g.DrawLine(ShadowPen, from.X + 1, from.Y + 1, to.X + 1, to.Y + 1);
-        g.DrawLine(_linePen!, from, to);
-
         // Endpoint arrowheads — triangles pointing inward along the ruler line.
         // The tip IS the exact measurement point. The base gives a perpendicular reference.
-        // Works at any scale: from tiny 5px measures to full-screen spans.
         float nx = 0, ny = 0;
         if (dist > 1) { nx = -dy / dist; ny = dx / dist; }
-        float arrowH = 9f * dpiScale;   // height along ruler direction
+        float arrowH = 9f * dpiScale;    // height along ruler direction
         float arrowHW = 4.5f * dpiScale; // half-width perpendicular
-        // Direction from→to: (dx/dist, dy/dist). Arrow at 'from' points toward 'to'.
         float dirX = dist > 1 ? dx / dist : 0;
         float dirY = dist > 1 ? dy / dist : 0;
+
+        // Shaft between arrow bases when there is room; otherwise full tip-to-tip.
+        if (dist > arrowH * 2.5f)
+        {
+            float sx0 = from.X + dirX * arrowH;
+            float sy0 = from.Y + dirY * arrowH;
+            float sx1 = to.X - dirX * arrowH;
+            float sy1 = to.Y - dirY * arrowH;
+            g.DrawLine(ShadowPen, sx0 + 1, sy0 + 1, sx1 + 1, sy1 + 1);
+            g.DrawLine(_linePen!, sx0, sy0, sx1, sy1);
+        }
+        else
+        {
+            g.DrawLine(ShadowPen, from.X + 1, from.Y + 1, to.X + 1, to.Y + 1);
+            g.DrawLine(_linePen!, from, to);
+        }
 
         DrawArrowhead(g, from, dirX, dirY, nx, ny, arrowH, arrowHW);
         DrawArrowhead(g, to, -dirX, -dirY, nx, ny, arrowH, arrowHW);
 
-        // Build label text in two parts: distance (larger, accent) + rest (normal)
-        string distText = $"{(int)dist}px";
-        string restText = $"  \u2022  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  \u2022  {angle:0.0}\u00b0";
+        // Round (not truncate) so the bold distance matches W/H, which already round via :0.
+        int distPx = (int)MathF.Round(dist);
+        int wPx = (int)MathF.Round(MathF.Abs(dx));
+        int hPx = (int)MathF.Round(MathF.Abs(dy));
+        string distText = $"{distPx}px";
+        string restText = $"  \u2022  W: {wPx}px  H: {hPx}px  \u2022  {angle:0.0}\u00b0";
         var distSz = TextRenderer.MeasureText(g, distText, _distFont!);
         var restSz = TextRenderer.MeasureText(g, restText, _font!);
         float maxH = Math.Max(distSz.Height, restSz.Height);
@@ -218,8 +236,11 @@ public static class RulerRenderer
         float dy = to.Y - from.Y;
         float dist = MathF.Sqrt(dx * dx + dy * dy);
         float angle = MathF.Atan2(dy, dx) * 180f / MathF.PI;
-        string distText = $"{(int)dist}px";
-        string restText = $"  •  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  •  {angle:0.0}°";
+        int distPx = (int)MathF.Round(dist);
+        int wPx = (int)MathF.Round(MathF.Abs(dx));
+        int hPx = (int)MathF.Round(MathF.Abs(dy));
+        string distText = $"{distPx}px";
+        string restText = $"  •  W: {wPx}px  H: {hPx}px  •  {angle:0.0}°";
         var distSz = TextRenderer.MeasureText(distText, _distFont!);
         var restSz = TextRenderer.MeasureText(restText, _font!);
 
@@ -244,8 +265,11 @@ public static class RulerRenderer
         float dy = to.Y - from.Y;
         float dist = MathF.Sqrt(dx * dx + dy * dy);
         float angle = MathF.Atan2(dy, dx) * 180f / MathF.PI;
-        string distText = $"{(int)dist}px";
-        string restText = $"  •  W: {Math.Abs(dx):0}px  H: {Math.Abs(dy):0}px  •  {angle:0.0}°";
+        int distPx = (int)MathF.Round(dist);
+        int wPx = (int)MathF.Round(MathF.Abs(dx));
+        int hPx = (int)MathF.Round(MathF.Abs(dy));
+        string distText = $"{distPx}px";
+        string restText = $"  •  W: {wPx}px  H: {hPx}px  •  {angle:0.0}°";
         var distSz = TextRenderer.MeasureText(distText, _distFont!);
         var restSz = TextRenderer.MeasureText(restText, _font!);
         float extraWidth = (CloseButtonSize + CloseButtonPad) * dpiScale;
@@ -324,10 +348,11 @@ public static class RulerRenderer
         float h = maxH + LabelPadV * 2;
         float ext = MathF.Abs(lnx * w / 2f) + MathF.Abs(lny * h / 2f);
         // Clearance from the ruler line to the nearest edge of the pill.
-        // When the ruler is horizontal the normal is vertical (|lny|≈1) and the wide
-        // chip sits parallel to the line — give it extra room so it does not crowd the measure.
-        // Vertical rulers keep the tighter 14px gap (pill sits to the side).
-        float lineClearance = 14f + MathF.Abs(lny) * 16f;
+        // Base gap for every orientation; extra when the normal is vertical (horizontal
+        // measure) so the wide chip does not sit parallel and tight above the line.
+        const float baseClearance = 34f;
+        const float parallelExtra = 16f; // added when |lny|≈1 (horizontal measure)
+        float lineClearance = baseClearance + MathF.Abs(lny) * parallelExtra;
         float d = ext + lineClearance;
 
         var labelCenter = new PointF(mid.X + lnx * d, mid.Y + lny * d);

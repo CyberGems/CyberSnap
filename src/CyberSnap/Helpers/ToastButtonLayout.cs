@@ -9,7 +9,7 @@ public enum ToastButtonKind
     Pin,
     Save,
     Copy,
-    Office,
+    Share,
     Delete,
     History,
     Edit
@@ -71,7 +71,7 @@ public static class ToastButtonLayout
             ToastButtonKind.Pin => settings.PinSlot,
             ToastButtonKind.Save => settings.SaveSlot,
             ToastButtonKind.Copy => settings.CopySlot,
-            ToastButtonKind.Office => settings.OfficeSlot,
+            ToastButtonKind.Share => settings.ShareSlot,
             ToastButtonKind.History => settings.HistorySlot,
             ToastButtonKind.Edit => settings.EditSlot,
             _ => settings.DeleteSlot
@@ -84,7 +84,7 @@ public static class ToastButtonLayout
             ToastButtonKind.Pin => settings.ShowPin,
             ToastButtonKind.Save => settings.ShowSave,
             ToastButtonKind.Copy => settings.ShowCopy,
-            ToastButtonKind.Office => settings.ShowOffice,
+            ToastButtonKind.Share => settings.ShowShare,
             ToastButtonKind.History => settings.ShowHistory,
             ToastButtonKind.Edit => settings.ShowEdit,
             _ => settings.ShowDelete
@@ -98,7 +98,7 @@ public static class ToastButtonLayout
             case ToastButtonKind.Pin: settings.ShowPin = visible; break;
             case ToastButtonKind.Save: settings.ShowSave = visible; break;
             case ToastButtonKind.Copy: settings.ShowCopy = visible; break;
-            case ToastButtonKind.Office: settings.ShowOffice = visible; break;
+            case ToastButtonKind.Share: settings.ShowShare = visible; break;
             case ToastButtonKind.History: settings.ShowHistory = visible; break;
             case ToastButtonKind.Edit: settings.ShowEdit = visible; break;
             default: settings.ShowDelete = visible; break;
@@ -169,7 +169,7 @@ public static class ToastButtonLayout
         if (settings.PinSlot == slot) return ToastButtonKind.Pin;
         if (settings.SaveSlot == slot) return ToastButtonKind.Save;
         if (settings.CopySlot == slot) return ToastButtonKind.Copy;
-        if (settings.OfficeSlot == slot) return ToastButtonKind.Office;
+        if (settings.ShareSlot == slot) return ToastButtonKind.Share;
         if (settings.DeleteSlot == slot) return ToastButtonKind.Delete;
         if (settings.HistorySlot == slot) return ToastButtonKind.History;
         if (settings.EditSlot == slot) return ToastButtonKind.Edit;
@@ -184,7 +184,7 @@ public static class ToastButtonLayout
             case ToastButtonKind.Pin: settings.PinSlot = slot; break;
             case ToastButtonKind.Save: settings.SaveSlot = slot; break;
             case ToastButtonKind.Copy: settings.CopySlot = slot; break;
-            case ToastButtonKind.Office: settings.OfficeSlot = slot; break;
+            case ToastButtonKind.Share: settings.ShareSlot = slot; break;
             case ToastButtonKind.History: settings.HistorySlot = slot; break;
             case ToastButtonKind.Edit: settings.EditSlot = slot; break;
             default: settings.DeleteSlot = slot; break;
@@ -199,7 +199,7 @@ public static class ToastButtonLayout
         ToastButtonKind.Save,
         ToastButtonKind.Copy,
         ToastButtonKind.History,
-        ToastButtonKind.Office,
+        ToastButtonKind.Share,
         ToastButtonKind.Delete,
         ToastButtonKind.Edit
     };
@@ -283,7 +283,7 @@ public static class ToastButtonLayout
                 Place(ToastButtonKind.Save, ToastButtonSlot.TopInnerRight);
                 Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
                 Place(ToastButtonKind.Copy, ToastButtonSlot.BottomLeft);
-                Place(ToastButtonKind.Office, ToastButtonSlot.BottomInnerLeft);
+                Place(ToastButtonKind.Share, ToastButtonSlot.BottomInnerLeft);
                 Place(ToastButtonKind.Delete, ToastButtonSlot.BottomInnerRight);
                 Place(ToastButtonKind.Edit, ToastButtonSlot.BottomRight);
                 break;

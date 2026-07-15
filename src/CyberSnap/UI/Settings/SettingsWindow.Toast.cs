@@ -60,7 +60,7 @@ public partial class SettingsWindow
             [ToastButtonKind.Pin] = ToastLayoutPinBtn,
             [ToastButtonKind.Save] = ToastLayoutSaveBtn,
             [ToastButtonKind.Copy] = ToastLayoutCopyBtn,
-            [ToastButtonKind.Office] = ToastLayoutOfficeBtn,
+            [ToastButtonKind.Share] = ToastLayoutShareBtn,
             [ToastButtonKind.Delete] = ToastLayoutDeleteBtn,
             [ToastButtonKind.History] = ToastLayoutAiRedirectBtn,
             [ToastButtonKind.Edit] = ToastLayoutEditBtn,
@@ -667,7 +667,7 @@ public partial class SettingsWindow
         UpdateToastPreviewButton(ToastLayoutPinBtn, ToastLayoutPinIcon, "pin", ToastButtonKind.Pin);
         UpdateToastPreviewButton(ToastLayoutSaveBtn, ToastLayoutSaveIcon, "download", ToastButtonKind.Save);
         UpdateToastPreviewButton(ToastLayoutCopyBtn, ToastLayoutCopyIcon, "copy", ToastButtonKind.Copy);
-        UpdateToastPreviewButton(ToastLayoutOfficeBtn, ToastLayoutOfficeIcon, "arrow", ToastButtonKind.Office);
+        UpdateToastPreviewButton(ToastLayoutShareBtn, ToastLayoutShareIcon, "share", ToastButtonKind.Share);
         UpdateToastPreviewButton(ToastLayoutDeleteBtn, ToastLayoutDeleteIcon, "trash", ToastButtonKind.Delete);
         UpdateToastPreviewButton(ToastLayoutAiRedirectBtn, ToastLayoutAiRedirectIcon, "history", ToastButtonKind.History);
         UpdateToastPreviewButton(ToastLayoutEditBtn, ToastLayoutEditIcon, "draw", ToastButtonKind.Edit);
@@ -698,7 +698,7 @@ public partial class SettingsWindow
         ToastLayoutPinBtn.Visibility = Visibility.Collapsed;
         ToastLayoutSaveBtn.Visibility = Visibility.Collapsed;
         ToastLayoutCopyBtn.Visibility = Visibility.Collapsed;
-        ToastLayoutOfficeBtn.Visibility = Visibility.Collapsed;
+        ToastLayoutShareBtn.Visibility = Visibility.Collapsed;
         ToastLayoutDeleteBtn.Visibility = Visibility.Collapsed;
         ToastLayoutAiRedirectBtn.Visibility = Visibility.Collapsed;
         ToastLayoutEditBtn.Visibility = Visibility.Collapsed;
@@ -1146,7 +1146,7 @@ public partial class SettingsWindow
         ToastButtonKind.Pin => Services.LocalizationService.Translate("Keep the preview open until you dismiss it manually."),
         ToastButtonKind.Save => Services.LocalizationService.Translate("Save the captured image to a file."),
         ToastButtonKind.Copy => Services.LocalizationService.Translate("Copy capture to the clipboard."),
-        ToastButtonKind.Office => Services.LocalizationService.Translate("Open the screenshot with another app (Word, PowerPoint, etc.)."),
+        ToastButtonKind.Share => Services.LocalizationService.Translate("Upload and copy a shareable link."),
         ToastButtonKind.Delete => Services.LocalizationService.Translate("Delete capture"),
         ToastButtonKind.History => Services.LocalizationService.Translate("Open capture in Gallery."),
         ToastButtonKind.Edit => Services.LocalizationService.Translate("Open this capture in the Annotations Editor."),
@@ -1159,7 +1159,7 @@ public partial class SettingsWindow
         ToastButtonKind.Pin => Services.LocalizationService.Translate("pin"),
         ToastButtonKind.Save => Services.LocalizationService.Translate("save"),
         ToastButtonKind.Copy => Services.LocalizationService.Translate("copy"),
-        ToastButtonKind.Office => Services.LocalizationService.Translate("send to"),
+        ToastButtonKind.Share => Services.LocalizationService.Translate("share"),
         ToastButtonKind.Delete => Services.LocalizationService.Translate("delete"),
         ToastButtonKind.History => Services.LocalizationService.Translate("gallery"),
         ToastButtonKind.Edit => Services.LocalizationService.Translate("edit"),
@@ -1180,7 +1180,7 @@ public partial class SettingsWindow
         ToastButtonKind.Pin => "pin",
         ToastButtonKind.Save => "download",
         ToastButtonKind.Copy => "copy",
-        ToastButtonKind.Office => "arrow",
+        ToastButtonKind.Share => "share",
         ToastButtonKind.Delete => "trash",
         ToastButtonKind.History => "history",
         _ => "draw"

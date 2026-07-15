@@ -1718,6 +1718,75 @@ public sealed partial class EditorForm : Form, IMessageFilter
         items.Add(settingsItem);
     }
 
+    private void RebuildSendToSubmenu(ToolStripMenuItem sendToItem)
+    {
+        sendToItem.DropDownItems.Clear();
+        PopulateSendToMenuItems(sendToItem.DropDownItems);
+        WindowsMenuRenderer.NormalizeDropDownWidths(sendToItem);
+    }
+
+    private void PopulateSendToMenuItems(ToolStripItemCollection items)
+    {
+        var wordInstalled = OfficeExportService.IsTargetInstalled(OfficeExportTarget.Word);
+        var pptInstalled = OfficeExportService.IsTargetInstalled(OfficeExportTarget.PowerPoint);
+        var excelInstalled = OfficeExportService.IsTargetInstalled(OfficeExportTarget.Excel);
+
+        var wordItem = WindowsMenuRenderer.Item("Word", iconId: "arrow");
+        wordItem.Enabled = wordInstalled;
+        wordItem.Click += (_, _) => DoSendToOffice(OfficeExportTarget.Word);
+
+        var pptItem = WindowsMenuRenderer.Item("PowerPoint", iconId: "arrow");
+        pptItem.Enabled = pptInstalled;
+        pptItem.Click += (_, _) => DoSendToOffice(OfficeExportTarget.PowerPoint);
+
+        var excelItem = WindowsMenuRenderer.Item("Excel", iconId: "arrow");
+        excelItem.Enabled = excelInstalled;
+        excelItem.Click += (_, _) => DoSendToOffice(OfficeExportTarget.Excel);
+
+        items.Add(wordItem);
+        items.Add(pptItem);
+        items.Add(excelItem);
+        items.Add(new ToolStripSeparator());
+
+        var openWithItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Open with..."), iconId: "arrow");
+        openWithItem.Click += (_, _) => DoOpenWithPicker();
+        items.Add(openWithItem);
+    }
+
+    private void DoSendToOffice(OfficeExportTarget target)
+    {
+        try
+        {
+            using var output = _canvas.RenderFinal();
+            OfficeExportService.SendBitmap(output, _savedFilePath, target);
+            ToastWindow.Show(
+                LocalizationService.Translate("Send to"),
+                OfficeExportService.GetTargetName(target),
+                _savedFilePath);
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "Send to failed", ex.Message, error: true);
+        }
+    }
+
+    private void DoOpenWithPicker()
+    {
+        try
+        {
+            using var output = _canvas.RenderFinal();
+            OfficeExportService.OpenWithBitmap(output, _savedFilePath);
+            ToastWindow.Show(
+                LocalizationService.Translate("Open with"),
+                LocalizationService.Translate("Choose an app from Windows."),
+                _savedFilePath);
+        }
+        catch (Exception ex)
+        {
+            ThemedConfirmDialog.Alert(Handle, "Open with failed", ex.Message, error: true);
+        }
+    }
+
     private void DoPaste()
     {
         try
@@ -2329,11 +2398,19 @@ public sealed partial class EditorForm : Form, IMessageFilter
         propsItem.Click += (_, _) => DoShowProperties();
         exitItem.Click += (_, _) => Close();
 
+        var shareToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Share to…"), showImages: true);
+        RebuildShareToSubmenu(shareToItem);
+
+        var sendToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Send to…"), showImages: true);
+        RebuildSendToSubmenu(sendToItem);
+
         menu.Items.Add(copyItem);
         menu.Items.Add(pasteItem);
         menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(saveAsItem);
+        menu.Items.Add(shareToItem);
+        menu.Items.Add(sendToItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(resizeItem);
         menu.Items.Add(new ToolStripSeparator());

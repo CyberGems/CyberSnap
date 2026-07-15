@@ -29,9 +29,7 @@ public partial class ToastWindow : Window
     private bool _isFading;
     private bool _isSavingPreview;
     private bool _isDeletingSavedFile;
-    private bool _isRunningOfficeAction;
-    private bool _restoreAutoDismissAfterOfficeAction;
-    private double _officeActionRemainingAutoDismissSeconds = 0.1;
+    private bool _isRunningShareAction;
     private int _toastStateVersion;
     private bool _closeAfterOpacityAnimation;
     private int _dismissAnimationToken;
@@ -55,9 +53,6 @@ public partial class ToastWindow : Window
     private System.Windows.Point _mouseDownPos;
     private System.Windows.Media.Brush? _dragBorderBrush;
     private Thickness _dragBorderThickness;
-    private System.Windows.Controls.ContextMenu? _officeMenu;
-    private readonly DispatcherTimer _officeMenuDismissTimer;
-    private bool _officeMenuMouseWasDown;
 
     private static bool IsDefaultDarkTheme()
         => Theme.IsDark && !Theme.IsGray;
@@ -145,8 +140,7 @@ public partial class ToastWindow : Window
             if (ToastPinPolicy.CanAutoDismiss(_isPinned, _isHovered))
                 DismissAnimated();
         };
-        _officeMenuDismissTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
-        _officeMenuDismissTimer.Tick += OfficeMenuDismissTimer_Tick;
+
 
         ConfigureShell();
         ApplySpec(spec);
@@ -517,14 +511,14 @@ public partial class ToastWindow : Window
         PinIcon.Source = FluentIcons.RenderWpf("pin", IconWhite, 20);
         SaveIcon.Source = FluentIcons.RenderWpf("download", IconWhite, 20);
         CopyIcon.Source = FluentIcons.RenderWpf("copy", IconWhite, 20);
-        OfficeIcon.Source = FluentIcons.RenderWpf("arrow", IconWhite, 20);
+        ShareIcon.Source = FluentIcons.RenderWpf("share", IconWhite, 20);
         DeleteIcon.Source = FluentIcons.RenderWpf("trash", IconWhite, 20);
         EditIcon.Source = FluentIcons.RenderWpf("draw", IconWhite, 20);
         ApplyToastOverlayButtonVisual(CloseBtn, CloseIcon, "close", active: false);
         ApplyToastOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
         ApplyToastOverlayButtonVisual(SaveBtn, SaveIcon, "download", active: false);
         ApplyToastOverlayButtonVisual(CopyBtn, CopyIcon, "copy", active: false);
-        ApplyToastOverlayButtonVisual(OfficeBtn, OfficeIcon, "arrow", active: false);
+        ApplyToastOverlayButtonVisual(ShareBtn, ShareIcon, "share", active: false);
         ApplyToastOverlayButtonVisual(DeleteBtn, DeleteIcon, "trash", active: false);
         ApplyToastOverlayButtonVisual(HistoryBtn, HistoryIcon, "history", active: false);
         ApplyToastOverlayButtonVisual(EditBtn, EditIcon, "draw", active: false);
@@ -534,7 +528,7 @@ public partial class ToastWindow : Window
         HookOverlayHover(PinBtn, PinIcon, "pin");
         HookOverlayHover(SaveBtn, SaveIcon, "download");
         HookOverlayHover(CopyBtn, CopyIcon, "copy");
-        HookOverlayHover(OfficeBtn, OfficeIcon, "arrow");
+        HookOverlayHover(ShareBtn, ShareIcon, "share");
         HookOverlayHover(DeleteBtn, DeleteIcon, "trash");
         HookOverlayHover(HistoryBtn, HistoryIcon, "history");
         HookOverlayHover(EditBtn, EditIcon, "draw");
@@ -614,13 +608,13 @@ public partial class ToastWindow : Window
         PinBtn.MouseLeftButtonDown -= PinBtn_MouseLeftButtonDown;
         SaveBtn.MouseLeftButtonDown -= SaveBtn_MouseLeftButtonDown;
         CopyBtn.MouseLeftButtonDown -= CopyBtn_MouseLeftButtonDown;
-        OfficeBtn.MouseLeftButtonDown -= OfficeBtn_MouseLeftButtonDown;
+        ShareBtn.MouseLeftButtonDown -= ShareBtn_MouseLeftButtonDown;
         DeleteBtn.MouseLeftButtonDown -= DeleteBtn_MouseLeftButtonDown;
         HistoryBtn.MouseLeftButtonDown -= HistoryBtn_MouseLeftButtonDown;
         EditBtn.MouseLeftButtonDown -= EditBtn_MouseLeftButtonDown;
         TextCloseBtn.MouseLeftButtonDown -= CloseBtn_MouseLeftButtonDown;
 
-        // Text-only toasts (no preview bitmap) always get an X â€” independent of ShowOverlayButtons.
+        // Text-only toasts (no preview bitmap) always get an X — independent of ShowOverlayButtons.
         TextCloseBtn.MouseLeftButtonDown += CloseBtn_MouseLeftButtonDown;
 
         if (_previewBitmap is null || !_spec.ShowOverlayButtons)
@@ -630,7 +624,7 @@ public partial class ToastWindow : Window
         PinBtn.MouseLeftButtonDown += PinBtn_MouseLeftButtonDown;
         SaveBtn.MouseLeftButtonDown += SaveBtn_MouseLeftButtonDown;
         CopyBtn.MouseLeftButtonDown += CopyBtn_MouseLeftButtonDown;
-        OfficeBtn.MouseLeftButtonDown += OfficeBtn_MouseLeftButtonDown;
+        ShareBtn.MouseLeftButtonDown += ShareBtn_MouseLeftButtonDown;
         DeleteBtn.MouseLeftButtonDown += DeleteBtn_MouseLeftButtonDown;
         HistoryBtn.MouseLeftButtonDown += HistoryBtn_MouseLeftButtonDown;
         EditBtn.MouseLeftButtonDown += EditBtn_MouseLeftButtonDown;
@@ -642,7 +636,7 @@ public partial class ToastWindow : Window
         ApplyOverlayButton(PinBtn, Helpers.ToastButtonKind.Pin);
         ApplyOverlayButton(SaveBtn, Helpers.ToastButtonKind.Save);
         ApplyOverlayButton(CopyBtn, Helpers.ToastButtonKind.Copy);
-        ApplyOverlayButton(OfficeBtn, Helpers.ToastButtonKind.Office);
+        ApplyOverlayButton(ShareBtn, Helpers.ToastButtonKind.Share);
         ApplyOverlayButton(DeleteBtn, Helpers.ToastButtonKind.Delete);
         ApplyOverlayButton(HistoryBtn, Helpers.ToastButtonKind.History);
         ApplyOverlayButton(EditBtn, Helpers.ToastButtonKind.Edit);
@@ -651,7 +645,7 @@ public partial class ToastWindow : Window
                                    PinBtn.Visibility == Visibility.Visible ||
                                    SaveBtn.Visibility == Visibility.Visible ||
                                    CopyBtn.Visibility == Visibility.Visible ||
-                                   OfficeBtn.Visibility == Visibility.Visible ||
+                                   ShareBtn.Visibility == Visibility.Visible ||
                                    DeleteBtn.Visibility == Visibility.Visible ||
                                    HistoryBtn.Visibility == Visibility.Visible ||
                                    EditBtn.Visibility == Visibility.Visible;
@@ -694,7 +688,7 @@ public partial class ToastWindow : Window
     private void RefreshActionsPanelMetrics()
     {
         int maxRow = 0;
-        foreach (var button in new[] { CloseBtn, PinBtn, SaveBtn, CopyBtn, OfficeBtn, DeleteBtn, HistoryBtn, EditBtn })
+        foreach (var button in new[] { CloseBtn, PinBtn, SaveBtn, CopyBtn, ShareBtn, DeleteBtn, HistoryBtn, EditBtn })
         {
             if (button.Visibility != Visibility.Visible)
                 continue;
@@ -751,9 +745,9 @@ public partial class ToastWindow : Window
                 ? (T("Saving preview"), T("Save is already running."))
                 : GetSaveButtonAccessibility(),
             Helpers.ToastButtonKind.Copy => (T("Copy to clipboard"), T("Copy capture to the clipboard.")),
-            Helpers.ToastButtonKind.Office => _isRunningOfficeAction
-                ? (T("Send to action running"), T("Open with or send action is already running."))
-                : (T("Send to"), T("Open the screenshot with another app.")),
+            Helpers.ToastButtonKind.Share => _isRunningShareAction
+                ? (T("Sharing capture"), T("Share upload is already running."))
+                : (T("Share"), T("Upload and copy a shareable link.")),
             Helpers.ToastButtonKind.Edit => (T("Edit preview"), T("Open this capture in the Annotations Editor.")),
             Helpers.ToastButtonKind.Delete => _isDeletingSavedFile
                 ? (T("Deleting file"), T("Delete is already running."))
@@ -1127,7 +1121,7 @@ public partial class ToastWindow : Window
     private static double GetToastAutoDismissRemainingSeconds(double progressScale, double durationSeconds) =>
         Math.Max(0.1, Math.Clamp(progressScale, 0, 1) * durationSeconds);
 
-    private void OfficeBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void ShareBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (!CanActivateMouseControl(sender) || InteractiveActionsBlocked)
         {
@@ -1136,256 +1130,62 @@ public partial class ToastWindow : Window
         }
 
         e.Handled = true;
-        OpenOfficeMenu();
+        SharePreview();
     }
 
-    private void OfficeBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    private void ShareBtn_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (!CanActivateKeyboardControl(sender, e) || InteractiveActionsBlocked)
             return;
 
         e.Handled = true;
-        OpenOfficeMenu();
+        SharePreview();
     }
 
-    private void OpenOfficeMenu()
+    private async void SharePreview()
     {
-        if (InteractiveActionsBlocked || _previewBitmap is null || _isRunningOfficeAction)
+        if (InteractiveActionsBlocked || _previewBitmap is null || _isRunningShareAction)
             return;
 
-        if (_officeMenu?.IsOpen == true)
-        {
-            _officeMenu.IsOpen = false;
-            return;
-        }
-
-        var wasPinnedBeforeMenu = _isPinned;
-        var menuActionSelected = false;
-        _restoreAutoDismissAfterOfficeAction = !wasPinnedBeforeMenu;
-        _officeActionRemainingAutoDismissSeconds = PauseToastAutoDismiss();
+        var wasPinnedBeforeShare = _isPinned;
+        var remainingAutoDismissSeconds = PauseToastAutoDismiss();
         ApplyPinnedState(true);
         RegionOverlayForm.CloseTransientUi();
 
-        var menu = new System.Windows.Controls.ContextMenu
-        {
-            PlacementTarget = OfficeBtn,
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom,
-            StaysOpen = false,
-            Focusable = true
-        };
-        _officeMenu = menu;
-        menu.Closed += (_, _) =>
-        {
-            _officeMenuDismissTimer.Stop();
-            _officeMenuMouseWasDown = false;
-            if (ReferenceEquals(_officeMenu, menu))
-                _officeMenu = null;
-            if (!wasPinnedBeforeMenu && !menuActionSelected)
-            {
-                _restoreAutoDismissAfterOfficeAction = false;
-                ResumeToastAutoDismiss(_officeActionRemainingAutoDismissSeconds);
-            }
-        };
-        menu.PreviewKeyDown += (_, args) =>
-        {
-            if (args.Key != Key.Escape)
-                return;
+        _isRunningShareAction = true;
+        ShareBtn.IsEnabled = false;
+        RefreshOverlayButtonAccessibility(ShareBtn, Helpers.ToastButtonKind.Share);
 
-            args.Handled = true;
-            menu.IsOpen = false;
-        };
-
-        AddOpenWithMenuItem(menu, () => menuActionSelected = true);
-
-        menu.IsOpen = true;
-        _officeMenuMouseWasDown = true;
-        _officeMenuDismissTimer.Start();
-    }
-
-    private void OfficeMenuDismissTimer_Tick(object? sender, EventArgs e)
-    {
-        var menu = _officeMenu;
-        if (menu is null || !menu.IsOpen)
-        {
-            _officeMenuDismissTimer.Stop();
-            _officeMenuMouseWasDown = false;
-            return;
-        }
-
-        bool mouseDown = IsMouseDown();
-        if (!mouseDown)
-        {
-            _officeMenuMouseWasDown = false;
-            return;
-        }
-
-        if (_officeMenuMouseWasDown)
-            return;
-
-        _officeMenuMouseWasDown = true;
-        if (!GetCursorPos(out var cursor))
-            return;
-
-        if (IsScreenPointOver(menu, cursor) || IsScreenPointOver(OfficeBtn, cursor))
-            return;
-
-        menu.IsOpen = false;
-    }
-
-    private static bool IsMouseDown()
-        => (GetAsyncKeyState(0x01) & 0x8000) != 0 ||
-           (GetAsyncKeyState(0x02) & 0x8000) != 0;
-
-    private static bool IsScreenPointOver(FrameworkElement element, NativePoint point)
-    {
-        if (!element.IsVisible || element.ActualWidth <= 0 || element.ActualHeight <= 0)
-            return false;
-
-        var topLeft = element.PointToScreen(new System.Windows.Point(0, 0));
-        return point.X >= topLeft.X &&
-               point.X <= topLeft.X + element.ActualWidth &&
-               point.Y >= topLeft.Y &&
-               point.Y <= topLeft.Y + element.ActualHeight;
-    }
-
-    private void AddOpenWithMenuItem(System.Windows.Controls.ContextMenu menu, Action onInvoked)
-    {
-        var item = new System.Windows.Controls.MenuItem { Header = "Open with..." };
-        item.Click += (_, _) =>
-        {
-            onInvoked();
-            OpenPreviewWithWindowsPicker();
-        };
-        menu.Items.Add(item);
-    }
-
-    private void OpenPreviewWithWindowsPicker()
-    {
-        if (_previewBitmap is null || !TryBeginOfficeAction())
-            return;
-
-        var restoreAutoDismiss = _restoreAutoDismissAfterOfficeAction;
-        var remainingAutoDismissSeconds = _officeActionRemainingAutoDismissSeconds;
-        bool isTemporary = false;
-        string? openPath = null;
         try
         {
-            openPath = Services.OfficeExportService.EnsureOpenableFile(_previewBitmap, _savedFilePath, out isTemporary);
-            if (TryOpenWithConfiguredApp(openPath, out var configuredAppName))
+            var settings = SettingsService.LoadStatic() ?? new AppSettings();
+            var provider = Services.Upload.ImageUploadService.GetDefaultProvider(settings);
+            
+            // Confirm upload if needed
+            if (!Share.ImageShareFlow.ConfirmThirdPartyUploadIfNeeded(this, new System.Windows.Interop.WindowInteropHelper(this).Handle, provider, settings))
             {
-                if (isTemporary)
-                    Services.OfficeExportService.ScheduleTemporaryOpenWithCleanup(openPath);
-                Show(ToastSpec.Standard("Open with", $"Opened {configuredAppName}.", GetExistingSavedFilePathOrNull()) with { SuppressSound = true });
+                if (!wasPinnedBeforeShare)
+                    ResumeToastAutoDismiss(remainingAutoDismissSeconds);
                 return;
             }
 
-            Services.OfficeExportService.ShowOpenWithDialog(openPath);
-            if (isTemporary)
-                Services.OfficeExportService.ScheduleTemporaryOpenWithCleanup(openPath);
-            Show(ToastSpec.Standard("Open with", "Choose an app from Windows.", GetExistingSavedFilePathOrNull()) with { SuppressSound = true });
+            var result = await Share.ImageShareFlow.ShareBitmapAsync(_previewBitmap).ConfigureAwait(true);
+            Share.ImageShareFlow.PresentResult(result);
+            DismissAnimated();
         }
         catch (Exception ex)
         {
-            if (isTemporary && !string.IsNullOrWhiteSpace(openPath) && File.Exists(openPath))
-            {
-                try
-                {
-                    File.Delete(openPath);
-                }
-                catch (Exception deleteEx)
-                {
-                    AppDiagnostics.LogWarning("toast.open-with-temp-delete", $"Failed to delete temporary Open With file {Path.GetFileName(openPath)}: {deleteEx.Message}", deleteEx);
-                }
-            }
+            AppDiagnostics.LogWarning("toast.share-preview", ex.Message, ex);
             Show(ToastSpec.Error(
-                "Open with failed",
-                BuildToastActionFailureBody("CyberSnap could not open the image with another app. Save the capture or open it from History, then try Windows Open with.", ex.Message),
+                LocalizationService.Translate("Upload failed"),
+                BuildToastActionFailureBody(LocalizationService.Translate("CyberSnap could not share the capture. Check your network or upload configuration in Settings."), ex.Message),
                 GetExistingSavedFilePathOrNull()));
         }
         finally
         {
-            EndOfficeAction(restoreAutoDismiss, remainingAutoDismissSeconds);
-        }
-    }
-
-    private static bool TryOpenWithConfiguredApp(string imagePath, out string appName)
-    {
-        appName = "";
-        var settings = SettingsService.LoadStatic();
-        if (settings is null ||
-            !Services.OfficeExportService.TryGetConfiguredApp(settings, Path.GetExtension(imagePath), out var appPath))
-        {
-            return false;
-        }
-
-        Services.OfficeExportService.OpenFileWithApp(imagePath, appPath);
-        appName = Path.GetFileNameWithoutExtension(appPath);
-        if (string.IsNullOrWhiteSpace(appName))
-            appName = Services.OfficeExportService.GetOpenWithLabel(Path.GetExtension(imagePath));
-        return true;
-    }
-
-    private void AddOfficeMenuItem(System.Windows.Controls.ContextMenu menu, Services.OfficeExportTarget target, Action onInvoked)
-    {
-        var targetName = Services.OfficeExportService.GetTargetName(target);
-        var item = new System.Windows.Controls.MenuItem
-        {
-            Header = $"Insert into {targetName}"
-        };
-
-        item.Click += (_, _) =>
-        {
-            onInvoked();
-            SendPreviewToOffice(target);
-        };
-        menu.Items.Add(item);
-    }
-
-    private void SendPreviewToOffice(Services.OfficeExportTarget target)
-    {
-        if (_previewBitmap is null || !TryBeginOfficeAction())
-            return;
-
-        var restoreAutoDismiss = _restoreAutoDismissAfterOfficeAction;
-        var remainingAutoDismissSeconds = _officeActionRemainingAutoDismissSeconds;
-        try
-        {
-            Services.OfficeExportService.SendBitmap(_previewBitmap, _savedFilePath, target);
-            Show(ToastSpec.Standard("Send to", Services.OfficeExportService.GetTargetName(target), GetExistingSavedFilePathOrNull()) with { SuppressSound = true });
-        }
-        catch (Exception ex)
-        {
-            Show(ToastSpec.Error(
-                "Send to failed",
-                BuildToastActionFailureBody("CyberSnap could not send the image. Save the capture and insert it manually, or try another target.", ex.Message),
-                GetExistingSavedFilePathOrNull()));
-        }
-        finally
-        {
-            EndOfficeAction(restoreAutoDismiss, remainingAutoDismissSeconds);
-        }
-    }
-
-    private bool TryBeginOfficeAction()
-    {
-        if (_isRunningOfficeAction)
-            return false;
-
-        _isRunningOfficeAction = true;
-        OfficeBtn.IsEnabled = false;
-        RefreshOverlayButtonAccessibility(OfficeBtn, Helpers.ToastButtonKind.Office);
-        return true;
-    }
-
-    private void EndOfficeAction(bool restoreAutoDismiss, double remainingAutoDismissSeconds)
-    {
-        _isRunningOfficeAction = false;
-        OfficeBtn.IsEnabled = true;
-        RefreshOverlayButtonAccessibility(OfficeBtn, Helpers.ToastButtonKind.Office);
-        _restoreAutoDismissAfterOfficeAction = false;
-        if (restoreAutoDismiss)
-        {
-            ResumeToastAutoDismiss(remainingAutoDismissSeconds);
+            _isRunningShareAction = false;
+            ShareBtn.IsEnabled = true;
+            RefreshOverlayButtonAccessibility(ShareBtn, Helpers.ToastButtonKind.Share);
         }
     }
 
@@ -1599,7 +1399,7 @@ public partial class ToastWindow : Window
         CloseBtn.Opacity = 1;
         SaveBtn.Opacity = 1;
         CopyBtn.Opacity = 1;
-        OfficeBtn.Opacity = 1;
+        ShareBtn.Opacity = 1;
         DeleteBtn.Opacity = 1;
         HistoryBtn.Opacity = 1;
         EditBtn.Opacity = 1;
@@ -2076,6 +1876,18 @@ public partial class ToastWindow : Window
         return IsScreenPointOver(OuterShell, cursor);
     }
 
+    private static bool IsScreenPointOver(FrameworkElement element, NativePoint point)
+    {
+        if (!element.IsVisible || element.ActualWidth <= 0 || element.ActualHeight <= 0)
+            return false;
+
+        var topLeft = element.PointToScreen(new System.Windows.Point(0, 0));
+        return point.X >= topLeft.X &&
+               point.X <= topLeft.X + element.ActualWidth &&
+               point.Y >= topLeft.Y &&
+               point.Y <= topLeft.Y + element.ActualHeight;
+    }
+
     private static bool IsChildOf(DependencyObject? child, DependencyObject parent)
     {
         while (child != null)
@@ -2102,7 +1914,7 @@ public partial class ToastWindow : Window
         IsChildOf(source, CloseBtn) ||
         IsChildOf(source, PinBtn) ||
         IsChildOf(source, SaveBtn) ||
-        IsChildOf(source, OfficeBtn) ||
+        IsChildOf(source, ShareBtn) ||
         IsChildOf(source, DeleteBtn) ||
         IsChildOf(source, HistoryBtn) ||
         IsChildOf(source, EditBtn) ||
@@ -2159,18 +1971,12 @@ public partial class ToastWindow : Window
         _resumeDismissOnMouseLeave = false;
         _isSavingPreview = false;
         _isDeletingSavedFile = false;
-        _isRunningOfficeAction = false;
-        _restoreAutoDismissAfterOfficeAction = false;
-        _officeMenuDismissTimer.Stop();
-        _officeMenuMouseWasDown = false;
-        if (_officeMenu?.IsOpen == true)
-            _officeMenu.IsOpen = false;
-        _officeMenu = null;
+        _isRunningShareAction = false;
         if (IsMouseCaptured)
             ReleaseMouseCapture();
         SaveBtn.IsEnabled = true;
         DeleteBtn.IsEnabled = true;
-        OfficeBtn.IsEnabled = true;
+        ShareBtn.IsEnabled = true;
         RefreshOverlayButtonLayout();
         StopDismissAnimationTimer();
         BeginAnimation(LeftProperty, null);
@@ -2489,12 +2295,6 @@ public partial class ToastWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         RunOnClosedCleanup("toast.closed.stop-timer", () => _timer.Stop());
-        RunOnClosedCleanup("toast.closed.stop-office-menu-timer", () => _officeMenuDismissTimer.Stop());
-        RunOnClosedCleanup("toast.closed.close-office-menu", () =>
-        {
-            if (_officeMenu?.IsOpen == true)
-                _officeMenu.IsOpen = false;
-        });
         RunOnClosedCleanup("toast.closed.stop-dismiss-animation", StopDismissAnimationTimer);
         if (_current == this) _current = null;
         RunOnClosedCleanup("toast.closed.dispose-preview", () => _previewBitmap?.Dispose());

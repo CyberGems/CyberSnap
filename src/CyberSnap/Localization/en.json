@@ -1382,5 +1382,18 @@
   "Scroll": "Scroll",
   "Extract text": "Extract text",
   "QR Codes": "QR Codes",
-  "Exit CyberSnap": "Exit CyberSnap"
+  "Exit CyberSnap": "Exit CyberSnap",
+  "share": "share",
+  "Upload and copy a shareable link.": "Upload and copy a shareable link.",
+  "Sharing capture": "Sharing capture",
+  "Share upload is already running.": "Share upload is already running.",
+  "Move the share notification button": "Move the share notification button",
+  "Share notification button": "Share notification button",
+  "Upload and copy a shareable link": "Upload and copy a shareable link",
+  "Send to": "Send to",
+  "Send to…": "Send to…",
+  "Insert into Word.": "Insert into Word.",
+  "Insert into PowerPoint.": "Insert into PowerPoint.",
+  "Insert into Excel.": "Insert into Excel.",
+  "Choose an app from Windows.": "Choose an app from Windows."
 }

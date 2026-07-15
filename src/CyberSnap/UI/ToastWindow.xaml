@@ -148,16 +148,16 @@
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
-                    <Border x:Name="OfficeBtn" Width="32" Height="32" CornerRadius="8"
+                    <Border x:Name="ShareBtn" Width="32" Height="32" CornerRadius="8"
                             Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                            ToolTip="Send to"
-                            AutomationProperties.Name="Send to"
-                            AutomationProperties.HelpText="Open the screenshot with another app."
+                            ToolTip="Share"
+                            AutomationProperties.Name="Share"
+                            AutomationProperties.HelpText="Upload and copy a shareable link."
                             Cursor="Hand"
                             Focusable="True"
-                            KeyDown="OfficeBtn_KeyDown"
+                            KeyDown="ShareBtn_KeyDown"
                             Opacity="1" Visibility="Collapsed">
-                        <Image x:Name="OfficeIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
+                        <Image x:Name="ShareIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
