@@ -139,12 +139,14 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="TitleTextBlock"
-                           Grid.Column="0"
-                           VerticalAlignment="Center"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image x:Name="AppLogoImage" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center" Opacity="0.75" Stretch="Uniform"/>
+                    <TextBlock x:Name="TitleTextBlock"
+                               VerticalAlignment="Center"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                </StackPanel>
                 <Button Grid.Column="1"
                         Width="24"
                         Height="24"

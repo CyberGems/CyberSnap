@@ -196,6 +196,8 @@ public partial class TrayContextMenuWindow : Window
     {
         var fgColor = Theme.TextPrimary;
 
+        AppLogoImage.Source = ThemedLogo.Square(16);
+
         AreaCaptureIcon.Source = GetIcon("captureRect", fgColor, 32);
         ScrollCaptureIcon.Source = GetIcon("scrollCapture", fgColor, 32);
         OcrIcon.Source = GetIcon("ocr", fgColor, 32);
