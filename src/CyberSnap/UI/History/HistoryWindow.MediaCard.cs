@@ -181,14 +181,13 @@ public partial class HistoryWindow
                 }
             }, "Open this image in the Editor.", "compose"));
 
-            actionMenu.Items.Add(CreateCardActionMenuItem("Share", () =>
-            {
-                suppressOpenAction = true;
-                _ = ShareHistoryImageAsync(vm.Entry);
-            }, "Upload and copy a shareable link.", "share"));
+            var shareToSub = new MenuItem { Header = LocalizationService.Translate("Share to…") };
+            shareToSub.SetResourceReference(MenuItem.StyleProperty, "HistoryActionsMenuItem");
+            PopulateShareToSubmenu(shareToSub, vm.Entry, actionMenu);
+            actionMenu.Items.Add(shareToSub);
 
-            var sendToSub = new MenuItem { Header = LocalizationService.Translate("Send to…") };
-            sendToSub.SetResourceReference(MenuItem.StyleProperty, "HistoryActionsMenuItem");
+            var openWithSub = new MenuItem { Header = LocalizationService.Translate("Open with…") };
+            openWithSub.SetResourceReference(MenuItem.StyleProperty, "HistoryActionsMenuItem");
             
             var wordInstalled = OfficeExportService.IsTargetInstalled(OfficeExportTarget.Word);
             var pptInstalled = OfficeExportService.IsTargetInstalled(OfficeExportTarget.PowerPoint);
@@ -208,7 +207,7 @@ public partial class HistoryWindow
                 }
             }, "Insert into Word.", "arrow");
             wordItem.IsEnabled = wordInstalled;
-            sendToSub.Items.Add(wordItem);
+            openWithSub.Items.Add(wordItem);
 
             var pptItem = CreateCardActionMenuItem("PowerPoint", () =>
             {
@@ -224,7 +223,7 @@ public partial class HistoryWindow
                 }
             }, "Insert into PowerPoint.", "arrow");
             pptItem.IsEnabled = pptInstalled;
-            sendToSub.Items.Add(pptItem);
+            openWithSub.Items.Add(pptItem);
 
             var excelItem = CreateCardActionMenuItem("Excel", () =>
             {
@@ -240,11 +239,11 @@ public partial class HistoryWindow
                 }
             }, "Insert into Excel.", "arrow");
             excelItem.IsEnabled = excelInstalled;
-            sendToSub.Items.Add(excelItem);
+            openWithSub.Items.Add(excelItem);
 
-            sendToSub.Items.Add(new Separator());
+            openWithSub.Items.Add(new Separator());
 
-            var openWithPickerItem = CreateCardActionMenuItem("Open with...", () =>
+            var openWithPickerItem = CreateCardActionMenuItem("Others...", () =>
             {
                 suppressOpenAction = true;
                 try
@@ -257,9 +256,9 @@ public partial class HistoryWindow
                     ToastWindow.ShowError("Open with failed", ex.Message);
                 }
             }, "Open the screenshot with another app.", "arrow");
-            sendToSub.Items.Add(openWithPickerItem);
+            openWithSub.Items.Add(openWithPickerItem);
 
-            actionMenu.Items.Add(sendToSub);
+            actionMenu.Items.Add(openWithSub);
         }
         if ((vm.Entry.Kind == HistoryKind.Video || vm.Entry.Kind == HistoryKind.Gif) && HasHistoryFilePath(vm.Entry.FilePath))
         {
@@ -892,5 +891,53 @@ public partial class HistoryWindow
                 filePath);
             return false;
         }
+    }
+
+    private void PopulateShareToSubmenu(MenuItem shareToSub, HistoryEntry entry, ContextMenu actionMenu)
+    {
+        var settings = SettingsService.LoadStatic() ?? new AppSettings();
+        var defaultKind = ImageUploadService.GetDefaultProvider(settings);
+        var providers = ImageUploadService.GetMenuProviders(settings);
+
+        foreach (var (kind, available, label) in providers)
+        {
+            if (kind == UploadProviderKind.Custom)
+            {
+                shareToSub.Items.Add(new Separator());
+            }
+
+            var display = label;
+            
+            var item = CreateCardActionMenuItem(display, () =>
+            {
+                actionMenu.IsOpen = false;
+                if (!available)
+                {
+                    if (System.Windows.Application.Current is CyberSnap.App app)
+                        app.ShowSettings("uploads");
+                }
+                else
+                {
+                    Services.SettingsService.SetUploadDefaultProvider(kind);
+                    _ = ShareHistoryImageAsync(entry, kind);
+                }
+            }, available ? "Upload and copy a shareable link." : "Configure in Settings…", null);
+
+            if (kind == defaultKind)
+            {
+                item.IsChecked = true;
+            }
+
+            shareToSub.Items.Add(item);
+        }
+
+        shareToSub.Items.Add(new Separator());
+        var settingsItem = CreateCardActionMenuItem("Upload settings…", () =>
+        {
+            actionMenu.IsOpen = false;
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.ShowSettings("uploads");
+        }, "Configure upload settings.", "gear");
+        shareToSub.Items.Add(settingsItem);
     }
 }
