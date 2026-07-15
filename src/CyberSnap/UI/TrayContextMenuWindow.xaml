@@ -228,19 +228,19 @@
                     </StackPanel>
                 </Button>
 
-                <!-- Annotations Editor -->
-                <Button x:Name="AnnotationsBtn" Style="{StaticResource GridButtonStyle}" Click="Annotations_Click">
+                <!-- Screen Recorder (MP4) -->
+                <Button x:Name="VideoRecordBtn" Style="{StaticResource GridButtonStyle}" Click="VideoRecord_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="AnnotationsIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="AnnotationsText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="VideoRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="VideoRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
-                <!-- Gallery -->
-                <Button x:Name="GalleryBtn" Style="{StaticResource GridButtonStyle}" Click="Gallery_Click">
+                <!-- Screen Recorder (GIF) -->
+                <Button x:Name="GifRecordBtn" Style="{StaticResource GridButtonStyle}" Click="GifRecord_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image x:Name="GalleryIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                        <TextBlock x:Name="GalleryText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Image x:Name="GifRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                        <TextBlock x:Name="GifRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </UniformGrid>
@@ -250,29 +250,42 @@
 
             <!-- Bottom Actions -->
             <StackPanel Grid.Row="3">
-                <!-- Video Recorder / Stop Recording -->
-                <Button x:Name="VideoRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="VideoRecord_Click">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Image x:Name="VideoRecordIcon" Grid.Column="0" Width="18" Height="18" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="VideoRecordText" Grid.Column="1" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                    </Grid>
-                </Button>
+                <!-- Editor & Gallery in the same row -->
+                <UniformGrid Columns="2">
+                    <!-- Editor (left) -->
+                    <Button x:Name="AnnotationsBtn"
+                            Style="{StaticResource BottomButtonStyle}"
+                            Click="Annotations_Click"
+                            Padding="8,10"
+                            Margin="4,2,2,2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image x:Name="AnnotationsIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="AnnotationsText"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="86"/>
+                        </StackPanel>
+                    </Button>
 
-                <!-- Secondary Recorder option (GIF) - only shown when not recording -->
-                <Button x:Name="GifRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="GifRecord_Click">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Image x:Name="GifRecordIcon" Grid.Column="0" Width="18" Height="18" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="GifRecordText" Grid.Column="1" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                    </Grid>
-                </Button>
+                    <!-- Gallery (right) -->
+                    <Button x:Name="GalleryBtn"
+                            Style="{StaticResource BottomButtonStyle}"
+                            Click="Gallery_Click"
+                            Padding="8,10"
+                            Margin="2,2,4,2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image x:Name="GalleryIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="GalleryText"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="86"/>
+                        </StackPanel>
+                    </Button>
+                </UniformGrid>
 
                 <!-- Exit & Settings in the same row (compact: short labels + full tooltips) -->
                 <UniformGrid Columns="2">

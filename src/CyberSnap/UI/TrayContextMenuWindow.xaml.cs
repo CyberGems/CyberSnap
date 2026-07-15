@@ -166,6 +166,8 @@ public partial class TrayContextMenuWindow : Window
         RulerBtn.ToolTip = T("Ruler");
         AnnotationsBtn.ToolTip = T("Annotations Editor...");
         GalleryBtn.ToolTip = T("Capture Gallery...");
+        VideoRecordBtn.ToolTip = T("Screen recorder (MP4)");
+        GifRecordBtn.ToolTip = T("Screen recorder (GIF)");
         
         // Compact labels for the half-width row; full names live in tooltips.
         SettingsText.Text = T("Settings");
@@ -179,14 +181,14 @@ public partial class TrayContextMenuWindow : Window
         {
             VideoRecordText.Text = T("Stop recording");
             VideoRecordBtn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(239, 68, 68));
-            GifRecordBtn.Visibility = Visibility.Collapsed;
+            GifRecordBtn.IsEnabled = false;
         }
         else
         {
-            VideoRecordText.Text = T("Screen recorder (MP4)");
+            VideoRecordText.Text = T("Record") + " MP4";
             VideoRecordBtn.ClearValue(ForegroundProperty);
-            GifRecordBtn.Visibility = Visibility.Visible;
-            GifRecordText.Text = T("Screen recorder (GIF)");
+            GifRecordBtn.IsEnabled = true;
+            GifRecordText.Text = T("Record") + " GIF";
         }
     }
 
@@ -200,8 +202,8 @@ public partial class TrayContextMenuWindow : Window
         QrIcon.Source = GetIcon("scan", fgColor, 32);
         ColorPickerIcon.Source = GetIcon("picker", fgColor, 32);
         RulerIcon.Source = GetIcon("ruler", fgColor, 32);
-        AnnotationsIcon.Source = GetIcon("compose", fgColor, 32);
-        GalleryIcon.Source = GetIcon("history", fgColor, 32);
+        AnnotationsIcon.Source = GetIcon("compose", fgColor, 16);
+        GalleryIcon.Source = GetIcon("history", fgColor, 16);
 
         SettingsIcon.Source = GetIcon("gear", fgColor, 16);
         ExitIcon.Source = GetDangerIcon("signOut", 16);
@@ -209,12 +211,12 @@ public partial class TrayContextMenuWindow : Window
         bool isRecording = Capture.RecordingForm.Current != null;
         if (isRecording)
         {
-            VideoRecordIcon.Source = GetDangerIcon("play", 18);
+            VideoRecordIcon.Source = GetDangerIcon("play", 32);
         }
         else
         {
-            VideoRecordIcon.Source = GetIcon("record", fgColor, 18);
-            GifRecordIcon.Source = GetIcon("recordGif", fgColor, 18);
+            VideoRecordIcon.Source = GetIcon("record", fgColor, 32);
+            GifRecordIcon.Source = GetIcon("recordGif", fgColor, 32);
         }
     }
 
