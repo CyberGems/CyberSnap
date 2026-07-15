@@ -200,6 +200,7 @@ public partial class HistoryWindow
                 try
                 {
                     OfficeExportService.SendBitmap(null, vm.Entry.FilePath, OfficeExportTarget.Word);
+                    actionMenu.IsOpen = false;
                 }
                 catch (Exception ex)
                 {
@@ -215,6 +216,7 @@ public partial class HistoryWindow
                 try
                 {
                     OfficeExportService.SendBitmap(null, vm.Entry.FilePath, OfficeExportTarget.PowerPoint);
+                    actionMenu.IsOpen = false;
                 }
                 catch (Exception ex)
                 {
@@ -230,6 +232,7 @@ public partial class HistoryWindow
                 try
                 {
                     OfficeExportService.SendBitmap(null, vm.Entry.FilePath, OfficeExportTarget.Excel);
+                    actionMenu.IsOpen = false;
                 }
                 catch (Exception ex)
                 {
@@ -247,6 +250,7 @@ public partial class HistoryWindow
                 try
                 {
                     OfficeExportService.ShowOpenWithDialog(vm.Entry.FilePath);
+                    actionMenu.IsOpen = false;
                 }
                 catch (Exception ex)
                 {

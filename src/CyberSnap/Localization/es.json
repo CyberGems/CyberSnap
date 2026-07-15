@@ -1774,5 +1774,8 @@
   "Insert into Word.": "Insertar en Word.",
   "Insert into PowerPoint.": "Insertar en PowerPoint.",
   "Insert into Excel.": "Insertar en Excel.",
-  "Choose an app from Windows.": "Elige una aplicación de Windows."
+  "Choose an app from Windows.": "Elige una aplicación de Windows.",
+  "Open with...": "Abrir con...",
+  "Open with": "Abrir con",
+  "Sent to external program": "Enviado a programa externo"
 }

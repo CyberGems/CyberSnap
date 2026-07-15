@@ -686,21 +686,49 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="24"/>
                                     <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <ContentPresenter Grid.Column="0"
-                                                  ContentSource="Icon"
-                                                  VerticalAlignment="Center"
-                                                  HorizontalAlignment="Center"
-                                                  Margin="0,0,4,0"/>
+                                                   ContentSource="Icon"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,0,4,0"/>
                                 <ContentPresenter Grid.Column="1"
-                                                  ContentSource="Header"
-                                                  RecognizesAccessKey="True"
-                                                  VerticalAlignment="Center"/>
+                                                   ContentSource="Header"
+                                                   RecognizesAccessKey="True"
+                                                   VerticalAlignment="Center"/>
+                                <Path x:Name="RightArrow" Grid.Column="2"
+                                      VerticalAlignment="Center"
+                                      Margin="4,0,0,0"
+                                      Fill="{TemplateBinding Foreground}"
+                                      Data="M 0 0 L 4 4 L 0 8 Z"
+                                      Visibility="Collapsed"/>
+                                <Popup x:Name="PART_Popup"
+                                       AllowsTransparency="True"
+                                       Focusable="False"
+                                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                       Placement="Right"
+                                       PopupAnimation="{DynamicResource {x:Static SystemParameters.MenuPopupAnimationKey}}">
+                                    <Border Background="{DynamicResource ThemeCardBrush}"
+                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="4">
+                                        <ScrollViewer CanContentScroll="True"
+                                                      HorizontalScrollBarVisibility="Disabled"
+                                                      VerticalScrollBarVisibility="Auto">
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Popup>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="HasItems" Value="True">
+                                <Setter TargetName="RightArrow" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.45"/>
