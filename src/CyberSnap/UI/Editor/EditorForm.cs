@@ -1748,7 +1748,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         items.Add(excelItem);
         items.Add(new ToolStripSeparator());
 
-        var openWithItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Open with..."), iconId: "arrow");
+        var openWithItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Others..."), iconId: "arrow");
         openWithItem.Click += (_, _) => DoOpenWithPicker();
         items.Add(openWithItem);
     }
@@ -2401,8 +2401,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var shareToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Share to…"), showImages: true);
         RebuildShareToSubmenu(shareToItem);
 
-        var sendToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Send to…"), showImages: true);
-        RebuildSendToSubmenu(sendToItem);
+        var openWithItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open with…"), showImages: true);
+        RebuildSendToSubmenu(openWithItem);
 
         menu.Items.Add(copyItem);
         menu.Items.Add(pasteItem);
@@ -2410,7 +2410,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(saveAsItem);
         menu.Items.Add(shareToItem);
-        menu.Items.Add(sendToItem);
+        menu.Items.Add(openWithItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(resizeItem);
         menu.Items.Add(new ToolStripSeparator());

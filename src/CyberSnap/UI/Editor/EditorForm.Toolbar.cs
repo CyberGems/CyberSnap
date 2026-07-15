@@ -1681,7 +1681,7 @@ public sealed partial class EditorForm
 
         var shareToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Share to…"), showImages: true);
 
-        var sendToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Send to…"), showImages: true);
+        var sendToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open with…"), showImages: true);
 
         var resizeCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         resizeCanvasItem.Click += (_, _) => DoResizeCanvas();

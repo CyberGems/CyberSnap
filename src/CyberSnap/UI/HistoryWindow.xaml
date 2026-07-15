@@ -148,11 +148,18 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <ContentPresenter Grid.Column="0"
-                                                   ContentSource="Icon"
-                                                   VerticalAlignment="Center"
-                                                   HorizontalAlignment="Center"
-                                                   Margin="0,0,4,0"/>
+                                <Grid Grid.Column="0" Margin="0,0,4,0">
+                                    <ContentPresenter ContentSource="Icon"
+                                                      VerticalAlignment="Center"
+                                                      HorizontalAlignment="Center"/>
+                                    <Path x:Name="CheckMark"
+                                          Width="10" Height="10"
+                                          SnapsToDevicePixels="False"
+                                          Stroke="{TemplateBinding Foreground}"
+                                          StrokeThickness="1.5"
+                                          Data="M 1 5 L 4 8 L 9 2"
+                                          Visibility="Collapsed"/>
+                                </Grid>
                                 <ContentPresenter Grid.Column="1"
                                                    ContentSource="Header"
                                                    RecognizesAccessKey="True"
@@ -189,6 +196,9 @@
                             </Trigger>
                             <Trigger Property="HasItems" Value="True">
                                 <Setter TargetName="RightArrow" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.45"/>
