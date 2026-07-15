@@ -73,7 +73,7 @@ public sealed class WindowsToolTip : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        CaptureWindowExclusion.Apply(this);
+        CaptureWindowExclusion.Register(Handle);
     }
 
     protected override void OnHandleDestroyed(EventArgs e)
