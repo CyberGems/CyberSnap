@@ -65,7 +65,7 @@ public partial class App
                 {
                     var action = NormalizeAfterCaptureAction(settings.AfterCapture);
                     if (ShouldCopyAfterCapture(action))
-                        TryCopyCaptureOutputToClipboard(persisted.Output);
+                        TryCopyCaptureOutputToClipboard(persisted.Output, persisted.FilePath);
                     ResetCapturing();
 
                     // Counted once per capture, before the action branches, so every capture counts
@@ -450,11 +450,11 @@ public partial class App
     private static bool ShouldPreviewAfterCapture(AfterCaptureAction action) =>
         action is AfterCaptureAction.PreviewAndCopy or AfterCaptureAction.PreviewOnly;
 
-    private static bool TryCopyCaptureOutputToClipboard(Bitmap output)
+    private static bool TryCopyCaptureOutputToClipboard(Bitmap output, string? filePath = null)
     {
         try
         {
-            ClipboardService.CopyToClipboard(output);
+            ClipboardService.CopyToClipboard(output, filePath);
             return true;
         }
         catch (Exception ex)

@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.IO;
 
 namespace CyberSnap.Services;
@@ -17,6 +17,22 @@ public static class ClipboardService
             dataObject.SetData("PNG", false, new MemoryStream(pngBuffer.Array!, pngBuffer.Offset, pngBuffer.Count, writable: false, publiclyVisible: true));
         else
             dataObject.SetData("PNG", false, new MemoryStream(pngStream.ToArray(), writable: false));
+
+        if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+        {
+            dataObject.SetData(System.Windows.Forms.DataFormats.FileDrop, new string[] { filePath });
+        }
+
+        SetClipboardWithRetry(dataObject);
+    }
+
+    public static void CopyFileToClipboard(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            return;
+
+        var dataObject = new System.Windows.Forms.DataObject();
+        dataObject.SetData(System.Windows.Forms.DataFormats.FileDrop, new string[] { filePath });
 
         SetClipboardWithRetry(dataObject);
     }
