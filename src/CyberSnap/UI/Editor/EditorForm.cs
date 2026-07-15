@@ -1777,7 +1777,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
             using var output = _canvas.RenderFinal();
             OfficeExportService.OpenWithBitmap(output, _savedFilePath);
             ToastWindow.Show(
-                LocalizationService.Translate("Open with"),
+                LocalizationService.Translate("Sent to external program"),
                 LocalizationService.Translate("Choose an app from Windows."),
                 _savedFilePath);
         }
