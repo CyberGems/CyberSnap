@@ -213,10 +213,31 @@ public sealed partial class RecordingForm
         int tx = _recordRegion.X + _recordRegion.Width / 2 - tw / 2;
         int ty = _recordRegion.Y - th - UiChrome.ScaleInt(14);
 
-        // If off-screen (fullscreen recording), place at bottom center of screen
         var edge = UiChrome.ScaleInt(4);
-        if (ty < edge || _recordRegion.Height > Height - UiChrome.ScaleInt(100))
-            ty = Height - th - UiChrome.ScaleInt(40); // from bottom edge
+        
+        // If placing above goes off-screen, try placing below the recording region
+        if (ty < edge)
+        {
+            int tyBelow = _recordRegion.Bottom + UiChrome.ScaleInt(14);
+            if (tyBelow + th <= Height - edge)
+            {
+                ty = tyBelow;
+            }
+            else
+            {
+                // Fallback: place inside near the bottom of the screen
+                ty = Height - th - UiChrome.ScaleInt(40);
+            }
+        }
+
+        // Safety override: if the toolbar still overlaps the recording region,
+        // and the recording region is very tall, place it inside at the bottom center of the screen
+        var toolbarTemp = new Rectangle(tx, ty, tw, th);
+        if (toolbarTemp.IntersectsWith(_recordRegion) && _recordRegion.Height > Height - UiChrome.ScaleInt(100))
+        {
+            ty = Height - th - UiChrome.ScaleInt(40);
+        }
+
         if (tx < edge) tx = edge;
         if (tx + tw > Width - edge) tx = Width - edge - tw;
 
