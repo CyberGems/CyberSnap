@@ -791,8 +791,7 @@ public partial class App
     {
         try
         {
-            var files = new System.Collections.Specialized.StringCollection { path };
-            System.Windows.Clipboard.SetFileDropList(files);
+            ClipboardService.CopyFileToClipboard(path);
             return true;
         }
         catch

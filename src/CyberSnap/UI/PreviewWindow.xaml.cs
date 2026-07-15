@@ -112,8 +112,7 @@ public partial class PreviewWindow : Window
     {
         try
         {
-            var files = new System.Collections.Specialized.StringCollection { mediaFilePath };
-            System.Windows.Clipboard.SetFileDropList(files);
+            ClipboardService.CopyFileToClipboard(mediaFilePath);
             return true;
         }
         catch (Exception ex)
