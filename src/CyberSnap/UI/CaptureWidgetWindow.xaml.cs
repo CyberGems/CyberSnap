@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using System.Windows.Forms;
 using System.Linq;
 using Microsoft.Win32;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 
@@ -25,6 +26,7 @@ public partial class CaptureWidgetWindow : Window
     private bool _isDragArmed;
     private bool _suppressHoverExpand; // brief grace after a drag so it doesn't auto-expand under the resting cursor
     private bool _suppressEditorToggle; // reflecting OpenEditorAfterCapture into the toggle without re-saving/syncing
+    private bool _suppressAutoCopyToggle; // reflecting AutoCopyToClipboard into the toggle without re-saving/syncing
     private bool _contextMenuOpen;     // keep the widget from collapsing while its context menu is open
     private System.Windows.Media.Effects.Effect? _panelShadow; // soft shadow, applied only when expanded
     private System.Windows.Point _dragStartPoint;
@@ -37,7 +39,7 @@ public partial class CaptureWidgetWindow : Window
 
     // Layout constants
     private const double PanelWidth = 196;
-    private const double PanelHeight = 250;
+    private const double PanelHeight = 276; // room for Auto-copy + Send to Editor toggles
     private const double PeekSize = 9; // slim peek (SnagIt-like), less intrusive than the old 16px
 
     // Transparent halo (DIPs) added around the content on every side so the panel's drop shadow
@@ -91,6 +93,7 @@ public partial class CaptureWidgetWindow : Window
         LoadIcons();
         RefreshLayout();
         UpdateEnableEditorState();
+        UpdateAutoCopyState();
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
     }
 
@@ -247,6 +250,7 @@ public partial class CaptureWidgetWindow : Window
 
         ApplyTheme();
         UpdateEnableEditorState();
+        UpdateAutoCopyState();
         LoadIcons();
 
         // Tooltip reflects the configured default capture mode (area vs from-center).
@@ -330,6 +334,16 @@ public partial class CaptureWidgetWindow : Window
 
     // Settings → widget: re-read the persisted value so the toggle matches the Settings checkbox.
     public void RefreshEnableEditorToggle() => UpdateEnableEditorState();
+
+    private void UpdateAutoCopyState()
+    {
+        _suppressAutoCopyToggle = true;
+        try { AutoCopyToggle.IsChecked = _settings.AutoCopyToClipboard; }
+        finally { _suppressAutoCopyToggle = false; }
+    }
+
+    // Settings → widget: re-read the global Auto-copy master.
+    public void RefreshAutoCopyToggle() => UpdateAutoCopyState();
 
     /// <summary>
     /// Transparent shadow halo per side. The docked side gets ZERO halo so the window sits flush
@@ -1343,6 +1357,18 @@ public partial class CaptureWidgetWindow : Window
         _settingsService.Save();
         // Keep the Settings window's "Enable editor" checkbox in lockstep when it's open.
         ((App)System.Windows.Application.Current).SyncSettingsEnableEditorCheck();
+    }
+
+    private void AutoCopyToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAutoCopyToggle) return;
+
+        var enabled = AutoCopyToggle.IsChecked == true;
+        AutoCopyPreferences.SetMaster(_settings, enabled);
+        AutoCopyPreferences.SyncAfterCaptureCopyBits(_settings);
+        _settingsService.Save();
+        SettingsService.PublishAutoCopyState(_settings);
+        ((App)System.Windows.Application.Current).SyncSettingsAutoCopyChecks();
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e)

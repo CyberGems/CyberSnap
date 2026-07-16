@@ -31,7 +31,17 @@ public static class SettingsSchemaCatalog
                     "App startup and update defaults.",
                     [
                         new SettingDefinition("start_with_windows", "Start with Windows", SettingsValueKind.Toggle, "Launch CyberSnap automatically when the user signs in.", "StartWithWindows"),
-                        new SettingDefinition("after_capture", "After capture behavior", SettingsValueKind.Choice, "Default post-capture action.", "AfterCapture"),
+                    ]),
+                new SettingsSectionDefinition(
+                    "behavior_after_captures",
+                    "Behavior after captures",
+                    "Where captures open and whether results are auto-copied to the clipboard.",
+                    [
+                        new SettingDefinition("after_capture", "After capture behavior", SettingsValueKind.Choice, "Default post-capture destination window.", "AfterCapture"),
+                        new SettingDefinition("auto_copy", "Auto-copy results", SettingsValueKind.Toggle, "Copy captures, OCR text, and recordings to the clipboard when they finish.", "AutoCopyToClipboard"),
+                        new SettingDefinition("auto_copy_exclude_images", "Don't auto-copy screenshots", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy image captures.", "AutoCopyExcludeImages"),
+                        new SettingDefinition("auto_copy_exclude_ocr", "Don't auto-copy OCR text", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy OCR text.", "AutoCopyExcludeOcr"),
+                        new SettingDefinition("auto_copy_exclude_recording", "Don't auto-copy recordings", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy video/GIF files.", "AutoCopyExcludeRecording"),
                     ]),
                 new SettingsSectionDefinition(
                     "standalone_ruler",

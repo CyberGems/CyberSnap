@@ -30,30 +30,107 @@ public sealed class SettingsService : IDisposable
     public event Action<string>? SaveFailed;
 
     public static event Action<bool>? OcrAutoCopyToClipboardChanged;
+    public static event Action<bool>? AutoCopyToClipboardChanged;
 
+    /// <summary>
+    /// Legacy OCR toggle. Maps onto global auto-copy + OCR exclusion.
+    /// </summary>
     public static void SetOcrAutoCopyToClipboard(bool value)
+    {
+        MutateAutoCopy(settings =>
+        {
+            Helpers.AutoCopyPreferences.SetKindEnabled(settings, Helpers.AutoCopyKind.Ocr, value);
+        }, "settings.ocr-auto-copy.static-save");
+
+        OcrAutoCopyToClipboardChanged?.Invoke(value);
+        RaiseAutoCopyEventsFromCache();
+    }
+
+    public static void SetAutoCopyToClipboard(bool value)
+    {
+        MutateAutoCopy(settings =>
+        {
+            Helpers.AutoCopyPreferences.SetMaster(settings, value);
+            Helpers.AutoCopyPreferences.SyncAfterCaptureCopyBits(settings);
+        }, "settings.auto-copy.static-save");
+
+        RaiseAutoCopyEventsFromCache();
+    }
+
+    public static void SetAutoCopyExclude(Helpers.AutoCopyKind kind, bool excluded)
+    {
+        MutateAutoCopy(settings =>
+        {
+            Helpers.AutoCopyPreferences.SetExcluded(settings, kind, excluded);
+            if (kind == Helpers.AutoCopyKind.Image)
+                Helpers.AutoCopyPreferences.SyncAfterCaptureCopyBits(settings);
+        }, "settings.auto-copy-exclude.static-save");
+
+        RaiseAutoCopyEventsFromCache();
+    }
+
+    private static void MutateAutoCopy(Action<AppSettings> mutate, string errorCode)
     {
         lock (CacheGate)
         {
             if (s_cachedSettings != null)
-            {
-                s_cachedSettings.OcrAutoCopyToClipboard = value;
-            }
+                mutate(s_cachedSettings);
         }
 
         try
         {
             var svc = new SettingsService();
             svc.Load();
-            svc.Settings.OcrAutoCopyToClipboard = value;
+            mutate(svc.Settings);
             svc.Save();
         }
         catch (Exception ex)
         {
-            AppDiagnostics.LogError("settings.ocr-auto-copy.static-save", ex);
+            AppDiagnostics.LogError(errorCode, ex);
+        }
+    }
+
+    private static void RaiseAutoCopyEventsFromCache()
+    {
+        AppSettings? snapshot;
+        lock (CacheGate)
+            snapshot = s_cachedSettings;
+
+        if (snapshot is null)
+            return;
+
+        AutoCopyToClipboardChanged?.Invoke(snapshot.AutoCopyToClipboard);
+        OcrAutoCopyToClipboardChanged?.Invoke(snapshot.OcrAutoCopyToClipboard);
+    }
+
+    /// <summary>
+    /// After the Settings window mutates auto-copy fields and saves, publish the
+    /// new state to the static cache and listeners (widget menus, OCR tools).
+    /// </summary>
+    public static void PublishAutoCopyState(AppSettings settings)
+    {
+        if (settings is null)
+            return;
+
+        Helpers.AutoCopyPreferences.SyncLegacyAliases(settings);
+
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+            {
+                s_cachedSettings.AutoCopyToClipboard = settings.AutoCopyToClipboard;
+                s_cachedSettings.AutoCopyExcludeImages = settings.AutoCopyExcludeImages;
+                s_cachedSettings.AutoCopyExcludeOcr = settings.AutoCopyExcludeOcr;
+                s_cachedSettings.AutoCopyExcludeRecording = settings.AutoCopyExcludeRecording;
+                s_cachedSettings.OcrAutoCopyToClipboard = settings.OcrAutoCopyToClipboard;
+                s_cachedSettings.AfterCapture = settings.AfterCapture;
+                s_cachedSettings.OpenEditorAfterCapture = settings.OpenEditorAfterCapture;
+                s_cachedSettings.AutoCopySettingsSchemaVersion = settings.AutoCopySettingsSchemaVersion;
+            }
         }
 
-        OcrAutoCopyToClipboardChanged?.Invoke(value);
+        AutoCopyToClipboardChanged?.Invoke(settings.AutoCopyToClipboard);
+        OcrAutoCopyToClipboardChanged?.Invoke(settings.OcrAutoCopyToClipboard);
     }
 
     public static void SetEditorExportFormat(int format)
@@ -375,6 +452,7 @@ public sealed class SettingsService : IDisposable
 
         NormalizeUnsafeModifierlessHotkeys(settings);
         NormalizeToastButtonLayout(settings.ToastButtons);
+        Helpers.AutoCopyPreferences.MigrateIfNeeded(settings);
 
         // If the primary capture hotkey was never set (e.g. old settings file predating the
         // property default), restore the factory default: Alt+Shift+A.

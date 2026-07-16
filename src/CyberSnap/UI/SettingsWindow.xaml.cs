@@ -44,6 +44,7 @@ public partial class SettingsWindow : Window
     private bool _suppressRecordingPreferenceChange;
     private bool _suppressOcrPreferenceChange;
     private bool _suppressHistoryPreferenceChange;
+    private bool _suppressAutoCopyPreferenceChange;
     private bool ImageIndexResetInProgress { get; set; }
     private bool _suppressStartWithWindowsChange;
     private WindowState _lastNonMinimizedState = WindowState.Normal;
@@ -78,6 +79,7 @@ public partial class SettingsWindow : Window
         LocalizationChanged += () => RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
         SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopyToClipboardChanged;
+        SettingsService.AutoCopyToClipboardChanged += OnAutoCopyToClipboardChanged;
         Activated += (_, _) =>
         {
             ApplyThemeColors();
@@ -94,6 +96,7 @@ public partial class SettingsWindow : Window
         {
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;
             SettingsService.OcrAutoCopyToClipboardChanged -= OnOcrAutoCopyToClipboardChanged;
+            SettingsService.AutoCopyToClipboardChanged -= OnAutoCopyToClipboardChanged;
             SaveWindowBounds();
         };
     }
@@ -309,7 +312,7 @@ public partial class SettingsWindow : Window
 
     private void AfterCaptureCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange || _suppressGeneralPreferenceChange) return;
 
         // "Editor", "Save only" and "System viewer" require saving to file
         if (AfterCaptureCombo.SelectedIndex >= 1 && SaveToFileCheck.IsChecked != true)
@@ -320,7 +323,8 @@ public partial class SettingsWindow : Window
         var previous = GetAfterCaptureViewPreference();
         var selected = GetAfterCaptureViewPreferenceFromControls();
 
-        UpdateCaptureSavePreference(
+        // Lives on General → Behavior after captures; status goes to GeneralPreferenceStatusText.
+        UpdateGeneralPreference(
             "settings.after-capture",
             "After capture",
             previous,
@@ -339,35 +343,14 @@ public partial class SettingsWindow : Window
                 ((App)Application.Current).RefreshWidgetWindowLayout();
                 RefreshEditorPreviewState();
             },
-            () => ((App)Application.Current).RefreshWidgetWindowLayout());
-    }
-
-    private void AfterCaptureCopyCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
-
-        var previous = GetAfterCaptureViewPreference();
-        var selected = GetAfterCaptureViewPreferenceFromControls();
-
-        UpdateCaptureSavePreference(
-            "settings.after-capture-copy",
-            "Copy capture to clipboard",
-            previous,
-            selected,
-            value =>
-            {
-                SetAfterCaptureViewPreference(value);
-                RefreshAfterCaptureSummary(value);
-            },
-            value => ApplyAfterCaptureViewPreference(value),
-            () => ((App)Application.Current).RefreshWidgetWindowLayout());
+            value => ((App)Application.Current).RefreshWidgetWindowLayout());
     }
 
     private AfterCaptureViewPreference GetAfterCaptureViewPreference() =>
         AfterCapturePreferences.FromSettings(_settingsService.Settings);
 
     private static void SetAfterCaptureViewPreference(AfterCaptureViewPreference preference, AppSettings settings) =>
-        AfterCapturePreferences.ApplyToSettings(preference, settings);
+        AfterCapturePreferences.ApplyDestinationToSettings(preference.WindowIndex, settings);
 
     private void SetAfterCaptureViewPreference(AfterCaptureViewPreference preference) =>
         SetAfterCaptureViewPreference(preference, _settingsService.Settings);
@@ -375,18 +358,24 @@ public partial class SettingsWindow : Window
     private void ApplyAfterCaptureViewPreference(AfterCaptureViewPreference preference)
     {
         AfterCaptureCombo.SelectedIndex = preference.WindowIndex;
-        AfterCaptureCopyCheck.IsChecked = preference.Copy;
         RefreshAfterCaptureSummary(preference);
     }
 
     private AfterCaptureViewPreference GetAfterCaptureViewPreferenceFromControls() =>
-        new(AfterCaptureCombo.SelectedIndex, AfterCaptureCopyCheck.IsChecked == true);
+        new(
+            AfterCaptureCombo.SelectedIndex,
+            AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Image));
 
     private void RefreshAfterCaptureSummary(AfterCaptureViewPreference preference)
     {
         bool saveToFile = SaveToFileCheck.IsChecked == true;
+        // Always re-read copy from global auto-copy so the summary stays accurate.
+        var live = preference with
+        {
+            Copy = AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Image)
+        };
         AfterCaptureSummaryText.Text = AfterCapturePreferences.BuildSummary(
-            preference, saveToFile, LocalizationService.Translate);
+            live, saveToFile, LocalizationService.Translate);
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>

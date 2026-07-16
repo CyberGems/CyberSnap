@@ -257,9 +257,25 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0" Margin="0,0,0,6" ToolTip="Send image captures to the Annotation Editor and video/GIF to the Trimmer">
+                        <Grid Grid.Row="0" Margin="0,0,0,6" ToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish.">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Auto-copy" FontSize="11" Foreground="{DynamicResource WidgetTextMuted}" FontFamily="Segoe UI Variable Text"
+                                       Margin="0,0,8,0" VerticalAlignment="Center"
+                                       ToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish."/>
+                            <ToggleButton x:Name="AutoCopyToggle" Grid.Column="1" Style="{StaticResource WidgetToggleSwitch}"
+                                          Checked="AutoCopyToggle_Changed" Unchecked="AutoCopyToggle_Changed"
+                                          ToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish."
+                                          AutomationProperties.Name="Auto-copy"
+                                          AutomationProperties.HelpText="Copy captures, OCR text, and recordings to the clipboard when they finish."/>
+                        </Grid>
+
+                        <Grid Grid.Row="1" Margin="0,0,0,6" ToolTip="Send image captures to the Annotation Editor and video/GIF to the Trimmer">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -274,7 +290,7 @@
                                           AutomationProperties.HelpText="Send image captures to the Annotation Editor and video/GIF to the Trimmer"/>
                         </Grid>
 
-                        <Grid Grid.Row="1">
+                        <Grid Grid.Row="2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>

@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
 
@@ -1021,6 +1022,174 @@ public partial class SettingsWindow
         _suppressGeneralPreferenceChange = true;
         try { WidgetAlwaysOnTopCheck.IsChecked = _settingsService.Settings.WidgetAlwaysOnTop; }
         finally { _suppressGeneralPreferenceChange = false; }
+    }
+
+    // ── Global auto-copy (Workflow) + per-kind exclusions ──────────────────────
+
+    private void AutoCopyToClipboardCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange || _suppressAutoCopyPreferenceChange) return;
+
+        var previous = _settingsService.Settings.AutoCopyToClipboard;
+        var selected = AutoCopyToClipboardCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.auto-copy",
+            "Auto-copy results",
+            previous,
+            selected,
+            value =>
+            {
+                AutoCopyPreferences.SetMaster(_settingsService.Settings, value);
+                AutoCopyPreferences.SyncAfterCaptureCopyBits(_settingsService.Settings);
+            },
+            value =>
+            {
+                ApplyAutoCopyControlsFromSettings(_settingsService.Settings);
+            },
+            value =>
+            {
+                UpdateAutoCopyExcludeEnabledState();
+                RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
+                SettingsService.PublishAutoCopyState(_settingsService.Settings);
+                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+            });
+    }
+
+    private void AutoCopyExcludeImagesCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange || _suppressAutoCopyPreferenceChange) return;
+
+        var previous = _settingsService.Settings.AutoCopyExcludeImages;
+        var selected = AutoCopyExcludeImagesCheck.IsChecked == true;
+        UpdateCaptureSavePreference(
+            "settings.auto-copy-exclude-images",
+            "Don't auto-copy screenshots",
+            previous,
+            selected,
+            value =>
+            {
+                AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Image, value);
+                AutoCopyPreferences.SyncAfterCaptureCopyBits(_settingsService.Settings);
+            },
+            value => AutoCopyExcludeImagesCheck.IsChecked = value,
+            () =>
+            {
+                RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
+                SettingsService.PublishAutoCopyState(_settingsService.Settings);
+                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+            });
+    }
+
+    private void AutoCopyExcludeRecordingCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressRecordingPreferenceChange || _suppressAutoCopyPreferenceChange) return;
+
+        var previous = _settingsService.Settings.AutoCopyExcludeRecording;
+        var selected = AutoCopyExcludeRecordingCheck.IsChecked == true;
+        UpdateRecordingPreference(
+            "settings.auto-copy-exclude-recording",
+            "Don't auto-copy recordings",
+            previous,
+            selected,
+            value => AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Recording, value),
+            value => AutoCopyExcludeRecordingCheck.IsChecked = value,
+            value =>
+            {
+                SettingsService.PublishAutoCopyState(_settingsService.Settings);
+                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+            });
+    }
+
+    public void RefreshAutoCopyChecks()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(RefreshAutoCopyChecks);
+            return;
+        }
+
+        // Re-read from disk cache when the change may have come from the widget / OCR menu.
+        try
+        {
+            var fresh = SettingsService.LoadStatic();
+            if (fresh != null)
+            {
+                _settingsService.Settings.AutoCopyToClipboard = fresh.AutoCopyToClipboard;
+                _settingsService.Settings.AutoCopyExcludeImages = fresh.AutoCopyExcludeImages;
+                _settingsService.Settings.AutoCopyExcludeOcr = fresh.AutoCopyExcludeOcr;
+                _settingsService.Settings.AutoCopyExcludeRecording = fresh.AutoCopyExcludeRecording;
+                _settingsService.Settings.OcrAutoCopyToClipboard = fresh.OcrAutoCopyToClipboard;
+                _settingsService.Settings.AfterCapture = fresh.AfterCapture;
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("settings.refresh-auto-copy", ex.Message, ex);
+        }
+
+        ApplyAutoCopyControlsFromSettings(_settingsService.Settings);
+        RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
+    }
+
+    private void OnAutoCopyToClipboardChanged(bool value)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(() => OnAutoCopyToClipboardChanged(value)));
+            return;
+        }
+
+        RefreshAutoCopyChecks();
+    }
+
+    private void ApplyAutoCopyControlsFromSettings(AppSettings s)
+    {
+        _suppressAutoCopyPreferenceChange = true;
+        _suppressGeneralPreferenceChange = true;
+        _suppressCaptureSavePreferenceChange = true;
+        _suppressOcrPreferenceChange = true;
+        _suppressRecordingPreferenceChange = true;
+        try
+        {
+            if (AutoCopyToClipboardCheck != null)
+                AutoCopyToClipboardCheck.IsChecked = s.AutoCopyToClipboard;
+            if (AutoCopyExcludeImagesCheck != null)
+                AutoCopyExcludeImagesCheck.IsChecked = s.AutoCopyExcludeImages;
+            if (AutoCopyExcludeOcrCheck != null)
+                AutoCopyExcludeOcrCheck.IsChecked = s.AutoCopyExcludeOcr;
+            if (AutoCopyExcludeRecordingCheck != null)
+                AutoCopyExcludeRecordingCheck.IsChecked = s.AutoCopyExcludeRecording;
+            UpdateAutoCopyExcludeEnabledState();
+        }
+        finally
+        {
+            _suppressAutoCopyPreferenceChange = false;
+            _suppressGeneralPreferenceChange = false;
+            _suppressCaptureSavePreferenceChange = false;
+            _suppressOcrPreferenceChange = false;
+            _suppressRecordingPreferenceChange = false;
+        }
+    }
+
+    private void UpdateAutoCopyExcludeEnabledState()
+    {
+        bool masterOn = _settingsService.Settings.AutoCopyToClipboard;
+        double opacity = masterOn ? 1.0 : 0.45;
+
+        void Apply(FrameworkElement? row, System.Windows.Controls.CheckBox? check)
+        {
+            if (row != null)
+            {
+                row.IsEnabled = masterOn;
+                row.Opacity = opacity;
+            }
+            if (check != null)
+                check.IsEnabled = masterOn;
+        }
+
+        Apply(AutoCopyExcludeImagesRow, AutoCopyExcludeImagesCheck);
+        Apply(AutoCopyExcludeOcrRow, AutoCopyExcludeOcrCheck);
+        Apply(AutoCopyExcludeRecordingRow, AutoCopyExcludeRecordingCheck);
     }
 
     private void WidgetEnableEditorCheck_Changed(object sender, RoutedEventArgs e)

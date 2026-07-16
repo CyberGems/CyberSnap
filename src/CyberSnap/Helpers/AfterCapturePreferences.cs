@@ -18,34 +18,57 @@ public static class AfterCapturePreferences
     //   3 = System viewer
     public static AfterCaptureViewPreference FromSettings(AppSettings settings)
     {
+        var destination = FromSettingsDestinationOnly(settings);
+        bool copy = AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Image);
+        return new AfterCaptureViewPreference(destination.WindowIndex, copy);
+    }
+
+    /// <summary>
+    /// Destination only (window index / open-editor), ignoring the global auto-copy flag.
+    /// </summary>
+    public static AfterCaptureViewPreference FromSettingsDestinationOnly(AppSettings settings)
+    {
         var action = NormalizeAction(settings.AfterCapture);
         var openEditor = settings.OpenEditorAfterCapture;
 
-        return action switch
+        int windowIndex = action switch
         {
-            AfterCaptureAction.OpenInSystemViewer => new AfterCaptureViewPreference(3, false),
-            AfterCaptureAction.CopyToClipboard    => new AfterCaptureViewPreference(2, true),
-            AfterCaptureAction.None               => new AfterCaptureViewPreference(2, false),
-            _ => openEditor
-                ? new AfterCaptureViewPreference(1, action == AfterCaptureAction.PreviewAndCopy)
-                : new AfterCaptureViewPreference(0, action == AfterCaptureAction.PreviewAndCopy)
+            AfterCaptureAction.OpenInSystemViewer => 3,
+            AfterCaptureAction.CopyToClipboard => 2,
+            AfterCaptureAction.None => 2,
+            _ => openEditor ? 1 : 0
         };
+
+        return new AfterCaptureViewPreference(windowIndex, Copy: false);
     }
 
     public static void ApplyToSettings(AfterCaptureViewPreference preference, AppSettings settings)
     {
-        (AfterCaptureAction action, bool openEditor) = preference.WindowIndex switch
+        ApplyDestinationAndLegacyCopy(preference.WindowIndex, preference.Copy, settings);
+        AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Image, preference.Copy);
+    }
+
+    /// <summary>
+    /// Applies only the after-capture destination. Image auto-copy is left unchanged.
+    /// </summary>
+    public static void ApplyDestinationToSettings(int windowIndex, AppSettings settings)
+    {
+        bool copy = AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Image);
+        ApplyDestinationAndLegacyCopy(windowIndex, copy, settings);
+    }
+
+    /// <summary>
+    /// Writes AfterCapture + OpenEditorAfterCapture from a window index and copy flag.
+    /// Does not mutate AutoCopy* settings.
+    /// </summary>
+    public static void ApplyDestinationAndLegacyCopy(int windowIndex, bool copy, AppSettings settings)
+    {
+        (AfterCaptureAction action, bool openEditor) = windowIndex switch
         {
-            0 => preference.Copy
-                ? (AfterCaptureAction.PreviewAndCopy, false)
-                : (AfterCaptureAction.PreviewOnly, false),
-            1 => preference.Copy
-                ? (AfterCaptureAction.PreviewAndCopy, true)
-                : (AfterCaptureAction.PreviewOnly, true),
+            0 => (copy ? AfterCaptureAction.PreviewAndCopy : AfterCaptureAction.PreviewOnly, false),
+            1 => (copy ? AfterCaptureAction.PreviewAndCopy : AfterCaptureAction.PreviewOnly, true),
             3 => (AfterCaptureAction.OpenInSystemViewer, false),
-            _ => preference.Copy
-                ? (AfterCaptureAction.CopyToClipboard, false)
-                : (AfterCaptureAction.None, false)
+            _ => (copy ? AfterCaptureAction.CopyToClipboard : AfterCaptureAction.None, false)
         };
 
         settings.AfterCapture = action;
@@ -81,7 +104,7 @@ public static class AfterCapturePreferences
         if (actionKey is not null)
             parts.Add(translate(actionKey));
 
-        // Step 3: copy to clipboard (optional modifier)
+        // Step 3: copy to clipboard (optional modifier from global auto-copy)
         if (preference.Copy)
             parts.Add(translate("Outcome step: copy to clipboard"));
 

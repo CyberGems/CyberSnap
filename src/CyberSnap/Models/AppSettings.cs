@@ -198,7 +198,33 @@ public sealed class AppSettings
     public int OcrModelQuality { get; set; } // 0 = Fast (~1 MB), 1 = Standard (~4 MB)
     public string OcrDefaultTranslateFrom { get; set; } = "auto";
     public string OcrDefaultTranslateTo { get; set; } = "auto";
+    /// <summary>
+    /// Legacy OCR-only alias. Kept in sync with global auto-copy + OCR exclusion
+    /// (<see cref="Helpers.AutoCopyPreferences"/>). Prefer AutoCopy* settings for new code.
+    /// </summary>
     public bool OcrAutoCopyToClipboard { get; set; }
+
+    /// <summary>
+    /// Global master: when true, finished results are copied unless the kind is excluded.
+    /// Covers screenshots, OCR text, and video/GIF recordings.
+    /// </summary>
+    public bool AutoCopyToClipboard { get; set; } = true;
+
+    /// <summary>When true, image captures are not auto-copied even if the global master is on.</summary>
+    public bool AutoCopyExcludeImages { get; set; }
+
+    /// <summary>When true, OCR text is not auto-copied even if the global master is on.</summary>
+    public bool AutoCopyExcludeOcr { get; set; } = true;
+
+    /// <summary>When true, video/GIF files are not auto-copied even if the global master is on.</summary>
+    public bool AutoCopyExcludeRecording { get; set; }
+
+    /// <summary>
+    /// 0 = not yet migrated from AfterCapture.Copy / OcrAutoCopyToClipboard.
+    /// 1 = global auto-copy schema.
+    /// </summary>
+    public int AutoCopySettingsSchemaVersion { get; set; }
+
     public bool OcrResultWindowPinnedByDefault { get; set; } = true;
     public bool OcrTranslationPanelExpanded { get; set; }
     public string? GoogleTranslateApiKey { get; set; }

@@ -219,8 +219,8 @@ public partial class SettingsWindow
 
             var afterCaptureView = GetAfterCaptureViewPreference();
             AfterCaptureCombo.SelectedIndex = afterCaptureView.WindowIndex;
-            AfterCaptureCopyCheck.IsChecked = afterCaptureView.Copy;
             RefreshAfterCaptureSummary(afterCaptureView);
+            ApplyAutoCopyControlsFromSettings(s);
 
             SaveToFileCheck.IsChecked = s.SaveToFile;
             UpdateSaveToFileState();
@@ -261,7 +261,6 @@ public partial class SettingsWindow
             ConfirmBeforeExitCheck.IsChecked = s.ConfirmBeforeExit;
             SelectAppTheme(s.ThemeMode);
             SelectUiScale(s.UiScale);
-            OcrAutoCopyCheck.IsChecked = s.OcrAutoCopyToClipboard;
             CrosshairGuidesCheck.IsChecked = s.ShowCrosshairGuides;
             ShowCaptureMagnifierCheck.IsChecked = s.ShowCaptureMagnifier;
             ShowSelectionSizeCheck.IsChecked = s.ShowSelectionSize;

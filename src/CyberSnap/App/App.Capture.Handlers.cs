@@ -64,7 +64,8 @@ public partial class App
                 Dispatcher.BeginInvoke(() =>
                 {
                     var action = NormalizeAfterCaptureAction(settings.AfterCapture);
-                    if (ShouldCopyAfterCapture(action))
+                    // B1: image auto-copy is independent of the post-capture destination window.
+                    if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
                         TryCopyCaptureOutputToClipboard(persisted.Output, persisted.FilePath);
                     ResetCapturing();
 
@@ -444,9 +445,6 @@ public partial class App
             ? action
             : AfterCaptureAction.PreviewAndCopy;
 
-    private static bool ShouldCopyAfterCapture(AfterCaptureAction action) =>
-        action is AfterCaptureAction.CopyToClipboard or AfterCaptureAction.PreviewAndCopy;
-
     private static bool ShouldPreviewAfterCapture(AfterCaptureAction action) =>
         action is AfterCaptureAction.PreviewAndCopy or AfterCaptureAction.PreviewOnly;
 
@@ -493,7 +491,7 @@ public partial class App
                     MarkFirstTime(_settingsService.Settings.HasFirstOcr,
                         () => _settingsService.Settings.HasFirstOcr = true, "First OCR", "ocr");
 
-                    if (_settingsService.Settings.OcrAutoCopyToClipboard)
+                    if (Helpers.AutoCopyPreferences.ShouldCopy(_settingsService.Settings, Helpers.AutoCopyKind.Ocr))
                     {
                         var copied = TryCopyCaptureTextToClipboard(text);
                         ToastWindow.Show(copied

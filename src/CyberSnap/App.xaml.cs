@@ -436,6 +436,30 @@ public partial class App : Application
         _widgetWindow?.RefreshEnableEditorToggle();
     }
 
+    // Settings → widget: push the global Auto-copy master onto the widget toggle.
+    public void SyncWidgetAutoCopyToggle()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(SyncWidgetAutoCopyToggle);
+            return;
+        }
+
+        _widgetWindow?.RefreshAutoCopyToggle();
+    }
+
+    // Widget → Settings: when the widget's auto-copy master changes, refresh Settings controls.
+    public void SyncSettingsAutoCopyChecks()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(SyncSettingsAutoCopyChecks);
+            return;
+        }
+
+        _settingsWindow?.RefreshAutoCopyChecks();
+    }
+
     // Settings → widget: push the AlwaysOnTop value onto the widget window.
     public void SyncWidgetAlwaysOnTop(bool alwaysOnTop)
     {
