@@ -893,10 +893,10 @@ public partial class SettingsWindow
         {
             // General / Startup
             "startwithwindows"          => StartWithWindowsCheck,
-            "aftercapture"              => AfterCaptureCombo,
-            // General / Workflow
-            "autocopytoclipboard"       => AutoCopyToClipboardCheck,
-            "autocopy"                  => AutoCopyToClipboardCheck,
+            "aftercapture"              => AfterCaptureOutcomeEditor,
+            // General / Behavior after captures
+            "autocopytoclipboard"       => AfterCaptureOutcomeEditor,
+            "autocopy"                  => AfterCaptureOutcomeEditor,
             "autocopyexcludeimages"     => AutoCopyExcludeImagesCheck,
             "autocopyexcludeocr"        => AutoCopyExcludeOcrCheck,
             "autocopyexcluderecording"  => AutoCopyExcludeRecordingCheck,

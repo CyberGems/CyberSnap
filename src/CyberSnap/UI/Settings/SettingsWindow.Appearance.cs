@@ -217,9 +217,7 @@ public partial class SettingsWindow
                 ? (int)s.CenterSelectionAspectRatio
                 : 0;
 
-            var afterCaptureView = GetAfterCaptureViewPreference();
-            AfterCaptureCombo.SelectedIndex = afterCaptureView.WindowIndex;
-            RefreshAfterCaptureSummary(afterCaptureView);
+            AfterCaptureOutcomeEditor?.LoadFromSettings(s);
             ApplyAutoCopyControlsFromSettings(s);
 
             SaveToFileCheck.IsChecked = s.SaveToFile;

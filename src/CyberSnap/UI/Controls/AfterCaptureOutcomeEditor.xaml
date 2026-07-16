@@ -1,0 +1,41 @@
+<UserControl x:Class="CyberSnap.UI.Controls.AfterCaptureOutcomeEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:Services="clr-namespace:CyberSnap.Services"
+             x:Name="Root">
+    <StackPanel>
+        <TextBlock x:Name="ActiveLabel"
+                   Text="Active"
+                   FontSize="11"
+                   FontWeight="SemiBold"
+                   Opacity="0.75"
+                   Margin="0,0,0,6"
+                   Services:LocalizationService.SourceText="Active outcome"
+                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+        <Border Background="{DynamicResource ThemeInputBackgroundBrush}"
+                BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="8,8"
+                MinHeight="44">
+            <WrapPanel x:Name="ActivePanel" Orientation="Horizontal"/>
+        </Border>
+
+        <TextBlock x:Name="AvailableLabel"
+                   Text="Available"
+                   FontSize="11"
+                   FontWeight="SemiBold"
+                   Opacity="0.75"
+                   Margin="0,12,0,6"
+                   Services:LocalizationService.SourceText="Available outcome"
+                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+        <Border Background="{DynamicResource ThemeInputBackgroundBrush}"
+                BorderBrush="{DynamicResource ThemeInputBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="8,8"
+                MinHeight="44">
+            <WrapPanel x:Name="AvailablePanel" Orientation="Horizontal"/>
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -76,7 +76,13 @@ public partial class SettingsWindow : Window
                 _lastNonMinimizedState = WindowState;
             }
         };
-        LocalizationChanged += () => RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
+        LocalizationChanged += () =>
+        {
+            AfterCaptureOutcomeEditor?.RefreshLocalization();
+            AfterCaptureOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
+        };
+        if (AfterCaptureOutcomeEditor != null)
+            AfterCaptureOutcomeEditor.OutcomeChanged += AfterCaptureOutcomeEditor_OutcomeChanged;
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
         SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopyToClipboardChanged;
         SettingsService.AutoCopyToClipboardChanged += OnAutoCopyToClipboardChanged;
@@ -310,72 +316,60 @@ public partial class SettingsWindow : Window
         ApplyThemeColors();
     }
 
-    private void AfterCaptureCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void AfterCaptureOutcomeEditor_OutcomeChanged()
     {
-        if (!IsLoaded || _suppressCaptureSavePreferenceChange || _suppressGeneralPreferenceChange) return;
+        if (!IsLoaded || _suppressGeneralPreferenceChange || _suppressAutoCopyPreferenceChange) return;
+        if (AfterCaptureOutcomeEditor is null) return;
 
-        // "Editor", "Save only" and "System viewer" require saving to file
-        if (AfterCaptureCombo.SelectedIndex >= 1 && SaveToFileCheck.IsChecked != true)
-        {
-            SaveToFileCheck.IsChecked = true;
-        }
+        var previous = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+        var selected = AfterCaptureOutcomeEditor.State;
 
-        var previous = GetAfterCaptureViewPreference();
-        var selected = GetAfterCaptureViewPreferenceFromControls();
-
-        // Lives on General → Behavior after captures; status goes to GeneralPreferenceStatusText.
         UpdateGeneralPreference(
-            "settings.after-capture",
+            "settings.after-capture-outcome",
             "After capture",
             previous,
             selected,
             value =>
             {
-                SetAfterCaptureViewPreference(value);
-                RefreshAfterCaptureSummary(value);
-                UpdateSaveToFileState();
-                // Keep the notification dual preview's emphasis in step with the editor state.
+                AfterCaptureOutcomeModel.ApplyToSettings(value, _settingsService.Settings);
+            },
+            value =>
+            {
+                AfterCaptureOutcomeEditor.LoadFromSettings(_settingsService.Settings);
+                // If rollback, restore settings snapshot already in _settingsService from setValue(previous).
+                SyncSaveToFileCheckFromSettings();
                 RefreshEditorPreviewState();
             },
             value =>
             {
-                ApplyAfterCaptureViewPreference(value);
-                ((App)Application.Current).RefreshWidgetWindowLayout();
+                SyncSaveToFileCheckFromSettings();
+                UpdateSaveToFileState();
+                SettingsService.PublishAutoCopyState(_settingsService.Settings);
+                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+                ((App)Application.Current).SyncWidgetEnableEditorToggle();
                 RefreshEditorPreviewState();
-            },
-            value => ((App)Application.Current).RefreshWidgetWindowLayout());
+            });
     }
 
-    private AfterCaptureViewPreference GetAfterCaptureViewPreference() =>
-        AfterCapturePreferences.FromSettings(_settingsService.Settings);
-
-    private static void SetAfterCaptureViewPreference(AfterCaptureViewPreference preference, AppSettings settings) =>
-        AfterCapturePreferences.ApplyDestinationToSettings(preference.WindowIndex, settings);
-
-    private void SetAfterCaptureViewPreference(AfterCaptureViewPreference preference) =>
-        SetAfterCaptureViewPreference(preference, _settingsService.Settings);
-
-    private void ApplyAfterCaptureViewPreference(AfterCaptureViewPreference preference)
+    private void SyncSaveToFileCheckFromSettings()
     {
-        AfterCaptureCombo.SelectedIndex = preference.WindowIndex;
-        RefreshAfterCaptureSummary(preference);
-    }
-
-    private AfterCaptureViewPreference GetAfterCaptureViewPreferenceFromControls() =>
-        new(
-            AfterCaptureCombo.SelectedIndex,
-            AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Image));
-
-    private void RefreshAfterCaptureSummary(AfterCaptureViewPreference preference)
-    {
-        bool saveToFile = SaveToFileCheck.IsChecked == true;
-        // Always re-read copy from global auto-copy so the summary stays accurate.
-        var live = preference with
+        _suppressCaptureSavePreferenceChange = true;
+        try
         {
-            Copy = AutoCopyPreferences.ShouldCopy(_settingsService.Settings, AutoCopyKind.Image)
-        };
-        AfterCaptureSummaryText.Text = AfterCapturePreferences.BuildSummary(
-            live, saveToFile, LocalizationService.Translate);
+            SaveToFileCheck.IsChecked = _settingsService.Settings.SaveToFile;
+            SaveDirPanel.Visibility = _settingsService.Settings.SaveToFile ? Visibility.Visible : Visibility.Collapsed;
+        }
+        finally
+        {
+            _suppressCaptureSavePreferenceChange = false;
+        }
+    }
+
+    private void RefreshAfterCaptureOutcomeEditor()
+    {
+        if (AfterCaptureOutcomeEditor is null) return;
+        AfterCaptureOutcomeEditor.LoadFromSettings(_settingsService.Settings);
+        UpdateSaveToFileState();
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
@@ -440,8 +434,9 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
-        // "Editor", "Save only", and "System viewer" modes require save-to-file
-        if (AfterCaptureCombo.SelectedIndex >= 1 && SaveToFileCheck.IsChecked != true)
+        // Editor / System viewer require save-to-file (locked on the outcome pills too).
+        var outcome = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+        if (outcome.RequiresSave && SaveToFileCheck.IsChecked != true)
         {
             SaveToFileCheck.IsChecked = true;
             return;
@@ -462,14 +457,19 @@ public partial class SettingsWindow : Window
                 SaveDirPanel.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
                 if (value && !wasVisible)
                     AnimateHighlight(SaveDirPanel);
-                RefreshAfterCaptureSummary(GetAfterCaptureViewPreferenceFromControls());
+                RefreshAfterCaptureOutcomeEditor();
             },
-            () => SaveDirPanel.Visibility = selected ? Visibility.Visible : Visibility.Collapsed);
+            () =>
+            {
+                SaveDirPanel.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+                RefreshAfterCaptureOutcomeEditor();
+            });
     }
 
     private void UpdateSaveToFileState()
     {
-        bool requiresSaveToFile = AfterCaptureCombo.SelectedIndex >= 1;
+        var outcome = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+        bool requiresSaveToFile = outcome.RequiresSave;
         SaveToFileCheck.IsEnabled = !requiresSaveToFile;
         SaveToFileCheck.Opacity = requiresSaveToFile ? 0.5 : 1.0;
     }
