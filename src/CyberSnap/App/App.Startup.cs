@@ -66,6 +66,32 @@ public partial class App
                 _settingsService.Settings.OcrAutoCopyToClipboard = value;
             }
         };
+        SettingsService.AutoCopyToClipboardChanged += value =>
+        {
+            if (_settingsService != null)
+            {
+                _settingsService.Settings.AutoCopyToClipboard = value;
+                // Keep kind flags / legacy alias consistent with the latest static mutation.
+                try
+                {
+                    var fresh = SettingsService.LoadStatic();
+                    if (fresh != null)
+                    {
+                        _settingsService.Settings.AutoCopyExcludeImages = fresh.AutoCopyExcludeImages;
+                        _settingsService.Settings.AutoCopyExcludeOcr = fresh.AutoCopyExcludeOcr;
+                        _settingsService.Settings.AutoCopyExcludeRecording = fresh.AutoCopyExcludeRecording;
+                        _settingsService.Settings.OcrAutoCopyToClipboard = fresh.OcrAutoCopyToClipboard;
+                        _settingsService.Settings.AfterCapture = fresh.AfterCapture;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppDiagnostics.LogWarning("startup.auto-copy-sync", ex.Message, ex);
+                }
+            }
+
+            try { SyncWidgetAutoCopyToggle(); } catch (Exception ex) { AppDiagnostics.LogWarning("startup.auto-copy-widget-sync", ex.Message, ex); }
+        };
         _settingsService.SaveFailed += message =>
         {
             _ = Dispatcher.BeginInvoke(() =>

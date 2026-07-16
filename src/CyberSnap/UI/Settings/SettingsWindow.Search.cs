@@ -894,6 +894,12 @@ public partial class SettingsWindow
             // General / Startup
             "startwithwindows"          => StartWithWindowsCheck,
             "aftercapture"              => AfterCaptureCombo,
+            // General / Workflow
+            "autocopytoclipboard"       => AutoCopyToClipboardCheck,
+            "autocopy"                  => AutoCopyToClipboardCheck,
+            "autocopyexcludeimages"     => AutoCopyExcludeImagesCheck,
+            "autocopyexcludeocr"        => AutoCopyExcludeOcrCheck,
+            "autocopyexcluderecording"  => AutoCopyExcludeRecordingCheck,
             // General / Output
             "savetofile"                => SaveToFileCheck,
             "savedirectory"             => SaveDirBox,

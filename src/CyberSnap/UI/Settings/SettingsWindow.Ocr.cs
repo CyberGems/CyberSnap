@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
+using CyberSnap.Helpers;
 using CyberSnap.Services;
 using ComboBox = System.Windows.Controls.ComboBox;
 using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
@@ -27,7 +28,9 @@ public partial class SettingsWindow
         {
             LoadOcrLanguageOptions();
             LoadTranslateLanguageCombos();
-            OcrAutoCopyCheck.IsChecked = _settingsService.Settings.OcrAutoCopyToClipboard;
+            if (AutoCopyExcludeOcrCheck != null)
+                AutoCopyExcludeOcrCheck.IsChecked = _settingsService.Settings.AutoCopyExcludeOcr;
+            UpdateAutoCopyExcludeEnabledState();
             OcrPinByDefaultCheck.IsChecked = _settingsService.Settings.OcrResultWindowPinnedByDefault;
             GoogleApiKeyBox.Password = _settingsService.Settings.GoogleTranslateApiKey ?? "";
         }
@@ -118,23 +121,25 @@ public partial class SettingsWindow
             SetOcrPreferenceStatus);
     }
 
-    private void OcrAutoCopyCheck_Changed(object sender, RoutedEventArgs e)
+    private void AutoCopyExcludeOcrCheck_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || _suppressOcrPreferenceChange) return;
+        if (!IsLoaded || _suppressOcrPreferenceChange || _suppressAutoCopyPreferenceChange) return;
 
-        var previous = _settingsService.Settings.OcrAutoCopyToClipboard;
-        var selected = OcrAutoCopyCheck.IsChecked == true;
+        var previous = _settingsService.Settings.AutoCopyExcludeOcr;
+        var selected = AutoCopyExcludeOcrCheck.IsChecked == true;
         UpdateOcrPreference(
-            "settings.ocr-auto-copy",
-            "OCR auto-copy",
+            "settings.auto-copy-exclude-ocr",
+            "Don't auto-copy OCR text",
             previous,
             selected,
-            value => {
-                _settingsService.Settings.OcrAutoCopyToClipboard = value;
-                SettingsService.SetOcrAutoCopyToClipboard(value);
-            },
-            value => OcrAutoCopyCheck.IsChecked = value,
-            SetOcrPreferenceStatus);
+            value => AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Ocr, value),
+            value => AutoCopyExcludeOcrCheck.IsChecked = value,
+            SetOcrPreferenceStatus,
+            _ =>
+            {
+                SettingsService.PublishAutoCopyState(_settingsService.Settings);
+                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+            });
     }
 
     private void OcrPinByDefaultCheck_Changed(object sender, RoutedEventArgs e)
@@ -470,15 +475,7 @@ public partial class SettingsWindow
             return;
         }
 
-        _suppressOcrPreferenceChange = true;
-        try
-        {
-            _settingsService.Settings.OcrAutoCopyToClipboard = value;
-            OcrAutoCopyCheck.IsChecked = value;
-        }
-        finally
-        {
-            _suppressOcrPreferenceChange = false;
-        }
+        // Legacy event: refresh full auto-copy UI (master + exclusions).
+        RefreshAutoCopyChecks();
     }
 }

@@ -180,7 +180,10 @@ public partial class App
                             AppDiagnostics.LogError("capture.recording-history", ex, $"Failed to save recording history for {Path.GetFileName(path)}.");
                         }
 
-                        var copiedToClipboard = TryCopyRecordingFileToClipboard(path);
+                        bool autoCopyRecording = Helpers.AutoCopyPreferences.ShouldCopy(s, Helpers.AutoCopyKind.Recording);
+                        bool? copiedToClipboard = autoCopyRecording
+                            ? TryCopyRecordingFileToClipboard(path)
+                            : null;
 
                         // Count toward milestones; any earned celebration shows as a separate
                         // delayed follow-up toast, so the recording toast keeps its own text.
@@ -267,14 +270,24 @@ public partial class App
         thread.Start();
     }
 
-    private void ShowRecordingToast(string path, Bitmap? firstFrame, bool copiedToClipboard, bool isGif)
+    /// <param name="copiedToClipboard">
+    /// true = copied, false = copy attempted and failed, null = auto-copy skipped for recordings.
+    /// </param>
+    private void ShowRecordingToast(string path, Bitmap? firstFrame, bool? copiedToClipboard, bool isGif)
     {
+        string copyStatus = copiedToClipboard switch
+        {
+            true => LocalizationService.Translate("File copied to clipboard"),
+            false => LocalizationService.Translate("Saved; clipboard copy failed"),
+            null => LocalizationService.Translate("Saved")
+        };
+
         if (firstFrame != null)
         {
             ToastWindow.Show(ToastSpec.ImagePreview(
                 firstFrame,
                 isGif ? LocalizationService.Translate("GIF recorded") : LocalizationService.Translate("Video recorded"),
-                copiedToClipboard ? LocalizationService.Translate("File copied to clipboard") : LocalizationService.Translate("Saved; clipboard copy failed"),
+                copyStatus,
                 path,
                 false,
                 transparentShell: false,
@@ -288,7 +301,6 @@ public partial class App
             string size = fi.Length > 1024 * 1024
                 ? $"{fi.Length / 1024.0 / 1024.0:F1} MB"
                 : $"{fi.Length / 1024:N0} KB";
-            var copyStatus = copiedToClipboard ? LocalizationService.Translate("File copied to clipboard") : LocalizationService.Translate("Saved; clipboard copy failed");
             ToastWindow.Show(ToastSpec.Standard($"{label} recorded", $"{fi.Name} · {size} · {copyStatus}", path));
         }
     }

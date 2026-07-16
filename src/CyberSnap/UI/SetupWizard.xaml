@@ -823,13 +823,13 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                                        <TextBlock Text="Copy capture to clipboard" FontSize="12"
+                                        <TextBlock Text="Auto-copy results" FontSize="12"
                                                    Foreground="{DynamicResource WizFg}"/>
-                                        <TextBlock Text="Automatically copy the saved image to the clipboard."
+                                        <TextBlock Text="Copy captures, OCR text, and recordings to the clipboard when they finish."
                                                    FontSize="11" Foreground="{DynamicResource WizFgMuted}"
                                                    Margin="0,2,0,0" TextWrapping="Wrap" Opacity="0.85"/>
                                     </StackPanel>
-                                    <CheckBox x:Name="WizAfterCaptureCopyCheck" Grid.Column="1" Content=""
+                                    <CheckBox x:Name="WizAutoCopyCheck" Grid.Column="1" Content=""
                                               Style="{StaticResource WizCheckBox}"
                                               Checked="WizAfterCapture_Changed" Unchecked="WizAfterCapture_Changed"/>
                                 </Grid>

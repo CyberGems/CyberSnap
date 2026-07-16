@@ -1129,11 +1129,11 @@ public sealed partial class RegionOverlayForm : Form
         {
             var autoCopy = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
             var autoCopyItem = WindowsMenuRenderer.Item(
-                isSpanish ? "Auto-copiar OCR" : "Auto-copy OCR",
+                isSpanish ? "Auto-copiar texto OCR" : "Auto-copy OCR text",
                 iconSize: 24);
             autoCopyItem.ToolTipText = isSpanish
-                ? "Copiar el texto reconocido sin abrir la ventana de resultados"
-                : "Copy recognized text without opening the result window";
+                ? "Copia el texto OCR al portapapeles (usa el Auto-copy global; no abre la ventana de resultados)"
+                : "Copy OCR text to the clipboard (uses global Auto-copy; skips the result window)";
             autoCopyItem.Image = autoCopy ? FluentIcons.RenderBitmap("check",
                 UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
             autoCopyItem.Click += (_, _) =>
@@ -1214,11 +1214,11 @@ public sealed partial class RegionOverlayForm : Form
         {
             var autoCopy = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
             var autoCopyItem = WindowsMenuRenderer.Item(
-                isSpanish ? "Auto-copiar OCR" : "Auto-copy OCR",
+                isSpanish ? "Auto-copiar texto OCR" : "Auto-copy OCR text",
                 iconSize: 24);
             autoCopyItem.ToolTipText = isSpanish
-                ? "Copiar el texto reconocido sin abrir la ventana de resultados"
-                : "Copy recognized text without opening the result window";
+                ? "Copia el texto OCR al portapapeles (usa el Auto-copy global; no abre la ventana de resultados)"
+                : "Copy OCR text to the clipboard (uses global Auto-copy; skips the result window)";
             autoCopyItem.Image = autoCopy ? FluentIcons.RenderBitmap("check",
                 UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
             autoCopyItem.Click += (_, _) =>

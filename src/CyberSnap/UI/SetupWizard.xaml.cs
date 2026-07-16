@@ -752,7 +752,7 @@ public partial class SetupWizard : Window
         try
         {
             WizAfterCaptureCombo.SelectedIndex = Math.Clamp(preference.WindowIndex, 0, WizAfterCaptureCombo.Items.Count - 1);
-            WizAfterCaptureCopyCheck.IsChecked = preference.Copy;
+            WizAutoCopyCheck.IsChecked = _settingsService.Settings.AutoCopyToClipboard;
             RefreshAfterCaptureSummary(preference);
         }
         finally
@@ -761,10 +761,15 @@ public partial class SetupWizard : Window
         }
     }
 
-    private AfterCaptureViewPreference GetAfterCaptureViewPreferenceFromControls() =>
-        new(
-            Math.Clamp(WizAfterCaptureCombo.SelectedIndex, 0, 2),
-            WizAfterCaptureCopyCheck.IsChecked == true);
+    private AfterCaptureViewPreference GetAfterCaptureViewPreferenceFromControls()
+    {
+        // Wizard Auto-copy checkbox is the global master; summary uses effective image copy.
+        bool master = WizAutoCopyCheck.IsChecked == true;
+        bool imageCopy = master && !_settingsService.Settings.AutoCopyExcludeImages;
+        return new(
+            Math.Clamp(WizAfterCaptureCombo.SelectedIndex, 0, WizAfterCaptureCombo.Items.Count - 1),
+            imageCopy);
+    }
 
     private void RefreshAfterCaptureSummary(AfterCaptureViewPreference preference)
     {
@@ -915,11 +920,19 @@ public partial class SetupWizard : Window
                     var previousSaving = (
                         s.SaveToFile,
                         s.AfterCapture,
-                        s.OpenEditorAfterCapture);
+                        s.OpenEditorAfterCapture,
+                        s.AutoCopyToClipboard,
+                        s.AutoCopyExcludeImages,
+                        s.OcrAutoCopyToClipboard);
                     try
                     {
                         s.SaveToFile = WizSaveToFileCheck.IsChecked == true;
-                        AfterCapturePreferences.ApplyToSettings(GetAfterCaptureViewPreferenceFromControls(), s);
+                        AfterCapturePreferences.ApplyDestinationToSettings(
+                            Math.Clamp(WizAfterCaptureCombo.SelectedIndex, 0, WizAfterCaptureCombo.Items.Count - 1),
+                            s);
+                        AutoCopyPreferences.SetMaster(s, WizAutoCopyCheck.IsChecked == true);
+                        AutoCopyPreferences.SyncAfterCaptureCopyBits(s);
+                        s.AutoCopySettingsSchemaVersion = AutoCopyPreferences.SchemaVersion;
                         _settingsService.Save();
                     }
                     catch
@@ -927,6 +940,9 @@ public partial class SetupWizard : Window
                         s.SaveToFile = previousSaving.SaveToFile;
                         s.AfterCapture = previousSaving.AfterCapture;
                         s.OpenEditorAfterCapture = previousSaving.OpenEditorAfterCapture;
+                        s.AutoCopyToClipboard = previousSaving.AutoCopyToClipboard;
+                        s.AutoCopyExcludeImages = previousSaving.AutoCopyExcludeImages;
+                        s.OcrAutoCopyToClipboard = previousSaving.OcrAutoCopyToClipboard;
                         LoadDefaults();
                         throw;
                     }
