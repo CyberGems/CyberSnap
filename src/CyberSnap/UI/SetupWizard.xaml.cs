@@ -43,11 +43,14 @@ public partial class SetupWizard : Window
         _stepSubs = new[] { StepSub1, StepSub2, StepSub3, StepSub4, StepSub5 };
 
         InitializeMainHotkey();
+        if (WizAfterCaptureOutcomeEditor != null)
+            WizAfterCaptureOutcomeEditor.OutcomeChanged += WizAfterCaptureOutcomeEditor_OutcomeChanged;
         LoadDefaults();
         UpdateSteps(_page);
         PopulateLanguages();
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
         RefreshLanguageComboDisplay();
+        WizAfterCaptureOutcomeEditor?.RefreshLocalization();
 
         // Show the first page explicitly (Page0 starts collapsed in XAML)
         Page0.Visibility = Visibility.Visible;
@@ -176,7 +179,7 @@ public partial class SetupWizard : Window
 
         LocalizationService.ApplyCurrentCulture(normalized);
         LocalizationService.ApplyTo(this, normalized);
-        RefreshAfterCaptureSummary(GetAfterCaptureViewPreferenceFromControls());
+        WizAfterCaptureOutcomeEditor?.RefreshLocalization();
         UpdateSaveDirectoryState();
         UpdateNavButtons();
         RefreshLanguageComboDisplay();
@@ -688,7 +691,7 @@ public partial class SetupWizard : Window
         WizEnableSoundsCheck.IsChecked = !s.MuteSounds;
         WizSaveToFileCheck.IsChecked = s.SaveToFile;
         WizCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
-        ApplyAfterCaptureViewPreference(AfterCapturePreferences.FromSettings(s));
+        WizAfterCaptureOutcomeEditor?.LoadFromSettings(s);
         WizSaveDirText.Text = s.SaveDirectory;
         UpdateSaveDirectoryState();
         LoadAppearanceDefaults();
@@ -728,69 +731,65 @@ public partial class SetupWizard : Window
 
     private void WizSaveToFile_Changed(object sender, RoutedEventArgs e)
     {
+        if (_suppressAfterCaptureChange)
+        {
+            UpdateSaveDirectoryState();
+            return;
+        }
+
+        // Keep the Save outcome pill in lockstep with the wizard checkbox.
+        if (WizAfterCaptureOutcomeEditor != null)
+        {
+            var state = WizAfterCaptureOutcomeEditor.State;
+            bool save = WizSaveToFileCheck.IsChecked == true;
+            if (state.RequiresSave && !save)
+            {
+                _suppressAfterCaptureChange = true;
+                try { WizSaveToFileCheck.IsChecked = true; }
+                finally { _suppressAfterCaptureChange = false; }
+                UpdateSaveDirectoryState();
+                return;
+            }
+
+            if (state.Save != save)
+                WizAfterCaptureOutcomeEditor.SetState(state with { Save = save });
+        }
+
         UpdateSaveDirectoryState();
-        RefreshAfterCaptureSummary(GetAfterCaptureViewPreferenceFromControls());
     }
 
     private void UpdateSaveDirectoryState()
     {
-        // When "Editor", "Save only" or "System viewer" is selected, saving to file is mandatory
-        bool requiresSaveToFile = WizAfterCaptureCombo.SelectedIndex >= 1;
+        var outcome = WizAfterCaptureOutcomeEditor?.State
+            ?? AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+        bool requiresSaveToFile = outcome.RequiresSave;
         WizSaveToFileCheck.IsEnabled = !requiresSaveToFile;
         WizSaveToFileCheck.Opacity = requiresSaveToFile ? 0.5 : 1.0;
 
-        var saveEnabled = WizSaveToFileCheck.IsChecked == true;
+        var saveEnabled = WizSaveToFileCheck.IsChecked == true || requiresSaveToFile;
         WizSaveDirRow.Opacity = saveEnabled ? 1 : 0.48;
         WizBrowseSaveDirBtn.IsEnabled = saveEnabled;
         WizSaveDirText.Visibility = saveEnabled ? Visibility.Visible : Visibility.Collapsed;
         WizSaveDirDisabledHint.Visibility = saveEnabled ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void ApplyAfterCaptureViewPreference(AfterCaptureViewPreference preference)
+    private void WizAfterCaptureOutcomeEditor_OutcomeChanged()
     {
+        if (_suppressAfterCaptureChange)
+            return;
+
+        var state = WizAfterCaptureOutcomeEditor.State;
         _suppressAfterCaptureChange = true;
         try
         {
-            WizAfterCaptureCombo.SelectedIndex = Math.Clamp(preference.WindowIndex, 0, WizAfterCaptureCombo.Items.Count - 1);
-            WizAutoCopyCheck.IsChecked = _settingsService.Settings.AutoCopyToClipboard;
-            RefreshAfterCaptureSummary(preference);
+            WizSaveToFileCheck.IsChecked = state.EffectiveSave;
         }
         finally
         {
             _suppressAfterCaptureChange = false;
         }
-    }
-
-    private AfterCaptureViewPreference GetAfterCaptureViewPreferenceFromControls()
-    {
-        // Wizard Auto-copy checkbox is the global master; summary uses effective image copy.
-        bool master = WizAutoCopyCheck.IsChecked == true;
-        bool imageCopy = master && !_settingsService.Settings.AutoCopyExcludeImages;
-        return new(
-            Math.Clamp(WizAfterCaptureCombo.SelectedIndex, 0, WizAfterCaptureCombo.Items.Count - 1),
-            imageCopy);
-    }
-
-    private void RefreshAfterCaptureSummary(AfterCaptureViewPreference preference)
-    {
-        bool saveToFile = WizSaveToFileCheck.IsChecked == true;
-        WizAfterCaptureSummaryText.Text = AfterCapturePreferences.BuildSummary(
-            preference, saveToFile, LocalizationService.Translate);
-    }
-
-    private void WizAfterCapture_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_suppressAfterCaptureChange)
-            return;
-
-        // "Editor", "Save only" and "System viewer" require saving to file
-        if (WizAfterCaptureCombo.SelectedIndex >= 1 && WizSaveToFileCheck.IsChecked != true)
-        {
-            WizSaveToFileCheck.IsChecked = true;
-        }
 
         UpdateSaveDirectoryState();
-        RefreshAfterCaptureSummary(GetAfterCaptureViewPreferenceFromControls());
     }
 
     private void BrowseSaveDir_Click(object sender, RoutedEventArgs e)
@@ -923,15 +922,17 @@ public partial class SetupWizard : Window
                         s.OpenEditorAfterCapture,
                         s.AutoCopyToClipboard,
                         s.AutoCopyExcludeImages,
+                        s.AutoCopyExcludeOcr,
+                        s.AutoCopyExcludeRecording,
                         s.OcrAutoCopyToClipboard);
                     try
                     {
-                        s.SaveToFile = WizSaveToFileCheck.IsChecked == true;
-                        AfterCapturePreferences.ApplyDestinationToSettings(
-                            Math.Clamp(WizAfterCaptureCombo.SelectedIndex, 0, WizAfterCaptureCombo.Items.Count - 1),
-                            s);
-                        AutoCopyPreferences.SetMaster(s, WizAutoCopyCheck.IsChecked == true);
-                        AutoCopyPreferences.SyncAfterCaptureCopyBits(s);
+                        var state = WizAfterCaptureOutcomeEditor.State with
+                        {
+                            Save = WizSaveToFileCheck.IsChecked == true
+                                   || WizAfterCaptureOutcomeEditor.State.RequiresSave
+                        };
+                        AfterCaptureOutcomeModel.ApplyToSettings(state, s);
                         s.AutoCopySettingsSchemaVersion = AutoCopyPreferences.SchemaVersion;
                         _settingsService.Save();
                     }
@@ -942,6 +943,8 @@ public partial class SetupWizard : Window
                         s.OpenEditorAfterCapture = previousSaving.OpenEditorAfterCapture;
                         s.AutoCopyToClipboard = previousSaving.AutoCopyToClipboard;
                         s.AutoCopyExcludeImages = previousSaving.AutoCopyExcludeImages;
+                        s.AutoCopyExcludeOcr = previousSaving.AutoCopyExcludeOcr;
+                        s.AutoCopyExcludeRecording = previousSaving.AutoCopyExcludeRecording;
                         s.OcrAutoCopyToClipboard = previousSaving.OcrAutoCopyToClipboard;
                         LoadDefaults();
                         throw;

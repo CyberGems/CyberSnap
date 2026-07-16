@@ -2575,98 +2575,24 @@
                                Text="Behavior after captures" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                            <Grid Style="{StaticResource SettingRow}" Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,10,0">
+                                <Border Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,10,0">
                                     <TextBlock Text="&#xE930;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
-                                <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Top">
+                                <StackPanel Grid.Column="1" VerticalAlignment="Top">
                                     <TextBlock Text="After capture" Style="{StaticResource SettingTitle}"
                                                Services:LocalizationService.SourceText="After capture"/>
-                                    <TextBlock Text="Choose what happens when a capture finishes." Style="{StaticResource SettingDescription}"
-                                               Services:LocalizationService.SourceText="Choose what happens when a capture finishes."/>
+                                    <TextBlock Text="Choose what happens when a capture finishes. Add steps with + and remove them with ×."
+                                               Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Choose what happens when a capture finishes. Add steps with + and remove them with ×."
+                                               TextWrapping="Wrap"/>
                                 </StackPanel>
-                                <ComboBox x:Name="AfterCaptureCombo" Grid.Row="0" Grid.Column="2" MinWidth="150"
-                                          VerticalAlignment="Top"
-                                          AutomationProperties.Name="Open after capture"
-                                          ToolTip="Choose what CyberSnap opens after saving the selection."
-                                          SelectionChanged="AfterCaptureCombo_SelectionChanged">
-                                    <ComboBoxItem Services:LocalizationService.SourceContent="Notification"
-                                                  ToolTip="Open the preview window after capture."
-                                                  AutomationProperties.Name="Open notification after capture"
-                                                  AutomationProperties.HelpText="Show the post-capture notification window."/>
-                                    <ComboBoxItem Services:LocalizationService.SourceContent="Editor"
-                                                  ToolTip="Open the editor after capture."
-                                                  AutomationProperties.Name="Open editor after capture"
-                                                  AutomationProperties.HelpText="Open the post-capture editor directly."/>
-                                    <ComboBoxItem Services:LocalizationService.SourceContent="Save only"
-                                                  ToolTip="Save the capture without opening a window."
-                                                  AutomationProperties.Name="Save capture only"
-                                                  AutomationProperties.HelpText="Write the file and skip both preview and editor."/>
-                                    <ComboBoxItem Services:LocalizationService.SourceContent="System viewer"
-                                                  ToolTip="Open the capture in the system default viewer."
-                                                  AutomationProperties.Name="Open in system viewer"
-                                                  AutomationProperties.HelpText="Open the saved file in the system default viewer (such as CyberViewer)."/>
-                                </ComboBox>
-
-                                <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                                        Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                        BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Padding="9,6"
-                                        Margin="0,12,0,0">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="&#xE946;"
-                                                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                   Opacity="0.9"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,8,0"/>
-                                        <TextBlock x:Name="AfterCaptureSummaryText" Grid.Column="1"
-                                                   FontSize="11.5"
-                                                   FontFamily="Segoe UI Variable Text"
-                                                   Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                   Opacity="0.9"
-                                                   VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Border>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8C8;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Auto-copy results" Style="{StaticResource SettingTitle}"
-                                               Services:LocalizationService.SourceText="Auto-copy results"/>
-                                    <TextBlock Text="Copy captures, OCR text, and recordings to the clipboard when they finish." Style="{StaticResource SettingDescription}"
-                                               Services:LocalizationService.SourceText="Copy captures, OCR text, and recordings to the clipboard when they finish."/>
-                                </StackPanel>
-                                <CheckBox x:Name="AutoCopyToClipboardCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Auto-copy results"
-                                          ToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish."
-                                          Services:LocalizationService.SourceToolTip="Copy captures, OCR text, and recordings to the clipboard when they finish."
-                                          Checked="AutoCopyToClipboardCheck_Changed" Unchecked="AutoCopyToClipboardCheck_Changed"/>
-                            </Grid>
+                            <controls:AfterCaptureOutcomeEditor x:Name="AfterCaptureOutcomeEditor"/>
                         </StackPanel>
                     </Border>
 

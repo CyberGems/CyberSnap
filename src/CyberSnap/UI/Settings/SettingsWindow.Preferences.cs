@@ -1024,36 +1024,7 @@ public partial class SettingsWindow
         finally { _suppressGeneralPreferenceChange = false; }
     }
 
-    // ── Global auto-copy (Workflow) + per-kind exclusions ──────────────────────
-
-    private void AutoCopyToClipboardCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressGeneralPreferenceChange || _suppressAutoCopyPreferenceChange) return;
-
-        var previous = _settingsService.Settings.AutoCopyToClipboard;
-        var selected = AutoCopyToClipboardCheck.IsChecked == true;
-        UpdateGeneralPreference(
-            "settings.auto-copy",
-            "Auto-copy results",
-            previous,
-            selected,
-            value =>
-            {
-                AutoCopyPreferences.SetMaster(_settingsService.Settings, value);
-                AutoCopyPreferences.SyncAfterCaptureCopyBits(_settingsService.Settings);
-            },
-            value =>
-            {
-                ApplyAutoCopyControlsFromSettings(_settingsService.Settings);
-            },
-            value =>
-            {
-                UpdateAutoCopyExcludeEnabledState();
-                RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
-                SettingsService.PublishAutoCopyState(_settingsService.Settings);
-                ((App)Application.Current).SyncWidgetAutoCopyToggle();
-            });
-    }
+    // ── Global auto-copy exclusions (master lives in after-capture outcome pills) ─
 
     private void AutoCopyExcludeImagesCheck_Changed(object sender, RoutedEventArgs e)
     {
@@ -1074,7 +1045,7 @@ public partial class SettingsWindow
             value => AutoCopyExcludeImagesCheck.IsChecked = value,
             () =>
             {
-                RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
+                RefreshAfterCaptureOutcomeEditor();
                 SettingsService.PublishAutoCopyState(_settingsService.Settings);
                 ((App)Application.Current).SyncWidgetAutoCopyToggle();
             });
@@ -1128,7 +1099,7 @@ public partial class SettingsWindow
         }
 
         ApplyAutoCopyControlsFromSettings(_settingsService.Settings);
-        RefreshAfterCaptureSummary(GetAfterCaptureViewPreference());
+        RefreshAfterCaptureOutcomeEditor();
     }
 
     private void OnAutoCopyToClipboardChanged(bool value)
@@ -1151,8 +1122,6 @@ public partial class SettingsWindow
         _suppressRecordingPreferenceChange = true;
         try
         {
-            if (AutoCopyToClipboardCheck != null)
-                AutoCopyToClipboardCheck.IsChecked = s.AutoCopyToClipboard;
             if (AutoCopyExcludeImagesCheck != null)
                 AutoCopyExcludeImagesCheck.IsChecked = s.AutoCopyExcludeImages;
             if (AutoCopyExcludeOcrCheck != null)
@@ -1160,6 +1129,7 @@ public partial class SettingsWindow
             if (AutoCopyExcludeRecordingCheck != null)
                 AutoCopyExcludeRecordingCheck.IsChecked = s.AutoCopyExcludeRecording;
             UpdateAutoCopyExcludeEnabledState();
+            AfterCaptureOutcomeEditor?.LoadFromSettings(s);
         }
         finally
         {
