@@ -62,6 +62,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private bool _windowStateToggleInProgress;
     private FormWindowState _lastWindowState = FormWindowState.Normal;
     private bool _enableComposited = true;
+    /// <summary>
+    /// True until the first Shown layout/maximize pass finishes. The form opens at Opacity 0
+    /// so toolbar/canvas composition and optional auto-maximize never flash mid-construction.
+    /// </summary>
+    private bool _awaitingInitialReveal = true;
     private bool _messageFilterRegistered;
     private readonly System.Windows.Forms.Timer _saveStatusTimer = new() { Interval = 2200 };
     private readonly System.Windows.Forms.Timer _clipboardMonitorTimer = new() { Interval = 1000 };
@@ -296,6 +301,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (!Visible)
             Show();
 
+        // If restore races the first-open reveal, make sure we are not stuck at Opacity 0.
+        if (_awaitingInitialReveal)
+            RevealEditorWhenReady();
+        else if (Opacity < 1.0)
+            Opacity = 1.0;
+
         Activate();
         BringToFront();
 
@@ -342,6 +353,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
         BackColor = EditorColors.BgPrimary;
         Font = UiChrome.ChromeFont(9f, FontStyle.Regular);
         KeyPreview = true;
+        // Invisible until Shown finishes maximize + layout (see RevealEditorWhenReady).
+        // Matches the Capture Widget pattern: never show an incomplete first frame.
+        Opacity = 0;
 
         var settings = Services.SettingsService.LoadStatic();
         _showTooltips = settings?.EditorShowTooltips ?? true;
@@ -585,22 +599,71 @@ public sealed partial class EditorForm : Form, IMessageFilter
             _lastWindowState = WindowState;
             UpdateStatusBarResponsiveLayout();
         };
-        Shown += (_, _) =>
+        Shown += OnEditorShownFirstTime;
+    }
+
+    /// <summary>
+    /// Completes first-open layout while Opacity is still 0, then reveals the finished window.
+    /// Past flash fixes (WS_EX_COMPOSITED alone) still painted the progressive build because
+    /// Show() made the HWND visible before auto-maximize and nested layout finished.
+    /// </summary>
+    private void OnEditorShownFirstTime(object? sender, EventArgs e)
+    {
+        // One-shot — subsequent Show/restore must not re-enter the reveal path.
+        Shown -= OnEditorShownFirstTime;
+
+        try
         {
             MaybeAutoMaximizeForCapture();
             UpdateWindowChromeRegion();
-            Activate();
-            BringToFront();
             RefreshUi();
             UpdateStatusBarResponsiveLayout();
 
-            // Disable compositing after initial render to avoid layout corruption bugs when losing focus
+            // Force a full layout + paint pass while still invisible.
+            RefreshLayoutAndRedraw();
+
+            // Disable compositing after the initial pass — leaving it on permanently
+            // corrupts layout when the window loses/regains focus (known WinForms issue).
             _enableComposited = false;
             UpdateStyles();
             RefreshLayoutAndRedraw();
+        }
+        finally
+        {
+            // Reveal on the next UI turn so the last paint is committed before the user sees it.
+            if (IsHandleCreated && !IsDisposed)
+                BeginInvoke(new Action(RevealEditorWhenReady));
+            else
+                RevealEditorWhenReady();
+        }
+    }
 
-            _canvas.Focus();
-        };
+    private void RevealEditorWhenReady()
+    {
+        if (IsDisposed || Disposing)
+            return;
+
+        if (_awaitingInitialReveal)
+        {
+            _awaitingInitialReveal = false;
+            try
+            {
+                if (Opacity < 1.0)
+                    Opacity = 1.0;
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("editor.reveal", $"Failed to set Opacity=1: {ex.Message}", ex);
+                try { Opacity = 1.0; } catch { /* last resort ignored */ }
+            }
+        }
+
+        if (!Visible)
+            return;
+
+        Activate();
+        BringToFront();
+        _canvas?.Focus();
     }
 
     private void UpdateStatusBarResponsiveLayout()

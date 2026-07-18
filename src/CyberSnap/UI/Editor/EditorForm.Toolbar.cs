@@ -1210,9 +1210,12 @@ public sealed partial class EditorForm
 
     private static string FormatPanToolTooltip()
     {
-        var text = LocalizationService.Translate("Pan");
+        // Space always enables temporary pan from other tools; when Space is also Pan's
+        // hotkey, a short tap activates Pan permanently instead of restoring the prior tool.
+        var text = LocalizationService.Translate("Pan")
+            + $"  ·  {LocalizationService.Translate("Drag to pan · Hold Space from any tool for temporary pan")}";
         if (EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
-            text += $"  ·  {LocalizationService.Translate("Tap to activate · hold for temporary pan")}";
+            text += $"  ·  {LocalizationService.Translate("Tap Space to activate Pan")}";
         var hotkey = EditorToolHotkeyHelper.GetHotkeyLabel(AnnotationCanvas.CanvasTool.Pan);
         return hotkey is not null ? $"{text}  ({hotkey})" : text;
     }
@@ -1609,8 +1612,8 @@ public sealed partial class EditorForm
 
             AnnotationCanvas.CanvasTool.Pan =>
                 EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey()
-                    ? LocalizationService.Translate("Drag to pan · Scroll to zoom · Tap Space to activate · hold for temporary pan")
-                    : LocalizationService.Translate("Drag to pan the canvas · Scroll wheel to zoom"),
+                    ? LocalizationService.Translate("Drag to pan · Scroll to zoom · Hold Space from other tools for temporary pan · Tap Space to activate")
+                    : LocalizationService.Translate("Drag to pan · Scroll to zoom · Hold Space from other tools for temporary pan"),
 
             // Crop always arms a full-image rect on enter; one hint covers select, adjust, confirm.
             AnnotationCanvas.CanvasTool.Crop =>
