@@ -51,12 +51,6 @@ public sealed partial class RegionOverlayForm
     {
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-        // Dock enter: slide the chrome in from the docked edge (form stays put).
-        GraphicsState? dockState = IsDockEnterAnimating ? g.Save() : null;
-        if (dockState != null)
-            g.TranslateTransform(_dockEnterOffsetX, _dockEnterOffsetY);
-
         var r = new Rectangle(_toolbarRect.X, _toolbarRect.Y,
             _toolbarRect.Width, _toolbarRect.Height);
 
@@ -408,12 +402,10 @@ public sealed partial class RegionOverlayForm
             bool hover = _hoveredButton == i;
             bool isTier2 = i >= drawingStartIdx;
             var tierAccent = isTier2 ? UiChrome.AccentTier2 : UiChrome.AccentColor;
-            float welcome = active ? GetWelcomePulse(_toolbarToolIds[i]) : 0f;
-
             // Stroke width button (shows line thickness preview in current tool color)
             if (_toolbarIcons[i] == "strokeWidth")
             {
-                WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent, welcomePulse: welcome);
+                WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
                 float lineY = btn.Y + btn.Height / 2f;
                 // Inset to roughly match the icon glyphs' footprint so the preview doesn't crowd the
                 // group separator on its left.
@@ -430,14 +422,14 @@ public sealed partial class RegionOverlayForm
                     g.DrawLine(pen, lineX1, lineY, lineX2, lineY);
                 }
                 if (active)
-                    WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent, welcome);
+                    WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
                 continue;
             }
 
             // Color dot button (shows active drawing color)
             if (_toolbarIcons[i] == "color")
             {
-                WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent, welcomePulse: welcome);
+                WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
                 int dotSize = 16;
                 float dx = btn.X + (btn.Width - dotSize) / 2f;
                 float dy = btn.Y + (btn.Height - dotSize) / 2f;
@@ -466,7 +458,7 @@ public sealed partial class RegionOverlayForm
                 using (var hlBrush = new SolidBrush(Color.FromArgb(glossAlpha, 255, 255, 255)))
                     g.FillEllipse(hlBrush, hlX, hlY, hlW, hlH);
                 if (active)
-                    WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent, welcome);
+                    WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
                 continue;
             }
 
@@ -490,14 +482,14 @@ public sealed partial class RegionOverlayForm
                 continue;
             }
 
-            WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent, welcomePulse: welcome);
+            WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
 
             int ia = active ? 255 : hover ? 240 : 200;
             var iconColor = active ? tierAccent : UiChrome.SurfaceTextPrimary;
             DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
 
             if (active)
-                WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent, welcome);
+                WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
 
             // Hold-to-switch affordance on the merged capture button (rect ↔ center).
             if (i == _mergedCaptureButtonIndex)
@@ -568,9 +560,6 @@ public sealed partial class RegionOverlayForm
         {
             g.FillPolygon(brush, points);
         }
-
-        if (dockState != null)
-            g.Restore(dockState);
 
         g.SmoothingMode = SmoothingMode.Default;
         g.PixelOffsetMode = PixelOffsetMode.Default;
