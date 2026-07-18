@@ -905,25 +905,36 @@ public sealed partial class RegionOverlayForm : Form
         PositionToolbarForm();
         RefreshToolbar();
 
-        // Never lerp the layered form across the whole screen (that painted empty mid-screen
-        // content and looked like a glitch). Slide + fade in from the *destination* edge only.
+        // Form stays at the final dock bounds. Only the painted chrome slides in a few pixels
+        // from the docked edge — never change layered alpha (that stuck half-transparent).
         if (!UI.Motion.Disabled && _toolbarForm is { IsDisposed: false, Visible: true })
             StartDockEnterAnimation();
+        else
+            EnsureToolbarFullyOpaque();
     }
 
-    // Dock enter: paint offset + surface alpha. Form stays parked at the final dock bounds.
+    // Dock enter: paint-only offset. Form stays parked; SurfaceAlpha always 255.
     private float _dockEnterT = 1f;
     private float _dockEnterOffsetX;
     private float _dockEnterOffsetY;
     private DateTime _dockEnterStart;
     private System.Windows.Forms.Timer? _dockAnimTimer;
-    private const int DockAnimMs = 240;
-    private const float DockEnterSlidePx = 28f;
+    private const int DockAnimMs = 220;
+    private const float DockEnterSlidePx = 36f;
 
     private bool IsDockEnterAnimating => _dockEnterT < 0.999f;
 
+    private void EnsureToolbarFullyOpaque()
+    {
+        if (_toolbarForm is null || _toolbarForm.IsDisposed) return;
+        _toolbarForm.SurfaceAlpha = 255;
+        MarkToolbarRenderDirty();
+        try { _toolbarForm.UpdateSurface(); } catch { }
+    }
+
     private void StartDockEnterAnimation()
     {
+        EnsureToolbarFullyOpaque();
         _dockEnterT = 0f;
         _dockEnterStart = DateTime.UtcNow;
         ApplyDockEnterVisual(0f);
@@ -939,14 +950,14 @@ public sealed partial class RegionOverlayForm : Form
     {
         if (_toolbarForm is null || _toolbarForm.IsDisposed || IsDisposed || Disposing)
         {
-            StopDockEnterAnimation(snapToEnd: false);
+            StopDockEnterAnimation();
             return;
         }
 
         float raw = (float)(DateTime.UtcNow - _dockEnterStart).TotalMilliseconds / DockAnimMs;
         if (raw >= 1f)
         {
-            StopDockEnterAnimation(snapToEnd: true);
+            StopDockEnterAnimation();
             return;
         }
 
@@ -961,7 +972,6 @@ public sealed partial class RegionOverlayForm : Form
         float inv = 1f - _dockEnterT;
         float slide = DockEnterSlidePx * inv;
 
-        // Start slightly off the docked edge and settle into place.
         _dockEnterOffsetX = 0f;
         _dockEnterOffsetY = 0f;
         switch (ActiveDockSide)
@@ -980,23 +990,20 @@ public sealed partial class RegionOverlayForm : Form
                 break;
         }
 
+        // Always fully opaque — only the paint offset animates.
         if (_toolbarForm is { IsDisposed: false })
         {
-            // Soft fade with the slide (never fully 0 so the first frame still composites).
-            _toolbarForm.SurfaceAlpha = (byte)Math.Clamp((int)Math.Round(30 + 225 * _dockEnterT), 0, 255);
+            _toolbarForm.SurfaceAlpha = 255;
             MarkToolbarRenderDirty();
             try { _toolbarForm.UpdateSurface(); } catch { }
         }
     }
 
-    private void StopDockEnterAnimation(bool snapToEnd)
+    private void StopDockEnterAnimation()
     {
-        if (snapToEnd)
-        {
-            _dockEnterT = 1f;
-            _dockEnterOffsetX = 0f;
-            _dockEnterOffsetY = 0f;
-        }
+        _dockEnterT = 1f;
+        _dockEnterOffsetX = 0f;
+        _dockEnterOffsetY = 0f;
 
         if (_dockAnimTimer != null)
         {
@@ -1004,19 +1011,87 @@ public sealed partial class RegionOverlayForm : Form
             _dockAnimTimer.Tick -= OnDockAnimTick;
         }
 
-        if (_toolbarForm is { IsDisposed: false })
-        {
-            _toolbarForm.SurfaceAlpha = 255;
-            if (snapToEnd)
-            {
-                MarkToolbarRenderDirty();
-                try { _toolbarForm.UpdateSurface(); } catch { }
-            }
-        }
+        EnsureToolbarFullyOpaque();
     }
 
     // Back-compat name used from Dispose.
-    private void StopDockSlideAnimation(bool snapToEnd) => StopDockEnterAnimation(snapToEnd);
+    private void StopDockSlideAnimation(bool snapToEnd) => StopDockEnterAnimation();
+
+    // ── Welcome pulse on the newly selected tool (short-lived, not continuous) ──
+    private string? _welcomePulseToolId;
+    private DateTime _welcomePulseStart;
+    private System.Windows.Forms.Timer? _welcomePulseTimer;
+    private const int WelcomePulseMs = 1300;
+
+    private void StartToolWelcomePulse(string? toolId)
+    {
+        if (string.IsNullOrEmpty(toolId) || UI.Motion.Disabled)
+        {
+            StopToolWelcomePulse();
+            return;
+        }
+
+        _welcomePulseToolId = toolId;
+        _welcomePulseStart = DateTime.UtcNow;
+
+        _welcomePulseTimer?.Stop();
+        _welcomePulseTimer ??= new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _welcomePulseTimer.Tick -= OnWelcomePulseTick;
+        _welcomePulseTimer.Tick += OnWelcomePulseTick;
+        _welcomePulseTimer.Start();
+        UpdateToolbarSurfaceOnly();
+    }
+
+    private void OnWelcomePulseTick(object? sender, EventArgs e)
+    {
+        if (IsDisposed || Disposing || string.IsNullOrEmpty(_welcomePulseToolId))
+        {
+            StopToolWelcomePulse();
+            return;
+        }
+
+        float raw = (float)(DateTime.UtcNow - _welcomePulseStart).TotalMilliseconds / WelcomePulseMs;
+        if (raw >= 1f)
+        {
+            StopToolWelcomePulse();
+            return;
+        }
+
+        UpdateToolbarSurfaceOnly();
+    }
+
+    private void StopToolWelcomePulse()
+    {
+        _welcomePulseToolId = null;
+        if (_welcomePulseTimer != null)
+        {
+            _welcomePulseTimer.Stop();
+            _welcomePulseTimer.Tick -= OnWelcomePulseTick;
+        }
+        if (!IsDisposed && !Disposing)
+            UpdateToolbarSurfaceOnly();
+    }
+
+    /// <summary>
+    /// 0..1 intensity for the short welcome pulse on the active tool, or 0 if none.
+    /// Two soft beats that decay over <see cref="WelcomePulseMs"/>.
+    /// </summary>
+    private float GetWelcomePulse(string? toolId)
+    {
+        if (string.IsNullOrEmpty(toolId)
+            || string.IsNullOrEmpty(_welcomePulseToolId)
+            || !string.Equals(toolId, _welcomePulseToolId, StringComparison.OrdinalIgnoreCase))
+            return 0f;
+
+        float raw = (float)(DateTime.UtcNow - _welcomePulseStart).TotalMilliseconds / WelcomePulseMs;
+        if (raw < 0f || raw >= 1f)
+            return 0f;
+
+        float envelope = 1f - raw; // linear decay
+        // Two peaks across the window.
+        float beat = 0.45f + 0.55f * MathF.Abs(MathF.Sin(raw * MathF.PI * 4f));
+        return Math.Clamp(envelope * beat, 0f, 1f);
+    }
 
     private void CycleStrokeWidth()
     {

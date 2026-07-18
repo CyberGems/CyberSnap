@@ -158,12 +158,18 @@ public sealed partial class RegionOverlayForm
         }
         _moveHoverIndex = -1;
 
+        var previousToolId = _activeToolId;
         _mode = m;
         _activeToolId = toolId ?? _visibleTools.FirstOrDefault(t => t.Mode == m)?.Id;
 
         // Remember annotation tools so the next confirm session can restore them.
         if (ToolDef.IsAnnotationTool(m) && !string.IsNullOrEmpty(_activeToolId))
             LastAnnotationToolChanged?.Invoke(_activeToolId);
+
+        // Short welcome pulse when the user actually switches tools (not every SetMode no-op).
+        if (!string.IsNullOrEmpty(_activeToolId)
+            && !string.Equals(previousToolId, _activeToolId, StringComparison.OrdinalIgnoreCase))
+            StartToolWelcomePulse(_activeToolId);
 
         _hasSelection = false;
         _hasDragged = false;
