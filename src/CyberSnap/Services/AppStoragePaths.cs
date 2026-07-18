@@ -11,6 +11,12 @@ internal static class AppStoragePaths
     public static string SettingsPath => Path.Combine(GetStorageDirectory(), "settings.json");
     public static string LogDirectory => Path.Combine(GetStorageDirectory(), "logs");
 
+    /// <summary>
+    /// Gallery index, thumbnails, and search DB. Never named "History" —
+    /// capture files themselves live only in the user-configured save folder.
+    /// </summary>
+    public static string GalleryDataDirectory => Path.Combine(GetStorageDirectory(), "gallery");
+
     public static string ResolveSettingsPath(string? explicitSettingsPath)
     {
         if (!string.IsNullOrWhiteSpace(explicitSettingsPath))

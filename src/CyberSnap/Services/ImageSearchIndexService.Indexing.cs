@@ -751,6 +751,7 @@ public sealed partial class ImageSearchIndexService
                      $"{LegacyDbPath}-shm",
                      $"{LegacyDbPath}-wal",
                      LegacyAppDataIndexPath,
+                     LegacyPicturesHistoryIndexPath,
                      LegacyHistoryIndexPath
                  })
         {

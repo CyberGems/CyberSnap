@@ -4332,11 +4332,15 @@
                                     <TextBlock Text="&#xE74E;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Save captures to Gallery" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="When enabled, captures will be saved in the Gallery." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Save captures to Gallery" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Save captures to Gallery"/>
+                                    <TextBlock Text="When enabled, captures saved to your save folder are listed in the Gallery."
+                                               Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="When enabled, captures saved to your save folder are listed in the Gallery."/>
                                 </StackPanel>
                                 <CheckBox x:Name="SaveHistoryCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="When enabled, captures will be saved in the Gallery."
+                                          ToolTip="When enabled, captures saved to your save folder are listed in the Gallery."
+                                          Services:LocalizationService.SourceToolTip="When enabled, captures saved to your save folder are listed in the Gallery."
                                           AutomationProperties.Name="Save captures to Gallery"
                                           Checked="SaveHistoryCheck_Changed" Unchecked="SaveHistoryCheck_Changed"/>
                             </Grid>

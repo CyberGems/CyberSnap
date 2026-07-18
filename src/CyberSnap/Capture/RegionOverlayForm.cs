@@ -359,6 +359,8 @@ public sealed partial class RegionOverlayForm : Form
     public event Action<CaptureDockSide>? DockSideChanged;
     public event Action<CaptureMode>? DefaultCaptureModeChanged;
     public event Action? CaptureBannerDismissed;
+    /// <summary>Raised once when the first-run quick-start guide is dismissed so the host can persist HasSeenQuickStartGuide.</summary>
+    public event Action? QuickStartGuideDismissed;
     private const int ColorPickerColumns = 6;
     private const int ColorPickerRows = 1;
     private const int ColorPickerSwatchSize = 28;

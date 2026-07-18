@@ -125,6 +125,7 @@ public sealed class SettingsService : IDisposable
                 s_cachedSettings.OcrAutoCopyToClipboard = settings.OcrAutoCopyToClipboard;
                 s_cachedSettings.AfterCapture = settings.AfterCapture;
                 s_cachedSettings.OpenEditorAfterCapture = settings.OpenEditorAfterCapture;
+                s_cachedSettings.OpenInSystemViewerAfterCapture = settings.OpenInSystemViewerAfterCapture;
                 s_cachedSettings.AutoCopySettingsSchemaVersion = settings.AutoCopySettingsSchemaVersion;
             }
         }
@@ -453,6 +454,7 @@ public sealed class SettingsService : IDisposable
         NormalizeUnsafeModifierlessHotkeys(settings);
         NormalizeToastButtonLayout(settings.ToastButtons);
         Helpers.AutoCopyPreferences.MigrateIfNeeded(settings);
+        Helpers.AfterCapturePreferences.MigrateSystemViewerFlagIfNeeded(settings);
 
         // If the primary capture hotkey was never set (e.g. old settings file predating the
         // property default), restore the factory default: Alt+Shift+A.

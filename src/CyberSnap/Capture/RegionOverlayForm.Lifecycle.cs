@@ -39,6 +39,14 @@ public sealed partial class RegionOverlayForm
         Invalidate();
         Update();
 
+        // First-run talk bubble: wait a beat so the toolbar has painted the logo anchor.
+        BeginInvoke(new Action(() =>
+        {
+            if (IsDisposed || Disposing || !Visible)
+                return;
+            TryAutoShowQuickStartGuide();
+        }));
+
         WindowDetector.ClearSnapshot();
         if (_windowDetectionMode != WindowDetectionMode.Off)
         {

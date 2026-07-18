@@ -75,6 +75,7 @@ public partial class App
                     // (separate from the functional toast below) so it's always noticeable.
                     CelebrateCaptureIfEarned(settings);
 
+                    // Editor owns the post-capture surface (no stacked notification/viewer).
                     if (settings.OpenEditorAfterCapture &&
                         persisted.HistoryEntry?.Kind != Services.HistoryKind.Video &&
                         persisted.HistoryEntry?.Kind != Services.HistoryKind.Gif)
@@ -98,6 +99,7 @@ public partial class App
                         {
                             // Fall back to the standard preview so the capture isn't lost
                             // (size rejection, GDI failure, etc.).
+                            TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
                             ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
                             return;
                         }
@@ -112,34 +114,22 @@ public partial class App
                             LocalizationService.Translate("Your capture is open in the editor."),
                             persisted.FilePath);
                     }
-                    else if (action == AfterCaptureAction.OpenInSystemViewer)
-                    {
-                        persisted.Output.Dispose();
-                        if (!string.IsNullOrEmpty(persisted.FilePath) && File.Exists(persisted.FilePath))
-                        {
-                            try
-                            {
-                                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                                {
-                                    FileName = persisted.FilePath,
-                                    UseShellExecute = true
-                                });
-                            }
-                            catch (Exception ex)
-                            {
-                                AppDiagnostics.LogError("capture.auto-open", ex);
-                            }
-                        }
-                        ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
-                    }
-                    else if (ShouldPreviewAfterCapture(action))
-                    {
-                        ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
-                    }
                     else
                     {
-                        persisted.Output.Dispose();
-                        ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
+                        // System viewer stacks with notification: open the file first (path-only),
+                        // then hand the bitmap to the image preview when requested.
+                        TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
+
+                        if (ShouldPreviewAfterCapture(action))
+                        {
+                            ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
+                        }
+                        else
+                        {
+                            persisted.Output.Dispose();
+                            // Viewer-only (or save-only) keeps a lightweight confirmation toast.
+                            ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
+                        }
                     }
 
                     ScheduleIdleMemoryTrim();
@@ -179,21 +169,15 @@ public partial class App
                     filePath = requestedPath;
                 }
 
-                if (historyService != null)
+                // Gallery only indexes files the user actually saved (SaveToFile / save folder).
+                // Never write capture images into a CyberSnap "History" (or gallery data) folder.
+                if (historyService != null && filePath != null)
                 {
-                    if (filePath != null)
-                    {
-                        historyEntry = historyService.TrackExistingCapture(
-                            filePath,
-                            output.Width,
-                            output.Height,
-                            HistoryKind.Image);
-                    }
-                    else
-                    {
-                        historyEntry = historyService.SaveCapture(output);
-                        filePath = historyEntry.FilePath;
-                    }
+                    historyEntry = historyService.TrackExistingCapture(
+                        filePath,
+                        output.Width,
+                        output.Height,
+                        HistoryKind.Image);
                 }
 
                 if (historyEntry is not null)
@@ -447,6 +431,37 @@ public partial class App
 
     private static bool ShouldPreviewAfterCapture(AfterCaptureAction action) =>
         action is AfterCaptureAction.PreviewAndCopy or AfterCaptureAction.PreviewOnly;
+
+    /// <summary>
+    /// Opens the saved file in the OS default app when the stackable viewer flag is on
+    /// (or the legacy exclusive AfterCapture.OpenInSystemViewer value is still present).
+    /// Safe to call before image-preview toasts: only uses the file path, not the bitmap.
+    /// </summary>
+    private static bool TryOpenSystemViewerAfterCapture(
+        Models.AppSettings settings,
+        AfterCaptureAction action,
+        string? filePath)
+    {
+        bool wantViewer = settings.OpenInSystemViewerAfterCapture
+            || action == AfterCaptureAction.OpenInSystemViewer;
+        if (!wantViewer || string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            return false;
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = filePath,
+                UseShellExecute = true
+            });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("capture.auto-open", ex);
+            return false;
+        }
+    }
 
     private static bool TryCopyCaptureOutputToClipboard(Bitmap output, string? filePath = null)
     {

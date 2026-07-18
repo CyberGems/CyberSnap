@@ -2,7 +2,7 @@ using CyberSnap.Models;
 
 namespace CyberSnap.Helpers;
 
-public readonly record struct AfterCaptureViewPreference(int WindowIndex, bool Copy);
+public readonly record struct AfterCaptureViewPreference(int WindowIndex, bool Copy, bool OpenSystemViewer = false);
 
 public static class AfterCapturePreferences
 {
@@ -11,45 +11,66 @@ public static class AfterCapturePreferences
             ? action
             : AfterCaptureAction.PreviewAndCopy;
 
-    // WindowIndex mapping:
+    // WindowIndex mapping (primary UI destination — not system viewer):
     //   0 = Notification
     //   1 = Editor
-    //   2 = Save only
-    //   3 = System viewer
+    //   2 = Save only / no preview window
+    // System viewer is OpenInSystemViewerAfterCapture (can stack with Notification).
     public static AfterCaptureViewPreference FromSettings(AppSettings settings)
     {
         var destination = FromSettingsDestinationOnly(settings);
         bool copy = AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Image);
-        return new AfterCaptureViewPreference(destination.WindowIndex, copy);
+        bool viewer = settings.OpenInSystemViewerAfterCapture
+            || settings.AfterCapture == AfterCaptureAction.OpenInSystemViewer;
+        return new AfterCaptureViewPreference(destination.WindowIndex, copy, viewer);
     }
 
     /// <summary>
-    /// Destination only (window index / open-editor), ignoring the global auto-copy flag.
+    /// Destination only (window index / open-editor), ignoring auto-copy and system viewer.
     /// </summary>
     public static AfterCaptureViewPreference FromSettingsDestinationOnly(AppSettings settings)
     {
         var action = NormalizeAction(settings.AfterCapture);
         var openEditor = settings.OpenEditorAfterCapture;
 
+        // OpenInSystemViewer is a legacy exclusive mode; after migration it is a flag.
+        // Treat unmigrated enum as "no preview destination" (index 2).
         int windowIndex = action switch
         {
-            AfterCaptureAction.OpenInSystemViewer => 3,
+            AfterCaptureAction.OpenInSystemViewer => 2,
             AfterCaptureAction.CopyToClipboard => 2,
             AfterCaptureAction.None => 2,
             _ => openEditor ? 1 : 0
         };
 
-        return new AfterCaptureViewPreference(windowIndex, Copy: false);
+        return new AfterCaptureViewPreference(windowIndex, Copy: false, OpenSystemViewer: false);
+    }
+
+    /// <summary>
+    /// One-time: move exclusive AfterCapture.OpenInSystemViewer into the stackable flag.
+    /// Preserves old behavior (viewer + no image preview).
+    /// </summary>
+    public static void MigrateSystemViewerFlagIfNeeded(AppSettings settings)
+    {
+        if (settings.AfterCapture != AfterCaptureAction.OpenInSystemViewer)
+            return;
+
+        settings.OpenInSystemViewerAfterCapture = true;
+        settings.OpenEditorAfterCapture = false;
+        // None = no image-preview notification (matches previous exclusive-viewer path).
+        settings.AfterCapture = AfterCaptureAction.None;
     }
 
     public static void ApplyToSettings(AfterCaptureViewPreference preference, AppSettings settings)
     {
         ApplyDestinationAndLegacyCopy(preference.WindowIndex, preference.Copy, settings);
+        settings.OpenInSystemViewerAfterCapture = preference.OpenSystemViewer
+            && preference.WindowIndex != 1; // never stack viewer with editor
         AutoCopyPreferences.SetKindEnabled(settings, AutoCopyKind.Image, preference.Copy);
     }
 
     /// <summary>
-    /// Applies only the after-capture destination. Image auto-copy is left unchanged.
+    /// Applies only the after-capture destination. Image auto-copy and system viewer are left unchanged.
     /// </summary>
     public static void ApplyDestinationToSettings(int windowIndex, AppSettings settings)
     {
@@ -59,7 +80,8 @@ public static class AfterCapturePreferences
 
     /// <summary>
     /// Writes AfterCapture + OpenEditorAfterCapture from a window index and copy flag.
-    /// Does not mutate AutoCopy* settings.
+    /// Does not mutate AutoCopy* or OpenInSystemViewerAfterCapture.
+    /// Never writes the legacy OpenInSystemViewer enum value.
     /// </summary>
     public static void ApplyDestinationAndLegacyCopy(int windowIndex, bool copy, AppSettings settings)
     {
@@ -67,7 +89,8 @@ public static class AfterCapturePreferences
         {
             0 => (copy ? AfterCaptureAction.PreviewAndCopy : AfterCaptureAction.PreviewOnly, false),
             1 => (copy ? AfterCaptureAction.PreviewAndCopy : AfterCaptureAction.PreviewOnly, true),
-            3 => (AfterCaptureAction.OpenInSystemViewer, false),
+            // Index 3 was legacy exclusive system viewer — map to save-only destination.
+            3 => (copy ? AfterCaptureAction.CopyToClipboard : AfterCaptureAction.None, false),
             _ => (copy ? AfterCaptureAction.CopyToClipboard : AfterCaptureAction.None, false)
         };
 
@@ -88,27 +111,28 @@ public static class AfterCapturePreferences
         const string sep = " ᐧ ";
         var parts = new List<string>();
 
-        // Step 1: save to file (shown whenever the file will actually be written)
-        bool willSave = saveToFile || preference.WindowIndex >= 1;
+        bool willSave = saveToFile
+            || preference.WindowIndex == 1
+            || preference.OpenSystemViewer
+            || preference.WindowIndex == 3;
         if (willSave)
             parts.Add(translate("Outcome step: save file"));
 
-        // Step 2: main action
         string? actionKey = preference.WindowIndex switch
         {
             0 => "Outcome step: show notification",
             1 => "Outcome step: open editor",
-            3 => "Outcome step: open in system viewer",
-            _ => null   // index 2 = save only — no extra action label
+            _ => null
         };
         if (actionKey is not null)
             parts.Add(translate(actionKey));
 
-        // Step 3: copy to clipboard (optional modifier from global auto-copy)
+        if (preference.OpenSystemViewer || preference.WindowIndex == 3)
+            parts.Add(translate("Outcome step: open in system viewer"));
+
         if (preference.Copy)
             parts.Add(translate("Outcome step: copy to clipboard"));
 
-        // Prefix
         string prefix = translate("Outcome prefix");
         return prefix + string.Join(sep, parts);
     }

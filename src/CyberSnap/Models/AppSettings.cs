@@ -317,6 +317,12 @@ public sealed class AppSettings
 
     public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
     public bool OpenEditorAfterCapture { get; set; }
+    /// <summary>
+    /// When true, open the saved capture in the OS default image viewer after capture.
+    /// Independent of the notification/preview destination (can stack with Preview*).
+    /// Legacy: previously encoded as <see cref="AfterCaptureAction.OpenInSystemViewer"/>.
+    /// </summary>
+    public bool OpenInSystemViewerAfterCapture { get; set; }
     public bool OpenVideoTrimmerAfterCapture { get; set; }
     /// <summary>Last volume level used in the video trimmer (0.0–1.0).</summary>
     public double VideoTrimmerVolume { get; set; } = 1.0;
@@ -458,6 +464,8 @@ public sealed class AppSettings
     public bool ShowToolBanners { get; set; } = true;
     public bool ConfirmBeforeExit { get; set; } = true;
     public bool HasSeenCaptureBanner { get; set; }
+    /// <summary>True after the capture-mode quick-start bubble has been shown and dismissed once.</summary>
+    public bool HasSeenQuickStartGuide { get; set; }
     public bool ShowCursor { get; set; }
     public bool ShowCaptureMagnifier { get; set; } = true;
     public bool ShowSelectionSize { get; set; } = true;

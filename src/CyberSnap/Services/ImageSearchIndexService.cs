@@ -265,7 +265,9 @@ public sealed partial class ImageSearchIndexService : IDisposable
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CyberSnap", "history", "image_search_index.json");
     private static readonly string LegacyDbPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CyberSnap", "history", "image_search_index.db");
-    private static readonly string LegacyHistoryIndexPath = Path.Combine(HistoryService.HistoryDir, "image_search_index.json");
+    private static readonly string LegacyPicturesHistoryIndexPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "CyberSnap History", "image_search_index.json");
+    private static readonly string LegacyHistoryIndexPath = Path.Combine(HistoryService.GalleryDataDir, "image_search_index.json");
 
     private readonly object _gate = new();
     private readonly CancellationTokenSource _lifetimeCts = new();
@@ -299,7 +301,7 @@ public sealed partial class ImageSearchIndexService : IDisposable
     {
         lock (_gate)
         {
-            Directory.CreateDirectory(HistoryService.HistoryDir);
+            Directory.CreateDirectory(HistoryService.GalleryDataDir);
             EnsureDatabase_NoLock();
             if (!IsDatabaseCurrent_NoLock())
             {

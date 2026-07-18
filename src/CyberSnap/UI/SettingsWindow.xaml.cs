@@ -449,19 +449,34 @@ public partial class SettingsWindow : Window
             "Save screenshots",
             previous,
             selected,
-            value => _settingsService.Settings.SaveToFile = value,
             value =>
             {
-                SaveToFileCheck.IsChecked = value;
+                _settingsService.Settings.SaveToFile = value;
+                // Never-empty outcome: if turning Save off leaves nothing active,
+                // Normalize would still show Save — persist that so UI and settings match.
+                var normalized = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+                if (normalized.EffectiveSave)
+                    _settingsService.Settings.SaveToFile = true;
+            },
+            value =>
+            {
+                SaveToFileCheck.IsChecked = _settingsService.Settings.SaveToFile;
                 var wasVisible = SaveDirPanel.Visibility == Visibility.Visible;
-                SaveDirPanel.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
-                if (value && !wasVisible)
+                var showDir = _settingsService.Settings.SaveToFile;
+                SaveDirPanel.Visibility = showDir ? Visibility.Visible : Visibility.Collapsed;
+                if (showDir && !wasVisible)
                     AnimateHighlight(SaveDirPanel);
                 RefreshAfterCaptureOutcomeEditor();
             },
             () =>
             {
-                SaveDirPanel.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+                // Re-sync checkbox if Normalize forced Save back on.
+                _suppressCaptureSavePreferenceChange = true;
+                try { SaveToFileCheck.IsChecked = _settingsService.Settings.SaveToFile; }
+                finally { _suppressCaptureSavePreferenceChange = false; }
+                SaveDirPanel.Visibility = _settingsService.Settings.SaveToFile
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
                 RefreshAfterCaptureOutcomeEditor();
             });
     }

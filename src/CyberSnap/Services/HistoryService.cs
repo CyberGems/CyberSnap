@@ -54,26 +54,32 @@ public sealed class CodeHistoryEntry
 
 public sealed partial class HistoryService : IDisposable
 {
-    public static readonly string HistoryDir = Path.Combine(
+    /// <summary>
+    /// Gallery metadata root (DB + thumb caches). Lives under AppData/portable CyberSnap\gallery.
+    /// Never use a folder named "History" — capture files only go to the user save folder.
+    /// </summary>
+    public static string GalleryDataDir => AppStoragePaths.GalleryDataDirectory;
+
+    /// <summary>Obsolete name kept for call-site compatibility; same as <see cref="GalleryDataDir"/>.</summary>
+    public static string HistoryDir => GalleryDataDir;
+
+    public static string ThumbnailDir => Path.Combine(GalleryDataDir, "cache", "video-thumbs");
+    public static string ImageThumbnailDir => Path.Combine(GalleryDataDir, "cache", "thumbs");
+    public static string DatabasePath => Path.Combine(GalleryDataDir, "gallery.db");
+
+    // Legacy locations we may read/migrate FROM — never create these again.
+    private static readonly string LegacyPicturesHistoryDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "CyberSnap History");
-
-    
-    public static readonly string ThumbnailDir = Path.Combine(HistoryDir, "cache", "video-thumbs");
-    public static readonly string ImageThumbnailDir = Path.Combine(HistoryDir, "cache", "thumbs");
-    public static readonly string DatabasePath = Path.Combine(HistoryDir, "history.db");
-
-    private static readonly string LegacyHistoryDir = Path.Combine(
+    private static readonly string LegacyAppDataHistoryDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CyberSnap", "history");
 
-    
+    private static readonly string MigrationIndexPath = Path.Combine(GalleryDataDir, "index.json");
+    private static readonly string MigrationOcrIndexPath = Path.Combine(GalleryDataDir, "ocr_index.json");
+    private static readonly string MigrationColorIndexPath = Path.Combine(GalleryDataDir, "color_index.json");
 
-    private static readonly string MigrationIndexPath = Path.Combine(HistoryDir, "index.json");
-    private static readonly string MigrationOcrIndexPath = Path.Combine(HistoryDir, "ocr_index.json");
-    private static readonly string MigrationColorIndexPath = Path.Combine(HistoryDir, "color_index.json");
-
-    private static readonly string LegacyIndexPath = Path.Combine(LegacyHistoryDir, "index.json");
-    private static readonly string LegacyOcrIndexPath = Path.Combine(LegacyHistoryDir, "ocr_index.json");
-    private static readonly string LegacyColorIndexPath = Path.Combine(LegacyHistoryDir, "color_index.json");
+    private static readonly string LegacyIndexPath = Path.Combine(LegacyAppDataHistoryDir, "index.json");
+    private static readonly string LegacyOcrIndexPath = Path.Combine(LegacyAppDataHistoryDir, "ocr_index.json");
+    private static readonly string LegacyColorIndexPath = Path.Combine(LegacyAppDataHistoryDir, "color_index.json");
 
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
@@ -158,7 +164,7 @@ public sealed partial class HistoryService : IDisposable
         {
             var hash = new HashCode();
 
-            AddDirectorySignature(hash, HistoryDir);
+            AddDirectorySignature(hash, GalleryDataDir);
             AddDirectoryTreeSignature(hash, saveDirectory);
             AddDirectoryTreeSignature(hash, Path.Combine(saveDirectory, "Videos"));
             AddDirectoryTreeSignature(hash, Path.Combine(saveDirectory, "GIFs"));
@@ -178,9 +184,10 @@ public sealed partial class HistoryService : IDisposable
     {
         lock (_gate)
         {
-            Directory.CreateDirectory(HistoryDir);
+            Directory.CreateDirectory(GalleryDataDir);
             Directory.CreateDirectory(ThumbnailDir);
             Directory.CreateDirectory(ImageThumbnailDir);
+            MigrateGalleryDataFromLegacyLocations_NoLock();
             EnsureDatabase_NoLock();
             LoadFromDatabase_NoLock();
             ImportLegacyJsonIndexes_NoLock();
@@ -192,12 +199,91 @@ public sealed partial class HistoryService : IDisposable
         }
     }
 
+    /// <summary>
+    /// One-time: copy gallery.db / history.db + thumb caches out of any legacy
+    /// "History" folders into AppData\CyberSnap\gallery. Does not create those
+    /// legacy folders and does not store capture images there.
+    /// </summary>
+    private static void MigrateGalleryDataFromLegacyLocations_NoLock()
+    {
+        try
+        {
+            if (!File.Exists(DatabasePath))
+            {
+                foreach (var legacyDb in EnumerateLegacyDatabasePaths())
+                {
+                    if (!File.Exists(legacyDb))
+                        continue;
+
+                    Directory.CreateDirectory(GalleryDataDir);
+                    File.Copy(legacyDb, DatabasePath, overwrite: false);
+                    break;
+                }
+            }
+
+            TryCopyDirectoryIfEmpty(
+                Path.Combine(LegacyPicturesHistoryDir, "cache", "thumbs"),
+                ImageThumbnailDir);
+            TryCopyDirectoryIfEmpty(
+                Path.Combine(LegacyPicturesHistoryDir, "cache", "video-thumbs"),
+                ThumbnailDir);
+            TryCopyDirectoryIfEmpty(
+                Path.Combine(LegacyAppDataHistoryDir, "cache", "thumbs"),
+                ImageThumbnailDir);
+            TryCopyDirectoryIfEmpty(
+                Path.Combine(LegacyAppDataHistoryDir, "cache", "video-thumbs"),
+                ThumbnailDir);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("gallery.migrate-data-dir", ex);
+        }
+    }
+
+    private static IEnumerable<string> EnumerateLegacyDatabasePaths()
+    {
+        yield return Path.Combine(LegacyPicturesHistoryDir, "history.db");
+        yield return Path.Combine(LegacyPicturesHistoryDir, "gallery.db");
+        yield return Path.Combine(LegacyAppDataHistoryDir, "history.db");
+        yield return Path.Combine(LegacyAppDataHistoryDir, "gallery.db");
+    }
+
+    private static void TryCopyDirectoryIfEmpty(string sourceDir, string destDir)
+    {
+        if (!Directory.Exists(sourceDir))
+            return;
+
+        try
+        {
+            if (Directory.Exists(destDir) && Directory.EnumerateFileSystemEntries(destDir).Any())
+                return;
+
+            Directory.CreateDirectory(destDir);
+            foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
+            {
+                var rel = Path.GetRelativePath(sourceDir, file);
+                var target = Path.Combine(destDir, rel);
+                var targetDir = Path.GetDirectoryName(target);
+                if (!string.IsNullOrEmpty(targetDir))
+                    Directory.CreateDirectory(targetDir);
+                if (!File.Exists(target))
+                    File.Copy(file, target, overwrite: false);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("gallery.migrate-cache", ex.Message, ex);
+        }
+    }
+
     private void CleanupLegacyThumbnailDirectories_NoLock()
     {
         var legacyThumbDirs = new[]
         {
-            Path.Combine(HistoryDir, ".thumbs"),
-            Path.Combine(HistoryDir, "Videos", ".thumbs")
+            Path.Combine(GalleryDataDir, ".thumbs"),
+            Path.Combine(GalleryDataDir, "Videos", ".thumbs"),
+            Path.Combine(LegacyPicturesHistoryDir, ".thumbs"),
+            Path.Combine(LegacyPicturesHistoryDir, "Videos", ".thumbs"),
         };
 
         foreach (var dir in legacyThumbDirs.Distinct(StringComparer.OrdinalIgnoreCase))
@@ -334,37 +420,16 @@ public sealed partial class HistoryService : IDisposable
         return entry;
     }
 
+    /// <summary>
+    /// Gallery no longer stores capture image files. Use
+    /// <see cref="TrackExistingCapture"/> after writing to the user save folder.
+    /// </summary>
+    [Obsolete("Do not write captures into a History/gallery folder. Save to SaveDirectory and call TrackExistingCapture.")]
     public HistoryEntry SaveCapture(Bitmap screenshot)
     {
-        var now = DateTime.Now;
-        string ext = CaptureOutputService.GetExtension(CaptureImageFormat);
-        var fileName = $"CyberSnap_{now:yyyyMMdd_HHmmss_fff}.{ext}";
-        var captureDir = Helpers.CaptureSavePath.GetMonthDirectory(HistoryDir, now);
-        var filePath = Path.Combine(captureDir, fileName);
-
-        Directory.CreateDirectory(captureDir);
-        CaptureOutputService.SaveBitmap(screenshot, filePath, CaptureImageFormat, JpegQuality);
-        var fileSizeBytes = new FileInfo(filePath).Length;
-
-        HistoryEntry entry;
-        lock (_gate)
-        {
-            entry = new HistoryEntry
-            {
-                FileName = fileName, FilePath = filePath, CapturedAt = now,
-                Width = screenshot.Width, Height = screenshot.Height,
-                FileSizeBytes = fileSizeBytes,
-                Kind = HistoryKind.Image
-            };
-            _entries.Insert(0, entry);
-            _entriesByPath[entry.FilePath] = entry;
-            InvalidateFilteredCache();
-            QueueEntryUpsert_NoLock(entry);
-            PruneByCount_NoLock(HistoryCountLimit, HistoryDeleteOriginalOnPrune);
-            ScheduleFlush_NoLock();
-        }
-        NotifyChanged();
-        return entry;
+        throw new InvalidOperationException(
+            "CyberSnap no longer stores captures under a History folder. " +
+            "Enable Save to file and use TrackExistingCapture on the saved path.");
     }
 
     public void SaveOcrEntry(string text)

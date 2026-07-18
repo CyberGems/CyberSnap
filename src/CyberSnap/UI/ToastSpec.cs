@@ -27,6 +27,11 @@ internal sealed record ToastSpec
     public bool ShowOverlayButtons { get; init; }
     public bool HideEditButton { get; init; }
     /// <summary>
+    /// When true, delete <see cref="FilePath"/> after the toast closes (temp recordings
+    /// when Save to file is off).
+    /// </summary>
+    public bool DeleteFileOnDismiss { get; init; }
+    /// <summary>
     /// Layout-only preview (e.g. Settings → Test capture notification): buttons and body click
     /// are visible but do not run real actions.
     /// </summary>
@@ -88,7 +93,8 @@ internal sealed record ToastSpec
         bool showOverlayButtons,
         string? clickActionUrl = null,
         string? clickActionLabel = null,
-        bool hideEditButton = false) => new()
+        bool hideEditButton = false,
+        bool deleteFileOnDismiss = false) => new()
     {
         Title = title,
         Body = body,
@@ -99,7 +105,8 @@ internal sealed record ToastSpec
         AutoPin = autoPin,
         TransparentShell = transparentShell,
         ShowOverlayButtons = showOverlayButtons,
-        HideEditButton = hideEditButton
+        HideEditButton = hideEditButton,
+        DeleteFileOnDismiss = deleteFileOnDismiss
     };
 
     public static ToastSpec Sticker(Bitmap sticker) => new()

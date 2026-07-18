@@ -3,28 +3,29 @@ using CyberSnap.Models;
 namespace CyberSnap.Helpers;
 
 /// <summary>
-/// UI destination for a finished image capture. At most one may be active
-/// (none = save-only path).
+/// Primary post-capture UI destination. At most one of Notification/Editor.
+/// System viewer is a separate flag and can stack with Notification.
 /// </summary>
 public enum AfterCaptureDestination
 {
     None = 0,
     Notification = 1,
-    Editor = 2,
-    SystemViewer = 3
+    Editor = 2
 }
 
 /// <summary>
 /// Composable after-capture outcome used by the minipill editor.
-/// Maps onto existing settings (AfterCapture, OpenEditorAfterCapture, SaveToFile, AutoCopy*).
+/// Maps onto existing settings (AfterCapture, OpenEditorAfterCapture,
+/// OpenInSystemViewerAfterCapture, SaveToFile, AutoCopy*).
 /// </summary>
 public readonly record struct AfterCaptureOutcomeState(
     bool Save,
     AfterCaptureDestination Destination,
+    bool SystemViewer,
     bool Clipboard)
 {
     public bool RequiresSave =>
-        Destination is AfterCaptureDestination.Editor or AfterCaptureDestination.SystemViewer;
+        Destination is AfterCaptureDestination.Editor || SystemViewer;
 
     public bool EffectiveSave => Save || RequiresSave;
 }
@@ -56,17 +57,22 @@ public static class AfterCaptureOutcomeModel
         {
             0 => AfterCaptureDestination.Notification,
             1 => AfterCaptureDestination.Editor,
-            3 => AfterCaptureDestination.SystemViewer,
             _ => AfterCaptureDestination.None
         };
 
-        bool requiresSave = destination is AfterCaptureDestination.Editor
-            or AfterCaptureDestination.SystemViewer;
+        // Prefer the dedicated flag; still honor unmigrated enum values.
+        bool systemViewer = settings.OpenInSystemViewerAfterCapture
+            || settings.AfterCapture == AfterCaptureAction.OpenInSystemViewer;
+
+        // Editor remains exclusive vs notification in the UI model.
+        if (destination == AfterCaptureDestination.Editor)
+            systemViewer = false;
+
+        bool requiresSave = destination is AfterCaptureDestination.Editor || systemViewer;
         bool save = settings.SaveToFile || requiresSave;
-        // Same master flag as the widget Auto-copy toggle (not image-exclude alone).
         bool clipboard = settings.AutoCopyToClipboard;
 
-        return Normalize(new AfterCaptureOutcomeState(save, destination, clipboard));
+        return Normalize(new AfterCaptureOutcomeState(save, destination, systemViewer, clipboard));
     }
 
     public static void ApplyToSettings(AfterCaptureOutcomeState state, AppSettings settings)
@@ -74,6 +80,8 @@ public static class AfterCaptureOutcomeModel
         state = Normalize(state);
 
         settings.SaveToFile = state.EffectiveSave;
+        settings.OpenInSystemViewerAfterCapture = state.SystemViewer
+            && state.Destination != AfterCaptureDestination.Editor;
 
         // Keep chip ↔ widget in lockstep: both drive the global Auto-copy master.
         AutoCopyPreferences.SetMaster(settings, state.Clipboard);
@@ -82,8 +90,7 @@ public static class AfterCaptureOutcomeModel
         {
             AfterCaptureDestination.Notification => 0,
             AfterCaptureDestination.Editor => 1,
-            AfterCaptureDestination.SystemViewer => 3,
-            _ => 2 // save only
+            _ => 2 // save only / no preview window
         };
 
         AfterCapturePreferences.ApplyDestinationAndLegacyCopy(
@@ -93,24 +100,32 @@ public static class AfterCaptureOutcomeModel
     }
 
     /// <summary>
-    /// Enforces exclusive destination, forced save for Editor/System viewer,
-    /// and never-empty outcome (at least Save or Notification).
+    /// Enforces Editor exclusivity (clears SystemViewer), forced save for Editor/Viewer,
+    /// and never-empty outcome (at least Save when nothing else is on).
+    /// Notification + SystemViewer is allowed.
     /// </summary>
     public static AfterCaptureOutcomeState Normalize(AfterCaptureOutcomeState state)
     {
-        bool requiresSave = state.Destination is AfterCaptureDestination.Editor
-            or AfterCaptureDestination.SystemViewer;
+        var destination = state.Destination;
+        bool systemViewer = state.SystemViewer;
+
+        // Editor owns the post-capture surface: no stacked notification/viewer.
+        if (destination == AfterCaptureDestination.Editor)
+            systemViewer = false;
+
+        bool requiresSave = destination is AfterCaptureDestination.Editor || systemViewer;
         bool save = state.Save || requiresSave;
 
         // Never empty: if nothing would happen, keep Save.
         if (!save
-            && state.Destination == AfterCaptureDestination.None
+            && destination == AfterCaptureDestination.None
+            && !systemViewer
             && !state.Clipboard)
         {
             save = true;
         }
 
-        return new AfterCaptureOutcomeState(save, state.Destination, state.Clipboard);
+        return new AfterCaptureOutcomeState(save, destination, systemViewer, state.Clipboard);
     }
 
     public static bool IsActive(AfterCaptureOutcomeState state, AfterCapturePillKind pill) =>
@@ -119,7 +134,7 @@ public static class AfterCaptureOutcomeModel
             AfterCapturePillKind.Save => state.EffectiveSave,
             AfterCapturePillKind.Notification => state.Destination == AfterCaptureDestination.Notification,
             AfterCapturePillKind.Editor => state.Destination == AfterCaptureDestination.Editor,
-            AfterCapturePillKind.SystemViewer => state.Destination == AfterCaptureDestination.SystemViewer,
+            AfterCapturePillKind.SystemViewer => state.SystemViewer,
             AfterCapturePillKind.Clipboard => state.Clipboard,
             _ => false
         };
@@ -129,11 +144,14 @@ public static class AfterCaptureOutcomeModel
         if (!IsActive(state, pill))
             return false;
 
-        // Save is forced while Editor / System viewer is selected.
+        // Save is forced while Editor or System viewer needs a file on disk.
         if (pill == AfterCapturePillKind.Save && state.RequiresSave)
             return false;
 
-        return true;
+        // If Normalize would put this pill back, offering × is a no-op.
+        var trial = ApplyRemove(state, pill);
+        var normalized = Normalize(trial);
+        return !IsActive(normalized, pill);
     }
 
     public static AfterCaptureOutcomeState WithPillAdded(AfterCaptureOutcomeState state, AfterCapturePillKind pill)
@@ -141,9 +159,28 @@ public static class AfterCaptureOutcomeModel
         state = pill switch
         {
             AfterCapturePillKind.Save => state with { Save = true },
-            AfterCapturePillKind.Notification => state with { Destination = AfterCaptureDestination.Notification },
-            AfterCapturePillKind.Editor => state with { Destination = AfterCaptureDestination.Editor, Save = true },
-            AfterCapturePillKind.SystemViewer => state with { Destination = AfterCaptureDestination.SystemViewer, Save = true },
+            AfterCapturePillKind.Notification => state with
+            {
+                Destination = AfterCaptureDestination.Notification
+                // SystemViewer kept — Notification + Viewer is allowed.
+            },
+            AfterCapturePillKind.Editor => state with
+            {
+                Destination = AfterCaptureDestination.Editor,
+                SystemViewer = false,
+                Save = true
+            },
+            AfterCapturePillKind.SystemViewer => state with
+            {
+                SystemViewer = true,
+                Save = true,
+                // Adding Viewer while Editor is active replaces Editor with Notification-capable
+                // surface only if Destination was Editor — drop Editor so Viewer can stack
+                // with Notification or stand alone.
+                Destination = state.Destination == AfterCaptureDestination.Editor
+                    ? AfterCaptureDestination.None
+                    : state.Destination
+            },
             AfterCapturePillKind.Clipboard => state with { Clipboard = true },
             _ => state
         };
@@ -155,7 +192,12 @@ public static class AfterCaptureOutcomeModel
         if (!CanRemove(state, pill))
             return state;
 
-        state = pill switch
+        return Normalize(ApplyRemove(state, pill));
+    }
+
+    /// <summary>Raw pill clear without CanRemove / Normalize (used by CanRemove prediction).</summary>
+    private static AfterCaptureOutcomeState ApplyRemove(AfterCaptureOutcomeState state, AfterCapturePillKind pill) =>
+        pill switch
         {
             AfterCapturePillKind.Save => state with { Save = false },
             AfterCapturePillKind.Notification
@@ -164,14 +206,10 @@ public static class AfterCaptureOutcomeModel
             AfterCapturePillKind.Editor
                 when state.Destination == AfterCaptureDestination.Editor
                 => state with { Destination = AfterCaptureDestination.None },
-            AfterCapturePillKind.SystemViewer
-                when state.Destination == AfterCaptureDestination.SystemViewer
-                => state with { Destination = AfterCaptureDestination.None },
+            AfterCapturePillKind.SystemViewer => state with { SystemViewer = false },
             AfterCapturePillKind.Clipboard => state with { Clipboard = false },
             _ => state
         };
-        return Normalize(state);
-    }
 
     public static string LabelKey(AfterCapturePillKind pill) => pill switch
     {
@@ -179,7 +217,6 @@ public static class AfterCaptureOutcomeModel
         AfterCapturePillKind.Notification => "Outcome step: show notification",
         AfterCapturePillKind.Editor => "Outcome step: open editor",
         AfterCapturePillKind.SystemViewer => "Outcome step: open in system viewer",
-        // Same label as the widget toggle.
         AfterCapturePillKind.Clipboard => "Auto-copy",
         _ => pill.ToString()
     };
@@ -189,12 +226,16 @@ public static class AfterCaptureOutcomeModel
         AfterCapturePillKind.Save => "Write the capture to the configured save folder.",
         AfterCapturePillKind.Notification => "Show the post-capture notification window.",
         AfterCapturePillKind.Editor => "Open the capture in the annotation editor.",
-        AfterCapturePillKind.SystemViewer => "Open the saved file in the system default viewer.",
-        // Same help text as the widget Auto-copy toggle.
+        AfterCapturePillKind.SystemViewer =>
+            "Open the saved file in the system default viewer. Can be combined with the notification.",
         AfterCapturePillKind.Clipboard => "Copy captures, OCR text, and recordings to the clipboard when they finish.",
         _ => ""
     };
 
     public static string ForcedSaveTooltipKey =>
         "Save is required when opening the editor or system viewer.";
+
+    /// <summary>Shown on a locked Save chip when it is the only remaining outcome step.</summary>
+    public static string RequiredOutcomeTooltipKey =>
+        "Keep at least one after-capture step.";
 }
