@@ -33,8 +33,19 @@ public partial class App
         if (Interlocked.CompareExchange(ref _settingsWindowOpening, 1, 0) != 0)
             return;
 
-        // No preloader toast: constructing Settings on the UI thread freezes toast animations
-        // mid-flight and leaves the toast lingering after the window is ready.
+        // STA-thread splash (own message loop) — stays smooth while Settings builds on the UI thread.
+        WindowStartupSplash? splash = null;
+        try
+        {
+            splash = WindowStartupSplash.Show(
+                LocalizationService.Translate("Starting configuration…"),
+                LocalizationService.Translate("Preparing the workspace…"));
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("lifecycle.settings-splash", ex.Message, ex);
+        }
+
         _ = Task.Run(() =>
         {
             try
@@ -61,6 +72,7 @@ public partial class App
                     }
                     finally
                     {
+                        try { splash?.Dispose(); } catch { }
                         Interlocked.Exchange(ref _settingsWindowOpening, 0);
                     }
                 }, DispatcherPriority.Background);
@@ -70,6 +82,7 @@ public partial class App
                 _ = Dispatcher.BeginInvoke(() =>
                 {
                     _settingsWindow = null;
+                    try { splash?.Dispose(); } catch { }
                     ShowSettingsOpenFailed(ex, "lifecycle.show-settings.init", "lifecycle.show-settings.init.toast");
                     Interlocked.Exchange(ref _settingsWindowOpening, 0);
                 }, DispatcherPriority.Background);
@@ -182,8 +195,19 @@ public partial class App
         if (Interlocked.CompareExchange(ref _historyWindowOpening, 1, 0) != 0)
             return;
 
-        // No preloader toast: constructing Gallery on the UI thread freezes toast animations
-        // mid-flight and leaves the toast lingering after the window is ready.
+        // STA-thread splash (own message loop) — stays smooth while Gallery builds on the UI thread.
+        WindowStartupSplash? splash = null;
+        try
+        {
+            splash = WindowStartupSplash.Show(
+                LocalizationService.Translate("Starting gallery…"),
+                LocalizationService.Translate("Preparing the workspace…"));
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("lifecycle.gallery-splash", ex.Message, ex);
+        }
+
         _ = Task.Run(() =>
         {
             try
@@ -211,6 +235,7 @@ public partial class App
                     }
                     finally
                     {
+                        try { splash?.Dispose(); } catch { }
                         Interlocked.Exchange(ref _historyWindowOpening, 0);
                     }
                 }, DispatcherPriority.Background);
@@ -220,6 +245,7 @@ public partial class App
                 _ = Dispatcher.BeginInvoke(() =>
                 {
                     _historyWindow = null;
+                    try { splash?.Dispose(); } catch { }
                     ShowHistoryOpenFailed(ex);
                     Interlocked.Exchange(ref _historyWindowOpening, 0);
                 }, DispatcherPriority.Background);
