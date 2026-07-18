@@ -19,7 +19,16 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        DismissQuickStartGuide();
+        // Closing the guide by clicking outside must never start a capture / selection.
+        // Clicks on toolbar chrome still go through so tools and the ▼ menu keep working.
+        bool guideWasOpen = _quickStartGuide != null && _quickStartGuide.Visible;
+        if (guideWasOpen)
+        {
+            DismissQuickStartGuide();
+            if (!IsPointInOverlayUi(e.Location))
+                return;
+        }
+
         if (e.Button == MouseButtons.Right)
         {
             if (_isConfirmingSelection)

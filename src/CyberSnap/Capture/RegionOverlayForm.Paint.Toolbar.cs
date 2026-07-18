@@ -465,35 +465,39 @@ public sealed partial class RegionOverlayForm
         }
 
         // Draw elegant mini menu activator (▼). Soft accent pulse while the quick-start guide is open.
+        // Pulse phase 0→1→0 over ~1.1s; driven by StartMenuActivatorPulse → UpdateToolbarSurfaceOnly.
         float guidePulse = 0f;
         if (_highlightMenuActivatorForGuide)
         {
             double secs = (DateTime.UtcNow - _menuActivatorPulseStart).TotalSeconds;
-            guidePulse = 0.55f + 0.45f * (float)Math.Sin(secs * Math.PI * 2.0 / 1.4);
+            // 0..1..0 triangle-ish via absolute sine for a clear bright/dim beat.
+            guidePulse = Math.Abs((float)Math.Sin(secs * Math.PI * 2.0 / 1.1));
         }
 
         bool activatorHot = _hoveredMenuActivator || _highlightMenuActivatorForGuide;
         if (activatorHot)
         {
             int fillA = _highlightMenuActivatorForGuide
-                ? (int)(36 + 40 * guidePulse)
+                ? (int)(50 + 90 * guidePulse)
                 : 30;
-            using (var path = WindowsDockRenderer.RoundedRect(_menuActivatorRect, UiChrome.ScaleInt(3)))
+            var glowRect = _highlightMenuActivatorForGuide
+                ? Rectangle.Inflate(_menuActivatorRect, UiChrome.ScaleInt(3), UiChrome.ScaleInt(3))
+                : _menuActivatorRect;
+            using (var path = WindowsDockRenderer.RoundedRect(glowRect, UiChrome.ScaleInt(4)))
             using (var brush = new SolidBrush(Color.FromArgb(fillA, UiChrome.AccentColor)))
                 g.FillPath(brush, path);
 
             if (_highlightMenuActivatorForGuide)
             {
-                int ringA = (int)(70 + 90 * guidePulse);
-                using var ring = new Pen(Color.FromArgb(ringA, UiChrome.AccentColor), 1.25f);
-                using var path = WindowsDockRenderer.RoundedRect(
-                    Rectangle.Inflate(_menuActivatorRect, 1, 1), UiChrome.ScaleInt(4));
+                int ringA = (int)(110 + 120 * guidePulse);
+                using var ring = new Pen(Color.FromArgb(ringA, UiChrome.AccentColor), 1.6f);
+                using var path = WindowsDockRenderer.RoundedRect(glowRect, UiChrome.ScaleInt(4));
                 g.DrawPath(ring, path);
             }
         }
 
-        int triW = UiChrome.ScaleInt(6);
-        int triH = UiChrome.ScaleInt(4);
+        int triW = UiChrome.ScaleInt(_highlightMenuActivatorForGuide ? 7 : 6);
+        int triH = UiChrome.ScaleInt(_highlightMenuActivatorForGuide ? 5 : 4);
         float tcx = _menuActivatorRect.X + _menuActivatorRect.Width / 2f;
         float tcy = _menuActivatorRect.Y + _menuActivatorRect.Height / 2f;
 
@@ -507,7 +511,8 @@ public sealed partial class RegionOverlayForm
         Color arrowColor;
         if (_highlightMenuActivatorForGuide)
         {
-            int a = (int)(170 + 85 * guidePulse);
+            // Fully solid accent at peak; still clearly accent when dim.
+            int a = (int)(200 + 55 * guidePulse);
             arrowColor = Color.FromArgb(a, UiChrome.AccentColor);
         }
         else if (_hoveredMenuActivator)

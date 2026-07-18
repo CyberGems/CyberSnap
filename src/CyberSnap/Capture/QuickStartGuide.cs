@@ -37,9 +37,7 @@ public sealed class QuickStartGuide : Form
     private const float Corner = 18f;
     private const float TailWidth = 28f;
     private const float TailHeight = 16f;
-    private const int EnterDurationMs = 200;
-    private const float EnterStartScale = 0.92f;
-    private const int EnterSlidePx = 10;
+    private const int EnterDurationMs = 280;
 
     private readonly Font _headerFont = UiChrome.ChromeFont(13f, FontStyle.Bold);
     private readonly Font _sectionFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
@@ -71,11 +69,10 @@ public sealed class QuickStartGuide : Form
     private float _tailCenterX;
     private RectangleF _bodyRect;
 
-    // Entrance animation (fade + scale + slight slide from the logo caret)
-    private float _enterT = 1f;
+    // Soft fade-in only (Form.Opacity). Scale/slide caused a one-frame glitch with Region.
     private DateTime _enterStart;
-    private Point _finalLocation;
     private System.Windows.Forms.Timer? _enterTimer;
+    private bool _entering;
 
     public QuickStartGuide()
     {
@@ -211,25 +208,11 @@ public sealed class QuickStartGuide : Form
         float maxTail = totalW - Corner - TailWidth / 2f - 4f;
         _tailCenterX = Math.Clamp(localAnchorX, minTail, maxTail);
 
-        _finalLocation = new Point(x, y);
         Bounds = new Rectangle(x, y, totalW, totalH);
         ApplyBubbleRegion(totalW, totalH);
 
         bool animate = !CyberSnap.UI.Motion.Disabled;
-        if (animate)
-        {
-            // Start slightly toward the logo so the bubble “grows out” of it.
-            int slide = _tailPointsDown ? EnterSlidePx : -EnterSlidePx;
-            Location = new Point(x, y + slide);
-            Opacity = 0.02;
-            _enterT = 0f;
-            _enterStart = DateTime.UtcNow;
-        }
-        else
-        {
-            Opacity = 1.0;
-            _enterT = 1f;
-        }
+        try { Opacity = animate ? 0.01 : 1.0; } catch { Opacity = 1.0; }
 
         Show(owner);
 
@@ -240,12 +223,23 @@ public sealed class QuickStartGuide : Form
         }
         catch { }
 
+        // Force a complete first paint while still nearly invisible, then fade up.
+        // Avoids the half-formed content flash that looked like a glitch.
+        try { Update(); } catch { }
+
         if (animate)
-            StartEnterAnimation();
+            BeginInvoke(new Action(StartEnterAnimation));
+        else
+            try { Opacity = 1.0; } catch { }
     }
 
     private void StartEnterAnimation()
     {
+        if (IsDisposed || Disposing)
+            return;
+        _entering = true;
+        _enterStart = DateTime.UtcNow;
+        try { Opacity = 0.01; } catch { }
         _enterTimer?.Stop();
         _enterTimer ??= new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
         _enterTimer.Tick -= OnEnterTick;
@@ -255,7 +249,7 @@ public sealed class QuickStartGuide : Form
 
     private void OnEnterTick(object? sender, EventArgs e)
     {
-        if (IsDisposed || Disposing)
+        if (IsDisposed || Disposing || !_entering)
         {
             StopEnterAnimation();
             return;
@@ -264,27 +258,19 @@ public sealed class QuickStartGuide : Form
         float raw = (float)(DateTime.UtcNow - _enterStart).TotalMilliseconds / EnterDurationMs;
         if (raw >= 1f)
         {
-            _enterT = 1f;
-            Location = _finalLocation;
             try { Opacity = 1.0; } catch { }
             StopEnterAnimation();
-            Invalidate();
             return;
         }
 
-        // Ease-out cubic
+        // Ease-out cubic fade only — no scale/slide (those caused a Region redraw glitch).
         float t = 1f - MathF.Pow(1f - raw, 3f);
-        _enterT = t;
-        try { Opacity = Math.Clamp(0.02 + 0.98 * t, 0.02, 1.0); } catch { }
-
-        int slide = _tailPointsDown ? EnterSlidePx : -EnterSlidePx;
-        int oy = (int)Math.Round(slide * (1f - t));
-        Location = new Point(_finalLocation.X, _finalLocation.Y + oy);
-        Invalidate();
+        try { Opacity = Math.Clamp(0.01 + 0.99 * t, 0.01, 1.0); } catch { }
     }
 
     private void StopEnterAnimation()
     {
+        _entering = false;
         if (_enterTimer == null) return;
         _enterTimer.Stop();
         _enterTimer.Tick -= OnEnterTick;
@@ -458,19 +444,6 @@ public sealed class QuickStartGuide : Form
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-        // Scale from the caret tip so the bubble appears to grow out of the logo.
-        if (_enterT < 0.999f)
-        {
-            float scale = EnterStartScale + (1f - EnterStartScale) * _enterT;
-            float ox = _tailCenterX;
-            float oy = _tailPointsDown
-                ? _bodyRect.Bottom + TailHeight
-                : _bodyRect.Y - TailHeight;
-            g.TranslateTransform(ox, oy);
-            g.ScaleTransform(scale, scale);
-            g.TranslateTransform(-ox, -oy);
-        }
 
         var accent = UiChrome.AccentColor;
         using (var path = CreateBubblePath(Width, Height))
