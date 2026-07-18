@@ -33,6 +33,18 @@ public partial class App
         if (Interlocked.CompareExchange(ref _settingsWindowOpening, 1, 0) != 0)
             return;
 
+        // Preloader first (only on cold open) — paints before service warm-up / window construction.
+        try
+        {
+            ToastWindow.ShowStartingStatus(
+                LocalizationService.Translate("Starting configuration…"),
+                LocalizationService.Translate("Preparing the workspace…"));
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("lifecycle.settings-starting-toast", ex.Message, ex);
+        }
+
         _ = Task.Run(() =>
         {
             try
@@ -179,6 +191,18 @@ public partial class App
 
         if (Interlocked.CompareExchange(ref _historyWindowOpening, 1, 0) != 0)
             return;
+
+        // Preloader first (only on cold open) — paints before service warm-up / window construction.
+        try
+        {
+            ToastWindow.ShowStartingStatus(
+                LocalizationService.Translate("Starting gallery…"),
+                LocalizationService.Translate("Preparing the workspace…"));
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("lifecycle.gallery-starting-toast", ex.Message, ex);
+        }
 
         _ = Task.Run(() =>
         {

@@ -73,22 +73,17 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     /// <summary>
     /// Brief system toast while the editor HWND is still Opacity 0 (layout / auto-maximize).
-    /// Capture→editor already follows with "Sent to the editor", which replaces this toast.
-    /// Reopening an existing instance is instant — no toast.
+    /// Uses <see cref="ToastWindow.ShowStartingStatus"/> so the toast paints <b>before</b>
+    /// WinForms construction blocks the UI thread. Capture→editor still follows with
+    /// "Sent to the editor", which replaces this toast. Reopening an existing instance: no toast.
     /// </summary>
     private static void NotifyEditorStarting()
     {
         try
         {
-            ToastWindow.Show(new ToastSpec
-            {
-                Title = LocalizationService.Translate("Starting editor…"),
-                Body = LocalizationService.Translate("Preparing the workspace…"),
-                IsSystemMessage = true,
-                SuppressSound = true,
-                // Long enough to cover cold open; capture flow replaces it immediately after Show().
-                DurationSeconds = 8,
-            });
+            ToastWindow.ShowStartingStatus(
+                LocalizationService.Translate("Starting editor…"),
+                LocalizationService.Translate("Preparing the workspace…"));
         }
         catch (Exception ex)
         {
@@ -98,8 +93,15 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     /// <summary>Opens or reuses the single editor instance.</summary>
     /// <param name="source">Origin of the image — controls size limits and soft warnings.</param>
+    /// <param name="showStartingToast">
+    /// When false, the caller already showed the starting toast (e.g. before a slow file load).
+    /// </param>
     /// <returns>False when the image was rejected (caller still owns cleanup of other resources).</returns>
-    public static bool ShowEditor(Bitmap captured, string? savedFilePath = null, ImageOpenSource source = ImageOpenSource.Capture)
+    public static bool ShowEditor(
+        Bitmap captured,
+        string? savedFilePath = null,
+        ImageOpenSource source = ImageOpenSource.Capture,
+        bool showStartingToast = true)
     {
         if (captured is null) throw new ArgumentNullException(nameof(captured));
 
@@ -133,7 +135,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return true;
         }
 
-        NotifyEditorStarting();
+        if (showStartingToast)
+            NotifyEditorStarting();
         _instance = new EditorForm(captured, savedFilePath);
         _instance.Show();
         if (eval.ShouldWarn)
@@ -149,6 +152,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
                 return;
 
+            // Surface the preloader before any decode/project load blocks the UI.
+            bool coldStart = _instance is null || _instance.IsDisposed;
+            if (coldStart)
+                NotifyEditorStarting();
+
             if (filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
             {
                 var sizeEval = ImageOpenPolicy.EvaluateFileSize(filePath, ImageOpenSource.FilePath);
@@ -157,11 +165,6 @@ public sealed partial class EditorForm : Form, IMessageFilter
                     ShowImageOpenError(sizeEval);
                     return;
                 }
-
-                // Toast early: project load can take a moment before the form exists.
-                bool coldStart = _instance is null || _instance.IsDisposed;
-                if (coldStart)
-                    NotifyEditorStarting();
 
                 var (baseBitmap, projectData) = CanvasProjectService.LoadProject(filePath);
                 var dimEval = ImageOpenPolicy.EvaluateBitmap(baseBitmap, ImageOpenSource.FilePath, sizeEval.FileSizeBytes);
@@ -210,7 +213,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 return;
             }
 
-            ShowEditor(captured, filePath, ImageOpenSource.FilePath);
+            // Toast already shown above for cold start.
+            ShowEditor(captured, filePath, ImageOpenSource.FilePath, showStartingToast: false);
             if (_instance is not null)
                 _instance.AddRecentFile(filePath);
         }
