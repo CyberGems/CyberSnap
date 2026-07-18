@@ -21,6 +21,22 @@ public sealed class ToolbarForm : Form
     private int _lastRenderVersion = int.MinValue;
     private Size _lastRenderSize;
     private Point _lastRenderLocation;
+    private byte _surfaceAlpha = 255;
+
+    /// <summary>0–255 overall opacity for the layered toolbar surface (used by dock enter anim).</summary>
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public byte SurfaceAlpha
+    {
+        get => _surfaceAlpha;
+        set
+        {
+            byte v = value;
+            if (_surfaceAlpha == v) return;
+            _surfaceAlpha = v;
+            // Force a present even if the bitmap content is unchanged.
+            _lastRenderVersion = int.MinValue;
+        }
+    }
 
     public ToolbarForm(RegionOverlayForm owner)
     {
@@ -108,7 +124,7 @@ public sealed class ToolbarForm : Form
         {
             BlendOp = 0, // AC_SRC_OVER
             BlendFlags = 0,
-            SourceConstantAlpha = 255,
+            SourceConstantAlpha = _surfaceAlpha,
             AlphaFormat = 1  // AC_SRC_ALPHA
         };
 

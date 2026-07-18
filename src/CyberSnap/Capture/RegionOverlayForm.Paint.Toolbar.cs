@@ -51,6 +51,12 @@ public sealed partial class RegionOverlayForm
     {
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+        // Dock enter: slide the chrome in from the docked edge (form stays put).
+        GraphicsState? dockState = IsDockEnterAnimating ? g.Save() : null;
+        if (dockState != null)
+            g.TranslateTransform(_dockEnterOffsetX, _dockEnterOffsetY);
+
         var r = new Rectangle(_toolbarRect.X, _toolbarRect.Y,
             _toolbarRect.Width, _toolbarRect.Height);
 
@@ -561,6 +567,9 @@ public sealed partial class RegionOverlayForm
         {
             g.FillPolygon(brush, points);
         }
+
+        if (dockState != null)
+            g.Restore(dockState);
 
         g.SmoothingMode = SmoothingMode.Default;
         g.PixelOffsetMode = PixelOffsetMode.Default;
