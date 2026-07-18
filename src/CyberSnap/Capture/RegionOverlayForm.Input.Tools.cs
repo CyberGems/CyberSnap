@@ -288,17 +288,17 @@ public sealed partial class RegionOverlayForm
             _hoverButtonStartTime = DateTime.UtcNow;
         }
 
-        bool hovBrand = _logoRect.Contains(e.Location);
+        bool hovBrand = _logoRect.Contains(e.Location) || _brandRect.Contains(e.Location);
         bool hovActivator = _menuActivatorRect.Contains(e.Location);
         if (hovBrand != _hoveredBrand || hovActivator != _hoveredMenuActivator)
         {
             _hoveredBrand = hovBrand;
             _hoveredMenuActivator = hovActivator;
             toolbarDirty = true;
-            if (hovBrand || hovActivator)
-            {
-                HideToolbarTooltip();
-            }
+            // Reset tooltip so brand / ▼ can show their own hints after the delay.
+            HideToolbarTooltip();
+            _tooltipDismissed = false;
+            _hoverButtonStartTime = DateTime.UtcNow;
         }
 
         bool prevHoveredAlt = _hoveredAltCaptureBtn;

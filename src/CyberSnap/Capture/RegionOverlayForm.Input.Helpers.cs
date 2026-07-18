@@ -160,6 +160,11 @@ public sealed partial class RegionOverlayForm
 
         _mode = m;
         _activeToolId = toolId ?? _visibleTools.FirstOrDefault(t => t.Mode == m)?.Id;
+
+        // Remember annotation tools so the next confirm session can restore them.
+        if (ToolDef.IsAnnotationTool(m) && !string.IsNullOrEmpty(_activeToolId))
+            LastAnnotationToolChanged?.Invoke(_activeToolId);
+
         _hasSelection = false;
         _hasDragged = false;
         _selectionRect = Rectangle.Empty;

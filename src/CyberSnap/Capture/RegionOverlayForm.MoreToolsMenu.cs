@@ -474,6 +474,16 @@ public sealed partial class RegionOverlayForm
             SetEnabledTools(enabled);
             CalcToolbar();
             InvalidateToolbarArea();
+
+            var tool = ToolDef.AllTools.FirstOrDefault(t => t.Id == toolId);
+            var name = tool != null
+                ? LocalizationService.Translate(tool.Label)
+                : toolId;
+            // Brief banner so the user knows how to bring the tool back.
+            var msg = string.Format(
+                LocalizationService.Translate("\"{0}\" hidden · Restore from ▼"),
+                name);
+            ShowToolBanner(msg, persistent: false);
         }
     }
 

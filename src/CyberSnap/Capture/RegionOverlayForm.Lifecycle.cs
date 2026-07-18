@@ -556,6 +556,9 @@ public sealed partial class RegionOverlayForm
             _escapeHook?.Dispose();
             _escapeHook = null;
             StopMenuActivatorPulse();
+            StopDockSlideAnimation(snapToEnd: false);
+            try { _dockAnimTimer?.Dispose(); } catch { }
+            _dockAnimTimer = null;
             _banner?.Dispose();
             ClearCrosshairGuides();
             if (_verticalCrosshairForm != null)

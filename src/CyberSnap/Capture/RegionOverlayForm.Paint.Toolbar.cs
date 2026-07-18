@@ -381,6 +381,19 @@ public sealed partial class RegionOverlayForm
             }
         }
 
+        // 3b. Subtle chrome well behind Move + Close so they read as system controls,
+        // not as another pair of tools next to color/stroke.
+        if (PositionButtonIndex < _toolbarButtons.Length && CloseButtonIndex < _toolbarButtons.Length)
+        {
+            var posBtn = _toolbarButtons[PositionButtonIndex];
+            var closeBtn = _toolbarButtons[CloseButtonIndex];
+            var chrome = Rectangle.Union(posBtn, closeBtn);
+            chrome.Inflate(UiChrome.ScaleInt(3), UiChrome.ScaleInt(2));
+            using (var path = WindowsDockRenderer.RoundedRect(chrome, UiChrome.ScaleFloat(6f)))
+            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 28 : 18, 0, 0, 0)))
+                g.FillPath(brush, path);
+        }
+
         // 4. Draw all buttons
         for (int i = 0; i < BtnCount; i++)
         {
@@ -409,6 +422,8 @@ public sealed partial class RegionOverlayForm
                     pen.EndCap = LineCap.Round;
                     g.DrawLine(pen, lineX1, lineY, lineX2, lineY);
                 }
+                if (active)
+                    WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
                 continue;
             }
 
@@ -443,6 +458,8 @@ public sealed partial class RegionOverlayForm
                 int glossAlpha = colorAlpha > 200 ? 100 : 70;
                 using (var hlBrush = new SolidBrush(Color.FromArgb(glossAlpha, 255, 255, 255)))
                     g.FillEllipse(hlBrush, hlX, hlY, hlW, hlH);
+                if (active)
+                    WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
                 continue;
             }
 
@@ -457,11 +474,27 @@ public sealed partial class RegionOverlayForm
                 continue;
             }
 
+            // Position (Move bar): slightly muted so it stays with Close as chrome.
+            if (i == PositionButtonIndex)
+            {
+                WindowsDockRenderer.PaintButton(g, btn, active: false, hovered: hover, accent: tierAccent);
+                int pa = hover ? 210 : 120;
+                DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(pa, UiChrome.SurfaceTextPrimary), active: false);
+                continue;
+            }
+
             WindowsDockRenderer.PaintButton(g, btn, active, hover, accent: tierAccent);
 
-            int ia = active ? 255 : hover ? 240 : (i == PositionButtonIndex) ? 130 : 200;
+            int ia = active ? 255 : hover ? 240 : 200;
             var iconColor = active ? tierAccent : UiChrome.SurfaceTextPrimary;
             DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
+
+            if (active)
+                WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
+
+            // Hold-to-switch affordance on the merged capture button (rect ↔ center).
+            if (i == _mergedCaptureButtonIndex)
+                PaintCaptureHoldHint(g, btn, tierAccent);
         }
 
         // Draw elegant mini menu activator (▼). Soft accent pulse while the quick-start guide is open.
@@ -571,6 +604,46 @@ public sealed partial class RegionOverlayForm
     {
         factor = Math.Clamp(factor, 0f, 1f);
         return Color.FromArgb((int)Math.Round(color.A * factor), color.R, color.G, color.B);
+    }
+
+    /// <summary>
+    /// Small chevron badge + hold-progress arc on the primary capture button so users
+    /// discover the long-press alternate mode (Area ↔ From Center).
+    /// </summary>
+    private void PaintCaptureHoldHint(Graphics g, Rectangle btn, Color accent)
+    {
+        // Tiny corner chevron (always visible when this is the merged capture button).
+        float s = UiChrome.ScaleFloat(3.2f);
+        float cx = btn.Right - UiChrome.ScaleFloat(7f);
+        float cy = btn.Bottom - UiChrome.ScaleFloat(7f);
+        var chev = new[]
+        {
+            new PointF(cx - s, cy - s * 0.35f),
+            new PointF(cx + s, cy - s * 0.35f),
+            new PointF(cx, cy + s * 0.75f),
+        };
+        int chevA = _isMouseDownOnCaptureBtn || _altCapturePopupOpen ? 230 : 120;
+        using (var brush = new SolidBrush(Color.FromArgb(chevA, accent)))
+            g.FillPolygon(brush, chev);
+
+        // Progress ring while holding toward the 300ms threshold.
+        if (_isMouseDownOnCaptureBtn && _mouseDownStartTime != DateTime.MinValue)
+        {
+            float raw = (float)(DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds / 300f;
+            float t = Math.Clamp(raw, 0f, 1f);
+            if (t > 0.02f)
+            {
+                float pad = UiChrome.ScaleFloat(2.5f);
+                var ring = RectangleF.Inflate(btn, -pad, -pad);
+                using var pen = new Pen(Color.FromArgb((int)(80 + 140 * t), accent), UiChrome.ScaleFloat(1.6f))
+                {
+                    StartCap = LineCap.Round,
+                    EndCap = LineCap.Round,
+                };
+                // Sweep from top, clockwise.
+                g.DrawArc(pen, ring, -90f, 360f * t);
+            }
+        }
     }
 
     /// <summary>

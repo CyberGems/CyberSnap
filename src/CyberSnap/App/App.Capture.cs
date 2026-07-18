@@ -632,6 +632,14 @@ public partial class App
                     _settingsService.Settings.HasSeenQuickStartGuide = true;
                     _settingsService.Save();
                 };
+                overlay.LastAnnotationToolChanged += toolId =>
+                {
+                    if (string.IsNullOrWhiteSpace(toolId)) return;
+                    if (string.Equals(_settingsService!.Settings.LastAnnotationToolId, toolId, StringComparison.OrdinalIgnoreCase))
+                        return;
+                    _settingsService.Settings.LastAnnotationToolId = toolId;
+                    _settingsService.Save();
+                };
 
                 overlay.RegionSelected += sel =>
                 {
