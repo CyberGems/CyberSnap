@@ -464,12 +464,32 @@ public sealed partial class RegionOverlayForm
             DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
         }
 
-        // Draw elegant mini menu activator
-        if (_hoveredMenuActivator)
+        // Draw elegant mini menu activator (▼). Soft accent pulse while the quick-start guide is open.
+        float guidePulse = 0f;
+        if (_highlightMenuActivatorForGuide)
         {
+            double secs = (DateTime.UtcNow - _menuActivatorPulseStart).TotalSeconds;
+            guidePulse = 0.55f + 0.45f * (float)Math.Sin(secs * Math.PI * 2.0 / 1.4);
+        }
+
+        bool activatorHot = _hoveredMenuActivator || _highlightMenuActivatorForGuide;
+        if (activatorHot)
+        {
+            int fillA = _highlightMenuActivatorForGuide
+                ? (int)(36 + 40 * guidePulse)
+                : 30;
             using (var path = WindowsDockRenderer.RoundedRect(_menuActivatorRect, UiChrome.ScaleInt(3)))
-            using (var brush = new SolidBrush(Color.FromArgb(30, UiChrome.AccentColor)))
+            using (var brush = new SolidBrush(Color.FromArgb(fillA, UiChrome.AccentColor)))
                 g.FillPath(brush, path);
+
+            if (_highlightMenuActivatorForGuide)
+            {
+                int ringA = (int)(70 + 90 * guidePulse);
+                using var ring = new Pen(Color.FromArgb(ringA, UiChrome.AccentColor), 1.25f);
+                using var path = WindowsDockRenderer.RoundedRect(
+                    Rectangle.Inflate(_menuActivatorRect, 1, 1), UiChrome.ScaleInt(4));
+                g.DrawPath(ring, path);
+            }
         }
 
         int triW = UiChrome.ScaleInt(6);
@@ -484,9 +504,20 @@ public sealed partial class RegionOverlayForm
             new PointF(tcx, tcy + triH / 2f)
         };
 
-        Color arrowColor = _hoveredMenuActivator 
-            ? UiChrome.AccentColor 
-            : Color.FromArgb((int)((UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f * 255), UiChrome.SurfaceTextPrimary);
+        Color arrowColor;
+        if (_highlightMenuActivatorForGuide)
+        {
+            int a = (int)(170 + 85 * guidePulse);
+            arrowColor = Color.FromArgb(a, UiChrome.AccentColor);
+        }
+        else if (_hoveredMenuActivator)
+        {
+            arrowColor = UiChrome.AccentColor;
+        }
+        else
+        {
+            arrowColor = Color.FromArgb((int)((UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f * 255), UiChrome.SurfaceTextPrimary);
+        }
 
         using (var brush = new SolidBrush(arrowColor))
         {
