@@ -466,6 +466,8 @@ public sealed class AppSettings
     public bool HasSeenCaptureBanner { get; set; }
     /// <summary>True after the capture-mode quick-start bubble has been shown and dismissed once.</summary>
     public bool HasSeenQuickStartGuide { get; set; }
+    /// <summary>Last Group-1 (annotation) tool id used during capture confirm, restored next time.</summary>
+    public string? LastAnnotationToolId { get; set; }
     public bool ShowCursor { get; set; }
     public bool ShowCaptureMagnifier { get; set; } = true;
     public bool ShowSelectionSize { get; set; } = true;

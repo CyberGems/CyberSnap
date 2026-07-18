@@ -359,6 +359,8 @@ public sealed partial class RegionOverlayForm : Form
     public event Action<CaptureMode>? DefaultCaptureModeChanged;
     /// <summary>Raised once when the first-run quick-start guide is dismissed so the host can persist HasSeenQuickStartGuide.</summary>
     public event Action? QuickStartGuideDismissed;
+    /// <summary>Raised when the user picks a Group-1 annotation tool so the host can persist LastAnnotationToolId.</summary>
+    public event Action<string>? LastAnnotationToolChanged;
     private const int ColorPickerColumns = 6;
     private const int ColorPickerRows = 1;
     private const int ColorPickerSwatchSize = 28;
@@ -897,11 +899,98 @@ public sealed partial class RegionOverlayForm : Form
 
     public void ToggleToolbarPosition()
     {
+        var fromBounds = _toolbarForm is { IsDisposed: false, Visible: true }
+            ? _toolbarForm.Bounds
+            : Rectangle.Empty;
+
         CaptureDockSide = CaptureDockSide == CaptureDockSide.Top ? CaptureDockSide.Bottom : CaptureDockSide.Top;
         DockSideChanged?.Invoke(CaptureDockSide);
         CalcToolbar();
         PositionToolbarForm();
         RefreshToolbar();
+
+        var toBounds = _toolbarForm is { IsDisposed: false, Visible: true }
+            ? _toolbarForm.Bounds
+            : Rectangle.Empty;
+
+        if (!UI.Motion.Disabled
+            && !fromBounds.IsEmpty
+            && !toBounds.IsEmpty
+            && fromBounds != toBounds
+            && _toolbarForm is { IsDisposed: false })
+        {
+            StartDockSlideAnimation(fromBounds, toBounds);
+        }
+    }
+
+    private Rectangle _dockAnimFrom;
+    private Rectangle _dockAnimTo;
+    private float _dockAnimT = 1f;
+    private DateTime _dockAnimStart;
+    private System.Windows.Forms.Timer? _dockAnimTimer;
+    private const int DockAnimMs = 220;
+
+    private void StartDockSlideAnimation(Rectangle from, Rectangle to)
+    {
+        _dockAnimFrom = from;
+        _dockAnimTo = to;
+        _dockAnimT = 0f;
+        _dockAnimStart = DateTime.UtcNow;
+        try { _toolbarForm!.Bounds = from; } catch { }
+
+        _dockAnimTimer?.Stop();
+        _dockAnimTimer ??= new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _dockAnimTimer.Tick -= OnDockAnimTick;
+        _dockAnimTimer.Tick += OnDockAnimTick;
+        _dockAnimTimer.Start();
+    }
+
+    private void OnDockAnimTick(object? sender, EventArgs e)
+    {
+        if (_toolbarForm is null || _toolbarForm.IsDisposed || IsDisposed || Disposing)
+        {
+            StopDockSlideAnimation(snapToEnd: false);
+            return;
+        }
+
+        float raw = (float)(DateTime.UtcNow - _dockAnimStart).TotalMilliseconds / DockAnimMs;
+        if (raw >= 1f)
+        {
+            try { _toolbarForm.Bounds = _dockAnimTo; } catch { }
+            StopDockSlideAnimation(snapToEnd: true);
+            MarkToolbarRenderDirty();
+            try { _toolbarForm.UpdateSurface(); } catch { }
+            return;
+        }
+
+        // Ease-out cubic
+        float t = 1f - MathF.Pow(1f - raw, 3f);
+        _dockAnimT = t;
+        int x = (int)Math.Round(_dockAnimFrom.X + (_dockAnimTo.X - _dockAnimFrom.X) * t);
+        int y = (int)Math.Round(_dockAnimFrom.Y + (_dockAnimTo.Y - _dockAnimFrom.Y) * t);
+        int w = (int)Math.Round(_dockAnimFrom.Width + (_dockAnimTo.Width - _dockAnimFrom.Width) * t);
+        int h = (int)Math.Round(_dockAnimFrom.Height + (_dockAnimTo.Height - _dockAnimFrom.Height) * t);
+        try
+        {
+            _toolbarForm.Bounds = new Rectangle(x, y, Math.Max(1, w), Math.Max(1, h));
+            MarkToolbarRenderDirty();
+            _toolbarForm.UpdateSurface();
+        }
+        catch { }
+    }
+
+    private void StopDockSlideAnimation(bool snapToEnd)
+    {
+        _dockAnimT = 1f;
+        if (_dockAnimTimer != null)
+        {
+            _dockAnimTimer.Stop();
+            _dockAnimTimer.Tick -= OnDockAnimTick;
+        }
+        if (snapToEnd && _toolbarForm is { IsDisposed: false })
+        {
+            try { _toolbarForm.Bounds = _dockAnimTo; } catch { }
+        }
     }
 
     private void CycleStrokeWidth()
@@ -954,9 +1043,13 @@ public sealed partial class RegionOverlayForm : Form
     {
         bool changed = false;
 
-        // 1. Mouse hold check (0.3 seconds)
+        // 1. Mouse hold check (0.3 seconds) + progress ring redraw while holding
         if (_isMouseDownOnCaptureBtn && _mouseDownStartTime != DateTime.MinValue)
         {
+            // Repaint so the hold progress arc on the capture button advances.
+            if (!_altCapturePopupOpen)
+                changed = true;
+
             if ((DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds >= 300)
             {
                 if (!_altCapturePopupOpen)
@@ -1004,7 +1097,10 @@ public sealed partial class RegionOverlayForm : Form
                 }
                 _hoverButtonStartTime = DateTime.MinValue;
             }
-            else if (_hoveredButton >= 0 || (_hoveredAltCaptureBtn && _altCapturePopupOpen))
+            else if (_hoveredButton >= 0
+                     || _hoveredMenuActivator
+                     || _hoveredBrand
+                     || (_hoveredAltCaptureBtn && _altCapturePopupOpen))
             {
                 if (!_tooltipVisible && !_tooltipDismissed)
                 {

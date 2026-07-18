@@ -133,9 +133,10 @@ public static class WindowsDockRenderer
         using var path = RoundedRect(rect, radius);
         if (active)
         {
-            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 36 : 28, accentColor)))
+            // Stronger fill + ring so the active tool is obvious on bright monitors.
+            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 52 : 40, accentColor)))
                 g.FillPath(brush, path);
-            using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 140 : 100, accentColor), 1f))
+            using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 180 : 140, accentColor), 1.35f))
                 g.DrawPath(pen, path);
         }
         else // Hovered
@@ -143,6 +144,18 @@ public static class WindowsDockRenderer
             using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 20 : 16, accentColor)))
                 g.FillPath(brush, path);
         }
+    }
+
+    /// <summary>Small accent pill under an active toolbar icon (extra active-state cue).</summary>
+    public static void PaintActiveIndicator(Graphics g, RectangleF button, Color accent)
+    {
+        float w = Math.Max(8f, button.Width * 0.36f);
+        float h = Math.Max(2f, UiChrome.ScaleFloat(2.5f));
+        float x = button.X + (button.Width - w) / 2f;
+        float y = button.Bottom - h - UiChrome.ScaleFloat(3f);
+        using var path = RoundedRect(new RectangleF(x, y, w, h), h / 2f);
+        using var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 230 : 210, accent));
+        g.FillPath(brush, path);
     }
 
     public static void PaintDivider(Graphics g, Point a, Point b)

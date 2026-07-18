@@ -935,6 +935,7 @@ public sealed partial class RegionOverlayForm
         try { CloseCaptureMagnifier(); } catch { }
         EnsureToolbarReady();
         RefreshToolbar();
+        TryRestoreLastAnnotationTool();
         _shinePhase[0] = 0f;
         _shinePhase[1] = 0.5f;
         _shinePhase[2] = 0.25f;
@@ -942,6 +943,30 @@ public sealed partial class RegionOverlayForm
         _shineDup[0] = _shineDup[1] = _shineDup[2] = 0f;
         if (!UI.Motion.Disabled) _confirmShineTimer.Start();
         Invalidate();
+    }
+
+    /// <summary>
+    /// After the region is locked for annotation, restore the last Group-1 tool the user used
+    /// (if it is still enabled on the bar). Capture-only users never set the preference.
+    /// </summary>
+    private void TryRestoreLastAnnotationTool()
+    {
+        var settings = Services.SettingsService.LoadStatic();
+        var lastId = settings?.LastAnnotationToolId;
+        if (string.IsNullOrWhiteSpace(lastId))
+            return;
+
+        var tool = ToolDef.AllTools.FirstOrDefault(t =>
+            t.Group == 1 && string.Equals(t.Id, lastId, StringComparison.OrdinalIgnoreCase));
+        if (tool is null || tool.Mode is null)
+            return;
+
+        // Only restore if the tool is currently visible on the annotation bar.
+        if (!_flyoutTools.Any(t => string.Equals(t.Id, tool.Id, StringComparison.OrdinalIgnoreCase))
+            && !_mainBarTools.Any(t => string.Equals(t.Id, tool.Id, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        SetTool(tool);
     }
 
     private void ExitConfirmMode()
