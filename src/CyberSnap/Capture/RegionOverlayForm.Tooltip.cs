@@ -230,7 +230,9 @@ public sealed partial class RegionOverlayForm
             CaptureMode.Ruler => LocalizationService.Translate("Click & drag to measure"),
             CaptureMode.ColorPicker => LocalizationService.Translate("Click a pixel to pick its color"),
             CaptureMode.Record or CaptureMode.RecordGif => LocalizationService.Translate("Click & drag to select area"),
-            CaptureMode.Move => LocalizationService.Translate("Click to select · Drag to move · Double-click Pick to select all"),
+            CaptureMode.Move => string.Format(
+                LocalizationService.Translate("Click to select · Drag to move · Double-click {0} to select all"),
+                LocalizationService.Translate("Pick")),
             CaptureMode.Eraser => LocalizationService.Translate("Click or drag to erase objects"),
             CaptureMode.Highlight => LocalizationService.Translate("Click & drag to highlight"),
             CaptureMode.Text => LocalizationService.Translate("Click to place text"),
