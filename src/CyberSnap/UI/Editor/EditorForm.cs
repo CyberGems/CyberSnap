@@ -71,6 +71,31 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private readonly System.Windows.Forms.Timer _saveStatusTimer = new() { Interval = 2200 };
     private readonly System.Windows.Forms.Timer _clipboardMonitorTimer = new() { Interval = 1000 };
 
+    /// <summary>
+    /// Brief system toast while the editor HWND is still Opacity 0 (layout / auto-maximize).
+    /// Capture→editor already follows with "Sent to the editor", which replaces this toast.
+    /// Reopening an existing instance is instant — no toast.
+    /// </summary>
+    private static void NotifyEditorStarting()
+    {
+        try
+        {
+            ToastWindow.Show(new ToastSpec
+            {
+                Title = LocalizationService.Translate("Starting editor…"),
+                Body = LocalizationService.Translate("Preparing the workspace…"),
+                IsSystemMessage = true,
+                SuppressSound = true,
+                // Long enough to cover cold open; capture flow replaces it immediately after Show().
+                DurationSeconds = 8,
+            });
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("editor.starting-toast", ex.Message, ex);
+        }
+    }
+
     /// <summary>Opens or reuses the single editor instance.</summary>
     /// <param name="source">Origin of the image — controls size limits and soft warnings.</param>
     /// <returns>False when the image was rejected (caller still owns cleanup of other resources).</returns>
@@ -107,6 +132,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
             App.NotifyFirstTimeTool("editor");
             return true;
         }
+
+        NotifyEditorStarting();
         _instance = new EditorForm(captured, savedFilePath);
         _instance.Show();
         if (eval.ShouldWarn)
@@ -130,6 +157,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
                     ShowImageOpenError(sizeEval);
                     return;
                 }
+
+                // Toast early: project load can take a moment before the form exists.
+                bool coldStart = _instance is null || _instance.IsDisposed;
+                if (coldStart)
+                    NotifyEditorStarting();
 
                 var (baseBitmap, projectData) = CanvasProjectService.LoadProject(filePath);
                 var dimEval = ImageOpenPolicy.EvaluateBitmap(baseBitmap, ImageOpenSource.FilePath, sizeEval.FileSizeBytes);
