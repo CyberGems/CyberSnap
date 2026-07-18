@@ -695,7 +695,8 @@ public sealed partial class RegionOverlayForm : Form
             _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Stroke width
             cy += buttonSize + buttonSpacing;
             _toolbarButtons[ColorButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Color
-            cy += buttonSize + buttonSpacing;
+            // Separator before Move so it groups with Close, not with the color swatch.
+            cy += buttonSize + buttonSpacing + GroupGap;
             _toolbarButtons[PositionButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Position
             cy += buttonSize + buttonSpacing;
             _toolbarButtons[CloseButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Close
@@ -756,10 +757,10 @@ public sealed partial class RegionOverlayForm : Form
             _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Stroke width
             cx += buttonSize + buttonSpacing;
             _toolbarButtons[ColorButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Color
-            cx += buttonSize + buttonSpacing;
+            // Separator before Move so it groups with Close, not with the color swatch.
+            cx += buttonSize + buttonSpacing + GroupGap;
             _toolbarButtons[PositionButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Position
             cx += buttonSize + buttonSpacing;
-            cx += GroupGap;
             _toolbarButtons[CloseButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Close
 
             // Row 2: Annotation Tools

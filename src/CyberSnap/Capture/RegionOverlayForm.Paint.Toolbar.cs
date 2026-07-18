@@ -324,21 +324,21 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        // 2b. Divider isolating the Cancel (X) button from the styling/system cluster, so it doesn't
-        // read as just another tool. Drawn in the existing gap before Close — no layout changes.
-        if (PositionButtonIndex < _toolbarButtons.Length && CloseButtonIndex < _toolbarButtons.Length)
+        // 2b. Divider before Move (position) so chrome controls (Move + Close) are grouped
+        // and Move is not visually attached to the color swatch.
+        if (ColorButtonIndex < _toolbarButtons.Length && PositionButtonIndex < _toolbarButtons.Length)
         {
+            var colorBtn = _toolbarButtons[ColorButtonIndex];
             var posBtn = _toolbarButtons[PositionButtonIndex];
-            var closeBtn = _toolbarButtons[CloseButtonIndex];
             if (IsVerticalDock)
             {
-                int sy = (posBtn.Bottom + closeBtn.Y) / 2;
-                WindowsDockRenderer.PaintDivider(g, new Point(closeBtn.X + 4, sy), new Point(closeBtn.Right - 4, sy));
+                int sy = (colorBtn.Bottom + posBtn.Y) / 2;
+                WindowsDockRenderer.PaintDivider(g, new Point(posBtn.X + 4, sy), new Point(posBtn.Right - 4, sy));
             }
             else
             {
-                int sx = (posBtn.Right + closeBtn.X) / 2;
-                WindowsDockRenderer.PaintDivider(g, new Point(sx, closeBtn.Y + 4), new Point(sx, closeBtn.Bottom - 4));
+                int sx = (colorBtn.Right + posBtn.X) / 2;
+                WindowsDockRenderer.PaintDivider(g, new Point(sx, posBtn.Y + 4), new Point(sx, posBtn.Bottom - 4));
             }
         }
 
