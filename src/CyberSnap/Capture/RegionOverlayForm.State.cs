@@ -1038,8 +1038,6 @@ public sealed partial class RegionOverlayForm
         if (!IsSelectionCaptureMode())
             return false;
 
-        HideCaptureBanner();
-
         if (_isSelecting)
         {
             _isSelecting = false;

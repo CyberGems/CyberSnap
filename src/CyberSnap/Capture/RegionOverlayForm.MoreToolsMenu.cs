@@ -16,6 +16,9 @@ public sealed partial class RegionOverlayForm
     private ContextMenuStrip? _toolbarContextMenu;
     private ContextMenuStrip? _confirmContextMenu;
     private QuickStartGuide? _quickStartGuide;
+    private bool _highlightMenuActivatorForGuide;
+    private DateTime _menuActivatorPulseStart;
+    private System.Windows.Forms.Timer? _menuActivatorPulseTimer;
     private static List<string>? _rememberedAnnotationTools;
 
     private void ShowQuickStartGuide()
@@ -44,6 +47,7 @@ public sealed partial class RegionOverlayForm
         _quickStartGuide.ShowNear(this, anchorScreen, above: above);
         _quickStartGuide.FormClosed -= OnQuickStartGuideClosed;
         _quickStartGuide.FormClosed += OnQuickStartGuideClosed;
+        StartMenuActivatorPulse();
     }
 
     private void OnQuickStartGuideClosed(object? sender, FormClosedEventArgs e)
@@ -54,8 +58,57 @@ public sealed partial class RegionOverlayForm
             _quickStartGuide = null;
         }
 
+        StopMenuActivatorPulse();
+
         // First dismissal (auto or manual) marks the guide as seen so it does not re-auto-open.
         QuickStartGuideDismissed?.Invoke();
+    }
+
+    private void StartMenuActivatorPulse()
+    {
+        _highlightMenuActivatorForGuide = true;
+        _menuActivatorPulseStart = DateTime.UtcNow;
+        if (_menuActivatorPulseTimer == null)
+        {
+            _menuActivatorPulseTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+            _menuActivatorPulseTimer.Tick += (_, _) =>
+            {
+                if (!_highlightMenuActivatorForGuide || IsDisposed || Disposing)
+                {
+                    StopMenuActivatorPulse();
+                    return;
+                }
+                InvalidateMenuActivatorArea();
+            };
+        }
+        _menuActivatorPulseTimer.Start();
+        InvalidateMenuActivatorArea();
+    }
+
+    private void StopMenuActivatorPulse()
+    {
+        _highlightMenuActivatorForGuide = false;
+        try { _menuActivatorPulseTimer?.Stop(); } catch { }
+        if (_menuActivatorPulseTimer != null)
+        {
+            try { _menuActivatorPulseTimer.Dispose(); } catch { }
+            _menuActivatorPulseTimer = null;
+        }
+        if (!IsDisposed && !Disposing)
+            InvalidateMenuActivatorArea();
+    }
+
+    private void InvalidateMenuActivatorArea()
+    {
+        if (_menuActivatorRect.IsEmpty)
+        {
+            InvalidateToolbarArea();
+            return;
+        }
+        var pad = UiChrome.ScaleInt(8);
+        var r = Rectangle.Inflate(_menuActivatorRect, pad, pad);
+        Invalidate(r);
+        try { _toolbarForm?.UpdateSurface(); } catch { }
     }
 
     private Rectangle GetQuickStartAnchorLocal()
@@ -309,6 +362,24 @@ public sealed partial class RegionOverlayForm
             _toolbarContextMenu?.Close();
         };
         menu.Items.Add(bannersItem);
+
+        // Quick-start guide (always available after first run; re-opens the talk bubble)
+        var guideText = LocalizationService.Translate("Show quick start guide");
+        var guideItem = WindowsMenuRenderer.Item(guideText, iconId: "info", iconSize: 24);
+        guideItem.Click += (s, e) =>
+        {
+            _toolbarContextMenu?.Close();
+            // Open after the menu has fully closed so it does not steal the first click.
+            BeginInvoke(new Action(() =>
+            {
+                if (IsDisposed || Disposing || !Visible)
+                    return;
+                if (_quickStartGuide != null && _quickStartGuide.Visible)
+                    return;
+                ShowQuickStartGuide();
+            }));
+        };
+        menu.Items.Add(guideItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu, 200, itemHeight: 46);
 

@@ -626,12 +626,6 @@ public partial class App
                     _settingsService.Save();
                     RefreshWidgetWindowLayout();
                 };
-                overlay.CaptureBannerDismissed += () =>
-                {
-                    if (_settingsService!.Settings.HasSeenCaptureBanner) return;
-                    _settingsService.Settings.HasSeenCaptureBanner = true;
-                    _settingsService.Save();
-                };
                 overlay.QuickStartGuideDismissed += () =>
                 {
                     if (_settingsService!.Settings.HasSeenQuickStartGuide) return;

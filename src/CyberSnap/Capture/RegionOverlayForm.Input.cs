@@ -15,7 +15,6 @@ public sealed partial class RegionOverlayForm
             && (_logoRect.Contains(e.Location) || _brandRect.Contains(e.Location)))
         {
             HideToolbarTooltip();
-            HideCaptureBanner();
             ShowQuickStartGuide();
             return;
         }
@@ -60,9 +59,6 @@ public sealed partial class RegionOverlayForm
             return;
         }
         if (e.Button != MouseButtons.Left) return;
-
-        // Hide the first-time capture banner on any user interaction
-        HideCaptureBanner();
 
         // Region confirmation mode: handles and buttons take priority
         if (_isConfirmingSelection)

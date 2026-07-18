@@ -110,7 +110,6 @@ public sealed partial class RegionOverlayForm : Form
     private LiveSelectionAdornerForm? _selectionAdorner;
     private CaptureEscapeKeyHook? _escapeHook;
     private StandaloneToolBanner? _banner;
-    private bool _captureBannerShown; // first-run banner displayed this session
     private CrosshairGuideForm? _verticalCrosshairForm;
     private CrosshairGuideForm? _horizontalCrosshairForm;
     private readonly System.Windows.Forms.Timer _animTimer;
@@ -358,7 +357,6 @@ public sealed partial class RegionOverlayForm : Form
     public event Action<Color>? ToolColorChanged;
     public event Action<CaptureDockSide>? DockSideChanged;
     public event Action<CaptureMode>? DefaultCaptureModeChanged;
-    public event Action? CaptureBannerDismissed;
     /// <summary>Raised once when the first-run quick-start guide is dismissed so the host can persist HasSeenQuickStartGuide.</summary>
     public event Action? QuickStartGuideDismissed;
     private const int ColorPickerColumns = 6;
@@ -457,39 +455,7 @@ public sealed partial class RegionOverlayForm : Form
         _confirmShineTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
         _confirmShineTimer.Tick += (_, _) => ConfirmShineTick();
 
-        // ── First-time capture banner ──
-        // CaptureDockSide is assigned via object-initializer after the ctor, so read the
-        // preferred dock from settings here (default Bottom matches the property default).
-        var settings = SettingsService.LoadStatic();
-        if (settings != null && !settings.HasSeenCaptureBanner)
-        {
-            var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
-            bool toolbarAtTop = settings.CaptureDockSide == CaptureDockSide.Top;
-            // Anchor opposite the toolbar so the pill does not cover the dock.
-            _banner = new StandaloneToolBanner(
-                LocalizationService.Translate("Click & drag to capture · Toolbar below · Right-click or Esc to cancel"),
-                bannerWorkingArea,
-                Bounds,
-                persistent: true,
-                onInvalidateRect: r => Invalidate(r),
-                anchorBottom: toolbarAtTop);
-            _captureBannerShown = true;
-        }
-
         _currentOverlay = this;
-    }
-
-    /// <summary>
-    /// Hide the first-run instruction banner from view (e.g. on first interaction).
-    /// This is visual only — it does NOT mark the banner as seen. The "seen" flag is
-    /// persisted in <see cref="Dispose(bool)"/> only when the overlay closes via an
-    /// actual capture, so cancelling without capturing still shows the hint next time.
-    /// </summary>
-    private void HideCaptureBanner()
-    {
-        if (_banner == null) return;
-        _banner.Dismiss();
-        _banner = null;
     }
 
     public static bool TrySwitchCurrentOverlayMode(CaptureMode mode)
