@@ -121,9 +121,9 @@ public static class WindowsDockRenderer
             g.FillPath(keyBrush, path);
     }
 
-    public static void PaintButton(Graphics g, RectangleF rect, bool active, bool hovered, float radius = -1f, Color? accent = null)
+    public static void PaintButton(Graphics g, RectangleF rect, bool active, bool hovered, float radius = -1f, Color? accent = null, float welcomePulse = 0f)
     {
-        if (!active && !hovered)
+        if (!active && !hovered && welcomePulse <= 0f)
             return;
 
         if (radius < 0)
@@ -131,12 +131,15 @@ public static class WindowsDockRenderer
 
         var accentColor = accent ?? UiChrome.AccentColor;
         using var path = RoundedRect(rect, radius);
-        if (active)
+        if (active || welcomePulse > 0f)
         {
-            // Stronger fill + ring so the active tool is obvious on bright monitors.
-            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 52 : 40, accentColor)))
+            // Base active fill; welcomePulse (0..1) briefly boosts glow after tool select.
+            float pulse = Math.Clamp(welcomePulse, 0f, 1f);
+            int fillA = (int)((UiChrome.IsDark ? 52 : 40) + 50 * pulse);
+            int ringA = (int)((UiChrome.IsDark ? 180 : 140) + 60 * pulse);
+            using (var brush = new SolidBrush(Color.FromArgb(Math.Clamp(fillA, 0, 255), accentColor)))
                 g.FillPath(brush, path);
-            using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 180 : 140, accentColor), 1.35f))
+            using (var pen = new Pen(Color.FromArgb(Math.Clamp(ringA, 0, 255), accentColor), 1.35f + pulse * 0.6f))
                 g.DrawPath(pen, path);
         }
         else // Hovered
@@ -147,14 +150,16 @@ public static class WindowsDockRenderer
     }
 
     /// <summary>Small accent pill under an active toolbar icon (extra active-state cue).</summary>
-    public static void PaintActiveIndicator(Graphics g, RectangleF button, Color accent)
+    public static void PaintActiveIndicator(Graphics g, RectangleF button, Color accent, float welcomePulse = 0f)
     {
-        float w = Math.Max(8f, button.Width * 0.36f);
-        float h = Math.Max(2f, UiChrome.ScaleFloat(2.5f));
+        float pulse = Math.Clamp(welcomePulse, 0f, 1f);
+        float w = Math.Max(8f, button.Width * (0.36f + 0.12f * pulse));
+        float h = Math.Max(2f, UiChrome.ScaleFloat(2.5f + pulse));
         float x = button.X + (button.Width - w) / 2f;
         float y = button.Bottom - h - UiChrome.ScaleFloat(3f);
         using var path = RoundedRect(new RectangleF(x, y, w, h), h / 2f);
-        using var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 230 : 210, accent));
+        int a = (int)((UiChrome.IsDark ? 230 : 210) * (0.75f + 0.25f * pulse));
+        using var brush = new SolidBrush(Color.FromArgb(Math.Clamp(a, 0, 255), accent));
         g.FillPath(brush, path);
     }
 
