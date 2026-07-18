@@ -100,15 +100,9 @@ public sealed partial class RegionOverlayForm
 
     private void InvalidateMenuActivatorArea()
     {
-        if (_menuActivatorRect.IsEmpty)
-        {
-            InvalidateToolbarArea();
-            return;
-        }
-        var pad = UiChrome.ScaleInt(8);
-        var r = Rectangle.Inflate(_menuActivatorRect, pad, pad);
-        Invalidate(r);
-        try { _toolbarForm?.UpdateSurface(); } catch { }
+        // Toolbar is a separate layered form that only redraws when render version bumps.
+        // Invalidate alone does nothing — must MarkToolbarRenderDirty + UpdateSurface.
+        UpdateToolbarSurfaceOnly();
     }
 
     private Rectangle GetQuickStartAnchorLocal()
