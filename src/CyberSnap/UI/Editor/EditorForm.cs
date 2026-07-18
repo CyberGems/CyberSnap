@@ -67,6 +67,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
     /// so toolbar/canvas composition and optional auto-maximize never flash mid-construction.
     /// </summary>
     private bool _awaitingInitialReveal = true;
+    /// <summary>Optional STA-thread splash closed when the editor first becomes visible.</summary>
+    private WindowStartupSplash? _startupSplash;
     private bool _messageFilterRegistered;
     private readonly System.Windows.Forms.Timer _saveStatusTimer = new() { Interval = 2200 };
     private readonly System.Windows.Forms.Timer _clipboardMonitorTimer = new() { Interval = 1000 };
@@ -108,22 +110,44 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return true;
         }
 
-        // No preloader toast: same UI thread can't animate a toast while constructing this form
-        // (stutter mid-open + toast lingering after ready). Opacity-0 reveal handles the flash.
-        _instance = new EditorForm(captured, savedFilePath);
-        _instance.Show();
-        if (eval.ShouldWarn)
-            _instance.ShowLargeImagePerformanceBanner(eval);
-        App.NotifyFirstTimeTool("editor");
-        return true;
+        // STA-thread splash (independent message loop) + Opacity-0 reveal — no toast preloader.
+        WindowStartupSplash? splash = null;
+        try
+        {
+            splash = WindowStartupSplash.Show(
+                LocalizationService.Translate("Starting editor…"),
+                LocalizationService.Translate("Preparing the workspace…"));
+            _instance = new EditorForm(captured, savedFilePath);
+            _instance._startupSplash = splash;
+            splash = null; // ownership transferred — closed in RevealEditorWhenReady
+            _instance.Show();
+            if (eval.ShouldWarn)
+                _instance.ShowLargeImagePerformanceBanner(eval);
+            App.NotifyFirstTimeTool("editor");
+            return true;
+        }
+        catch
+        {
+            splash?.Dispose();
+            throw;
+        }
     }
 
     public static void ShowEditorFromFile(string filePath)
     {
+        WindowStartupSplash? splash = null;
         try
         {
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
                 return;
+
+            bool coldStart = _instance is null || _instance.IsDisposed;
+            if (coldStart)
+            {
+                splash = WindowStartupSplash.Show(
+                    LocalizationService.Translate("Starting editor…"),
+                    LocalizationService.Translate("Preparing the workspace…"));
+            }
 
             if (filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
             {
@@ -165,6 +189,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
                     return;
                 }
                 _instance = new EditorForm(baseBitmap, filePath);
+                _instance._startupSplash = splash;
+                splash = null;
                 _instance.LoadCaptureProject(baseBitmap, projectData, filePath, performanceWarning: dimEval.ShouldWarn);
                 _instance.Show();
                 return;
@@ -181,7 +207,22 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 return;
             }
 
-            ShowEditor(captured, filePath, ImageOpenSource.FilePath);
+            // Cold-start splash already up; ShowEditor would open a second one if we
+            // don't pass the existing instance path — inject splash then construct.
+            if (_instance is null || _instance.IsDisposed)
+            {
+                _instance = new EditorForm(captured, filePath);
+                _instance._startupSplash = splash;
+                splash = null;
+                _instance.Show();
+                if (eval.ShouldWarn)
+                    _instance.ShowLargeImagePerformanceBanner(eval);
+                App.NotifyFirstTimeTool("editor");
+            }
+            else
+            {
+                ShowEditor(captured, filePath, ImageOpenSource.FilePath);
+            }
             if (_instance is not null)
                 _instance.AddRecentFile(filePath);
         }
@@ -192,6 +233,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 LocalizationService.Translate("Error importing image"),
                 ex.Message,
                 error: true);
+        }
+        finally
+        {
+            splash?.Dispose();
         }
     }
 
@@ -573,6 +618,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
             _shareMenu?.Dispose();
             try { _shareCts?.Cancel(); } catch { }
             _shareCts?.Dispose();
+            try { _startupSplash?.Dispose(); } catch { }
+            _startupSplash = null;
             if (ReferenceEquals(_instance, this)) _instance = null;
             UnregisterCanvasMessageFilter();
         };
@@ -649,6 +696,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (_awaitingInitialReveal)
         {
             _awaitingInitialReveal = false;
+
+            // Drop the STA splash first so it never sits on top of the revealed editor.
+            var splash = _startupSplash;
+            _startupSplash = null;
+            try { splash?.Dispose(); } catch { /* ignore */ }
+
             try
             {
                 if (Opacity < 1.0)
