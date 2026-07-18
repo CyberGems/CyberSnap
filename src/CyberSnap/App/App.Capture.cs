@@ -114,15 +114,27 @@ public partial class App
                 var s = settings;
                 var fmt = formatOverride ?? s.RecordingFormat;
 
-                string baseDir = s.SaveDirectory;
                 string ext = fmt switch { RecordingFormat.MP4 => ".mp4", _ => ".gif" };
-                string saveRoot = fmt == RecordingFormat.GIF ? Path.Combine(baseDir, "GIFs") : Path.Combine(baseDir, "Videos");
-                string saveDir = s.SaveInMonthlyFolders
-                    ? Helpers.CaptureSavePath.GetMonthDirectory(saveRoot)
-                    : saveRoot;
-                Directory.CreateDirectory(saveDir);
-                string fileName = $"{Helpers.FileNameTemplate.Format(s.FileNameTemplate, 0, 0)}{ext}";
-                string savePath = Helpers.CaptureSavePath.GetAvailablePath(Path.Combine(saveDir, fileName));
+                // Respect SaveToFile: permanent folder vs session temp (deleted after toast/trimmer).
+                bool persistRecording = s.SaveToFile;
+                string savePath;
+                if (persistRecording)
+                {
+                    string baseDir = s.SaveDirectory;
+                    string saveRoot = fmt == RecordingFormat.GIF
+                        ? Path.Combine(baseDir, "GIFs")
+                        : Path.Combine(baseDir, "Videos");
+                    string saveDir = s.SaveInMonthlyFolders
+                        ? Helpers.CaptureSavePath.GetMonthDirectory(saveRoot)
+                        : saveRoot;
+                    Directory.CreateDirectory(saveDir);
+                    string fileName = $"{Helpers.FileNameTemplate.Format(s.FileNameTemplate, 0, 0)}{ext}";
+                    savePath = Helpers.CaptureSavePath.GetAvailablePath(Path.Combine(saveDir, fileName));
+                }
+                else
+                {
+                    savePath = Helpers.CaptureSavePath.BuildTempRecordingPath(ext);
+                }
                 int maxH = s.RecordingQuality switch { RecordingQuality.P1080 => 1080, RecordingQuality.P720 => 720, RecordingQuality.P480 => 480, _ => 0 };
                 int fps = fmt == RecordingFormat.GIF ? s.GifFps : s.RecordingFps;
 
@@ -140,7 +152,12 @@ public partial class App
                             Dispatcher.Invoke(DispatcherPriority.Send, () =>
                             {
                                 _trayIcon?.UpdateRecordingState(false);
-                                OpenVideoTrimmerAfterRecording(path, firstFrame: null, isGif: true, onFailure: () => { });
+                                OpenVideoTrimmerAfterRecording(
+                                    path,
+                                    firstFrame: null,
+                                    isGif: true,
+                                    ephemeral: !persistRecording,
+                                    onFailure: () => { });
                             });
                         }
                         catch (Exception ex)
@@ -169,15 +186,17 @@ public partial class App
                         if (!(openTrimmer && isGif))
                             _trayIcon?.UpdateRecordingState(false);
 
-                        Services.HistoryEntry? historyEntry = null;
-                        try
+                        // Gallery only indexes permanently saved recordings (SaveToFile).
+                        if (persistRecording && s.SaveHistory)
                         {
-                            if (s.SaveHistory)
-                                historyEntry = EnsureHistoryService().SaveMediaEntry(path);
-                        }
-                        catch (Exception ex)
-                        {
-                            AppDiagnostics.LogError("capture.recording-history", ex, $"Failed to save recording history for {Path.GetFileName(path)}.");
+                            try
+                            {
+                                EnsureHistoryService().SaveMediaEntry(path);
+                            }
+                            catch (Exception ex)
+                            {
+                                AppDiagnostics.LogError("capture.recording-history", ex, $"Failed to save recording history for {Path.GetFileName(path)}.");
+                            }
                         }
 
                         bool autoCopyRecording = Helpers.AutoCopyPreferences.ShouldCopy(s, Helpers.AutoCopyKind.Recording);
@@ -194,25 +213,30 @@ public partial class App
                         {
                             if (isGif)
                             {
+                                // Trimmer already opened from onGifEncodedForTrimmer.
                                 firstFrame?.Dispose();
                             }
                             else
                             {
                                 try
                                 {
-                                    OpenVideoTrimmerAfterRecording(path, firstFrame, isGif: false, onFailure: () =>
-                                        ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false));
+                                    OpenVideoTrimmerAfterRecording(
+                                        path,
+                                        firstFrame,
+                                        isGif: false,
+                                        ephemeral: !persistRecording,
+                                        onFailure: () => ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false, ephemeral: !persistRecording));
                                 }
                                 catch (Exception ex)
                                 {
                                     AppDiagnostics.LogError("capture.auto-open-trimmer", ex);
-                                    ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false);
+                                    ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false, ephemeral: !persistRecording);
                                 }
                             }
                         }
                         else
                         {
-                            ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif);
+                            ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif, ephemeral: !persistRecording);
                         }
 
                         ScheduleIdleMemoryTrim();
@@ -273,13 +297,18 @@ public partial class App
     /// <param name="copiedToClipboard">
     /// true = copied, false = copy attempted and failed, null = auto-copy skipped for recordings.
     /// </param>
-    private void ShowRecordingToast(string path, Bitmap? firstFrame, bool? copiedToClipboard, bool isGif)
+    /// <param name="ephemeral">When true, recording is temp (SaveToFile off); toast deletes it on dismiss.</param>
+    private void ShowRecordingToast(string path, Bitmap? firstFrame, bool? copiedToClipboard, bool isGif, bool ephemeral = false)
     {
         string copyStatus = copiedToClipboard switch
         {
             true => LocalizationService.Translate("File copied to clipboard"),
-            false => LocalizationService.Translate("Saved; clipboard copy failed"),
-            null => LocalizationService.Translate("Saved")
+            false => ephemeral
+                ? LocalizationService.Translate("Clipboard copy failed")
+                : LocalizationService.Translate("Saved; clipboard copy failed"),
+            null => ephemeral
+                ? LocalizationService.Translate("Ready")
+                : LocalizationService.Translate("Saved")
         };
 
         if (firstFrame != null)
@@ -292,7 +321,8 @@ public partial class App
                 false,
                 transparentShell: false,
                 showOverlayButtons: true,
-                hideEditButton: false));
+                hideEditButton: false,
+                deleteFileOnDismiss: ephemeral));
         }
         else
         {
@@ -301,7 +331,14 @@ public partial class App
             string size = fi.Length > 1024 * 1024
                 ? $"{fi.Length / 1024.0 / 1024.0:F1} MB"
                 : $"{fi.Length / 1024:N0} KB";
-            ToastWindow.Show(ToastSpec.Standard($"{label} recorded", $"{fi.Name} · {size} · {copyStatus}", path));
+            ToastWindow.Show(new ToastSpec
+            {
+                Title = $"{label} recorded",
+                Body = $"{fi.Name} · {size} · {copyStatus}",
+                FilePath = path,
+                IsSystemMessage = true,
+                DeleteFileOnDismiss = ephemeral
+            });
         }
     }
 
@@ -595,6 +632,12 @@ public partial class App
                     _settingsService.Settings.HasSeenCaptureBanner = true;
                     _settingsService.Save();
                 };
+                overlay.QuickStartGuideDismissed += () =>
+                {
+                    if (_settingsService!.Settings.HasSeenQuickStartGuide) return;
+                    _settingsService.Settings.HasSeenQuickStartGuide = true;
+                    _settingsService.Save();
+                };
 
                 overlay.RegionSelected += sel =>
                 {
@@ -771,7 +814,8 @@ public partial class App
         string path,
         Bitmap? firstFrame,
         bool isGif,
-        Action onFailure)
+        Action onFailure,
+        bool ephemeral = false)
     {
         void ShowTrimmer()
         {
@@ -779,12 +823,19 @@ public partial class App
             {
                 ToastWindow.ForceDismissCurrent();
                 var trimmer = new VideoTrimmerWindow(path, _settingsService!, firstFrame);
+                if (ephemeral)
+                {
+                    // Drop the temp recording when the trimmer closes (Save As New keeps the export).
+                    trimmer.Closed += (_, _) => Helpers.CaptureSavePath.TryDeleteTempRecording(path);
+                }
                 trimmer.Show();
                 trimmer.Activate();
             }
             catch (Exception ex)
             {
                 AppDiagnostics.LogError("capture.auto-open-trimmer-deferred", ex);
+                if (ephemeral)
+                    Helpers.CaptureSavePath.TryDeleteTempRecording(path);
                 onFailure();
             }
         }

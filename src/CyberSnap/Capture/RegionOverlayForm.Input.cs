@@ -9,6 +9,17 @@ public sealed partial class RegionOverlayForm
     protected override void OnMouseDown(MouseEventArgs e)
     {
         Focus();
+
+        // Logo / brand toggles the guide — handle before generic dismiss so click is not a no-op.
+        if (e.Button == MouseButtons.Left
+            && (_logoRect.Contains(e.Location) || _brandRect.Contains(e.Location)))
+        {
+            HideToolbarTooltip();
+            HideCaptureBanner();
+            ShowQuickStartGuide();
+            return;
+        }
+
         DismissQuickStartGuide();
         if (e.Button == MouseButtons.Right)
         {
@@ -96,12 +107,6 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        if (_logoRect.Contains(e.Location) || _brandRect.Contains(e.Location))
-        {
-            HideToolbarTooltip();
-            ShowQuickStartGuide();
-            return;
-        }
         if (_menuActivatorRect.Contains(e.Location))
         {
             HideToolbarTooltip();

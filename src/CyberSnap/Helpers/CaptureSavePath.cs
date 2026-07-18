@@ -53,4 +53,56 @@ internal static class CaptureSavePath
 
         return Path.Combine(directory ?? "", $"{fileName} ({Guid.NewGuid():N}){extension}");
     }
+
+    /// <summary>
+    /// Temp root for recordings when SaveToFile is off. Not the user gallery/save folder.
+    /// </summary>
+    public static string TempRecordingsDirectory =>
+        Path.Combine(Path.GetTempPath(), "CyberSnap", "recordings");
+
+    public static string BuildTempRecordingPath(string extension)
+    {
+        var ext = string.IsNullOrWhiteSpace(extension)
+            ? ".mp4"
+            : (extension.StartsWith('.') ? extension : "." + extension);
+        Directory.CreateDirectory(TempRecordingsDirectory);
+        var fileName = $"CyberSnap_{DateTime.Now:yyyyMMdd_HHmmss_fff}{ext}";
+        return GetAvailablePath(Path.Combine(TempRecordingsDirectory, fileName));
+    }
+
+    public static bool IsTempRecordingPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        try
+        {
+            var full = Path.GetFullPath(path);
+            var root = Path.GetFullPath(TempRecordingsDirectory)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                   || full.StartsWith(root + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(full, root, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static void TryDeleteTempRecording(string? path)
+    {
+        if (!IsTempRecordingPath(path))
+            return;
+
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path!);
+        }
+        catch
+        {
+            // Best-effort; OS temp cleanup will eventually reclaim.
+        }
+    }
 }

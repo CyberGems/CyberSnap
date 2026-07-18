@@ -37,10 +37,18 @@ public sealed partial class HistoryService
             }
         }
 
-        if (Directory.Exists(LegacyHistoryDir))
+        // Index media left in legacy "History" folders by path (do not move them into gallery data).
+        foreach (var legacyMediaRoot in new[] { LegacyAppDataHistoryDir, LegacyPicturesHistoryDir })
         {
-            foreach (var file in Directory.EnumerateFiles(LegacyHistoryDir, "*.*", SearchOption.AllDirectories))
+            if (!Directory.Exists(legacyMediaRoot))
+                continue;
+
+            foreach (var file in Directory.EnumerateFiles(legacyMediaRoot, "*.*", SearchOption.AllDirectories))
             {
+                if (file.Contains($"{Path.DirectorySeparatorChar}cache{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                    || file.Contains($"{Path.AltDirectorySeparatorChar}cache{Path.AltDirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 if (!HistoryEntryUtilities.IsSupportedHistoryFile(file))
                     continue;
 
@@ -100,6 +108,9 @@ public sealed partial class HistoryService
         }
     }
 
+    /// <summary>
+    /// Index a legacy media file in place. Never moves captures into GalleryDataDir.
+    /// </summary>
     private static bool TryMigrateLegacyFile(string sourcePath, HistoryKind legacyKind, out HistoryEntry migrated)
     {
         migrated = new HistoryEntry();
@@ -109,23 +120,16 @@ public sealed partial class HistoryService
 
         try
         {
-            var fileName = Path.GetFileName(sourcePath);
-            var targetPath = Path.Combine(HistoryDir, fileName);
-
-            Directory.CreateDirectory(HistoryDir);
-            if (!sourcePath.Equals(targetPath, StringComparison.OrdinalIgnoreCase))
-                File.Move(sourcePath, targetPath, overwrite: true);
-
-            var fi = new FileInfo(targetPath);
+            var fi = new FileInfo(sourcePath);
             migrated = new HistoryEntry
             {
                 FileName = fi.Name,
-                FilePath = targetPath,
+                FilePath = fi.FullName,
                 CapturedAt = fi.CreationTime,
                 Width = 0,
                 Height = 0,
                 FileSizeBytes = fi.Length,
-                Kind = HistoryEntryUtilities.GetKindForPath(targetPath, legacyKind)
+                Kind = HistoryEntryUtilities.GetKindForPath(sourcePath, legacyKind)
             };
             return true;
         }
@@ -376,7 +380,7 @@ public sealed partial class HistoryService
             return;
         }
 
-        Directory.CreateDirectory(HistoryDir);
+        Directory.CreateDirectory(GalleryDataDir);
         Directory.CreateDirectory(ThumbnailDir);
         Directory.CreateDirectory(ImageThumbnailDir);
         var result = HistoryStore.Flush(DatabasePath, new HistoryFlushRequest(

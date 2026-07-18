@@ -172,21 +172,8 @@ public static class UninstallService
     public static void RemoveAppData()
     {
         var appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "CyberSnap");
-        var legacyHistory = Path.Combine(appData, "history");
-
-        try
-        {
-            if (Directory.Exists(legacyHistory))
-                CopyDirectoryContents(legacyHistory, HistoryService.HistoryDir);
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning(
-                "uninstall.history-migration",
-                $"Failed to preserve legacy history before app data removal: {ex.Message}",
-                ex);
-        }
-
+        // Gallery data now lives under AppData\CyberSnap\gallery (deleted with appData).
+        // Do not create or repopulate any "History" folder on uninstall.
         RemoveRuntimeCaches();
         TryDeleteDirectory(appData);
     }

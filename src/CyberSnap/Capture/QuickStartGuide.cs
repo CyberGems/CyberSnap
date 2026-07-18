@@ -6,60 +6,67 @@ using CyberSnap.Services;
 
 namespace CyberSnap.Capture;
 
+/// <summary>
+/// Speech-bubble quick-start guide anchored to the toolbar logo.
+/// Explains how to capture, points at the toolbar menu, and lists hotkeys.
+/// </summary>
 public sealed class QuickStartGuide : Form
 {
-    private const int MaxWidth = 480;
-    private const int MinWidth = 336;
-    private const int WidthSlack = 10;
-    private const int TipMeasureSlack = 6;
-    private const int PadX = 18;
-    private const int PadY = 16;
-    private const int FooterBottomPad = 14;
-    private const int HeaderHeight = 32;
-    private const int HeroMinHeight = 44;
-    private const int HeroPad = 12;
-    private const int ShortcutRowHeight = 30;
-    private const int TipRowMinHeight = 28;
-    private const int TipRowGap = 3;
-    private const int TipTextPad = 6;
-    private const int SectionGap = 16;
-    private const int SectionLabelHeight = 18;
-    private const int IconColWidth = 20;
-    private const int IconSize = 18;
-    private const int IconTextGap = 10;
-    private const int KbdPadH = 8;
-    private const int KbdPadV = 3;
+    private const int MaxWidth = 420;
+    private const int MinWidth = 340;
+    private const int PadX = 20;
+    private const int PadY = 18;
+    private const int HeaderHeight = 28;
+    private const int StepGap = 10;
+    private const int StepCircle = 22;
+    private const int StepTextGap = 12;
+    private const int SectionGap = 14;
+    private const int SectionLabelHeight = 20;
+    private const int ShortcutRowHeight = 34;
+    private const int KbdPadH = 9;
+    private const int KbdPadV = 4;
     private const int KbdLabelGap = 8;
-    private const int ShortcutColGap = 12;
-    private const int TipIconSize = 14;
-    private const float Corner = 10f;
+    private const int ShortcutColGap = 14;
+    private const int TipRowMinHeight = 26;
+    private const int TipRowGap = 6;
+    private const int TipIconSize = 16;
+    private const int IconColWidth = 22;
+    private const int IconTextGap = 10;
+    private const int FooterHeight = 22;
+    // Classic comic-style talk bubble (see artifacts/2026-07-18_04-09-35.png).
+    private const float Corner = 18f;
+    private const float TailWidth = 28f;
+    private const float TailHeight = 16f;
 
-    private readonly Font _headerFont = UiChrome.ChromeFont(11f, FontStyle.Bold);
-    private readonly Font _sectionFont = UiChrome.ChromeFont(7.5f, FontStyle.Bold);
-    private readonly Font _bodyFont = UiChrome.ChromeFont(9f);
-    private readonly Font _bodyMediumFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
-    private readonly Font _keyFont = UiChrome.ChromeFont(8f, FontStyle.Bold);
-    private readonly Font _footerFont = UiChrome.ChromeFont(7.5f);
-    private readonly Font _brandFont = UiChrome.ChromeFont(7f, FontStyle.Bold);
+    private readonly Font _headerFont = UiChrome.ChromeFont(13f, FontStyle.Bold);
+    private readonly Font _sectionFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
+    private readonly Font _bodyFont = UiChrome.ChromeFont(11f);
+    private readonly Font _stepNumFont = UiChrome.ChromeFont(10f, FontStyle.Bold);
+    private readonly Font _keyFont = UiChrome.ChromeFont(9.5f, FontStyle.Bold);
+    private readonly Font _footerFont = UiChrome.ChromeFont(9f);
 
     private record ShortcutDef(string Key, string Label);
+    private record StepDef(string Text);
     private record TipDef(string? IconId, string Text);
 
     private ShortcutDef[] _shortcuts = Array.Empty<ShortcutDef>();
+    private StepDef[] _steps = Array.Empty<StepDef>();
     private TipDef[] _tips = Array.Empty<TipDef>();
     private string _title = "";
-    private string _captureText = "";
+    private string _stepsTitle = "";
+    private string _menuTitle = "";
     private string _shortcutsTitle = "";
-    private string _tipsTitle = "";
     private string _footerText = "";
-    private string _brandText = "";
-    private int _totalHeight;
     private int _contentWidth;
-    private int _heroHeight = HeroMinHeight;
+    private int _bodyHeight;
     private int _shortcutColWidth;
+    private int[] _stepHeights = Array.Empty<int>();
     private int[] _tipHeights = Array.Empty<int>();
     private Rectangle _closeRect;
     private bool _closeHovered;
+    private bool _tailPointsDown = true;
+    private float _tailCenterX;
+    private RectangleF _bodyRect;
 
     public QuickStartGuide()
     {
@@ -87,14 +94,21 @@ public sealed class QuickStartGuide : Form
         base.WndProc(ref m);
     }
 
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        CaptureWindowExclusion.Register(Handle);
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        CaptureWindowExclusion.Unregister(Handle);
+        base.OnHandleDestroyed(e);
+    }
+
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
-        if (_closeRect.Contains(e.Location))
-        {
-            Close();
-            return;
-        }
         Close();
     }
 
@@ -132,131 +146,235 @@ public sealed class QuickStartGuide : Form
         get
         {
             var cp = base.CreateParams;
-            cp.ExStyle |= 0x80;
-            cp.ExStyle |= 0x08000000;
+            cp.ExStyle |= 0x80;       // WS_EX_TOOLWINDOW
+            cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE
             return cp;
         }
     }
 
+    /// <summary>
+    /// Shows the guide as a talk bubble pointing at <paramref name="anchorScreenBounds"/> (logo).
+    /// When <paramref name="above"/> is true the bubble sits above the anchor with the tail down.
+    /// </summary>
     public void ShowNear(IWin32Window owner, Rectangle anchorScreenBounds, bool above)
     {
         CyberSnap.UI.Theme.Refresh();
         BackColor = UiChrome.SurfaceTier1;
         ForeColor = UiChrome.SurfaceTextPrimary;
 
-        bool isSpanish = string.Equals(
-            SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
-            "es", StringComparison.OrdinalIgnoreCase);
-
-        _title = isSpanish ? "Guía rápida" : "Quick Start";
-        _captureText = isSpanish
-            ? "Arrastra para seleccionar el área de captura"
-            : "Drag to select the capture area";
-        _shortcutsTitle = isSpanish ? "ATAJOS DE TECLADO" : "KEYBOARD SHORTCUTS";
-        _tipsTitle = isSpanish ? "SOBRE LA BARRA" : "ABOUT THE TOOLBAR";
-        _footerText = isSpanish ? "Click o Esc para cerrar" : "Click or Esc to close";
-        _brandText = "CyberSnap";
-
-        _shortcuts = isSpanish
-            ? new[]
-            {
-                new ShortcutDef("Enter", "Capturar"),
-                new ShortcutDef("Esc", "Cancelar"),
-                new ShortcutDef("Ctrl+Z", "Deshacer"),
-                new ShortcutDef("Ctrl+Y", "Rehacer"),
-            }
-            : new[]
-            {
-                new ShortcutDef("Enter", "Capture"),
-                new ShortcutDef("Esc", "Cancel"),
-                new ShortcutDef("Ctrl+Z", "Undo"),
-                new ShortcutDef("Ctrl+Y", "Redo"),
-            };
-
-        _tips = isSpanish
-            ? new[]
-            {
-                new TipDef("menu", "▼ abre tools ocultas y preferencias"),
-                new TipDef("menu", "También: aviso al cancelar y ayudas"),
-                new TipDef("sticker", "Anotar solo después de capturar"),
-                new TipDef("captureRect", "Clic derecho en tool → ocultarla"),
-            }
-            : new[]
-            {
-                new TipDef("menu", "▼ opens hidden tools and preferences"),
-                new TipDef("menu", "Also: cancel prompt and help tips"),
-                new TipDef("sticker", "Annotate only after capture"),
-                new TipDef("captureRect", "Right-click tool → hide from bar"),
-            };
+        LoadStrings();
 
         using var g = CreateGraphics();
+        MeasureLayout(g);
 
-        int maxShortcutCellW = 0;
-        foreach (var sc in _shortcuts)
-        {
-            int cellW = MeasureShortcutCell(g, sc);
-            maxShortcutCellW = Math.Max(maxShortcutCellW, cellW);
-        }
-
-        _contentWidth = Math.Max(
-            ComputeReferenceContentWidth(g),
-            maxShortcutCellW * 2 + ShortcutColGap);
         int width = Math.Min(MaxWidth, Math.Max(MinWidth, _contentWidth + PadX * 2));
         _contentWidth = width - PadX * 2;
-        _shortcutColWidth = maxShortcutCellW;
 
-        int tipTextWidth = _contentWidth - IconColWidth - IconTextGap;
-        _tipHeights = new int[_tips.Length];
-        int tipsBlockHeight = 0;
-        for (int i = 0; i < _tips.Length; i++)
-        {
-            _tipHeights[i] = MeasureTipRowHeight(g, _tips[i].Text, tipTextWidth);
-            tipsBlockHeight += _tipHeights[i];
-            if (i < _tips.Length - 1)
-                tipsBlockHeight += TipRowGap;
-        }
+        // Re-measure tip/step wrap with final content width
+        MeasureLayout(g);
 
-        int heroTextWidth = _contentWidth - HeroPad * 2 - IconSize - IconTextGap;
-        var heroTextSize = TextRenderer.MeasureText(g, _captureText, _bodyMediumFont,
-            new Size(heroTextWidth, 0),
-            TextFormatFlags.NoPadding | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-        _heroHeight = Math.Max(HeroMinHeight, heroTextSize.Height + HeroPad * 2);
+        int bodyH = _bodyHeight;
+        int totalH = bodyH + (int)Math.Ceiling(TailHeight);
+        int totalW = width;
 
-        int y = PadY;
-        y += HeaderHeight + SectionGap;
-        y += _heroHeight + SectionGap;
-        y += SectionLabelHeight + 8;
-        y += tipsBlockHeight + 6;
-        y += SectionLabelHeight + 10;
-        int shortcutRows = (_shortcuts.Length + 1) / 2;
-        y += shortcutRows * ShortcutRowHeight + SectionGap;
-        y += SectionGap + 1 + 14 + 16 + FooterBottomPad + PadY;
-        _totalHeight = y;
+        _tailPointsDown = above;
+        _bodyRect = above
+            ? new RectangleF(0, 0, totalW, bodyH)
+            : new RectangleF(0, TailHeight, totalW, bodyH);
 
-        int x = anchorScreenBounds.Left + (anchorScreenBounds.Width - width) / 2;
-        int gap = 12;
-        // When above the anchor, grow upward so the bottom edge stays fixed.
-        int ay = above
-            ? anchorScreenBounds.Top - _totalHeight - gap
-            : anchorScreenBounds.Bottom + gap;
-
+        // Align bubble so the tail points at the logo center; prefer leftish placement
+        // so the bubble does not cover the whole toolbar.
+        int anchorCx = anchorScreenBounds.Left + anchorScreenBounds.Width / 2;
+        int preferredX = anchorCx - (int)(totalW * 0.22f);
         var screen = Screen.FromRectangle(anchorScreenBounds).WorkingArea;
-        x = Math.Clamp(x, screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - width - 4));
-        ay = Math.Clamp(ay, screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - _totalHeight - 4));
+        int x = Math.Clamp(preferredX, screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - totalW - 4));
 
-        Bounds = new Rectangle(x, ay, width, _totalHeight);
-        Region?.Dispose();
-        using (var path = WindowsDockRenderer.RoundedRect(new RectangleF(0, 0, width, _totalHeight), Corner))
-            Region = new Region(path);
+        // Keep the caret tip close to the logo without overlapping it.
+        int gap = 2;
+        int y = above
+            ? anchorScreenBounds.Top - totalH - gap
+            : anchorScreenBounds.Bottom + gap;
+        y = Math.Clamp(y, screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - totalH - 4));
+
+        // Tail tip X in local coords — clamp so it stays on the body edge
+        float localAnchorX = anchorCx - x;
+        float minTail = Corner + TailWidth / 2f + 4f;
+        float maxTail = totalW - Corner - TailWidth / 2f - 4f;
+        _tailCenterX = Math.Clamp(localAnchorX, minTail, maxTail);
+
+        Bounds = new Rectangle(x, y, totalW, totalH);
+        ApplyBubbleRegion(totalW, totalH);
 
         Show(owner);
 
         try
         {
-            Native.Dwm.TrySetWindowCornerPreference(Handle, Native.Dwm.DWMWCP_ROUND);
+            Native.Dwm.TrySetWindowCornerPreference(Handle, Native.Dwm.DWMWCP_DONOTROUND);
             Native.Dwm.TrySetImmersiveDarkMode(Handle, UiChrome.IsDark);
         }
         catch { }
+    }
+
+    private void LoadStrings()
+    {
+        string T(string key) => LocalizationService.Translate(key);
+
+        _title = T("Quick Start");
+        _stepsTitle = T("HOW TO CAPTURE");
+        _menuTitle = T("TOOLBAR MENU");
+        _shortcutsTitle = T("KEYBOARD SHORTCUTS");
+        _footerText = T("Click or Esc to close");
+
+        _steps =
+        [
+            new StepDef(T("Drag to select the capture area")),
+            new StepDef(T("Press Enter to capture, or Esc to cancel")),
+            new StepDef(T("Use toolbar tools to annotate before capturing")),
+        ];
+
+        _tips =
+        [
+            new TipDef("menu", T("▼ opens hidden tools, preferences, and this help")),
+            new TipDef("captureRect", T("Right-click a tool on the bar to hide it")),
+        ];
+
+        _shortcuts =
+        [
+            new ShortcutDef("Enter", T("Capture")),
+            new ShortcutDef("Esc", T("Cancel")),
+            new ShortcutDef("Ctrl+Z", T("Undo")),
+            new ShortcutDef("Ctrl+Y", T("Redo")),
+        ];
+    }
+
+    private void MeasureLayout(Graphics g)
+    {
+        int maxShortcutCellW = 0;
+        foreach (var sc in _shortcuts)
+            maxShortcutCellW = Math.Max(maxShortcutCellW, MeasureShortcutCell(g, sc));
+
+        int stepsTextCol = Math.Max(160, (_contentWidth > 0 ? _contentWidth : MinWidth - PadX * 2) - StepCircle - StepTextGap);
+        _stepHeights = new int[_steps.Length];
+        int stepsBlock = 0;
+        for (int i = 0; i < _steps.Length; i++)
+        {
+            var size = TextRenderer.MeasureText(g, _steps[i].Text, _bodyFont,
+                new Size(stepsTextCol, 0),
+                TextFormatFlags.NoPadding | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+            _stepHeights[i] = Math.Max(StepCircle, size.Height + 2);
+            stepsBlock += _stepHeights[i];
+            if (i < _steps.Length - 1)
+                stepsBlock += StepGap;
+        }
+
+        int tipTextW = Math.Max(140, (_contentWidth > 0 ? _contentWidth : MinWidth - PadX * 2) - IconColWidth - IconTextGap);
+        _tipHeights = new int[_tips.Length];
+        int tipsBlock = 0;
+        for (int i = 0; i < _tips.Length; i++)
+        {
+            using var format = StringFormat.GenericTypographic;
+            var size = g.MeasureString(_tips[i].Text, _bodyFont, tipTextW, format);
+            _tipHeights[i] = Math.Max(TipRowMinHeight, (int)Math.Ceiling(size.Height) + 4);
+            tipsBlock += _tipHeights[i];
+            if (i < _tips.Length - 1)
+                tipsBlock += TipRowGap;
+        }
+
+        int titleW = TextRenderer.MeasureText(g, _title, _headerFont, Size.Empty,
+            TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width + 28 + 28;
+        int stepLineMax = 0;
+        for (int i = 0; i < _steps.Length; i++)
+        {
+            int tw = TextRenderer.MeasureText(g, _steps[i].Text, _bodyFont, Size.Empty,
+                TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
+            stepLineMax = Math.Max(stepLineMax, StepCircle + StepTextGap + tw);
+        }
+        int tipLineMax = 0;
+        foreach (var tip in _tips)
+        {
+            int tw = (int)Math.Ceiling(g.MeasureString(tip.Text, _bodyFont, int.MaxValue, StringFormat.GenericTypographic).Width);
+            tipLineMax = Math.Max(tipLineMax, IconColWidth + IconTextGap + tw);
+        }
+
+        int needed = Math.Max(titleW, Math.Max(stepLineMax, Math.Max(tipLineMax, maxShortcutCellW * 2 + ShortcutColGap)));
+        if (_contentWidth <= 0)
+            _contentWidth = Math.Max(MinWidth - PadX * 2, Math.Min(MaxWidth - PadX * 2, needed + 8));
+        _shortcutColWidth = maxShortcutCellW;
+
+        int y = PadY;
+        y += HeaderHeight + SectionGap;
+        y += SectionLabelHeight + 8;
+        y += stepsBlock + SectionGap;
+        y += SectionLabelHeight + 8;
+        y += tipsBlock + SectionGap;
+        y += SectionLabelHeight + 10;
+        int shortcutRows = (_shortcuts.Length + 1) / 2;
+        y += shortcutRows * ShortcutRowHeight + 10;
+        y += 1 + 8 + FooterHeight + PadY;
+        _bodyHeight = y;
+    }
+
+    private void ApplyBubbleRegion(int width, int height)
+    {
+        Region?.Dispose();
+        using var path = CreateBubblePath(width, height);
+        Region = new Region(path);
+    }
+
+    /// <summary>
+    /// Classic talk-bubble silhouette: rounded rect + triangular caret pointing at the logo.
+    /// Tail base is slightly asymmetric so the tip reads as a comic speech pointer.
+    /// </summary>
+    private GraphicsPath CreateBubblePath(float width, float height)
+    {
+        var body = _bodyRect;
+        float r = Math.Min(Corner, Math.Min(body.Width, body.Height) / 2f - 1f);
+        float d = r * 2f;
+        float tw = TailWidth;
+        float th = TailHeight;
+        float tx = _tailCenterX;
+
+        // Classic bubble: wider base on the outer side, tip slightly biased toward logo.
+        float baseLeft = tx - tw * 0.55f;
+        float baseRight = tx + tw * 0.40f;
+        float tipX = tx - tw * 0.06f; // slight left lean like the reference
+
+        // Keep base fully on the flat bottom/top edge (inside corner radii).
+        float minBase = body.X + r + 2f;
+        float maxBase = body.Right - r - 2f;
+        baseLeft = Math.Clamp(baseLeft, minBase, maxBase - 8f);
+        baseRight = Math.Clamp(baseRight, baseLeft + 8f, maxBase);
+        tipX = Math.Clamp(tipX, baseLeft + 2f, baseRight - 2f);
+
+        var path = new GraphicsPath();
+
+        if (_tailPointsDown)
+        {
+            // Clockwise: top-left → top-right → bottom-right → tail → bottom-left
+            path.AddArc(body.X, body.Y, d, d, 180, 90);
+            path.AddArc(body.Right - d, body.Y, d, d, 270, 90);
+            path.AddArc(body.Right - d, body.Bottom - d, d, d, 0, 90);
+            path.AddLine(body.Right - r, body.Bottom, baseRight, body.Bottom);
+            path.AddLine(baseRight, body.Bottom, tipX, body.Bottom + th);
+            path.AddLine(tipX, body.Bottom + th, baseLeft, body.Bottom);
+            path.AddLine(baseLeft, body.Bottom, body.X + r, body.Bottom);
+            path.AddArc(body.X, body.Bottom - d, d, d, 90, 90);
+        }
+        else
+        {
+            // Tail on top (toolbar docked at top)
+            path.AddArc(body.X, body.Y, d, d, 180, 90);
+            path.AddLine(body.X + r, body.Y, baseLeft, body.Y);
+            path.AddLine(baseLeft, body.Y, tipX, body.Y - th);
+            path.AddLine(tipX, body.Y - th, baseRight, body.Y);
+            path.AddLine(baseRight, body.Y, body.Right - r, body.Y);
+            path.AddArc(body.Right - d, body.Y, d, d, 270, 90);
+            path.AddArc(body.Right - d, body.Bottom - d, d, d, 0, 90);
+            path.AddArc(body.X, body.Bottom - d, d, d, 90, 90);
+        }
+
+        path.CloseFigure();
+        return path;
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -264,149 +382,191 @@ public sealed class QuickStartGuide : Form
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
         var accent = UiChrome.AccentColor;
-        var bounds = new RectangleF(0, 0, Width, Height);
-
-        WindowsDockRenderer.PaintShadow(g, bounds, Corner);
-        using (var path = WindowsDockRenderer.RoundedRect(bounds, Corner))
+        using (var path = CreateBubblePath(Width, Height))
         {
-            using var bgBrush = new SolidBrush(UiChrome.SurfaceTier1);
-            g.FillPath(bgBrush, path);
-            using var borderPen = new Pen(Color.FromArgb(UiChrome.IsDark ? 80 : 50, accent), 1f);
-            g.DrawPath(borderPen, path);
+            // Soft ambient shadow under the bubble
+            using (var shadowPath = (GraphicsPath)path.Clone())
+            {
+                using var m = new Matrix();
+                m.Translate(0, 3f);
+                shadowPath.Transform(m);
+                using var shadow = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 80 : 48, 0, 0, 0));
+                g.FillPath(shadow, shadowPath);
+            }
+
+            using var bg = new SolidBrush(UiChrome.SurfaceTier1);
+            g.FillPath(bg, path);
+
+            // Light rim like the reference bubble (readable on dark chrome)
+            Color rim = UiChrome.IsDark
+                ? Color.FromArgb(210, 235, 235, 240)
+                : Color.FromArgb(220, 255, 255, 255);
+            using (var rimPen = new Pen(rim, 2.2f) { LineJoin = LineJoin.Round, Alignment = PenAlignment.Inset })
+                g.DrawPath(rimPen, path);
+
+            // Subtle accent inner edge so it still feels on-brand
+            using (var accentPen = new Pen(Color.FromArgb(UiChrome.IsDark ? 90 : 70, accent), 1f)
+            {
+                LineJoin = LineJoin.Round,
+                Alignment = PenAlignment.Inset,
+            })
+                g.DrawPath(accentPen, path);
         }
 
-        PaintTopAccentLine(g, bounds, accent);
-
-        int curY = PadY;
+        int originY = (int)Math.Round(_bodyRect.Y);
+        int curY = originY + PadY;
 
         // Header
-        const int closeBtnSize = 14;
-        _closeRect = new Rectangle(Width - PadX - closeBtnSize - 6, PadY - 2,
-            closeBtnSize + 10, closeBtnSize + 10);
+        const int closeBtnSize = 16;
+        _closeRect = new Rectangle(
+            Width - PadX - closeBtnSize - 8,
+            originY + PadY - 4,
+            closeBtnSize + 12,
+            closeBtnSize + 12);
 
         if (_closeHovered)
         {
-            using var hoverPath = WindowsDockRenderer.RoundedRect(_closeRect, 5f);
-            using var hoverBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 28 : 20, accent));
+            using var hoverPath = WindowsDockRenderer.RoundedRect(_closeRect, 6f);
+            using var hoverBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 32 : 22, accent));
             g.FillPath(hoverBrush, hoverPath);
         }
 
-        var titleIconRect = new RectangleF(PadX, curY + 6, 16, 16);
-        FluentIcons.DrawIcon(g, "info", titleIconRect, accent, iconInset: 1f);
+        FluentIcons.DrawIcon(g, "info",
+            new RectangleF(PadX, curY + 4, 18, 18), accent, iconInset: 1f);
 
-        var headerRect = new Rectangle(PadX + 22, curY, _contentWidth - closeBtnSize - 28, HeaderHeight);
+        var headerRect = new Rectangle(PadX + 26, curY, _contentWidth - closeBtnSize - 36, HeaderHeight);
         TextRenderer.DrawText(g, _title, _headerFont, headerRect,
             UiChrome.SurfaceTextPrimary,
             TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
         var closeColor = _closeHovered
             ? UiChrome.SurfaceTextPrimary
-            : Color.FromArgb(140, UiChrome.SurfaceTextSecondary);
+            : Color.FromArgb(150, UiChrome.SurfaceTextSecondary);
         FluentIcons.DrawIcon(g, "close",
-            new RectangleF(_closeRect.X + 5, _closeRect.Y + 5, closeBtnSize, closeBtnSize),
+            new RectangleF(_closeRect.X + 6, _closeRect.Y + 6, closeBtnSize, closeBtnSize),
             closeColor, iconInset: 0f);
         curY += HeaderHeight + SectionGap;
 
-        // Hero call-to-action card
-        var heroRect = new RectangleF(PadX, curY, _contentWidth, _heroHeight);
-        using (var heroPath = WindowsDockRenderer.RoundedRect(heroRect, 7f))
-        {
-            using var heroBg = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 32 : 24, accent));
-            g.FillPath(heroBg, heroPath);
-            using var heroBorder = new Pen(Color.FromArgb(UiChrome.IsDark ? 90 : 70, accent), 1f);
-            g.DrawPath(heroBorder, heroPath);
-        }
+        // Steps
+        curY = PaintSectionLabel(g, _stepsTitle, curY) + 8;
+        curY = PaintSteps(g, curY, accent) + SectionGap;
 
-        var heroIconRect = new RectangleF(PadX + HeroPad, curY + (_heroHeight - IconSize) / 2f, IconSize, IconSize);
-        FluentIcons.DrawIcon(g, "captureRect", heroIconRect, accent, iconInset: 0f);
-
-        var heroTextRect = new Rectangle(
-            PadX + HeroPad + IconSize + IconTextGap,
-            (int)curY + HeroPad,
-            _contentWidth - HeroPad * 2 - IconSize - IconTextGap,
-            _heroHeight - HeroPad * 2);
-        TextRenderer.DrawText(g, _captureText, _bodyMediumFont, heroTextRect,
-            UiChrome.SurfaceTextPrimary,
-            TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-        curY += _heroHeight + SectionGap;
-
-        // Tips (before shortcuts — context first for new users)
-        curY = PaintSectionLabel(g, _tipsTitle, curY) + 8;
+        // Toolbar menu tips
+        curY = PaintSectionLabel(g, _menuTitle, curY) + 8;
         curY = PaintTips(g, curY) + SectionGap;
 
         // Shortcuts
         curY = PaintSectionLabel(g, _shortcutsTitle, curY) + 10;
         curY = PaintShortcutGrid(g, curY);
 
-        // Footer divider + text (inset from rounded bottom corners)
-        const int footerBlockHeight = 34;
-        int footerY = Height - FooterBottomPad - PadY - footerBlockHeight;
-        using (var footerSep = new Pen(UiChrome.SurfaceBorderSubtle, 1f))
-            g.DrawLine(footerSep, PadX, footerY, Width - PadX, footerY);
+        // Footer
+        int footerY = originY + (int)_bodyRect.Height - PadY - FooterHeight - 4;
+        using (var sep = new Pen(UiChrome.SurfaceBorderSubtle, 1f))
+            g.DrawLine(sep, PadX, footerY, Width - PadX, footerY);
 
-        var footerRect = new Rectangle(PadX, footerY + 6, _contentWidth, 14);
+        var footerRect = new Rectangle(PadX, footerY + 6, _contentWidth, FooterHeight);
         TextRenderer.DrawText(g, _footerText, _footerFont, footerRect,
             UiChrome.SurfaceTextMuted,
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-
-        int brandH = TextRenderer.MeasureText(g, _brandText, _brandFont,
-            new Size(0, 0), TextFormatFlags.NoPadding).Height;
-        int brandW = TextRenderer.MeasureText(g, _brandText, _brandFont,
-            new Size(0, 0), TextFormatFlags.NoPadding).Width;
-        var brandRect = new Rectangle((Width - brandW) / 2, footerY + 22, brandW + 4, brandH + 2);
-        TextRenderer.DrawText(g, _brandText, _brandFont, brandRect,
-            Color.FromArgb(UiChrome.IsDark ? 100 : 80, accent),
-            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-    }
-
-    private static void PaintTopAccentLine(Graphics g, RectangleF bounds, Color accent)
-    {
-        float inset = 1f;
-        float y = bounds.Y + inset + 0.5f;
-        float x0 = bounds.X + Corner;
-        float x1 = bounds.Right - Corner;
-        var fade = Color.FromArgb(0, accent);
-        using var brush = new LinearGradientBrush(
-            new PointF(x0, y), new PointF(x1, y), accent, accent)
-        {
-            InterpolationColors = new ColorBlend
-            {
-                Colors = new[] { fade, accent, accent, fade },
-                Positions = new[] { 0f, 0.12f, 0.88f, 1f },
-            },
-        };
-        using var pen = new Pen(brush, 2f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-        g.DrawLine(pen, x0, y, x1, y);
     }
 
     private int PaintSectionLabel(Graphics g, string text, int y)
     {
         var rect = new Rectangle(PadX, y, _contentWidth, SectionLabelHeight);
         TextRenderer.DrawText(g, text, _sectionFont, rect,
-            UiChrome.SurfaceTextMuted,
+            Color.FromArgb(UiChrome.IsDark ? 170 : 140, UiChrome.SurfaceTextSecondary),
             TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         return y + SectionLabelHeight;
+    }
+
+    private int PaintSteps(Graphics g, int startY, Color accent)
+    {
+        int curY = startY;
+        for (int i = 0; i < _steps.Length; i++)
+        {
+            int rowH = i < _stepHeights.Length ? _stepHeights[i] : StepCircle;
+            float cy = curY + rowH / 2f;
+
+            // Number circle
+            var circle = new RectangleF(PadX, cy - StepCircle / 2f, StepCircle, StepCircle);
+            using (var fill = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 40 : 30, accent)))
+                g.FillEllipse(fill, circle);
+            using (var ring = new Pen(Color.FromArgb(UiChrome.IsDark ? 140 : 110, accent), 1.2f))
+                g.DrawEllipse(ring, circle);
+
+            string num = (i + 1).ToString();
+            TextRenderer.DrawText(g, num, _stepNumFont,
+                Rectangle.Round(circle),
+                accent,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+
+            int textX = PadX + StepCircle + StepTextGap;
+            int textW = _contentWidth - StepCircle - StepTextGap;
+            var textRect = new Rectangle(textX, curY, textW, rowH);
+            TextRenderer.DrawText(g, _steps[i].Text, _bodyFont, textRect,
+                UiChrome.SurfaceTextPrimary,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+
+            curY += rowH;
+            if (i < _steps.Length - 1)
+                curY += StepGap;
+        }
+        return curY;
+    }
+
+    private int PaintTips(Graphics g, int startY)
+    {
+        int curY = startY;
+        var iconColor = Color.FromArgb(190, UiChrome.SurfaceTextSecondary);
+        int tipTextWidth = _contentWidth - IconColWidth - IconTextGap;
+
+        for (int i = 0; i < _tips.Length; i++)
+        {
+            var tip = _tips[i];
+            int rowH = i < _tipHeights.Length ? _tipHeights[i] : TipRowMinHeight;
+
+            float iconY = curY + (rowH - TipIconSize) / 2f;
+            var iconRect = new RectangleF(PadX + 2, iconY, TipIconSize, TipIconSize);
+
+            if (tip.IconId != null && FluentIcons.HasIcon(tip.IconId))
+                FluentIcons.DrawIcon(g, tip.IconId, iconRect, iconColor, iconInset: 1f);
+            else
+            {
+                using var dot = new SolidBrush(Color.FromArgb(120, UiChrome.SurfaceTextMuted));
+                g.FillEllipse(dot, PadX + IconColWidth / 2f - 2.5f, curY + rowH / 2f - 2.5f, 5f, 5f);
+            }
+
+            var tipTextRect = new RectangleF(PadX + IconColWidth + IconTextGap, curY, tipTextWidth, rowH);
+            using var textBrush = new SolidBrush(UiChrome.SurfaceTextSecondary);
+            using var format = new StringFormat(StringFormat.GenericTypographic)
+            {
+                Alignment = StringAlignment.Near,
+                LineAlignment = StringAlignment.Center,
+                Trimming = StringTrimming.None,
+            };
+            g.DrawString(tip.Text, _bodyFont, textBrush, tipTextRect, format);
+
+            curY += rowH;
+            if (i < _tips.Length - 1)
+                curY += TipRowGap;
+        }
+        return curY;
     }
 
     private int PaintShortcutGrid(Graphics g, int startY)
     {
         var accent = UiChrome.AccentColor;
-        int curY = startY;
-
         for (int i = 0; i < _shortcuts.Length; i++)
         {
             int col = i % 2;
             int row = i / 2;
-            if (col == 0 && i > 0)
-                curY = startY + row * ShortcutRowHeight;
-
             int cellX = PadX + col * (_shortcutColWidth + ShortcutColGap);
             int cellY = startY + row * ShortcutRowHeight;
             PaintShortcutCell(g, _shortcuts[i], cellX, cellY, accent);
         }
-
         int rows = (_shortcuts.Length + 1) / 2;
         return startY + rows * ShortcutRowHeight;
     }
@@ -419,24 +579,24 @@ public sealed class QuickStartGuide : Form
             new Size(0, 0), TextFormatFlags.NoPadding).Width;
 
         int kbdW = keyW + KbdPadH * 2;
-        int kbdH = ShortcutRowHeight - 8;
-        var kbdRect = new RectangleF(x, y + 4, kbdW, kbdH);
+        int kbdH = ShortcutRowHeight - 10;
+        var kbdRect = new RectangleF(x, y + 5, kbdW, kbdH);
 
-        using (var kbdPath = WindowsDockRenderer.RoundedRect(kbdRect, 4f))
+        using (var kbdPath = WindowsDockRenderer.RoundedRect(kbdRect, 5f))
         {
             using var kbdBg = new SolidBrush(UiChrome.SurfaceTier2);
             g.FillPath(kbdBg, kbdPath);
-            using var kbdBorder = new Pen(Color.FromArgb(UiChrome.IsDark ? 70 : 55, accent), 1f);
+            using var kbdBorder = new Pen(Color.FromArgb(UiChrome.IsDark ? 80 : 60, accent), 1f);
             g.DrawPath(kbdBorder, kbdPath);
         }
 
         TextRenderer.DrawText(g, sc.Key, _keyFont,
-            new Rectangle(x + KbdPadH, y + 4, keyW + 2, kbdH),
+            new Rectangle(x + KbdPadH, y + 5, keyW + 2, kbdH),
             accent,
             TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
         TextRenderer.DrawText(g, sc.Label, _bodyFont,
-            new Rectangle(x + kbdW + KbdLabelGap, y + 4, labelW + 4, kbdH),
+            new Rectangle(x + kbdW + KbdLabelGap, y + 5, labelW + 4, kbdH),
             UiChrome.SurfaceTextSecondary,
             TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
     }
@@ -448,113 +608,6 @@ public sealed class QuickStartGuide : Form
         int labelW = TextRenderer.MeasureText(g, sc.Label, _bodyFont,
             new Size(0, 0), TextFormatFlags.NoPadding).Width;
         return keyW + KbdPadH * 2 + KbdLabelGap + labelW;
-    }
-
-    private int PaintTips(Graphics g, int startY)
-    {
-        int curY = startY;
-        var iconColor = Color.FromArgb(170, UiChrome.SurfaceTextSecondary);
-        int tipTextWidth = Width - PadX - IconColWidth - IconTextGap - PadX;
-        using var textBrush = new SolidBrush(UiChrome.SurfaceTextSecondary);
-        using var tipFormat = new StringFormat(StringFormat.GenericTypographic)
-        {
-            Alignment = StringAlignment.Near,
-            LineAlignment = StringAlignment.Near,
-            Trimming = StringTrimming.None,
-        };
-
-        for (int i = 0; i < _tips.Length; i++)
-        {
-            var tip = _tips[i];
-            int rowH = i < _tipHeights.Length ? _tipHeights[i] : TipRowMinHeight;
-            var rowRect = new Rectangle(PadX, curY, Width - PadX * 2, rowH);
-
-            var saved = g.Save();
-            g.SetClip(rowRect);
-
-            float iconY = curY + (rowH - TipIconSize) / 2f;
-            var iconRect = new RectangleF(PadX + 2, iconY, TipIconSize, TipIconSize);
-
-            if (tip.IconId != null && FluentIcons.HasIcon(tip.IconId))
-            {
-                FluentIcons.DrawIcon(g, tip.IconId, iconRect, iconColor, iconInset: 1f);
-            }
-            else
-            {
-                float dotX = PadX + IconColWidth / 2f;
-                float dotY = curY + rowH / 2f;
-                using var dotBrush = new SolidBrush(Color.FromArgb(100, UiChrome.SurfaceTextMuted));
-                g.FillEllipse(dotBrush, dotX - 2f, dotY - 2f, 4f, 4f);
-            }
-
-            int tipTextX = PadX + IconColWidth + IconTextGap;
-            var tipTextRect = new RectangleF(tipTextX, curY, tipTextWidth, rowH);
-            g.DrawString(tip.Text, _bodyFont, textBrush, tipTextRect, tipFormat);
-
-            g.Restore(saved);
-            curY += rowH;
-            if (i < _tips.Length - 1)
-                curY += TipRowGap;
-        }
-
-        return curY;
-    }
-
-    private int ComputeReferenceContentWidth(Graphics g)
-    {
-        const string refTitle = "Quick Start";
-        const string refCapture = "Drag to select the capture area";
-        var refShortcuts = new[]
-        {
-            new ShortcutDef("Enter", "Capture"),
-            new ShortcutDef("Esc", "Cancel"),
-            new ShortcutDef("Ctrl+Z", "Undo"),
-            new ShortcutDef("Ctrl+Y", "Redo"),
-        };
-        var refTips = new[]
-        {
-            "▼ opens hidden tools and preferences",
-            "Also: cancel prompt and help tips",
-            "Annotate only after capture",
-            "Right-click tool → hide from bar",
-        };
-
-        int maxTextWidth = TextRenderer.MeasureText(g, refTitle, _headerFont, Size.Empty,
-            TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
-
-        int maxShortcutCellW = 0;
-        foreach (var sc in refShortcuts)
-            maxShortcutCellW = Math.Max(maxShortcutCellW, MeasureShortcutCell(g, sc));
-        maxTextWidth = Math.Max(maxTextWidth, maxShortcutCellW * 2 + ShortcutColGap);
-
-        int heroLineW = HeroPad * 2 + IconSize + IconTextGap +
-            TextRenderer.MeasureText(g, refCapture, _bodyMediumFont, Size.Empty,
-                TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix).Width;
-        maxTextWidth = Math.Max(maxTextWidth, heroLineW);
-
-        foreach (var tip in refTips)
-        {
-            int tw = MeasureTipLineWidth(g, tip) + TipMeasureSlack;
-            maxTextWidth = Math.Max(maxTextWidth, tw + IconColWidth + IconTextGap);
-        }
-
-        return Math.Max(MinWidth - PadX * 2, maxTextWidth + WidthSlack);
-    }
-
-    private static int MeasureTipLineWidth(Graphics g, string text, Font font)
-    {
-        var size = g.MeasureString(text, font, int.MaxValue, StringFormat.GenericTypographic);
-        return (int)Math.Ceiling(size.Width);
-    }
-
-    private int MeasureTipLineWidth(Graphics g, string text)
-        => MeasureTipLineWidth(g, text, _bodyFont);
-
-    private int MeasureTipRowHeight(Graphics g, string text, int tipTextWidth)
-    {
-        using var format = StringFormat.GenericTypographic;
-        var size = g.MeasureString(text, _bodyFont, tipTextWidth, format);
-        return Math.Max(TipRowMinHeight, (int)Math.Ceiling(size.Height) + TipTextPad);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
@@ -571,10 +624,9 @@ public sealed class QuickStartGuide : Form
             _headerFont.Dispose();
             _sectionFont.Dispose();
             _bodyFont.Dispose();
-            _bodyMediumFont.Dispose();
+            _stepNumFont.Dispose();
             _keyFont.Dispose();
             _footerFont.Dispose();
-            _brandFont.Dispose();
         }
         base.Dispose(disposing);
     }

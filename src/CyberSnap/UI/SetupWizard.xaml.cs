@@ -689,9 +689,20 @@ public partial class SetupWizard : Window
         WizCrosshairCheck.IsChecked = s.ShowCrosshairGuides;
         WizCaptureMagnifierCheck.IsChecked = s.ShowCaptureMagnifier;
         WizEnableSoundsCheck.IsChecked = !s.MuteSounds;
-        WizSaveToFileCheck.IsChecked = s.SaveToFile;
         WizCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
         WizAfterCaptureOutcomeEditor?.LoadFromSettings(s);
+        // Prefer EffectiveSave so locked Editor/System-viewer and never-empty
+        // Normalize stay in lockstep with the checkbox.
+        _suppressAfterCaptureChange = true;
+        try
+        {
+            WizSaveToFileCheck.IsChecked = WizAfterCaptureOutcomeEditor?.State.EffectiveSave
+                ?? s.SaveToFile;
+        }
+        finally
+        {
+            _suppressAfterCaptureChange = false;
+        }
         WizSaveDirText.Text = s.SaveDirectory;
         UpdateSaveDirectoryState();
         LoadAppearanceDefaults();
@@ -751,8 +762,19 @@ public partial class SetupWizard : Window
                 return;
             }
 
-            if (state.Save != save)
+            if (state.EffectiveSave != save)
+            {
                 WizAfterCaptureOutcomeEditor.SetState(state with { Save = save });
+                // Normalize may force Save back (never-empty outcome). Re-sync the checkbox
+                // so it doesn't stay off while the Save pill is still active.
+                var effective = WizAfterCaptureOutcomeEditor.State.EffectiveSave;
+                if (WizSaveToFileCheck.IsChecked != effective)
+                {
+                    _suppressAfterCaptureChange = true;
+                    try { WizSaveToFileCheck.IsChecked = effective; }
+                    finally { _suppressAfterCaptureChange = false; }
+                }
+            }
         }
 
         UpdateSaveDirectoryState();
@@ -920,6 +942,7 @@ public partial class SetupWizard : Window
                         s.SaveToFile,
                         s.AfterCapture,
                         s.OpenEditorAfterCapture,
+                        s.OpenInSystemViewerAfterCapture,
                         s.AutoCopyToClipboard,
                         s.AutoCopyExcludeImages,
                         s.AutoCopyExcludeOcr,
@@ -941,6 +964,7 @@ public partial class SetupWizard : Window
                         s.SaveToFile = previousSaving.SaveToFile;
                         s.AfterCapture = previousSaving.AfterCapture;
                         s.OpenEditorAfterCapture = previousSaving.OpenEditorAfterCapture;
+                        s.OpenInSystemViewerAfterCapture = previousSaving.OpenInSystemViewerAfterCapture;
                         s.AutoCopyToClipboard = previousSaving.AutoCopyToClipboard;
                         s.AutoCopyExcludeImages = previousSaving.AutoCopyExcludeImages;
                         s.AutoCopyExcludeOcr = previousSaving.AutoCopyExcludeOcr;
@@ -1127,7 +1151,13 @@ public partial class SetupWizard : Window
 
     private void Window_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton == MouseButton.Left) DragMove();
+        // Interactive chrome (steppers, outcome pills, buttons) sets e.Handled on
+        // LeftButtonDown so DragMove does not steal the click. Same pattern as StepDot_MouseDown.
+        if (e.ChangedButton != MouseButton.Left || e.Handled)
+            return;
+
+        try { DragMove(); }
+        catch { /* DragMove throws if the button was already released */ }
     }
 
     private void WizOpenWinSettingsBtn_Click(object sender, RoutedEventArgs e)

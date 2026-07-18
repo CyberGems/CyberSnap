@@ -30,6 +30,7 @@ public partial class ToastWindow : Window
     private bool _isSavingPreview;
     private bool _isDeletingSavedFile;
     private bool _isRunningShareAction;
+    private bool _deleteFileOnDismiss;
     private int _toastStateVersion;
     private bool _closeAfterOpacityAnimation;
     private int _dismissAnimationToken;
@@ -323,6 +324,8 @@ public partial class ToastWindow : Window
         ApplyToastOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
 
         _savedFilePath = spec.FilePath;
+        _deleteFileOnDismiss = spec.DeleteFileOnDismiss
+            && !string.IsNullOrWhiteSpace(spec.FilePath);
 
         var celebrating = spec.Celebrate && !spec.IsError;
         TitleText.Text = LocalizationService.Translate(spec.Title);
@@ -665,16 +668,17 @@ public partial class ToastWindow : Window
     private void ApplyOverlayButton(System.Windows.Controls.Border button, Helpers.ToastButtonKind kind)
     {
         RefreshOverlayButtonAccessibility(button, kind);
+        // Keep Delete in the layout even when there is no file (notification-only captures)
+        // so the action strip doesn't jump; disable it instead of hiding.
         bool visible = _previewBitmap is not null &&
                        _spec.ShowOverlayButtons &&
-                       Helpers.ToastButtonLayout.IsVisible(_buttonLayout, kind) &&
-                       (kind != Helpers.ToastButtonKind.Delete || HasSavedFileOnDisk());
+                       Helpers.ToastButtonLayout.IsVisible(_buttonLayout, kind);
 
         button.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         // Hide the Edit button for non-image captures (e.g. MP4/GIF recordings)
         if (kind == Helpers.ToastButtonKind.Edit && _spec.HideEditButton)
             button.Visibility = Visibility.Collapsed;
-        if (!visible)
+        if (button.Visibility != Visibility.Visible)
             return;
 
         var (row, col) = Helpers.ToastButtonLayout.ToGridCell(Helpers.ToastButtonLayout.GetSlot(_buttonLayout, kind));
@@ -683,6 +687,23 @@ public partial class ToastWindow : Window
         button.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
         button.VerticalAlignment = System.Windows.VerticalAlignment.Center;
         button.Margin = new Thickness(4);
+
+        if (kind == Helpers.ToastButtonKind.Delete)
+            ApplyDeleteButtonEnabledState();
+    }
+
+    /// <summary>
+    /// Delete stays visible for layout consistency; enabled only when a real file exists on disk.
+    /// </summary>
+    private void ApplyDeleteButtonEnabledState()
+    {
+        bool canDelete = HasSavedFileOnDisk() && !_isDeletingSavedFile;
+        DeleteBtn.IsEnabled = canDelete;
+        DeleteBtn.Opacity = canDelete ? 1.0 : 0.38;
+        DeleteBtn.Cursor = canDelete
+            ? System.Windows.Input.Cursors.Hand
+            : System.Windows.Input.Cursors.Arrow;
+        RefreshOverlayButtonAccessibility(DeleteBtn, Helpers.ToastButtonKind.Delete);
     }
 
     private void RefreshActionsPanelMetrics()
@@ -751,7 +772,9 @@ public partial class ToastWindow : Window
             Helpers.ToastButtonKind.Edit => (T("Edit preview"), T("Open this capture in the Annotations Editor.")),
             Helpers.ToastButtonKind.Delete => _isDeletingSavedFile
                 ? (T("Deleting file"), T("Delete is already running."))
-                : (T("Delete capture"), T("Delete capture")),
+                : HasSavedFileOnDisk()
+                    ? (T("Delete capture"), T("Delete capture"))
+                    : (T("Delete capture"), T("No file to delete — capture was not saved to disk.")),
             Helpers.ToastButtonKind.History => (T("Open capture in Gallery"), T("Open capture in Gallery.")),
             _ => (T("Notification action"), T("Run this notification action."))
         };
@@ -1322,21 +1345,19 @@ public partial class ToastWindow : Window
 
         if (!HasSavedFileOnDisk())
         {
-            ShowSavedFileMissingError();
+            // Button is visible-but-disabled for notification-only captures; ignore stray clicks.
             return;
         }
 
         _isDeletingSavedFile = true;
-        DeleteBtn.IsEnabled = false;
-        RefreshOverlayButtonAccessibility(DeleteBtn, Helpers.ToastButtonKind.Delete);
+        ApplyDeleteButtonEnabledState();
         var deletePath = _savedFilePath!;
         try
         {
             if (!SavedFilePathStillExists(deletePath))
             {
                 _isDeletingSavedFile = false;
-                DeleteBtn.IsEnabled = true;
-                RefreshOverlayButtonAccessibility(DeleteBtn, Helpers.ToastButtonKind.Delete);
+                ApplyDeleteButtonEnabledState();
                 ShowSavedFileMissingError(deletePath);
                 return;
             }
@@ -1345,17 +1366,16 @@ public partial class ToastWindow : Window
                 throw new IOException($"Could not delete {deletePath}");
 
             _savedFilePath = null;
+            _deleteFileOnDismiss = false; // already deleted
             _isDeletingSavedFile = false;
-            DeleteBtn.IsEnabled = true;
-            RefreshOverlayButtonAccessibility(DeleteBtn, Helpers.ToastButtonKind.Delete);
+            ApplyDeleteButtonEnabledState();
             DismissAnimated();
             Show(ToastSpec.Standard("Deleted", Path.GetFileName(deletePath) ?? deletePath));
         }
         catch (Exception ex)
         {
             _isDeletingSavedFile = false;
-            DeleteBtn.IsEnabled = true;
-            RefreshOverlayButtonAccessibility(DeleteBtn, Helpers.ToastButtonKind.Delete);
+            ApplyDeleteButtonEnabledState();
             Show(ToastSpec.Error(
                 "Delete failed",
                 BuildToastActionFailureBody("CyberSnap could not delete the saved file. Open it from History or delete it manually in File Explorer.", ex.Message),
@@ -1975,8 +1995,9 @@ public partial class ToastWindow : Window
         if (IsMouseCaptured)
             ReleaseMouseCapture();
         SaveBtn.IsEnabled = true;
-        DeleteBtn.IsEnabled = true;
         ShareBtn.IsEnabled = true;
+        _deleteFileOnDismiss = false;
+        // Delete enablement re-applied in ApplyOverlayButton when the next spec loads.
         RefreshOverlayButtonLayout();
         StopDismissAnimationTimer();
         BeginAnimation(LeftProperty, null);
@@ -2301,6 +2322,22 @@ public partial class ToastWindow : Window
         _previewBitmap = null;
         RunOnClosedCleanup("toast.closed.clear-preview-source", () => PreviewImage.Source = null);
         RunOnClosedCleanup("toast.closed.clear-inline-source", () => InlinePreviewImage.Source = null);
+        if (_deleteFileOnDismiss)
+        {
+            var path = _savedFilePath;
+            _deleteFileOnDismiss = false;
+            RunOnClosedCleanup("toast.closed.delete-ephemeral", () =>
+            {
+                Helpers.CaptureSavePath.TryDeleteTempRecording(path);
+                // Also best-effort for non-temp ephemeral paths (should not happen).
+                if (!string.IsNullOrWhiteSpace(path)
+                    && !Helpers.CaptureSavePath.IsTempRecordingPath(path)
+                    && File.Exists(path))
+                {
+                    try { File.Delete(path); } catch { /* ignore */ }
+                }
+            });
+        }
         base.OnClosed(e);
     }
 

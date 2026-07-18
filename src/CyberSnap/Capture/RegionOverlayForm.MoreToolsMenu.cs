@@ -23,30 +23,85 @@ public sealed partial class RegionOverlayForm
         if (_quickStartGuide != null && _quickStartGuide.Visible)
         {
             _quickStartGuide.Close();
-            _quickStartGuide = null;
             return;
         }
 
+        var anchorLocal = GetQuickStartAnchorLocal();
+        if (anchorLocal.Width <= 0 || anchorLocal.Height <= 0)
+            return;
+
         _quickStartGuide ??= new QuickStartGuide();
 
-        var anchorLocal = Rectangle.Union(_logoRect, _brandRect);
         var anchorScreen = new Rectangle(
             _virtualBounds.X + anchorLocal.X,
             _virtualBounds.Y + anchorLocal.Y,
             anchorLocal.Width,
             anchorLocal.Height);
 
-        _quickStartGuide.ShowNear(this, anchorScreen, above: IsBottomDock);
-        _quickStartGuide.FormClosed += (_, _) => _quickStartGuide = null;
+        // Bubble above the logo when the toolbar is at the bottom or side; below when docked top.
+        bool above = CaptureDockSide != CaptureDockSide.Top;
+
+        _quickStartGuide.ShowNear(this, anchorScreen, above: above);
+        _quickStartGuide.FormClosed -= OnQuickStartGuideClosed;
+        _quickStartGuide.FormClosed += OnQuickStartGuideClosed;
+    }
+
+    private void OnQuickStartGuideClosed(object? sender, FormClosedEventArgs e)
+    {
+        if (_quickStartGuide != null)
+        {
+            _quickStartGuide.FormClosed -= OnQuickStartGuideClosed;
+            _quickStartGuide = null;
+        }
+
+        // First dismissal (auto or manual) marks the guide as seen so it does not re-auto-open.
+        QuickStartGuideDismissed?.Invoke();
+    }
+
+    private Rectangle GetQuickStartAnchorLocal()
+    {
+        // Prefer the painted logo; brand column is a solid fallback after CalcToolbar.
+        if (_logoRect.Width > 0 && _logoRect.Height > 0)
+            return _logoRect.Width > 0 && _brandRect.Width > 0
+                ? Rectangle.Union(_logoRect, _brandRect)
+                : _logoRect;
+        if (_brandRect.Width > 0 && _brandRect.Height > 0)
+            return _brandRect;
+        // Last resort: left edge of the toolbar surface.
+        if (_toolbarRect.Width > 0)
+            return new Rectangle(_toolbarRect.X + 4, _toolbarRect.Y + 4, 24, 24);
+        return Rectangle.Empty;
+    }
+
+    /// <summary>
+    /// First-run: open the talk-bubble guide once the toolbar logo has a valid anchor.
+    /// </summary>
+    private void TryAutoShowQuickStartGuide()
+    {
+        if (IsDisposed || Disposing || !Visible || _isConfirmingSelection)
+            return;
+
+        var settings = SettingsService.LoadStatic();
+        if (settings == null || settings.HasSeenQuickStartGuide)
+            return;
+
+        if (_quickStartGuide != null && _quickStartGuide.Visible)
+            return;
+
+        // Ensure logo/brand rects exist (painted during toolbar surface update).
+        EnsureToolbarReady();
+        try { _toolbarForm?.UpdateSurface(); } catch { }
+
+        if (GetQuickStartAnchorLocal().IsEmpty)
+            return;
+
+        ShowQuickStartGuide();
     }
 
     private void DismissQuickStartGuide()
     {
         if (_quickStartGuide != null && _quickStartGuide.Visible)
-        {
             _quickStartGuide.Close();
-            _quickStartGuide = null;
-        }
     }
 
     private void ShowToolbarContextMenu(int buttonIndex, Point clickLocation)

@@ -15,7 +15,11 @@ namespace CyberSnap.UI.Controls;
 
 public partial class AfterCaptureOutcomeEditor : UserControl
 {
-    private AfterCaptureOutcomeState _state = new(Save: true, AfterCaptureDestination.Notification, Clipboard: true);
+    private AfterCaptureOutcomeState _state = new(
+        Save: true,
+        AfterCaptureDestination.Notification,
+        SystemViewer: false,
+        Clipboard: true);
     private bool _suppress;
 
     public AfterCaptureOutcomeEditor()
@@ -117,9 +121,7 @@ public partial class AfterCaptureOutcomeEditor : UserControl
     {
         bool canRemove = AfterCaptureOutcomeModel.CanRemove(_state, pill);
         string label = LocalizationService.Translate(AfterCaptureOutcomeModel.LabelKey(pill));
-        string tip = canRemove
-            ? LocalizationService.Translate(AfterCaptureOutcomeModel.TooltipKey(pill))
-            : LocalizationService.Translate(AfterCaptureOutcomeModel.ForcedSaveTooltipKey);
+        string tip = ResolveActiveTooltip(pill, canRemove);
 
         var root = CreatePillChrome(isActive: true, tip);
         var row = new StackPanel
@@ -129,27 +131,27 @@ public partial class AfterCaptureOutcomeEditor : UserControl
             Height = PillContentHeight
         };
 
-        // No extra margin before the trailing action — the action itself is tight.
+        // Small gap before × / lock so hover fill doesn't crowd the label.
         row.Children.Add(new TextBlock
         {
             Text = label,
             FontSize = PillFontSize,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, canRemove ? 0 : 2, 0)
+            Margin = new Thickness(0, 0, GlyphTextGap, 0)
         });
 
         if (canRemove)
         {
             var remove = CreateActionGlyph(
-                text: "\uE711",
-                useIconFont: true,
+                text: "\u00D7", // × — compact, no icon-font metrics blowout
+                useIconFont: false,
                 automationName: LocalizationService.Translate("Remove outcome step"),
                 onClick: () => RemovePill(pill));
             row.Children.Add(remove);
         }
         else
         {
-            // Locked save: subtle lock glyph so forced state is visible.
+            // Locked save: subtle lock glyph so forced / sole-step state is visible.
             row.Children.Add(new TextBlock
             {
                 Text = "\uE72E",
@@ -167,6 +169,18 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         return root;
     }
 
+    private string ResolveActiveTooltip(AfterCapturePillKind pill, bool canRemove)
+    {
+        if (canRemove)
+            return LocalizationService.Translate(AfterCaptureOutcomeModel.TooltipKey(pill));
+
+        // Locked Save: distinguish forced-by-destination vs sole remaining step.
+        if (pill == AfterCapturePillKind.Save && _state.RequiresSave)
+            return LocalizationService.Translate(AfterCaptureOutcomeModel.ForcedSaveTooltipKey);
+
+        return LocalizationService.Translate(AfterCaptureOutcomeModel.RequiredOutcomeTooltipKey);
+    }
+
     private FrameworkElement BuildAvailablePill(AfterCapturePillKind pill)
     {
         string label = LocalizationService.Translate(AfterCaptureOutcomeModel.LabelKey(pill));
@@ -175,8 +189,11 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         var root = CreatePillChrome(isActive: false, tip);
         root.Cursor = System.Windows.Input.Cursors.Hand;
         // Whole chip remains clickable; + also has its own hover glyph like ×.
-        root.MouseLeftButtonUp += (_, e) =>
+        // Must handle MouseLeftButtonDown (not Up): host windows that DragMove on
+        // bubbling LeftButtonDown (SetupWizard) otherwise swallow the click.
+        root.MouseLeftButtonDown += (_, e) =>
         {
+            if (e.ChangedButton != MouseButton.Left) return;
             e.Handled = true;
             AddPill(pill);
         };
@@ -194,7 +211,8 @@ public partial class AfterCaptureOutcomeEditor : UserControl
             useIconFont: false,
             automationName: LocalizationService.Translate("Add outcome step"),
             onClick: () => AddPill(pill));
-        add.Margin = new Thickness(0, 0, 2, 0);
+        // Mirror the Active gap so + hover doesn't sit on the label.
+        add.Margin = new Thickness(0, 0, GlyphTextGap, 0);
         row.Children.Add(add);
         row.Children.Add(new TextBlock
         {
@@ -212,7 +230,9 @@ public partial class AfterCaptureOutcomeEditor : UserControl
     private const double PillContentHeight = 18;
     private const double PillFontSize = 11.5;
     // Compact hit target for × / + — keeps chips narrow even on hover.
-    private const double GlyphHitSize = 12;
+    private const double GlyphHitSize = 14;
+    // Breathing room between label and × / + (visible on hover fill).
+    private const double GlyphTextGap = 4;
     // Available stays fully legible; only a mild opacity drop + quieter fill.
     private const double AvailablePillOpacity = 0.92;
 
@@ -224,11 +244,12 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         {
             CornerRadius = new CornerRadius(12),
             Padding = isActive
-                ? new Thickness(8, 3, 3, 3)
+                ? new Thickness(8, 3, 4, 3)
                 : new Thickness(5, 3, 8, 3),
             Margin = new Thickness(0, 0, 6, 6),
             MinHeight = 26,
             SnapsToDevicePixels = true,
+            ClipToBounds = true,
             ToolTip = string.IsNullOrWhiteSpace(toolTip) ? null : toolTip
         };
 
@@ -262,13 +283,16 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         var glyph = new TextBlock
         {
             Text = text,
-            FontSize = useIconFont ? 8.5 : 12,
+            // × needs a touch more size than + to match optical weight.
+            FontSize = useIconFont ? 8.5 : (text == "\u00D7" ? 13 : 12),
             FontWeight = useIconFont ? FontWeights.Normal : FontWeights.SemiBold,
             FontFamily = useIconFont
                 ? new WpfFontFamily("Segoe Fluent Icons, Segoe MDL2 Assets")
                 : new WpfFontFamily("Segoe UI Variable Text, Segoe UI"),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
+            // Nudge × up slightly — multiplication sign sits low in the em box.
+            Margin = text == "\u00D7" ? new Thickness(0, -1, 0, 0) : new Thickness(0),
             IsHitTestVisible = false
         };
 
@@ -285,6 +309,7 @@ public partial class AfterCaptureOutcomeEditor : UserControl
             Margin = new Thickness(0),
             Cursor = System.Windows.Input.Cursors.Hand,
             SnapsToDevicePixels = true,
+            ClipToBounds = true,
             ToolTip = automationName,
             Child = glyph,
             VerticalAlignment = VerticalAlignment.Center
@@ -293,8 +318,10 @@ public partial class AfterCaptureOutcomeEditor : UserControl
 
         hit.MouseEnter += (_, _) => hit.Background = hoverBg;
         hit.MouseLeave += (_, _) => hit.Background = idleBg;
-        hit.MouseLeftButtonUp += (_, e) =>
+        // Down + Handled: blocks window DragMove (wizard) and still works in Settings.
+        hit.MouseLeftButtonDown += (_, e) =>
         {
+            if (e.ChangedButton != MouseButton.Left) return;
             e.Handled = true;
             onClick();
         };
