@@ -556,12 +556,6 @@ public sealed partial class RegionOverlayForm
             _escapeHook?.Dispose();
             _escapeHook = null;
             StopMenuActivatorPulse();
-            StopDockSlideAnimation(snapToEnd: false);
-            StopToolWelcomePulse();
-            try { _dockAnimTimer?.Dispose(); } catch { }
-            _dockAnimTimer = null;
-            try { _welcomePulseTimer?.Dispose(); } catch { }
-            _welcomePulseTimer = null;
             if (_toolbarForm is { IsDisposed: false })
                 _toolbarForm.SurfaceAlpha = 255;
             _banner?.Dispose();
