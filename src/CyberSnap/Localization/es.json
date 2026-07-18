@@ -192,6 +192,8 @@
   "Click to select · Drag to move · Double-click Pick or canvas to select all": "Clic para marcar · Arrastra para mover · Doble clic en Seleccionar o el canvas marca todo",
   "Double-click Pick to select all": "Doble clic en Seleccionar para marcar todo",
   "Double-click tool to select all": "Doble clic en la herramienta para seleccionar todo",
+  "Double-click {0} to select all": "Doble clic en {0} para marcar todo",
+  "Click to select · Drag to move · Double-click {0} to select all": "Clic para marcar · Arrastra para mover · Doble clic en {0} marca todo",
   "Tap to activate · hold for temporary pan": "Toque para activar · mantener para desplazar temporal",
   "Drag to pan · Scroll to zoom · Tap Space to activate · hold for temporary pan": "Arrastra para desplazar · Rueda para zoom · Toque Espacio para activar · mantener para desplazar temporal",
   "Drag to pan · Release Space to restore previous tool": "Arrastra para desplazar · Suelta Espacio para restaurar la herramienta anterior",

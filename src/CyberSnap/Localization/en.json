@@ -143,6 +143,8 @@
   "Click to select · Drag to move · Double-click Pick or canvas to select all": "Click to select · Drag to move · Double-click Pick or canvas to select all",
   "Double-click Pick to select all": "Double-click Pick to select all",
   "Double-click tool to select all": "Double-click tool to select all",
+  "Double-click {0} to select all": "Double-click {0} to select all",
+  "Click to select · Drag to move · Double-click {0} to select all": "Click to select · Drag to move · Double-click {0} to select all",
   "Tap to activate · hold for temporary pan": "Tap to activate · hold for temporary pan",
   "Drag to pan · Scroll to zoom · Tap Space to activate · hold for temporary pan": "Drag to pan · Scroll to zoom · Tap Space to activate · hold for temporary pan",
   "Drag to pan · Release Space to restore previous tool": "Drag to pan · Release Space to restore previous tool",

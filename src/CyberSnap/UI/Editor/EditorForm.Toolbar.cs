@@ -1224,7 +1224,12 @@ public sealed partial class EditorForm
 
         var text = LocalizationService.Translate(labelKey);
         if (tool == AnnotationCanvas.CanvasTool.Move)
-            text += $"  ·  {LocalizationService.Translate("Double-click tool to select all")}";
+        {
+            // Inject the localized tool name ("Pick" → "Seleccionar") — never leave English "Pick" in ES UI.
+            text += $"  ·  {string.Format(
+                LocalizationService.Translate("Double-click {0} to select all"),
+                LocalizationService.Translate("Pick"))}";
+        }
         var hotkey = EditorToolHotkeyHelper.GetHotkeyLabel(tool);
         return hotkey is not null ? $"{text}  ({hotkey})" : text;
     }
