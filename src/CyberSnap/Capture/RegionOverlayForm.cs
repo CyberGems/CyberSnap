@@ -899,44 +899,34 @@ public sealed partial class RegionOverlayForm : Form
 
     public void ToggleToolbarPosition()
     {
-        var fromBounds = _toolbarForm is { IsDisposed: false, Visible: true }
-            ? _toolbarForm.Bounds
-            : Rectangle.Empty;
-
         CaptureDockSide = CaptureDockSide == CaptureDockSide.Top ? CaptureDockSide.Bottom : CaptureDockSide.Top;
         DockSideChanged?.Invoke(CaptureDockSide);
         CalcToolbar();
         PositionToolbarForm();
         RefreshToolbar();
 
-        var toBounds = _toolbarForm is { IsDisposed: false, Visible: true }
-            ? _toolbarForm.Bounds
-            : Rectangle.Empty;
-
-        if (!UI.Motion.Disabled
-            && !fromBounds.IsEmpty
-            && !toBounds.IsEmpty
-            && fromBounds != toBounds
-            && _toolbarForm is { IsDisposed: false })
-        {
-            StartDockSlideAnimation(fromBounds, toBounds);
-        }
+        // Never lerp the layered form across the whole screen (that painted empty mid-screen
+        // content and looked like a glitch). Slide + fade in from the *destination* edge only.
+        if (!UI.Motion.Disabled && _toolbarForm is { IsDisposed: false, Visible: true })
+            StartDockEnterAnimation();
     }
 
-    private Rectangle _dockAnimFrom;
-    private Rectangle _dockAnimTo;
-    private float _dockAnimT = 1f;
-    private DateTime _dockAnimStart;
+    // Dock enter: paint offset + surface alpha. Form stays parked at the final dock bounds.
+    private float _dockEnterT = 1f;
+    private float _dockEnterOffsetX;
+    private float _dockEnterOffsetY;
+    private DateTime _dockEnterStart;
     private System.Windows.Forms.Timer? _dockAnimTimer;
-    private const int DockAnimMs = 220;
+    private const int DockAnimMs = 240;
+    private const float DockEnterSlidePx = 28f;
 
-    private void StartDockSlideAnimation(Rectangle from, Rectangle to)
+    private bool IsDockEnterAnimating => _dockEnterT < 0.999f;
+
+    private void StartDockEnterAnimation()
     {
-        _dockAnimFrom = from;
-        _dockAnimTo = to;
-        _dockAnimT = 0f;
-        _dockAnimStart = DateTime.UtcNow;
-        try { _toolbarForm!.Bounds = from; } catch { }
+        _dockEnterT = 0f;
+        _dockEnterStart = DateTime.UtcNow;
+        ApplyDockEnterVisual(0f);
 
         _dockAnimTimer?.Stop();
         _dockAnimTimer ??= new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
@@ -949,49 +939,84 @@ public sealed partial class RegionOverlayForm : Form
     {
         if (_toolbarForm is null || _toolbarForm.IsDisposed || IsDisposed || Disposing)
         {
-            StopDockSlideAnimation(snapToEnd: false);
+            StopDockEnterAnimation(snapToEnd: false);
             return;
         }
 
-        float raw = (float)(DateTime.UtcNow - _dockAnimStart).TotalMilliseconds / DockAnimMs;
+        float raw = (float)(DateTime.UtcNow - _dockEnterStart).TotalMilliseconds / DockAnimMs;
         if (raw >= 1f)
         {
-            try { _toolbarForm.Bounds = _dockAnimTo; } catch { }
-            StopDockSlideAnimation(snapToEnd: true);
-            MarkToolbarRenderDirty();
-            try { _toolbarForm.UpdateSurface(); } catch { }
+            StopDockEnterAnimation(snapToEnd: true);
             return;
         }
 
         // Ease-out cubic
         float t = 1f - MathF.Pow(1f - raw, 3f);
-        _dockAnimT = t;
-        int x = (int)Math.Round(_dockAnimFrom.X + (_dockAnimTo.X - _dockAnimFrom.X) * t);
-        int y = (int)Math.Round(_dockAnimFrom.Y + (_dockAnimTo.Y - _dockAnimFrom.Y) * t);
-        int w = (int)Math.Round(_dockAnimFrom.Width + (_dockAnimTo.Width - _dockAnimFrom.Width) * t);
-        int h = (int)Math.Round(_dockAnimFrom.Height + (_dockAnimTo.Height - _dockAnimFrom.Height) * t);
-        try
-        {
-            _toolbarForm.Bounds = new Rectangle(x, y, Math.Max(1, w), Math.Max(1, h));
-            MarkToolbarRenderDirty();
-            _toolbarForm.UpdateSurface();
-        }
-        catch { }
+        ApplyDockEnterVisual(t);
     }
 
-    private void StopDockSlideAnimation(bool snapToEnd)
+    private void ApplyDockEnterVisual(float t)
     {
-        _dockAnimT = 1f;
+        _dockEnterT = Math.Clamp(t, 0f, 1f);
+        float inv = 1f - _dockEnterT;
+        float slide = DockEnterSlidePx * inv;
+
+        // Start slightly off the docked edge and settle into place.
+        _dockEnterOffsetX = 0f;
+        _dockEnterOffsetY = 0f;
+        switch (ActiveDockSide)
+        {
+            case CaptureDockSide.Top:
+                _dockEnterOffsetY = -slide;
+                break;
+            case CaptureDockSide.Bottom:
+                _dockEnterOffsetY = slide;
+                break;
+            case CaptureDockSide.Left:
+                _dockEnterOffsetX = -slide;
+                break;
+            case CaptureDockSide.Right:
+                _dockEnterOffsetX = slide;
+                break;
+        }
+
+        if (_toolbarForm is { IsDisposed: false })
+        {
+            // Soft fade with the slide (never fully 0 so the first frame still composites).
+            _toolbarForm.SurfaceAlpha = (byte)Math.Clamp((int)Math.Round(30 + 225 * _dockEnterT), 0, 255);
+            MarkToolbarRenderDirty();
+            try { _toolbarForm.UpdateSurface(); } catch { }
+        }
+    }
+
+    private void StopDockEnterAnimation(bool snapToEnd)
+    {
+        if (snapToEnd)
+        {
+            _dockEnterT = 1f;
+            _dockEnterOffsetX = 0f;
+            _dockEnterOffsetY = 0f;
+        }
+
         if (_dockAnimTimer != null)
         {
             _dockAnimTimer.Stop();
             _dockAnimTimer.Tick -= OnDockAnimTick;
         }
-        if (snapToEnd && _toolbarForm is { IsDisposed: false })
+
+        if (_toolbarForm is { IsDisposed: false })
         {
-            try { _toolbarForm.Bounds = _dockAnimTo; } catch { }
+            _toolbarForm.SurfaceAlpha = 255;
+            if (snapToEnd)
+            {
+                MarkToolbarRenderDirty();
+                try { _toolbarForm.UpdateSurface(); } catch { }
+            }
         }
     }
+
+    // Back-compat name used from Dispose.
+    private void StopDockSlideAnimation(bool snapToEnd) => StopDockEnterAnimation(snapToEnd);
 
     private void CycleStrokeWidth()
     {
