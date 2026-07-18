@@ -71,37 +71,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
     private readonly System.Windows.Forms.Timer _saveStatusTimer = new() { Interval = 2200 };
     private readonly System.Windows.Forms.Timer _clipboardMonitorTimer = new() { Interval = 1000 };
 
-    /// <summary>
-    /// Brief system toast while the editor HWND is still Opacity 0 (layout / auto-maximize).
-    /// Uses <see cref="ToastWindow.ShowStartingStatus"/> so the toast paints <b>before</b>
-    /// WinForms construction blocks the UI thread. Capture→editor still follows with
-    /// "Sent to the editor", which replaces this toast. Reopening an existing instance: no toast.
-    /// </summary>
-    private static void NotifyEditorStarting()
-    {
-        try
-        {
-            ToastWindow.ShowStartingStatus(
-                LocalizationService.Translate("Starting editor…"),
-                LocalizationService.Translate("Preparing the workspace…"));
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("editor.starting-toast", ex.Message, ex);
-        }
-    }
-
     /// <summary>Opens or reuses the single editor instance.</summary>
     /// <param name="source">Origin of the image — controls size limits and soft warnings.</param>
-    /// <param name="showStartingToast">
-    /// When false, the caller already showed the starting toast (e.g. before a slow file load).
-    /// </param>
     /// <returns>False when the image was rejected (caller still owns cleanup of other resources).</returns>
-    public static bool ShowEditor(
-        Bitmap captured,
-        string? savedFilePath = null,
-        ImageOpenSource source = ImageOpenSource.Capture,
-        bool showStartingToast = true)
+    public static bool ShowEditor(Bitmap captured, string? savedFilePath = null, ImageOpenSource source = ImageOpenSource.Capture)
     {
         if (captured is null) throw new ArgumentNullException(nameof(captured));
 
@@ -135,8 +108,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return true;
         }
 
-        if (showStartingToast)
-            NotifyEditorStarting();
+        // No preloader toast: same UI thread can't animate a toast while constructing this form
+        // (stutter mid-open + toast lingering after ready). Opacity-0 reveal handles the flash.
         _instance = new EditorForm(captured, savedFilePath);
         _instance.Show();
         if (eval.ShouldWarn)
@@ -151,11 +124,6 @@ public sealed partial class EditorForm : Form, IMessageFilter
         {
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
                 return;
-
-            // Surface the preloader before any decode/project load blocks the UI.
-            bool coldStart = _instance is null || _instance.IsDisposed;
-            if (coldStart)
-                NotifyEditorStarting();
 
             if (filePath.EndsWith(".csnp", StringComparison.OrdinalIgnoreCase))
             {
@@ -213,8 +181,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 return;
             }
 
-            // Toast already shown above for cold start.
-            ShowEditor(captured, filePath, ImageOpenSource.FilePath, showStartingToast: false);
+            ShowEditor(captured, filePath, ImageOpenSource.FilePath);
             if (_instance is not null)
                 _instance.AddRecentFile(filePath);
         }
