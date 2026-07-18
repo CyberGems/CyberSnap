@@ -1212,7 +1212,7 @@ public sealed partial class EditorForm
     {
         var text = LocalizationService.Translate("Pan");
         if (EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
-            text += $"  ·  {LocalizationService.Translate("Tap to select · hold for temporary pan")}";
+            text += $"  ·  {LocalizationService.Translate("Tap to activate · hold for temporary pan")}";
         var hotkey = EditorToolHotkeyHelper.GetHotkeyLabel(AnnotationCanvas.CanvasTool.Pan);
         return hotkey is not null ? $"{text}  ({hotkey})" : text;
     }
@@ -1224,7 +1224,7 @@ public sealed partial class EditorForm
 
         var text = LocalizationService.Translate(labelKey);
         if (tool == AnnotationCanvas.CanvasTool.Move)
-            text += $"  ·  {LocalizationService.Translate("Double-click Pick to select all")}";
+            text += $"  ·  {LocalizationService.Translate("Double-click tool to select all")}";
         var hotkey = EditorToolHotkeyHelper.GetHotkeyLabel(tool);
         return hotkey is not null ? $"{text}  ({hotkey})" : text;
     }
@@ -1348,6 +1348,8 @@ public sealed partial class EditorForm
             _canvas.SelectedEmoji = emoji;
             _canvas.ActiveTool = AnnotationCanvas.CanvasTool.Emoji;
             _canvas.Focus();
+            // ActiveTool no-ops when already Emoji; refresh the place/resize hint explicitly.
+            UpdateLiveStatusText();
         };
         _emojiPicker.FormClosed += (_, _) =>
         {
@@ -1517,6 +1519,9 @@ public sealed partial class EditorForm
         }
     }
 
+    // Title vs actions: large bullet after the tool name; middle dots (·) between action segments.
+    private const string HintTitleSeparator = "  ●  ";
+
     private void UpdateLiveStatusText()
     {
         if (_liveStatusLabel is null) return;
@@ -1528,9 +1533,14 @@ public sealed partial class EditorForm
             string mode = _canvas.ResizeHandlesScaleContent
                 ? LocalizationService.Translate("scaling content")
                 : LocalizationService.Translate("extending area");
-            string resizeHint = string.Format(
+            // Reuse existing "{0} × {1} px · {2}" string; promote the last · to the title bullet.
+            string raw = string.Format(
                 LocalizationService.Translate("Resizing canvas: {0} × {1} px · {2}"),
                 sz.Width, sz.Height, mode);
+            int sep = raw.LastIndexOf(" · ", StringComparison.Ordinal);
+            string resizeHint = sep >= 0
+                ? raw[..sep] + HintTitleSeparator + raw[(sep + 3)..]
+                : raw;
             if (_liveStatusLabel.Text != resizeHint)
                 _liveStatusLabel.Text = resizeHint;
             return;
@@ -1541,34 +1551,106 @@ public sealed partial class EditorForm
         if (_canvas.IsEditingText)
         {
             // Live editing: show confirm / newline / cancel shortcuts only.
-            hint = LocalizationService.Translate("Text")
-                + $"  ·  {LocalizationService.Translate("Enter to confirm · Shift+Enter for new line · Esc to cancel")}";
+            hint = FormatToolHint(
+                LocalizationService.Translate("Text"),
+                LocalizationService.Translate("Enter to confirm · Shift+Enter for new line · Esc to cancel"));
         }
         else
         {
-            hint = LocalizationService.Translate(GetToolStatusLabelKey(_canvas.ActiveTool));
-
-            if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Move)
-            {
-                hint += $"  ·  {LocalizationService.Translate("Click to select · Drag to move · Double-click text to edit · Double-click empty to select all")}";
-            }
-            else if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Text)
-            {
-                hint += $"  ·  {LocalizationService.Translate("Click to place · Click text to re-edit · Enter confirms · Shift+Enter new line")}";
-            }
-            else if (_canvas.ActiveTool == AnnotationCanvas.CanvasTool.Pan)
-            {
-                if (EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey())
-                    hint += $"  ·  {LocalizationService.Translate("Tap to select · hold for temporary pan")}";
-            }
-            else
-            {
-                hint += $"  ·  {LocalizationService.Translate("Hold Space to pan")}";
-            }
+            hint = FormatToolHint(
+                LocalizationService.Translate(GetToolStatusLabelKey(_canvas.ActiveTool)),
+                GetToolActionHint(_canvas.ActiveTool));
         }
 
         if (_liveStatusLabel.Text != hint)
             _liveStatusLabel.Text = hint;
+    }
+
+    /// <summary>
+    /// Builds status text as <c>Title ● action · action · action</c> so the tool name
+    /// reads as a header and the smaller middle dots separate individual tips.
+    /// </summary>
+    private static string FormatToolHint(string title, string? actionSegments)
+    {
+        if (string.IsNullOrEmpty(actionSegments))
+            return title;
+        return title + HintTitleSeparator + actionSegments;
+    }
+
+    /// <summary>
+    /// Per-tool status-bar guidance, including contextual overrides (selection, Space-pan, emoji).
+    /// </summary>
+    private string GetToolActionHint(AnnotationCanvas.CanvasTool tool)
+    {
+        // Holding Space for temporary pan — highest priority over the underlying tool.
+        if (_canvas.IsTemporarySpacePan)
+            return LocalizationService.Translate("Drag to pan · Release Space to restore previous tool");
+
+        // Pick with an active selection: show edit shortcuts for the current selection.
+        if (tool == AnnotationCanvas.CanvasTool.Move && _canvas.SelectedCount > 0)
+        {
+            return _canvas.SelectedCount > 1
+                ? LocalizationService.Translate("Drag to move group · Del deletes · Ctrl+D duplicates · Esc deselects")
+                : LocalizationService.Translate("Drag to move · Resize with handles · Del deletes · Ctrl+D duplicates · Esc deselects");
+        }
+
+        return tool switch
+        {
+            AnnotationCanvas.CanvasTool.Move =>
+                LocalizationService.Translate("Click to select · Drag to move · Ctrl+click multi-select · Double-click text to edit · Double-click empty to select all"),
+
+            AnnotationCanvas.CanvasTool.Text =>
+                LocalizationService.Translate("Click to place · Click text to re-edit · Enter confirms · Shift+Enter new line"),
+
+            AnnotationCanvas.CanvasTool.Pan =>
+                EditorToolHotkeyHelper.IsSpaceAssignedAsPanHotkey()
+                    ? LocalizationService.Translate("Drag to pan · Scroll to zoom · Tap Space to activate · hold for temporary pan")
+                    : LocalizationService.Translate("Drag to pan the canvas · Scroll wheel to zoom"),
+
+            // Crop always arms a full-image rect on enter; one hint covers select, adjust, confirm.
+            AnnotationCanvas.CanvasTool.Crop =>
+                LocalizationService.Translate("Drag to select or adjust crop · Enter to apply · Esc to cancel"),
+
+            AnnotationCanvas.CanvasTool.Draw =>
+                LocalizationService.Translate("Drag freehand to draw · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.Arrow =>
+                LocalizationService.Translate("Drag to draw arrow · Shift snaps to 45° · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.CurvedArrow =>
+                LocalizationService.Translate("Drag freehand to draw curved arrow · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.Line =>
+                LocalizationService.Translate("Drag to draw line · Shift snaps to 45° · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.Rect =>
+                LocalizationService.Translate("Drag to draw rectangle · Shift for square · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.Circle =>
+                LocalizationService.Translate("Drag to draw ellipse · Shift for circle · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.Eraser =>
+                LocalizationService.Translate("Click or drag over objects to erase · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.Highlight =>
+                LocalizationService.Translate("Drag to highlight an area · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.Blur =>
+                LocalizationService.Translate("Drag to blur an area · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.StepNumber =>
+                LocalizationService.Translate("Click to place the next step number · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.Magnifier =>
+                LocalizationService.Translate("Click to place a magnifier · Hold Space to pan"),
+
+            AnnotationCanvas.CanvasTool.Emoji =>
+                string.IsNullOrEmpty(_canvas.SelectedEmoji)
+                    ? LocalizationService.Translate("Click to choose an emoji · Scroll to resize after picking")
+                    : LocalizationService.Translate("Click to place emoji · Scroll to resize · Hold Space to pan"),
+
+            _ => LocalizationService.Translate("Hold Space to pan"),
+        };
     }
 
     private static string GetToolStatusLabelKey(AnnotationCanvas.CanvasTool tool) => tool switch

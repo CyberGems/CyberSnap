@@ -602,6 +602,10 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         ? _multiSelectedIndices.Count
         : (_selectedAnnotationIndex >= 0 ? 1 : 0);
 
+    /// <summary>True while Space is held for temporary pan (previous tool stored).</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool IsTemporarySpacePan => _preSpaceTool is not null;
+
     /// <summary>Selects all annotations on the canvas. Shows a sticky banner with the count.</summary>
     public void SelectAll()
     {
@@ -655,6 +659,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         _multiDragOriginals = null;
         HideToolBanner();
         Invalidate();
+        OnStateChanged(); // refresh contextual selection hints
     }
 
     /// <summary>Raised after any modification (push/undo/redo, tool change, base bitmap change).</summary>

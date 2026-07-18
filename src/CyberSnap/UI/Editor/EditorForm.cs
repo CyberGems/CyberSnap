@@ -1938,6 +1938,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
     protected override bool ProcessKeyPreview(ref Message m)
     {
+        // Space keyup must restore the previous tool even when focus is not on the canvas.
+        if (TryForwardSpacePanKeyUp(ref m))
+            return true;
         if (TryProcessEditorKeyPreview(ref m))
             return true;
         if (TryForwardKeyDownToCanvas(ref m))
@@ -1962,9 +1965,10 @@ public sealed partial class EditorForm : Form, IMessageFilter
     }
 
     /// <summary>
-    /// Delivers keys handled in <see cref="AnnotationCanvas.OnKeyDown"/> when only focus
-    /// was restored in <see cref="TryProcessEditorKeyPreview"/> (Space pan, Delete).
-    /// Escape is routed via <see cref="AnnotationCanvas.ProcessEscapeKey"/> directly.
+    /// Routes Space / Escape to the canvas without <c>SendMessage</c>.
+    /// SendMessage re-enters <see cref="ProcessKeyPreview"/> and, because that returns true,
+    /// <c>ProcessKeyEventArgs</c>/<see cref="AnnotationCanvas.OnKeyDown"/> never run — which
+    /// broke hold-Space temporary pan.
     /// </summary>
     private bool TryForwardKeyDownToCanvas(ref Message m)
     {
@@ -1984,10 +1988,38 @@ public sealed partial class EditorForm : Form, IMessageFilter
             return true;
         }
 
-        if (key is not (Keys.Space or Keys.Delete))
+        if (key == Keys.Space)
+        {
+            // Let the inline text box receive Space as a character.
+            if (_canvas.IsEditingText)
+                return false;
+
+            if (!_canvas.Focused)
+                _canvas.Focus();
+            _canvas.HandleSpacePanKeyDown();
+            return true;
+        }
+
+        // Delete is handled in TryProcessEditorKeyPreview (when not editing text).
+        return false;
+    }
+
+    /// <summary>Ends temporary Space-pan on keyup when the canvas may not own focus.</summary>
+    private bool TryForwardSpacePanKeyUp(ref Message m)
+    {
+        // WM_KEYUP / WM_SYSKEYUP
+        if (m.Msg is not (0x101 or 0x105))
             return false;
 
-        CyberSnap.Native.User32.SendMessage(_canvas.Handle, m.Msg, m.WParam, m.LParam);
+        var key = (Keys)(int)m.WParam;
+        if (key != Keys.Space)
+            return false;
+        if (_canvas.IsDisposed || !_canvas.IsHandleCreated)
+            return false;
+        if (_canvas.IsEditingText)
+            return false;
+
+        _canvas.HandleSpacePanKeyUp();
         return true;
     }
 
@@ -2037,7 +2069,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
                 return true;
         }
 
-        if (key is Keys.Space && !_canvas.Focused) { _canvas.Focus(); return false; }
+        // Space is fully handled in TryForwardKeyDownToCanvas (direct pan API, no SendMessage).
         if ((key is Keys.Delete || EditorViewHotkeyHelper.IsAnyViewHotkey(key | mod))
             && !_canvas.Focused)
         {

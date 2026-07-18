@@ -165,18 +165,22 @@ public sealed partial class AnnotationCanvas
             _currentStroke = null;
             Invalidate();
         }
+        bool selectionCleared = false;
         if (_selectedAnnotationIndex >= 0 && !_isDragging && _preSpaceTool == null)
         {
             _selectedAnnotationIndex = -1;
             _selectOriginalAnnotation = null;
+            selectionCleared = true;
             Invalidate();
         }
         _isSelectResizing = false;
         _selectResizeHandle = -1;
         _selectResizeOriginalAnnotation = null;
         _isMarqueeSelecting = false;
-        ClearMultiSelection();
+        ClearMultiSelection(); // may fire OnStateChanged if multi-selection was active
         _multiDragOriginals = null;
+        if (selectionCleared)
+            OnStateChanged(); // contextual Pick hints when Esc deselects
         if (_eraserHoverIndex >= 0)
         {
             _eraserHoverIndex = -1;
@@ -564,6 +568,7 @@ public sealed partial class AnnotationCanvas
                 }
                 _currentStroke = null;
                 Invalidate();
+                OnStateChanged(); // contextual Pick hints when selection changes
                 return;
             }
         }
@@ -690,6 +695,7 @@ public sealed partial class AnnotationCanvas
                     _marqueeEndImg = img;
                 }
                 Invalidate();
+                OnStateChanged(); // contextual Pick hints when selection changes
                 break;
             }
             case CanvasTool.Crop:
@@ -1558,10 +1564,11 @@ public sealed partial class AnnotationCanvas
 
     private void EndSpacePanGesture(KeyEventArgs e)
     {
-        _isPanning = false;
-
+        // Not in a temporary Space-pan session — leave normal Pan-tool drags alone.
         if (_preSpaceTool is null)
             return;
+
+        _isPanning = false;
 
         var elapsedMs = (DateTime.UtcNow - _spaceKeyDownUtc).TotalMilliseconds;
         if (elapsedMs < EditorToolHotkeyHelper.SpacePanTapThresholdMs
@@ -1617,6 +1624,31 @@ public sealed partial class AnnotationCanvas
                 _panStartOffset = _pan;
             }
         }
+    }
+
+    /// <summary>
+    /// Host-side Space keydown (ProcessKeyPreview). Avoids SendMessage re-entry that
+    /// would skip <see cref="OnKeyDown"/> via ProcessKeyPreview returning true first.
+    /// </summary>
+    public void HandleSpacePanKeyDown()
+    {
+        if (_inlineTextBox is not null)
+            return;
+
+        // Only stamp the initial press — key-repeat must not reset the tap timer.
+        if (_preSpaceTool is null && _activeTool != CanvasTool.Pan)
+            _spaceKeyDownUtc = DateTime.UtcNow;
+        StartTemporarySpacePan();
+    }
+
+    /// <summary>Host-side Space keyup to end temporary pan when the canvas may not be focused.</summary>
+    public void HandleSpacePanKeyUp()
+    {
+        if (_inlineTextBox is not null)
+            return;
+
+        var e = new KeyEventArgs(Keys.Space);
+        EndSpacePanGesture(e);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
