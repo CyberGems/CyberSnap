@@ -12,27 +12,27 @@ namespace CyberSnap.Capture;
 /// </summary>
 public sealed class QuickStartGuide : Form
 {
-    private const int MaxWidth = 420;
-    private const int MinWidth = 340;
-    private const int PadX = 20;
-    private const int PadY = 18;
-    private const int HeaderHeight = 28;
-    private const int StepGap = 10;
-    private const int StepCircle = 22;
-    private const int StepTextGap = 12;
-    private const int SectionGap = 14;
-    private const int SectionLabelHeight = 20;
-    private const int ShortcutRowHeight = 34;
-    private const int KbdPadH = 9;
+    private const int MaxWidth = 460;
+    private const int MinWidth = 380;
+    private const int PadX = 22;
+    private const int PadY = 20;
+    private const int HeaderHeight = 30;
+    private const int StepGap = 12;
+    private const int StepCircle = 24;
+    private const int StepTextGap = 14;
+    private const int SectionGap = 16;
+    private const int SectionLabelHeight = 22;
+    private const int ShortcutRowHeight = 36;
+    private const int KbdPadH = 10;
     private const int KbdPadV = 4;
-    private const int KbdLabelGap = 8;
-    private const int ShortcutColGap = 14;
-    private const int TipRowMinHeight = 26;
-    private const int TipRowGap = 6;
-    private const int TipIconSize = 16;
-    private const int IconColWidth = 22;
-    private const int IconTextGap = 10;
-    private const int FooterHeight = 22;
+    private const int KbdLabelGap = 10;
+    private const int ShortcutColGap = 16;
+    private const int TipRowMinHeight = 28;
+    private const int TipRowGap = 8;
+    private const int TipIconSize = 18;
+    private const int IconColWidth = 24;
+    private const int IconTextGap = 12;
+    private const int FooterHeight = 24;
     // Classic comic-style talk bubble (see artifacts/2026-07-18_04-09-35.png).
     private const float Corner = 18f;
     private const float TailWidth = 28f;
@@ -296,8 +296,8 @@ public sealed class QuickStartGuide : Form
         _tips =
         [
             new TipDef("position", T("Drag the toolbar or click ⇅ to reposition it")),
-            new TipDef("menu", T("▼ opens hidden tools, preferences, and this help")),
-            new TipDef("captureRect", T("Right-click a tool on the bar to hide it")),
+            new TipDef("more", T("▼ opens hidden tools, preferences, and this help")),
+            new TipDef("rect", T("Right-click a tool on the bar to hide it")),
         ];
 
         _shortcuts =
@@ -582,7 +582,7 @@ public sealed class QuickStartGuide : Form
     private int PaintTips(Graphics g, int startY)
     {
         int curY = startY;
-        var iconColor = Color.FromArgb(190, UiChrome.SurfaceTextSecondary);
+        var iconColor = UiChrome.AccentColor;
         int tipTextWidth = _contentWidth - IconColWidth - IconTextGap;
 
         for (int i = 0; i < _tips.Length; i++)
@@ -594,11 +594,11 @@ public sealed class QuickStartGuide : Form
             var iconRect = new RectangleF(PadX + 2, iconY, TipIconSize, TipIconSize);
 
             if (tip.IconId != null && FluentIcons.HasIcon(tip.IconId))
-                FluentIcons.DrawIcon(g, tip.IconId, iconRect, iconColor, iconInset: 1f);
+                FluentIcons.DrawIcon(g, tip.IconId, iconRect, iconColor, iconInset: 0f);
             else
             {
-                using var dot = new SolidBrush(Color.FromArgb(120, UiChrome.SurfaceTextMuted));
-                g.FillEllipse(dot, PadX + IconColWidth / 2f - 2.5f, curY + rowH / 2f - 2.5f, 5f, 5f);
+                using var dot = new SolidBrush(Color.FromArgb(180, iconColor));
+                g.FillEllipse(dot, PadX + IconColWidth / 2f - 3f, curY + rowH / 2f - 3f, 6f, 6f);
             }
 
             var tipTextRect = new RectangleF(PadX + IconColWidth + IconTextGap, curY, tipTextWidth, rowH);
@@ -640,25 +640,25 @@ public sealed class QuickStartGuide : Form
         int labelW = TextRenderer.MeasureText(g, sc.Label, _bodyFont,
             new Size(0, 0), TextFormatFlags.NoPadding).Width;
 
-        int kbdW = keyW + KbdPadH * 2;
-        int kbdH = ShortcutRowHeight - 10;
-        var kbdRect = new RectangleF(x, y + 5, kbdW, kbdH);
+        int kbdW = Math.Max(48, keyW + KbdPadH * 2 + 6);
+        int kbdH = ShortcutRowHeight - 8;
+        var kbdRect = new RectangleF(x, y + 4, kbdW, kbdH);
 
-        using (var kbdPath = WindowsDockRenderer.RoundedRect(kbdRect, 5f))
+        using (var kbdPath = WindowsDockRenderer.RoundedRect(kbdRect, 6f))
         {
             using var kbdBg = new SolidBrush(UiChrome.SurfaceTier2);
             g.FillPath(kbdBg, kbdPath);
-            using var kbdBorder = new Pen(Color.FromArgb(UiChrome.IsDark ? 80 : 60, accent), 1f);
+            using var kbdBorder = new Pen(Color.FromArgb(UiChrome.IsDark ? 100 : 75, accent), 1.2f);
             g.DrawPath(kbdBorder, kbdPath);
         }
 
         TextRenderer.DrawText(g, sc.Key, _keyFont,
-            new Rectangle(x + KbdPadH, y + 5, keyW + 2, kbdH),
+            Rectangle.Round(kbdRect),
             accent,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
         TextRenderer.DrawText(g, sc.Label, _bodyFont,
-            new Rectangle(x + kbdW + KbdLabelGap, y + 5, labelW + 4, kbdH),
+            new Rectangle(x + kbdW + KbdLabelGap, y + 4, labelW + 12, kbdH),
             UiChrome.SurfaceTextSecondary,
             TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
     }
@@ -669,7 +669,8 @@ public sealed class QuickStartGuide : Form
             new Size(0, 0), TextFormatFlags.NoPadding).Width;
         int labelW = TextRenderer.MeasureText(g, sc.Label, _bodyFont,
             new Size(0, 0), TextFormatFlags.NoPadding).Width;
-        return keyW + KbdPadH * 2 + KbdLabelGap + labelW;
+        int kbdW = Math.Max(48, keyW + KbdPadH * 2 + 6);
+        return kbdW + KbdLabelGap + labelW + 8;
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
