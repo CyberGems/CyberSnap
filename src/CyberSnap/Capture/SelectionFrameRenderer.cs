@@ -59,16 +59,17 @@ internal static class SelectionFrameRenderer
         int glowAlpha = provisional ? 32 : 42;
         float glowWidth = provisional ? 3.5f * scale : 4.5f * scale;
 
-        // Brackets grow with the shorter side so window-sized holes still show the tool language.
-        // ~7% of min side, clamped — small regions keep compact corners, large ones get presence.
+        // Brackets grow with the shorter side so window-sized holes still show the tool language,
+        // but stay restrained on large captures (was ~7%/52px — felt oversized on full windows).
+        // Soft curve: ~5% of min side, min ~12, max ~34 at 100% UI scale.
         int minSide = Math.Min(rect.Width, rect.Height);
         int cornerLen = Math.Clamp(
-            (int)Math.Round(minSide * 0.07f),
-            UiChrome.ScaleInt(14),
-            UiChrome.ScaleInt(52));
-        float cornerPenWidth = Math.Clamp(minSide * 0.01f, 2f * scale, 3.5f * scale);
+            (int)Math.Round(minSide * 0.05f),
+            UiChrome.ScaleInt(12),
+            UiChrome.ScaleInt(34));
+        float cornerPenWidth = Math.Clamp(minSide * 0.008f, 1.75f * scale, 2.75f * scale);
         if (provisional)
-            cornerPenWidth = Math.Max(1.75f * scale, cornerPenWidth * 0.92f);
+            cornerPenWidth = Math.Max(1.5f * scale, cornerPenWidth * 0.92f);
         int cornerOffset = Math.Max(1, (int)Math.Round(scale)); // snug to outline
 
         // Pixel-calibrated outline (GDI+ exclusive bottom-right).
