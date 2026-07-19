@@ -179,6 +179,16 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-suppress-paste-confirm", ex); }
     }
 
+    /// <summary>Persists whether the rotate/flip flatten confirmation dialog was suppressed.</summary>
+    public void PersistEditorSuppressTransformFlattenConfirm(bool suppress)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorSuppressTransformFlattenConfirm == suppress) return;
+        _settingsService.Settings.EditorSuppressTransformFlattenConfirm = suppress;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-suppress-transform-flatten-confirm", ex); }
+    }
+
     /// <summary>Persists whether the third-party share/upload confirmation was suppressed.</summary>
     public void PersistUploadSuppressThirdPartyConfirm(bool suppress)
     {

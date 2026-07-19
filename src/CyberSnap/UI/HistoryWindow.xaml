@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:Services="clr-namespace:CyberSnap.Services"
-        Title="CyberSnap - Capture Gallery"
+        Title="Capture Gallery"
         Height="620" Width="820"
         MinHeight="460" MinWidth="580"
         ResizeMode="CanResize"
@@ -400,7 +400,7 @@
                 </Grid.RowDefinitions>
 
                 <controls:CyberSnapTitleBar x:Name="SettingsTitleBar" Grid.Row="0"
-                                            Title="CyberSnap - Capture Gallery"
+                                            Title="Capture Gallery"
                                             CloseRequested="TitleBar_CloseRequested"/>
 
                 <!-- Hidden checked RadioButton for keeping conditional checks in history partial files intact -->

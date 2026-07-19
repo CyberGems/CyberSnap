@@ -61,6 +61,12 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     private bool _viewFitsWindow = true; // image auto-fits the canvas until the user zooms
     private bool _userPanned;            // user has manually dragged the image
     private bool _welcomeDismissed;      // welcome overlay hidden after first meaningful interaction
+    private bool _welcomeDragOver;       // file drag currently over the editor while welcome is shown
+    private RectangleF _welcomeCardRect;
+    private readonly RectangleF[] _welcomeChipRects = new RectangleF[3];
+    private int _welcomeHoverChip = -1;  // -1 none, 0 Open, 1 Paste, 2 Capture
+    private bool _welcomeHoverCard;
+    private int _welcomePressedChip = -1;
     private bool _isPanning;
     private Point _panStart;
     private PointF _panStartOffset;
@@ -288,6 +294,35 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool ShowWelcomeBanner { get; set; } = true;
 
+    /// <summary>True while the blank-canvas welcome overlay is currently painted.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool IsWelcomeVisible => IsDefaultBlank && !_welcomeDismissed && ShowWelcomeBanner;
+
+    /// <summary>Highlight the welcome card while a file is dragged over the editor.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool WelcomeDragOver
+    {
+        get => _welcomeDragOver;
+        set
+        {
+            if (_welcomeDragOver == value) return;
+            _welcomeDragOver = value;
+            if (IsWelcomeVisible) Invalidate();
+        }
+    }
+
+    /// <summary>Welcome chip: open a file/project dialog.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Action? WelcomeOpenRequested { get; set; }
+
+    /// <summary>Welcome chip: paste image from clipboard.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Action? WelcomePasteRequested { get; set; }
+
+    /// <summary>Welcome chip: start a new region capture.</summary>
+    [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public Action? WelcomeCaptureRequested { get; set; }
+
     private float _bannerOpacity = 0f;
     private string _bannerText = "";
     private System.Windows.Forms.Timer? _bannerTimer;
@@ -494,8 +529,84 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         if (!_welcomeDismissed)
         {
             _welcomeDismissed = true;
+            _welcomeHoverChip = -1;
+            _welcomeHoverCard = false;
+            _welcomePressedChip = -1;
+            _welcomeDragOver = false;
             Invalidate();
         }
+    }
+
+    private bool TryWelcomeMouseMove(Point client)
+    {
+        if (!IsWelcomeVisible) return false;
+
+        bool overCard = _welcomeCardRect.Contains(client);
+        int chip = HitTestWelcomeChip(client);
+
+        if (overCard != _welcomeHoverCard || chip != _welcomeHoverChip)
+        {
+            _welcomeHoverCard = overCard;
+            _welcomeHoverChip = chip;
+            Cursor = chip >= 0 && IsWelcomeChipEnabled(chip) ? Cursors.Hand : Cursors.Default;
+            Invalidate();
+        }
+        else if (chip >= 0 && IsWelcomeChipEnabled(chip))
+        {
+            Cursor = Cursors.Hand;
+        }
+
+        return overCard || chip >= 0;
+    }
+
+    private bool TryWelcomeMouseDown(Point client)
+    {
+        if (!IsWelcomeVisible) return false;
+        int chip = HitTestWelcomeChip(client);
+        if (chip < 0 || !IsWelcomeChipEnabled(chip)) return false;
+        _welcomePressedChip = chip;
+        Invalidate();
+        return true;
+    }
+
+    private bool TryWelcomeMouseUp(Point client)
+    {
+        if (!IsWelcomeVisible) return false;
+        int pressed = _welcomePressedChip;
+        _welcomePressedChip = -1;
+        if (pressed < 0) return false;
+
+        int chip = HitTestWelcomeChip(client);
+        Invalidate();
+        if (chip != pressed || !IsWelcomeChipEnabled(chip)) return true;
+
+        switch (chip)
+        {
+            case 0: WelcomeOpenRequested?.Invoke(); break;
+            case 1: WelcomePasteRequested?.Invoke(); break;
+            case 2: WelcomeCaptureRequested?.Invoke(); break;
+        }
+        return true;
+    }
+
+    private int HitTestWelcomeChip(Point client)
+    {
+        for (int i = 0; i < _welcomeChipRects.Length; i++)
+        {
+            if (_welcomeChipRects[i].Contains(client))
+                return i;
+        }
+        return -1;
+    }
+
+    private static bool IsWelcomeChipEnabled(int chip)
+    {
+        if (chip == 1)
+        {
+            try { return Clipboard.ContainsImage(); }
+            catch { return false; }
+        }
+        return chip is 0 or 2;
     }
     private CanvasTool _activeTool = CanvasTool.Move;
     private int _lastClickTick;
@@ -624,6 +735,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
     /// <summary>
     /// Pick-tool double-click entry point. Text under the cursor takes priority over select-all
     /// (so a single double-click edits text without fighting select-all).
+    /// On a pristine blank canvas, double-click opens a file (welcome browse gesture).
     /// </summary>
     internal void SelectAllFromDoubleClick()
     {
@@ -631,6 +743,15 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
         // Already in text edit from an earlier path of the same gesture — do nothing.
         if (_inlineTextBox is not null) return;
         if (_activeTool != CanvasTool.Move) return;
+
+        // Empty welcome document: double-click browses for a file (not select-all).
+        // PreFilterMessage and OnMouseDoubleClick both land here, so this keeps the gesture working.
+        if (IsDefaultBlank)
+        {
+            CancelSelectAllDoubleClickSideEffects();
+            WelcomeOpenRequested?.Invoke();
+            return;
+        }
 
         // Prefer re-edit when the double-click lands on text — must be centralized because
         // WndProc (WM_LBUTTONDBLCLK), OnMouseDown timing, and OnMouseDoubleClick all converge here.
@@ -1162,6 +1283,38 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             PushClean(command);
         else
             Push(command);
+
+        HideToolBanner();
+        DismissWelcomeOverlay();
+        _userPanned = true;
+        Invalidate();
+    }
+
+    /// <summary>
+    /// Rotates or flips the entire canvas. Annotations are flattened into the base bitmap
+    /// (no longer individually editable). Undo restores the pre-transform bitmap + layers.
+    /// </summary>
+    public void TransformCanvas(Models.Commands.CanvasTransformKind kind)
+    {
+        // Commit/cancel in-progress drawing so we don't bake half-finished UI state.
+        CancelInProgressTool();
+        _selectedAnnotationIndex = -1;
+        _multiSelectedIndices.Clear();
+        _multiDragOriginals = null;
+        _selectOriginalAnnotation = null;
+
+        bool hadAnnotations = _annotations.Count > 0;
+        bool pristineBlank = IsDefaultBlank && !hadAnnotations;
+
+        var command = new Models.Commands.TransformCanvasCommand(kind);
+        if (pristineBlank)
+            PushClean(command);
+        else
+            Push(command);
+
+        // Flattened pixels are a real image; blank checkerboard regeneration stays blank.
+        if (hadAnnotations)
+            IsBlankCanvas = false;
 
         HideToolBanner();
         DismissWelcomeOverlay();

@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:CyberSnap.UI.Controls"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:Services="clr-namespace:CyberSnap.Services"
-        Title="CyberSnap"
+        Title="Configuration"
         Height="680" Width="960"
         MinHeight="560" MinWidth="860"
         ResizeMode="CanResize"

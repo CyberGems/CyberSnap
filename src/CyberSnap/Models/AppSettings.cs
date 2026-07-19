@@ -354,6 +354,8 @@ public sealed class AppSettings
     // When true, the "Don't show again" checkbox was checked in the paste-replace
     // confirmation dialog, so future pastes replace the document without asking.
     public bool EditorSuppressPasteConfirm { get; set; }
+    // When true, the flatten warning for rotate/flip canvas was suppressed.
+    public bool EditorSuppressTransformFlattenConfirm { get; set; }
     /// <summary>Maximum undo steps in the editor (1–200). Default 100.</summary>
     public int EditorUndoLimit { get; set; } = 100;
     /// <summary>Preferred image export format: 0 = PNG, 1 = JPEG.</summary>

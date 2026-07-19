@@ -104,7 +104,7 @@ public partial class CyberSnapTitleBar : UserControl
 
     public void RefreshIcons()
     {
-        TitleLogo.Source = ThemedLogo.Square(18);
+        TitleLogo.Source = OwnerWindow?.Icon ?? ThemedLogo.Square(18);
         var titleIcon = System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
         MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", titleIcon, 18);
 

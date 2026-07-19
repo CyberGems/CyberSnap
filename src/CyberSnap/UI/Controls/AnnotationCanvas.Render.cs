@@ -689,197 +689,182 @@ public sealed partial class AnnotationCanvas
         return p;
     }
 
+    /// <summary>Simple drop/image glyph — single rounded frame + down arrow (no stacked tabs).</summary>
     private void DrawWelcomeIcon(Graphics g, float cx, float cy, float size, Color color)
     {
-        float strokeW = Math.Max(2f, size * 0.03f);
-        using var pen = new Pen(color, strokeW) { LineJoin = LineJoin.Round, StartCap = LineCap.Round, EndCap = LineCap.Round };
-        using var bgBrush = new SolidBrush(Color.FromArgb(220, EditorColors.BgCard));
+        float strokeW = Math.Max(1.75f, size * 0.045f);
+        using var pen = new Pen(color, strokeW)
+        {
+            LineJoin = LineJoin.Round,
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+        };
 
-        // --- Layout: total icon spans from cy-size/2 to cy+size/2 ---
-        float top = cy - size * 0.50f;
+        float frameW = size * 0.62f;
+        float frameH = size * 0.50f;
+        float frameX = cx - frameW / 2f;
+        float frameY = cy - frameH / 2f - size * 0.04f;
+        float corner = size * 0.08f;
 
-        // --- Pre-compute all layer positions ---
-        float tabGap = size * 0.05f;       // vertical gap between tab tops
-        float tabThick = size * 0.06f;      // how tall each tab strip is
-        float cornerR = size * 0.055f;
+        using (var frame = RoundedRectPath(frameX, frameY, frameW, frameH, corner))
+            g.DrawPath(pen, frame);
 
-        float tab2Y = top;
-        float tab1Y = top + tabGap;
-        float cardY = top + tabGap * 2;
-        float cardW = size * 0.72f;
-        float cardH = size * 0.55f;
-        float cardX = cx - cardW / 2;
-
-        // --- Back tab (narrowest, highest) — clip to only show above middle tab ---
-        float tab2W = size * 0.50f;
-        float tab2X = cx - tab2W / 2;
-        using var tab2Path = RoundedRectPath(tab2X, tab2Y, tab2W, tabThick + cornerR, cornerR);
-        var savedClip = g.Clip.Clone();
-        g.SetClip(new RectangleF(tab2X - strokeW, tab2Y - strokeW, tab2W + strokeW * 2, (tab1Y - tab2Y) + strokeW * 2), CombineMode.Intersect);
-        g.FillPath(bgBrush, tab2Path);
-        g.DrawPath(pen, tab2Path);
-        g.Clip = savedClip;
-
-        // --- Middle tab (wider, slightly lower) — clip to only show above front card ---
-        float tab1W = size * 0.60f;
-        float tab1X = cx - tab1W / 2;
-        using var tab1Path = RoundedRectPath(tab1X, tab1Y, tab1W, tabThick + cornerR, cornerR);
-        var savedClip2 = g.Clip.Clone();
-        g.SetClip(new RectangleF(tab1X - strokeW, tab1Y - strokeW, tab1W + strokeW * 2, (cardY - tab1Y) + strokeW * 2), CombineMode.Intersect);
-        g.FillPath(bgBrush, tab1Path);
-        g.DrawPath(pen, tab1Path);
-        g.Clip = savedClip2;
-
-        // --- Front card ---
-        using var cardPath = RoundedRectPath(cardX, cardY, cardW, cardH, cornerR);
-        g.FillPath(bgBrush, cardPath);
-        g.DrawPath(pen, cardPath);
-
-        // --- Large centered download arrow inside card ---
+        // Down arrow into the frame (drop affordance)
         float arrowCx = cx;
-        float arrowCy = cardY + cardH * 0.48f;
-        float shaftLen = cardH * 0.55f;
-        float arrowTop = arrowCy - shaftLen * 0.35f;
-        float arrowBot = arrowCy + shaftLen * 0.65f;
-        float wingSpan = size * 0.14f;
-
-        // Vertical shaft
+        float arrowTop = frameY + frameH * 0.22f;
+        float arrowBot = frameY + frameH * 0.72f;
+        float wing = size * 0.11f;
         g.DrawLine(pen, arrowCx, arrowTop, arrowCx, arrowBot);
-
-        // Chevron arrowhead
-        g.DrawLine(pen, arrowCx - wingSpan, arrowBot - wingSpan, arrowCx, arrowBot);
-        g.DrawLine(pen, arrowCx + wingSpan, arrowBot - wingSpan, arrowCx, arrowBot);
+        g.DrawLine(pen, arrowCx - wing, arrowBot - wing, arrowCx, arrowBot);
+        g.DrawLine(pen, arrowCx + wing, arrowBot - wing, arrowCx, arrowBot);
     }
 
-    private void DrawCursorIcon(Graphics g, float x, float y, float size, Color color)
+    private void DrawWelcomeChip(
+        Graphics g,
+        RectangleF rect,
+        string label,
+        Font font,
+        bool enabled,
+        bool hovered,
+        bool pressed,
+        Color textColor,
+        Color mutedColor,
+        Color accent,
+        Color chipBg,
+        Color chipBorder)
     {
-        using var brush = new SolidBrush(color);
-        using var pen = new Pen(color, 1.0f) { LineJoin = LineJoin.Round };
-        
-        // Arrow cursor with visible handle/tail
-        var path = new GraphicsPath();
-        path.AddLine(x, y, x, y + size);                                         // left edge down
-        path.AddLine(x, y + size, x + size * 0.24f, y + size * 0.74f);           // bottom-left diagonal
-        path.AddLine(x + size * 0.24f, y + size * 0.74f, x + size * 0.46f, y + size * 1.10f); // handle left
-        path.AddLine(x + size * 0.46f, y + size * 1.10f, x + size * 0.60f, y + size * 1.00f); // handle bottom
-        path.AddLine(x + size * 0.60f, y + size * 1.00f, x + size * 0.38f, y + size * 0.64f); // handle right
-        path.AddLine(x + size * 0.38f, y + size * 0.64f, x + size * 0.62f, y + size * 0.62f); // right wing
-        path.CloseAllFigures();
-        
-        g.FillPath(brush, path);
-        g.DrawPath(pen, path);
+        Color bg = !enabled
+            ? Color.FromArgb(40, chipBg)
+            : pressed
+                ? Color.FromArgb(60, accent)
+                : hovered
+                    ? Color.FromArgb(45, accent)
+                    : chipBg;
+        Color border = !enabled
+            ? Color.FromArgb(60, chipBorder)
+            : hovered || pressed
+                ? Color.FromArgb(200, accent)
+                : chipBorder;
+        Color fg = enabled ? textColor : mutedColor;
+
+        using var path = RoundedRectPath(rect.X, rect.Y, rect.Width, rect.Height, 8f);
+        using var bgBrush = new SolidBrush(bg);
+        using var borderPen = new Pen(border, 1.25f);
+        g.FillPath(bgBrush, path);
+        g.DrawPath(borderPen, path);
+
+        // TextRenderer is sharper than GDI+ DrawString for UI labels (ClearType on Windows).
+        var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+            | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding;
+        TextRenderer.DrawText(g, label, font, Rectangle.Round(rect), fg, flags);
     }
 
     private void RenderWelcomeText(Graphics g)
     {
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        using var titleFont = UiChrome.ChromeFont(15f, FontStyle.Bold);
-        using var mediumFont = UiChrome.ChromeFont(11.5f, FontStyle.Bold);
-        using var smallFont = UiChrome.ChromeFont(9.5f, FontStyle.Regular);
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+        g.TextContrast = 12;
 
-        var titleText = LocalizationService.Translate("Annotations Editor");
-        var mediumText = LocalizationService.Translate("Drag & drop a file");
-        var smallTextTemplate = LocalizationService.Translate("Paste an image (Ctrl+V) or double-click {0} to browse");
+        // Slightly larger, high-contrast title; body uses ClearType via TextRenderer.
+        using var titleFont = UiChrome.ChromeFont(15.5f, FontStyle.Bold);
+        using var subFont = UiChrome.ChromeFont(9.75f, FontStyle.Regular);
+        using var chipFont = UiChrome.ChromeFont(9.5f, FontStyle.Bold);
 
-        // Measure strings
-        var titleSize = g.MeasureString(titleText, titleFont);
-        var mediumSize = g.MeasureString(mediumText, mediumFont);
+        var titleText = LocalizationService.Translate("Drop an image or project");
+        var hintText = LocalizationService.Translate("Double-click · drag and drop");
+        var openLabel = LocalizationService.Translate("Open");
+        var pasteLabel = LocalizationService.Translate("Paste");
+        var captureLabel = LocalizationService.Translate("Capture");
 
-        // Measure small text (with spaces in place of {0})
-        float cursorPlaceholderWidth = 16;
-        string smallTextForMeasurement = string.Format(smallTextTemplate, "   "); // 3 spaces
-        var smallSize = g.MeasureString(smallTextForMeasurement, smallFont);
+        var titleSize = TextRenderer.MeasureText(g, titleText, titleFont, new Size(int.MaxValue, int.MaxValue),
+            TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
+        var hintSize = TextRenderer.MeasureText(g, hintText, subFont, new Size(int.MaxValue, int.MaxValue),
+            TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding);
 
-        float paddingH = 32;
-        float paddingV = 20;
-        float spacing = 8;
-        float iconSize = 72;
+        float paddingH = 28;
+        float paddingV = 22;
+        float spacing = 10;
+        float iconSize = 52;
+        float chipH = 30;
+        float chipGap = 8;
+        float chipMinW = 84;
 
-        float width = Math.Max(titleSize.Width, Math.Max(mediumSize.Width, smallSize.Width)) + paddingH * 2;
-        float height = iconSize + titleSize.Height + mediumSize.Height + smallSize.Height + paddingV * 2 + spacing * 2 + 2;
+        float openW = Math.Max(chipMinW, TextRenderer.MeasureText(g, openLabel, chipFont).Width + 28);
+        float pasteW = Math.Max(chipMinW, TextRenderer.MeasureText(g, pasteLabel, chipFont).Width + 28);
+        float captureW = Math.Max(chipMinW, TextRenderer.MeasureText(g, captureLabel, chipFont).Width + 28);
+        float chipsRowW = openW + pasteW + captureW + chipGap * 2;
 
-        // Make sure the width is at least 340 to look premium
-        width = Math.Max(width, 340);
+        float contentW = Math.Max(titleSize.Width, Math.Max(hintSize.Width, chipsRowW));
+        float width = Math.Max(contentW + paddingH * 2, 360);
+        float height = paddingV * 2 + iconSize + spacing + titleSize.Height + spacing
+            + hintSize.Height + spacing + 4 + chipH;
 
-        float x = (ClientSize.Width - width) / 2;
-        float y = (ClientSize.Height - height) / 2;
+        float x = (ClientSize.Width - width) / 2f;
+        float y = (ClientSize.Height - height) / 2f;
+        _welcomeCardRect = new RectangleF(x, y, width, height);
+
+        Color titleColor = EditorColors.IsDark
+            ? Color.FromArgb(235, 240, 248)
+            : Color.FromArgb(32, 48, 72);
+        Color subColor = EditorColors.IsDark ? EditorColors.TextMuted : Color.FromArgb(100, 120, 150);
+        Color iconColor = EditorColors.IsDark ? EditorColors.TextMuted : Color.FromArgb(70, 110, 175);
+        Color accent = EditorColors.Accent;
+        Color chipBg = EditorColors.IsDark
+            ? Color.FromArgb(255, Math.Min(255, EditorColors.BgCard.R + 12), Math.Min(255, EditorColors.BgCard.G + 14), Math.Min(255, EditorColors.BgCard.B + 18))
+            : Color.FromArgb(245, 248, 252);
+        Color chipBorder = EditorColors.BorderSubtle;
+        bool emphasize = _welcomeDragOver || _welcomeHoverCard;
+        Color cardBorder = _welcomeDragOver
+            ? Color.FromArgb(220, accent)
+            : emphasize
+                ? Color.FromArgb(160, accent)
+                : EditorColors.BorderSubtle;
+        float borderW = _welcomeDragOver ? 2f : 1.5f;
 
         var rect = new Rectangle((int)x, (int)y, (int)width, (int)height);
-        using var path = EditorPaint.RoundedRect(rect, 12);
-        using var bgBrush = new SolidBrush(Color.FromArgb(220, EditorColors.BgCard));
-        using var borderPen = new Pen(EditorColors.BorderSubtle, 1.5f);
-
+        using var path = EditorPaint.RoundedRect(rect, 14);
+        using var bgBrush = new SolidBrush(Color.FromArgb(_welcomeDragOver ? 235 : 220, EditorColors.BgCard));
+        using var borderPen = new Pen(cardBorder, borderW);
         g.FillPath(bgBrush, path);
         g.DrawPath(borderPen, path);
 
-        // Layout order: Title → Icon → Subheader → Small text
+        if (_welcomeDragOver)
+        {
+            using var glow = new Pen(Color.FromArgb(50, accent), 6f);
+            g.DrawPath(glow, path);
+        }
+
         float curY = y + paddingV;
+        float iconCx = x + width / 2f;
+        float iconCy = curY + iconSize / 2f;
+        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, _welcomeDragOver ? accent : iconColor);
+        curY += iconSize + spacing;
 
-        // 1. Draw Title (header first)
-        Color titleColor = EditorColors.IsDark ? EditorColors.TextSecondary : Color.FromArgb(45, 65, 95);
-        Color mediumColor = EditorColors.IsDark ? EditorColors.TextSecondary : Color.FromArgb(50, 75, 110);
-        Color iconColor = EditorColors.IsDark ? EditorColors.TextMuted : Color.FromArgb(70, 110, 175);
-        Color smallColor = EditorColors.IsDark ? EditorColors.TextMuted : Color.FromArgb(100, 120, 150);
-        Color cursorColor = EditorColors.IsDark ? EditorColors.TextMuted : Color.FromArgb(100, 120, 150);
-
-        using var titleBrush = new SolidBrush(titleColor);
-        using var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-        var titleRect = new RectangleF(x, curY, width, titleSize.Height);
-        g.DrawString(titleText, titleFont, titleBrush, titleRect, sf);
+        var titleFlags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+            | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding;
+        var titleRect = new Rectangle((int)x, (int)curY, (int)width, titleSize.Height + 2);
+        TextRenderer.DrawText(g, titleText, titleFont, titleRect, titleColor, titleFlags);
         curY += titleSize.Height + spacing;
 
-        // 2. Draw Icon
-        float iconCx = x + width / 2;
-        float iconCy = curY + iconSize / 2 + iconSize * 0.09f;  // offset down to visually center (tabs shorter than arrow)
-        DrawWelcomeIcon(g, iconCx, iconCy, iconSize, iconColor);
-        curY += iconSize + 2;  // tight gap below icon
+        // Plain hint (no key-pill — Paste chip already covers Ctrl+V).
+        var hintRect = new Rectangle((int)x, (int)curY, (int)width, hintSize.Height + 2);
+        TextRenderer.DrawText(g, hintText, subFont, hintRect, subColor, titleFlags);
+        curY += hintSize.Height + spacing + 4;
 
-        // 3. Draw Subheader
-        using var mediumBrush = new SolidBrush(mediumColor);
-        var mediumRect = new RectangleF(x, curY, width, mediumSize.Height);
-        g.DrawString(mediumText, mediumFont, mediumBrush, mediumRect, sf);
-        curY += mediumSize.Height + spacing;
+        // Action chips
+        float chipsStartX = x + (width - chipsRowW) / 2f;
+        _welcomeChipRects[0] = new RectangleF(chipsStartX, curY, openW, chipH);
+        _welcomeChipRects[1] = new RectangleF(chipsStartX + openW + chipGap, curY, pasteW, chipH);
+        _welcomeChipRects[2] = new RectangleF(chipsStartX + openW + chipGap + pasteW + chipGap, curY, captureW, chipH);
 
-        // 4. Draw Small Text (with inline cursor)
-        using var smallBrush = new SolidBrush(smallColor);
-        var smallRect = new RectangleF(x, curY, width, smallSize.Height);
-
-        string part1 = "";
-        string part2 = "";
-        if (smallTextTemplate.Contains("{0}"))
-        {
-            var idx = smallTextTemplate.IndexOf("{0}");
-            part1 = smallTextTemplate.Substring(0, idx);
-            part2 = smallTextTemplate.Substring(idx + 3);
-        }
-        else
-        {
-            part1 = smallTextTemplate;
-        }
-
-        if (string.IsNullOrEmpty(part2))
-        {
-            // Draw normally if no {0} template matches
-            g.DrawString(smallTextTemplate, smallFont, smallBrush, smallRect, sf);
-        }
-        else
-        {
-            // Draw part1, cursor, and part2 inline.
-            var sizePart1 = g.MeasureString(part1, smallFont);
-            var sizePart2 = g.MeasureString(part2, smallFont);
-            float totalTextW = sizePart1.Width + cursorPlaceholderWidth + sizePart2.Width;
-            
-            float startTextX = x + (width - totalTextW) / 2;
-            float textY = smallRect.Y + (smallRect.Height - Math.Max(sizePart1.Height, sizePart2.Height)) / 2;
-
-            g.DrawString(part1, smallFont, smallBrush, startTextX, textY);
-            
-            float cursorX = startTextX + sizePart1.Width + 2;
-            float cursorY = textY + 2;
-            DrawCursorIcon(g, cursorX, cursorY, 12, cursorColor);
-
-            g.DrawString(part2, smallFont, smallBrush, cursorX + cursorPlaceholderWidth, textY);
-        }
+        bool pasteEnabled = IsWelcomeChipEnabled(1);
+        DrawWelcomeChip(g, _welcomeChipRects[0], openLabel, chipFont, true,
+            _welcomeHoverChip == 0, _welcomePressedChip == 0, titleColor, subColor, accent, chipBg, chipBorder);
+        DrawWelcomeChip(g, _welcomeChipRects[1], pasteLabel, chipFont, pasteEnabled,
+            _welcomeHoverChip == 1, _welcomePressedChip == 1, titleColor, subColor, accent, chipBg, chipBorder);
+        DrawWelcomeChip(g, _welcomeChipRects[2], captureLabel, chipFont, true,
+            _welcomeHoverChip == 2, _welcomePressedChip == 2, titleColor, subColor, accent, chipBg, chipBorder);
     }
 
     private void RenderGuides(Graphics g)
