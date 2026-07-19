@@ -52,6 +52,16 @@ public sealed partial class RegionOverlayForm
         {
             return true;
         }
+        // Confirm-mode: R retries the area selection (discard crop, pick again).
+        if ((keyData & Keys.KeyCode) == Keys.R
+            && (keyData & Keys.Modifiers) == Keys.None
+            && _isConfirmingSelection
+            && !_isTyping
+            && !_emojiPickerOpen)
+        {
+            ExitConfirmMode();
+            return true;
+        }
         return base.ProcessCmdKey(ref msg, keyData);
     }
 
@@ -128,6 +138,15 @@ public sealed partial class RegionOverlayForm
         {
             e.SuppressKeyPress = true;
             e.Handled = true;
+            return;
+        }
+
+        if (e.KeyCode == Keys.R && e.Modifiers == Keys.None
+            && _isConfirmingSelection && !_isTyping && !_emojiPickerOpen)
+        {
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+            ExitConfirmMode();
             return;
         }
 

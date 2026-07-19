@@ -124,6 +124,7 @@
   "Discard the current crop and select again": "Discard the current crop and select again",
   "Cancel capture completely": "Cancel capture completely",
   "Close the capture tool and discard everything": "Close the capture tool and discard everything",
+  "double-click": "double-click",
   "\"{0}\" hidden · Restore from ▼": "\"{0}\" hidden · Restore from ▼",
   "Drag to select the capture area": "Drag to select the capture area",
   "Press Enter to capture, or Esc to cancel": "Press Enter to capture, or Esc to cancel",

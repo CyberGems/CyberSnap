@@ -911,6 +911,11 @@ public sealed partial class RegionOverlayForm
 
     // ── Region confirmation mode (handles + Confirm/Cancel buttons) ──
 
+    // Capture tool active when the region was locked — restored on Retry so annotation tools
+    // (e.g. Eraser) activated for in-confirm editing do not stick after ExitConfirmMode.
+    private CaptureMode _modeBeforeConfirm = CaptureMode.Rectangle;
+    private string? _toolIdBeforeConfirm;
+
     private void EnterConfirmMode(Rectangle rect, Point? releaseAnchor = null)
     {
         _isConfirmingSelection = true;
@@ -935,6 +940,9 @@ public sealed partial class RegionOverlayForm
         try { CloseCaptureMagnifier(); } catch { }
         EnsureToolbarReady();
         RefreshToolbar();
+        // Snapshot the capture tool *before* restoring the last annotation tool for confirm-mode editing.
+        _modeBeforeConfirm = _mode;
+        _toolIdBeforeConfirm = _activeToolId;
         // Restore the last annotation tool on the bar, but never flash its help banner here —
         // the user just finished selecting a region and should only see Confirm/Retry chrome.
         TryRestoreLastAnnotationTool();
@@ -982,6 +990,10 @@ public sealed partial class RegionOverlayForm
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
         _selectionEnd = Point.Empty;
+        // Retry = re-select area: put the original capture tool back (not the annotation tool
+        // restored for confirm-mode editing, which made Eraser stick after Retry).
+        SetMode(_modeBeforeConfirm, _toolIdBeforeConfirm, showHelpBanner: false);
+        HideToolBannerImmediate();
         EnsureToolbarReady();
         RefreshToolbar();
         Invalidate();
@@ -1352,6 +1364,8 @@ public sealed partial class RegionOverlayForm
 
         int offset = UiChrome.ScaleInt(12);
         int margin = UiChrome.ScaleInt(10);
+        // Prefer not covering the exact release point; a few px of air when parking inside.
+        int cursorGap = UiChrome.ScaleInt(10);
 
         // Horizontal: put the Confirm button directly under the point where the drag ended (its
         // proportional position inside the selection). Retry sits to its left, then Cancel, so the
@@ -1364,18 +1378,103 @@ public sealed partial class RegionOverlayForm
         int maxX = monitor.Right - margin;
         int minY = monitor.Top + margin;
         int maxY = monitor.Bottom - margin;
+        int maxTop = Math.Max(minY, maxY - bh);
 
-        int confirmXCenter = (int)Math.Round(anchorX - bw / 2f);
-        int clusterLeftCenter = confirmXCenter - gap - retryW - gap - cancelW;
-        int clusterRightCenter = confirmXCenter + bw;
+        // Vertical placement priority (near the release/cursor point always wins):
+        //  1. Outside on the side nearest the release, if that side fits on the monitor.
+        //  2. Inside the selection next to the release (right-edge Listo anchor).
+        //  3. Outside on the far side only if inside cannot host the cluster either.
+        //
+        // Important: do NOT flip to the far outside edge just because it "fits". That is what
+        // put Listo at the top of a tall crop when the user released at the bottom-right
+        // (see artifacts photo of the Grok TUI selection).
+        int outsideBelow = r.Bottom + offset;
+        int outsideAbove = r.Top - bh - offset;
+        bool belowFits = outsideBelow >= minY && outsideBelow + bh <= maxY;
+        bool aboveFits = outsideAbove >= minY && outsideAbove + bh <= maxY;
 
-        int confirmX;
-        if (clusterRightCenter > maxX)
-            confirmX = (int)Math.Round(anchorX - bw); // right edge of Listo at release point
-        else if (clusterLeftCenter < minX)
-            confirmX = (int)Math.Round(anchorX); // left edge of Listo at release point
+        // Which outside side is nearer the release point?
+        float distBelow = Math.Abs((outsideBelow + bh * 0.5f) - anchorY);
+        float distAbove = Math.Abs((outsideAbove + bh * 0.5f) - anchorY);
+        bool preferBelow = distBelow <= distAbove;
+
+        int y;
+        bool insidePlacement = false;
+
+        int insidePad = Math.Max(offset, UiChrome.ScaleInt(ConfirmHandleSize));
+        int insideMin = r.Top + insidePad;
+        int insideMax = r.Bottom - insidePad - bh;
+        bool canPlaceInside = insideMax >= insideMin;
+        int insideY = 0;
+        if (canPlaceInside)
+        {
+            // Prefer just above the release (common when releasing near the bottom edge),
+            // then just below — never straddle the selection frame through Listo's middle.
+            int aboveCursor = Math.Clamp((int)Math.Round(anchorY - bh - cursorGap), insideMin, insideMax);
+            int belowCursor = Math.Clamp((int)Math.Round(anchorY + cursorGap), insideMin, insideMax);
+            float bestInside = Math.Abs(aboveCursor + bh * 0.5f - anchorY);
+            insideY = aboveCursor;
+            float distBelowCursor = Math.Abs(belowCursor + bh * 0.5f - anchorY);
+            if (distBelowCursor < bestInside)
+                insideY = belowCursor;
+        }
+
+        int? preferredOutside = preferBelow
+            ? (belowFits ? outsideBelow : null)
+            : (aboveFits ? outsideAbove : null);
+        int? farOutside = preferBelow
+            ? (aboveFits ? outsideAbove : null)
+            : (belowFits ? outsideBelow : null);
+
+        if (preferredOutside is int preferredY)
+        {
+            // Nearest outside side has room — park there (close to the cursor).
+            y = preferredY;
+        }
+        else if (canPlaceInside)
+        {
+            // Preferred outside is blocked (e.g. released at the bottom of the monitor).
+            // Stay next to the cursor inside the crop instead of jumping to the far top/bottom.
+            y = insideY;
+            insidePlacement = true;
+        }
+        else if (farOutside is int farY)
+        {
+            // Cluster cannot fit inside a short selection — last resort far outside.
+            y = farY;
+        }
         else
-            confirmX = confirmXCenter;
+        {
+            y = Math.Clamp((int)Math.Round(anchorY - bh / 2f), minY, maxTop);
+            // Treat monitor-only clamp near the release as "inside-like" for horizontal anchor.
+            if (y >= r.Top && y + bh <= r.Bottom)
+                insidePlacement = true;
+        }
+
+        y = Math.Clamp(y, minY, maxTop);
+
+        // Horizontal:
+        //  - Outside the crop: center Listo on the release X (existing behaviour).
+        //  - Inside the crop: right-edge of Listo at the release X — same as when the cluster
+        //    is forced against the screen edge — so the pill sits fully to the left of the
+        //    cursor and is not cut through the middle by the selection frame.
+        int confirmX;
+        if (insidePlacement)
+        {
+            confirmX = (int)Math.Round(anchorX - bw); // right edge of Listo at release point
+        }
+        else
+        {
+            int confirmXCenter = (int)Math.Round(anchorX - bw / 2f);
+            int clusterLeftCenter = confirmXCenter - gap - retryW - gap - cancelW;
+            int clusterRightCenter = confirmXCenter + bw;
+            if (clusterRightCenter > maxX)
+                confirmX = (int)Math.Round(anchorX - bw); // right edge of Listo at release point
+            else if (clusterLeftCenter < minX)
+                confirmX = (int)Math.Round(anchorX); // left edge of Listo at release point
+            else
+                confirmX = confirmXCenter;
+        }
 
         int retryX = confirmX - gap - retryW;
         int closeX = retryX - gap - cancelW;
@@ -1391,17 +1490,6 @@ public sealed partial class RegionOverlayForm
         {
             int s = maxX - clusterRight; confirmX += s; retryX += s; closeX += s;
         }
-
-        // Vertical: park the cluster just outside the selection on the side nearest the release
-        // point (below if released in the lower half, above otherwise), flipping if there's no room.
-        int below = r.Bottom + offset;
-        int above = r.Top - bh - offset;
-        int y;
-        if (_confirmButtonAnchorFracY < 0.5f)
-            y = above >= minY ? above : below;
-        else
-            y = below + bh <= maxY ? below : above;
-        y = Math.Clamp(y, minY, Math.Max(minY, maxY - bh));
 
         return (
             new Rectangle(confirmX, y, bw, bh),
