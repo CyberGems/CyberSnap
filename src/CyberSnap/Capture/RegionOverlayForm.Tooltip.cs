@@ -151,7 +151,7 @@ public sealed partial class RegionOverlayForm
         {
             return LocalizationService.Translate("Toolbar Position")
                 + "\n"
-                + LocalizationService.Translate("Move the bar to the opposite edge");
+                + LocalizationService.Translate("Move the bar to the opposite edge, or drag to position freely");
         }
 
         if (button == StrokeWidthButtonIndex)

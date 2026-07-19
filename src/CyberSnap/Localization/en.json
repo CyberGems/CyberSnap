@@ -118,6 +118,8 @@
   "Cancel capture": "Cancel capture",
   "Discard the selection and close without saving": "Discard the selection and close without saving",
   "Move the bar to the opposite edge": "Move the bar to the opposite edge",
+  "Move the bar to the opposite edge, or drag to position freely": "Move the bar to the opposite edge, or drag to position freely",
+  "Drag the toolbar or click ⇅ to reposition it": "Drag the toolbar or click ⇅ to reposition it",
   "Click to cycle stroke width": "Click to cycle stroke width",
   "Click to open the color palette": "Click to open the color palette",
   "Hold to show Area Capture tool": "Hold to show Area Capture tool",

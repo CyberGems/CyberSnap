@@ -162,6 +162,8 @@
   "Cancel capture": "Cancelar captura",
   "Discard the selection and close without saving": "Descarta la selección y cierra sin guardar",
   "Move the bar to the opposite edge": "Mueve la barra al borde opuesto",
+  "Move the bar to the opposite edge, or drag to position freely": "Mueve la barra al borde opuesto, o arrastra para ubicarla libremente",
+  "Drag the toolbar or click ⇅ to reposition it": "Arrastra la barra o haz clic en ⇅ para reubicarla",
   "Click to cycle stroke width": "Clic para cambiar el grosor del trazo",
   "Click to open the color palette": "Clic para abrir la paleta de color",
   "Hold to show Area Capture tool": "Mantén pulsado para ver Captura de área",
