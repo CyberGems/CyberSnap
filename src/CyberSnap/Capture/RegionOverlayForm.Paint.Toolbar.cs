@@ -469,7 +469,7 @@ public sealed partial class RegionOverlayForm
                 var danger = UiChrome.SurfaceDanger;
                 WindowsDockRenderer.PaintButton(g, btn, active: false, hovered: hover, accent: danger);
                 int ca = hover ? 255 : 165;
-                DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ca, danger.R, danger.G, danger.B), active: false);
+                DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ca, danger.R, danger.G, danger.B), active: false, flipHorizontal: true);
                 continue;
             }
 
@@ -782,7 +782,7 @@ public sealed partial class RegionOverlayForm
         return _iconGlyphCache;
     }
 
-    private static void DrawIcon(Graphics g, string icon, Rectangle b, Color c, bool active = false)
+    private static void DrawIcon(Graphics g, string icon, Rectangle b, Color c, bool active = false, bool flipHorizontal = false)
     {
         if (icon == "color") return;
 
@@ -792,7 +792,7 @@ public sealed partial class RegionOverlayForm
         if (FluentIcons.HasIcon(iconId))
         {
             float inset = active ? 6f : 7f;
-            FluentIcons.DrawIcon(g, iconId, b, c, inset, active);
+            FluentIcons.DrawIcon(g, iconId, b, c, inset, active, flipHorizontal);
             return;
         }
 

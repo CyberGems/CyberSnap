@@ -683,7 +683,7 @@ public sealed partial class RegionOverlayForm : Form
 
         // 5. Close (Cancel) button
         int closeIdx = CloseButtonIndex;
-        _toolbarIcons[closeIdx] = "close";
+        _toolbarIcons[closeIdx] = "signOut";
         _toolbarLabels[closeIdx] = LocalizationService.Translate("Cancel");
         _toolbarToolIds[closeIdx] = "close";
         _toolbarModes[closeIdx] = null;

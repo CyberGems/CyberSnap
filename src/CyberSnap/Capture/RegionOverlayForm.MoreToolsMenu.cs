@@ -214,7 +214,7 @@ public sealed partial class RegionOverlayForm
             else if (buttonIndex == CloseButtonIndex)
             {
                 systemButtonName = LocalizationService.Translate("Cancel");
-                systemIconId = "close";
+                systemIconId = "signOut";
             }
 
             if (systemButtonName != null)
