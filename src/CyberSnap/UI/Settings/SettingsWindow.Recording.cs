@@ -343,10 +343,10 @@ public partial class SettingsWindow
                 string.Format(LocalizationService.Translate("Choose custom sound for {0}"), translatedLabel));
             controlsPanel.Children.Add(browseBtn);
 
-            // Reset button
+            // Reset button — circular arrow (same idea as Config ↺ resets), not a cancel X.
             var resetBtn = new Button
             {
-                Content = "\uE711",
+                Content = "\uE72C", // Refresh / reset
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,

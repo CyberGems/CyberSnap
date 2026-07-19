@@ -834,15 +834,17 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
         </Style>
 
-        <!-- Status chip only (not interactive): flat caption, no button chrome. -->
+        <!-- Status caption (not interactive): fixed slot so action buttons stay column-aligned. -->
         <Style x:Key="SoundItemSourcePill" TargetType="Border">
             <Setter Property="Padding" Value="0,1"/>
             <Setter Property="CornerRadius" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="MinWidth" Value="108"/>
             <Setter Property="MinHeight" Value="22"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="IsHitTestVisible" Value="False"/>
         </Style>
@@ -853,9 +855,10 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeMutedBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="Opacity" Value="0.9"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="MaxWidth" Value="140"/>
+            <Setter Property="MaxWidth" Value="108"/>
         </Style>
 
         <Style TargetType="{x:Type controls:ProviderSection}">
@@ -2730,9 +2733,16 @@
                                 <TextBlock Text="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Services:LocalizationService.SourceText="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="ResetAllSoundsBtn" Content="Reset all" MinWidth="90" Margin="0,0,12,0"
-                                        VerticalAlignment="Center" Cursor="Hand"
+                                <!-- Icon-only reset — same pattern as Notifications layout reset / file name pattern. -->
+                                <Button x:Name="ResetAllSoundsBtn" Content="↺"
+                                        Margin="0,0,12,0"
+                                        Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="0"
+                                        VerticalAlignment="Center"
+                                        VerticalContentAlignment="Center"
+                                        HorizontalContentAlignment="Center"
+                                        FontSize="14" FontWeight="Bold" Cursor="Hand"
                                         ToolTip="Revert all sounds to their built-in defaults."
+                                        Services:LocalizationService.SourceToolTip="Revert all sounds to their built-in defaults."
                                         AutomationProperties.Name="Reset all sounds to defaults"
                                         Click="ResetAllSoundsBtn_Click"/>
                                 <CheckBox x:Name="MuteSoundsCheck" Content="" FontSize="13"
