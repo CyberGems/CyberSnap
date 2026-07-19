@@ -323,7 +323,62 @@ public sealed partial class RegionOverlayForm
         if (_isConfirmingSelection)
             return true;
 
-        return IsSelectionCaptureMode();
+        if (!IsSelectionCaptureMode())
+            return false;
+
+        // Wait until the first auto-detect seed finishes so dim + hole appear together.
+        if (!_selectionDimPrimed)
+            return false;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Snapshot windows and seed the auto-detect hole under the cursor before the first dim paint.
+    /// </summary>
+    private void PrimeSelectionDimFromCursor()
+    {
+        if (_selectionDimPrimed)
+            return;
+
+        try
+        {
+            if (_windowDetectionMode != WindowDetectionMode.Off && IsSelectionCaptureMode())
+            {
+                WindowDetector.SnapshotWindows(_virtualBounds);
+                SeedAutoDetectUnderCursor();
+            }
+        }
+        catch
+        {
+            // Best-effort: still prime so dim can appear even if enum fails.
+        }
+        finally
+        {
+            _selectionDimPrimed = true;
+        }
+    }
+
+    private void SeedAutoDetectUnderCursor()
+    {
+        if (!IsSelectionCaptureMode() || _isSelecting || _isConfirmingSelection)
+            return;
+        if (_windowDetectionMode == WindowDetectionMode.Off)
+            return;
+        if (IsPointInOverlayUi(PointToClient(Cursor.Position)))
+        {
+            _autoDetectRect = Rectangle.Empty;
+            _autoDetectActive = false;
+            _lastAutoDetectRect = Rectangle.Empty;
+            return;
+        }
+
+        var clientPt = PointToClient(Cursor.Position);
+        var detected = WindowDetector.GetDetectionRectAtPoint(
+            clientPt, _virtualBounds, _windowDetectionMode);
+        _autoDetectRect = detected;
+        _autoDetectActive = detected.Width > 0 && detected.Height > 0;
+        _lastAutoDetectRect = _autoDetectActive ? detected : Rectangle.Empty;
     }
 
     /// <summary>

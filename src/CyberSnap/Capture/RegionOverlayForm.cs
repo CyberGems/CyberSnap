@@ -201,6 +201,11 @@ public sealed partial class RegionOverlayForm : Form
     // Region auto-detect
     private Rectangle _autoDetectRect;
     private bool _autoDetectActive;
+    /// <summary>
+    /// When false, selection-mode dim is suppressed so the first visible frame can include
+    /// both the veil and the window hole under the cursor (no full-dim flash).
+    /// </summary>
+    private bool _selectionDimPrimed;
 
     // Color picker popup state
     private bool _colorPickerOpen;
@@ -410,6 +415,15 @@ public sealed partial class RegionOverlayForm : Form
         _magGfx.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
         SetupForm();
+
+        // Defer first paint with dim until OnShown seeds auto-detect under the cursor.
+        // Opacity 0 hides the full-dim flash that used to appear before the window hole opened.
+        bool deferDimReveal = IsSelectionCaptureMode()
+            && _windowDetectionMode != WindowDetectionMode.Off;
+        _selectionDimPrimed = !deferDimReveal;
+        if (deferDimReveal)
+            Opacity = 0;
+
         CalcToolbar();
 
         _animTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
