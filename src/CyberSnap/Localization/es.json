@@ -173,6 +173,7 @@
   "Discard the current crop and select again": "Descarta el recorte actual y vuelve a seleccionar",
   "Cancel capture completely": "Cancelar captura completa",
   "Close the capture tool and discard everything": "Cierra la captura y descarta todo",
+  "double-click": "doble clic",
   "\"{0}\" hidden · Restore from ▼": "\"{0}\" oculto · Restaurar desde ▼",
   "Drag to select the capture area": "Arrastra para seleccionar el área de captura",
   "Press Enter to capture, or Esc to cancel": "Pulsa Enter para capturar, o Esc para cancelar",

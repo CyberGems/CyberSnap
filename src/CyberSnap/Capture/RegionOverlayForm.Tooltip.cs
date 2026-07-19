@@ -276,10 +276,12 @@ public sealed partial class RegionOverlayForm
         string text = _hoveredConfirmButton switch
         {
             0 => LocalizationService.Translate("Confirm capture")
-                + "  (Enter)\n"
+                + "  (Enter · "
+                + LocalizationService.Translate("double-click")
+                + ")\n"
                 + LocalizationService.Translate("Save or process the selected region"),
             1 => LocalizationService.Translate("Retry area")
-                + "\n"
+                + "  (R)\n"
                 + LocalizationService.Translate("Discard the current crop and select again"),
             2 => LocalizationService.Translate("Cancel capture completely")
                 + "  (Esc)\n"

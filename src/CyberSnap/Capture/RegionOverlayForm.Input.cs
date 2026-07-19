@@ -99,6 +99,15 @@ public sealed partial class RegionOverlayForm
             }
             if (_confirmRect.Contains(e.Location))
             {
+                // Double-click inside the locked region commits immediately (Snipping Tool style).
+                if (e.Clicks >= 2)
+                {
+                    _isConfirmDragging = false;
+                    _confirmHandleDragIndex = -1;
+                    StartConfirmPress(0);
+                    return;
+                }
+
                 // Start dragging the confirmed region
                 _isConfirmDragging = true;
                 _confirmHandleDragIndex = -1;
