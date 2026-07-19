@@ -416,13 +416,9 @@ public sealed partial class RegionOverlayForm : Form
 
         SetupForm();
 
-        // Defer first paint with dim until OnShown seeds auto-detect under the cursor.
-        // Opacity 0 hides the full-dim flash that used to appear before the window hole opened.
-        bool deferDimReveal = IsSelectionCaptureMode()
-            && _windowDetectionMode != WindowDetectionMode.Off;
-        _selectionDimPrimed = !deferDimReveal;
-        if (deferDimReveal)
-            Opacity = 0;
+        // Seed auto-detect before the form is ever shown so the first paint already has
+        // dim + window hole together. No Opacity tricks (those caused a white flash).
+        PrimeSelectionDimFromCursor();
 
         CalcToolbar();
 
@@ -535,6 +531,7 @@ public sealed partial class RegionOverlayForm : Form
         Cursor = _mode == CaptureMode.ColorPicker
             ? CursorFactory.EyedropperCursor
             : CursorFactory.PrecisionCursor;
+        // Match the screenshot fill path so any pre-paint erase is not a bright flash.
         BackColor = Color.Black;
         SetStyle(ControlStyles.AllPaintingInWmPaint |
                  ControlStyles.UserPaint |
@@ -543,6 +540,33 @@ public sealed partial class RegionOverlayForm : Form
                  ControlStyles.StandardDoubleClick |
                  ControlStyles.UserMouse, true);
         KeyPreview = true;
+    }
+
+    /// <summary>
+    /// Never erase to the default control white. Until OnPaint runs, show the screenshot
+    /// (or black) so activation never flashes a bright empty frame.
+    /// </summary>
+    protected override void OnPaintBackground(PaintEventArgs e)
+    {
+        try
+        {
+            if (_screenshot is not null)
+            {
+                var g = e.Graphics;
+                g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.None;
+                var clip = e.ClipRectangle;
+                g.DrawImage(_screenshot, clip, clip, GraphicsUnit.Pixel);
+                return;
+            }
+        }
+        catch
+        {
+            // Fall through to solid fill.
+        }
+
+        e.Graphics.Clear(Color.Black);
     }
 
     private static int GroupGap => UiChrome.ScaledToolbarGroupGap; // spacing between tool groups (includes separator line)

@@ -334,7 +334,8 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Snapshot windows and seed the auto-detect hole under the cursor before the first dim paint.
+    /// Snapshot windows and seed the auto-detect hole under the cursor before first show/paint.
+    /// Safe to call from the constructor (no HWND required).
     /// </summary>
     private void PrimeSelectionDimFromCursor()
     {
@@ -365,7 +366,12 @@ public sealed partial class RegionOverlayForm
             return;
         if (_windowDetectionMode == WindowDetectionMode.Off)
             return;
-        if (IsPointInOverlayUi(PointToClient(Cursor.Position)))
+
+        // Prefer manual conversion so this works before Handle creation.
+        var screen = Cursor.Position;
+        var clientPt = new Point(screen.X - _virtualBounds.X, screen.Y - _virtualBounds.Y);
+
+        if (IsHandleCreated && IsPointInOverlayUi(PointToClient(screen)))
         {
             _autoDetectRect = Rectangle.Empty;
             _autoDetectActive = false;
@@ -373,7 +379,6 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        var clientPt = PointToClient(Cursor.Position);
         var detected = WindowDetector.GetDetectionRectAtPoint(
             clientPt, _virtualBounds, _windowDetectionMode);
         _autoDetectRect = detected;

@@ -36,18 +36,19 @@ public sealed partial class RegionOverlayForm
         Focus();
         _escapeHook = CaptureEscapeKeyHook.Install(this, HandleEscapeKey);
 
-        // Seed auto-detect under the cursor BEFORE the first dim paint so the veil and the
-        // bright window hole appear together (no full-desktop flash, then hole).
-        PrimeSelectionDimFromCursor();
+        // Constructor already primed dim+hole from a pre-show snapshot. Re-seed under the
+        // cursor only if needed (cache hit / live fallback) — no second full Snapshot on the
+        // UI thread (that delayed the first paint and contributed to flash).
+        _selectionDimPrimed = true;
+        if (IsSelectionCaptureMode() && _windowDetectionMode != WindowDetectionMode.Off)
+            SeedAutoDetectUnderCursor();
 
         EnsureToolbarReady();
         if (_toolbarForm is { IsDisposed: false })
             WindowDetector.RegisterIgnoredWindow(_toolbarForm.Handle);
 
-        // Reveal after priming so the first visible frame already has dim + hole + toolbar.
-        if (Opacity < 1)
-            Opacity = 1;
-
+        // Avoid a full Invalidate here when the constructor already painted a primed frame;
+        // only refresh if the seed hole changed after the form became topmost/ignored.
         Invalidate();
         Update();
 
@@ -59,7 +60,7 @@ public sealed partial class RegionOverlayForm
             TryAutoShowQuickStartGuide();
         }));
 
-        // Refresh the window cache in the background (keep current seed; do not clear).
+        // Soft cache refresh off the UI thread (do not clear — keeps the current hole stable).
         if (_windowDetectionMode != WindowDetectionMode.Off)
         {
             _ = Task.Run(() =>
