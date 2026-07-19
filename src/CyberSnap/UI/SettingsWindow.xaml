@@ -834,17 +834,59 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
         </Style>
 
-        <!-- Per-row restore: same ↺ glyph as master reset (Segoe UI, not Fluent icon font). -->
+        <!-- Shared ↺ glyph face: geometric center + small optical nudge (glyph ink is top-left heavy). -->
         <Style x:Key="SoundItemResetButton" TargetType="Button" BasedOn="{StaticResource SoundItemPlayButton}">
             <Setter Property="FontFamily" Value="Segoe UI"/>
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
             <Setter Property="Content" Value="↺"/>
-            <Setter Property="Padding" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
+                            <Grid>
+                                <TextBlock Text="{TemplateBinding Content}"
+                                           FontFamily="{TemplateBinding FontFamily}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           FontWeight="{TemplateBinding FontWeight}"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           TextAlignment="Center"
+                                           LineStackingStrategy="BlockLineHeight"
+                                           LineHeight="{TemplateBinding FontSize}"
+                                           Margin="1.5,1.5,0,0"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonPressedBrush}"/>
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <!-- Master "reset all" — larger ↺, same glyph as per-row restore. -->
+        <!-- Master "reset all" — larger ↺, same glyph + optical centering as per-row restore. -->
         <Style x:Key="SettingsIconResetButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="Width" Value="32"/>
             <Setter Property="Height" Value="32"/>
@@ -856,7 +898,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontSize" Value="19"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Content" Value="↺"/>
@@ -868,9 +910,9 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="4"
-                                SnapsToDevicePixels="True">
-                            <!-- Explicit center box so ↺ sits optically centered in the 32×32 face. -->
-                            <Grid Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+                                SnapsToDevicePixels="True"
+                                UseLayoutRounding="True">
+                            <Grid ClipToBounds="True">
                                 <TextBlock Text="{TemplateBinding Content}"
                                            FontFamily="{TemplateBinding FontFamily}"
                                            FontSize="{TemplateBinding FontSize}"
@@ -878,8 +920,10 @@
                                            Foreground="{TemplateBinding Foreground}"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
-                                           Margin="0,0,0,1"
-                                           TextAlignment="Center"/>
+                                           TextAlignment="Center"
+                                           LineStackingStrategy="BlockLineHeight"
+                                           LineHeight="{TemplateBinding FontSize}"
+                                           Margin="1.5,1.5,0,0"/>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
