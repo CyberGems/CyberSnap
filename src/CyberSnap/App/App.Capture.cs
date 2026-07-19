@@ -109,19 +109,20 @@ public partial class App
                 Theme.Refresh();
                 var settings = _settingsService!.Settings;
                 Helpers.UiChrome.SetUiScale(settings.UiScale);
-                bool showCursor = settings.ShowCursor;
-                var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
                 var s = settings;
                 var fmt = formatOverride ?? s.RecordingFormat;
+                bool isGifFormat = fmt == RecordingFormat.GIF;
+                bool showCursor = isGifFormat ? s.GifShowCursor : s.VideoShowCursor;
+                var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
 
-                string ext = fmt switch { RecordingFormat.MP4 => ".mp4", _ => ".gif" };
+                string ext = isGifFormat ? ".gif" : ".mp4";
                 // Respect SaveToFile: permanent folder vs session temp (deleted after toast/trimmer).
                 bool persistRecording = s.SaveToFile;
                 string savePath;
                 if (persistRecording)
                 {
                     string baseDir = s.SaveDirectory;
-                    string saveRoot = fmt == RecordingFormat.GIF
+                    string saveRoot = isGifFormat
                         ? Path.Combine(baseDir, "GIFs")
                         : Path.Combine(baseDir, "Videos");
                     string saveDir = s.SaveInMonthlyFolders
@@ -136,12 +137,12 @@ public partial class App
                     savePath = Helpers.CaptureSavePath.BuildTempRecordingPath(ext);
                 }
                 int maxH = s.RecordingQuality switch { RecordingQuality.P1080 => 1080, RecordingQuality.P720 => 720, RecordingQuality.P480 => 480, _ => 0 };
-                int fps = fmt == RecordingFormat.GIF ? s.GifFps : s.RecordingFps;
+                int fps = isGifFormat ? s.GifFps : s.RecordingFps;
 
-                bool recMic = fmt != RecordingFormat.GIF && s.RecordMicrophone;
-                bool recDesktop = fmt != RecordingFormat.GIF && s.RecordDesktopAudio;
+                bool recMic = !isGifFormat && s.RecordMicrophone;
+                bool recDesktop = !isGifFormat && s.RecordDesktopAudio;
                 Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
-                bool openTrimmer = s.OpenVideoTrimmerAfterCapture;
+                bool openTrimmer = isGifFormat ? s.OpenGifTrimmerAfterCapture : s.OpenVideoTrimmerAfterCapture;
                 Action<string>? onGifEncodedForTrimmer = null;
                 if (openTrimmer && fmt == RecordingFormat.GIF)
                 {
@@ -199,7 +200,10 @@ public partial class App
                             }
                         }
 
-                        bool autoCopyRecording = Helpers.AutoCopyPreferences.ShouldCopy(s, Helpers.AutoCopyKind.Recording);
+                        var autoCopyKind = isGif
+                            ? Helpers.AutoCopyKind.Gif
+                            : Helpers.AutoCopyKind.Video;
+                        bool autoCopyRecording = Helpers.AutoCopyPreferences.ShouldCopy(s, autoCopyKind);
                         bool? copiedToClipboard = autoCopyRecording
                             ? TryCopyRecordingFileToClipboard(path)
                             : null;

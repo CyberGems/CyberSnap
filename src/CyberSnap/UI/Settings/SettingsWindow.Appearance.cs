@@ -294,9 +294,13 @@ public partial class SettingsWindow
             MuteSoundsCheck.IsChecked = !s.MuteSounds; // activator: checked = all sounds on
             PopulateSoundCustomizationPanel();
             ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
-            WidgetEnableEditorCheck.IsChecked = s.OpenEditorAfterCapture || s.OpenVideoTrimmerAfterCapture;
+            WidgetEnableEditorCheck.IsChecked = s.OpenEditorAfterCapture
+                || s.OpenVideoTrimmerAfterCapture
+                || s.OpenGifTrimmerAfterCapture;
             if (VideoEnableEditorCheck != null)
                 VideoEnableEditorCheck.IsChecked = s.OpenVideoTrimmerAfterCapture;
+            if (GifEnableEditorCheck != null)
+                GifEnableEditorCheck.IsChecked = s.OpenGifTrimmerAfterCapture;
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
             PopulateWidgetMonitors();
@@ -317,8 +321,14 @@ public partial class SettingsWindow
             SelectUndoLimit(s.EditorUndoLimit);
             EditorExportFormatCombo.SelectedIndex = s.EditorExportFormat;
             RecordingQualityCombo.SelectedIndex = (int)s.RecordingQuality;
-            SelectRecordingFps(s.RecordingFormat == RecordingFormat.GIF ? s.GifFps : s.RecordingFps);
-            RecordShowCursorCheck.IsChecked = s.ShowCursor;
+            SelectRecordingFps(s.RecordingFps);
+            SelectGifFps(s.GifFps);
+            if (VideoShowCursorCheck != null)
+                VideoShowCursorCheck.IsChecked = s.VideoShowCursor;
+            if (GifShowCursorCheck != null)
+                GifShowCursorCheck.IsChecked = s.GifShowCursor;
+            if (AutoCopyExcludeGifCheck != null)
+                AutoCopyExcludeGifCheck.IsChecked = s.AutoCopyExcludeGif;
             RecordMicCheck.IsChecked = s.RecordMicrophone;
             RecordDesktopAudioCheck.IsChecked = s.RecordDesktopAudio;
             TryLoadSettingsSection("settings.populate-audio-devices", PopulateAudioDevices);
@@ -828,7 +838,7 @@ public partial class SettingsWindow
         if (CaptureTab.IsChecked == true) return "Capture";
         if (WidgetTab.IsChecked == true) return "Widget";
         if (EditorTab.IsChecked == true) return "Editor";
-        if (RecordingTab.IsChecked == true) return "Video";
+        if (RecordingTab.IsChecked == true) return "Video & GIF";
         if (OcrTab.IsChecked == true) return "OCR";
         if (HotkeysTab.IsChecked == true) return "Hotkeys";
         if (HistoryTab.IsChecked == true) return "Gallery";

@@ -6,7 +6,10 @@ public enum AutoCopyKind
 {
     Image,
     Ocr,
-    Recording
+    /// <summary>Legacy alias for <see cref="Video"/> (MP4).</summary>
+    Recording,
+    Video,
+    Gif
 }
 
 /// <summary>
@@ -26,7 +29,8 @@ public static class AutoCopyPreferences
         {
             AutoCopyKind.Image => !settings.AutoCopyExcludeImages,
             AutoCopyKind.Ocr => !settings.AutoCopyExcludeOcr,
-            AutoCopyKind.Recording => !settings.AutoCopyExcludeRecording,
+            AutoCopyKind.Recording or AutoCopyKind.Video => !settings.AutoCopyExcludeRecording,
+            AutoCopyKind.Gif => !settings.AutoCopyExcludeGif,
             _ => false
         };
     }
@@ -36,7 +40,8 @@ public static class AutoCopyPreferences
         {
             AutoCopyKind.Image => settings.AutoCopyExcludeImages,
             AutoCopyKind.Ocr => settings.AutoCopyExcludeOcr,
-            AutoCopyKind.Recording => settings.AutoCopyExcludeRecording,
+            AutoCopyKind.Recording or AutoCopyKind.Video => settings.AutoCopyExcludeRecording,
+            AutoCopyKind.Gif => settings.AutoCopyExcludeGif,
             _ => false
         };
 
@@ -57,7 +62,11 @@ public static class AutoCopyPreferences
                 settings.AutoCopyExcludeOcr = excluded;
                 break;
             case AutoCopyKind.Recording:
+            case AutoCopyKind.Video:
                 settings.AutoCopyExcludeRecording = excluded;
+                break;
+            case AutoCopyKind.Gif:
+                settings.AutoCopyExcludeGif = excluded;
                 break;
         }
 
@@ -99,11 +108,13 @@ public static class AutoCopyPreferences
         bool imageCopy = action is AfterCaptureAction.CopyToClipboard or AfterCaptureAction.PreviewAndCopy;
         bool ocrCopy = settings.OcrAutoCopyToClipboard;
 
-        // Preserve prior behavior: recordings always copied to the clipboard.
+        // Preserve prior schema-v0→v1 behavior for images/OCR; recordings default to excluded
+        // (auto-copy off) unless the user opts in from Video & GIF settings.
         settings.AutoCopyToClipboard = true;
         settings.AutoCopyExcludeImages = !imageCopy;
         settings.AutoCopyExcludeOcr = !ocrCopy;
-        settings.AutoCopyExcludeRecording = false;
+        settings.AutoCopyExcludeRecording = true;
+        settings.AutoCopyExcludeGif = true;
         settings.AutoCopySettingsSchemaVersion = SchemaVersion;
 
         SyncLegacyAliases(settings);

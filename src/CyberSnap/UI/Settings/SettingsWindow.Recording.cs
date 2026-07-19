@@ -512,21 +512,35 @@ public partial class SettingsWindow
         if (!int.TryParse(tag, out int fps))
             return;
 
-        var isGif = _settingsService.Settings.RecordingFormat == RecordingFormat.GIF;
-        var previous = isGif ? _settingsService.Settings.GifFps : _settingsService.Settings.RecordingFps;
+        var previous = _settingsService.Settings.RecordingFps;
         UpdateRecordingPreference(
             "settings.recording-fps",
-            "Recording FPS",
+            "Video FPS",
             previous,
             fps,
-            value =>
-            {
-                if (isGif)
-                    _settingsService.Settings.GifFps = value;
-                else
-                    _settingsService.Settings.RecordingFps = value;
-            },
+            value => _settingsService.Settings.RecordingFps = value,
             SelectRecordingFps);
+    }
+
+    private void GifFpsCombo_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressRecordingPreferenceChange) return;
+        if (GifFpsCombo.SelectedItem is not ComboBoxItem item || item.Tag is not string tag)
+            return;
+
+        if (!int.TryParse(tag, out int fps))
+            return;
+
+        // GIF only supports 15 (default) and 30.
+        fps = fps == 30 ? 30 : 15;
+        var previous = _settingsService.Settings.GifFps;
+        UpdateRecordingPreference(
+            "settings.gif-fps",
+            "GIF FPS",
+            previous,
+            fps,
+            value => _settingsService.Settings.GifFps = value,
+            SelectGifFps);
     }
 
     private void SelectRecordingFps(int fps)
@@ -541,28 +555,61 @@ public partial class SettingsWindow
         };
     }
 
-    private void RecordShowCursorCheck_Changed(object sender, RoutedEventArgs e)
+    private void SelectGifFps(int fps)
     {
-        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
+        GifFpsCombo.SelectedIndex = fps == 30 ? 1 : 0;
+    }
 
-        var previous = _settingsService.Settings.ShowCursor;
-        var selected = RecordShowCursorCheck.IsChecked == true;
-        UpdateCaptureSavePreference(
-            "settings.record-show-cursor",
-            "Recording cursor",
+    private void VideoShowCursorCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressRecordingPreferenceChange) return;
+
+        var previous = _settingsService.Settings.VideoShowCursor;
+        var selected = VideoShowCursorCheck.IsChecked == true;
+        UpdateRecordingPreference(
+            "settings.video-show-cursor",
+            "Show cursor in video",
             previous,
             selected,
-            value => _settingsService.Settings.ShowCursor = value,
+            value => _settingsService.Settings.VideoShowCursor = value,
+            value => VideoShowCursorCheck.IsChecked = value);
+    }
+
+    private void GifShowCursorCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressRecordingPreferenceChange) return;
+
+        var previous = _settingsService.Settings.GifShowCursor;
+        var selected = GifShowCursorCheck.IsChecked == true;
+        UpdateRecordingPreference(
+            "settings.gif-show-cursor",
+            "Show cursor in GIF",
+            previous,
+            selected,
+            value => _settingsService.Settings.GifShowCursor = value,
+            value => GifShowCursorCheck.IsChecked = value);
+    }
+
+    private void GifEnableEditorCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
+
+        var previous = _settingsService.Settings.OpenGifTrimmerAfterCapture;
+        var selected = GifEnableEditorCheck.IsChecked == true;
+        UpdateGeneralPreference(
+            "settings.open-gif-trimmer-after-capture",
+            "Open trimmer after GIF",
+            previous,
+            selected,
+            value => _settingsService.Settings.OpenGifTrimmerAfterCapture = value,
             value =>
             {
-                RecordShowCursorCheck.IsChecked = value;
-                ShowCursorCheck.IsChecked = value;
+                if (GifEnableEditorCheck != null)
+                    GifEnableEditorCheck.IsChecked = value;
             },
-            () =>
-            {
-                if (ShowCursorCheck.IsChecked != selected)
-                    ShowCursorCheck.IsChecked = selected;
-            });
+            value => ((App)Application.Current).SyncWidgetEnableEditorToggle());
+
+        RefreshEditorPreviewState();
     }
 
     private void PopulateAudioDevices()

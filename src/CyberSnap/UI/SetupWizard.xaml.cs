@@ -947,6 +947,7 @@ public partial class SetupWizard : Window
                         s.AutoCopyExcludeImages,
                         s.AutoCopyExcludeOcr,
                         s.AutoCopyExcludeRecording,
+                        s.AutoCopyExcludeGif,
                         s.OcrAutoCopyToClipboard);
                     try
                     {
@@ -969,6 +970,7 @@ public partial class SetupWizard : Window
                         s.AutoCopyExcludeImages = previousSaving.AutoCopyExcludeImages;
                         s.AutoCopyExcludeOcr = previousSaving.AutoCopyExcludeOcr;
                         s.AutoCopyExcludeRecording = previousSaving.AutoCopyExcludeRecording;
+                        s.AutoCopyExcludeGif = previousSaving.AutoCopyExcludeGif;
                         s.OcrAutoCopyToClipboard = previousSaving.OcrAutoCopyToClipboard;
                         LoadDefaults();
                         throw;

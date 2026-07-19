@@ -218,8 +218,11 @@ public sealed class AppSettings
     /// <summary>When true, OCR text is not auto-copied even if the global master is on.</summary>
     public bool AutoCopyExcludeOcr { get; set; } = true;
 
-    /// <summary>When true, video/GIF files are not auto-copied even if the global master is on.</summary>
-    public bool AutoCopyExcludeRecording { get; set; }
+    /// <summary>When true, MP4 video files are not auto-copied even if the global master is on.</summary>
+    public bool AutoCopyExcludeRecording { get; set; } = true;
+
+    /// <summary>When true, GIF files are not auto-copied even if the global master is on.</summary>
+    public bool AutoCopyExcludeGif { get; set; } = true;
 
     /// <summary>
     /// 0 = not yet migrated from AfterCapture.Copy / OcrAutoCopyToClipboard.
@@ -325,7 +328,11 @@ public sealed class AppSettings
     /// Legacy: previously encoded as <see cref="AfterCaptureAction.OpenInSystemViewer"/>.
     /// </summary>
     public bool OpenInSystemViewerAfterCapture { get; set; }
-    public bool OpenVideoTrimmerAfterCapture { get; set; }
+    /// <summary>When true, open the trimmer after each MP4 recording.</summary>
+    public bool OpenVideoTrimmerAfterCapture { get; set; } = true;
+
+    /// <summary>When true, open the trimmer after each GIF recording.</summary>
+    public bool OpenGifTrimmerAfterCapture { get; set; } = true;
     /// <summary>Last volume level used in the video trimmer (0.0–1.0).</summary>
     public double VideoTrimmerVolume { get; set; } = 1.0;
     /// <summary>When true, exported trimmer output excludes the audio track.</summary>
@@ -563,14 +570,20 @@ public sealed class AppSettings
     public double SettingsWindowHeight { get; set; } = 680;
     public int SettingsWindowState { get; set; } = 0; // 0 = Normal, 2 = Maximized (WPF WindowState)
 
-    // Video recording
+    // Video recording (MP4)
     public RecordingFormat RecordingFormat { get; set; } = RecordingFormat.MP4;
     public RecordingQuality RecordingQuality { get; set; } = RecordingQuality.Original;
     public int RecordingFps { get; set; } = 30;
+    /// <summary>Include the mouse pointer in MP4 recordings.</summary>
+    public bool VideoShowCursor { get; set; }
     public bool RecordMicrophone { get; set; }
     public bool RecordDesktopAudio { get; set; } = true;
     public string? MicrophoneDeviceId { get; set; }
     public string? DesktopAudioDeviceId { get; set; }
+
+    // GIF recording
+    /// <summary>Include the mouse pointer in GIF recordings. Default off (cleaner loops).</summary>
+    public bool GifShowCursor { get; set; }
 
     // Toolbar customization: which tools appear in the dock
     // null = all tools enabled (default). List of tool IDs from ToolDef.AllTools.

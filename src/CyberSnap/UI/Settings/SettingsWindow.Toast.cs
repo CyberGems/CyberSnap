@@ -863,7 +863,8 @@ public partial class SettingsWindow
         // Two related-but-separate settings: images → editor, video/GIF → trimmer.
         // The widget toggle often sets both; Settings can set them independently.
         bool editorOn = _settingsService.Settings.OpenEditorAfterCapture;
-        bool trimmerOn = _settingsService.Settings.OpenVideoTrimmerAfterCapture;
+        bool trimmerOn = _settingsService.Settings.OpenVideoTrimmerAfterCapture
+            || _settingsService.Settings.OpenGifTrimmerAfterCapture;
         // Video/GIF "success" path skips the designed preview toast when the trimmer opens
         // (only an encoding system wait toast). Images skip it when the editor opens.
         bool designedToastForImages = !editorOn;
@@ -1129,13 +1130,16 @@ public partial class SettingsWindow
     private void SetSendToEditorMode(bool enabled)
     {
         var s = _settingsService.Settings;
-        if (s.OpenEditorAfterCapture == enabled && s.OpenVideoTrimmerAfterCapture == enabled)
+        if (s.OpenEditorAfterCapture == enabled
+            && s.OpenVideoTrimmerAfterCapture == enabled
+            && s.OpenGifTrimmerAfterCapture == enabled)
             return;
 
         s.OpenEditorAfterCapture = enabled;
         s.OpenVideoTrimmerAfterCapture = enabled;
+        s.OpenGifTrimmerAfterCapture = enabled;
         _settingsService.Save();
-        RefreshEnableEditorCheck();                                // Widget + Video tab checkboxes
+        RefreshEnableEditorCheck();                                // Widget + Video & GIF tab checkboxes
         ((App)Application.Current).SyncWidgetEnableEditorToggle(); // floating widget toggle
         RefreshEditorPreviewState();                               // highlight + this toggle
     }

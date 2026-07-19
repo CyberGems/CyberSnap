@@ -80,6 +80,7 @@ public partial class App
                         _settingsService.Settings.AutoCopyExcludeImages = fresh.AutoCopyExcludeImages;
                         _settingsService.Settings.AutoCopyExcludeOcr = fresh.AutoCopyExcludeOcr;
                         _settingsService.Settings.AutoCopyExcludeRecording = fresh.AutoCopyExcludeRecording;
+                        _settingsService.Settings.AutoCopyExcludeGif = fresh.AutoCopyExcludeGif;
                         _settingsService.Settings.OcrAutoCopyToClipboard = fresh.OcrAutoCopyToClipboard;
                         _settingsService.Settings.AfterCapture = fresh.AfterCapture;
                     }

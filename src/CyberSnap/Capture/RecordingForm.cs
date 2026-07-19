@@ -75,20 +75,11 @@ public sealed partial class RecordingForm : Form
     private CaptureEscapeKeyHook? _escapeHook;
     private System.Windows.Forms.Timer? _tickTimer;
     private readonly string _savePath;
-    private WindowsToolTip? _chromeToolTip;
-    private Rectangle? _tooltipAnchor;
+    private RecordingControlBar? _controlBar;
 
     // Screen-relative selection (stays valid after phase change)
     private Rectangle _recordRegion; // in form coords, persisted
 
-    // Toolbar (recording phase) - positioned relative to form
-    private Rectangle _toolbarRect;
-    private Rectangle _pauseBtn;
-    private Rectangle _stopBtn;
-    private Rectangle _discardBtn;
-    private Rectangle _startBtn;
-    private Rectangle _fpsBtn;
-    private int _hoveredBtn = -1; // 0=pause/start, 1=stop/fps, 2=discard
     private bool _isPaused;
     private DateTime? _pauseStartTime;
     private TimeSpan _totalPausedDuration;
@@ -99,14 +90,7 @@ public sealed partial class RecordingForm : Form
     // Cached GDI objects for paint
     private readonly Font _readoutFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
     private readonly Pen _borderPen = new(UiChrome.AccentColor, 2.0f) { DashStyle = DashStyle.Dash, DashPattern = new[] { 5f, 3f }, LineJoin = LineJoin.Miter };
-    private readonly SolidBrush _cornerBrush = new(UiChrome.AccentColor);
-    private readonly SolidBrush _dotBrush = new(Color.FromArgb(240, UiChrome.AccentColor.R, UiChrome.AccentColor.G, UiChrome.AccentColor.B));
-    private readonly Pen _ringPen = new(Color.FromArgb(60, UiChrome.AccentColor.R, UiChrome.AccentColor.G, UiChrome.AccentColor.B), 2f);
-    private readonly Font _timeFont = UiChrome.ChromeFont(UiChrome.ChromeTitleSize, FontStyle.Bold);
-    private readonly SolidBrush _timeBrush = new(UiChrome.SurfaceTextPrimary);
-    private readonly Font _encFont = UiChrome.ChromeFont(10f, FontStyle.Bold);
-    private readonly SolidBrush _encTextBrush = new(UiChrome.SurfaceTextSecondary);
-    private readonly SolidBrush _spinBrush = new(Color.FromArgb(200, UiChrome.AccentColor.R, UiChrome.AccentColor.G, UiChrome.AccentColor.B));
+
 
     public RecordingForm(Bitmap? screenshot, Rectangle virtualBounds, int fps, string savePath,
                          Models.RecordingFormat format = Models.RecordingFormat.GIF, int maxHeight = 0,
@@ -287,6 +271,7 @@ public sealed partial class RecordingForm : Form
         if (_state == State.Encoding)
             return;
 
+        CloseControlBar();
         RecordingCancelled?.Invoke();
         Close();
     }
@@ -322,17 +307,6 @@ public sealed partial class RecordingForm : Form
         }
         else if (_state == State.PreRecording && e.Button == MouseButtons.Left)
         {
-            if (_toolbarRect.Contains(e.Location))
-            {
-                if (_startBtn.Contains(e.Location))
-                    StartActualRecording();
-                else if (_fpsBtn.Contains(e.Location))
-                    ToggleFps();
-                else if (_discardBtn.Contains(e.Location))
-                    DiscardRecording();
-                return;
-            }
-
             int hit = HitTestHandle(e.Location);
             if (hit >= 0)
             {
@@ -350,15 +324,6 @@ public sealed partial class RecordingForm : Form
                 _handleDragStartRect = _recordRegion;
                 return;
             }
-        }
-        else if (_state == State.Recording && e.Button == MouseButtons.Left)
-        {
-            if (_pauseBtn.Contains(e.Location) && _format != Models.RecordingFormat.GIF)
-                TogglePause();
-            else if (_stopBtn.Contains(e.Location))
-                StopRecording();
-            else if (_discardBtn.Contains(e.Location))
-                DiscardRecording();
         }
     }
 
@@ -424,127 +389,14 @@ public sealed partial class RecordingForm : Form
         }
         if (_state == State.PreRecording)
         {
-            if (_toolbarRect.Contains(e.Location))
-            {
-                int prev = _hoveredBtn;
-                _hoveredBtn = _startBtn.Contains(e.Location) ? 0
-                            : _fpsBtn.Contains(e.Location) ? 1
-                            : _discardBtn.Contains(e.Location) ? 2
-                            : -1;
-                Cursor = _hoveredBtn >= 0 ? Cursors.Hand : Cursors.Default;
-                if (_hoveredBtn != prev) Invalidate(_toolbarRect);
-            }
+            int hit = HitTestHandle(e.Location);
+            if (hit >= 0)
+                Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
+            else if (_recordRegion.Contains(e.Location))
+                Cursor = Cursors.SizeAll;
             else
-            {
-                _hoveredBtn = -1;
-                int hit = HitTestHandle(e.Location);
-                if (hit >= 0)
-                    Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
-                else if (_recordRegion.Contains(e.Location))
-                    Cursor = Cursors.SizeAll;
-                else
-                    Cursor = Cursors.Default;
-            }
-
-            UpdateChromeToolTip();
-            return;
+                Cursor = Cursors.Default;
         }
-        if (_state == State.Recording)
-        {
-            int prev = _hoveredBtn;
-            _hoveredBtn = _pauseBtn.Contains(e.Location) && _format != Models.RecordingFormat.GIF ? 0
-                        : _stopBtn.Contains(e.Location) ? 1
-                        : _discardBtn.Contains(e.Location) ? 2
-                        : -1;
-            Cursor = _hoveredBtn >= 0 ? Cursors.Hand : Cursors.Default;
-            if (_hoveredBtn != prev) Invalidate(_toolbarRect);
-
-            UpdateChromeToolTip();
-        }
-    }
-
-    protected override void OnMouseLeave(EventArgs e)
-    {
-        base.OnMouseLeave(e);
-        HideChromeToolTip();
-    }
-
-    private void UpdateChromeToolTip()
-    {
-        if (_state is not State.PreRecording)
-        {
-            HideChromeToolTip();
-            return;
-        }
-
-        string? tip = null;
-        Rectangle? anchor = null;
-
-        if (_state == State.PreRecording)
-        {
-            switch (_hoveredBtn)
-            {
-                case 0:
-                    tip = "Start recording";
-                    anchor = _startBtn;
-                    break;
-                case 1:
-                    tip = $"Toggle FPS (current: {_fps})";
-                    anchor = _fpsBtn;
-                    break;
-                case 2:
-                    tip = "Cancel recording";
-                    anchor = _discardBtn;
-                    break;
-            }
-        }
-        else
-        {
-            switch (_hoveredBtn)
-            {
-                case 0:
-                    tip = _isPaused ? "Resume recording" : "Pause recording";
-                    anchor = _pauseBtn;
-                    break;
-                case 1:
-                    tip = "Stop and save recording";
-                    anchor = _stopBtn;
-                    break;
-                case 2:
-                    tip = "Discard recording";
-                    anchor = _discardBtn;
-                    break;
-            }
-        }
-
-        if (tip == null || anchor == null || anchor.Value.IsEmpty)
-        {
-            HideChromeToolTip();
-            return;
-        }
-
-        if (_tooltipAnchor == anchor && _chromeToolTip?.Visible == true)
-            return;
-
-        _tooltipAnchor = anchor;
-        _chromeToolTip ??= new WindowsToolTip();
-        var screenAnchor = GetToolbarButtonScreenBounds(anchor.Value);
-        _chromeToolTip.ShowNear(this, tip, screenAnchor, above: true);
-    }
-
-    private Rectangle GetToolbarButtonScreenBounds(Rectangle clientRect)
-    {
-        return new Rectangle(
-            _virtualBounds.X + clientRect.X,
-            _virtualBounds.Y + clientRect.Y,
-            clientRect.Width,
-            clientRect.Height);
-    }
-
-    private void HideChromeToolTip()
-    {
-        _tooltipAnchor = null;
-        _chromeToolTip?.Hide();
     }
 
     protected override void OnMouseUp(MouseEventArgs e)
@@ -679,10 +531,6 @@ public sealed partial class RecordingForm : Form
 
         var accentColor = _format == Models.RecordingFormat.GIF ? Color.FromArgb(255, 140, 0) : UiChrome.AccentColor;
         _borderPen.Color = accentColor;
-        _cornerBrush.Color = accentColor;
-        _dotBrush.Color = Color.FromArgb(240, accentColor.R, accentColor.G, accentColor.B);
-        _ringPen.Color = Color.FromArgb(60, accentColor.R, accentColor.G, accentColor.B);
-        _spinBrush.Color = Color.FromArgb(200, accentColor.R, accentColor.G, accentColor.B);
 
         var borderRect = Rectangle.Inflate(_recordRegion, 2, 2);
 
@@ -719,159 +567,6 @@ public sealed partial class RecordingForm : Form
             var handles = GetHandleRects();
             foreach (var h in handles)
                 WindowsHandleRenderer.Paint(g, h);
-        }
-
-        var tbRectF = new RectangleF(_toolbarRect.X, _toolbarRect.Y, _toolbarRect.Width, _toolbarRect.Height);
-
-        // ── Cyber-mica toolbar background ──
-        float radius = UiChrome.ScaleFloat(5f);
-        var bgPath = WindowsDockRenderer.RoundedRect(tbRectF, radius);
-        var toolbarGlowRect = tbRectF;
-        toolbarGlowRect.Inflate(3f, 3f);
-        var glowPath = WindowsDockRenderer.RoundedRect(toolbarGlowRect, radius);
-
-        // Subtle ambient glow behind the toolbar
-        using (var glowBrush = new SolidBrush(Color.FromArgb(25, accentColor.R, accentColor.G, accentColor.B)))
-            g.FillPath(glowBrush, glowPath);
-
-        // Mica-black fill
-        using (var micaBrush = new SolidBrush(Color.FromArgb(225, 12, 12, 16)))
-            g.FillPath(micaBrush, bgPath);
-
-        // Accent border stroke
-        using (var bp = new Pen(Color.FromArgb(150, accentColor), 1f))
-            g.DrawPath(bp, bgPath);
-
-        // Shadow
-        WindowsDockRenderer.PaintShadow(g, tbRectF, radius);
-
-        var rawElapsed = _recorder?.Elapsed ?? _videoRecorder?.Elapsed ?? TimeSpan.Zero;
-        var pausedNow = _isPaused && _pauseStartTime.HasValue ? DateTime.UtcNow - _pauseStartTime.Value : TimeSpan.Zero;
-        var elapsed = rawElapsed - _totalPausedDuration - pausedNow;
-
-        // ── REC indicator (dot + label) ──
-        float dotX = _toolbarRect.X + UiChrome.ScaleFloat(22f);
-        float centerY = _toolbarRect.Y + _toolbarRect.Height / 2f;
-        float dotY = centerY - UiChrome.ScaleFloat(5f);
-        double pulse = _isPaused ? 0 : Math.Sin(elapsed.TotalMilliseconds / 250.0);
-        float pulseAlpha = (float)((pulse + 1.0) / 2.0);
-
-        int glowAlpha = _isPaused ? 20 : (int)(30 + 40 * pulseAlpha);
-        int dotAlpha = _isPaused ? 120 : (int)(200 + 55 * pulseAlpha);
-        Color recColor = _isPaused ? UiChrome.SurfaceTextMuted : accentColor;
-
-        if (_state == State.PreRecording)
-        {
-            using (var glowBrush = new SolidBrush(Color.FromArgb(30, accentColor.R, accentColor.G, accentColor.B)))
-                g.FillEllipse(glowBrush, dotX - UiChrome.ScaleFloat(4f), dotY - UiChrome.ScaleFloat(4f), UiChrome.ScaleFloat(18f), UiChrome.ScaleFloat(18f));
-            using (var activeDotBrush = new SolidBrush(Color.FromArgb(180, accentColor.R, accentColor.G, accentColor.B)))
-                g.FillEllipse(activeDotBrush, dotX, dotY, UiChrome.ScaleFloat(10f), UiChrome.ScaleFloat(10f));
-        }
-        else
-        {
-            // Soft glow behind dot
-            using (var glowBrush = new SolidBrush(Color.FromArgb(glowAlpha, recColor.R, recColor.G, recColor.B)))
-                g.FillEllipse(glowBrush, dotX - UiChrome.ScaleFloat(4f), dotY - UiChrome.ScaleFloat(4f), UiChrome.ScaleFloat(18f), UiChrome.ScaleFloat(18f));
-            using (var activeDotBrush = new SolidBrush(Color.FromArgb(dotAlpha, recColor.R, recColor.G, recColor.B)))
-                g.FillEllipse(activeDotBrush, dotX, dotY, UiChrome.ScaleFloat(10f), UiChrome.ScaleFloat(10f));
-        }
-
-        // REC / READY / PAUSED label — vertically centered with the dot
-        using (var recFont = UiChrome.ChromeFont(8f, FontStyle.Bold))
-        using (var recBrush = new SolidBrush(_isPaused
-            ? Color.FromArgb(180, UiChrome.SurfaceTextMuted)
-            : Color.FromArgb(220, accentColor)))
-        {
-            var recLabel = _state == State.PreRecording ? $"READY  ({GetRecordingFormatLabel()})"
-                         : _isPaused ? "PAUSED"
-                         : (_format == Models.RecordingFormat.GIF ? "REC  (GIF)" : $"REC  ({_format})");
-            var recRect = new RectangleF(dotX + UiChrome.ScaleFloat(16f), centerY - UiChrome.ScaleFloat(8f), UiChrome.ScaleFloat(105f), UiChrome.ScaleFloat(16f));
-            using var recFormat = new StringFormat
-            {
-                LineAlignment = StringAlignment.Center,
-                Alignment = StringAlignment.Near,
-                Trimming = StringTrimming.EllipsisCharacter,
-                FormatFlags = StringFormatFlags.NoWrap
-            };
-            g.DrawString(recLabel, recFont, recBrush, recRect, recFormat);
-        }
-
-        // Timer — starts after REC label so it never overlaps
-        string time = _state == State.PreRecording ? "00:00" : $"{(int)elapsed.TotalMinutes:D2}:{elapsed.Seconds:D2}";
-        float timeX = dotX + UiChrome.ScaleFloat(125f);
-        int rightBoundaryX = _state == State.PreRecording ? _startBtn.X : (_format == Models.RecordingFormat.GIF ? _stopBtn.X : _pauseBtn.X);
-        var timeRect = new RectangleF(timeX, _toolbarRect.Y, rightBoundaryX - (timeX + UiChrome.ScaleFloat(6f)), _toolbarRect.Height);
-        using (var timeFormat = new StringFormat
-        {
-            LineAlignment = StringAlignment.Center,
-            Trimming = StringTrimming.EllipsisCharacter,
-            FormatFlags = StringFormatFlags.NoWrap
-        })
-            g.DrawString(time, _timeFont, _timeBrush, timeRect, timeFormat);
-
-        if (_state == State.PreRecording)
-        {
-            Color startColor = _hoveredBtn == 0 ? accentColor : UiChrome.SurfaceTextPrimary;
-            DrawIconBtn(g, _startBtn, "play", _hoveredBtn == 0, startColor, active: false);
-
-            DrawTextBtn(g, _fpsBtn, $"{_fps} FPS", _hoveredBtn == 1, accentColor);
-
-            Color discardColor = _hoveredBtn == 2 ? accentColor : UiChrome.SurfaceTextPrimary;
-            DrawIconBtn(g, _discardBtn, "close", _hoveredBtn == 2, discardColor, active: false);
-        }
-        else
-        {
-            // Pause button (video only)
-            if (_format != Models.RecordingFormat.GIF)
-            {
-                Color pauseColor = _hoveredBtn == 0 ? accentColor : UiChrome.SurfaceTextPrimary;
-                DrawIconBtn(g, _pauseBtn, _isPaused ? "play" : "pause", _hoveredBtn == 0, pauseColor, active: false);
-            }
-
-            // Stop button - red accent to indicate emergency/stop action
-            Color stopColor = _hoveredBtn == 1 ? Color.FromArgb(255, 255, 80, 80) : Color.FromArgb(220, 255, 80, 80);
-            DrawIconBtn(g, _stopBtn, "stop", _hoveredBtn == 1, stopColor, active: false);
-
-            // Discard/Cancel button
-            Color discardColor = _hoveredBtn == 2 ? accentColor : UiChrome.SurfaceTextPrimary;
-            DrawIconBtn(g, _discardBtn, "close", _hoveredBtn == 2, discardColor, active: false);
-        }
-
-        if (_state == State.Encoding)
-        {
-            WindowsDockRenderer.PaintSurface(g, _toolbarRect);
-
-            float spinX = _toolbarRect.X + 14;
-            float spinY = _toolbarRect.Y + _toolbarRect.Height / 2f - 4;
-            g.FillEllipse(_spinBrush, spinX, spinY, 8, 8);
-
-            string encLabel = _format == Models.RecordingFormat.GIF
-                ? LocalizationService.Translate("Encoding GIF...")
-                : LocalizationService.Translate("Saving...");
-            var encRect = new RectangleF(spinX + 16, _toolbarRect.Y, _toolbarRect.Width - 30, _toolbarRect.Height);
-            using var encFormat = new StringFormat { LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
-            g.DrawString(encLabel, _encFont, _encTextBrush, encRect, encFormat);
-        }
-    }
-
-    private void DrawIconBtn(Graphics g, Rectangle rect, string iconId, bool hovered,
-        Color iconColor, bool active)
-    {
-        bool useFilledIcon = active || iconId == "stop";
-        WindowsDockRenderer.PaintButton(g, rect, active, hovered);
-        int alpha = active ? 255 : hovered ? 240 : 200;
-        WindowsDockRenderer.PaintIcon(g, iconId, rect, Color.FromArgb(alpha, iconColor.R, iconColor.G, iconColor.B), useFilledIcon);
-    }
-
-    private void DrawTextBtn(Graphics g, Rectangle rect, string text, bool hovered, Color accentColor)
-    {
-        WindowsDockRenderer.PaintButton(g, rect, false, hovered);
-        Color textColor = hovered ? accentColor : UiChrome.SurfaceTextPrimary;
-        using (var font = UiChrome.ChromeFont(8.5f, FontStyle.Bold))
-        using (var brush = new SolidBrush(textColor))
-        using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-        {
-            g.DrawString(text, font, brush, rect, sf);
         }
     }
 
@@ -1009,11 +704,33 @@ public sealed partial class RecordingForm : Form
 
     private void RebuildRecordingSurface()
     {
-        // Rebuild the hollow frame region and toolbar for the new _recordRegion
-        CalcToolbarLayout();
         BuildHollowRegion();
         CaptureWindowExclusion.SetLogicalBounds(Handle, GetRecordingChromeScreenBounds);
+        UpdateControlBarPosition();
         Invalidate();
+    }
+
+    private void UpdateControlBarPosition()
+    {
+        if (_controlBar is null || _controlBar.IsDisposed)
+            return;
+
+        var screenRegion = new Rectangle(
+            _recordRegion.X + _virtualBounds.X,
+            _recordRegion.Y + _virtualBounds.Y,
+            _recordRegion.Width,
+            _recordRegion.Height);
+        _controlBar.Reposition(screenRegion);
+        // Bring the control bar back to front — resizing the overlay can steal TopMost z-order.
+        User32.SetWindowPos(_controlBar.Handle, User32.HWND_TOPMOST,
+            0, 0, 0, 0, User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_SHOWWINDOW);
+    }
+
+    private void CloseControlBar()
+    {
+        try { _controlBar?.Close(); } catch { /* ignore */ }
+        try { _controlBar?.Dispose(); } catch { /* ignore */ }
+        _controlBar = null;
     }
 
     private void BuildHollowRegion()
@@ -1029,6 +746,7 @@ public sealed partial class RecordingForm : Form
         }
 
         // During Recording, use a hollow frame so the interior is capturable.
+        // The floating control bar is a separate excluded window.
         const int RGN_OR = 2;
         const int frameThickness = 15; // covers border + glow + handles
         var rgn = Native.Gdi32.CreateRectRgn(0, 0, 0, 0);
@@ -1059,13 +777,6 @@ public sealed partial class RecordingForm : Form
             Native.Gdi32.DeleteObject(rightRgn);
         }
 
-        if (_toolbarRect.Width > 0 && _toolbarRect.Height > 0)
-        {
-            var tbRgn = Native.Gdi32.CreateRectRgn(_toolbarRect.Left, _toolbarRect.Top, _toolbarRect.Right, _toolbarRect.Bottom);
-            Native.Gdi32.CombineRgn(rgn, rgn, tbRgn, RGN_OR);
-            Native.Gdi32.DeleteObject(tbRgn);
-        }
-
         Native.User32.SetWindowRgn(Handle, rgn, true);
     }
 
@@ -1080,8 +791,7 @@ public sealed partial class RecordingForm : Form
             WindowDetector.ClearSnapshot();
 
             CaptureWindowExclusion.Unregister(Handle);
-            _chromeToolTip?.Dispose();
-            _chromeToolTip = null;
+            CloseControlBar();
             _escapeHook?.Dispose();
             _escapeHook = null;
             _tickTimer?.Dispose();
@@ -1093,10 +803,7 @@ public sealed partial class RecordingForm : Form
             _screenshot?.Dispose();
             _screenshot = null;
             _readoutFont.Dispose();
-            _borderPen.Dispose(); _cornerBrush.Dispose();
-            _dotBrush.Dispose(); _ringPen.Dispose(); _timeFont.Dispose();
-            _timeBrush.Dispose(); _encFont.Dispose();
-            _encTextBrush.Dispose(); _spinBrush.Dispose();
+            _borderPen.Dispose();
         }
         base.Dispose(disposing);
     }
