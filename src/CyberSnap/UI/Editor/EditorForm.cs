@@ -578,19 +578,30 @@ public sealed partial class EditorForm : Form, IMessageFilter
 
         AllowDrop = true;
         DragEnter += OnEditorDragEnter;
+        DragLeave += OnEditorDragLeave;
         DragDrop += OnEditorDragDrop;
 
         windowFrame.AllowDrop = true;
         windowFrame.DragEnter += OnEditorDragEnter;
+        windowFrame.DragLeave += OnEditorDragLeave;
         windowFrame.DragDrop += OnEditorDragDrop;
 
         root.AllowDrop = true;
         root.DragEnter += OnEditorDragEnter;
+        root.DragLeave += OnEditorDragLeave;
         root.DragDrop += OnEditorDragDrop;
 
         _canvas.AllowDrop = true;
         _canvas.DragEnter += OnEditorDragEnter;
+        _canvas.DragLeave += OnEditorDragLeave;
         _canvas.DragDrop += OnEditorDragDrop;
+        _canvas.WelcomeOpenRequested = () => DoOpen();
+        _canvas.WelcomePasteRequested = () => DoPaste();
+        _canvas.WelcomeCaptureRequested = () =>
+        {
+            if (System.Windows.Application.Current is CyberSnap.App app)
+                app.OnHotkeyPressedProxy();
+        };
 
         BuildContextMenus();
 
@@ -1467,6 +1478,9 @@ public sealed partial class EditorForm : Form, IMessageFilter
         _canvas.Invalidate();
     }
 
+    /// <summary>Closes the current document and returns to a fresh blank canvas (Editor stays open).</summary>
+    private void DoCloseDocument() => DoNew();
+
     private void DoResizeCanvas()
     {
         int curW = _canvas.BaseBitmap.Width;
@@ -1477,6 +1491,34 @@ public sealed partial class EditorForm : Form, IMessageFilter
         // ResizeCanvas handles the blank-document case itself (regenerates the checkerboard
         // via BlankBitmapFactory), so a single call covers both blank and real images.
         _canvas.ResizeCanvas(result.Width, result.Height, result.ScaleContent, result.Anchor);
+    }
+
+    private void DoTransformCanvas(Models.Commands.CanvasTransformKind kind)
+    {
+        // Flatten only matters when there are editable layers; skip the dialog otherwise.
+        if (_canvas.Annotations.Count > 0)
+        {
+            var s = Services.SettingsService.LoadStatic();
+            if (s?.EditorSuppressTransformFlattenConfirm != true)
+            {
+                var title = LocalizationService.Translate("Transform canvas");
+                var message = LocalizationService.Translate(
+                    "This will flatten all annotations into the image. They will no longer be editable separately. Continue?");
+                bool confirmed = ThemedConfirmDialog.Confirm(
+                    Handle, title, message, out bool dontShowAgain,
+                    primaryText: LocalizationService.Translate("Transform"),
+                    secondaryText: LocalizationService.Translate("Cancel"),
+                    danger: false,
+                    iconId: "warning");
+                if (dontShowAgain && System.Windows.Application.Current is CyberSnap.App app)
+                    app.PersistEditorSuppressTransformFlattenConfirm(true);
+                if (!confirmed)
+                    return;
+            }
+        }
+
+        _canvas.TransformCanvas(kind);
+        RefreshUi();
     }
 
     private void DoNewCanvas()
@@ -1785,6 +1827,88 @@ public sealed partial class EditorForm : Form, IMessageFilter
         WindowsMenuRenderer.NormalizeDropDownWidths(shareToItem);
     }
 
+    /// <summary>Rebuilds the burger "Export as…" submenu (PNG / JPEG / PDF) with the active format checked.</summary>
+    private void RebuildExportAsSubmenu(ToolStripMenuItem exportAsItem)
+    {
+        exportAsItem.DropDownItems.Clear();
+        PopulateExportAsMenuItems(exportAsItem.DropDownItems);
+        WindowsMenuRenderer.NormalizeDropDownWidths(exportAsItem);
+    }
+
+    private void PopulateExportAsMenuItems(ToolStripItemCollection items)
+    {
+        var s = SettingsService.LoadStatic();
+        int activeFormat = s?.EditorExportFormat ?? 0;
+
+        var pngItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export as PNG"), iconId: "export");
+        pngItem.Click += (_, _) =>
+        {
+            SettingsService.SetEditorExportFormat(0);
+            DoSaveAsWithExtension(".png");
+        };
+        if (activeFormat == 0) pngItem.Checked = true;
+        items.Add(pngItem);
+
+        var jpgItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export as JPEG"), iconId: "export");
+        jpgItem.Click += (_, _) =>
+        {
+            SettingsService.SetEditorExportFormat(1);
+            DoSaveAsWithExtension(".jpg");
+        };
+        if (activeFormat == 1) jpgItem.Checked = true;
+        items.Add(jpgItem);
+
+        var pdfItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export as PDF"), iconId: "export");
+        pdfItem.Click += (_, _) =>
+        {
+            SettingsService.SetEditorExportFormat(2);
+            DoSaveAsWithExtension(".pdf");
+        };
+        if (activeFormat == 2) pdfItem.Checked = true;
+        items.Add(pdfItem);
+
+        items.Add(new ToolStripSeparator());
+
+        // Free-format dialog; keeps the previous top-level Export shortcut discoverable.
+        var saveAsItem = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Save as..."), shortcut: "Ctrl+Shift+S", iconId: "save");
+        saveAsItem.Click += (_, _) => DoSaveAs();
+        items.Add(saveAsItem);
+    }
+
+    /// <summary>Rotate / flip submenu shared by the burger menu and canvas context menus.</summary>
+    private ToolStripMenuItem BuildTransformSubmenu()
+    {
+        var transformSubmenu = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Transform"), showImages: true);
+        transformSubmenu.Image = FluentIcons.RenderBitmap("redo",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
+
+        var rotate90CwItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 90° clockwise"), iconId: "redo");
+        rotate90CwItem.Click += (_, _) => DoTransformCanvas(Models.Commands.CanvasTransformKind.Rotate90Clockwise);
+
+        var rotate90CcwItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 90° counter-clockwise"), iconId: "undo");
+        rotate90CcwItem.Click += (_, _) => DoTransformCanvas(Models.Commands.CanvasTransformKind.Rotate90CounterClockwise);
+
+        var rotate180Item = WindowsMenuRenderer.Item(LocalizationService.Translate("Rotate 180°"), iconId: "redo");
+        rotate180Item.Click += (_, _) => DoTransformCanvas(Models.Commands.CanvasTransformKind.Rotate180);
+
+        var flipHItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Flip horizontal"), iconId: "flipHorizontal");
+        flipHItem.Click += (_, _) => DoTransformCanvas(Models.Commands.CanvasTransformKind.FlipHorizontal);
+
+        var flipVItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Flip vertical"), iconId: "flipVertical");
+        flipVItem.Click += (_, _) => DoTransformCanvas(Models.Commands.CanvasTransformKind.FlipVertical);
+
+        transformSubmenu.DropDownItems.Add(rotate90CwItem);
+        transformSubmenu.DropDownItems.Add(rotate90CcwItem);
+        transformSubmenu.DropDownItems.Add(rotate180Item);
+        transformSubmenu.DropDownItems.Add(new ToolStripSeparator());
+        transformSubmenu.DropDownItems.Add(flipHItem);
+        transformSubmenu.DropDownItems.Add(flipVItem);
+        WindowsMenuRenderer.NormalizeDropDownWidths(transformSubmenu, minWidth: 220);
+        return transformSubmenu;
+    }
+
     private void PopulateShareMenuItems(ToolStripItemCollection items)
     {
         var settings = SettingsService.LoadStatic() ?? new AppSettings();
@@ -1974,11 +2098,11 @@ public sealed partial class EditorForm : Form, IMessageFilter
     {
         // Never open a document while editing text (double-click selects a word instead),
         // or when the click landed on an annotation / non-pristine canvas.
+        // Primary blank-canvas path is SelectAllFromDoubleClick → WelcomeOpenRequested
+        // (PreFilterMessage / OnMouseDoubleClick); this remains a backup if the event fires.
         if (_canvas.IsEditingText) return;
         if (!_canvas.IsDefaultBlank) return;
 
-        // Only the empty welcome canvas uses double-click-to-browse.
-        _canvas.DismissWelcomeOverlay();
         DoOpen();
     }
 
@@ -2023,6 +2147,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (keyData == (Keys.Control | Keys.S)) { DoSave(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { DoSaveAs(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.U)) { DoShare(); return true; }
+        if (keyData == (Keys.Control | Keys.W)) { DoCloseDocument(); return true; }
         if (keyData == (Keys.Control | Keys.C)) { DoCopy(); return true; }
         if (keyData == (Keys.Control | Keys.V)) { DoPaste(); return true; }
         if (keyData == (Keys.Control | Keys.A)) { _canvas.SelectAll(); return true; }
@@ -2491,6 +2616,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project..."), iconId: "save");
         var resizeItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
+        var transformItem = BuildTransformSubmenu();
         var fitItem = WindowsMenuRenderer.Item("Fit to window", iconId: null);
         var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
         var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
@@ -2513,6 +2639,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         menu.Items.Add(saveProjectAsItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(resizeItem);
+        menu.Items.Add(transformItem);
         menu.Items.Add(fitItem);
         menu.Items.Add(resetItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -2533,8 +2660,13 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var pasteItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Paste"), iconId: "paste");
         var saveItem = WindowsMenuRenderer.Item("Save", iconId: "download");
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project..."), iconId: "save");
-        var saveAsItem = WindowsMenuRenderer.Item("Export...", iconId: "export");
+        var exportAsItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Export as…"), showImages: true);
+        exportAsItem.Image = FluentIcons.RenderBitmap("export",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
+        RebuildExportAsSubmenu(exportAsItem);
         var resizeItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
+        var transformItem = BuildTransformSubmenu();
         var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");
         var propsItem = WindowsMenuRenderer.Item("Properties", iconId: null);
         var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "close", danger: true);
@@ -2545,13 +2677,15 @@ public sealed partial class EditorForm : Form, IMessageFilter
         saveItem.Click += (_, _) => DoSave();
         saveItem.Enabled = _canvas.IsDirty && !_canvas.IsDefaultBlank;
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
-        saveAsItem.Click += (_, _) => DoSaveAs();
         resizeItem.Click += (_, _) => DoResizeCanvas();
         openLocItem.Click += (_, _) => DoOpenLocation();
         propsItem.Click += (_, _) => DoShowProperties();
         exitItem.Click += (_, _) => Close();
 
         var shareToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Share to…"), showImages: true);
+        shareToItem.Image = FluentIcons.RenderBitmap("share",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
         RebuildShareToSubmenu(shareToItem);
 
         var openWithItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open with…"), showImages: true);
@@ -2561,11 +2695,12 @@ public sealed partial class EditorForm : Form, IMessageFilter
         menu.Items.Add(pasteItem);
         menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
-        menu.Items.Add(saveAsItem);
+        menu.Items.Add(exportAsItem);
         menu.Items.Add(shareToItem);
         menu.Items.Add(openWithItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(resizeItem);
+        menu.Items.Add(transformItem);
         menu.Items.Add(new ToolStripSeparator());
 
         bool hasPath = !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);
@@ -2742,15 +2877,25 @@ public sealed partial class EditorForm : Form, IMessageFilter
         if (e.Data is not null && e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             e.Effect = DragDropEffects.Copy;
+            if (_canvas.IsWelcomeVisible)
+                _canvas.WelcomeDragOver = true;
         }
         else
         {
             e.Effect = DragDropEffects.None;
+            _canvas.WelcomeDragOver = false;
         }
+    }
+
+    private void OnEditorDragLeave(object? sender, EventArgs e)
+    {
+        _canvas.WelcomeDragOver = false;
     }
 
     private void OnEditorDragDrop(object? sender, DragEventArgs e)
     {
+        _canvas.WelcomeDragOver = false;
+
         if (e.Data is null || !e.Data.GetDataPresent(DataFormats.FileDrop))
             return;
 

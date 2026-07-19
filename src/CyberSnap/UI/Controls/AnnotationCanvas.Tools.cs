@@ -331,6 +331,10 @@ public sealed partial class AnnotationCanvas
         if (TryHandleSelectAllDoubleClick(e))
             return;
 
+        // Welcome chips are real buttons: consume the click so tools don't start underneath.
+        if (e.Button == MouseButtons.Left && TryWelcomeMouseDown(e.Location))
+            return;
+
         base.OnMouseDown(e);
 
         // Scrollbar overlays consume clicks in their hit zone before any tool.
@@ -796,6 +800,9 @@ public sealed partial class AnnotationCanvas
         _cursorClient = e.Location;
         _cursorOnCanvas = true;
 
+        if (TryWelcomeMouseMove(e.Location))
+            return;
+
         // Scrollbar drag takes full priority; hover updates always run.
         if (ScrollbarMouseMove(e)) return;
 
@@ -1206,6 +1213,9 @@ public sealed partial class AnnotationCanvas
 
     protected override void OnMouseUp(MouseEventArgs e)
     {
+        if (e.Button == MouseButtons.Left && TryWelcomeMouseUp(e.Location))
+            return;
+
         base.OnMouseUp(e);
 
         if (ScrollbarMouseUp(e)) return;
@@ -1438,6 +1448,13 @@ public sealed partial class AnnotationCanvas
     {
         base.OnMouseLeave(e);
         ClearScrollbarHover();
+        if (_welcomeHoverChip >= 0 || _welcomeHoverCard || _welcomePressedChip >= 0)
+        {
+            _welcomeHoverChip = -1;
+            _welcomeHoverCard = false;
+            _welcomePressedChip = -1;
+            Invalidate();
+        }
         if (_cursorOnCanvas)
         {
             _cursorOnCanvas = false;

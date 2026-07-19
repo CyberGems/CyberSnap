@@ -503,18 +503,13 @@ public sealed partial class EditorForm
         _brandPanel = brandPanel;
         brandPanel.MouseDown += BeginWindowDrag;
 
-        // Load logo bitmap
+        // Load logo bitmap from Editor.ico
         if (_brandBitmap == null)
         {
             try
             {
-                var logoUri = new Uri("pack://application:,,,/Assets/CyberSnap_square.png", UriKind.Absolute);
-                var streamInfo = System.Windows.Application.GetResourceStream(logoUri);
-                if (streamInfo != null)
-                {
-                    using (var s = streamInfo.Stream)
-                        _brandBitmap = new Bitmap(s);
-                }
+                using var ico = WindowIcons.WinForms(WindowIconKind.Editor);
+                _brandBitmap = ico.ToBitmap();
             }
             catch { }
         }
@@ -533,17 +528,11 @@ public sealed partial class EditorForm
                 g.DrawImage(_brandBitmap, new Rectangle(0, cy - 10, 20, 20));
             }
 
-            using var font1 = UiChrome.ChromeFont(11f, FontStyle.Bold);
-            var size1 = TextRenderer.MeasureText("CyberSnap", font1);
-            TextRenderer.DrawText(g, "CyberSnap", font1,
-                new Rectangle(26, 0, size1.Width, brandPanel.Height),
-                EditorColors.Accent,
-                TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-
-            using var font2 = UiChrome.ChromeFont(10f, FontStyle.Regular);
-            TextRenderer.DrawText(g, LocalizationService.Translate("Editor"), font2,
-                new Rectangle(26 + size1.Width + 8, 0, 280, brandPanel.Height),
-                EditorColors.TextSecondary,
+            var titleText = LocalizationService.Translate("Annotations Editor");
+            using var font = UiChrome.ChromeFont(11f, FontStyle.Bold);
+            TextRenderer.DrawText(g, titleText, font,
+                new Rectangle(26, 0, 340, brandPanel.Height),
+                EditorColors.TextPrimary,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         };
 
@@ -1763,18 +1752,28 @@ public sealed partial class EditorForm
         var saveProjectAsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Save project as..."), iconId: "save");
         saveProjectAsItem.Click += (_, _) => DoSaveProjectAs();
 
-        var exportItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Export"), shortcut: "Ctrl+Shift+S", iconId: "export");
-        exportItem.Click += (_, _) => DoSaveAs();
-
-        var shareItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Share"), shortcut: "Ctrl+Shift+U", iconId: "share");
-        shareItem.Click += (_, _) => DoShare();
+        // Single submenu per family (no redundant top-level Export / Share rows).
+        var exportAsItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Export as…"), showImages: true);
+        exportAsItem.Image = FluentIcons.RenderBitmap("export",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
 
         var shareToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Share to…"), showImages: true);
+        shareToItem.Image = FluentIcons.RenderBitmap("share",
+            Color.FromArgb(215, UiChrome.SurfaceTextSecondary.R, UiChrome.SurfaceTextSecondary.G, UiChrome.SurfaceTextSecondary.B),
+            20, false);
 
         var sendToItem = WindowsMenuRenderer.Submenu(LocalizationService.Translate("Open with…"), showImages: true);
 
         var resizeCanvasItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Resize canvas..."), iconId: "maximize");
         resizeCanvasItem.Click += (_, _) => DoResizeCanvas();
+
+        // ── Transform (rotate / flip; always flattens annotations) ──
+        var transformSubmenu = BuildTransformSubmenu();
+
+        var closeDocumentItem = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Close document"), shortcut: "Ctrl+W", iconId: "signOut");
+        closeDocumentItem.Click += (_, _) => DoCloseDocument();
 
         // ── Standard edit actions ──
         var copyItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Copy"), shortcut: "Ctrl+C", iconId: "copy");
@@ -1963,12 +1962,13 @@ public sealed partial class EditorForm
         menu.Items.Add(openRecentItem);
         menu.Items.Add(saveItem);
         menu.Items.Add(saveProjectAsItem);
+        menu.Items.Add(closeDocumentItem);
         menu.Items.Add(resizeCanvasItem);
+        menu.Items.Add(transformSubmenu);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(viewItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(exportItem);
-        menu.Items.Add(shareItem);
+        menu.Items.Add(exportAsItem);
         menu.Items.Add(shareToItem);
         menu.Items.Add(sendToItem);
         menu.Items.Add(new ToolStripSeparator());
@@ -1982,6 +1982,7 @@ public sealed partial class EditorForm
 
         menu.Opened += (_, _) =>
         {
+            RebuildExportAsSubmenu(exportAsItem);
             RebuildShareToSubmenu(shareToItem);
             RebuildSendToSubmenu(sendToItem);
             UpdateBurgerCheckmarks(borderItem, fitItem, lockObjectsItem, cropHandlesItem, resizeHandlesItem, resizeScaleItem, bannersItem, welcomeBannerItem, rulersItem, hintsItem, coordinatesItem, tooltipsItem, scrollbarsItem);
@@ -2012,6 +2013,12 @@ public sealed partial class EditorForm
             // Save reflects the current document's save-ability: disabled for a pristine
             // blank canvas, enabled when there's something to save.
             saveItem.Enabled = !(_canvas.IsDefaultBlank && !_canvas.IsDirty);
+
+            // Close document is a no-op on the pristine welcome canvas.
+            closeDocumentItem.Enabled = !(_canvas.IsDefaultBlank && !_canvas.IsDirty);
+
+            WindowsMenuRenderer.NormalizeDropDownWidths(transformSubmenu);
+            WindowsMenuRenderer.NormalizeDropDownWidths(exportAsItem);
 
             // Keep the submenus on the same monitor as the burger menu: when the burger button
             // is near the right edge of its screen (same condition that opens the menu with

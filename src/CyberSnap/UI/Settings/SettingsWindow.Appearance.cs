@@ -625,7 +625,7 @@ public partial class SettingsWindow
     private void UpdateWindowTitle()
     {
         var configLabel = LocalizationService.Translate("Configuration");
-        SettingsTitleBar.Title = $"CyberSnap {UpdateService.GetCurrentVersionLabel()} - {configLabel}";
+        SettingsTitleBar.Title = configLabel;
         WindowTitles.ApplyTaskbar(this, WindowTitles.Settings, _settingsService.Settings.InterfaceLanguage);
     }
 
@@ -1063,6 +1063,7 @@ public partial class SettingsWindow
     {
         _settingsService.Settings.EditorSuppressResizeConfirm = false;
         _settingsService.Settings.EditorSuppressPasteConfirm = false;
+        _settingsService.Settings.EditorSuppressTransformFlattenConfirm = false;
         _settingsService.Settings.UploadSuppressThirdPartyConfirm = false;
         try { _settingsService.Save(); }
         catch (Exception ex) { AppDiagnostics.LogError("settings.reset-suppressed-dialogs", ex); }
