@@ -1176,7 +1176,7 @@ public sealed partial class RegionOverlayForm : Form
         // ConfirmAndCancelCapture so pending annotations get the same "will be lost" warning).
         var cancelItem = WindowsMenuRenderer.Item(
             isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit",
-            iconId: "close", danger: true, iconSize: 24);
+            iconId: "signOut", danger: true, iconSize: 24);
         cancelItem.Click += (_, _) => ConfirmAndCancelCapture();
         menu.Items.Add(cancelItem);
 
@@ -1207,14 +1207,14 @@ public sealed partial class RegionOverlayForm : Form
         if (_mode == CaptureMode.ScrollCapture)
         {
             var cancelLabel = isSpanish ? "Cancelar captura por desplazamiento" : "Cancel scroll capture";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOut", danger: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
         else if (_mode == CaptureMode.Ruler)
         {
             var cancelRulerLabel = isSpanish ? "Cancelar dibujo de reglas" : "Cancel ruler drawing";
-            var cancelRulerItem = WindowsMenuRenderer.Item(cancelRulerLabel, iconId: "close", danger: true, iconSize: 24);
+            var cancelRulerItem = WindowsMenuRenderer.Item(cancelRulerLabel, iconId: "signOut", danger: true, iconSize: 24);
             cancelRulerItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelRulerItem);
 
@@ -1226,14 +1226,14 @@ public sealed partial class RegionOverlayForm : Form
             menu.Items.Add(fsItem);
 
             var cancelLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOut", danger: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
         else if (_mode == CaptureMode.ColorPicker)
         {
             var cancelLabel = isSpanish ? "Cancelar selección de color" : "Cancel color picker";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOut", danger: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
@@ -1257,7 +1257,7 @@ public sealed partial class RegionOverlayForm : Form
             menu.Items.Add(new ToolStripSeparator());
 
             var cancelLabel = isSpanish ? "Cancelar extracción de texto" : "Cancel text extraction";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOut", danger: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
@@ -1269,7 +1269,7 @@ public sealed partial class RegionOverlayForm : Form
             menu.Items.Add(fsItem);
 
             var cancelLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOut", danger: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
@@ -1356,7 +1356,7 @@ public sealed partial class RegionOverlayForm : Form
         menu.Items.Add(captureItem);
 
         var cancelCaptureLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
-        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "close", iconSize: 24);
+        var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "signOut", iconSize: 24);
         cancelCapItem.Click += (s, e) => Cancel();
         menu.Items.Add(cancelCapItem);
 

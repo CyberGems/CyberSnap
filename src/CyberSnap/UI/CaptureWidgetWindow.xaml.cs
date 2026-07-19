@@ -1218,7 +1218,7 @@ public partial class CaptureWidgetWindow : Window
     private System.Windows.Forms.ToolStripMenuItem BuildDisableItem()
     {
         var disableItem = Helpers.WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Disable Widget"), iconId: "close", danger: true);
+            LocalizationService.Translate("Disable Widget"), iconId: "signOut", danger: true);
         disableItem.Click += (s, ev) =>
         {
             _settings.ShowCaptureWidget = false;

@@ -2621,7 +2621,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var resetItem = WindowsMenuRenderer.Item("Reset zoom", iconId: null);
         var undoItem = WindowsMenuRenderer.Item("Undo", iconId: null);
         var redoItem = WindowsMenuRenderer.Item("Redo", iconId: null);
-        var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "close", danger: true);
+        var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "signOut", danger: true);
 
         openItem.Click += (_, _) => DoOpen();
         pasteItem.Click += (_, _) => DoPaste();
@@ -2669,7 +2669,7 @@ public sealed partial class EditorForm : Form, IMessageFilter
         var transformItem = BuildTransformSubmenu();
         var openLocItem = WindowsMenuRenderer.Item("Open location", iconId: "folder");
         var propsItem = WindowsMenuRenderer.Item("Properties", iconId: null);
-        var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "close", danger: true);
+        var exitItem = WindowsMenuRenderer.Item("Exit", iconId: "signOut", danger: true);
 
         copyItem.Click += (_, _) => DoCopy();
         pasteItem.Click += (_, _) => DoPaste();
