@@ -26,110 +26,127 @@ internal static class SelectionFrameRenderer
     }
 
     /// <summary>
-    /// Provisional window/desktop hover frame. Same geometry language as
-    /// <see cref="DrawRectangle"/> (dash + dual stroke + HUD corners) so it sits on the
-    /// dim/desaturate hole edge, but slightly softer to read as "not locked yet".
+    /// Provisional window/desktop hover frame — same calibrated outline + size-scaled HUD
+    /// brackets as the locked selection, slightly softer so it reads as "not locked yet".
     /// </summary>
     public static void DrawAutoDetectRectangle(Graphics g, Rectangle rect)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
 
-        // Same outline math as the real selection frame so the stroke shares the hole edge
-        // used by dim/desaturate (no heavier glow that optically shifts the border outward).
         DrawSelectionChrome(g, rect, fill: false, provisional: true);
     }
 
     /// <summary>
-    /// Shared selection / auto-detect chrome. <paramref name="provisional"/> softens glow and
-    /// accent alpha for hover auto-detect; confirmed drag selection stays full strength.
+    /// Shared selection / auto-detect chrome.
+    /// Single solid accent stroke (no dual dash — the two dashes mixed poorly) plus a thin
+    /// dark understroke for contrast. HUD L-brackets scale with selection size so they stay
+    /// readable on full-window captures, not only on small regions.
     /// </summary>
     private static void DrawSelectionChrome(Graphics g, Rectangle rect, bool fill, bool provisional)
     {
         var oldSmoothing = g.SmoothingMode;
-        // Axis-aligned frames read sharper without AA (avoids half-pixel "float" vs the hole).
-        g.SmoothingMode = provisional ? SmoothingMode.None : SmoothingMode.AntiAlias;
+        // Axis-aligned frames stay crisp without AA (matches the dim/desaturate hole edge).
+        g.SmoothingMode = SmoothingMode.None;
 
         var accent = UiChrome.AccentColor;
-        int glowAlpha = provisional ? 28 : 40;
-        float glowWidth = provisional ? 4f : 5f;
-        int glowInflate = provisional ? 1 : 2;
-        float outerWidth = provisional ? 1.25f : 1.5f;
-        int outerAlpha = provisional ? 210 : 255;
-        int innerAlpha = provisional ? 160 : 200;
-        int cornerLen = provisional ? 10 : 12;
-        int cornerOffset = 2; // sit tight to the outline — old auto-detect used 4 and felt offset
-        float cornerPenWidth = provisional ? 1.75f : 2f;
+        float scale = Math.Max(1f, (float)UiChrome.UiScale);
 
-        // Ambient accent glow — kept tight so it does not read as the true border.
-        var glowRect = rect;
-        glowRect.Inflate(glowInflate, glowInflate);
-        // GDI+ DrawRectangle uses an exclusive bottom-right for the logical box.
-        var glowOutline = glowRect;
-        glowOutline.Width = Math.Max(1, glowOutline.Width - 1);
-        glowOutline.Height = Math.Max(1, glowOutline.Height - 1);
+        // Stroke weights
+        float edgeWidth = provisional ? 1.5f * scale : 1.75f * scale;
+        int edgeAlpha = provisional ? 220 : 255;
+        int underAlpha = provisional ? 90 : 110;
+        int glowAlpha = provisional ? 32 : 42;
+        float glowWidth = provisional ? 3.5f * scale : 4.5f * scale;
+
+        // Brackets grow with the shorter side so window-sized holes still show the tool language.
+        // ~7% of min side, clamped — small regions keep compact corners, large ones get presence.
+        int minSide = Math.Min(rect.Width, rect.Height);
+        int cornerLen = Math.Clamp(
+            (int)Math.Round(minSide * 0.07f),
+            UiChrome.ScaleInt(14),
+            UiChrome.ScaleInt(52));
+        float cornerPenWidth = Math.Clamp(minSide * 0.01f, 2f * scale, 3.5f * scale);
+        if (provisional)
+            cornerPenWidth = Math.Max(1.75f * scale, cornerPenWidth * 0.92f);
+        int cornerOffset = Math.Max(1, (int)Math.Round(scale)); // snug to outline
+
+        // Pixel-calibrated outline (GDI+ exclusive bottom-right).
+        var outline = rect;
+        outline.Width = Math.Max(1, outline.Width - 1);
+        outline.Height = Math.Max(1, outline.Height - 1);
+
+        // Soft ambient glow — tight, does not compete with the true edge.
+        var glowOutline = outline;
+        glowOutline.Inflate(Math.Max(1, (int)Math.Round(scale)), Math.Max(1, (int)Math.Round(scale)));
         using (var glowPen = new Pen(Color.FromArgb(glowAlpha, accent), glowWidth))
             g.DrawRectangle(glowPen, glowOutline);
 
         if (fill)
             g.FillRectangle(FillBrush, rect);
 
-        // Pixel-calibrated outline: same -1 width/height as the locked selection frame.
-        var outline = rect;
-        outline.Width = Math.Max(1, outline.Width - 1);
-        outline.Height = Math.Max(1, outline.Height - 1);
-
-        float[] dash = { 6f, 4f };
-
-        // Outer accent dash
-        using (var outerPen = new Pen(Color.FromArgb(outerAlpha, accent), outerWidth)
-        {
-            LineJoin = LineJoin.Miter,
-            DashStyle = DashStyle.Dash,
-            DashPattern = dash
-        })
-            g.DrawRectangle(outerPen, outline);
-
-        // Inner crisp white dash for contrast on any wallpaper
-        var innerOutline = outline;
-        innerOutline.Inflate(-1, -1);
-        if (innerOutline.Width > 0 && innerOutline.Height > 0)
-        {
-            using var innerPen = new Pen(Color.FromArgb(innerAlpha, 255, 255, 255), 1f)
-            {
-                LineJoin = LineJoin.Miter,
-                DashStyle = DashStyle.Dash,
-                DashPattern = dash
-            };
-            g.DrawRectangle(innerPen, innerOutline);
-        }
-
-        // HUD corner brackets — same inset language as locked selection
-        using (var cornerPen = new Pen(Color.FromArgb(outerAlpha, accent), cornerPenWidth)
+        // Dark understroke (solid) for contrast on light and busy wallpapers — not a second dash.
+        using (var underPen = new Pen(Color.FromArgb(underAlpha, 0, 0, 0), edgeWidth + scale)
         {
             LineJoin = LineJoin.Miter
         })
-        {
-            int x0 = outline.X - cornerOffset;
-            int y0 = outline.Y - cornerOffset;
-            int x1 = outline.Right + cornerOffset;
-            int y1 = outline.Bottom + cornerOffset;
+            g.DrawRectangle(underPen, outline);
 
-            // Top-left
-            g.DrawLine(cornerPen, x0, y0, x0 + cornerLen, y0);
-            g.DrawLine(cornerPen, x0, y0, x0, y0 + cornerLen);
-            // Top-right
-            g.DrawLine(cornerPen, x1, y0, x1 - cornerLen, y0);
-            g.DrawLine(cornerPen, x1, y0, x1, y0 + cornerLen);
-            // Bottom-left
-            g.DrawLine(cornerPen, x0, y1, x0 + cornerLen, y1);
-            g.DrawLine(cornerPen, x0, y1, x0, y1 - cornerLen);
-            // Bottom-right
-            g.DrawLine(cornerPen, x1, y1, x1 - cornerLen, y1);
-            g.DrawLine(cornerPen, x1, y1, x1, y1 - cornerLen);
+        // Single clean accent edge (solid).
+        using (var edgePen = new Pen(Color.FromArgb(edgeAlpha, accent), edgeWidth)
+        {
+            LineJoin = LineJoin.Miter
+        })
+            g.DrawRectangle(edgePen, outline);
+
+        // HUD L-brackets — the signature of the region tool; scale with selection size.
+        using (var cornerGlow = new Pen(Color.FromArgb(provisional ? 50 : 70, accent), cornerPenWidth + 2f * scale)
+        {
+            LineJoin = LineJoin.Miter,
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round
+        })
+        using (var cornerPen = new Pen(Color.FromArgb(edgeAlpha, accent), cornerPenWidth)
+        {
+            LineJoin = LineJoin.Miter,
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round
+        })
+        using (var cornerCore = new Pen(Color.FromArgb(provisional ? 200 : 230, 255, 255, 255), Math.Max(1f, cornerPenWidth - scale))
+        {
+            LineJoin = LineJoin.Miter,
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round
+        })
+        {
+            DrawCornerBrackets(g, outline, cornerLen, cornerOffset, cornerGlow);
+            DrawCornerBrackets(g, outline, cornerLen, cornerOffset, cornerPen);
+            // Thin white core on top so brackets stay sharp over accent glow.
+            DrawCornerBrackets(g, outline, Math.Max(cornerLen - 1, cornerLen * 3 / 4), cornerOffset, cornerCore);
         }
 
         g.SmoothingMode = oldSmoothing;
+    }
+
+    private static void DrawCornerBrackets(Graphics g, Rectangle outline, int cornerLen, int cornerOffset, Pen pen)
+    {
+        int x0 = outline.X - cornerOffset;
+        int y0 = outline.Y - cornerOffset;
+        int x1 = outline.Right + cornerOffset;
+        int y1 = outline.Bottom + cornerOffset;
+
+        // Top-left
+        g.DrawLine(pen, x0, y0, x0 + cornerLen, y0);
+        g.DrawLine(pen, x0, y0, x0, y0 + cornerLen);
+        // Top-right
+        g.DrawLine(pen, x1, y0, x1 - cornerLen, y0);
+        g.DrawLine(pen, x1, y0, x1, y0 + cornerLen);
+        // Bottom-left
+        g.DrawLine(pen, x0, y1, x0 + cornerLen, y1);
+        g.DrawLine(pen, x0, y1, x0, y1 - cornerLen);
+        // Bottom-right
+        g.DrawLine(pen, x1, y1, x1 - cornerLen, y1);
+        g.DrawLine(pen, x1, y1, x1, y1 - cornerLen);
     }
 
     /// <summary>
