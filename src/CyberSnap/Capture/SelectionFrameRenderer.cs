@@ -22,110 +22,111 @@ internal static class SelectionFrameRenderer
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
 
-        var oldSmoothing = g.SmoothingMode;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-
-        // Premium ambient accent glow behind the selection frame
-        var glowRect = rect;
-        glowRect.Inflate(2, 2);
-        using (var glowPen = new Pen(Color.FromArgb(40, UiChrome.AccentColor), 5f))
-            g.DrawRectangle(glowPen, glowRect);
-
-        if (fill)
-            g.FillRectangle(FillBrush, rect);
-
-        var outline = rect;
-        outline.Width = Math.Max(1, outline.Width - 1);
-        outline.Height = Math.Max(1, outline.Height - 1);
-
-        // Draw outer premium neon accent line
-        using (var outerPen = new Pen(UiChrome.AccentColor, 1.5f))
-        {
-            outerPen.DashStyle = DashStyle.Dash;
-            outerPen.DashPattern = new[] { 6f, 4f };
-            g.DrawRectangle(outerPen, outline);
-        }
-
-        // Draw inner crisp white line for high contrast
-        var innerOutline = outline;
-        innerOutline.Inflate(-1, -1);
-        using (var innerPen = new Pen(Color.FromArgb(200, 255, 255, 255), 1f))
-        {
-            innerPen.DashStyle = DashStyle.Dash;
-            innerPen.DashPattern = new[] { 6f, 4f };
-            g.DrawRectangle(innerPen, innerOutline);
-        }
-
-        // Draw tactical HUD-style corner brackets
-        const int cornerLen = 12;
-        const int cornerOffset = 3;
-        using (var cornerPen = new Pen(UiChrome.AccentColor, 2f) { LineJoin = LineJoin.Miter })
-        {
-            // Top-left
-            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Y - cornerOffset, outline.X - cornerOffset + cornerLen, outline.Y - cornerOffset);
-            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Y - cornerOffset, outline.X - cornerOffset, outline.Y - cornerOffset + cornerLen);
-
-            // Top-right
-            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Y - cornerOffset, outline.Right + cornerOffset - cornerLen, outline.Y - cornerOffset);
-            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Y - cornerOffset, outline.Right + cornerOffset, outline.Y - cornerOffset + cornerLen);
-
-            // Bottom-left
-            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Bottom + cornerOffset, outline.X - cornerOffset + cornerLen, outline.Bottom + cornerOffset);
-            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Bottom + cornerOffset, outline.X - cornerOffset, outline.Bottom + cornerOffset - cornerLen);
-
-            // Bottom-right
-            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Bottom + cornerOffset, outline.Right + cornerOffset - cornerLen, outline.Bottom + cornerOffset);
-            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Bottom + cornerOffset, outline.Right + cornerOffset, outline.Bottom + cornerOffset - cornerLen);
-        }
-
-        g.SmoothingMode = oldSmoothing;
+        DrawSelectionChrome(g, rect, fill, provisional: false);
     }
 
+    /// <summary>
+    /// Provisional window/desktop hover frame. Same geometry language as
+    /// <see cref="DrawRectangle"/> (dash + dual stroke + HUD corners) so it sits on the
+    /// dim/desaturate hole edge, but slightly softer to read as "not locked yet".
+    /// </summary>
     public static void DrawAutoDetectRectangle(Graphics g, Rectangle rect)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
 
+        // Same outline math as the real selection frame so the stroke shares the hole edge
+        // used by dim/desaturate (no heavier glow that optically shifts the border outward).
+        DrawSelectionChrome(g, rect, fill: false, provisional: true);
+    }
+
+    /// <summary>
+    /// Shared selection / auto-detect chrome. <paramref name="provisional"/> softens glow and
+    /// accent alpha for hover auto-detect; confirmed drag selection stays full strength.
+    /// </summary>
+    private static void DrawSelectionChrome(Graphics g, Rectangle rect, bool fill, bool provisional)
+    {
         var oldSmoothing = g.SmoothingMode;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        // Axis-aligned frames read sharper without AA (avoids half-pixel "float" vs the hole).
+        g.SmoothingMode = provisional ? SmoothingMode.None : SmoothingMode.AntiAlias;
 
         var accent = UiChrome.AccentColor;
+        int glowAlpha = provisional ? 28 : 40;
+        float glowWidth = provisional ? 4f : 5f;
+        int glowInflate = provisional ? 1 : 2;
+        float outerWidth = provisional ? 1.25f : 1.5f;
+        int outerAlpha = provisional ? 210 : 255;
+        int innerAlpha = provisional ? 160 : 200;
+        int cornerLen = provisional ? 10 : 12;
+        int cornerOffset = 2; // sit tight to the outline — old auto-detect used 4 and felt offset
+        float cornerPenWidth = provisional ? 1.75f : 2f;
 
-        // Strong neon glow behind the frame
+        // Ambient accent glow — kept tight so it does not read as the true border.
         var glowRect = rect;
-        glowRect.Inflate(4, 4);
-        using (var glowPen = new Pen(Color.FromArgb(70, accent), 8f))
-            g.DrawRectangle(glowPen, glowRect);
+        glowRect.Inflate(glowInflate, glowInflate);
+        // GDI+ DrawRectangle uses an exclusive bottom-right for the logical box.
+        var glowOutline = glowRect;
+        glowOutline.Width = Math.Max(1, glowOutline.Width - 1);
+        glowOutline.Height = Math.Max(1, glowOutline.Height - 1);
+        using (var glowPen = new Pen(Color.FromArgb(glowAlpha, accent), glowWidth))
+            g.DrawRectangle(glowPen, glowOutline);
 
-        // No fill tint — only the outline/brackets mark the detected window, leaving its content untouched.
+        if (fill)
+            g.FillRectangle(FillBrush, rect);
 
-        // Accent-colored outline
+        // Pixel-calibrated outline: same -1 width/height as the locked selection frame.
         var outline = rect;
         outline.Width = Math.Max(1, outline.Width - 1);
         outline.Height = Math.Max(1, outline.Height - 1);
-        using (var accentPen = new Pen(accent, 2f) { LineJoin = LineJoin.Miter })
-            g.DrawRectangle(accentPen, outline);
 
-        // HUD corner brackets
-        const int cornerLen = 10;
-        const int cornerOffset = 4;
-        using (var cornerPen = new Pen(accent, 2f) { LineJoin = LineJoin.Miter })
+        float[] dash = { 6f, 4f };
+
+        // Outer accent dash
+        using (var outerPen = new Pen(Color.FromArgb(outerAlpha, accent), outerWidth)
         {
+            LineJoin = LineJoin.Miter,
+            DashStyle = DashStyle.Dash,
+            DashPattern = dash
+        })
+            g.DrawRectangle(outerPen, outline);
+
+        // Inner crisp white dash for contrast on any wallpaper
+        var innerOutline = outline;
+        innerOutline.Inflate(-1, -1);
+        if (innerOutline.Width > 0 && innerOutline.Height > 0)
+        {
+            using var innerPen = new Pen(Color.FromArgb(innerAlpha, 255, 255, 255), 1f)
+            {
+                LineJoin = LineJoin.Miter,
+                DashStyle = DashStyle.Dash,
+                DashPattern = dash
+            };
+            g.DrawRectangle(innerPen, innerOutline);
+        }
+
+        // HUD corner brackets — same inset language as locked selection
+        using (var cornerPen = new Pen(Color.FromArgb(outerAlpha, accent), cornerPenWidth)
+        {
+            LineJoin = LineJoin.Miter
+        })
+        {
+            int x0 = outline.X - cornerOffset;
+            int y0 = outline.Y - cornerOffset;
+            int x1 = outline.Right + cornerOffset;
+            int y1 = outline.Bottom + cornerOffset;
+
             // Top-left
-            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Y - cornerOffset, outline.X - cornerOffset + cornerLen, outline.Y - cornerOffset);
-            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Y - cornerOffset, outline.X - cornerOffset, outline.Y - cornerOffset + cornerLen);
-
+            g.DrawLine(cornerPen, x0, y0, x0 + cornerLen, y0);
+            g.DrawLine(cornerPen, x0, y0, x0, y0 + cornerLen);
             // Top-right
-            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Y - cornerOffset, outline.Right + cornerOffset - cornerLen, outline.Y - cornerOffset);
-            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Y - cornerOffset, outline.Right + cornerOffset, outline.Y - cornerOffset + cornerLen);
-
+            g.DrawLine(cornerPen, x1, y0, x1 - cornerLen, y0);
+            g.DrawLine(cornerPen, x1, y0, x1, y0 + cornerLen);
             // Bottom-left
-            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Bottom + cornerOffset, outline.X - cornerOffset + cornerLen, outline.Bottom + cornerOffset);
-            g.DrawLine(cornerPen, outline.X - cornerOffset, outline.Bottom + cornerOffset, outline.X - cornerOffset, outline.Bottom + cornerOffset - cornerLen);
-
+            g.DrawLine(cornerPen, x0, y1, x0 + cornerLen, y1);
+            g.DrawLine(cornerPen, x0, y1, x0, y1 - cornerLen);
             // Bottom-right
-            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Bottom + cornerOffset, outline.Right + cornerOffset - cornerLen, outline.Bottom + cornerOffset);
-            g.DrawLine(cornerPen, outline.Right + cornerOffset, outline.Bottom + cornerOffset, outline.Right + cornerOffset, outline.Bottom + cornerOffset - cornerLen);
+            g.DrawLine(cornerPen, x1, y1, x1 - cornerLen, y1);
+            g.DrawLine(cornerPen, x1, y1, x1, y1 - cornerLen);
         }
 
         g.SmoothingMode = oldSmoothing;
