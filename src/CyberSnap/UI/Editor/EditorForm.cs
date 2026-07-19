@@ -115,7 +115,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
         try
         {
             splash = WindowStartupSplash.Show(
-                LocalizationService.Translate("Starting editor…"),
+                LocalizationService.Translate("Editor"),
+                WindowIconKind.Editor,
                 LocalizationService.Translate("Preparing the workspace…"));
             _instance = new EditorForm(captured, savedFilePath);
             _instance._startupSplash = splash;
@@ -145,7 +146,8 @@ public sealed partial class EditorForm : Form, IMessageFilter
             if (coldStart)
             {
                 splash = WindowStartupSplash.Show(
-                    LocalizationService.Translate("Starting editor…"),
+                    LocalizationService.Translate("Editor"),
+                    WindowIconKind.Editor,
                     LocalizationService.Translate("Preparing the workspace…"));
             }
 
