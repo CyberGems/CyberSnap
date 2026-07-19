@@ -57,6 +57,21 @@ public sealed partial class RegionOverlayForm
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
+        if (_isDraggingToolbar)
+        {
+            int dx = e.Location.X - _toolbarDragStart.X;
+            int dy = e.Location.Y - _toolbarDragStart.Y;
+            if (Math.Abs(dx) > 3 || Math.Abs(dy) > 3)
+                _hasMovedToolbarByDrag = true;
+
+            if (_hasMovedToolbarByDrag)
+            {
+                _toolbarCustomOffset = new Point(_toolbarDragOriginalOffset.X + dx, _toolbarDragOriginalOffset.Y + dy);
+                RefreshToolbar();
+            }
+            return;
+        }
+
         if (_isConfirmingSelection)
         {
             _prevCursorPos = _lastCursorPos;
@@ -834,6 +849,20 @@ public sealed partial class RegionOverlayForm
     protected override void OnMouseUp(MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Left) return;
+
+        if (_isDraggingToolbar)
+        {
+            _isDraggingToolbar = false;
+            if (!_hasMovedToolbarByDrag)
+            {
+                int btnHit = GetToolbarButtonAt(e.Location);
+                if (btnHit == PositionButtonIndex)
+                {
+                    ToggleToolbarPosition();
+                }
+            }
+            return;
+        }
 
         if (_isMarqueeSelecting)
         {
