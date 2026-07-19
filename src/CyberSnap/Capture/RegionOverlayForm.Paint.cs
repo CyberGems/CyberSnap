@@ -44,24 +44,25 @@ public sealed partial class RegionOverlayForm
         bool isScan = _mode == CaptureMode.Scan;
         bool isSelectionMode = _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;
 
-        // Dimming overlay — shown ONLY while dragging out / confirming a capture selection,
-        // with the selected region excluded so it stands out against the dimmed surroundings.
-        // Outside selection (idle, annotation tools like the ruler) there is NO dim: a full-screen
-        // alpha blend every frame is what made live tool previews stutter. Tune alpha to taste.
-        if (_isSelecting || _isConfirmingSelection)
+        // Dimming overlay for capture-selection tools: everything outside the current "hole"
+        // (drag selection, confirm rect, or auto-detected window) is dimmed — including other
+        // monitors. Annotation tools keep a clear full-screen view so live previews stay fluid.
+        if (ShouldDimOutsideSelection())
         {
-            var activeSelectionRect = _isConfirmingSelection ? _confirmRect : _selectionRect;
+            var hole = GetSelectionDimHole();
             var state = g.Save();
             try
             {
-                if (activeSelectionRect.Width > 0 && activeSelectionRect.Height > 0)
-                {
-                    g.ExcludeClip(activeSelectionRect);
-                }
-                using (var dimBrush = new SolidBrush(Color.FromArgb(120, 0, 0, 0)))
-                {
-                    g.FillRectangle(dimBrush, ClientRectangle);
-                }
+                if (hole.Width > 0 && hole.Height > 0)
+                    g.ExcludeClip(hole);
+
+                // Prefer the paint clip so multi-monitor partial invalidates stay cheap; fall back
+                // to the full client when Windows delivers an empty clip.
+                var dimArea = e.ClipRectangle;
+                if (dimArea.Width <= 0 || dimArea.Height <= 0)
+                    dimArea = ClientRectangle;
+                using var dimBrush = new SolidBrush(SelectionDimColor);
+                g.FillRectangle(dimBrush, dimArea);
             }
             finally
             {
@@ -751,8 +752,37 @@ public sealed partial class RegionOverlayForm
 
     private void InvalidateSelectionChrome(Rectangle oldSelection, Point oldCursor, Rectangle newSelection, Point newCursor)
     {
-        InvalidateSelectionChromePart(oldSelection, oldCursor);
-        InvalidateSelectionChromePart(newSelection, newCursor);
+        // Dim tracks the selection hole; re-dim / un-dim both rects (incl. other monitors).
+        if (ShouldDimOutsideSelection())
+        {
+            var dimDirty = Rectangle.Union(
+                oldSelection.Width > 2 ? InflateForRepaint(oldSelection, 20) : Rectangle.Empty,
+                newSelection.Width > 2 ? InflateForRepaint(newSelection, 20) : Rectangle.Empty);
+
+            // Tiny→visible or visible→empty needs a broader pass so the dim veil stays coherent.
+            if (oldSelection.Width <= 2 || newSelection.Width <= 2
+                || oldSelection.IsEmpty || newSelection.IsEmpty)
+            {
+                Invalidate();
+            }
+            else if (!dimDirty.IsEmpty)
+            {
+                Invalidate(dimDirty);
+            }
+            else
+            {
+                Invalidate();
+            }
+        }
+        else
+        {
+            InvalidateSelectionChromePart(oldSelection, oldCursor);
+            InvalidateSelectionChromePart(newSelection, newCursor);
+            return;
+        }
+
+        InvalidateSelectionReadout(oldCursor, oldSelection);
+        InvalidateSelectionReadout(newCursor, newSelection);
     }
 
     private void InvalidateSelectionChromePart(Rectangle selection, Point cursor)
@@ -763,6 +793,13 @@ public sealed partial class RegionOverlayForm
         var selectionDirty = selection;
         selectionDirty.Inflate(16, 16);
         Invalidate(selectionDirty);
+        InvalidateSelectionReadout(cursor, selection);
+    }
+
+    private void InvalidateSelectionReadout(Point cursor, Rectangle selection)
+    {
+        if (selection.Width <= 2 || selection.Height <= 2)
+            return;
 
         var readoutBounds = SelectionSizeReadout.GetBounds(
             cursor,
