@@ -253,7 +253,15 @@ public sealed partial class RegionOverlayForm
            && !IsPointInOverlayUi(p);
 
     private Point GetReadoutCursorPoint()
-        => _selectionEnd != Point.Empty ? _selectionEnd : _lastCursorPos;
+    {
+        // Prefer the active drag end; otherwise the last known cursor (confirm mode,
+        // hover after release) so dimension pills stay parked on the nearest corner.
+        if (_selectionEnd != Point.Empty)
+            return _selectionEnd;
+        if (_lastCursorPos != Point.Empty)
+            return _lastCursorPos;
+        return Point.Empty;
+    }
 
     private Rectangle GetSelectionOverlayBounds(Rectangle rect, bool isOcr, bool isScan)
     {
@@ -1094,6 +1102,9 @@ public sealed partial class RegionOverlayForm
         RecomputeConfirmButtonWidth();
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
+        // Keep the release point as the readout anchor until the cursor moves again.
+        if (releaseAnchor is { } releasePt)
+            _lastCursorPos = releasePt;
         _selectionEnd = Point.Empty;
         try { CloseCaptureMagnifier(); } catch { }
         EnsureToolbarReady();

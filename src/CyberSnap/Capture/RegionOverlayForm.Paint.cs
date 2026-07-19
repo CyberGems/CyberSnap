@@ -310,6 +310,15 @@ public sealed partial class RegionOverlayForm
             // Draw selection frame and handles ON TOP of buttons
             SelectionFrameRenderer.DrawRectangle(g, _confirmRect, fill: false);
             SelectionFrameRenderer.DrawConfirmHandles(g, GetConfirmHandleRects());
+
+            // Keep dimension pills visible after drag ends — still useful while resizing /
+            // confirming. Anchor follows the cursor (nearest corner of the locked region).
+            SelectionSizeReadout.Draw(
+                g,
+                GetReadoutCursorPoint(),
+                _confirmRect,
+                _readoutFont,
+                ClientRectangle);
         }
 
         g.SmoothingMode = SmoothingMode.Default;
