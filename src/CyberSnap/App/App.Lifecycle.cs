@@ -38,7 +38,8 @@ public partial class App
         try
         {
             splash = WindowStartupSplash.Show(
-                LocalizationService.Translate("Starting configuration…"),
+                LocalizationService.Translate("Configuration"),
+                Helpers.WindowIconKind.Settings,
                 LocalizationService.Translate("Preparing the workspace…"));
         }
         catch (Exception ex)
@@ -200,7 +201,8 @@ public partial class App
         try
         {
             splash = WindowStartupSplash.Show(
-                LocalizationService.Translate("Starting gallery…"),
+                LocalizationService.Translate("Gallery"),
+                Helpers.WindowIconKind.History,
                 LocalizationService.Translate("Preparing the workspace…"));
         }
         catch (Exception ex)

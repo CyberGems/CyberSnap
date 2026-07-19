@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Windows.Forms;
+using CyberSnap.Helpers;
 using CyberSnap.Services;
 using MediaColor = System.Windows.Media.Color;
 
@@ -21,7 +22,7 @@ public sealed class WindowStartupSplash : IDisposable
     private readonly Color _muted;
     private readonly Color _border;
     private readonly Color _accent;
-    private readonly Bitmap? _logo;
+    private readonly Bitmap? _icon;
 
     private Thread? _thread;
     private SplashForm? _form;
@@ -37,7 +38,7 @@ public sealed class WindowStartupSplash : IDisposable
         Color muted,
         Color border,
         Color accent,
-        Bitmap? logo)
+        Bitmap? icon)
     {
         _title = title;
         _body = body;
@@ -46,29 +47,38 @@ public sealed class WindowStartupSplash : IDisposable
         _muted = muted;
         _border = border;
         _accent = accent;
-        _logo = logo;
+        _icon = icon;
     }
 
     /// <summary>
-    /// Shows the splash immediately. Snapshots theme/logo on the calling thread, then
+    /// Shows the splash immediately. Snapshots theme + window icon on the calling thread, then
     /// pumps a private message loop so animation never depends on the main UI thread.
     /// </summary>
-    public static WindowStartupSplash Show(string title, string? body = null)
+    /// <param name="windowName">
+    /// Localized window title as used in the rest of the UI (e.g. Editor, Galería, Configuración).
+    /// </param>
+    /// <param name="iconKind">
+    /// Per-window icon (matches taskbar chrome). Falls back to the app logo if load fails.
+    /// </param>
+    public static WindowStartupSplash Show(string windowName, WindowIconKind iconKind, string? body = null)
     {
+        var title = string.Format(
+            LocalizationService.Translate("Starting {0}…"),
+            windowName);
         var resolvedBody = string.IsNullOrWhiteSpace(body)
             ? LocalizationService.Translate("Preparing the workspace…")
             : body!;
 
-        // Snapshot theme + logo on the caller (usually the UI thread) so the splash
+        // Snapshot theme + icon on the caller (usually the UI thread) so the splash
         // thread never touches WPF Application / Theme while the main thread is busy.
         var bg = ToDrawing(Theme.ToastBg);
         var fg = ToDrawing(Theme.TextPrimary);
         var muted = ToDrawing(Theme.TextSecondary);
         var border = ToDrawing(Theme.ToastBorder);
         var accent = ToDrawing(Theme.Accent);
-        var logo = TryLoadLogoBitmap();
+        var icon = TryLoadWindowIconBitmap(iconKind) ?? TryLoadLogoBitmap();
 
-        var splash = new WindowStartupSplash(title, resolvedBody, bg, fg, muted, border, accent, logo);
+        var splash = new WindowStartupSplash(title, resolvedBody, bg, fg, muted, border, accent, icon);
         splash.Start();
         // Wait until the form is actually visible (or give up quickly).
         splash._ready.Wait(millisecondsTimeout: 1500);
@@ -100,7 +110,7 @@ public sealed class WindowStartupSplash : IDisposable
 
         try
         {
-            _form = new SplashForm(_title, _body, _bg, _fg, _muted, _border, _accent, _logo);
+            _form = new SplashForm(_title, _body, _bg, _fg, _muted, _border, _accent, _icon);
             _form.Shown += (_, _) =>
             {
                 try { _ready.Set(); } catch { /* ignore */ }
@@ -119,7 +129,7 @@ public sealed class WindowStartupSplash : IDisposable
         }
         finally
         {
-            try { _logo?.Dispose(); } catch { }
+            try { _icon?.Dispose(); } catch { }
         }
     }
 
@@ -171,6 +181,23 @@ public sealed class WindowStartupSplash : IDisposable
     private static Color ToDrawing(MediaColor c)
         => Color.FromArgb(c.A, c.R, c.G, c.B);
 
+    /// <summary>Window-specific icon (Editor / Gallery / Configuration), sized for the splash card.</summary>
+    private static Bitmap? TryLoadWindowIconBitmap(WindowIconKind kind)
+    {
+        try
+        {
+            using var icon = WindowIcons.WinForms(kind);
+            // ToBitmap() returns a new bitmap; copy so we fully own the pixels after Icon dispose.
+            using var tmp = icon.ToBitmap();
+            return new Bitmap(tmp);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("startup-splash.window-icon", ex.Message, ex);
+            return null;
+        }
+    }
+
     private static Bitmap? TryLoadLogoBitmap()
     {
         try
@@ -203,7 +230,7 @@ public sealed class WindowStartupSplash : IDisposable
         private readonly Color _muted;
         private readonly Color _border;
         private readonly Color _accent;
-        private readonly Bitmap? _logo;
+        private readonly Bitmap? _icon;
         private readonly System.Windows.Forms.Timer _pulseTimer;
         private float _phase;
         private readonly Font _titleFont;
@@ -217,7 +244,7 @@ public sealed class WindowStartupSplash : IDisposable
             Color muted,
             Color border,
             Color accent,
-            Bitmap? logo)
+            Bitmap? icon)
         {
             _title = title;
             _body = body;
@@ -226,7 +253,7 @@ public sealed class WindowStartupSplash : IDisposable
             _muted = muted;
             _border = border;
             _accent = accent;
-            _logo = logo;
+            _icon = icon;
 
             _titleFont = new Font("Segoe UI Semibold", 11f, FontStyle.Bold, GraphicsUnit.Point);
             _bodyFont = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
@@ -290,17 +317,17 @@ public sealed class WindowStartupSplash : IDisposable
             int logoSize = 40;
             int textLeft = pad;
 
-            if (_logo is not null)
+            if (_icon is not null)
             {
                 try
                 {
                     g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    g.DrawImage(_logo, pad, pad + 2, logoSize, logoSize);
+                    g.DrawImage(_icon, pad, pad + 2, logoSize, logoSize);
                     textLeft = pad + logoSize + 14;
                 }
                 catch
                 {
-                    // Logo optional.
+                    // Icon optional.
                 }
             }
 
