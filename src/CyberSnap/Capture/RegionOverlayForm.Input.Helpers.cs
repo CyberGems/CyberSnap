@@ -137,6 +137,7 @@ public sealed partial class RegionOverlayForm
     {
         if (_isTyping) CommitText();
         bool wasEmoji = _mode == CaptureMode.Emoji && _emojiPickerOpen;
+        bool wasSelectionMode = IsSelectionCaptureMode();
         _colorPickerOpen = false;
         _fontPickerOpen = false;
         HideFontSearchBox();
@@ -348,6 +349,10 @@ public sealed partial class RegionOverlayForm
         }
 
         Invalidate(Rectangle.Union(InflateForRepaint(GetEmojiPickerBounds(), 12), InflateForRepaint(GetColorPickerBounds(), 12)));
+        // Capture-selection modes dim the full virtual desktop; entering or leaving them must
+        // refresh every monitor so the veil does not stick on a secondary screen.
+        if (wasSelectionMode || IsSelectionCaptureMode())
+            Invalidate();
         RefreshToolbar();
     }
 

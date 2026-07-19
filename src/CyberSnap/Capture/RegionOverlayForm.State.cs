@@ -310,29 +310,83 @@ public sealed partial class RegionOverlayForm
     private bool IsSelectionCaptureMode()
         => _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;
 
-    private void InvalidateAutoDetectChrome(Rectangle oldDetect, Rectangle newDetect)
+    /// <summary>
+    /// Capture-selection tools dim the world outside the active hole from the moment the
+    /// overlay opens (idle / auto-detect / drag). Confirm mode always dims outside the locked
+    /// region — even after the last annotation tool is restored on the bar for in-region edits.
+    /// Pure annotation tools (no confirm session) never dim, so live previews stay fluid.
+    /// </summary>
+    private bool ShouldDimOutsideSelection()
     {
-        if (!IsSelectionCaptureMode() || _isSelecting || _hasSelection)
+        // Confirm locks the region: keep the veil until Confirm / Retry / Cancel, regardless of
+        // which annotation tool is active for editing inside the hole.
+        if (_isConfirmingSelection)
+            return true;
+
+        return IsSelectionCaptureMode();
+    }
+
+    /// <summary>
+    /// Bright region excluded from the dim overlay. Empty = full virtual-desktop dim
+    /// (no window under cursor yet, or drag not started).
+    /// </summary>
+    private Rectangle GetSelectionDimHole()
+    {
+        if (_isConfirmingSelection && _confirmRect.Width > 0 && _confirmRect.Height > 0)
+            return _confirmRect;
+
+        if (_isSelecting && _selectionRect.Width > 2 && _selectionRect.Height > 2)
+            return _selectionRect;
+
+        if (!_isSelecting && !_isConfirmingSelection
+            && _autoDetectActive
+            && _autoDetectRect.Width > 0 && _autoDetectRect.Height > 0)
+            return _autoDetectRect;
+
+        return Rectangle.Empty;
+    }
+
+    private static readonly Color SelectionDimColor = Color.FromArgb(120, 0, 0, 0);
+
+    /// <summary>
+    /// When the dim hole changes, both the old and new holes must repaint (re-dim / un-dim).
+    /// Spans all monitors when the hole jumps between them.
+    /// </summary>
+    private void InvalidateDimHoleChange(Rectangle oldHole, Rectangle newHole)
+    {
+        if (oldHole == newHole)
             return;
 
-        if (oldDetect.IsEmpty != newDetect.IsEmpty)
+        // Empty ↔ non-empty: the rest of the virtual desktop's veil interpretation changes;
+        // full invalidate keeps every monitor in sync.
+        if (oldHole.IsEmpty || newHole.IsEmpty)
         {
             Invalidate();
             Update();
             return;
         }
 
-        var oldDirty = InflateForRepaint(oldDetect);
-        var newDirty = InflateForRepaint(newDetect);
-        if (!oldDirty.IsEmpty && !newDirty.IsEmpty)
+        var dirty = Rectangle.Union(
+            InflateForRepaint(oldHole, 20),
+            InflateForRepaint(newHole, 20));
+        if (dirty.IsEmpty)
         {
-            Invalidate(Rectangle.Union(oldDirty, newDirty));
+            Invalidate();
             Update();
+            return;
         }
-        else if (!oldDirty.IsEmpty)
-            Invalidate(oldDirty);
-        else if (!newDirty.IsEmpty)
-            Invalidate(newDirty);
+
+        Invalidate(dirty);
+        Update();
+    }
+
+    private void InvalidateAutoDetectChrome(Rectangle oldDetect, Rectangle newDetect)
+    {
+        if (!IsSelectionCaptureMode() || _isSelecting || _hasSelection)
+            return;
+
+        // Dim hole tracks auto-detect while idle — must refresh both holes across monitors.
+        InvalidateDimHoleChange(oldDetect, newDetect);
     }
 
     private void UpdateAutoDetectRect(Point location)
