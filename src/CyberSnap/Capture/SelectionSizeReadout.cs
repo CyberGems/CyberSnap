@@ -1,26 +1,25 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Drawing.Text;
 using System.Windows.Forms;
 using CyberSnap.Helpers;
 
 namespace CyberSnap.Capture;
 
 /// <summary>
-/// Draws the selection dimensions as premium pills anchored to the selection edges:
-/// a width pill centered above the top edge (↔) and a height pill centered on the left
-/// edge (↕). When the selection sits too close to a screen edge — so a pill would clip
-/// off-screen or the two pills would collide — they fuse into a single combined pill.
-/// Anchoring to the selection (not the cursor) keeps the readout clear of the magnifier.
+/// Draws selection dimensions as premium pills anchored to the corner of the selection
+/// nearest the cursor (so dragging any direction keeps the readout under the hand).
+/// Prefer split pills (width on the horizontal edge, height on the vertical edge of that
+/// corner); when they would clip or collide they fuse into one combined pill still near
+/// that corner.
 /// </summary>
 internal static class SelectionSizeReadout
 {
-    private const int PadX = 8;          // pill horizontal inner padding
-    private const int PadY = 4;          // pill vertical inner padding
-    private const int EdgeGap = 7;       // gap between pill and selection edge
-    private const int SegGap = 9;        // gap between width/height chips when merged
-    private const int IconTextGap = 4;   // gap between arrow icon and its number
-    private const int LineGap = 2;       // gap between stacked lines inside a pill
+    private const int PadX = 8;
+    private const int PadY = 4;
+    private const int EdgeGap = 7;
+    private const int SegGap = 9;
+    private const int IconTextGap = 4;
+    private const int LineGap = 2;
     private const float Radius = 6f;
 
     /// <summary>
@@ -44,7 +43,7 @@ internal static class SelectionSizeReadout
         if (!ShowDimensions)
             return Rectangle.Empty;
 
-        var pills = Layout(selection, font, clientBounds, details);
+        var pills = Layout(cursor, selection, font, clientBounds, details);
         if (pills.Count == 0)
             return Rectangle.Empty;
 
@@ -59,7 +58,7 @@ internal static class SelectionSizeReadout
         if (!ShowDimensions)
             return;
 
-        var pills = Layout(selection, font, clientBounds, details);
+        var pills = Layout(cursor, selection, font, clientBounds, details);
         if (pills.Count == 0)
             return;
 
@@ -76,7 +75,7 @@ internal static class SelectionSizeReadout
 
     // ── Layout ────────────────────────────────────────────────────────────────
 
-    private static List<Pill> Layout(Rectangle selection, Font font, Rectangle clientBounds, IReadOnlyList<string>? details)
+    private static List<Pill> Layout(Point cursor, Rectangle selection, Font font, Rectangle clientBounds, IReadOnlyList<string>? details)
     {
         var result = new List<Pill>(2);
         if (selection.Width <= 2 || selection.Height <= 2)
@@ -89,7 +88,6 @@ internal static class SelectionSizeReadout
         var heightSeg = new Seg(Arrow.Vertical, selection.Height.ToString());
         var detailLines = BuildDetailLines(details);
 
-        // Candidate split pills: width on top edge, height on left edge.
         var wLines = new List<Seg[]>(detailLines);
         wLines.Add(new[] { widthSeg });
         var hLines = new List<Seg[]> { new[] { heightSeg } };
@@ -97,44 +95,125 @@ internal static class SelectionSizeReadout
         var wSize = MeasurePill(wLines, font, lineH, iconBox);
         var hSize = MeasurePill(hLines, font, lineH, iconBox);
 
-        int cx = selection.Left + selection.Width / 2;
-        int cy = selection.Top + selection.Height / 2;
+        // Corner of the selection nearest the cursor (drag end / hover hand).
+        var (preferRight, preferBottom) = NearestCorner(cursor, selection);
 
-        var topRect = new Rectangle(cx - wSize.Width / 2, selection.Top - EdgeGap - wSize.Height, wSize.Width, wSize.Height);
-        var leftRect = new Rectangle(selection.Left - EdgeGap - hSize.Width, cy - hSize.Height / 2, hSize.Width, hSize.Height);
+        // Width pill: outside the top or bottom edge, aligned to the preferred horizontal corner.
+        int wY = preferBottom
+            ? selection.Bottom + EdgeGap
+            : selection.Top - EdgeGap - wSize.Height;
+        int wX = preferRight
+            ? selection.Right - wSize.Width
+            : selection.Left;
+        var topOrBottomRect = new Rectangle(wX, wY, wSize.Width, wSize.Height);
 
-        bool topFits = topRect.Top >= clientBounds.Top && topRect.Left >= clientBounds.Left && topRect.Right <= clientBounds.Right;
-        bool leftFits = leftRect.Left >= clientBounds.Left && leftRect.Top >= clientBounds.Top && leftRect.Bottom <= clientBounds.Bottom;
-        bool collide = topRect.IntersectsWith(leftRect);
+        // Height pill: outside the left or right edge, aligned to the preferred vertical corner.
+        int hX = preferRight
+            ? selection.Right + EdgeGap
+            : selection.Left - EdgeGap - hSize.Width;
+        int hY = preferBottom
+            ? selection.Bottom - hSize.Height
+            : selection.Top;
+        var sideRect = new Rectangle(hX, hY, hSize.Width, hSize.Height);
 
-        if (topFits && leftFits && !collide)
+        bool wFits = FitsInClient(topOrBottomRect, clientBounds);
+        bool hFits = FitsInClient(sideRect, clientBounds);
+        bool collide = topOrBottomRect.IntersectsWith(sideRect);
+
+        if (wFits && hFits && !collide)
         {
-            topRect.X = Clamp(topRect.X, clientBounds.Left, clientBounds.Right - topRect.Width);
-            leftRect.Y = Clamp(leftRect.Y, clientBounds.Top, clientBounds.Bottom - leftRect.Height);
-            result.Add(new Pill { Lines = wLines, Rect = topRect });
-            result.Add(new Pill { Lines = hLines, Rect = leftRect });
-            return result;
+            topOrBottomRect = ClampToClient(topOrBottomRect, clientBounds);
+            sideRect = ClampToClient(sideRect, clientBounds);
+            // Re-check after clamp (edge cases near screen corners).
+            if (!topOrBottomRect.IntersectsWith(sideRect))
+            {
+                result.Add(new Pill { Lines = wLines, Rect = topOrBottomRect });
+                result.Add(new Pill { Lines = hLines, Rect = sideRect });
+                return result;
+            }
         }
 
-        // Merge: one pill carrying both chips (plus any detail lines).
+        // Merge: one pill with both chips, still parked at the nearest corner.
         var mergedLines = new List<Seg[]>(detailLines);
         mergedLines.Add(new[] { widthSeg, heightSeg });
         var mSize = MeasurePill(mergedLines, font, lineH, iconBox);
-
-        Rectangle mRect;
-        int aboveY = selection.Top - EdgeGap - mSize.Height;
-        int belowY = selection.Bottom + EdgeGap;
-        if (aboveY >= clientBounds.Top)
-            mRect = new Rectangle(cx - mSize.Width / 2, aboveY, mSize.Width, mSize.Height);
-        else if (belowY + mSize.Height <= clientBounds.Bottom)
-            mRect = new Rectangle(cx - mSize.Width / 2, belowY, mSize.Width, mSize.Height);
-        else
-            mRect = new Rectangle(selection.Left + EdgeGap, selection.Top + EdgeGap, mSize.Width, mSize.Height);
-
-        mRect.X = Clamp(mRect.X, clientBounds.Left, Math.Max(clientBounds.Left, clientBounds.Right - mRect.Width));
-        mRect.Y = Clamp(mRect.Y, clientBounds.Top, Math.Max(clientBounds.Top, clientBounds.Bottom - mRect.Height));
+        var mRect = PlaceMergedNearCorner(selection, mSize, preferRight, preferBottom, clientBounds);
         result.Add(new Pill { Lines = mergedLines, Rect = mRect });
         return result;
+    }
+
+    /// <summary>
+    /// Which corner of <paramref name="selection"/> is closest to <paramref name="cursor"/>.
+    /// Empty cursor defaults to bottom-right (common release end when dragging top-left → bottom-right).
+    /// </summary>
+    private static (bool PreferRight, bool PreferBottom) NearestCorner(Point cursor, Rectangle selection)
+    {
+        if (cursor.IsEmpty)
+            return (true, true);
+
+        // Distances to the four corners (squared).
+        long dTL = Dist2(cursor, selection.Left, selection.Top);
+        long dTR = Dist2(cursor, selection.Right, selection.Top);
+        long dBL = Dist2(cursor, selection.Left, selection.Bottom);
+        long dBR = Dist2(cursor, selection.Right, selection.Bottom);
+
+        long best = dTL;
+        bool right = false, bottom = false;
+        if (dTR < best) { best = dTR; right = true; bottom = false; }
+        if (dBL < best) { best = dBL; right = false; bottom = true; }
+        if (dBR < best) { right = true; bottom = true; }
+        return (right, bottom);
+    }
+
+    private static long Dist2(Point p, int x, int y)
+    {
+        long dx = p.X - x;
+        long dy = p.Y - y;
+        return dx * dx + dy * dy;
+    }
+
+    private static Rectangle PlaceMergedNearCorner(
+        Rectangle selection, Size mSize, bool preferRight, bool preferBottom, Rectangle clientBounds)
+    {
+        // Prefer outside the preferred vertical side, aligned to the preferred horizontal corner.
+        int xOutside = preferRight ? selection.Right - mSize.Width : selection.Left;
+        int yOutside = preferBottom
+            ? selection.Bottom + EdgeGap
+            : selection.Top - EdgeGap - mSize.Height;
+
+        var outside = new Rectangle(xOutside, yOutside, mSize.Width, mSize.Height);
+        if (FitsInClient(outside, clientBounds))
+            return ClampToClient(outside, clientBounds);
+
+        // Flip vertical outside.
+        int yFlip = preferBottom
+            ? selection.Top - EdgeGap - mSize.Height
+            : selection.Bottom + EdgeGap;
+        var flipped = new Rectangle(xOutside, yFlip, mSize.Width, mSize.Height);
+        if (FitsInClient(flipped, clientBounds))
+            return ClampToClient(flipped, clientBounds);
+
+        // Park just inside the preferred corner of the selection.
+        int xIn = preferRight
+            ? selection.Right - EdgeGap - mSize.Width
+            : selection.Left + EdgeGap;
+        int yIn = preferBottom
+            ? selection.Bottom - EdgeGap - mSize.Height
+            : selection.Top + EdgeGap;
+        return ClampToClient(new Rectangle(xIn, yIn, mSize.Width, mSize.Height), clientBounds);
+    }
+
+    private static bool FitsInClient(Rectangle r, Rectangle client)
+        => r.Left >= client.Left
+           && r.Top >= client.Top
+           && r.Right <= client.Right
+           && r.Bottom <= client.Bottom;
+
+    private static Rectangle ClampToClient(Rectangle r, Rectangle client)
+    {
+        r.X = Clamp(r.X, client.Left, Math.Max(client.Left, client.Right - r.Width));
+        r.Y = Clamp(r.Y, client.Top, Math.Max(client.Top, client.Bottom - r.Height));
+        return r;
     }
 
     private static List<Seg[]> BuildDetailLines(IReadOnlyList<string>? details)
@@ -188,12 +267,10 @@ internal static class SelectionSizeReadout
         var accent = UiChrome.AccentColor;
         var rect = pill.Rect;
 
-        // Soft shadow for depth
         using (var shadowPath = WindowsDockRenderer.RoundedRect(new RectangleF(rect.X, rect.Y + 1.5f, rect.Width, rect.Height), Radius))
         using (var shadowBrush = new SolidBrush(Color.FromArgb(70, 0, 0, 0)))
             g.FillPath(shadowBrush, shadowPath);
 
-        // Pill background + accent border
         using (var path = WindowsDockRenderer.RoundedRect(rect, Radius))
         {
             using var bg = new SolidBrush(Color.FromArgb(225, 18, 18, 20));
@@ -244,7 +321,7 @@ internal static class SelectionSizeReadout
             g.DrawLine(pen, x1, cyf, x1 - head, cyf - head);
             g.DrawLine(pen, x1, cyf, x1 - head, cyf + head);
         }
-        else // Vertical
+        else
         {
             float y0 = box.Top + 2.5f;
             float y1 = box.Bottom - 2.5f;

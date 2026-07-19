@@ -87,8 +87,8 @@ public sealed partial class RegionOverlayForm
                     var oldRect = _confirmRect;
                     var (oldConfirm, oldCancel, oldClose) = GetConfirmButtonRects();
                     _confirmRect = nb;
-                    InvalidateSelectionChromePart(oldRect, Point.Empty);
-                    InvalidateSelectionChromePart(_confirmRect, Point.Empty);
+                    InvalidateSelectionChromePart(oldRect, _prevCursorPos);
+                    InvalidateSelectionChromePart(_confirmRect, e.Location);
                     var (confirm, cancel, close) = GetConfirmButtonRects();
                     Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
                     Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
@@ -107,8 +107,8 @@ public sealed partial class RegionOverlayForm
                 var oldRect = _confirmRect;
                 var (oldConfirm, oldCancel, oldClose) = GetConfirmButtonRects();
                 _confirmRect = new Rectangle(newX, newY, oldRect.Width, oldRect.Height);
-                InvalidateSelectionChromePart(oldRect, Point.Empty);
-                InvalidateSelectionChromePart(_confirmRect, Point.Empty);
+                InvalidateSelectionChromePart(oldRect, _prevCursorPos);
+                InvalidateSelectionChromePart(_confirmRect, e.Location);
                 var (confirm, cancel, close) = GetConfirmButtonRects();
                 Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
                 Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
@@ -154,6 +154,13 @@ public sealed partial class RegionOverlayForm
                 HideToolbarTooltip();
                 _tooltipDismissed = false;
                 _hoverButtonStartTime = DateTime.UtcNow;
+            }
+
+            // Dimension pills track the nearest corner — repaint when the hand moves.
+            if (_prevCursorPos != e.Location && _confirmRect.Width > 2)
+            {
+                InvalidateSelectionReadout(_prevCursorPos, _confirmRect);
+                InvalidateSelectionReadout(e.Location, _confirmRect);
             }
             return;
         }
