@@ -22,18 +22,31 @@ ChangesAssociations=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
+[CustomMessages]
+english.CreateShortcutGroup=Create shortcuts for:
+english.CyberSnapShortcut=CyberSnap
+english.EditorShortcut=Annotation Editor
+english.OptionsGroup=Options:
+english.RunAtStartup=Run CyberSnap when Windows starts
+
+spanish.CreateShortcutGroup=Crear accesos directos para:
+spanish.CyberSnapShortcut=CyberSnap
+spanish.EditorShortcut=Editor de Anotaciones
+spanish.OptionsGroup=Opciones:
+spanish.RunAtStartup=Ejecutar CyberSnap al iniciar Windows
+
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "editordesktopicon"; Description: "Create a desktop icon for CyberSnap Editor"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "startup"; Description: "Run CyberSnap when Windows starts"; GroupDescription: "Options:"
+Name: "desktopicon"; Description: "{cm:CyberSnapShortcut}"; GroupDescription: "{cm:CreateShortcutGroup}"
+Name: "editordesktopicon"; Description: "{cm:EditorShortcut}"; GroupDescription: "{cm:CreateShortcutGroup}"
+Name: "startup"; Description: "{cm:RunAtStartup}"; GroupDescription: "{cm:OptionsGroup}"
 
 [Files]
 Source: ".\publish-win64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\CyberSnap"; Filename: "{app}\CyberSnap.exe"
+Name: "{group}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; IconFilename: "{app}\Assets\Icons\CyberSnap.ico"
 Name: "{group}\CyberSnap Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; IconFilename: "{app}\Assets\Icons\Editor.ico"
-Name: "{autodesktop}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: desktopicon
+Name: "{autodesktop}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: desktopicon; IconFilename: "{app}\Assets\Icons\CyberSnap.ico"
 Name: "{autodesktop}\CyberSnap Editor"; Filename: "{app}\CyberSnap.exe"; Parameters: "--editor"; Tasks: editordesktopicon; IconFilename: "{app}\Assets\Icons\Editor.ico"
 Name: "{userstartup}\CyberSnap"; Filename: "{app}\CyberSnap.exe"; Tasks: startup
 
