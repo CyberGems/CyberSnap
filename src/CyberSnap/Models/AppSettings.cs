@@ -50,6 +50,8 @@ public enum SoundEvent
     Achievement,
     /// <summary>Successful cloud share / upload (file: Assets/Sounds/upload.mp3).</summary>
     Upload,
+    /// <summary>Brief system toasts (e.g. "Sent to the editor"). File: Assets/Sounds/system.mp3.</summary>
+    System,
 }
 
 public enum RecordingFormat

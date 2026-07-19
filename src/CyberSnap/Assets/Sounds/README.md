@@ -12,6 +12,7 @@ El proyecto embebe automáticamente todo `Assets/Sounds/*.mp3` (`EmbeddedResourc
 | `record-start.mp3`    | `RecordStart`          | Inicia una grabación                                |
 | `record-stop.mp3`     | `RecordStop`           | Termina una grabación                               |
 | `upload.mp3`          | `Upload`               | Subida / Share exitoso (Editor o Galería)           |
+| `system.mp3`          | `System`               | Avisos de sistema (p. ej. "Enviado al editor")      |
 | `error.mp3`           | `Error`                | Ocurre un error                                     |
 | `startup.mp3`         | `Startup`              | Toast "CyberSnap ready" al iniciar la app           |
 | `achievement.mp3`     | `Achievement`          | Se desbloquea un logro                              |
