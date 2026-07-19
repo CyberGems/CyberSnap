@@ -1460,13 +1460,10 @@ public partial class SettingsWindow
         try
         {
             // Brief system alert — same family as "Sent to the editor" / encoding wait.
+            // Plays SoundEvent.System (customizable in Sounds) unless muted.
             ToastWindow.Show(ToastSpec.Standard(
                 LocalizationService.Translate("Sent to the editor"),
-                LocalizationService.Translate("Your capture is open in the editor.")) with
-            {
-                IsSystemMessage = true,
-                SuppressSound = true
-            });
+                LocalizationService.Translate("Your capture is open in the editor.")));
         }
         catch (Exception ex)
         {

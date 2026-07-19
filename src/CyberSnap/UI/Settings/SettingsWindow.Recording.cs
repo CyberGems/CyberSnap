@@ -245,6 +245,8 @@ public partial class SettingsWindow
         (SoundEvent.RecordStop, "Recording stop", "stop"),
         (SoundEvent.Upload, "Upload / Share", "share"),
         (SoundEvent.Achievement, "Achievement", "trophy"),
+        // Brief status toasts: "Sent to the editor", encoding wait, etc. (not capture previews).
+        (SoundEvent.System, "System notification", "info"),
         (SoundEvent.Error, "Error", "warning"),
     ];
 
