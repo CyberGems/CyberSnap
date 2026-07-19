@@ -17,12 +17,14 @@ public sealed class WindowStartupSplash : IDisposable
 {
     private readonly string _title;
     private readonly string _body;
+    private readonly string _brandLabel;
     private readonly Color _bg;
     private readonly Color _fg;
     private readonly Color _muted;
     private readonly Color _border;
     private readonly Color _accent;
     private readonly Bitmap? _icon;
+    private readonly Bitmap? _brandLogo;
 
     private Thread? _thread;
     private SplashForm? _form;
@@ -33,21 +35,25 @@ public sealed class WindowStartupSplash : IDisposable
     private WindowStartupSplash(
         string title,
         string body,
+        string brandLabel,
         Color bg,
         Color fg,
         Color muted,
         Color border,
         Color accent,
-        Bitmap? icon)
+        Bitmap? icon,
+        Bitmap? brandLogo)
     {
         _title = title;
         _body = body;
+        _brandLabel = brandLabel;
         _bg = bg;
         _fg = fg;
         _muted = muted;
         _border = border;
         _accent = accent;
         _icon = icon;
+        _brandLogo = brandLogo;
     }
 
     /// <summary>
@@ -69,16 +75,21 @@ public sealed class WindowStartupSplash : IDisposable
             ? LocalizationService.Translate("Preparing the workspace…")
             : body!;
 
-        // Snapshot theme + icon on the caller (usually the UI thread) so the splash
+        // Snapshot theme + icons on the caller (usually the UI thread) so the splash
         // thread never touches WPF Application / Theme while the main thread is busy.
         var bg = ToDrawing(Theme.ToastBg);
         var fg = ToDrawing(Theme.TextPrimary);
         var muted = ToDrawing(Theme.TextSecondary);
         var border = ToDrawing(Theme.ToastBorder);
         var accent = ToDrawing(Theme.Accent);
-        var icon = TryLoadWindowIconBitmap(iconKind) ?? TryLoadLogoBitmap();
+        var brandLogo = TryLoadLogoBitmap();
+        // Window icon for the primary identity; brand logo stays as the footer mark (tray style).
+        var icon = TryLoadWindowIconBitmap(iconKind) ?? (brandLogo is null ? null : new Bitmap(brandLogo));
+        // Same wording as the tray menu header: "CyberSnap  vX.Y.Z"
+        var brandLabel = $"CyberSnap  {UpdateService.GetCurrentVersionLabel()}";
 
-        var splash = new WindowStartupSplash(title, resolvedBody, bg, fg, muted, border, accent, icon);
+        var splash = new WindowStartupSplash(
+            title, resolvedBody, brandLabel, bg, fg, muted, border, accent, icon, brandLogo);
         splash.Start();
         // Wait until the form is actually visible (or give up quickly).
         splash._ready.Wait(millisecondsTimeout: 1500);
@@ -110,7 +121,8 @@ public sealed class WindowStartupSplash : IDisposable
 
         try
         {
-            _form = new SplashForm(_title, _body, _bg, _fg, _muted, _border, _accent, _icon);
+            _form = new SplashForm(
+                _title, _body, _brandLabel, _bg, _fg, _muted, _border, _accent, _icon, _brandLogo);
             _form.Shown += (_, _) =>
             {
                 try { _ready.Set(); } catch { /* ignore */ }
@@ -130,6 +142,7 @@ public sealed class WindowStartupSplash : IDisposable
         finally
         {
             try { _icon?.Dispose(); } catch { }
+            try { _brandLogo?.Dispose(); } catch { }
         }
     }
 
@@ -225,38 +238,47 @@ public sealed class WindowStartupSplash : IDisposable
     {
         private readonly string _title;
         private readonly string _body;
+        private readonly string _brandLabel;
         private readonly Color _bg;
         private readonly Color _fg;
         private readonly Color _muted;
         private readonly Color _border;
         private readonly Color _accent;
         private readonly Bitmap? _icon;
+        private readonly Bitmap? _brandLogo;
         private readonly System.Windows.Forms.Timer _pulseTimer;
         private float _phase;
         private readonly Font _titleFont;
         private readonly Font _bodyFont;
+        private readonly Font _brandFont;
 
         public SplashForm(
             string title,
             string body,
+            string brandLabel,
             Color bg,
             Color fg,
             Color muted,
             Color border,
             Color accent,
-            Bitmap? icon)
+            Bitmap? icon,
+            Bitmap? brandLogo)
         {
             _title = title;
             _body = body;
+            _brandLabel = brandLabel;
             _bg = bg;
             _fg = fg;
             _muted = muted;
             _border = border;
             _accent = accent;
             _icon = icon;
+            _brandLogo = brandLogo;
 
             _titleFont = new Font("Segoe UI Semibold", 11f, FontStyle.Bold, GraphicsUnit.Point);
             _bodyFont = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
+            // Matches tray menu header (≈13px semi-bold, secondary tone).
+            _brandFont = new Font("Segoe UI Semibold", 8.5f, FontStyle.Regular, GraphicsUnit.Point);
 
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
@@ -269,7 +291,8 @@ public sealed class WindowStartupSplash : IDisposable
             MinimizeBox = false;
             DoubleBuffered = true;
             BackColor = bg;
-            ClientSize = new Size(340, 118);
+            // Extra height for the centered brand strip above the progress bar.
+            ClientSize = new Size(340, 148);
             Opacity = 0.98;
 
             // Soft indeterminate bar animation — runs on THIS form's message loop only.
@@ -339,19 +362,68 @@ public sealed class WindowStartupSplash : IDisposable
                 g.DrawString(_body, _bodyFont, bodyBrush, textLeft, textTop + 22);
             }
 
+            // Brand footer (tray-style): small logo + "CyberSnap  vX.Y.Z", centered above the bar.
+            DrawBrandFooter(g, pad);
+
             // Indeterminate accent bar at the bottom.
-            var track = new RectangleF(pad, Height - 22, Width - pad * 2, 4);
+            var track = new RectangleF(pad, Height - 18, Width - pad * 2, 4);
             using (var trackBrush = new SolidBrush(Color.FromArgb(40, _accent)))
             using (var trackPath = RoundedRect(track, 2f))
                 g.FillPath(trackBrush, trackPath);
 
             float barW = track.Width * 0.32f;
-            float travel = track.Width - barW;
+            float travel = Math.Max(0, track.Width - barW);
             float x = track.X + (_phase * travel);
             var bar = new RectangleF(x, track.Y, barW, track.Height);
             using (var barBrush = new SolidBrush(Color.FromArgb(220, _accent)))
             using (var barPath = RoundedRect(bar, 2f))
                 g.FillPath(barBrush, barPath);
+        }
+
+        /// <summary>
+        /// Mirrors the tray menu header: 14px logo + CyberSnap version, soft secondary color.
+        /// Centered so it reads as product branding under the window-specific status.
+        /// </summary>
+        private void DrawBrandFooter(Graphics g, int pad)
+        {
+            const int brandLogoSize = 14;
+            const int gap = 6;
+            var textSize = g.MeasureString(_brandLabel, _brandFont);
+            float contentW = textSize.Width + (_brandLogo is null ? 0 : brandLogoSize + gap);
+            float startX = (Width - contentW) / 2f;
+            // Sit just above the progress track.
+            float y = Height - 40;
+
+            if (_brandLogo is not null)
+            {
+                try
+                {
+                    // Soft like tray Opacity 0.75
+                    var colorMatrix = new System.Drawing.Imaging.ColorMatrix { Matrix33 = 0.75f };
+                    using var attrs = new System.Drawing.Imaging.ImageAttributes();
+                    attrs.SetColorMatrix(colorMatrix);
+                    var dest = new Rectangle(
+                        (int)Math.Round(startX),
+                        (int)Math.Round(y + (textSize.Height - brandLogoSize) / 2f),
+                        brandLogoSize,
+                        brandLogoSize);
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(
+                        _brandLogo,
+                        dest,
+                        0, 0, _brandLogo.Width, _brandLogo.Height,
+                        GraphicsUnit.Pixel,
+                        attrs);
+                    startX += brandLogoSize + gap;
+                }
+                catch
+                {
+                    // Brand logo optional.
+                }
+            }
+
+            using var brandBrush = new SolidBrush(Color.FromArgb(200, _muted));
+            g.DrawString(_brandLabel, _brandFont, brandBrush, startX, y);
         }
 
         protected override void Dispose(bool disposing)
@@ -361,6 +433,7 @@ public sealed class WindowStartupSplash : IDisposable
                 try { _pulseTimer.Stop(); _pulseTimer.Dispose(); } catch { }
                 try { _titleFont.Dispose(); } catch { }
                 try { _bodyFont.Dispose(); } catch { }
+                try { _brandFont.Dispose(); } catch { }
             }
             base.Dispose(disposing);
         }
