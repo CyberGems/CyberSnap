@@ -322,16 +322,16 @@ public partial class SettingsWindow
             previewBtn.Click += (_, _) => SoundService.Play(evt);
             controlsPanel.Children.Add(previewBtn);
 
-            // Source pill
-            var sourcePill = new Border { Style = (Style)FindResource("SoundItemSourcePill"), Margin = new Thickness(12, 0, 10, 0) };
+            // Source status (not a button): "Built-in" / filename caption between actions.
+            var sourcePill = new Border { Style = (Style)FindResource("SoundItemSourcePill"), Margin = new Thickness(10, 0, 8, 0) };
             var sourceLabel = new TextBlock { Style = (Style)FindResource("SoundItemSourceText") };
             sourcePill.Child = sourceLabel;
             controlsPanel.Children.Add(sourcePill);
 
-            // Browse button
+            // Browse button — same chrome as preview so it reads as an action.
             var browseBtn = new Button
             {
-                Content = "\uE70F",
+                Content = "\uE8E5", // OpenFile / folder
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Margin = new Thickness(0, 0, 6, 0),
@@ -398,17 +398,21 @@ public partial class SettingsWindow
             LocalizationService.SetSourceText(label, "");
             label.Text = System.IO.Path.GetFileName(customPath);
             label.Foreground = (System.Windows.Media.Brush)FindResource("ThemeTextPrimaryBrush");
-            sourcePill.Background = (System.Windows.Media.Brush)FindResource("SoundItemCustomSourceBrush");
-            sourcePill.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeTextSecondaryBrush");
+            label.Opacity = 1.0;
+            // Flat status caption — no pill chrome (must not look like a button).
+            sourcePill.Background = System.Windows.Media.Brushes.Transparent;
+            sourcePill.BorderBrush = System.Windows.Media.Brushes.Transparent;
             resetBtn.Visibility = Visibility.Visible;
         }
         else
         {
-            LocalizationService.SetSourceText(label, "Default");
-            label.Text = LocalizationService.Translate("Default");
-            label.Foreground = (System.Windows.Media.Brush)FindResource("ThemeTextSecondaryBrush");
-            sourcePill.Background = (System.Windows.Media.Brush)FindResource("ThemeInputBackgroundBrush");
-            sourcePill.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeInputBorderBrush");
+            // Dedicated key so ES can say "Predefinido" without changing global "Default".
+            LocalizationService.SetSourceText(label, "Built-in");
+            label.Text = LocalizationService.Translate("Built-in");
+            label.Foreground = (System.Windows.Media.Brush)FindResource("ThemeMutedBrush");
+            label.Opacity = 0.9;
+            sourcePill.Background = System.Windows.Media.Brushes.Transparent;
+            sourcePill.BorderBrush = System.Windows.Media.Brushes.Transparent;
             resetBtn.Visibility = Visibility.Hidden;
         }
     }
