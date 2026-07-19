@@ -207,6 +207,9 @@ public sealed partial class RegionOverlayForm : Form
     /// </summary>
     private bool _selectionDimPrimed;
 
+    /// <summary>Grayscale copy of the capture screenshot for outside-selection desaturation.</summary>
+    private Bitmap? _desaturatedScreenshot;
+
     // Color picker popup state
     private bool _colorPickerOpen;
     private Rectangle _colorPickerRect;

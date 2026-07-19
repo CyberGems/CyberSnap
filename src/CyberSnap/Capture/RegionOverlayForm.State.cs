@@ -406,7 +406,51 @@ public sealed partial class RegionOverlayForm
         return Rectangle.Empty;
     }
 
-    private static readonly Color SelectionDimColor = Color.FromArgb(120, 0, 0, 0);
+    // Softer veil on top of the desaturated outside so color loss stays readable.
+    private static readonly Color SelectionDimColor = Color.FromArgb(72, 0, 0, 0);
+
+    private static readonly ColorMatrix DesaturateColorMatrix = new(new[]
+    {
+        new[] { 0.299f, 0.299f, 0.299f, 0f, 0f },
+        new[] { 0.587f, 0.587f, 0.587f, 0f, 0f },
+        new[] { 0.114f, 0.114f, 0.114f, 0f, 0f },
+        new[] { 0f, 0f, 0f, 1f, 0f },
+        new[] { 0f, 0f, 0f, 0f, 1f },
+    });
+
+    /// <summary>
+    /// One-time grayscale bake of the frozen screenshot. Cost is O(pixels) once per overlay
+    /// (typically a few–tens of ms on multi-monitor 4K); per-frame paint is then a plain blit.
+    /// </summary>
+    private void EnsureDesaturatedScreenshot()
+    {
+        if (_desaturatedScreenshot is not null || _screenshot is null)
+            return;
+
+        try
+        {
+            int w = _screenshot.Width;
+            int h = _screenshot.Height;
+            _desaturatedScreenshot = new Bitmap(w, h, PixelFormat.Format32bppArgb);
+            using var g = Graphics.FromImage(_desaturatedScreenshot);
+            g.CompositingMode = CompositingMode.SourceCopy;
+            g.InterpolationMode = InterpolationMode.NearestNeighbor;
+            g.PixelOffsetMode = PixelOffsetMode.None;
+            using var attrs = new ImageAttributes();
+            attrs.SetColorMatrix(DesaturateColorMatrix);
+            g.DrawImage(
+                _screenshot,
+                new Rectangle(0, 0, w, h),
+                0, 0, w, h,
+                GraphicsUnit.Pixel,
+                attrs);
+        }
+        catch
+        {
+            try { _desaturatedScreenshot?.Dispose(); } catch { }
+            _desaturatedScreenshot = null;
+        }
+    }
 
     /// <summary>
     /// When the dim hole changes, both the old and new holes must repaint (re-dim / un-dim).

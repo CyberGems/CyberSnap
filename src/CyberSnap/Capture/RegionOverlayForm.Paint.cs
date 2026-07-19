@@ -33,41 +33,74 @@ public sealed partial class RegionOverlayForm
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
         g.SmoothingMode = SmoothingMode.None;
 
-        // Blit the cached screenshot + committed annotations layer.
         var clip = e.ClipRectangle;
-        var committed = GetCommittedAnnotationsBitmap();
-        g.CompositingMode = CompositingMode.SourceCopy;
-        g.DrawImage(committed, clip, clip, GraphicsUnit.Pixel);
-        g.CompositingMode = CompositingMode.SourceOver;
+        if (clip.Width <= 0 || clip.Height <= 0)
+            clip = ClientRectangle;
 
+        var committed = GetCommittedAnnotationsBitmap();
         bool isOcr = _mode == CaptureMode.Ocr;
         bool isScan = _mode == CaptureMode.Scan;
         bool isSelectionMode = _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr or CaptureMode.Scan or CaptureMode.Sticker or CaptureMode.Upscale or CaptureMode.ScrollCapture;
 
-        // Dimming overlay for capture-selection tools: everything outside the current "hole"
-        // (drag selection, confirm rect, or auto-detected window) is dimmed — including other
-        // monitors. Annotation tools keep a clear full-screen view so live previews stay fluid.
+        // Capture-selection tools: outside the hole is desaturated + lightly dimmed; the hole
+        // stays full color. Annotation tools keep a clear full-color view for live previews.
         if (ShouldDimOutsideSelection())
         {
+            EnsureDesaturatedScreenshot();
             var hole = GetSelectionDimHole();
-            var state = g.Save();
+            var desat = _desaturatedScreenshot;
+
+            g.CompositingMode = CompositingMode.SourceCopy;
+
+            // 1) Desaturated base for everything outside the hole (all monitors).
+            if (desat is not null)
+            {
+                var stateDesat = g.Save();
+                try
+                {
+                    if (hole.Width > 2 && hole.Height > 2)
+                        g.ExcludeClip(hole);
+                    g.DrawImage(desat, clip, clip, GraphicsUnit.Pixel);
+                }
+                finally
+                {
+                    g.Restore(stateDesat);
+                }
+            }
+            else
+            {
+                // Fallback if grayscale bake failed: full color then heavier dim below.
+                g.DrawImage(committed, clip, clip, GraphicsUnit.Pixel);
+            }
+
+            // 2) Full-color hole (screenshot + committed annotations).
+            if (hole.Width > 2 && hole.Height > 2)
+            {
+                var holeClip = Rectangle.Intersect(hole, clip);
+                if (holeClip.Width > 0 && holeClip.Height > 0)
+                    g.DrawImage(committed, holeClip, holeClip, GraphicsUnit.Pixel);
+            }
+
+            // 3) Soft dark veil outside the hole so the desaturated area still recedes.
+            g.CompositingMode = CompositingMode.SourceOver;
+            var stateDim = g.Save();
             try
             {
-                if (hole.Width > 0 && hole.Height > 0)
+                if (hole.Width > 2 && hole.Height > 2)
                     g.ExcludeClip(hole);
-
-                // Prefer the paint clip so multi-monitor partial invalidates stay cheap; fall back
-                // to the full client when Windows delivers an empty clip.
-                var dimArea = e.ClipRectangle;
-                if (dimArea.Width <= 0 || dimArea.Height <= 0)
-                    dimArea = ClientRectangle;
                 using var dimBrush = new SolidBrush(SelectionDimColor);
-                g.FillRectangle(dimBrush, dimArea);
+                g.FillRectangle(dimBrush, clip);
             }
             finally
             {
-                g.Restore(state);
+                g.Restore(stateDim);
             }
+        }
+        else
+        {
+            g.CompositingMode = CompositingMode.SourceCopy;
+            g.DrawImage(committed, clip, clip, GraphicsUnit.Pixel);
+            g.CompositingMode = CompositingMode.SourceOver;
         }
 
         g.SmoothingMode = SmoothingMode.AntiAlias;

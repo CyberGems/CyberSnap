@@ -53,7 +53,30 @@ public static class WindowDetector
         if (mode == WindowDetectionMode.Off)
             return Rectangle.Empty;
 
-        return GetTopLevelWindowRectAtPoint(screenPoint, virtualBounds);
+        var window = GetTopLevelWindowRectAtPoint(screenPoint, virtualBounds);
+        if (window.Width > 2 && window.Height > 2)
+            return window;
+
+        // No app window under the cursor (wallpaper / empty desktop). Treat the monitor
+        // that contains the pointer as the snappable "desktop" region — Progman/WorkerW
+        // are intentionally not snappable as chrome, but users expect a full-screen hole.
+        return GetDesktopMonitorRectAtPoint(screenPoint, virtualBounds);
+    }
+
+    /// <summary>
+    /// Monitor bounds under <paramref name="formClientPoint"/> in virtual-desktop / form client coords.
+    /// </summary>
+    public static Rectangle GetDesktopMonitorRectAtPoint(Point formClientPoint, Rectangle virtualBounds)
+    {
+        var screenPoint = new Point(
+            formClientPoint.X + virtualBounds.X,
+            formClientPoint.Y + virtualBounds.Y);
+        var bounds = System.Windows.Forms.Screen.FromPoint(screenPoint).Bounds;
+        return new Rectangle(
+            bounds.X - virtualBounds.X,
+            bounds.Y - virtualBounds.Y,
+            bounds.Width,
+            bounds.Height);
     }
 
     public static Rectangle GetWindowRectAtPoint(Point screenPoint, Rectangle virtualBounds)
