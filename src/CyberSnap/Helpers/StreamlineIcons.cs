@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Media;
@@ -91,7 +91,7 @@ public static class StreamlineIcons
 
     public static bool HasIcon(string id) => FluentIconData.Icons.ContainsKey(id);
 
-    public static void DrawIcon(DrawingGraphics g, string id, RectangleF bounds, DrawingColor color, float iconInset = 7f, bool active = false)
+    public static void DrawIcon(DrawingGraphics g, string id, RectangleF bounds, DrawingColor color, float iconInset = 7f, bool active = false, bool flipHorizontal = false)
     {
         int width = Math.Max(1, (int)Math.Ceiling(bounds.Width - iconInset * 2f));
         int height = Math.Max(1, (int)Math.Ceiling(bounds.Height - iconInset * 2f));
@@ -106,7 +106,18 @@ public static class StreamlineIcons
             bounds.Width - iconInset * 2f,
             bounds.Height - iconInset * 2f);
         g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-        g.DrawImage(bitmap, dest);
+        if (flipHorizontal)
+        {
+            var state = g.Save();
+            g.TranslateTransform(dest.X + dest.Width / 2f, dest.Y + dest.Height / 2f);
+            g.ScaleTransform(-1f, 1f);
+            g.DrawImage(bitmap, new RectangleF(-dest.Width / 2f, -dest.Height / 2f, dest.Width, dest.Height));
+            g.Restore(state);
+        }
+        else
+        {
+            g.DrawImage(bitmap, dest);
+        }
     }
 
     public static BitmapSource? RenderWpf(string id, DrawingColor color, int size, bool active = false)

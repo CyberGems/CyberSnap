@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Windows.Media.Imaging;
 
 namespace CyberSnap.Helpers;
@@ -20,8 +20,8 @@ public static class FluentIcons
 
     public static bool HasIcon(string id) => StreamlineIcons.HasIcon(id);
 
-    public static void DrawIcon(Graphics g, string id, RectangleF bounds, Color color, float iconInset = 7f, bool active = false)
-        => StreamlineIcons.DrawIcon(g, id, bounds, color, iconInset, active);
+    public static void DrawIcon(Graphics g, string id, RectangleF bounds, Color color, float iconInset = 7f, bool active = false, bool flipHorizontal = false)
+        => StreamlineIcons.DrawIcon(g, id, bounds, color, iconInset, active, flipHorizontal);
 
     public static BitmapSource? RenderWpf(string id, Color color, int size, bool active = false)
         => StreamlineIcons.RenderWpf(id, color, size, active);
