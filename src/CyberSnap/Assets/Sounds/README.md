@@ -1,44 +1,44 @@
 # Sound Assets
 
-Coloca aquí tus archivos MP3 con los siguientes nombres exactos.  
-El proyecto embebe automáticamente todo `Assets/Sounds/*.mp3` (`EmbeddedResource` en el `.csproj`).
+Place your MP3 files here using the exact names below.
+The project automatically embeds every `Assets/Sounds/*.mp3` (`EmbeddedResource` in the `.csproj`).
 
-| Archivo               | Evento (`SoundEvent`) | Se reproduce cuando...                              |
-|-----------------------|------------------------|-----------------------------------------------------|
-| `capture.mp3`         | `Capture`              | Se completa una captura                             |
-| `color.mp3`           | `Color`                | Se usa el color picker                              |
-| `text.mp3`            | `Text`                 | Se copia texto OCR                                  |
-| `scan.mp3`            | `Scan`                 | Se detecta un QR / código de barras                 |
-| `record-start.mp3`    | `RecordStart`          | Inicia una grabación                                |
-| `record-stop.mp3`     | `RecordStop`           | Termina una grabación                               |
-| `upload.mp3`          | `Upload`               | Subida / Share exitoso (Editor o Galería)           |
-| `system.mp3`          | `System`               | Avisos de sistema (p. ej. "Enviado al editor")      |
-| `error.mp3`           | `Error`                | Ocurre un error                                     |
-| `startup.mp3`         | `Startup`              | Toast "CyberSnap ready" al iniciar la app           |
-| `achievement.mp3`     | `Achievement`          | Se desbloquea un logro                              |
+| File                  | Event (`SoundEvent`) | Plays when...                                   |
+|-----------------------|----------------------|-------------------------------------------------|
+| `capture.mp3`         | `Capture`            | A capture is completed                           |
+| `color.mp3`           | `Color`              | The color picker is used                         |
+| `text.mp3`            | `Text`               | OCR text is copied                               |
+| `scan.mp3`            | `Scan`               | A QR / barcode is detected                       |
+| `record-start.mp3`    | `RecordStart`        | A recording starts                               |
+| `record-stop.mp3`     | `RecordStop`         | A recording ends                                 |
+| `upload.mp3`          | `Upload`             | Successful upload / Share (Editor or Gallery)    |
+| `system.mp3`          | `System`             | System notices (e.g. "Sent to editor")           |
+| `error.mp3`           | `Error`              | An error occurs                                  |
+| `startup.mp3`         | `Startup`            | "CyberSnap ready" toast on app launch            |
+| `achievement.mp3`     | `Achievement`        | An achievement is unlocked                       |
 
-## Añadir un sonido nuevo (checklist)
+## Add a new sound (checklist)
 
-1. **Archivo:** `src/CyberSnap/Assets/Sounds/<nombre>.mp3` (mismo nombre que en la tabla).
-2. **Código (solo si es un evento nuevo):**
-   - Añadir valor a `SoundEvent` en `Models/AppSettings.cs`.
-   - Mapear el nombre en `SoundService.LoadEmbeddedMp3`.
-   - Añadir fila en `SoundEventDefs` (`SettingsWindow.Recording.cs`) para la pestaña Sonidos.
-   - Llamar `SoundService.Play…()` donde corresponda.
-3. **Rebuild.** Si el MP3 falta, ese evento queda en silencio (sin error).
+1. **File:** `src/CyberSnap/Assets/Sounds/<name>.mp3` (same name as in the table).
+2. **Code (only if it is a new event):**
+   - Add a value to `SoundEvent` in `Models/AppSettings.cs`.
+   - Map the name in `SoundService.LoadEmbeddedMp3`.
+   - Add a row in `SoundEventDefs` (`SettingsWindow.Recording.cs`) for the Sounds tab.
+   - Call `SoundService.Play…()` where appropriate.
+3. **Rebuild.** If the MP3 is missing, that event stays silent (no error).
 
-Para **upload**, el cableado ya está: solo falta soltar `upload.mp3` en esta carpeta y recompilar.
+For **upload**, the wiring is already in place: just drop `upload.mp3` in this folder and rebuild.
 
-## Requisitos
+## Requirements
 
-- Formato: **MP3** (MPEG-1 Audio Layer III)
-- Duración recomendada: **&lt; 1 segundo** (sonidos UI, no canciones)
-- Bitrate: 128–192 kbps (mono o stereo)
-- Frecuencia de muestreo: 44100 Hz
+- Format: **MP3** (MPEG-1 Audio Layer III)
+- Recommended duration: **< 1 second** (UI sounds, not songs)
+- Bitrate: 128–192 kbps (mono or stereo)
+- Sample rate: 44100 Hz
 
-## Notas
+## Notes
 
-- Los archivos se embeben como `EmbeddedResource` en el `.exe`.
-- El usuario puede sobrescribir o silenciar cada sonido desde **Configuración → Sonidos**.
-- Si un archivo falta, ese sonido no se reproduce (sin crashear).
-- Fallos de subida usan el sonido de **Error**, no el de upload.
+- Files are embedded as `EmbeddedResource` in the `.exe`.
+- Users can override or mute each sound from **Settings → Sounds**.
+- If a file is missing, that sound does not play (no crash).
+- Upload failures use the **Error** sound, not the upload one.
