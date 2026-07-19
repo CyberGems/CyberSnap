@@ -291,8 +291,8 @@ public sealed class WindowStartupSplash : IDisposable
             MinimizeBox = false;
             DoubleBuffered = true;
             BackColor = bg;
-            // Extra height for the centered brand strip above the progress bar.
-            ClientSize = new Size(340, 148);
+            // Room for: title block · gap · progress (mid) · gap · brand · bottom margin.
+            ClientSize = new Size(340, 164);
             Opacity = 0.98;
 
             // Soft indeterminate bar animation — runs on THIS form's message loop only.
@@ -300,13 +300,35 @@ public sealed class WindowStartupSplash : IDisposable
             _pulseTimer.Tick += (_, _) =>
             {
                 _phase = (_phase + 0.045f) % 1f;
-                Invalidate(new Rectangle(20, ClientSize.Height - 22, ClientSize.Width - 40, 6));
+                var track = GetProgressTrackRect();
+                // Inflate slightly so the moving segment never leaves dirty edges.
+                Invalidate(Rectangle.Inflate(Rectangle.Round(track), 2, 2));
             };
             _pulseTimer.Start();
 
             // Rounded region after handle exists.
             HandleCreated += (_, _) => ApplyRoundedRegion();
             Resize += (_, _) => ApplyRoundedRegion();
+        }
+
+        // Layout (top → bottom): title block · gap · progress bar (mid band) · gap · brand · margin.
+        private const int ContentPad = 20;
+        private const int ProgressBarHeight = 4;
+        private const int BrandLogoSize = 14;
+        private const int GapAfterTitle = 22;
+        private const int GapAfterBar = 16;
+        private const int BottomMargin = 16;
+
+        private RectangleF GetProgressTrackRect()
+        {
+            // Vertically centered in the free band under the title block and above the brand strip.
+            float titleBlockBottom = ContentPad + 48f;
+            float brandBlockHeight = BrandLogoSize + 2f;
+            float freeTop = titleBlockBottom + GapAfterTitle;
+            float freeBottom = Height - BottomMargin - brandBlockHeight - GapAfterBar;
+            float freeMid = (freeTop + freeBottom) / 2f;
+            float y = freeMid - ProgressBarHeight / 2f;
+            return new RectangleF(ContentPad, y, Width - ContentPad * 2, ProgressBarHeight);
         }
 
         private void ApplyRoundedRegion()
@@ -336,17 +358,16 @@ public sealed class WindowStartupSplash : IDisposable
             using (var path = RoundedRect(new RectangleF(0.75f, 0.75f, Width - 1.5f, Height - 1.5f), 13f))
                 g.DrawPath(pen, path);
 
-            int pad = 20;
             int logoSize = 40;
-            int textLeft = pad;
+            int textLeft = ContentPad;
 
             if (_icon is not null)
             {
                 try
                 {
                     g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    g.DrawImage(_icon, pad, pad + 2, logoSize, logoSize);
-                    textLeft = pad + logoSize + 14;
+                    g.DrawImage(_icon, ContentPad, ContentPad + 2, logoSize, logoSize);
+                    textLeft = ContentPad + logoSize + 14;
                 }
                 catch
                 {
@@ -357,16 +378,13 @@ public sealed class WindowStartupSplash : IDisposable
             using (var titleBrush = new SolidBrush(_fg))
             using (var bodyBrush = new SolidBrush(_muted))
             {
-                float textTop = pad + 2;
+                float textTop = ContentPad + 2;
                 g.DrawString(_title, _titleFont, titleBrush, textLeft, textTop);
                 g.DrawString(_body, _bodyFont, bodyBrush, textLeft, textTop + 22);
             }
 
-            // Brand footer (tray-style): small logo + "CyberSnap  vX.Y.Z", centered above the bar.
-            DrawBrandFooter(g, pad);
-
-            // Indeterminate accent bar at the bottom.
-            var track = new RectangleF(pad, Height - 18, Width - pad * 2, 4);
+            // Progress bar in the mid band (clear of title and brand).
+            var track = GetProgressTrackRect();
             using (var trackBrush = new SolidBrush(Color.FromArgb(40, _accent)))
             using (var trackPath = RoundedRect(track, 2f))
                 g.FillPath(trackBrush, trackPath);
@@ -378,21 +396,21 @@ public sealed class WindowStartupSplash : IDisposable
             using (var barBrush = new SolidBrush(Color.FromArgb(220, _accent)))
             using (var barPath = RoundedRect(bar, 2f))
                 g.FillPath(barBrush, barPath);
+
+            // Brand footer BELOW the bar (tray-style), with comfortable margins.
+            DrawBrandFooter(g, track.Bottom + GapAfterBar);
         }
 
         /// <summary>
         /// Mirrors the tray menu header: 14px logo + CyberSnap version, soft secondary color.
-        /// Centered so it reads as product branding under the window-specific status.
+        /// Centered under the progress bar.
         /// </summary>
-        private void DrawBrandFooter(Graphics g, int pad)
+        private void DrawBrandFooter(Graphics g, float y)
         {
-            const int brandLogoSize = 14;
             const int gap = 6;
             var textSize = g.MeasureString(_brandLabel, _brandFont);
-            float contentW = textSize.Width + (_brandLogo is null ? 0 : brandLogoSize + gap);
+            float contentW = textSize.Width + (_brandLogo is null ? 0 : BrandLogoSize + gap);
             float startX = (Width - contentW) / 2f;
-            // Sit just above the progress track.
-            float y = Height - 40;
 
             if (_brandLogo is not null)
             {
@@ -404,9 +422,9 @@ public sealed class WindowStartupSplash : IDisposable
                     attrs.SetColorMatrix(colorMatrix);
                     var dest = new Rectangle(
                         (int)Math.Round(startX),
-                        (int)Math.Round(y + (textSize.Height - brandLogoSize) / 2f),
-                        brandLogoSize,
-                        brandLogoSize);
+                        (int)Math.Round(y + (textSize.Height - BrandLogoSize) / 2f),
+                        BrandLogoSize,
+                        BrandLogoSize);
                     g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                     g.DrawImage(
                         _brandLogo,
@@ -414,7 +432,7 @@ public sealed class WindowStartupSplash : IDisposable
                         0, 0, _brandLogo.Width, _brandLogo.Height,
                         GraphicsUnit.Pixel,
                         attrs);
-                    startX += brandLogoSize + gap;
+                    startX += BrandLogoSize + gap;
                 }
                 catch
                 {
