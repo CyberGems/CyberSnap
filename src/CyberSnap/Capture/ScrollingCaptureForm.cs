@@ -278,7 +278,7 @@ public sealed partial class ScrollingCaptureForm : Form
             _dragStart = e.Location;
             _selectionCursor = e.Location;
             _selection = Rectangle.Empty;
-            Invalidate(); // immediately hide the hint banner
+            Invalidate(); // start selection dim; banner fades via its own region/timer
             UpdateLiveSelectionAdorner();
         }
     }
@@ -986,17 +986,16 @@ public sealed partial class ScrollingCaptureForm : Form
         {
             SelectionFrameRenderer.DrawRectangle(g, _selection);
         }
-        else if (!_isDragging)
-        {
-            _hintBanner?.Render(g);
-        }
+
+        // Keep painting while fading out (Dismiss keeps the instance; opacity gates visibility).
+        _hintBanner?.Render(g);
     }
 
     private void DismissHintBanner()
     {
-        if (_hintBanner == null) return;
-        _hintBanner.Dismiss();
-        _hintBanner = null;
+        // Soft dismiss — keep the reference so the short fade can paint and so Revive()
+        // still works after an aborted click/drag that never became a selection.
+        _hintBanner?.Dismiss();
     }
 
     private void UpdateLiveSelectionAdorner()

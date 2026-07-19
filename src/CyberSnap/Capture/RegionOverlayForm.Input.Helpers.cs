@@ -101,10 +101,10 @@ public sealed partial class RegionOverlayForm
             halfW = Math.Max(1, (int)Math.Round(halfH * ratio));
     }
 
-    private void SetTool(ToolDef tool)
+    private void SetTool(ToolDef tool, bool showHelpBanner = true)
     {
         if (tool.Mode is { } mode)
-            SetMode(mode, tool.Id);
+            SetMode(mode, tool.Id, showHelpBanner);
     }
 
     public void SetToolColor(Color color)
@@ -133,7 +133,7 @@ public sealed partial class RegionOverlayForm
         var id => id,
     };
 
-    private void SetMode(CaptureMode m, string? toolId = null)
+    private void SetMode(CaptureMode m, string? toolId = null, bool showHelpBanner = true)
     {
         if (_isTyping) CommitText();
         bool wasEmoji = _mode == CaptureMode.Emoji && _emojiPickerOpen;
@@ -319,7 +319,8 @@ public sealed partial class RegionOverlayForm
         else if (m == CaptureMode.Emoji)
             action = LocalizationService.Translate("Click to pick emoji");
 
-        if (action != null && !string.IsNullOrEmpty(toolName))
+        // Silent restores (e.g. last annotation tool after locking a region) must not flash a help banner.
+        if (showHelpBanner && action != null && !string.IsNullOrEmpty(toolName))
         {
             var label = toolName + ": ";
             var segments = new BannerSegment[]

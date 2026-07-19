@@ -179,7 +179,8 @@ public sealed class StandaloneOcrForm : Form
     {
         _cursorPos = e.Location;
 
-        if (_banner.ContainsCursor(_cursorPos))
+        // Don't revive while dragging — the banner was dismissed on mouse-down on purpose.
+        if (!_isDragging && _banner.ContainsCursor(_cursorPos))
             _banner.Revive();
 
         if (_isDragging)

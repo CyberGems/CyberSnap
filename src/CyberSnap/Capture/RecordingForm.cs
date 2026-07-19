@@ -373,7 +373,8 @@ public sealed partial class RecordingForm : Form
 
         if (_state == State.Selecting)
         {
-            if (_banner != null && _banner.ContainsCursor(e.Location))
+            // Don't revive while dragging — Dismiss on mouse-down must stick until the selection ends.
+            if (!_isDragging && _banner != null && _banner.ContainsCursor(e.Location))
                 _banner.Revive();
 
             if (_isDragging)
@@ -632,15 +633,13 @@ public sealed partial class RecordingForm : Form
                 ClientRectangle,
                 GetRecordingReadoutDetails());
         }
-        else
+        else if (_autoDetectActive && !_autoDetectRect.IsEmpty)
         {
-            if (_autoDetectActive && !_autoDetectRect.IsEmpty)
-            {
-                SelectionFrameRenderer.DrawAutoDetectRectangle(g, _autoDetectRect);
-            }
-            _banner?.Render(g);
+            SelectionFrameRenderer.DrawAutoDetectRectangle(g, _autoDetectRect);
         }
 
+        // Always paint last so a short dismiss-fade can finish even mid-drag.
+        _banner?.Render(g);
     }
 
     private void UpdateLiveSelectionAdorner()

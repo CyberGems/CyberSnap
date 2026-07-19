@@ -1400,14 +1400,23 @@ public sealed partial class RegionOverlayForm : Form
         Invalidate(_banner.InvalidateBounds);
     }
 
+    /// <summary>
+    /// Soft-dismiss the current tool banner with a short fade. Keeps the instance alive so
+    /// the animation can paint until opacity hits zero; the next <see cref="ShowToolBanner"/>
+    /// call disposes any leftover instance.
+    /// </summary>
     private void HideToolBanner()
     {
-        if (_banner != null)
-        {
-            var bounds = _banner.InvalidateBounds;
-            _banner.Dispose();
-            _banner = null;
-            Invalidate(bounds);
-        }
+        _banner?.Dismiss();
+    }
+
+    /// <summary>Hard-hide and dispose the banner (no fade). Prefer <see cref="HideToolBanner"/>.</summary>
+    private void HideToolBannerImmediate()
+    {
+        if (_banner == null) return;
+        var bounds = _banner.InvalidateBounds;
+        _banner.Dispose();
+        _banner = null;
+        Invalidate(bounds);
     }
 }

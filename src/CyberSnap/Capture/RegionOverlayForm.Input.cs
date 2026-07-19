@@ -232,6 +232,7 @@ public sealed partial class RegionOverlayForm
         // Emoji placing: click to stamp
         if (_mode == CaptureMode.Emoji && _isPlacingEmoji && _selectedEmoji != null)
         {
+            HideToolBanner();
             var pos = new Point(e.Location.X - (int)(_emojiPlaceSize / 2), e.Location.Y - (int)(_emojiPlaceSize / 2));
             AddAnnotation(new EmojiAnnotation(pos, _selectedEmoji, _emojiPlaceSize));
             SuppressHoverBoxForLastPlaced();
@@ -523,6 +524,8 @@ public sealed partial class RegionOverlayForm
 
             if (clickedIdx >= 0 && handle >= 0)
             {
+                // Move/resize of an existing annotation — clear selection-count / help banners.
+                HideToolBanner();
                 _selectedAnnotationIndex = clickedIdx;
                 if (handle != 8)
                 {
@@ -555,6 +558,7 @@ public sealed partial class RegionOverlayForm
             int hit = HitTestAnnotationSurface(e.Location);
             if (hit >= 0)
             {
+                HideToolBanner();
                 if (_multiSelectedIndices.Count > 1 && _multiSelectedIndices.Contains(hit))
                 {
                     _isSelectDragging = true;
@@ -598,11 +602,15 @@ public sealed partial class RegionOverlayForm
 
         if (_mode == CaptureMode.ColorPicker)
         {
+            HideToolBanner();
             ColorPicked?.Invoke(_hexStr);
             return;
         }
 
         _hasDragged = false;
+        // Any tool action (drag or click) dismisses the help banner so it never sits over the work.
+        // Short animated fade with region-scoped invalidate; switch to HideToolBannerImmediate if glitchy.
+        HideToolBanner();
         switch (_mode)
         {
             case CaptureMode.Rectangle:
@@ -613,7 +621,6 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Sticker:
             case CaptureMode.Upscale:
                 HideToolbarForCaptureTool();
-                HideToolBanner();
                 if (_windowDetectionMode == WindowDetectionMode.Off)
                 {
                     _autoDetectRect = Rectangle.Empty;
@@ -696,8 +703,6 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Ruler:
                 // Ruler is an annotation tool — don't hide the toolbar while measuring.
-                // Dismiss the instruction banner so its fade animation can't fire repaints mid-drag.
-                HideToolBanner();
                 // Clear any ruler selected via right-click so its frame doesn't linger over the new drag.
                 if (_selectedAnnotationIndex >= 0)
                 {

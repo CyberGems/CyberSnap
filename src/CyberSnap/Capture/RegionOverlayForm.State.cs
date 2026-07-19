@@ -935,7 +935,10 @@ public sealed partial class RegionOverlayForm
         try { CloseCaptureMagnifier(); } catch { }
         EnsureToolbarReady();
         RefreshToolbar();
+        // Restore the last annotation tool on the bar, but never flash its help banner here —
+        // the user just finished selecting a region and should only see Confirm/Retry chrome.
         TryRestoreLastAnnotationTool();
+        HideToolBannerImmediate();
         _shinePhase[0] = 0f;
         _shinePhase[1] = 0.5f;
         _shinePhase[2] = 0.25f;
@@ -966,7 +969,7 @@ public sealed partial class RegionOverlayForm
             && !_mainBarTools.Any(t => string.Equals(t.Id, tool.Id, StringComparison.OrdinalIgnoreCase)))
             return;
 
-        SetTool(tool);
+        SetTool(tool, showHelpBanner: false);
     }
 
     private void ExitConfirmMode()

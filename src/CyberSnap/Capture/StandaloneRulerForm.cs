@@ -287,8 +287,8 @@ public sealed class StandaloneRulerForm : Form
         var prevCursorPos = _cursorPos;
         _cursorPos = e.Location;
 
-        // Revive banner if cursor moves over it (keep instructions visible)
-        if (_banner.ContainsCursor(_cursorPos))
+        // Revive only when idle — never while measuring/editing so the pill stays out of the way.
+        if (!_isDragging && _editState == EditState.None && _banner.ContainsCursor(_cursorPos))
             _banner.Revive();
 
         if (_isDragging)
