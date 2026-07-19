@@ -601,6 +601,8 @@ public sealed partial class RegionOverlayForm
             _magBitmap.Dispose();
             ClearEditHistory();
             _committedAnnotationsBitmap?.Dispose();
+            _desaturatedScreenshot?.Dispose();
+            _desaturatedScreenshot = null;
             _brandBitmap?.Dispose();
             _brandBitmap = null;
             _hexFont.Dispose();
