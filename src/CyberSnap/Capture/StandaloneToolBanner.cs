@@ -69,8 +69,18 @@ public sealed class StandaloneToolBanner : IDisposable
     private int _holdTicks;
     private RectangleF _bannerRect;
     private State _state = State.FadeIn;
+    /// <summary>Per-tick opacity drop while fading out. Auto-hide uses the slow rate;
+    /// user-initiated <see cref="Dismiss"/> uses a short fade (~100 ms) to clear the UI quickly.</summary>
+    private float _fadeOutStep = AutoFadeOutStep;
+
+    private const float AutoFadeOutStep = 0.08f;
+    /// <summary>~0.16 opacity per 16 ms tick → ~100 ms full fade from opaque.</summary>
+    private const float DismissFadeOutStep = 0.16f;
 
     private enum State { FadeIn, Hold, FadeOut }
+
+    /// <summary>True while the pill is still visible (opacity &gt; 0).</summary>
+    public bool IsVisible => _opacity > 0f;
 
     /// <summary>
     /// Creates the banner and starts its fade-in animation immediately.
@@ -303,10 +313,11 @@ public sealed class StandaloneToolBanner : IDisposable
                 break;
 
             case State.FadeOut:
-                _opacity -= 0.08f;
+                _opacity -= _fadeOutStep;
                 if (_opacity <= 0.0f)
                 {
                     _opacity = 0.0f;
+                    _fadeOutStep = AutoFadeOutStep;
                     _timer?.Stop();
                 }
                 RaiseInvalidate();
@@ -318,11 +329,16 @@ public sealed class StandaloneToolBanner : IDisposable
     /// or when the user clicks without completing a drag selection).</summary>
     public void Revive()
     {
-        if (_state == State.FadeOut)
+        _fadeOutStep = AutoFadeOutStep;
+        if (_state == State.FadeOut || _opacity < 1f)
         {
+            // Resume/restart fade-in from the current opacity so a mid-fade dismiss
+            // can be recovered smoothly (aborted selection, hover re-enter).
             _state = State.FadeIn;
-            _opacity = 0f; // restart fade-in from transparent
+            if (_opacity <= 0f)
+                _opacity = 0f;
             _timer?.Start();
+            RaiseInvalidate();
         }
         else if (_state == State.Hold)
         {
@@ -330,16 +346,46 @@ public sealed class StandaloneToolBanner : IDisposable
         }
     }
 
-    /// <summary>Immediately hide the banner (e.g. when the user starts interacting).</summary>
+    /// <summary>
+    /// Fade the banner out quickly (~100 ms). Safe to call from any state, including
+    /// an already-running auto fade-out (accelerates it). Prefer this on user interaction
+    /// so the pill leaves without a hard cut; use <see cref="DismissImmediate"/> only if
+    /// mid-drag repaints of the banner region prove problematic.
+    /// </summary>
     public void Dismiss()
     {
-        if (_state == State.FadeIn || _state == State.Hold)
+        if (_opacity <= 0f)
         {
             _state = State.FadeOut;
-            _opacity = 0f;
             _timer?.Stop();
-            RaiseInvalidate();
+            return;
         }
+
+        _state = State.FadeOut;
+        _fadeOutStep = DismissFadeOutStep;
+        _timer?.Start();
+        // First tick will drop opacity; force an immediate repaint so the host stays in sync.
+        RaiseInvalidate();
+    }
+
+    /// <summary>
+    /// Hard-hide the banner on the next paint (opacity → 0, timer stopped). Use when the
+    /// host is about to dispose the banner, or when an animated dismiss would contend with
+    /// a heavy full-surface drag repaint.
+    /// </summary>
+    public void DismissImmediate()
+    {
+        if (_opacity <= 0f && _state == State.FadeOut)
+        {
+            _timer?.Stop();
+            return;
+        }
+
+        _state = State.FadeOut;
+        _opacity = 0f;
+        _fadeOutStep = AutoFadeOutStep;
+        _timer?.Stop();
+        RaiseInvalidate();
     }
 
     /// <summary>
