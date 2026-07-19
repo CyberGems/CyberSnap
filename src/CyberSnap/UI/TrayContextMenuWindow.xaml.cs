@@ -164,14 +164,14 @@ public partial class TrayContextMenuWindow : Window
         QrBtn.ToolTip = T("QR & Barcodes");
         ColorPickerBtn.ToolTip = T("Color picker");
         RulerBtn.ToolTip = T("Ruler");
-        AnnotationsBtn.ToolTip = T("Annotations Editor...");
-        GalleryBtn.ToolTip = T("Capture Gallery...");
+        AnnotationsBtn.ToolTip = T("Open Annotation Editor");
+        GalleryBtn.ToolTip = T("Open Capture Gallery");
         VideoRecordBtn.ToolTip = T("Screen recorder (MP4)");
         GifRecordBtn.ToolTip = T("Screen recorder (GIF)");
         
         // Compact labels for the half-width row; full names live in tooltips.
         SettingsText.Text = T("Settings");
-        SettingsBtn.ToolTip = T("Configuration...");
+        SettingsBtn.ToolTip = T("Open Configuration window");
         ExitText.Text = T("Exit");
         ExitBtn.ToolTip = T("Exit CyberSnap");
 
