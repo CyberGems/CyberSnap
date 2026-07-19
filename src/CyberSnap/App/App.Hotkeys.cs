@@ -63,7 +63,9 @@ public partial class App
             var title = string.Format(
                 LocalizationService.Translate("CyberSnap {0} is ready"),
                 UpdateService.GetCurrentVersionLabel());
-            ToastWindow.Show(title, body);
+            // Suppress toast auto-sound: Standard is IsSystemMessage (would play System).
+            // Startup has its own SoundEvent — same pattern as achievements / upload.
+            ToastWindow.Show(ToastSpec.Standard(title, body) with { SuppressSound = true });
             SoundService.PlayStartupSound();
         }
     }
