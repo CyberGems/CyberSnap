@@ -81,17 +81,36 @@ public static class UpdateService
             string? assetSha256 = null;
             if (root.TryGetProperty("assets", out var assets))
             {
-                var channel = GetRuntimeChannel();
+                // Search for the setup installer first, as we need an executable to run the installer
                 foreach (var asset in assets.EnumerateArray())
                 {
                     var name = asset.GetProperty("name").GetString() ?? "";
-                    if (name.Contains(channel, StringComparison.OrdinalIgnoreCase))
+                    if (name.StartsWith("CyberSnap-Setup-", StringComparison.OrdinalIgnoreCase) &&
+                        name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                     {
                         downloadUrl = asset.GetProperty("browser_download_url").GetString();
                         assetName = name;
                         if (asset.TryGetProperty("sha256", out var sha))
                             assetSha256 = sha.GetString();
                         break;
+                    }
+                }
+
+                // Fallback to architecture-specific channel (e.g. portable zip) if installer is not found
+                if (downloadUrl is null)
+                {
+                    var channel = GetRuntimeChannel();
+                    foreach (var asset in assets.EnumerateArray())
+                    {
+                        var name = asset.GetProperty("name").GetString() ?? "";
+                        if (name.Contains(channel, StringComparison.OrdinalIgnoreCase))
+                        {
+                            downloadUrl = asset.GetProperty("browser_download_url").GetString();
+                            assetName = name;
+                            if (asset.TryGetProperty("sha256", out var sha))
+                                assetSha256 = sha.GetString();
+                            break;
+                        }
                     }
                 }
             }
