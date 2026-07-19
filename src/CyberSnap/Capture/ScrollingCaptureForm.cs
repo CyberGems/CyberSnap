@@ -1130,9 +1130,9 @@ public sealed partial class ScrollingCaptureForm : Form
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     /// <summary>
-    /// Floating control bar styled identically to the MP4/GIF recording bars
+    /// Floating control bar (reference design for MP4/GIF recording bars)
     /// with a teal accent tint. Two-phase: Ready (START) and Capturing (STOP).
-    /// Positions centered above the capture region like the recording bars.
+    /// Positions centered above the capture region.
     /// </summary>
     private sealed class CaptureControlBar : Form
     {

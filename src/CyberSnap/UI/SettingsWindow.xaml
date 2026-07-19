@@ -1107,7 +1107,9 @@
                                  IsChecked="True" Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="CaptureTab" Content="Capture" Tag="Capture" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="RecordingTab" Content="Video" Tag="Video" GroupName="Main"
+                    <RadioButton x:Name="RecordingTab" Content="Video &amp; GIF" Tag="Video"
+                                 Services:LocalizationService.SourceText="Video &amp; GIF"
+                                 GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="OcrTab" Content="OCR" Tag="OCR" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
@@ -1976,13 +1978,13 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Recording -->
+            <!-- Recording: Video & GIF -->
             <ScrollViewer x:Name="RecordingPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,18">
                 <StackPanel>
-                    <TextBlock Text="Screen Recording" Style="{StaticResource SectionLabel}"/>
-                    <Border Style="{StaticResource Card}">
+                    <TextBlock Text="Video recording (MP4)" Style="{StaticResource SectionLabel}"
+                               Services:LocalizationService.SourceText="Video recording (MP4)"/>
+                    <Border x:Name="VideoOnlySettings" Style="{StaticResource Card}">
                         <StackPanel>
-
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -1993,12 +1995,15 @@
                                     <TextBlock Text="&#xE9D2;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Quality" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Set maximum recording resolution." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Quality" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Quality"/>
+                                    <TextBlock Text="Maximum resolution for MP4 recordings." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Maximum resolution for MP4 recordings."/>
                                 </StackPanel>
                                 <ComboBox x:Name="RecordingQualityCombo" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Center"
-                                          ToolTip="Set maximum recording resolution"
+                                          ToolTip="Set maximum MP4 recording resolution"
+                                          Services:LocalizationService.SourceToolTip="Set maximum MP4 recording resolution"
                                           AutomationProperties.Name="Recording quality"
                                           SelectionChanged="RecordingQualityCombo_Changed">
                                     <ComboBoxItem Content="Original"
@@ -2030,30 +2035,33 @@
                                     <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="FPS" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Control how many frames are captured each second." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Video FPS" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Video FPS"/>
+                                    <TextBlock Text="Frames per second for MP4 recordings." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Frames per second for MP4 recordings."/>
                                 </StackPanel>
                                 <ComboBox x:Name="RecordingFpsCombo" Grid.Column="2" MinWidth="150"
                                           VerticalAlignment="Center"
-                                          ToolTip="Choose how many frames are captured each second"
-                                          AutomationProperties.Name="Recording FPS"
+                                          ToolTip="Choose frames per second for MP4 recordings"
+                                          Services:LocalizationService.SourceToolTip="Choose frames per second for MP4 recordings"
+                                          AutomationProperties.Name="Video FPS"
                                           SelectionChanged="RecordingFpsCombo_Changed">
                                     <ComboBoxItem Content="15" Tag="15"
                                                   ToolTip="Capture 15 frames per second"
                                                   AutomationProperties.Name="15 FPS"
-                                                  AutomationProperties.HelpText="Capture smoother-than-low-power recordings at 15 frames per second."/>
+                                                  AutomationProperties.HelpText="Capture 15 frames per second for MP4."/>
                                     <ComboBoxItem Content="24" Tag="24"
                                                   ToolTip="Capture 24 frames per second"
                                                   AutomationProperties.Name="24 FPS"
-                                                  AutomationProperties.HelpText="Capture video-like motion at 24 frames per second."/>
+                                                  AutomationProperties.HelpText="Capture 24 frames per second for MP4."/>
                                     <ComboBoxItem Content="30" Tag="30"
                                                   ToolTip="Capture 30 frames per second"
                                                   AutomationProperties.Name="30 FPS"
-                                                  AutomationProperties.HelpText="Capture smooth recordings at 30 frames per second."/>
+                                                  AutomationProperties.HelpText="Capture 30 frames per second for MP4."/>
                                     <ComboBoxItem Content="60" Tag="60"
                                                   ToolTip="Capture 60 frames per second"
                                                   AutomationProperties.Name="60 FPS"
-                                                  AutomationProperties.HelpText="Capture very smooth recordings at 60 frames per second."/>
+                                                  AutomationProperties.HelpText="Capture 60 frames per second for MP4."/>
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -2067,13 +2075,16 @@
                                     <TextBlock Text="&#xE7B3;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Show cursor in recordings" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Include pointer movement in recorded output." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Show cursor in video" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Show cursor in video"/>
+                                    <TextBlock Text="Include the mouse pointer in MP4 recordings." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Include the mouse pointer in MP4 recordings."/>
                                 </StackPanel>
-                                <CheckBox x:Name="RecordShowCursorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Show cursor in recordings"
-                                          ToolTip="Include pointer movement in recorded output."
-                                          Checked="RecordShowCursorCheck_Changed" Unchecked="RecordShowCursorCheck_Changed"/>
+                                <CheckBox x:Name="VideoShowCursorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Show cursor in video"
+                                          ToolTip="Include the mouse pointer in MP4 recordings."
+                                          Services:LocalizationService.SourceToolTip="Include the mouse pointer in MP4 recordings."
+                                          Checked="VideoShowCursorCheck_Changed" Unchecked="VideoShowCursorCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
@@ -2086,12 +2097,15 @@
                                     <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Enable editor" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Open the trimmer after each video or GIF recording." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Open trimmer after video" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Open trimmer after video"/>
+                                    <TextBlock Text="Open the video trimmer when an MP4 recording finishes." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Open the video trimmer when an MP4 recording finishes."/>
                                 </StackPanel>
                                 <CheckBox x:Name="VideoEnableEditorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Enable editor"
-                                          ToolTip="Open the post-capture trimmer for recordings."
+                                          AutomationProperties.Name="Open trimmer after video"
+                                          ToolTip="Open the video trimmer when an MP4 recording finishes."
+                                          Services:LocalizationService.SourceToolTip="Open the video trimmer when an MP4 recording finishes."
                                           Checked="VideoEnableEditorCheck_Changed" Unchecked="VideoEnableEditorCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -2105,27 +2119,18 @@
                                     <TextBlock Text="&#xE8C8;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Don't auto-copy recordings" Style="{StaticResource SettingTitle}"
-                                               Services:LocalizationService.SourceText="Don't auto-copy recordings"/>
-                                    <TextBlock Text="When global Auto-copy is on, still don't place the saved video or GIF on the clipboard." Style="{StaticResource SettingDescription}"
-                                               Services:LocalizationService.SourceText="When global Auto-copy is on, still don't place the saved video or GIF on the clipboard."/>
+                                    <TextBlock Text="Don't auto-copy video" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Don't auto-copy video"/>
+                                    <TextBlock Text="When global Auto-copy is on, still don't place the saved MP4 on the clipboard." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="When global Auto-copy is on, still don't place the saved MP4 on the clipboard."/>
                                 </StackPanel>
                                 <CheckBox x:Name="AutoCopyExcludeRecordingCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Don't auto-copy recordings"
-                                          ToolTip="When global Auto-copy is on, still don't place the saved video or GIF on the clipboard."
-                                          Services:LocalizationService.SourceToolTip="When global Auto-copy is on, still don't place the saved video or GIF on the clipboard."
+                                          AutomationProperties.Name="Don't auto-copy video"
+                                          ToolTip="When global Auto-copy is on, still don't place the saved MP4 on the clipboard."
+                                          Services:LocalizationService.SourceToolTip="When global Auto-copy is on, still don't place the saved MP4 on the clipboard."
                                           Checked="AutoCopyExcludeRecordingCheck_Changed" Unchecked="AutoCopyExcludeRecordingCheck_Changed"/>
                             </Grid>
-                        </StackPanel>
-                    </Border>
-                    <TextBlock x:Name="RecordingPreferenceStatusText"
-                               Style="{StaticResource SettingsStatusText}"
-                               Visibility="Collapsed"
-                               Margin="4,8,0,0"/>
-
-                    <TextBlock x:Name="AudioSettingsLabel" Text="Audio" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
-                    <Border x:Name="VideoOnlySettings" Style="{StaticResource Card}">
-                        <StackPanel>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -2136,8 +2141,10 @@
                                     <TextBlock Text="&#xE720;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Record microphone" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Capture audio from the selected input device." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Record microphone" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Record microphone"/>
+                                    <TextBlock Text="Capture audio from the selected input device." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Capture audio from the selected input device."/>
                                     <ComboBox x:Name="MicDeviceCombo" Margin="0,8,0,0"
                                               ToolTip="Choose the microphone input device"
                                               AutomationProperties.Name="Microphone input device"
@@ -2148,9 +2155,7 @@
                                           ToolTip="Capture audio from the selected input device."
                                           Checked="RecordMicCheck_Changed" Unchecked="RecordMicCheck_Changed"/>
                             </Grid>
-
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -2161,8 +2166,10 @@
                                     <TextBlock Text="&#xE767;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Record desktop audio" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Capture system audio from the selected output device." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Record desktop audio" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Record desktop audio"/>
+                                    <TextBlock Text="Capture system audio from the selected output device." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Capture system audio from the selected output device."/>
                                     <ComboBox x:Name="DesktopAudioDeviceCombo" Margin="0,8,0,0"
                                               ToolTip="Choose the desktop audio output device"
                                               AutomationProperties.Name="Desktop audio output device"
@@ -2175,6 +2182,115 @@
                             </Grid>
                         </StackPanel>
                     </Border>
+
+                    <TextBlock Text="GIF recording" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"
+                               Services:LocalizationService.SourceText="GIF recording"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="GIF FPS" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="GIF FPS"/>
+                                    <TextBlock Text="Frames per second for GIF recordings. 15 keeps files smaller; 30 is smoother." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Frames per second for GIF recordings. 15 keeps files smaller; 30 is smoother."/>
+                                </StackPanel>
+                                <ComboBox x:Name="GifFpsCombo" Grid.Column="2" MinWidth="150"
+                                          VerticalAlignment="Center"
+                                          ToolTip="Choose frames per second for GIF recordings"
+                                          Services:LocalizationService.SourceToolTip="Choose frames per second for GIF recordings"
+                                          AutomationProperties.Name="GIF FPS"
+                                          SelectionChanged="GifFpsCombo_Changed">
+                                    <ComboBoxItem Content="15" Tag="15"
+                                                  ToolTip="Capture 15 frames per second (recommended)"
+                                                  AutomationProperties.Name="15 FPS"
+                                                  AutomationProperties.HelpText="Default GIF frame rate. Smaller files, good motion."/>
+                                    <ComboBoxItem Content="30" Tag="30"
+                                                  ToolTip="Capture 30 frames per second"
+                                                  AutomationProperties.Name="30 FPS"
+                                                  AutomationProperties.HelpText="Smoother GIFs with larger file size."/>
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE7B3;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Show cursor in GIF" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Show cursor in GIF"/>
+                                    <TextBlock Text="Include the mouse pointer in GIF recordings. Off by default for cleaner loops." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Include the mouse pointer in GIF recordings. Off by default for cleaner loops."/>
+                                </StackPanel>
+                                <CheckBox x:Name="GifShowCursorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Show cursor in GIF"
+                                          ToolTip="Include the mouse pointer in GIF recordings. Off by default for cleaner loops."
+                                          Services:LocalizationService.SourceToolTip="Include the mouse pointer in GIF recordings. Off by default for cleaner loops."
+                                          Checked="GifShowCursorCheck_Changed" Unchecked="GifShowCursorCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Open trimmer after GIF" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Open trimmer after GIF"/>
+                                    <TextBlock Text="Open the trimmer when a GIF recording finishes." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Open the trimmer when a GIF recording finishes."/>
+                                </StackPanel>
+                                <CheckBox x:Name="GifEnableEditorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Open trimmer after GIF"
+                                          ToolTip="Open the trimmer when a GIF recording finishes."
+                                          Services:LocalizationService.SourceToolTip="Open the trimmer when a GIF recording finishes."
+                                          Checked="GifEnableEditorCheck_Changed" Unchecked="GifEnableEditorCheck_Changed"/>
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Grid x:Name="AutoCopyExcludeGifRow" Style="{StaticResource SettingRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}">
+                                    <TextBlock Text="&#xE8C8;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Don't auto-copy GIF" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Don't auto-copy GIF"/>
+                                    <TextBlock Text="When global Auto-copy is on, still don't place the saved GIF on the clipboard." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="When global Auto-copy is on, still don't place the saved GIF on the clipboard."/>
+                                </StackPanel>
+                                <CheckBox x:Name="AutoCopyExcludeGifCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Don't auto-copy GIF"
+                                          ToolTip="When global Auto-copy is on, still don't place the saved GIF on the clipboard."
+                                          Services:LocalizationService.SourceToolTip="When global Auto-copy is on, still don't place the saved GIF on the clipboard."
+                                          Checked="AutoCopyExcludeGifCheck_Changed" Unchecked="AutoCopyExcludeGifCheck_Changed"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock x:Name="RecordingPreferenceStatusText"
+                               Style="{StaticResource SettingsStatusText}"
+                               Visibility="Collapsed"
+                               Margin="4,8,0,0"/>
 
                 </StackPanel>
             </ScrollViewer>

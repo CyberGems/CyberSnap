@@ -122,6 +122,7 @@ public sealed class SettingsService : IDisposable
                 s_cachedSettings.AutoCopyExcludeImages = settings.AutoCopyExcludeImages;
                 s_cachedSettings.AutoCopyExcludeOcr = settings.AutoCopyExcludeOcr;
                 s_cachedSettings.AutoCopyExcludeRecording = settings.AutoCopyExcludeRecording;
+                s_cachedSettings.AutoCopyExcludeGif = settings.AutoCopyExcludeGif;
                 s_cachedSettings.OcrAutoCopyToClipboard = settings.OcrAutoCopyToClipboard;
                 s_cachedSettings.AfterCapture = settings.AfterCapture;
                 s_cachedSettings.OpenEditorAfterCapture = settings.OpenEditorAfterCapture;
@@ -487,6 +488,13 @@ public sealed class SettingsService : IDisposable
 
         settings.RecordingFormat = NormalizeEnum(settings.RecordingFormat, RecordingFormat.MP4);
         settings.RecordingQuality = NormalizeEnum(settings.RecordingQuality, RecordingQuality.Original);
+        settings.RecordingFps = settings.RecordingFps switch
+        {
+            15 or 24 or 30 or 60 => settings.RecordingFps,
+            _ => 30
+        };
+        // GIF encoder supports up to 30 FPS; keep options intentionally small for file size.
+        settings.GifFps = settings.GifFps == 30 ? 30 : 15;
         settings.CenterSelectionAspectRatio = NormalizeEnum(settings.CenterSelectionAspectRatio, CenterSelectionAspectRatio.Free);
         settings.TranslationModel = Enum.IsDefined(typeof(TranslationModel), settings.TranslationModel)
             ? settings.TranslationModel

@@ -40,7 +40,7 @@ public sealed partial class RecordingForm
             }
         }
 
-        Invalidate(_toolbarRect);
+        _controlBar?.SetPaused(_isPaused);
     }
 
     private void StopRecording()
@@ -50,9 +50,11 @@ public sealed partial class RecordingForm
         if (Interlocked.Exchange(ref _recordingStopRequested, 1) != 0) return;
         _state = State.Encoding;
         _tickTimer?.Stop();
+        _controlBar?.TransitionToEncoding();
 
         var gifRec = _recorder; _recorder = null;
         var vidRec = _videoRecorder; _videoRecorder = null;
+        CloseControlBar();
         Close();
 
         // Finalize the recording in the background after the UI closes.
@@ -113,6 +115,7 @@ public sealed partial class RecordingForm
         if (_videoRecorder != null) { _videoRecorder.Discard(); _videoRecorder.Dispose(); _videoRecorder = null; }
         _desktopAudioSoundSuppression?.Dispose();
         _desktopAudioSoundSuppression = null;
+        CloseControlBar();
         RecordingCancelled?.Invoke();
         Close();
     }
@@ -126,17 +129,68 @@ public sealed partial class RecordingForm
         _selectionAdorner = null;
         _recordRegion = _selection;
 
-        CalcToolbarLayout();
         TransitionToRecordingSurface();
+        ShowControlBar();
 
         Current = this;
-        Invalidate(Rectangle.Union(_selection, _toolbarRect));
+        Invalidate(_selection);
     }
 
-    private void ToggleFps()
+    private static void PersistRecordingFps(Models.RecordingFormat format, int fps)
     {
-        _fps = _fps == 60 ? 30 : 60;
-        Invalidate(_toolbarRect);
+        try
+        {
+            using var svc = new SettingsService();
+            svc.Load();
+            if (format == Models.RecordingFormat.GIF)
+                svc.Settings.GifFps = fps;
+            else
+                svc.Settings.RecordingFps = fps;
+            svc.Save();
+            svc.FlushPendingWrites();
+        }
+        catch { /* settings may be locked */ }
+    }
+
+    private void ShowControlBar()
+    {
+        CloseControlBar();
+
+        var screenRegion = new Rectangle(
+            _recordRegion.X + _virtualBounds.X,
+            _recordRegion.Y + _virtualBounds.Y,
+            _recordRegion.Width,
+            _recordRegion.Height);
+
+        _controlBar = new RecordingControlBar(screenRegion, _format, _fps);
+        _controlBar.FpsChanged += fps =>
+        {
+            _fps = fps;
+            PersistRecordingFps(_format, fps);
+        };
+        _controlBar.StartClicked += () =>
+        {
+            if (_state == State.PreRecording)
+                StartActualRecording();
+        };
+        _controlBar.StopClicked += () =>
+        {
+            if (_state == State.Recording)
+                StopRecording();
+        };
+        _controlBar.PauseClicked += () =>
+        {
+            if (_state == State.Recording)
+                TogglePause();
+        };
+        _controlBar.CancelClicked += () =>
+        {
+            if (_state is State.PreRecording or State.Recording)
+                DiscardRecording();
+        };
+        _controlBar.Show();
+        User32.SetWindowPos(_controlBar.Handle, User32.HWND_TOPMOST,
+            0, 0, 0, 0, User32.SWP_NOMOVE | User32.SWP_NOSIZE | User32.SWP_SHOWWINDOW);
     }
 
     private void StartActualRecording()
@@ -147,11 +201,16 @@ public sealed partial class RecordingForm
         _pauseStartTime = null;
         _isPaused = false;
 
+        // Prefer FPS selected on the floating bar (if present).
+        if (_controlBar is not null)
+            _fps = _controlBar.Fps;
+
         _screenshot?.Dispose();
         _screenshot = null;
 
-        CalcToolbarLayout();
         TransitionToRecordingSurface();
+        _controlBar?.TransitionToRecording();
+        UpdateControlBarPosition();
 
         var screenRegion = new Rectangle(
             _recordRegion.X + _virtualBounds.X,
@@ -184,6 +243,7 @@ public sealed partial class RecordingForm
             _recorder = null;
             _videoRecorder?.Dispose();
             _videoRecorder = null;
+            CloseControlBar();
             RecordingFailed?.Invoke(ex);
             Close();
             return;
@@ -197,78 +257,18 @@ public sealed partial class RecordingForm
                 StopRecording();
                 return;
             }
-            Invalidate(_toolbarRect);
+
+            var rawElapsed = _recorder?.Elapsed ?? _videoRecorder?.Elapsed ?? TimeSpan.Zero;
+            var pausedNow = _isPaused && _pauseStartTime.HasValue ? DateTime.UtcNow - _pauseStartTime.Value : TimeSpan.Zero;
+            var elapsed = rawElapsed - _totalPausedDuration - pausedNow;
+            _controlBar?.SetElapsed(elapsed);
         };
         _tickTimer.Start();
         Invalidate();
     }
 
-    private void CalcToolbarLayout()
-    {
-        bool isPreRec = _state == State.PreRecording;
-        int tw = UiChrome.ScaleInt(360);
-        int th = WindowsDockRenderer.SurfaceHeight;
-
-        // Try to place above the recording region
-        int tx = _recordRegion.X + _recordRegion.Width / 2 - tw / 2;
-        int ty = _recordRegion.Y - th - UiChrome.ScaleInt(14);
-
-        var edge = UiChrome.ScaleInt(4);
-        
-        // If placing above goes off-screen, try placing below the recording region
-        if (ty < edge)
-        {
-            int tyBelow = _recordRegion.Bottom + UiChrome.ScaleInt(14);
-            if (tyBelow + th <= Height - edge)
-            {
-                ty = tyBelow;
-            }
-            else
-            {
-                // Fallback: place inside near the bottom of the screen
-                ty = Height - th - UiChrome.ScaleInt(40);
-            }
-        }
-
-        // Safety override: if the toolbar still overlaps the recording region,
-        // and the recording region is very tall, place it inside at the bottom center of the screen
-        var toolbarTemp = new Rectangle(tx, ty, tw, th);
-        if (toolbarTemp.IntersectsWith(_recordRegion) && _recordRegion.Height > Height - UiChrome.ScaleInt(100))
-        {
-            ty = Height - th - UiChrome.ScaleInt(40);
-        }
-
-        if (tx < edge) tx = edge;
-        if (tx + tw > Width - edge) tx = Width - edge - tw;
-
-        _toolbarRect = new Rectangle(tx, ty, tw, th);
-
-        int btnY = _toolbarRect.Y + (_toolbarRect.Height - WindowsDockRenderer.IconButtonSize) / 2;
-        int btnPad = WindowsDockRenderer.SurfacePadding;
-        int btnSize = WindowsDockRenderer.IconButtonSize;
-        int btnGap = WindowsDockRenderer.ButtonSpacing;
-
-        _discardBtn = new Rectangle(_toolbarRect.Right - btnPad - btnSize, btnY, btnSize, btnSize);
-
-        if (isPreRec)
-        {
-            int fpsWidth = UiChrome.ScaleInt(54);
-            _fpsBtn = new Rectangle(_discardBtn.X - btnGap - fpsWidth, btnY, fpsWidth, btnSize);
-            _startBtn = new Rectangle(_fpsBtn.X - btnGap - btnSize, btnY, btnSize, btnSize);
-        }
-        else
-        {
-            _stopBtn = new Rectangle(_discardBtn.X - btnGap - btnSize, btnY, btnSize, btnSize);
-            bool hasPause = _format != Models.RecordingFormat.GIF;
-            _pauseBtn = hasPause
-                ? new Rectangle(_stopBtn.X - btnGap - btnSize, btnY, btnSize, btnSize)
-                : Rectangle.Empty;
-        }
-    }
-
     private void TransitionToRecordingSurface()
     {
-        HideChromeToolTip();
         _selectionAdorner?.Hide();
         Opacity = 1;
 
@@ -282,14 +282,16 @@ public sealed partial class RecordingForm
 
     private Rectangle GetRecordingChromeScreenBounds()
     {
-        if (_toolbarRect.Width <= 0 || _toolbarRect.Height <= 0)
+        // Frame chrome only — the floating control bar is excluded on its own handle.
+        if (_recordRegion.Width <= 0 || _recordRegion.Height <= 0)
             return Rectangle.Empty;
 
+        const int frameThickness = 15;
         return new Rectangle(
-            _virtualBounds.X + _toolbarRect.X,
-            _virtualBounds.Y + _toolbarRect.Y,
-            _toolbarRect.Width,
-            _toolbarRect.Height);
+            _virtualBounds.X + _recordRegion.X - frameThickness,
+            _virtualBounds.Y + _recordRegion.Y - frameThickness,
+            _recordRegion.Width + frameThickness * 2,
+            _recordRegion.Height + frameThickness * 2);
     }
 
     /// <summary>External stop (called from tray menu).</summary>
