@@ -178,7 +178,14 @@ public sealed partial class RegionOverlayForm
             if (btn == CloseButtonIndex) { Cancel(); return; }     // close (Cancel)
             if (btn == StrokeWidthButtonIndex) { CycleStrokeWidth(); return; } // stroke width
             if (btn == ColorButtonIndex) { ToggleColorPicker(); return; } // color dot
-            if (btn == PositionButtonIndex) { ToggleToolbarPosition(); return; } // toggle position
+            if (btn == PositionButtonIndex)
+            {
+                _isDraggingToolbar = true;
+                _toolbarDragStart = e.Location;
+                _toolbarDragOriginalOffset = _toolbarCustomOffset;
+                _hasMovedToolbarByDrag = false;
+                return;
+            }
             if (btn < _mainBarTools.Length)
             {
                 if (btn == _mergedCaptureButtonIndex)
@@ -204,7 +211,10 @@ public sealed partial class RegionOverlayForm
         }
         else if (_toolbarRect.Contains(e.Location))
         {
-            // Left-click on empty toolbar space is a no-op; right-click still shows the context menu.
+            _isDraggingToolbar = true;
+            _toolbarDragStart = e.Location;
+            _toolbarDragOriginalOffset = _toolbarCustomOffset;
+            _hasMovedToolbarByDrag = false;
             return;
         }
 

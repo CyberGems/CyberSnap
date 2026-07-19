@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -64,6 +64,12 @@ public sealed class ToolbarForm : Form
     {
         base.OnHandleCreated(e);
         CaptureWindowExclusion.Apply(this);
+    }
+
+    protected override void SetBoundsCore(int x, int y, int width, int height, BoundsSpecified specified)
+    {
+        base.SetBoundsCore(x, y, width, height, specified);
+        _lastRenderVersion = int.MinValue;
     }
 
     public void UpdateSurface()

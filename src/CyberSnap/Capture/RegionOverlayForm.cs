@@ -103,6 +103,13 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _lastOverlayUiBounds;
     private int _toolbarRenderVersion;
     private float _toolbarAnim;
+
+    // Toolbar drag variables
+    private bool _isDraggingToolbar;
+    private Point _toolbarDragStart;
+    private Point _toolbarDragOriginalOffset;
+    private bool _hasMovedToolbarByDrag;
+    private Point _toolbarCustomOffset;
     private Point _lastCursorPos;
     private Point _prevCursorPos; // crosshair ghosting fix
     private Rectangle _lastSelectionRect;
@@ -707,6 +714,11 @@ public sealed partial class RegionOverlayForm : Form
             CaptureDockSide,
             UiChrome.ScaledToolbarTopMargin);
 
+        if (!_toolbarCustomOffset.IsEmpty)
+        {
+            _toolbarRect.Offset(_toolbarCustomOffset);
+        }
+
         // Last visible in the pre-utility group (matches Paint.Toolbar.cs tier1)
         var tier1Group = new[] { "rect", "center", "scroll", "recordGif", "record" };
         int sepIdx = -1;
@@ -942,17 +954,19 @@ public sealed partial class RegionOverlayForm : Form
     {
         CaptureDockSide = CaptureDockSide == CaptureDockSide.Top ? CaptureDockSide.Bottom : CaptureDockSide.Top;
         DockSideChanged?.Invoke(CaptureDockSide);
+        _toolbarCustomOffset = Point.Empty;
+        var oldUiBounds = _lastOverlayUiBounds;
         CalcToolbar();
         PositionToolbarForm();
-        RefreshToolbar();
-        // Instant dock switch: layered toolbar + cross-screen motion fought each other
-        // (overshoot/glitch). A clean snap is clearer and more reliable.
-        if (_toolbarForm is { IsDisposed: false })
-        {
-            _toolbarForm.SurfaceAlpha = 255;
-            MarkToolbarRenderDirty();
-            try { _toolbarForm.UpdateSurface(); } catch { }
-        }
+        MarkToolbarRenderDirty();
+        _toolbarForm?.UpdateSurface();
+
+        var newUiBounds = GetOverlayUiBounds();
+        _lastOverlayUiBounds = newUiBounds;
+        if (!oldUiBounds.IsEmpty && !newUiBounds.IsEmpty)
+            Invalidate(Rectangle.Union(InflateForRepaint(oldUiBounds, 20), InflateForRepaint(newUiBounds, 20)));
+        else if (!newUiBounds.IsEmpty)
+            Invalidate(InflateForRepaint(newUiBounds, 20));
     }
 
     private void CycleStrokeWidth()
