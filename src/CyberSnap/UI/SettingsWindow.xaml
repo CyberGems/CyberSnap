@@ -834,6 +834,75 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
         </Style>
 
+        <!-- Per-row restore: same ↺ glyph as master reset (Segoe UI, not Fluent icon font). -->
+        <Style x:Key="SoundItemResetButton" TargetType="Button" BasedOn="{StaticResource SoundItemPlayButton}">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextSecondaryBrush}"/>
+            <Setter Property="Content" Value="↺"/>
+            <Setter Property="Padding" Value="0,0,0,1"/>
+        </Style>
+
+        <!-- Master "reset all" — larger ↺, same glyph as per-row restore. -->
+        <Style x:Key="SettingsIconResetButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinWidth" Value="32"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Content" Value="↺"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
+                            <!-- Explicit center box so ↺ sits optically centered in the 32×32 face. -->
+                            <Grid Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+                                <TextBlock Text="{TemplateBinding Content}"
+                                           FontFamily="{TemplateBinding FontFamily}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           FontWeight="{TemplateBinding FontWeight}"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,0,1"
+                                           TextAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChromeButtonPressedBrush}"/>
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Status caption (not interactive): fixed slot so action buttons stay column-aligned. -->
         <Style x:Key="SoundItemSourcePill" TargetType="Border">
             <Setter Property="Padding" Value="0,1"/>
@@ -2733,14 +2802,11 @@
                                 <TextBlock Text="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Services:LocalizationService.SourceText="Master switch for all capture and notification sounds. Customize individual events below using MP3 or WAV files." Style="{StaticResource SettingDescription}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <!-- Icon-only reset — same pattern as Notifications layout reset / file name pattern. -->
-                                <Button x:Name="ResetAllSoundsBtn" Content="↺"
+                                <!-- Icon-only reset — same ↺ glyph as per-row restore; larger for the master control. -->
+                                <Button x:Name="ResetAllSoundsBtn"
+                                        Style="{StaticResource SettingsIconResetButton}"
                                         Margin="0,0,12,0"
-                                        Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="0"
                                         VerticalAlignment="Center"
-                                        VerticalContentAlignment="Center"
-                                        HorizontalContentAlignment="Center"
-                                        FontSize="14" FontWeight="Bold" Cursor="Hand"
                                         ToolTip="Revert all sounds to their built-in defaults."
                                         Services:LocalizationService.SourceToolTip="Revert all sounds to their built-in defaults."
                                         AutomationProperties.Name="Reset all sounds to defaults"
