@@ -52,7 +52,7 @@
             </Setter>
         </Style>
 
-        <!-- Bottom general button style -->
+        <!-- Bottom general button style (compact height; content icons/text sized in markup). -->
         <Style x:Key="BottomButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -60,9 +60,9 @@
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="Padding" Value="10,8"/>
             <Setter Property="Margin" Value="4,2"/>
-            <Setter Property="Height" Value="40"/>
+            <Setter Property="Height" Value="42"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -257,7 +257,7 @@
             <!-- Separator -->
             <Border Grid.Row="2" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="4,6,4,6"/>
 
-            <!-- Bottom Actions -->
+            <!-- Bottom Actions — compact tiles; larger icons/labels for accessibility. -->
             <StackPanel Grid.Row="3">
                 <!-- Editor & Gallery in the same row -->
                 <UniformGrid Columns="2">
@@ -265,16 +265,16 @@
                     <Button x:Name="AnnotationsBtn"
                             Style="{StaticResource BottomButtonStyle}"
                             Click="Annotations_Click"
-                            Padding="8,10"
+                            Padding="8,8"
                             Margin="4,2,2,2">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="AnnotationsIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <Image x:Name="AnnotationsIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
                             <TextBlock x:Name="AnnotationsText"
-                                       FontSize="12"
+                                       FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="86"/>
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
 
@@ -282,16 +282,16 @@
                     <Button x:Name="GalleryBtn"
                             Style="{StaticResource BottomButtonStyle}"
                             Click="Gallery_Click"
-                            Padding="8,10"
+                            Padding="8,8"
                             Margin="2,2,4,2">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="GalleryIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <Image x:Name="GalleryIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
                             <TextBlock x:Name="GalleryText"
-                                       FontSize="12"
+                                       FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="86"/>
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
@@ -302,16 +302,16 @@
                     <Button x:Name="ExitBtn"
                             Style="{StaticResource BottomDangerButtonStyle}"
                             Click="Exit_Click"
-                            Padding="8,10"
+                            Padding="8,8"
                             Margin="4,2,2,2">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="ExitIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <Image x:Name="ExitIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
                             <TextBlock x:Name="ExitText"
-                                       FontSize="12"
+                                       FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="86"/>
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
 
@@ -319,16 +319,16 @@
                     <Button x:Name="SettingsBtn"
                             Style="{StaticResource BottomButtonStyle}"
                             Click="Settings_Click"
-                            Padding="8,10"
+                            Padding="8,8"
                             Margin="2,2,4,2">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Image x:Name="SettingsIcon" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <Image x:Name="SettingsIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
                             <TextBlock x:Name="SettingsText"
-                                       FontSize="12"
+                                       FontSize="13"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"
-                                       MaxWidth="86"/>
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>

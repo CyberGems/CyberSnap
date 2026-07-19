@@ -204,11 +204,12 @@ public partial class TrayContextMenuWindow : Window
         QrIcon.Source = GetIcon("scan", fgColor, 32);
         ColorPickerIcon.Source = GetIcon("picker", fgColor, 32);
         RulerIcon.Source = GetIcon("ruler", fgColor, 32);
-        AnnotationsIcon.Source = GetIcon("compose", fgColor, 16);
-        GalleryIcon.Source = GetIcon("history", fgColor, 16);
+        // Bottom row: larger assets for accessibility while keeping compact tile height.
+        AnnotationsIcon.Source = GetIcon("compose", fgColor, 20);
+        GalleryIcon.Source = GetIcon("history", fgColor, 20);
 
-        SettingsIcon.Source = GetIcon("gear", fgColor, 16);
-        ExitIcon.Source = GetDangerIcon("signOut", 16);
+        SettingsIcon.Source = GetIcon("gear", fgColor, 20);
+        ExitIcon.Source = GetDangerIcon("signOut", 20);
 
         bool isRecording = Capture.RecordingForm.Current != null;
         if (isRecording)
