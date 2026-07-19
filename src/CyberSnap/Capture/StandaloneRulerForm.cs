@@ -159,7 +159,7 @@ public sealed class StandaloneRulerForm : Form
 
         _contextMenu.Items.Add(new ToolStripSeparator());
 
-        var exitItem = WindowsMenuRenderer.Item("Salir", "Esc", iconId: "close", danger: true);
+        var exitItem = WindowsMenuRenderer.Item("Salir", "Esc", iconId: "signOut", danger: true);
         exitItem.Click += (_, _) => Close();
         _contextMenu.Items.Add(exitItem);
 

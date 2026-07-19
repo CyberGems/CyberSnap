@@ -1828,7 +1828,7 @@ public sealed partial class EditorForm
         var scrollbarsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Always show scrollbars"), iconId: null);
         scrollbarsItem.ToolTipText = LocalizationService.Translate("Keep the scroll position indicators visible at all times.");
         var settingsItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Configuration..."), iconId: "gear");
-        var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Exit"), iconId: "close");
+        var exitItem = WindowsMenuRenderer.Item(LocalizationService.Translate("Exit"), iconId: "signOut");
         settingsItem.Click += (_, _) =>
         {
             if (System.Windows.Application.Current is CyberSnap.App app)

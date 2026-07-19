@@ -109,7 +109,7 @@ public sealed class StandaloneOcrForm : Form
         closeMenuAndContinue.Click += (_, _) => { /* just close the menu */ };
         _contextMenu.Items.Add(closeMenuAndContinue);
 
-        var exitItem = WindowsMenuRenderer.Item("Exit OCR capture", iconId: "close", danger: true);
+        var exitItem = WindowsMenuRenderer.Item("Exit OCR capture", iconId: "signOut", danger: true);
         exitItem.Click += (_, _) => Close();
         _contextMenu.Items.Add(exitItem);
 

@@ -1345,7 +1345,7 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(new ToolStripSeparator());
 
             var yesLabel = isSpanish ? "Confirmar cancelación" : "Confirm cancellation";
-            var yesItem = WindowsMenuRenderer.Item(yesLabel, iconId: "close", danger: true, iconSize: 24);
+            var yesItem = WindowsMenuRenderer.Item(yesLabel, iconId: "signOut", danger: true, iconSize: 24);
             yesItem.Click += (_, _) => Cancel();
             menu.Items.Add(yesItem);
 

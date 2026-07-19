@@ -211,7 +211,7 @@ public sealed partial class ScrollingCaptureForm : Form
             "es", StringComparison.OrdinalIgnoreCase);
 
         var cancelLabel = isSpanish ? "Cancelar captura por desplazamiento" : "Cancel scroll capture";
-        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOut", danger: true, iconSize: 24);
         cancelItem.Click += (_, _) => Cancel();
         menu.Items.Add(cancelItem);
 

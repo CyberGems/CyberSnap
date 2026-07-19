@@ -245,7 +245,7 @@ public sealed partial class RecordingForm : Form
         var cancelLabel = isMp4
             ? (isSpanish ? "Cancelar captura MP4" : "Cancel MP4 capture")
             : (isSpanish ? "Cancelar captura GIF" : "Cancel GIF capture");
-        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "close", danger: true, iconSize: 24);
+        var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOut", danger: true, iconSize: 24);
         cancelItem.Click += (_, _) => CancelFromEscape();
         menu.Items.Add(cancelItem);
 
