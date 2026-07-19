@@ -27,7 +27,7 @@ The project automatically embeds every `Assets/Sounds/*.mp3` (`EmbeddedResource`
    - Call `SoundService.Play…()` where appropriate.
 3. **Rebuild.** If the MP3 is missing, that event stays silent (no error).
 
-For **upload**, the wiring is already in place: just drop `upload.mp3` in this folder and rebuild.
+Default MP3s in this folder are **soft synthesized UI blips** (mono 44.1 kHz). Replace any file with your own assets and rebuild to override the embedded default.
 
 ## Requirements
 
