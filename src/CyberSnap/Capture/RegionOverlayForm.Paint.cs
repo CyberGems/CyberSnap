@@ -312,13 +312,14 @@ public sealed partial class RegionOverlayForm
             SelectionFrameRenderer.DrawConfirmHandles(g, GetConfirmHandleRects());
 
             // Keep dimension pills visible after drag ends — still useful while resizing /
-            // confirming. Anchor follows the cursor (nearest corner of the locked region).
+            // confirming. Anchor follows the cursor (nearest free corner; avoids confirm buttons).
             SelectionSizeReadout.Draw(
                 g,
                 GetReadoutCursorPoint(),
                 _confirmRect,
                 _readoutFont,
-                ClientRectangle);
+                ClientRectangle,
+                avoidRects: GetConfirmReadoutAvoidRects());
         }
 
         g.SmoothingMode = SmoothingMode.Default;
@@ -847,7 +848,8 @@ public sealed partial class RegionOverlayForm
             cursor,
             selection,
             _readoutFont,
-            ClientRectangle);
+            ClientRectangle,
+            avoidRects: GetConfirmReadoutAvoidRects());
         if (!readoutBounds.IsEmpty)
             Invalidate(InflateForRepaint(readoutBounds, 10));
     }

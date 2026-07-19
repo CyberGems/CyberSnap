@@ -9,14 +9,15 @@ namespace CyberSnap.Capture;
 /// Draws selection dimensions as premium pills anchored to the corner of the selection
 /// nearest the cursor (so dragging any direction keeps the readout under the hand).
 /// Prefer split pills (width on the horizontal edge, height on the vertical edge of that
-/// corner); when they would clip or collide they fuse into one combined pill still near
-/// that corner.
+/// corner); when they would clip, collide with each other, or hit reserved chrome
+/// (e.g. confirm buttons) they try other corners / fuse into one pill.
 /// </summary>
 internal static class SelectionSizeReadout
 {
     private const int PadX = 8;
     private const int PadY = 4;
     private const int EdgeGap = 7;
+    private const int ObstaclePad = 8;  // gap kept clear of reserved chrome (confirm buttons)
     private const int SegGap = 9;
     private const int IconTextGap = 4;
     private const int LineGap = 2;
@@ -38,12 +39,18 @@ internal static class SelectionSizeReadout
         public Rectangle Rect;
     }
 
-    public static Rectangle GetBounds(Point cursor, Rectangle selection, Font font, Rectangle clientBounds, IReadOnlyList<string>? details = null)
+    public static Rectangle GetBounds(
+        Point cursor,
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<string>? details = null,
+        IReadOnlyList<Rectangle>? avoidRects = null)
     {
         if (!ShowDimensions)
             return Rectangle.Empty;
 
-        var pills = Layout(cursor, selection, font, clientBounds, details);
+        var pills = Layout(cursor, selection, font, clientBounds, details, avoidRects);
         if (pills.Count == 0)
             return Rectangle.Empty;
 
@@ -53,12 +60,19 @@ internal static class SelectionSizeReadout
         return union;
     }
 
-    public static void Draw(Graphics g, Point cursor, Rectangle selection, Font font, Rectangle clientBounds, IReadOnlyList<string>? details = null)
+    public static void Draw(
+        Graphics g,
+        Point cursor,
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<string>? details = null,
+        IReadOnlyList<Rectangle>? avoidRects = null)
     {
         if (!ShowDimensions)
             return;
 
-        var pills = Layout(cursor, selection, font, clientBounds, details);
+        var pills = Layout(cursor, selection, font, clientBounds, details, avoidRects);
         if (pills.Count == 0)
             return;
 
@@ -75,7 +89,13 @@ internal static class SelectionSizeReadout
 
     // ── Layout ────────────────────────────────────────────────────────────────
 
-    private static List<Pill> Layout(Point cursor, Rectangle selection, Font font, Rectangle clientBounds, IReadOnlyList<string>? details)
+    private static List<Pill> Layout(
+        Point cursor,
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<string>? details,
+        IReadOnlyList<Rectangle>? avoidRects)
     {
         var result = new List<Pill>(2);
         if (selection.Width <= 2 || selection.Height <= 2)
@@ -95,74 +115,166 @@ internal static class SelectionSizeReadout
         var wSize = MeasurePill(wLines, font, lineH, iconBox);
         var hSize = MeasurePill(hLines, font, lineH, iconBox);
 
-        // Corner of the selection nearest the cursor (drag end / hover hand).
-        var (preferRight, preferBottom) = NearestCorner(cursor, selection);
+        var mergedLines = new List<Seg[]>(detailLines);
+        mergedLines.Add(new[] { widthSeg, heightSeg });
+        var mSize = MeasurePill(mergedLines, font, lineH, iconBox);
 
-        // Width pill: outside the top or bottom edge, aligned to the preferred horizontal corner.
+        // Try corners nearest the cursor first; skip any placement that hits reserved chrome.
+        foreach (var (preferRight, preferBottom) in CornersByDistance(cursor, selection))
+        {
+            if (TryPlaceSplit(
+                    selection, wSize, hSize, preferRight, preferBottom, clientBounds, avoidRects,
+                    out var topOrBottomRect, out var sideRect))
+            {
+                result.Add(new Pill { Lines = wLines, Rect = topOrBottomRect });
+                result.Add(new Pill { Lines = hLines, Rect = sideRect });
+                return result;
+            }
+
+            if (TryPlaceMerged(
+                    selection, mSize, preferRight, preferBottom, clientBounds, avoidRects,
+                    out var mRect))
+            {
+                result.Add(new Pill { Lines = mergedLines, Rect = mRect });
+                return result;
+            }
+        }
+
+        // Last resort: merged at nearest corner, clamp into client (may still graze obstacles
+        // if the selection is tiny and chrome fills every side).
+        var (fallbackRight, fallbackBottom) = CornersByDistance(cursor, selection)[0];
+        var fallback = PlaceMergedNearCorner(selection, mSize, fallbackRight, fallbackBottom, clientBounds, avoidRects);
+        result.Add(new Pill { Lines = mergedLines, Rect = fallback });
+        return result;
+    }
+
+    private static bool TryPlaceSplit(
+        Rectangle selection,
+        Size wSize,
+        Size hSize,
+        bool preferRight,
+        bool preferBottom,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects,
+        out Rectangle topOrBottomRect,
+        out Rectangle sideRect)
+    {
         int wY = preferBottom
             ? selection.Bottom + EdgeGap
             : selection.Top - EdgeGap - wSize.Height;
         int wX = preferRight
             ? selection.Right - wSize.Width
             : selection.Left;
-        var topOrBottomRect = new Rectangle(wX, wY, wSize.Width, wSize.Height);
+        topOrBottomRect = new Rectangle(wX, wY, wSize.Width, wSize.Height);
 
-        // Height pill: outside the left or right edge, aligned to the preferred vertical corner.
         int hX = preferRight
             ? selection.Right + EdgeGap
             : selection.Left - EdgeGap - hSize.Width;
         int hY = preferBottom
             ? selection.Bottom - hSize.Height
             : selection.Top;
-        var sideRect = new Rectangle(hX, hY, hSize.Width, hSize.Height);
+        sideRect = new Rectangle(hX, hY, hSize.Width, hSize.Height);
 
-        bool wFits = FitsInClient(topOrBottomRect, clientBounds);
-        bool hFits = FitsInClient(sideRect, clientBounds);
-        bool collide = topOrBottomRect.IntersectsWith(sideRect);
+        if (!FitsInClient(topOrBottomRect, clientBounds) || !FitsInClient(sideRect, clientBounds))
+            return false;
+        if (topOrBottomRect.IntersectsWith(sideRect))
+            return false;
+        if (HitsObstacle(topOrBottomRect, avoidRects) || HitsObstacle(sideRect, avoidRects))
+            return false;
 
-        if (wFits && hFits && !collide)
+        topOrBottomRect = ClampToClient(topOrBottomRect, clientBounds);
+        sideRect = ClampToClient(sideRect, clientBounds);
+        if (topOrBottomRect.IntersectsWith(sideRect))
+            return false;
+        if (HitsObstacle(topOrBottomRect, avoidRects) || HitsObstacle(sideRect, avoidRects))
+            return false;
+
+        return true;
+    }
+
+    private static bool TryPlaceMerged(
+        Rectangle selection,
+        Size mSize,
+        bool preferRight,
+        bool preferBottom,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects,
+        out Rectangle mRect)
+    {
+        foreach (var candidate in EnumerateMergedCandidates(selection, mSize, preferRight, preferBottom))
         {
-            topOrBottomRect = ClampToClient(topOrBottomRect, clientBounds);
-            sideRect = ClampToClient(sideRect, clientBounds);
-            // Re-check after clamp (edge cases near screen corners).
-            if (!topOrBottomRect.IntersectsWith(sideRect))
-            {
-                result.Add(new Pill { Lines = wLines, Rect = topOrBottomRect });
-                result.Add(new Pill { Lines = hLines, Rect = sideRect });
-                return result;
-            }
+            if (!FitsInClient(candidate, clientBounds))
+                continue;
+            if (HitsObstacle(candidate, avoidRects))
+                continue;
+            mRect = ClampToClient(candidate, clientBounds);
+            if (HitsObstacle(mRect, avoidRects))
+                continue;
+            return true;
         }
 
-        // Merge: one pill with both chips, still parked at the nearest corner.
-        var mergedLines = new List<Seg[]>(detailLines);
-        mergedLines.Add(new[] { widthSeg, heightSeg });
-        var mSize = MeasurePill(mergedLines, font, lineH, iconBox);
-        var mRect = PlaceMergedNearCorner(selection, mSize, preferRight, preferBottom, clientBounds);
-        result.Add(new Pill { Lines = mergedLines, Rect = mRect });
-        return result;
+        mRect = Rectangle.Empty;
+        return false;
+    }
+
+    private static IEnumerable<Rectangle> EnumerateMergedCandidates(
+        Rectangle selection, Size mSize, bool preferRight, bool preferBottom)
+    {
+        int xAligned = preferRight ? selection.Right - mSize.Width : selection.Left;
+
+        // Outside preferred horizontal edge.
+        yield return new Rectangle(
+            xAligned,
+            preferBottom ? selection.Bottom + EdgeGap : selection.Top - EdgeGap - mSize.Height,
+            mSize.Width, mSize.Height);
+
+        // Outside opposite horizontal edge.
+        yield return new Rectangle(
+            xAligned,
+            preferBottom ? selection.Top - EdgeGap - mSize.Height : selection.Bottom + EdgeGap,
+            mSize.Width, mSize.Height);
+
+        // Outside preferred vertical edge, aligned to preferred vertical corner.
+        int yAligned = preferBottom ? selection.Bottom - mSize.Height : selection.Top;
+        yield return new Rectangle(
+            preferRight ? selection.Right + EdgeGap : selection.Left - EdgeGap - mSize.Width,
+            yAligned,
+            mSize.Width, mSize.Height);
+
+        // Outside opposite vertical edge.
+        yield return new Rectangle(
+            preferRight ? selection.Left - EdgeGap - mSize.Width : selection.Right + EdgeGap,
+            yAligned,
+            mSize.Width, mSize.Height);
+
+        // Inside preferred corner (last within this corner family).
+        yield return new Rectangle(
+            preferRight ? selection.Right - EdgeGap - mSize.Width : selection.Left + EdgeGap,
+            preferBottom ? selection.Bottom - EdgeGap - mSize.Height : selection.Top + EdgeGap,
+            mSize.Width, mSize.Height);
     }
 
     /// <summary>
-    /// Which corner of <paramref name="selection"/> is closest to <paramref name="cursor"/>.
-    /// Empty cursor defaults to bottom-right (common release end when dragging top-left → bottom-right).
+    /// Corners ordered by distance to cursor (nearest first). Empty cursor → BR first.
     /// </summary>
-    private static (bool PreferRight, bool PreferBottom) NearestCorner(Point cursor, Rectangle selection)
+    private static (bool PreferRight, bool PreferBottom)[] CornersByDistance(Point cursor, Rectangle selection)
     {
-        if (cursor.IsEmpty)
-            return (true, true);
+        var corners = new (bool Right, bool Bottom, long Dist)[]
+        {
+            (false, false, cursor.IsEmpty ? long.MaxValue / 4 : Dist2(cursor, selection.Left, selection.Top)),
+            (true, false, cursor.IsEmpty ? long.MaxValue / 3 : Dist2(cursor, selection.Right, selection.Top)),
+            (false, true, cursor.IsEmpty ? long.MaxValue / 2 : Dist2(cursor, selection.Left, selection.Bottom)),
+            (true, true, cursor.IsEmpty ? 0 : Dist2(cursor, selection.Right, selection.Bottom)),
+        };
 
-        // Distances to the four corners (squared).
-        long dTL = Dist2(cursor, selection.Left, selection.Top);
-        long dTR = Dist2(cursor, selection.Right, selection.Top);
-        long dBL = Dist2(cursor, selection.Left, selection.Bottom);
-        long dBR = Dist2(cursor, selection.Right, selection.Bottom);
-
-        long best = dTL;
-        bool right = false, bottom = false;
-        if (dTR < best) { best = dTR; right = true; bottom = false; }
-        if (dBL < best) { best = dBL; right = false; bottom = true; }
-        if (dBR < best) { right = true; bottom = true; }
-        return (right, bottom);
+        Array.Sort(corners, (a, b) => a.Dist.CompareTo(b.Dist));
+        return new[]
+        {
+            (corners[0].Right, corners[0].Bottom),
+            (corners[1].Right, corners[1].Bottom),
+            (corners[2].Right, corners[2].Bottom),
+            (corners[3].Right, corners[3].Bottom),
+        };
     }
 
     private static long Dist2(Point p, int x, int y)
@@ -173,34 +285,40 @@ internal static class SelectionSizeReadout
     }
 
     private static Rectangle PlaceMergedNearCorner(
-        Rectangle selection, Size mSize, bool preferRight, bool preferBottom, Rectangle clientBounds)
+        Rectangle selection,
+        Size mSize,
+        bool preferRight,
+        bool preferBottom,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects)
     {
-        // Prefer outside the preferred vertical side, aligned to the preferred horizontal corner.
+        if (TryPlaceMerged(selection, mSize, preferRight, preferBottom, clientBounds, avoidRects, out var good))
+            return good;
+
+        // Absolute fallback: clamp outside preferred edge even if it clips obstacles.
         int xOutside = preferRight ? selection.Right - mSize.Width : selection.Left;
         int yOutside = preferBottom
             ? selection.Bottom + EdgeGap
             : selection.Top - EdgeGap - mSize.Height;
+        return ClampToClient(new Rectangle(xOutside, yOutside, mSize.Width, mSize.Height), clientBounds);
+    }
 
-        var outside = new Rectangle(xOutside, yOutside, mSize.Width, mSize.Height);
-        if (FitsInClient(outside, clientBounds))
-            return ClampToClient(outside, clientBounds);
+    private static bool HitsObstacle(Rectangle r, IReadOnlyList<Rectangle>? avoidRects)
+    {
+        if (avoidRects is null || avoidRects.Count == 0)
+            return false;
 
-        // Flip vertical outside.
-        int yFlip = preferBottom
-            ? selection.Top - EdgeGap - mSize.Height
-            : selection.Bottom + EdgeGap;
-        var flipped = new Rectangle(xOutside, yFlip, mSize.Width, mSize.Height);
-        if (FitsInClient(flipped, clientBounds))
-            return ClampToClient(flipped, clientBounds);
+        foreach (var raw in avoidRects)
+        {
+            if (raw.Width <= 0 || raw.Height <= 0)
+                continue;
+            var pad = raw;
+            pad.Inflate(ObstaclePad, ObstaclePad);
+            if (r.IntersectsWith(pad))
+                return true;
+        }
 
-        // Park just inside the preferred corner of the selection.
-        int xIn = preferRight
-            ? selection.Right - EdgeGap - mSize.Width
-            : selection.Left + EdgeGap;
-        int yIn = preferBottom
-            ? selection.Bottom - EdgeGap - mSize.Height
-            : selection.Top + EdgeGap;
-        return ClampToClient(new Rectangle(xIn, yIn, mSize.Width, mSize.Height), clientBounds);
+        return false;
     }
 
     private static bool FitsInClient(Rectangle r, Rectangle client)
