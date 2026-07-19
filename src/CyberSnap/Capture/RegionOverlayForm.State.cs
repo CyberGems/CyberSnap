@@ -263,6 +263,19 @@ public sealed partial class RegionOverlayForm
         return Point.Empty;
     }
 
+    /// <summary>
+    /// Confirm-mode action pills occupy a corner near the release point — size readout
+    /// layout must treat them as reserved so the dimension chips never stack on top.
+    /// </summary>
+    private IReadOnlyList<Rectangle>? GetConfirmReadoutAvoidRects()
+    {
+        if (!_isConfirmingSelection)
+            return null;
+
+        var (confirm, cancel, close) = GetConfirmButtonRects();
+        return new[] { confirm, cancel, close };
+    }
+
     private Rectangle GetSelectionOverlayBounds(Rectangle rect, bool isOcr, bool isScan)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
