@@ -295,6 +295,7 @@ public sealed class QuickStartGuide : Form
 
         _tips =
         [
+            new TipDef("position", T("Drag the toolbar or click ⇅ to reposition it")),
             new TipDef("menu", T("▼ opens hidden tools, preferences, and this help")),
             new TipDef("captureRect", T("Right-click a tool on the bar to hide it")),
         ];
