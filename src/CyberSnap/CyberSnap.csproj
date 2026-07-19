@@ -12,7 +12,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationIcon>CyberSnap.ico</ApplicationIcon>
-    <Version>1.6.0</Version>
+    <Version>1.6.1</Version>
     <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
     <Authors>CyberGems</Authors>
     <AssemblyName>CyberSnap</AssemblyName>
@@ -46,10 +46,10 @@
     <Resource Include="Assets\Icons\Gallery.ico" />
     <Resource Include="Assets\Icons\OCR.ico" />
     <Resource Include="Assets\Icons\Trimmer.ico" />
-    <Content Include="Assets\Icons\*.ico">
+    <None Include="Assets\Icons\*.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-    </Content>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

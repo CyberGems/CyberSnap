@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using Microsoft.Data.Sqlite;
 
 namespace CyberSnap.Services;
@@ -333,7 +333,8 @@ internal static class HistoryStore
         var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            INSERT INTO history_entries(file_path, file_name, captured_at_ticks, width, height, file_size_bytes, kind)
+            INSERT INTO history_entries(file_path, file_name, captured_at_ticks, width, height, file_size_bytes, kind,
+                                       upload_url, upload_provider, uploaded_at_ticks, upload_error)
             VALUES($filePath, $fileName, $capturedAtTicks, $width, $height, $fileSizeBytes, $kind,
                    $uploadUrl, $uploadProvider, $uploadedAtTicks, $uploadError)
             ON CONFLICT(file_path) DO UPDATE SET
