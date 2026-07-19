@@ -66,25 +66,17 @@ public sealed class ToolbarForm : Form
         CaptureWindowExclusion.Apply(this);
     }
 
-    protected override void SetBoundsCore(int x, int y, int width, int height, BoundsSpecified specified)
+    public void UpdateSurface()
     {
-        base.SetBoundsCore(x, y, width, height, specified);
-        _lastRenderVersion = int.MinValue;
-    }
-
-    public void UpdateSurface(Rectangle? newBounds = null)
-    {
-        var targetBounds = newBounds ?? Bounds;
-        var sz = targetBounds.Size;
+        var sz = Size;
         if (sz.Width <= 0 || sz.Height <= 0) return;
 
-        var location = targetBounds.Location;
+        var location = Location;
         var renderVersion = _owner.ToolbarRenderVersion;
         if (_surface is not null &&
             _lastRenderVersion == renderVersion &&
             _lastRenderSize == sz &&
-            _lastRenderLocation == location &&
-            Bounds == targetBounds)
+            _lastRenderLocation == location)
         {
             return;
         }
@@ -99,9 +91,9 @@ public sealed class ToolbarForm : Form
 
         // _owner paints using overlay-client coordinates (e.g. _toolbarRect).
         // This form is positioned at screen coords; the overlay's screen origin
-        // is _owner.Left, _owner.Top. So translate = overlayScreenOrigin - targetScreenOrigin.
-        int dx = _owner.Left - targetBounds.X;
-        int dy = _owner.Top - targetBounds.Y;
+        // is _owner.Left, _owner.Top.  So translate = overlayScreenOrigin - thisScreenOrigin.
+        int dx = _owner.Left - Left;
+        int dy = _owner.Top - Top;
 
         var g = _surfaceGraphics!;
         try
@@ -125,7 +117,7 @@ public sealed class ToolbarForm : Form
             g.ResetTransform();
         }
 
-        var screenPt = new Native.User32.POINT { X = targetBounds.X, Y = targetBounds.Y };
+        var screenPt = new Native.User32.POINT { X = Left, Y = Top };
         var size = new Native.User32.SIZE { cx = sz.Width, cy = sz.Height };
         var srcPt = new Native.User32.POINT { X = 0, Y = 0 };
         var blend = new Native.User32.BLENDFUNCTION
@@ -151,10 +143,6 @@ public sealed class ToolbarForm : Form
             _lastRenderVersion = renderVersion;
             _lastRenderSize = sz;
             _lastRenderLocation = location;
-            if (Bounds != targetBounds)
-            {
-                SetBoundsCore(targetBounds.X, targetBounds.Y, targetBounds.Width, targetBounds.Height, BoundsSpecified.All);
-            }
         }
         finally
         {

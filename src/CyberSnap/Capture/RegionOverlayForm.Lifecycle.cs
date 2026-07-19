@@ -141,7 +141,12 @@ public sealed partial class RegionOverlayForm
             _virtualBounds.Y + uiBounds.Y,
             Math.Max(1, uiBounds.Width),
             Math.Max(1, uiBounds.Height));
-        _toolbarForm.UpdateSurface(bounds);
+        if (_toolbarForm.Bounds != bounds)
+        {
+            _toolbarForm.Bounds = bounds;
+        }
+        MarkToolbarRenderDirty();
+        _toolbarForm.UpdateSurface();
     }
 
     private static Rectangle[] GetScreenWorkingAreas()

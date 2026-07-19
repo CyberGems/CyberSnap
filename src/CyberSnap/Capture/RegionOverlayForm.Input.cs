@@ -181,8 +181,8 @@ public sealed partial class RegionOverlayForm
             if (btn == PositionButtonIndex)
             {
                 _isDraggingToolbar = true;
-                _toolbarDragStart = e.Location;
-                _toolbarDragOriginalOffset = _toolbarCustomOffset;
+                _toolbarDragStartMouse = e.Location;
+                _toolbarDragStartOffset = _toolbarCustomOffset;
                 _hasMovedToolbarByDrag = false;
                 return;
             }
@@ -212,8 +212,8 @@ public sealed partial class RegionOverlayForm
         else if (_toolbarRect.Contains(e.Location))
         {
             _isDraggingToolbar = true;
-            _toolbarDragStart = e.Location;
-            _toolbarDragOriginalOffset = _toolbarCustomOffset;
+            _toolbarDragStartMouse = e.Location;
+            _toolbarDragStartOffset = _toolbarCustomOffset;
             _hasMovedToolbarByDrag = false;
             return;
         }

@@ -106,8 +106,8 @@ public sealed partial class RegionOverlayForm : Form
 
     // Toolbar drag variables
     private bool _isDraggingToolbar;
-    private Point _toolbarDragStart;
-    private Point _toolbarDragOriginalOffset;
+    private Point _toolbarDragStartMouse;
+    private Point _toolbarDragStartOffset;
     private bool _hasMovedToolbarByDrag;
     private Point _toolbarCustomOffset;
     private Point _lastCursorPos;
