@@ -55,51 +55,49 @@ public sealed partial class RegionOverlayForm
     }
 
 
-    private Rectangle ClampToolbarToScreen(Rectangle toolbarRect)
+    private void ClampToolbarToScreen()
     {
         var screenPoint = new Point(
-            _virtualBounds.X + toolbarRect.X + toolbarRect.Width / 2,
-            _virtualBounds.Y + toolbarRect.Y + toolbarRect.Height / 2);
+            _virtualBounds.X + _toolbarRect.X + _toolbarRect.Width / 2,
+            _virtualBounds.Y + _toolbarRect.Y + _toolbarRect.Height / 2);
         var screen = Screen.FromPoint(screenPoint);
         var work = screen.WorkingArea;
 
         int minX = work.Left - _virtualBounds.X + UiChrome.ScaleInt(8);
-        int maxX = work.Right - _virtualBounds.X - toolbarRect.Width - UiChrome.ScaleInt(8);
+        int maxX = work.Right - _virtualBounds.X - _toolbarRect.Width - UiChrome.ScaleInt(8);
         int minY = work.Top - _virtualBounds.Y + UiChrome.ScaleInt(8);
-        int maxY = work.Bottom - _virtualBounds.Y - toolbarRect.Height - UiChrome.ScaleInt(8);
+        int maxY = work.Bottom - _virtualBounds.Y - _toolbarRect.Height - UiChrome.ScaleInt(8);
 
         if (maxX < minX) maxX = minX;
         if (maxY < minY) maxY = minY;
 
-        int clampedX = Math.Clamp(toolbarRect.X, minX, maxX);
-        int clampedY = Math.Clamp(toolbarRect.Y, minY, maxY);
+        int clampedX = Math.Clamp(_toolbarRect.X, minX, maxX);
+        int clampedY = Math.Clamp(_toolbarRect.Y, minY, maxY);
 
-        return new Rectangle(clampedX, clampedY, toolbarRect.Width, toolbarRect.Height);
+        int clampDx = clampedX - _toolbarRect.X;
+        int clampDy = clampedY - _toolbarRect.Y;
+
+        if (clampDx != 0 || clampDy != 0)
+        {
+            _toolbarCustomOffset = new Point(_toolbarCustomOffset.X + clampDx, _toolbarCustomOffset.Y + clampDy);
+            CalcToolbar();
+        }
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
         if (_isDraggingToolbar)
         {
-            int dx = e.Location.X - _toolbarDragStart.X;
-            int dy = e.Location.Y - _toolbarDragStart.Y;
+            int dx = e.Location.X - _toolbarDragStartMouse.X;
+            int dy = e.Location.Y - _toolbarDragStartMouse.Y;
             if (Math.Abs(dx) > 3 || Math.Abs(dy) > 3)
                 _hasMovedToolbarByDrag = true;
 
             if (_hasMovedToolbarByDrag)
             {
-                var proposedOffset = new Point(_toolbarDragOriginalOffset.X + dx, _toolbarDragOriginalOffset.Y + dy);
-                _toolbarCustomOffset = proposedOffset;
+                _toolbarCustomOffset = new Point(_toolbarDragStartOffset.X + dx, _toolbarDragStartOffset.Y + dy);
                 CalcToolbar();
-                var clamped = ClampToolbarToScreen(_toolbarRect);
-                if (clamped.X != _toolbarRect.X || clamped.Y != _toolbarRect.Y)
-                {
-                    _toolbarCustomOffset = new Point(
-                        _toolbarCustomOffset.X + (clamped.X - _toolbarRect.X),
-                        _toolbarCustomOffset.Y + (clamped.Y - _toolbarRect.Y));
-                    CalcToolbar();
-                }
-
+                ClampToolbarToScreen();
                 PositionToolbarForm();
                 UpdateToolbarSurfaceOnly();
             }
