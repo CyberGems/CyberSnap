@@ -55,6 +55,28 @@ public sealed partial class RegionOverlayForm
     }
 
 
+    private Rectangle ClampToolbarToScreen(Rectangle toolbarRect)
+    {
+        var screenPoint = new Point(
+            _virtualBounds.X + toolbarRect.X + toolbarRect.Width / 2,
+            _virtualBounds.Y + toolbarRect.Y + toolbarRect.Height / 2);
+        var screen = Screen.FromPoint(screenPoint);
+        var work = screen.WorkingArea;
+
+        int minX = work.Left - _virtualBounds.X + UiChrome.ScaleInt(8);
+        int maxX = work.Right - _virtualBounds.X - toolbarRect.Width - UiChrome.ScaleInt(8);
+        int minY = work.Top - _virtualBounds.Y + UiChrome.ScaleInt(8);
+        int maxY = work.Bottom - _virtualBounds.Y - toolbarRect.Height - UiChrome.ScaleInt(8);
+
+        if (maxX < minX) maxX = minX;
+        if (maxY < minY) maxY = minY;
+
+        int clampedX = Math.Clamp(toolbarRect.X, minX, maxX);
+        int clampedY = Math.Clamp(toolbarRect.Y, minY, maxY);
+
+        return new Rectangle(clampedX, clampedY, toolbarRect.Width, toolbarRect.Height);
+    }
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
         if (_isDraggingToolbar)
@@ -66,8 +88,20 @@ public sealed partial class RegionOverlayForm
 
             if (_hasMovedToolbarByDrag)
             {
-                _toolbarCustomOffset = new Point(_toolbarDragOriginalOffset.X + dx, _toolbarDragOriginalOffset.Y + dy);
-                RefreshToolbar();
+                var proposedOffset = new Point(_toolbarDragOriginalOffset.X + dx, _toolbarDragOriginalOffset.Y + dy);
+                _toolbarCustomOffset = proposedOffset;
+                CalcToolbar();
+                var clamped = ClampToolbarToScreen(_toolbarRect);
+                if (clamped.X != _toolbarRect.X || clamped.Y != _toolbarRect.Y)
+                {
+                    _toolbarCustomOffset = new Point(
+                        _toolbarCustomOffset.X + (clamped.X - _toolbarRect.X),
+                        _toolbarCustomOffset.Y + (clamped.Y - _toolbarRect.Y));
+                    CalcToolbar();
+                }
+
+                PositionToolbarForm();
+                UpdateToolbarSurfaceOnly();
             }
             return;
         }
