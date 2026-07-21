@@ -88,6 +88,9 @@ public sealed partial class RegionOverlayForm
     {
         if (_isDraggingToolbar)
         {
+            if (_tooltipVisible)
+                HideToolbarTooltip();
+
             if (!Cursor.Equals(CursorFactory.GrabbingCursor))
                 Cursor = CursorFactory.GrabbingCursor;
 

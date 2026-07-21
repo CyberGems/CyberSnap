@@ -315,8 +315,7 @@ public sealed partial class RegionOverlayForm
         }
         }
 
-        // 2b. Divider before Move (position) so chrome controls (Move + Close) are grouped
-        // and Move is not visually attached to the color swatch (or capture tools when color is hidden).
+        // 2b. Divider before Move (position) - matching standard divider height, inset, and opacity.
         if (PositionButtonIndex < _toolbarButtons.Length)
         {
             var posBtn = _toolbarButtons[PositionButtonIndex];
@@ -328,15 +327,16 @@ public sealed partial class RegionOverlayForm
                     : (_mainBarTools.Length > 0 ? _toolbarButtons[_mainBarTools.Length - 1] : Rectangle.Empty);
                 if (anchorBtn.Width > 0)
                 {
+                    int inset = UiChrome.ScaleInt(6);
                     if (IsVerticalDock)
                     {
                         int sy = (anchorBtn.Bottom + posBtn.Y) / 2;
-                        WindowsDockRenderer.PaintDivider(g, new Point(posBtn.X + 4, sy), new Point(posBtn.Right - 4, sy));
+                        WindowsDockRenderer.PaintDivider(g, new Point(posBtn.X + inset, sy), new Point(posBtn.Right - inset, sy));
                     }
                     else
                     {
                         int sx = (anchorBtn.Right + posBtn.X) / 2;
-                        WindowsDockRenderer.PaintDivider(g, new Point(sx, posBtn.Y + 4), new Point(sx, posBtn.Bottom - 4));
+                        WindowsDockRenderer.PaintDivider(g, new Point(sx, posBtn.Y + inset), new Point(sx, posBtn.Bottom - inset));
                     }
                 }
             }
@@ -387,18 +387,7 @@ public sealed partial class RegionOverlayForm
         }
         } // ShowAnnotationChrome tier-2 dividers
 
-        // 3b. Subtle chrome well behind Move + Close so they read as system controls,
-        // not as another pair of tools next to color/stroke.
-        if (PositionButtonIndex < _toolbarButtons.Length && CloseButtonIndex < _toolbarButtons.Length)
-        {
-            var posBtn = _toolbarButtons[PositionButtonIndex];
-            var closeBtn = _toolbarButtons[CloseButtonIndex];
-            var chrome = Rectangle.Union(posBtn, closeBtn);
-            chrome.Inflate(UiChrome.ScaleInt(3), UiChrome.ScaleInt(2));
-            using (var path = WindowsDockRenderer.RoundedRect(chrome, UiChrome.ScaleFloat(6f)))
-            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 28 : 18, 0, 0, 0)))
-                g.FillPath(brush, path);
-        }
+
 
         int drawingStartIdx = _mainBarTools.Length + 4;
 

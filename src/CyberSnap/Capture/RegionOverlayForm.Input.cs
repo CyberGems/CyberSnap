@@ -200,6 +200,7 @@ public sealed partial class RegionOverlayForm
                 _toolbarDragStartMouse = e.Location;
                 _toolbarDragStartOffset = _toolbarCustomOffset;
                 _hasMovedToolbarByDrag = false;
+                HideToolbarTooltip();
                 Cursor = CursorFactory.GrabbingCursor;
                 return;
             }
@@ -232,6 +233,7 @@ public sealed partial class RegionOverlayForm
             _toolbarDragStartMouse = e.Location;
             _toolbarDragStartOffset = _toolbarCustomOffset;
             _hasMovedToolbarByDrag = false;
+            HideToolbarTooltip();
             Cursor = CursorFactory.GrabbingCursor;
             return;
         }
