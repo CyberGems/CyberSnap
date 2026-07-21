@@ -133,6 +133,7 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _logoRect;
     private Rectangle _menuActivatorRect;
     private bool _hoveredBrand;
+    private bool _hoveredBrandDragArea;
     private bool _hoveredMenuActivator;
     private Rectangle _toolbarAnchorArea;
     private Rectangle _lastOverlayUiBounds;
@@ -1180,6 +1181,7 @@ public sealed partial class RegionOverlayForm : Form
             else if (_hoveredButton >= 0
                      || _hoveredMenuActivator
                      || _hoveredBrand
+                     || _hoveredBrandDragArea
                      || (_hoveredAltCaptureBtn && _altCapturePopupOpen))
             {
                 if (!_tooltipVisible && !_tooltipDismissed)

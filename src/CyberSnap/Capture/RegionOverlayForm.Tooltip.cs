@@ -76,6 +76,27 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
+        // Empty branding area → Drag toolbar hint
+        if (_hoveredBrandDragArea)
+        {
+            if (_tooltipButton == 996)
+                return;
+
+            _tooltipButton = 996;
+            _toolbarToolTip ??= new WindowsToolTip();
+            var dragText = LocalizationService.Translate("Drag to move toolbar")
+                + "\n" + LocalizationService.Translate("Click and hold to drag the toolbar");
+            var dragAnchor = new Rectangle(
+                _virtualBounds.X + _brandRect.X,
+                _virtualBounds.Y + _brandRect.Y,
+                Math.Max(1, _brandRect.Width),
+                Math.Max(1, _brandRect.Height));
+            _toolbarToolTip.ShowNear(this, dragText, dragAnchor, IsBottomDock);
+            _tooltipVisible = true;
+            _tooltipShowTime = DateTime.UtcNow;
+            return;
+        }
+
         // Menu activator (⋮ more options)
         if (_hoveredMenuActivator)
         {
