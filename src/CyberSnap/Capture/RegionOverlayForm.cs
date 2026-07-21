@@ -135,6 +135,8 @@ public sealed partial class RegionOverlayForm : Form
     private bool _hoveredBrand;
     private bool _hoveredBrandDragArea;
     private bool _hoveredMenuActivator;
+    private DateTime _lastContextMenuClosedTime = DateTime.MinValue;
+    private int _lastContextMenuBtnIndex = -999;
     private Rectangle _toolbarAnchorArea;
     private Rectangle _lastOverlayUiBounds;
     private int _toolbarRenderVersion;
