@@ -59,18 +59,15 @@ internal static class SelectionFrameRenderer
         int glowAlpha = provisional ? 32 : 42;
         float glowWidth = provisional ? 3.5f * scale : 4.5f * scale;
 
-        // Brackets grow with the shorter side so window-sized holes still show the tool language,
-        // but stay restrained on large captures (was ~7%/52px — felt oversized on full windows).
-        // Soft curve: ~5% of min side, min ~12, max ~34 at 100% UI scale.
+        // HUD L-brackets — the signature of the region tool; scale with selection size.
         int minSide = Math.Min(rect.Width, rect.Height);
         int cornerLen = Math.Clamp(
-            (int)Math.Round(minSide * 0.05f),
-            UiChrome.ScaleInt(12),
-            UiChrome.ScaleInt(34));
-        float cornerPenWidth = Math.Clamp(minSide * 0.008f, 1.75f * scale, 2.75f * scale);
+            (int)Math.Round(minSide * 0.06f),
+            UiChrome.ScaleInt(14),
+            UiChrome.ScaleInt(38));
+        float cornerPenWidth = Math.Clamp(minSide * 0.009f, 4f * scale, 6f * scale); // double thickness
         if (provisional)
             cornerPenWidth = Math.Max(1.5f * scale, cornerPenWidth * 0.92f);
-        int cornerOffset = Math.Max(1, (int)Math.Round(scale)); // snug to outline
 
         // Pixel-calibrated outline (GDI+ exclusive bottom-right).
         var outline = rect;
@@ -100,61 +97,53 @@ internal static class SelectionFrameRenderer
         })
             g.DrawRectangle(edgePen, outline);
 
-        // HUD L-brackets — the signature of the region tool; scale with selection size.
-        using (var cornerGlow = new Pen(Color.FromArgb(provisional ? 50 : 70, accent), cornerPenWidth + 2f * scale)
+        // The stroke centerline is exactly on 'outline' because DrawRectangle uses PenAlignment.Center by default
+        float x0 = outline.X;
+        float y0 = outline.Y;
+        float x1 = outline.Right;
+        float y1 = outline.Bottom;
+
+        Color bracketAccent = Color.FromArgb(0x00, 0xD4, 0xFF); // #00D4FF cyan for image capture
+
+        using (var cornerGlow = new Pen(Color.FromArgb(provisional ? 50 : 70, bracketAccent), cornerPenWidth + 3f * scale)
         {
             LineJoin = LineJoin.Miter,
             StartCap = LineCap.Round,
             EndCap = LineCap.Round
         })
-        using (var cornerPen = new Pen(Color.FromArgb(edgeAlpha, accent), cornerPenWidth)
-        {
-            LineJoin = LineJoin.Miter,
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round
-        })
-        using (var cornerCore = new Pen(Color.FromArgb(provisional ? 200 : 230, 255, 255, 255), Math.Max(1f, cornerPenWidth - scale))
+        using (var cornerPen = new Pen(Color.FromArgb(edgeAlpha, bracketAccent), cornerPenWidth)
         {
             LineJoin = LineJoin.Miter,
             StartCap = LineCap.Round,
             EndCap = LineCap.Round
         })
         {
-            DrawCornerBrackets(g, outline, cornerLen, cornerOffset, cornerGlow);
-            DrawCornerBrackets(g, outline, cornerLen, cornerOffset, cornerPen);
-            // Thin white core on top so brackets stay sharp over accent glow.
-            DrawCornerBrackets(g, outline, Math.Max(cornerLen - 1, cornerLen * 3 / 4), cornerOffset, cornerCore);
+            DrawCornerBrackets(g, x0, y0, x1, y1, cornerLen, cornerGlow);
+            DrawCornerBrackets(g, x0, y0, x1, y1, cornerLen, cornerPen);
         }
 
         g.SmoothingMode = oldSmoothing;
     }
 
-    private static void DrawCornerBrackets(Graphics g, Rectangle outline, int cornerLen, int cornerOffset, Pen pen)
+    private static void DrawCornerBrackets(Graphics g, float x0, float y0, float x1, float y1, float len, Pen pen)
     {
-        int x0 = outline.X - cornerOffset;
-        int y0 = outline.Y - cornerOffset;
-        int x1 = outline.Right + cornerOffset;
-        int y1 = outline.Bottom + cornerOffset;
-
         // Top-left
-        g.DrawLine(pen, x0, y0, x0 + cornerLen, y0);
-        g.DrawLine(pen, x0, y0, x0, y0 + cornerLen);
+        g.DrawLine(pen, x0, y0, x0 + len, y0);
+        g.DrawLine(pen, x0, y0, x0, y0 + len);
         // Top-right
-        g.DrawLine(pen, x1, y0, x1 - cornerLen, y0);
-        g.DrawLine(pen, x1, y0, x1, y0 + cornerLen);
+        g.DrawLine(pen, x1, y0, x1 - len, y0);
+        g.DrawLine(pen, x1, y0, x1, y0 + len);
         // Bottom-left
-        g.DrawLine(pen, x0, y1, x0 + cornerLen, y1);
-        g.DrawLine(pen, x0, y1, x0, y1 - cornerLen);
+        g.DrawLine(pen, x0, y1, x0 + len, y1);
+        g.DrawLine(pen, x0, y1, x0, y1 - len);
         // Bottom-right
-        g.DrawLine(pen, x1, y1, x1 - cornerLen, y1);
-        g.DrawLine(pen, x1, y1, x1, y1 - cornerLen);
+        g.DrawLine(pen, x1, y1, x1 - len, y1);
+        g.DrawLine(pen, x1, y1, x1, y1 - len);
     }
 
     /// <summary>
-    /// Draws premium resize handles for the confirmation frame: bold accent L-brackets
-    /// at the four corners (indices 0-3) and rounded grab-bars at the four mid-edges
-    /// (4=top, 5=left, 6=right, 7=bottom). Each handle has a white core, accent ring,
-    /// and a soft glow so it reads as a tactile grab target over any background.
+    /// Draws the mid-edge circular dot handles (4) for the confirmation frame.
+    /// Corners use L-brackets drawn by the main selection chrome.
     /// </summary>
     public static void DrawConfirmHandles(Graphics g, Rectangle[] handles)
     {
@@ -164,55 +153,36 @@ internal static class SelectionFrameRenderer
         var oldSmoothing = g.SmoothingMode;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        var accent = UiChrome.AccentColor;
-        float scale = (float)UiChrome.UiScale;
-        float thickness = 3f * scale;     // bracket / bar thickness
-        float armLen = 11f * scale;       // corner bracket arm length
-        float barLen = 18f * scale;       // mid-edge bar length
-        float radius = thickness / 2f;
+        var accent = Color.FromArgb(0x00, 0xD4, 0xFF); // Cyan for capture
+        float scale = Math.Max(1f, (float)UiChrome.UiScale);
+        float dotRadius = 4.5f * scale;     // main dot radius
+        float glowRadius = dotRadius + 3f * scale;
+        float coreRadius = dotRadius - 1.5f * scale;
 
-        using var glowBrush = new SolidBrush(Color.FromArgb(70, accent));
-        using var coreBrush = new SolidBrush(Color.White);
+        using var glowBrush = new SolidBrush(Color.FromArgb(50, accent));
         using var ringBrush = new SolidBrush(accent);
+        using var coreBrush = new SolidBrush(Color.White);
 
-        // ── Corner L-brackets (TL, TR, BL, BR) ──
-        float coreThick = Math.Max(1f, thickness - 2f * scale);
-        for (int i = 0; i < 4; i++)
-        {
-            var c = CenterOf(handles[i]);
-            // hx/hy point the two arms inward toward the selection center
-            float hx = i is 0 or 2 ? 1f : -1f;
-            float hy = i is 0 or 1 ? 1f : -1f;
-            // soft glow halo
-            DrawBar(g, glowBrush, c.X, c.Y, hx * armLen, thickness + 3f * scale, true, radius);
-            DrawBar(g, glowBrush, c.X, c.Y, hy * armLen, thickness + 3f * scale, false, radius);
-            // solid accent ring
-            DrawBar(g, ringBrush, c.X, c.Y, hx * armLen, thickness, true, radius);
-            DrawBar(g, ringBrush, c.X, c.Y, hy * armLen, thickness, false, radius);
-            // white core
-            DrawBar(g, coreBrush, c.X, c.Y, hx * armLen, coreThick, true, coreThick / 2f);
-            DrawBar(g, coreBrush, c.X, c.Y, hy * armLen, coreThick, false, coreThick / 2f);
-        }
-
-        // ── Mid-edge rounded bars (top, left, right, bottom) ──
+        // Only draw the 4 mid-edge circular dots. Indices 4-7 are Top, Left, Right, Bottom.
         for (int i = 4; i < 8; i++)
         {
             var c = CenterOf(handles[i]);
-            bool horizontal = i is 4 or 7; // top/bottom bars run horizontally
-            float len = barLen;
-            RectangleF core = horizontal
-                ? new RectangleF(c.X - len / 2f, c.Y - thickness / 2f, len, thickness)
-                : new RectangleF(c.X - thickness / 2f, c.Y - len / 2f, thickness, len);
 
-            RectangleF glow = RectangleF.Inflate(core, 2f * scale, 2f * scale);
-            using (var glowPath = WindowsDockRenderer.RoundedRect(glow, radius + 2f * scale))
-                g.FillPath(glowBrush, glowPath);
-            using (var corePath = WindowsDockRenderer.RoundedRect(core, radius))
-                g.FillPath(ringBrush, corePath);
-            var inner = RectangleF.Inflate(core, -1f * scale, -1f * scale);
-            if (inner.Width > 0 && inner.Height > 0)
-                using (var innerPath = WindowsDockRenderer.RoundedRect(inner, Math.Max(1f, radius - 1f * scale)))
-                    g.FillPath(coreBrush, innerPath);
+            // For mid-edge dots on the selection rect, we use the handle center exactly.
+            // (The stroke is drawn on outline, which matches rect's Left/Top, and is -1 for Right/Bottom).
+            float cx = c.X;
+            float cy = c.Y;
+            
+            // Adjust Right/Bottom inward by 1px to match the stroke's GDI+ -1 correction
+            if (i == 6) cx -= 1f; // Right
+            if (i == 7) cy -= 1f; // Bottom
+
+            // Glow halo
+            g.FillEllipse(glowBrush, cx - glowRadius, cy - glowRadius, glowRadius * 2, glowRadius * 2);
+            // Accent ring
+            g.FillEllipse(ringBrush, cx - dotRadius, cy - dotRadius, dotRadius * 2, dotRadius * 2);
+            // White core
+            g.FillEllipse(coreBrush, cx - coreRadius, cy - coreRadius, coreRadius * 2, coreRadius * 2);
         }
 
         g.SmoothingMode = oldSmoothing;
@@ -220,16 +190,6 @@ internal static class SelectionFrameRenderer
 
     private static PointF CenterOf(Rectangle r) =>
         new(r.X + r.Width / 2f, r.Y + r.Height / 2f);
-
-    // Draws one arm of a corner bracket as a rounded bar starting at (cx,cy).
-    private static void DrawBar(Graphics g, Brush brush, float cx, float cy, float length, float thickness, bool horizontal, float radius)
-    {
-        RectangleF rect = horizontal
-            ? new RectangleF(length < 0 ? cx + length : cx, cy - thickness / 2f, Math.Abs(length), thickness)
-            : new RectangleF(cx - thickness / 2f, length < 0 ? cy + length : cy, thickness, Math.Abs(length));
-        using var path = WindowsDockRenderer.RoundedRect(rect, radius);
-        g.FillPath(brush, path);
-    }
 
     public static void DrawPath(Graphics g, IReadOnlyList<Point> points, bool closed, bool fill = true)
     {

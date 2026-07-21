@@ -44,7 +44,8 @@ public sealed partial class RecordingForm : Form
     private Rectangle _selection;
 
     // Handle resize/move during PreRecording (after drag-release, before START)
-    private int _handleDragIdx = -1; // -1=none, 0=TL, 1=TR, 2=BL, 3=BR, 4=move
+    // Indices: 0=TL, 1=TR, 2=BL, 3=BR, 4=Top, 5=Left, 6=Right, 7=Bottom, 8=move
+    private int _handleDragIdx = -1;
     private bool _isHandleDragging;
     private Point _handleDragOrigin;
     private Rectangle _handleDragStartRect;
@@ -92,7 +93,6 @@ public sealed partial class RecordingForm : Form
 
     // Cached GDI objects for paint
     private readonly Font _readoutFont = UiChrome.ChromeFont(9f, FontStyle.Bold);
-    private readonly Pen _borderPen = new(UiChrome.AccentColor, 2.0f) { DashStyle = DashStyle.Dash, DashPattern = new[] { 5f, 3f }, LineJoin = LineJoin.Miter };
 
 
     public RecordingForm(Bitmap? screenshot, Rectangle virtualBounds, int fps, string savePath,
@@ -136,7 +136,8 @@ public sealed partial class RecordingForm : Form
         if (screenshot is null)
         {
             Opacity = 0.01;
-            _selectionAdorner = new LiveSelectionAdornerForm(_virtualBounds, "Drag to select recording area");
+            var adornerAccent = _format == Models.RecordingFormat.GIF ? Color.FromArgb(255, 140, 0) : UiChrome.AccentColor;
+            _selectionAdorner = new LiveSelectionAdornerForm(_virtualBounds, "Drag to select recording area", adornerAccent);
         }
         KeyPreview = true;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
@@ -321,7 +322,7 @@ public sealed partial class RecordingForm : Form
             }
             if (_recordRegion.Contains(e.Location))
             {
-                _handleDragIdx = 4; // move
+                _handleDragIdx = 8; // move
                 _isHandleDragging = true;
                 _handleDragOrigin = e.Location;
                 _handleDragStartRect = _recordRegion;
@@ -394,7 +395,16 @@ public sealed partial class RecordingForm : Form
         {
             int hit = HitTestHandle(e.Location);
             if (hit >= 0)
-                Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
+            {
+                Cursor = hit switch
+                {
+                    0 or 3 => Cursors.SizeNWSE,       // TL, BR
+                    1 or 2 => Cursors.SizeNESW,       // TR, BL
+                    4 or 7 => Cursors.SizeNS,          // Top, Bottom
+                    5 or 6 => Cursors.SizeWE,          // Left, Right
+                    _ => Cursors.Default
+                };
+            }
             else if (_recordRegion.Contains(e.Location))
                 Cursor = CursorFactory.GrabCursor;
             else
@@ -479,14 +489,15 @@ public sealed partial class RecordingForm : Form
             g.FillRectangle(dimBrush, ClientRectangle);
             g.Restore(state);
 
-            SelectionFrameRenderer.DrawRectangle(g, _selection);
+            var selAccent = _format == Models.RecordingFormat.GIF ? Color.FromArgb(255, 140, 0) : UiChrome.AccentColor;
+            DrawRecordingFrame(g, _selection, selAccent);
             SelectionSizeReadout.Draw(
                 g,
                 _selectionCursor,
                 _selection,
                 _readoutFont,
                 ClientRectangle,
-                GetRecordingReadoutDetails());
+                null);
         }
         else if (_autoDetectActive && !_autoDetectRect.IsEmpty)
         {
@@ -502,7 +513,7 @@ public sealed partial class RecordingForm : Form
         if (_selectionAdorner is null)
             return;
 
-        _selectionAdorner.SetSelection(_selection, PointToClient(Cursor.Position), GetRecordingReadoutDetails());
+        _selectionAdorner.SetSelection(_selection, PointToClient(Cursor.Position), null);
     }
 
     private void PaintRecordingPhase(Graphics g)
@@ -533,44 +544,177 @@ public sealed partial class RecordingForm : Form
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 
         var accentColor = _format == Models.RecordingFormat.GIF ? Color.FromArgb(255, 140, 0) : UiChrome.AccentColor;
-        _borderPen.Color = accentColor;
 
-        var borderRect = Rectangle.Inflate(_recordRegion, 2, 2);
+        DrawRecordingFrame(g, _recordRegion, accentColor);
 
-        // Neon glow behind the recording border
-        var glowRect = borderRect;
-        glowRect.Inflate(3, 3);
-        using (var glowPen = new Pen(Color.FromArgb(50, accentColor), 7f))
-            g.DrawRectangle(glowPen, glowRect);
-
-        // Accent dashed border
-        g.DrawRectangle(_borderPen, borderRect);
-
-        // HUD corner brackets
-        const int cornerLen = 12;
-        const int cornerOffset = 2;
-        using (var cornerPen = new Pen(accentColor, 2f) { LineJoin = LineJoin.Miter })
-        {
-            g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Y - cornerOffset, borderRect.X - cornerOffset + cornerLen, borderRect.Y - cornerOffset);
-            g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Y - cornerOffset, borderRect.X - cornerOffset, borderRect.Y - cornerOffset + cornerLen);
-
-            g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Y - cornerOffset, borderRect.Right + cornerOffset - cornerLen, borderRect.Y - cornerOffset);
-            g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Y - cornerOffset, borderRect.Right + cornerOffset, borderRect.Y - cornerOffset + cornerLen);
-
-            g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Bottom + cornerOffset, borderRect.X - cornerOffset + cornerLen, borderRect.Bottom + cornerOffset);
-            g.DrawLine(cornerPen, borderRect.X - cornerOffset, borderRect.Bottom + cornerOffset, borderRect.X - cornerOffset, borderRect.Bottom + cornerOffset - cornerLen);
-
-            g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset, borderRect.Right + cornerOffset - cornerLen, borderRect.Bottom + cornerOffset);
-            g.DrawLine(cornerPen, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset, borderRect.Right + cornerOffset, borderRect.Bottom + cornerOffset - cornerLen);
-        }
-
-        // Draw resize handles during PreRecording (before START is clicked)
+        // Draw circular resize handles during PreRecording (before START is clicked)
         if (_state == State.PreRecording)
         {
-            var handles = GetHandleRects();
-            foreach (var h in handles)
-                WindowsHandleRenderer.Paint(g, h);
+            DrawCircularHandles(g, _recordRegion, accentColor);
+
+            // Persist the size readout pill after drag ends (dimensions only, no format/FPS)
+            SelectionSizeReadout.Draw(
+                g,
+                new Point(_recordRegion.Right, _recordRegion.Bottom),
+                _recordRegion,
+                _readoutFont,
+                ClientRectangle,
+                null);
         }
+    }
+
+    /// <summary>
+    /// Draws the recording frame: thick solid rounded-corner border with a dashed
+    /// overlay and a soft outer glow — matching the reference OBS-style design.
+    /// </summary>
+    internal static void DrawRecordingFrame(Graphics g, Rectangle region, Color accent)
+    {
+        float scale = Math.Max(1f, (float)UiChrome.UiScale);
+        float solidWidth = 3f * scale;     // thick outer solid border
+        float dashWidth = 2f * scale;      // dashed overlay on top
+        float cornerRadius = 6f * scale;   // rounded corners
+
+        // Inflated rect for the border (sits just outside the capture region)
+        var frameRect = new RectangleF(
+            region.X - solidWidth / 2f,
+            region.Y - solidWidth / 2f,
+            region.Width + solidWidth,
+            region.Height + solidWidth);
+
+        // ── Dark understroke for contrast on light backgrounds ──
+        using (var underPath = CreateRoundedRectPath(frameRect, cornerRadius))
+        using (var underPen = new Pen(Color.FromArgb(100, 0, 0, 0), solidWidth + 1.5f * scale))
+        {
+            underPen.LineJoin = LineJoin.Round;
+            g.DrawPath(underPen, underPath);
+        }
+
+        // ── Thick solid accent border ──
+        using (var solidPath = CreateRoundedRectPath(frameRect, cornerRadius))
+        using (var solidPen = new Pen(accent, solidWidth))
+        {
+            solidPen.LineJoin = LineJoin.Round;
+            g.DrawPath(solidPen, solidPath);
+        }
+
+        // ── White dashed overlay ──
+        using (var dashPath = CreateRoundedRectPath(frameRect, cornerRadius))
+        using (var dashPen = new Pen(Color.FromArgb(220, 255, 255, 255), dashWidth))
+        {
+            dashPen.DashStyle = DashStyle.Dash;
+            dashPen.DashPattern = new[] { 6f, 4f };
+            dashPen.LineJoin = LineJoin.Round;
+            g.DrawPath(dashPen, dashPath);
+        }
+
+        // ── HUD L-brackets at the four corners ──
+        int minSide = Math.Min(region.Width, region.Height);
+        int bracketLen = Math.Clamp(
+            (int)Math.Round(minSide * 0.06f),
+            UiChrome.ScaleInt(14),
+            UiChrome.ScaleInt(38));
+        float bracketWidth = Math.Clamp(minSide * 0.009f, 4f * scale, 6f * scale); // double thickness
+
+        // Align brackets exactly on the border path center (solidWidth/2 from region edge)
+        float bOff = solidWidth / 2f;
+        float x0 = region.X - bOff;
+        float y0 = region.Y - bOff;
+        float x1 = region.Right + bOff;
+        float y1 = region.Bottom + bOff;
+
+        // Soft glow halo behind brackets
+        using var bracketGlow = new Pen(Color.FromArgb(50, accent), bracketWidth + 3f * scale)
+        {
+            LineJoin = LineJoin.Miter, StartCap = LineCap.Round, EndCap = LineCap.Round
+        };
+        // Solid accent bracket (no white core — pure accent color)
+        using var bracketPen = new Pen(accent, bracketWidth)
+        {
+            LineJoin = LineJoin.Miter, StartCap = LineCap.Round, EndCap = LineCap.Round
+        };
+
+        DrawCornerBracketsLocal(g, x0, y0, x1, y1, bracketLen, bracketGlow);
+        DrawCornerBracketsLocal(g, x0, y0, x1, y1, bracketLen, bracketPen);
+    }
+
+    internal static void DrawCornerBracketsLocal(Graphics g, float x0, float y0, float x1, float y1, float len, Pen pen)
+    {
+        // Top-left
+        g.DrawLine(pen, x0, y0, x0 + len, y0);
+        g.DrawLine(pen, x0, y0, x0, y0 + len);
+        // Top-right
+        g.DrawLine(pen, x1, y0, x1 - len, y0);
+        g.DrawLine(pen, x1, y0, x1, y0 + len);
+        // Bottom-left
+        g.DrawLine(pen, x0, y1, x0 + len, y1);
+        g.DrawLine(pen, x0, y1, x0, y1 - len);
+        // Bottom-right
+        g.DrawLine(pen, x1, y1, x1 - len, y1);
+        g.DrawLine(pen, x1, y1, x1, y1 - len);
+    }
+
+    /// <summary>
+    /// Draws 4 circular dot handles at mid-edges only (corners use L-brackets).
+    /// Each handle: soft glow halo → accent ring → white core.
+    /// </summary>
+    private static void DrawCircularHandles(Graphics g, Rectangle region, Color accent)
+    {
+        float scale = Math.Max(1f, (float)UiChrome.UiScale);
+        float solidWidth = 3f * scale;      // Same width as in DrawRecordingFrame
+        float dotRadius = 4.5f * scale;     // main dot radius
+        float glowRadius = dotRadius + 3f * scale;
+        float coreRadius = dotRadius - 1.5f * scale;
+
+        // The outer solid border is drawn inflated outward by solidWidth/2. 
+        // We need to shift the mid-edge dots by the same amount so they center exactly on the stroke.
+        float bOff = solidWidth / 2f;
+        float left = region.Left - bOff;
+        float right = region.Right + bOff;
+        float top = region.Top - bOff;
+        float bottom = region.Bottom + bOff;
+        float midX = region.Left + region.Width / 2f;
+        float midY = region.Top + region.Height / 2f;
+
+        // 4 mid-edge handle center points only (corners handled by L-brackets)
+        PointF[] centers =
+        {
+            new(midX, top),                       // Top
+            new(left, midY),                      // Left
+            new(right, midY),                     // Right
+            new(midX, bottom),                    // Bottom
+        };
+
+        using var glowBrush = new SolidBrush(Color.FromArgb(50, accent));
+        using var ringBrush = new SolidBrush(accent);
+        using var coreBrush = new SolidBrush(Color.White);
+
+        foreach (var c in centers)
+        {
+            // Glow halo
+            g.FillEllipse(glowBrush, c.X - glowRadius, c.Y - glowRadius, glowRadius * 2, glowRadius * 2);
+            // Accent ring
+            g.FillEllipse(ringBrush, c.X - dotRadius, c.Y - dotRadius, dotRadius * 2, dotRadius * 2);
+            // White core
+            g.FillEllipse(coreBrush, c.X - coreRadius, c.Y - coreRadius, coreRadius * 2, coreRadius * 2);
+        }
+    }
+
+    /// <summary>
+    /// Creates a GraphicsPath for a rounded rectangle.
+    /// </summary>
+    internal static GraphicsPath CreateRoundedRectPath(RectangleF rect, float radius)
+    {
+        var path = new GraphicsPath();
+        float d = radius * 2;
+        if (d > rect.Width) d = rect.Width;
+        if (d > rect.Height) d = rect.Height;
+
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     private static Rectangle NormRect(Point a, Point b)
@@ -658,10 +802,14 @@ public sealed partial class RecordingForm : Form
         var r = _recordRegion;
         return new[]
         {
-            new Rectangle(r.Left - h2, r.Top - h2, hs, hs),       // 0 TL
-            new Rectangle(r.Right - h2, r.Top - h2, hs, hs),      // 1 TR
-            new Rectangle(r.Left - h2, r.Bottom - h2, hs, hs),    // 2 BL
-            new Rectangle(r.Right - h2, r.Bottom - h2, hs, hs),   // 3 BR
+            new Rectangle(r.Left - h2, r.Top - h2, hs, hs),                           // 0 TL
+            new Rectangle(r.Right - h2, r.Top - h2, hs, hs),                           // 1 TR
+            new Rectangle(r.Left - h2, r.Bottom - h2, hs, hs),                         // 2 BL
+            new Rectangle(r.Right - h2, r.Bottom - h2, hs, hs),                        // 3 BR
+            new Rectangle(r.Left + r.Width / 2 - h2, r.Top - h2, hs, hs),             // 4 Top
+            new Rectangle(r.Left - h2, r.Top + r.Height / 2 - h2, hs, hs),            // 5 Left
+            new Rectangle(r.Right - h2, r.Top + r.Height / 2 - h2, hs, hs),           // 6 Right
+            new Rectangle(r.Left + r.Width / 2 - h2, r.Bottom - h2, hs, hs),          // 7 Bottom
         };
     }
 
@@ -686,11 +834,15 @@ public sealed partial class RecordingForm : Form
 
         var next = _handleDragIdx switch
         {
-            0 => Rectangle.FromLTRB(r.Left + dx, r.Top + dy, r.Right, r.Bottom),
-            1 => Rectangle.FromLTRB(r.Left, r.Top + dy, r.Right + dx, r.Bottom),
-            2 => Rectangle.FromLTRB(r.Left + dx, r.Top, r.Right, r.Bottom + dy),
-            3 => Rectangle.FromLTRB(r.Left, r.Top, r.Right + dx, r.Bottom + dy),
-            4 => new Rectangle(r.Left + dx, r.Top + dy, r.Width, r.Height),
+            0 => Rectangle.FromLTRB(r.Left + dx, r.Top + dy, r.Right, r.Bottom),       // TL corner
+            1 => Rectangle.FromLTRB(r.Left, r.Top + dy, r.Right + dx, r.Bottom),        // TR corner
+            2 => Rectangle.FromLTRB(r.Left + dx, r.Top, r.Right, r.Bottom + dy),        // BL corner
+            3 => Rectangle.FromLTRB(r.Left, r.Top, r.Right + dx, r.Bottom + dy),        // BR corner
+            4 => Rectangle.FromLTRB(r.Left, r.Top + dy, r.Right, r.Bottom),             // Top edge
+            5 => Rectangle.FromLTRB(r.Left + dx, r.Top, r.Right, r.Bottom),             // Left edge
+            6 => Rectangle.FromLTRB(r.Left, r.Top, r.Right + dx, r.Bottom),             // Right edge
+            7 => Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom + dy),             // Bottom edge
+            8 => new Rectangle(r.Left + dx, r.Top + dy, r.Width, r.Height),             // Move
             _ => r
         };
 
@@ -806,7 +958,6 @@ public sealed partial class RecordingForm : Form
             _screenshot?.Dispose();
             _screenshot = null;
             _readoutFont.Dispose();
-            _borderPen.Dispose();
         }
         base.Dispose(disposing);
     }
