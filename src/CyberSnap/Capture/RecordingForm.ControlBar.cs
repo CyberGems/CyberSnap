@@ -22,6 +22,7 @@ public sealed partial class RecordingForm
         public event Action? CancelClicked;
         public event Action? PauseClicked;
         public event Action<int>? FpsChanged;
+        public event Action<bool>? SendToTrimmerChanged;
 
         private static readonly Color DoneAccent = Color.FromArgb(255, 0xBD, 0x70, 0x11);
         private static readonly Color DoneAccentHover = Color.FromArgb(255, 0xD4, 0x82, 0x18);
@@ -29,12 +30,13 @@ public sealed partial class RecordingForm
         private static readonly Color StartShineCore = Color.FromArgb(210, 215, 222);
         private const float StartShineThicknessScale = 0.55f;
 
-        private static int BarWidth => UiChrome.ScaleInt(520);
+        private static int BarWidth => UiChrome.ScaleInt(598);
         private static int BarHeight => UiChrome.ScaleInt(58);
         private static int PrimaryBtnHeight => UiChrome.ScaleInt(40);
         private static int SecondaryBtnSize => UiChrome.ScaleInt(38);
         private static int PrimaryBtnWidth => UiChrome.ScaleInt(88);
-        private static int StartCancelGap => UiChrome.ScaleInt(8);
+        /// <summary>Air between Start/Stop ↔ Trimmer and Trimmer ↔ Cancel.</summary>
+        private static int TrimmerPrimaryGap => UiChrome.ScaleInt(18);
         private static int FpsComboWidth => UiChrome.ScaleInt(78);
         private static int FpsComboHeight => UiChrome.ScaleInt(30);
         private static int DotSize => UiChrome.ScaleInt(10);
@@ -46,6 +48,7 @@ public sealed partial class RecordingForm
         private readonly bool _supportsPause;
 
         private int _fps;
+        private bool _sendToTrimmer;
         private bool _isRecording;
         private bool _isPaused;
         private bool _isEncoding;
@@ -57,6 +60,7 @@ public sealed partial class RecordingForm
         private Rectangle _stopBtnRect;
         private Rectangle _pauseBtnRect;
         private Rectangle _cancelBtnRect;
+        private Rectangle _trimmerToggleRect;
         private Rectangle _fpsComboRect;
         private Rectangle _phaseLabelRect;
         private Rectangle _statusRect;
@@ -90,10 +94,11 @@ public sealed partial class RecordingForm
             FormatFlags = StringFormatFlags.NoWrap,
         };
 
-        public RecordingControlBar(Rectangle captureRegion, Models.RecordingFormat format, int fps)
+        public RecordingControlBar(Rectangle captureRegion, Models.RecordingFormat format, int fps, bool sendToTrimmer)
         {
             _format = format;
             _fps = NormalizeFps(format, fps);
+            _sendToTrimmer = sendToTrimmer;
             _supportsPause = format != Models.RecordingFormat.GIF;
             _accent = format == Models.RecordingFormat.GIF
                 ? Color.FromArgb(255, 140, 0)
@@ -201,27 +206,35 @@ public sealed partial class RecordingForm
                 _startBtnRect = Rectangle.Empty;
                 _stopBtnRect = Rectangle.Empty;
                 _pauseBtnRect = Rectangle.Empty;
+                _trimmerToggleRect = Rectangle.Empty;
             }
             else if (!_isRecording)
             {
-                _startBtnRect = new Rectangle(
-                    _cancelBtnRect.X - btnGap - StartCancelGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
+                // Ready: [Start] —gap— [Trimmer] —gap— [Cancel]
                 _stopBtnRect = Rectangle.Empty;
                 _pauseBtnRect = Rectangle.Empty;
+                _trimmerToggleRect = new Rectangle(
+                    _cancelBtnRect.X - TrimmerPrimaryGap - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize);
+                _startBtnRect = new Rectangle(
+                    _trimmerToggleRect.X - TrimmerPrimaryGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
             }
             else
             {
+                // Recording: [Pause?] [Stop] —gap— [Trimmer] —gap— [Cancel]
                 _startBtnRect = Rectangle.Empty;
+                _trimmerToggleRect = new Rectangle(
+                    _cancelBtnRect.X - TrimmerPrimaryGap - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize);
                 _stopBtnRect = new Rectangle(
-                    _cancelBtnRect.X - btnGap - StartCancelGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
+                    _trimmerToggleRect.X - TrimmerPrimaryGap - PrimaryBtnWidth, priY, PrimaryBtnWidth, PrimaryBtnHeight);
                 _pauseBtnRect = _supportsPause
-                    ? new Rectangle(_stopBtnRect.X - btnGap - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize)
+                    ? new Rectangle(_stopBtnRect.X - TrimmerPrimaryGap - SecondaryBtnSize, secY, SecondaryBtnSize, SecondaryBtnSize)
                     : Rectangle.Empty;
             }
 
             int firstBtnX = !_pauseBtnRect.IsEmpty ? _pauseBtnRect.X
                 : !_startBtnRect.IsEmpty ? _startBtnRect.X
                 : !_stopBtnRect.IsEmpty ? _stopBtnRect.X
+                : !_trimmerToggleRect.IsEmpty ? _trimmerToggleRect.X
                 : _cancelBtnRect.X;
 
             int statusX = !_fpsComboRect.IsEmpty
@@ -404,6 +417,15 @@ public sealed partial class RecordingForm
                     _hoveredRect == _pauseBtnRect, pauseColor);
             }
 
+            if (!_trimmerToggleRect.IsEmpty)
+            {
+                bool hovered = _hoveredRect == _trimmerToggleRect;
+                Color iconColor = _sendToTrimmer
+                    ? (hovered ? _accentHover : _accent)
+                    : (hovered ? _accent : UiChrome.SurfaceTextPrimary);
+                DrawIconBtn(g, _trimmerToggleRect, "filmstrip", hovered || _sendToTrimmer, iconColor, filled: _sendToTrimmer);
+            }
+
             if (!_isEncoding)
             {
                 bool cancelHovered = _hoveredRect == _cancelBtnRect;
@@ -463,12 +485,13 @@ public sealed partial class RecordingForm
             }
         }
 
-        private void DrawIconBtn(Graphics g, Rectangle r, string iconId, bool hovered, Color iconColor)
+        private void DrawIconBtn(Graphics g, Rectangle r, string iconId, bool hovered, Color iconColor, bool filled = false)
         {
-            bool filled = iconId == "stop";
-            WindowsDockRenderer.PaintButton(g, r, filled, hovered);
-            int alpha = filled ? 255 : hovered ? 240 : 200;
-            WindowsDockRenderer.PaintIcon(g, iconId, r, Color.FromArgb(alpha, iconColor.R, iconColor.G, iconColor.B), filled);
+            bool paintFilled = filled || iconId == "stop";
+            // Use the bar accent (cyan video / orange GIF) so active rings match the chrome theme.
+            WindowsDockRenderer.PaintButton(g, r, paintFilled, hovered, accent: _accent);
+            int alpha = paintFilled ? 255 : hovered ? 240 : 200;
+            WindowsDockRenderer.PaintIcon(g, iconId, r, Color.FromArgb(alpha, iconColor.R, iconColor.G, iconColor.B), paintFilled);
         }
 
         private void ShowFpsMenu()
@@ -554,6 +577,7 @@ public sealed partial class RecordingForm
             if (!_startBtnRect.IsEmpty && _startBtnRect.Contains(p)) return _startBtnRect;
             if (!_stopBtnRect.IsEmpty && _stopBtnRect.Contains(p)) return _stopBtnRect;
             if (!_pauseBtnRect.IsEmpty && _pauseBtnRect.Contains(p)) return _pauseBtnRect;
+            if (!_trimmerToggleRect.IsEmpty && _trimmerToggleRect.Contains(p)) return _trimmerToggleRect;
             if (!_isEncoding && _cancelBtnRect.Contains(p)) return _cancelBtnRect;
             return null;
         }
@@ -585,6 +609,17 @@ public sealed partial class RecordingForm
                 tip = LocalizationService.Translate(
                     _isPaused ? "Recording resume tooltip" : "Recording pause tooltip");
                 anchor = _pauseBtnRect;
+            }
+            else if (!_trimmerToggleRect.IsEmpty && _trimmerToggleRect.Contains(location))
+            {
+                tip = LocalizationService.Translate(_sendToTrimmer
+                    ? "Send to Trimmer is on"
+                    : "Send to Trimmer is off");
+                tip += "\n" + LocalizationService.Translate(
+                    _format == Models.RecordingFormat.GIF
+                        ? "Open this GIF in the Trimmer when recording finishes"
+                        : "Open this video in the Trimmer when recording finishes");
+                anchor = _trimmerToggleRect;
             }
             else if (!_isEncoding && _cancelBtnRect.Contains(location))
             {
@@ -652,6 +687,14 @@ public sealed partial class RecordingForm
                 StopClicked?.Invoke();
             else if (!_pauseBtnRect.IsEmpty && _pauseBtnRect.Contains(e.Location))
                 PauseClicked?.Invoke();
+            else if (!_trimmerToggleRect.IsEmpty && _trimmerToggleRect.Contains(e.Location))
+            {
+                _sendToTrimmer = !_sendToTrimmer;
+                SendToTrimmerChanged?.Invoke(_sendToTrimmer);
+                // Inflate so the active ring's AA fringe is fully redrawn.
+                Invalidate(Rectangle.Inflate(_trimmerToggleRect, 3, 3));
+                UpdateToolTip(e.Location);
+            }
             else if (!_isEncoding && _cancelBtnRect.Contains(e.Location))
                 CancelClicked?.Invoke();
         }

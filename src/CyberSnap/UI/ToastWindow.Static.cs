@@ -94,6 +94,8 @@ public partial class ToastWindow
         {
             if (spec.PlayErrorSound)
                 Services.SoundService.PlayErrorSound();
+            else if (spec.PlayCaptureSound)
+                Services.SoundService.PlayCaptureSound();
             else if (spec.IsSystemMessage)
                 Services.SoundService.PlaySystemSound();
             else

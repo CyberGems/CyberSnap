@@ -120,6 +120,8 @@ namespace CyberSnap.UI
             TrimmerTitleBar.IsPinActive = _isPinned;
             Topmost = _isPinned;
             
+            CopyFileBtn.Content = LocalizationService.Translate(lang, "Copy");
+            SaveAsNewBtn.Content = LocalizationService.Translate(lang, "Save As New");
             UpdatePlayPauseToolTip();
             UpdateAllTooltips();
 
@@ -1571,6 +1573,8 @@ namespace CyberSnap.UI
             string lang = _settingsService.Settings.InterfaceLanguage;
             StepBackBtn.ToolTip = LocalizationService.Translate(lang, "Step Backward") + " (\u2190)";
             StepForwardBtn.ToolTip = LocalizationService.Translate(lang, "Step Forward") + " (\u2192)";
+            CopyFileBtn.ToolTip = LocalizationService.Translate(lang, "Copy the media file to the clipboard");
+            SaveAsNewBtn.ToolTip = LocalizationService.Translate(lang, "Save the trimmed video as a new file");
             UpdateLoopTooltip();
         }
 
@@ -2028,9 +2032,16 @@ namespace CyberSnap.UI
 
             // Translate menu headers
             MenuShowInFolder.Header = LocalizationService.Translate(lang, "Show in folder");
+            MenuCopyFile.Header = LocalizationService.Translate(lang, "Copy file");
+            MenuOpenInGallery.Header = LocalizationService.Translate(lang, "Open in Gallery");
             MenuTrim.Header = LocalizationService.Translate(lang, "Trim");
             MenuSaveCopyAs.Header = LocalizationService.Translate(lang, "Save copy as...");
             MenuClose.Header = LocalizationService.Translate(lang, "Close");
+
+            bool fileReady = !string.IsNullOrEmpty(_mediaFilePath) && File.Exists(_mediaFilePath);
+            MenuCopyFile.IsEnabled = fileReady;
+            MenuOpenInGallery.IsEnabled = fileReady;
+            MenuShowInFolder.IsEnabled = fileReady;
 
             // Enable/disable Trim based on modifications
             bool isModified = _startTimeSeconds > 0.05 || _endTimeSeconds < (_videoDurationSeconds - 0.05);
@@ -2053,6 +2064,47 @@ namespace CyberSnap.UI
             catch (Exception ex)
             {
                 AppDiagnostics.LogError("trimmer.context-menu.show-in-folder", ex);
+            }
+        }
+
+        private void CopyFileBtn_Click(object sender, RoutedEventArgs e) => CopyMediaFileToClipboard();
+
+        private void MenuCopyFile_Click(object sender, RoutedEventArgs e) => CopyMediaFileToClipboard();
+
+        private void CopyMediaFileToClipboard()
+        {
+            string lang = _settingsService.Settings.InterfaceLanguage;
+            if (string.IsNullOrEmpty(_mediaFilePath) || !File.Exists(_mediaFilePath))
+            {
+                ShowBanner(LocalizationService.Translate(lang, "Clipboard copy failed"));
+                return;
+            }
+
+            try
+            {
+                ClipboardService.CopyFileToClipboard(_mediaFilePath);
+                ShowBanner(LocalizationService.Translate(lang, "File copied to clipboard"));
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("trimmer.copy-file", ex);
+                ShowBanner(LocalizationService.Translate(lang, "Clipboard copy failed"));
+            }
+        }
+
+        private void MenuOpenInGallery_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_mediaFilePath) || !File.Exists(_mediaFilePath))
+                return;
+
+            try
+            {
+                if (Application.Current is App app)
+                    app.ShowHistory(_mediaFilePath);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("trimmer.open-gallery", ex);
             }
         }
 

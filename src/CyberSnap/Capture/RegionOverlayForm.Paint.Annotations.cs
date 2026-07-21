@@ -217,6 +217,8 @@ public sealed partial class RegionOverlayForm
             r = U(r, InflateForRepaint(Rectangle.Round(GetActiveTextRect()), 16));
         if (_selectPreviewAnnotation is not null)
             r = U(r, GetAnnotationBounds(_selectPreviewAnnotation));
+        if (ShouldPaintCursorToolChip(_lastCursorPos))
+            r = U(r, GetCursorChipRect(_lastCursorPos));
 
         return r.Width > 0 && r.Height > 0 ? InflateForRepaint(r, 8) : Rectangle.Empty;
     }

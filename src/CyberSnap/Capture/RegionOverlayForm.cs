@@ -31,6 +31,30 @@ public sealed partial class RegionOverlayForm : Form
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public bool ConfirmRegionBeforeCapture { get; set; } = true;
 
+    /// <summary>
+    /// Post-confirm destination requested from the confirm-mode action pills
+    /// (toast-style Save / Copy / Edit / …). Consumed by <see cref="App"/> after crop.
+    /// </summary>
+    public enum ConfirmCommitAction
+    {
+        Default,
+        Save,
+        Copy,
+        Edit,
+        Share,
+        History
+    }
+
+    /// <summary>Action chosen when the user commits via a destination pill (or Enter / double-click primary).</summary>
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public ConfirmCommitAction PendingCommitAction { get; private set; } = ConfirmCommitAction.Default;
+
+    /// <summary>
+    /// Annotation flyout + stroke/color chrome only while the region is locked.
+    /// Pre-selection dock stays capture-only (no annotation bar, no color/width).
+    /// </summary>
+    private bool ShowAnnotationChrome => _isConfirmingSelection;
+
     private bool _isConfirmingSelection;
     private Rectangle _confirmRect;
     private int _confirmHandleDragIndex = -1;
@@ -38,14 +62,25 @@ public sealed partial class RegionOverlayForm : Form
     private Point _confirmDragStart;
     private Point _confirmDragOffset;
     private Rectangle _confirmDragStartRect;
-    private int _hoveredConfirmButton = -1; // 0 = Confirm, 1 = Cancel
+    private int _hoveredConfirmButton = -1; // index into confirm chrome
     private int _pressedConfirmButton = -1; // button currently playing the click squash
     private int _pendingConfirmAction = -1; // action to run when the squash finishes
     private float _confirmPressAmt;          // 0→1→0 squash progress for the pressed button
     private DateTime _pressAnimStart;
-    private readonly float[] _shinePhase = { 0f, 0.5f, 0.25f }; // per-button glint position (0=confirm,1=retry,2=cancel)
-    private readonly float[] _shineMain = { 1f, 1f, 1f }; // primary comet intensity per button (0=confirm,1=retry,2=cancel)
-    private readonly float[] _shineDup = { 0f, 0f, 0f };  // duplicate comet intensity (fades in on hover)
+    private const int ConfirmShineSlots = 10;
+    private readonly float[] _shinePhase = new float[ConfirmShineSlots]; // per-button glint position
+    private readonly float[] _shineMain = new float[ConfirmShineSlots]; // primary comet intensity
+    private readonly float[] _shineDup = new float[ConfirmShineSlots];  // duplicate comet intensity (hover)
+
+    // Confirm chrome: Cancel / Retry / destination pills (built in RebuildConfirmChrome)
+    private enum ConfirmChromeKind { Cancel, Retry, Save, Copy, Edit, Share, OcrExtract }
+    private ConfirmChromeKind[] _confirmChromeKinds =
+    {
+        ConfirmChromeKind.Cancel, ConfirmChromeKind.Retry, ConfirmChromeKind.Save
+    };
+    private Rectangle[] _confirmChromeRects = Array.Empty<Rectangle>();
+    /// <summary>Thin divider between fixed Cancel/Retry and destination pills (empty when unused).</summary>
+    private Rectangle _confirmChromeSeparatorRect = Rectangle.Empty;
 
     private CaptureDockSide ActiveDockSide => _isEvading ? GetOppositeDockSide(CaptureDockSide) : CaptureDockSide;
 
@@ -589,7 +624,6 @@ public sealed partial class RegionOverlayForm : Form
         int pad = UiChrome.ScaledToolbarInnerPadding;
         int buttonSize = UiChrome.ScaledToolbarButtonSize;
         int buttonSpacing = UiChrome.ScaledToolbarButtonSpacing;
-        int toolbarHeight = UiChrome.ScaledToolbarHeight;
         Point? cursorScreenPoint = null;
         try
         {
@@ -610,116 +644,61 @@ public sealed partial class RegionOverlayForm : Form
         BuildToolbarToolSplit(screenBounds, buttonSize, buttonSpacing, pad);
         _sepAfter = Array.Empty<int>(); // dividers drawn manually inside PaintToolbar
 
-        int activatorWidth = UiChrome.ScaleInt(14);
+        // Pre-confirm: capture tools + Move/Close.
+        // Confirm: annotation-only dock (no capture tools) — single row/column.
+        if (ShowAnnotationChrome)
+        {
+            CalcAnnotationOnlyToolbar(screenBounds, pad, buttonSize, buttonSpacing);
+            return;
+        }
+
+        CalcCaptureOnlyToolbar(screenBounds, pad, buttonSize, buttonSpacing);
+    }
+
+    /// <summary>
+    /// Capture-phase dock: Group 0 tools + Move/Close. No color, stroke, or annotation flyout.
+    /// </summary>
+    private void CalcCaptureOnlyToolbar(Rectangle screenBounds, int pad, int buttonSize, int buttonSpacing)
+    {
+        const int tier1UtilityCount = 2; // pos + close
+        // Gaps: after capture-tool group + before Move/Close (must match layout below)
+        const int tier1SepCount = 2;
+
+        int activatorW = UiChrome.ScaleInt(14);
+        // Match tool-button height so the kebab is easy to hit and the dots can spread vertically.
+        int activatorH = buttonSize;
         int activatorSpacing = buttonSpacing;
 
-        int tier1PrimarySpan = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, pad);
+        int tier1PrimarySpan = GetToolbarPrimarySpan(_mainBarTools.Length + tier1UtilityCount, tier1SepCount, buttonSize, buttonSpacing, pad);
         if (!IsVerticalDock)
-        {
-            tier1PrimarySpan += activatorWidth + activatorSpacing;
-        }
-        int tier2PrimarySpan = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, pad);
-        int maxPrimarySpan = Math.Max(tier1PrimarySpan, tier2PrimarySpan);
+            tier1PrimarySpan += activatorW + activatorSpacing;
 
         int w, h;
         int brandWidth = 0;
         if (IsVerticalDock)
         {
-            w = _flyoutTools.Length > 0 ? (pad * 2 + buttonSize * 2 + buttonSpacing) : (pad * 2 + buttonSize);
-            h = maxPrimarySpan;
+            w = pad * 2 + buttonSize;
+            h = tier1PrimarySpan;
         }
         else
         {
             int logoSize = UiChrome.ScaleInt(10);
-            int textWidth = UiChrome.ScaleInt(60); // "CyberSnap" text estimate at 5.8pt bold
-            
-            // Check if there is enough space to show the text.
-            // If the annotation bar is significantly wider than the main bar, or if we have at least 6 tools enabled in the main bar, show the text.
-            int tier1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
-            int tier2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
-            bool canShowText = (tier2Width - tier1Width >= UiChrome.ScaleInt(80)) || (_mainBarTools.Length >= 6);
-            
-            if (canShowText)
-            {
-                brandWidth = logoSize + textWidth + UiChrome.ScaleInt(24); // logo + text + padding+buffer
-            }
-            else
-            {
-                brandWidth = logoSize + UiChrome.ScaleInt(16); // only logo + small padding
-            }
-            
-            w = maxPrimarySpan + brandWidth;
-            h = _flyoutTools.Length > 0 ? (pad * 2 + buttonSize * 2 + buttonSpacing) : (pad * 2 + buttonSize);
+            int textWidth = UiChrome.ScaleInt(60);
+            bool canShowText = _mainBarTools.Length >= 6;
+            brandWidth = canShowText
+                ? logoSize + textWidth + UiChrome.ScaleInt(24)
+                : logoSize + UiChrome.ScaleInt(16);
+            w = tier1PrimarySpan + brandWidth;
+            h = pad * 2 + buttonSize;
         }
 
-        _toolbarButtons = new Rectangle[BtnCount];
-        _toolbarIcons = new string[BtnCount];
-        _toolbarLabels = new string[BtnCount];
-        _toolbarToolIds = new string[BtnCount];
-        _toolbarModes = new CaptureMode?[BtnCount];
-
-        // 1. Group 0 (Capture tools)
-        for (int i = 0; i < _mainBarTools.Length; i++)
-        {
-            _toolbarIcons[i] = _mainBarTools[i].Id switch { "crop" => "rect", "rect" => "captureRect", var id => id };
-            _toolbarLabels[i] = LocalizationService.Translate(_mainBarTools[i].Label);
-            _toolbarToolIds[i] = _mainBarTools[i].Id;
-            _toolbarModes[i] = _mainBarTools[i].Mode;
-        }
-
-        // 2. Stroke width button
-        int swIdx = StrokeWidthButtonIndex;
-        _toolbarIcons[swIdx] = "strokeWidth";
-        _toolbarLabels[swIdx] = LocalizationService.Translate("Shape stroke width");
-        _toolbarToolIds[swIdx] = "strokeWidth";
-        _toolbarModes[swIdx] = null;
-
-        // 3. Color picker button
-        int colorIdx = ColorButtonIndex;
-        _toolbarIcons[colorIdx] = "color";
-        _toolbarLabels[colorIdx] = LocalizationService.Translate("Active drawing and text color");
-        _toolbarToolIds[colorIdx] = "color";
-        _toolbarModes[colorIdx] = null;
-
-        // 4. Position button
-        int positionIdx = PositionButtonIndex;
-        _toolbarIcons[positionIdx] = "position";
-        _toolbarLabels[positionIdx] = LocalizationService.Translate("Toolbar Position");
-        _toolbarToolIds[positionIdx] = "position";
-        _toolbarModes[positionIdx] = null;
-
-        // 5. Close (Cancel) button
-        int closeIdx = CloseButtonIndex;
-        _toolbarIcons[closeIdx] = "signOut";
-        _toolbarLabels[closeIdx] = LocalizationService.Translate("Cancel");
-        _toolbarToolIds[closeIdx] = "close";
-        _toolbarModes[closeIdx] = null;
-
-        // 6. Group 1 (Annotation & Drawing tools)
-        int drawingStartIdx = _mainBarTools.Length + 4;
-        for (int i = 0; i < _flyoutTools.Length; i++)
-        {
-            int btnIdx = drawingStartIdx + i;
-            _toolbarIcons[btnIdx] = _flyoutTools[i].Id;
-            _toolbarLabels[btnIdx] = LocalizationService.Translate(_flyoutTools[i].Label);
-            _toolbarToolIds[btnIdx] = _flyoutTools[i].Id;
-            _toolbarModes[btnIdx] = _flyoutTools[i].Mode;
-        }
+        AllocateToolbarButtonMetadata();
 
         _toolbarRect = ToolbarLayout.GetToolbarRect(
-            _virtualBounds,
-            screenBounds,
-            w,
-            h,
-            CaptureDockSide,
-            UiChrome.ScaledToolbarTopMargin);
-
+            _virtualBounds, screenBounds, w, h, CaptureDockSide, UiChrome.ScaledToolbarTopMargin);
         if (!_toolbarCustomOffset.IsEmpty)
-        {
             _toolbarRect.Offset(_toolbarCustomOffset);
-        }
 
-        // Last visible in the pre-utility group (matches Paint.Toolbar.cs tier1)
         var tier1Group = new[] { "rect", "center", "scroll", "recordGif", "record" };
         int sepIdx = -1;
         for (int i = 0; i < _mainBarTools.Length; i++)
@@ -728,15 +707,17 @@ public sealed partial class RegionOverlayForm : Form
                 sepIdx = i;
         }
 
+        _toolbarButtons[StrokeWidthButtonIndex] = Rectangle.Empty;
+        _toolbarButtons[ColorButtonIndex] = Rectangle.Empty;
+
         if (IsVerticalDock)
         {
-            // Column 1: Capture & System Tools
-            int col1Height = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
+            int col1Height = GetToolbarPrimarySpan(_mainBarTools.Length + tier1UtilityCount, tier1SepCount, buttonSize, buttonSpacing, 0);
             int col1StartY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - col1Height) / 2;
             int col1X = _toolbarRect.X + pad;
-
             _brandRect = new Rectangle(col1X, _toolbarRect.Y + pad, buttonSize, col1StartY - (_toolbarRect.Y + pad));
-            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorWidth, _toolbarRect.Y + pad + UiChrome.ScaleInt(4), activatorWidth, activatorWidth);
+            int actY = _toolbarRect.Y + (_toolbarRect.Height - activatorH) / 2;
+            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorW, actY, activatorW, activatorH);
 
             int cy = col1StartY;
             for (int i = 0; i < _mainBarTools.Length; i++)
@@ -747,58 +728,20 @@ public sealed partial class RegionOverlayForm : Form
                     cy += GroupGap;
             }
             cy += GroupGap;
-            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Stroke width
+            _toolbarButtons[PositionButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize);
             cy += buttonSize + buttonSpacing;
-            _toolbarButtons[ColorButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Color
-            // Separator before Move so it groups with Close, not with the color swatch.
-            cy += buttonSize + buttonSpacing + GroupGap;
-            _toolbarButtons[PositionButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Position
-            cy += buttonSize + buttonSpacing;
-            _toolbarButtons[CloseButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize); // Close
-
-            // Column 2: Annotation Tools
-            int col2X = _toolbarRect.X + pad + buttonSize + buttonSpacing;
-            int col2Height = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
-            int col2StartY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - col2Height) / 2;
-            int cy2 = col2StartY;
-            // Separator after last visible in each group (matches Paint.Toolbar.cs)
-            var tier2GroupsV = new[] {
-                new[] { "select", "eraser", "highlight" },
-                new[] { "rectShape" }
-            };
-            var tier2SepFlyoutIndicesV = new HashSet<int>();
-            foreach (var group in tier2GroupsV)
-            {
-                int lastIdx = -1;
-                for (int i = 0; i < _flyoutTools.Length; i++)
-                {
-                    if (group.Contains(_flyoutTools[i].Id))
-                        lastIdx = i;
-                }
-                if (lastIdx >= 0)
-                    tier2SepFlyoutIndicesV.Add(lastIdx);
-            }
-            for (int i = 0; i < _flyoutTools.Length; i++)
-            {
-                int btnIdx = _mainBarTools.Length + 4 + i;
-                _toolbarButtons[btnIdx] = new Rectangle(col2X, cy2, buttonSize, buttonSize);
-                cy2 += buttonSize + buttonSpacing;
-                if (tier2SepFlyoutIndicesV.Contains(i))
-                    cy2 += GroupGap;
-            }
+            _toolbarButtons[CloseButtonIndex] = new Rectangle(col1X, cy, buttonSize, buttonSize);
         }
         else
         {
-            // Row 1: Capture & System Tools
-            int row1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
-            int row1StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row1Width - activatorWidth - activatorSpacing) / 2;
+            int row1Width = GetToolbarPrimarySpan(_mainBarTools.Length + tier1UtilityCount, tier1SepCount, buttonSize, buttonSpacing, 0);
+            int row1StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row1Width - activatorW - activatorSpacing) / 2;
             if (row1StartX < _toolbarRect.X + brandWidth)
-            {
                 row1StartX = _toolbarRect.X + brandWidth;
-            }
-            int row1Y = _toolbarRect.Y + ((_flyoutTools.Length > 0 ? h / 2 : h) - buttonSize) / 2;
+            int row1Y = _toolbarRect.Y + (h - buttonSize) / 2;
             _brandRect = new Rectangle(_toolbarRect.X, row1Y, brandWidth, buttonSize);
-            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorWidth, _toolbarRect.Y + pad + UiChrome.ScaleInt(4), activatorWidth, activatorWidth);
+            int actY = _toolbarRect.Y + (_toolbarRect.Height - activatorH) / 2;
+            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorW, actY, activatorW, activatorH);
 
             int cx = row1StartX;
             for (int i = 0; i < _mainBarTools.Length; i++)
@@ -809,45 +752,206 @@ public sealed partial class RegionOverlayForm : Form
                     cx += GroupGap;
             }
             cx += GroupGap;
-            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Stroke width
+            _toolbarButtons[PositionButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize);
             cx += buttonSize + buttonSpacing;
-            _toolbarButtons[ColorButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Color
-            // Separator before Move so it groups with Close, not with the color swatch.
-            cx += buttonSize + buttonSpacing + GroupGap;
-            _toolbarButtons[PositionButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Position
-            cx += buttonSize + buttonSpacing;
-            _toolbarButtons[CloseButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize); // Close
+            _toolbarButtons[CloseButtonIndex] = new Rectangle(cx, row1Y, buttonSize, buttonSize);
+        }
+    }
 
-            // Row 2: Annotation Tools
-            int row2Y = _toolbarRect.Y + h / 2 + (h - h / 2 - buttonSize) / 2;
-            int row2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
-            int row2StartX = _toolbarRect.X + pad + (_toolbarRect.Width - pad * 2 - row2Width) / 2;
-            int cx2 = row2StartX;
-            // Separator after last visible in each group (matches Paint.Toolbar.cs)
-            var tier2Groups = new[] {
-                new[] { "select", "eraser", "highlight" },
-                new[] { "rectShape" }
-            };
-            var tier2SepFlyoutIndices = new HashSet<int>();
-            foreach (var group in tier2Groups)
-            {
-                int lastIdx = -1;
-                for (int i = 0; i < _flyoutTools.Length; i++)
-                {
-                    if (group.Contains(_flyoutTools[i].Id))
-                        lastIdx = i;
-                }
-                if (lastIdx >= 0)
-                    tier2SepFlyoutIndices.Add(lastIdx);
-            }
+    /// <summary>
+    /// Confirm-phase dock: annotation tools only + stroke/color + Move/Close.
+    /// Capture tools stay in metadata but are not laid out (empty hit targets).
+    /// </summary>
+    private void CalcAnnotationOnlyToolbar(Rectangle screenBounds, int pad, int buttonSize, int buttonSpacing)
+    {
+        var annotSepIndices = GetAnnotationGroupSepFlyoutIndices();
+        int annotSepCount = annotSepIndices.Count;
+        // Gaps: annotation group seps + before stroke/color + before Move/Close
+        int sepCount = annotSepCount + 2;
+        int buttonCount = _flyoutTools.Length + 4; // annot + stroke + color + pos + close
+
+        int activatorW = UiChrome.ScaleInt(14);
+        int activatorH = buttonSize;
+        int activatorSpacing = buttonSpacing;
+        int primarySpan = GetToolbarPrimarySpan(buttonCount, sepCount, buttonSize, buttonSpacing, pad);
+        if (!IsVerticalDock)
+            primarySpan += activatorW + activatorSpacing;
+
+        int w, h;
+        int brandWidth = 0;
+        if (IsVerticalDock)
+        {
+            w = pad * 2 + buttonSize;
+            h = primarySpan;
+        }
+        else
+        {
+            int logoSize = UiChrome.ScaleInt(10);
+            int textWidth = UiChrome.ScaleInt(60);
+            // Confirm dock always uses full branding (logo + "CyberSnap") so a tools-hidden
+            // bar does not collapse to a tiny logo strip.
+            brandWidth = logoSize + textWidth + UiChrome.ScaleInt(24);
+            w = primarySpan + brandWidth;
+            h = pad * 2 + buttonSize;
+        }
+
+        AllocateToolbarButtonMetadata();
+
+        _toolbarRect = ToolbarLayout.GetToolbarRect(
+            _virtualBounds, screenBounds, w, h, CaptureDockSide, UiChrome.ScaledToolbarTopMargin);
+        if (!_toolbarCustomOffset.IsEmpty)
+            _toolbarRect.Offset(_toolbarCustomOffset);
+
+        // Capture tools are hidden in confirm mode.
+        for (int i = 0; i < _mainBarTools.Length; i++)
+            _toolbarButtons[i] = Rectangle.Empty;
+
+        int drawingStartIdx = _mainBarTools.Length + 4;
+
+        if (IsVerticalDock)
+        {
+            int colHeight = GetToolbarPrimarySpan(buttonCount, sepCount, buttonSize, buttonSpacing, 0);
+            int startY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - colHeight) / 2;
+            int colX = _toolbarRect.X + pad;
+            // Brand sits in the small strip above the first annotation tool (same column).
+            int brandH = Math.Max(buttonSize, startY - (_toolbarRect.Y + pad));
+            _brandRect = new Rectangle(colX, _toolbarRect.Y + pad, buttonSize, brandH);
+            int actY = _toolbarRect.Y + (_toolbarRect.Height - activatorH) / 2;
+            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorW, actY, activatorW, activatorH);
+
+            int cy = startY;
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
-                int btnIdx = _mainBarTools.Length + 4 + i;
-                _toolbarButtons[btnIdx] = new Rectangle(cx2, row2Y, buttonSize, buttonSize);
-                cx2 += buttonSize + buttonSpacing;
-                if (tier2SepFlyoutIndices.Contains(i))
-                    cx2 += GroupGap;
+                _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
+                cy += buttonSize + buttonSpacing;
+                if (annotSepIndices.Contains(i))
+                    cy += GroupGap;
             }
+            cy += GroupGap;
+            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+            cy += buttonSize + buttonSpacing;
+            _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+            cy += buttonSize + buttonSpacing + GroupGap;
+            _toolbarButtons[PositionButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+            cy += buttonSize + buttonSpacing;
+            _toolbarButtons[CloseButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+        }
+        else
+        {
+            // Pack tools left-to-right immediately after the brand strip (no centering gap).
+            int rowWidth = GetToolbarPrimarySpan(buttonCount, sepCount, buttonSize, buttonSpacing, 0);
+            int startX = _toolbarRect.X + brandWidth;
+            int rowY = _toolbarRect.Y + (h - buttonSize) / 2;
+            _brandRect = new Rectangle(_toolbarRect.X, rowY, brandWidth, buttonSize);
+            int actY = _toolbarRect.Y + (_toolbarRect.Height - activatorH) / 2;
+            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorW, actY, activatorW, activatorH);
+
+            int cx = startX;
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                _toolbarButtons[drawingStartIdx + i] = new Rectangle(cx, rowY, buttonSize, buttonSize);
+                cx += buttonSize + buttonSpacing;
+                if (annotSepIndices.Contains(i))
+                    cx += GroupGap;
+            }
+            cx += GroupGap;
+            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(cx, rowY, buttonSize, buttonSize);
+            cx += buttonSize + buttonSpacing;
+            _toolbarButtons[ColorButtonIndex] = new Rectangle(cx, rowY, buttonSize, buttonSize);
+            cx += buttonSize + buttonSpacing + GroupGap;
+            _toolbarButtons[PositionButtonIndex] = new Rectangle(cx, rowY, buttonSize, buttonSize);
+            cx += buttonSize + buttonSpacing;
+            _toolbarButtons[CloseButtonIndex] = new Rectangle(cx, rowY, buttonSize, buttonSize);
+
+            // Trim unused right padding from centering leftovers so the dock hugs content.
+            int contentRight = Math.Max(cx, _menuActivatorRect.Right + pad);
+            int desiredW = Math.Max(contentRight - _toolbarRect.X, brandWidth + rowWidth + pad);
+            if (desiredW < _toolbarRect.Width)
+                _toolbarRect.Width = desiredW;
+        }
+    }
+
+    private int GetFirstVisibleToolbarButtonX()
+    {
+        int best = int.MaxValue;
+        for (int i = 0; i < _toolbarButtons.Length; i++)
+        {
+            var b = _toolbarButtons[i];
+            if (b.Width <= 0 || b.Height <= 0) continue;
+            if (b.X < best) best = b.X;
+        }
+        return best == int.MaxValue ? -1 : best;
+    }
+
+    private HashSet<int> GetAnnotationGroupSepFlyoutIndices()
+    {
+        var groups = new[] {
+            new[] { "select", "eraser", "highlight" },
+            new[] { "rectShape" }
+        };
+        var seps = new HashSet<int>();
+        foreach (var group in groups)
+        {
+            int lastIdx = -1;
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                if (group.Contains(_flyoutTools[i].Id))
+                    lastIdx = i;
+            }
+            if (lastIdx >= 0)
+                seps.Add(lastIdx);
+        }
+        return seps;
+    }
+
+    private void AllocateToolbarButtonMetadata()
+    {
+        _toolbarButtons = new Rectangle[BtnCount];
+        _toolbarIcons = new string[BtnCount];
+        _toolbarLabels = new string[BtnCount];
+        _toolbarToolIds = new string[BtnCount];
+        _toolbarModes = new CaptureMode?[BtnCount];
+
+        for (int i = 0; i < _mainBarTools.Length; i++)
+        {
+            _toolbarIcons[i] = _mainBarTools[i].Id switch { "crop" => "rect", "rect" => "captureRect", var id => id };
+            _toolbarLabels[i] = LocalizationService.Translate(_mainBarTools[i].Label);
+            _toolbarToolIds[i] = _mainBarTools[i].Id;
+            _toolbarModes[i] = _mainBarTools[i].Mode;
+        }
+
+        int swIdx = StrokeWidthButtonIndex;
+        _toolbarIcons[swIdx] = "strokeWidth";
+        _toolbarLabels[swIdx] = LocalizationService.Translate("Shape stroke width");
+        _toolbarToolIds[swIdx] = "strokeWidth";
+        _toolbarModes[swIdx] = null;
+
+        int colorIdx = ColorButtonIndex;
+        _toolbarIcons[colorIdx] = "color";
+        _toolbarLabels[colorIdx] = LocalizationService.Translate("Active drawing and text color");
+        _toolbarToolIds[colorIdx] = "color";
+        _toolbarModes[colorIdx] = null;
+
+        int positionIdx = PositionButtonIndex;
+        _toolbarIcons[positionIdx] = "position";
+        _toolbarLabels[positionIdx] = LocalizationService.Translate("Toolbar Position");
+        _toolbarToolIds[positionIdx] = "position";
+        _toolbarModes[positionIdx] = null;
+
+        int closeIdx = CloseButtonIndex;
+        _toolbarIcons[closeIdx] = "signOut";
+        _toolbarLabels[closeIdx] = LocalizationService.Translate("Cancel");
+        _toolbarToolIds[closeIdx] = "close";
+        _toolbarModes[closeIdx] = null;
+
+        int drawingStartIdx = _mainBarTools.Length + 4;
+        for (int i = 0; i < _flyoutTools.Length; i++)
+        {
+            int btnIdx = drawingStartIdx + i;
+            _toolbarIcons[btnIdx] = _flyoutTools[i].Id;
+            _toolbarLabels[btnIdx] = LocalizationService.Translate(_flyoutTools[i].Label);
+            _toolbarToolIds[btnIdx] = _flyoutTools[i].Id;
+            _toolbarModes[btnIdx] = _flyoutTools[i].Mode;
         }
     }
 
@@ -1138,9 +1242,8 @@ public sealed partial class RegionOverlayForm : Form
     }
 
     /// <summary>
-    /// Right-click menu shown while confirming a selection. Mirrors the three on-screen action pills:
-    /// Confirm (green ✓), Retry the selection (neutral arrow), and Cancel &amp; exit (red close).
-    /// Action-only, no branding header — it's a quick contextual fallback for the buttons.
+    /// Right-click menu shown while confirming a selection. Mirrors the destination pills
+    /// plus Retry and Cancel. Choosing a destination commits the capture.
     /// </summary>
     private void ShowConfirmContextMenu(Point clickLocation)
     {
@@ -1151,15 +1254,52 @@ public sealed partial class RegionOverlayForm : Form
             Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
             "es", StringComparison.OrdinalIgnoreCase);
 
-        // Confirm — primary action (matches the green "Listo / Ready" pill).
-        var confirmColor = Color.FromArgb(34, 197, 94); // Premium vibrant success green
-        var confirmItem = WindowsMenuRenderer.Item(
-            isSpanish ? "Confirmar captura" : "Confirm capture",
-            iconId: "check", customColor: confirmColor, iconSize: 24);
-        confirmItem.Click += (_, _) => CommitConfirmedSelection();
-        menu.Items.Add(confirmItem);
+        var primaryColor = Color.FromArgb(34, 197, 94);
+        int primaryIdx = IndexOfPrimaryConfirmAction();
 
-        // Retry — discard this crop and select the area again (matches the Retry pill → ExitConfirmMode).
+        void AddDestination(ConfirmChromeKind kind, int chromeIdx)
+        {
+            string title = kind switch
+            {
+                ConfirmChromeKind.Save => "Save capture",
+                ConfirmChromeKind.Copy => "Copy to clipboard",
+                ConfirmChromeKind.Edit => "Open in editor",
+                ConfirmChromeKind.Share => "Share",
+                ConfirmChromeKind.OcrExtract => IsOcrAutoCopyEnabled()
+                    ? "Extract and copy text from the selection"
+                    : "Extract text from the selection",
+                _ => kind.ToString()
+            };
+            string? icon = ConfirmChromeFluentIcon(kind);
+            bool disabled = IsConfirmChromeDisabled(kind);
+            bool isPrimary = !disabled && chromeIdx == primaryIdx;
+            var item = WindowsMenuRenderer.Item(
+                title,
+                iconId: icon,
+                customColor: isPrimary ? primaryColor : null,
+                iconSize: 24);
+            item.Enabled = !disabled;
+            if (disabled)
+            {
+                item.ToolTipText = LocalizationService.Translate("Copy unavailable")
+                    + " — "
+                    + LocalizationService.Translate("Auto-copy is on — image captures already go to the clipboard");
+            }
+            else
+            {
+                int capturedIdx = chromeIdx;
+                item.Click += (_, _) => StartConfirmPress(capturedIdx);
+            }
+            menu.Items.Add(item);
+        }
+
+        for (int i = 0; i < _confirmChromeKinds.Length; i++)
+        {
+            if (IsConfirmDestinationKind(_confirmChromeKinds[i]))
+                AddDestination(_confirmChromeKinds[i], i);
+        }
+
+        // Retry — discard this crop and select the area again.
         var retryItem = WindowsMenuRenderer.Item(
             isSpanish ? "Reintentar selección" : "Retry selection",
             iconId: "redo", iconSize: 24);
@@ -1186,8 +1326,7 @@ public sealed partial class RegionOverlayForm : Form
             menu.Items.Add(new ToolStripSeparator());
         }
 
-        // Cancel everything and close the overlay (matches the red Cancel pill — routes through
-        // ConfirmAndCancelCapture so pending annotations get the same "will be lost" warning).
+        // Cancel everything and close the overlay (routes through ConfirmAndCancelCapture).
         var cancelItem = WindowsMenuRenderer.Item(
             isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit",
             iconId: "signOut", danger: true, iconSize: 24);
@@ -1418,11 +1557,7 @@ public sealed partial class RegionOverlayForm : Form
 
     private void ShowToolBanner(string text, bool persistent = false)
     {
-        if (_banner != null)
-        {
-            _banner.Dispose();
-            _banner = null;
-        }
+        DisposeToolBannerClearingGhost();
         var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
         // Place opposite the active dock so the banner never sits under the toolbar.
         _banner = new StandaloneToolBanner(
@@ -1437,11 +1572,7 @@ public sealed partial class RegionOverlayForm : Form
 
     private void ShowToolBanner(IReadOnlyList<BannerSegment> segments, bool persistent = false, string? iconId = null)
     {
-        if (_banner != null)
-        {
-            _banner.Dispose();
-            _banner = null;
-        }
+        DisposeToolBannerClearingGhost();
         var bannerWorkingArea = Screen.FromPoint(Cursor.Position).WorkingArea;
         // Place opposite the active dock so the banner never sits under the toolbar.
         _banner = new StandaloneToolBanner(
@@ -1456,22 +1587,30 @@ public sealed partial class RegionOverlayForm : Form
     }
 
     /// <summary>
-    /// Soft-dismiss the current tool banner with a short fade. Keeps the instance alive so
-    /// the animation can paint until opacity hits zero; the next <see cref="ShowToolBanner"/>
-    /// call disposes any leftover instance.
+    /// Soft-dismiss the current tool banner with a short fade. In confirm mode the dimmed
+    /// overlay is sensitive to partial invalidates, so dismiss immediately to avoid ghosts.
     /// </summary>
     private void HideToolBanner()
     {
-        _banner?.Dismiss();
+        if (_isConfirmingSelection)
+            HideToolBannerImmediate();
+        else
+            _banner?.Dismiss();
     }
 
-    /// <summary>Hard-hide and dispose the banner (no fade). Prefer <see cref="HideToolBanner"/>.</summary>
-    private void HideToolBannerImmediate()
+    private void DisposeToolBannerClearingGhost()
     {
         if (_banner == null) return;
         var bounds = _banner.InvalidateBounds;
         _banner.Dispose();
         _banner = null;
-        Invalidate(bounds);
+        if (bounds.Width > 0 && bounds.Height > 0)
+            Invalidate(bounds);
+    }
+
+    /// <summary>Hard-hide and dispose the banner (no fade). Prefer <see cref="HideToolBanner"/>.</summary>
+    private void HideToolBannerImmediate()
+    {
+        DisposeToolBannerClearingGhost();
     }
 }

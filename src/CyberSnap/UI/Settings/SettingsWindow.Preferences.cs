@@ -270,8 +270,15 @@ public partial class SettingsWindow
             "Show cursor",
             previous,
             selected,
-            value => _settingsService.Settings.ShowCursor = value,
-            value => ShowCursorCheck.IsChecked = value);
+            value => _settingsService.Settings.SetCaptureCursorForAll(value),
+            value =>
+            {
+                ShowCursorCheck.IsChecked = value;
+                if (WidgetCaptureCursorCheck != null)
+                    WidgetCaptureCursorCheck.IsChecked = value;
+                SyncRecordingShowCursorChecks(value);
+            },
+            () => ((App)Application.Current).SyncWidgetCaptureCursorToggle());
     }
 
     private void AutoCheckUpdateCheck_Changed(object sender, RoutedEventArgs e)
@@ -1177,35 +1184,26 @@ public partial class SettingsWindow
         Apply(AutoCopyExcludeGifRow, AutoCopyExcludeGifCheck);
     }
 
-    private void WidgetEnableEditorCheck_Changed(object sender, RoutedEventArgs e)
+    private void WidgetCaptureCursorCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressGeneralPreferenceChange) return;
 
-        // Same as the floating widget and Notifications designer: images → Editor, video/GIF → Trimmer.
-        var previous = _settingsService.Settings.OpenEditorAfterCapture;
-        var selected = WidgetEnableEditorCheck.IsChecked == true;
+        var previous = _settingsService.Settings.ShowCursor;
+        var selected = WidgetCaptureCursorCheck.IsChecked == true;
         UpdateGeneralPreference(
-            "settings.open-editor-after-capture",
-            "Send to Editor",
+            "settings.show-cursor",
+            "Capture cursor",
             previous,
             selected,
+            value => _settingsService.Settings.SetCaptureCursorForAll(value),
             value =>
             {
-                _settingsService.Settings.OpenEditorAfterCapture = value;
-                _settingsService.Settings.OpenVideoTrimmerAfterCapture = value;
-                _settingsService.Settings.OpenGifTrimmerAfterCapture = value;
+                WidgetCaptureCursorCheck.IsChecked = value;
+                if (ShowCursorCheck != null)
+                    ShowCursorCheck.IsChecked = value;
+                SyncRecordingShowCursorChecks(value);
             },
-            value =>
-            {
-                WidgetEnableEditorCheck.IsChecked = value;
-                if (VideoEnableEditorCheck != null)
-                    VideoEnableEditorCheck.IsChecked = value;
-                if (GifEnableEditorCheck != null)
-                    GifEnableEditorCheck.IsChecked = value;
-            },
-            value => ((App)Application.Current).SyncWidgetEnableEditorToggle());
-
-        RefreshEditorPreviewState();
+            value => ((App)Application.Current).SyncWidgetCaptureCursorToggle());
     }
 
     private void VideoEnableEditorCheck_Changed(object sender, RoutedEventArgs e)
@@ -1223,27 +1221,60 @@ public partial class SettingsWindow
             value => {
                 if (VideoEnableEditorCheck != null)
                     VideoEnableEditorCheck.IsChecked = value;
-            },
-            // Keep the widget's own "Enable editor" toggle in lockstep when it's open.
-            value => ((App)Application.Current).SyncWidgetEnableEditorToggle());
+            });
 
-        // Re-emphasise the notification mock-ups so the dual preview tracks the new editor state.
         RefreshEditorPreviewState();
     }
 
-    // Pulls the "Enable editor" checkbox back into sync after the change originated on the widget's
-    // own toggle. Suppressed so reflecting the value doesn't echo back into a save/sync round-trip.
+    // Pulls Capture-tab + Widget "Capture cursor" checkboxes into sync after the widget toggle changes.
+    // Also refreshes Video/GIF show-cursor boxes (master may have rewritten those flags).
+    public void RefreshShowCursorCheck()
+    {
+        _suppressGeneralPreferenceChange = true;
+        _suppressCaptureSavePreferenceChange = true;
+        _suppressRecordingPreferenceChange = true;
+        try
+        {
+            var s = _settingsService.Settings;
+            if (WidgetCaptureCursorCheck != null)
+                WidgetCaptureCursorCheck.IsChecked = s.ShowCursor;
+            if (ShowCursorCheck != null)
+                ShowCursorCheck.IsChecked = s.ShowCursor;
+            if (VideoShowCursorCheck != null)
+                VideoShowCursorCheck.IsChecked = s.VideoShowCursor;
+            if (GifShowCursorCheck != null)
+                GifShowCursorCheck.IsChecked = s.GifShowCursor;
+        }
+        finally
+        {
+            _suppressGeneralPreferenceChange = false;
+            _suppressCaptureSavePreferenceChange = false;
+            _suppressRecordingPreferenceChange = false;
+        }
+    }
+
+    private void SyncRecordingShowCursorChecks(bool enabled)
+    {
+        _suppressRecordingPreferenceChange = true;
+        try
+        {
+            if (VideoShowCursorCheck != null)
+                VideoShowCursorCheck.IsChecked = enabled;
+            if (GifShowCursorCheck != null)
+                GifShowCursorCheck.IsChecked = enabled;
+        }
+        finally
+        {
+            _suppressRecordingPreferenceChange = false;
+        }
+    }
+
+    /// <summary>Keeps Video/GIF "open trimmer" checkboxes in sync (Notifications designer / recording bars).</summary>
     public void RefreshEnableEditorCheck()
     {
-        if (WidgetEnableEditorCheck is null) return;
-
         _suppressGeneralPreferenceChange = true;
-        try {
-            // Widget checkbox mirrors "either path on" (same as the floating widget toggle).
-            WidgetEnableEditorCheck.IsChecked =
-                _settingsService.Settings.OpenEditorAfterCapture
-                || _settingsService.Settings.OpenVideoTrimmerAfterCapture
-                || _settingsService.Settings.OpenGifTrimmerAfterCapture;
+        try
+        {
             if (VideoEnableEditorCheck != null)
                 VideoEnableEditorCheck.IsChecked = _settingsService.Settings.OpenVideoTrimmerAfterCapture;
             if (GifEnableEditorCheck != null)
@@ -1391,8 +1422,8 @@ public partial class SettingsWindow
         WidgetOptionsSeparator.Visibility = visibility;
         WidgetAlwaysOnTopRow.Visibility = visibility;
         WidgetAlwaysOnTopSeparator.Visibility = visibility;
-        WidgetEnableEditorRow.Visibility = visibility;
-        WidgetEnableEditorSeparator.Visibility = visibility;
+        WidgetCaptureCursorRow.Visibility = visibility;
+        WidgetCaptureCursorSeparator.Visibility = visibility;
         WidgetDockEdgeRow.Visibility = visibility;
         WidgetHoverDelaySeparator.Visibility = visibility;
         WidgetHoverDelayRow.Visibility = visibility;
@@ -1480,11 +1511,11 @@ public partial class SettingsWindow
     {
         try
         {
-            // Brief system alert — same family as "Sent to the editor" / encoding wait.
+            // Brief system alert — same family as "Video recorded" / encoding wait.
             // Plays SoundEvent.System (customizable in Sounds) unless muted.
             ToastWindow.Show(ToastSpec.Standard(
-                LocalizationService.Translate("Sent to the editor"),
-                LocalizationService.Translate("Your capture is open in the editor.")));
+                LocalizationService.Translate("Screenshot ready"),
+                LocalizationService.Translate("Copied to clipboard")));
         }
         catch (Exception ex)
         {

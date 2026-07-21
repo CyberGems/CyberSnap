@@ -25,7 +25,7 @@ public partial class CaptureWidgetWindow : Window
     private bool _isDragging;
     private bool _isDragArmed;
     private bool _suppressHoverExpand; // brief grace after a drag so it doesn't auto-expand under the resting cursor
-    private bool _suppressEditorToggle; // reflecting OpenEditorAfterCapture into the toggle without re-saving/syncing
+    private bool _suppressCaptureCursorToggle; // reflecting ShowCursor into the toggle without re-saving/syncing
     private bool _suppressAutoCopyToggle; // reflecting AutoCopyToClipboard into the toggle without re-saving/syncing
     private bool _contextMenuOpen;     // keep the widget from collapsing while its context menu is open
     private System.Windows.Media.Effects.Effect? _panelShadow; // soft shadow, applied only when expanded
@@ -92,7 +92,7 @@ public partial class CaptureWidgetWindow : Window
 
         LoadIcons();
         RefreshLayout();
-        UpdateEnableEditorState();
+        UpdateCaptureCursorState();
         UpdateAutoCopyState();
         LocalizationService.ApplyTo(this, _settings.InterfaceLanguage);
     }
@@ -249,7 +249,7 @@ public partial class CaptureWidgetWindow : Window
         }
 
         ApplyTheme();
-        UpdateEnableEditorState();
+        UpdateCaptureCursorState();
         UpdateAutoCopyState();
         LoadIcons();
 
@@ -325,20 +325,15 @@ public partial class CaptureWidgetWindow : Window
         PeekGrip.Visibility = _isExpanded ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void UpdateEnableEditorState()
+    private void UpdateCaptureCursorState()
     {
-        _suppressEditorToggle = true;
-        try
-        {
-            EnableEditorToggle.IsChecked = _settings.OpenEditorAfterCapture
-                || _settings.OpenVideoTrimmerAfterCapture
-                || _settings.OpenGifTrimmerAfterCapture;
-        }
-        finally { _suppressEditorToggle = false; }
+        _suppressCaptureCursorToggle = true;
+        try { CaptureCursorToggle.IsChecked = _settings.ShowCursor; }
+        finally { _suppressCaptureCursorToggle = false; }
     }
 
-    // Settings → widget: re-read the persisted value so the toggle matches the Settings checkbox.
-    public void RefreshEnableEditorToggle() => UpdateEnableEditorState();
+    // Settings → widget: re-read ShowCursor so the toggle matches the Capture tab checkbox.
+    public void RefreshCaptureCursorToggle() => UpdateCaptureCursorState();
 
     private void UpdateAutoCopyState()
     {
@@ -1073,9 +1068,7 @@ public partial class CaptureWidgetWindow : Window
     {
         var menu = Helpers.WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
 
-        // Capture toggles (top level, checkmark style)
-        menu.Items.Add(BuildCaptureToggle("Capture cursor", _settings.ShowCursor,
-            () => _settings.ShowCursor = !_settings.ShowCursor));
+        // Capture toggles (top level, checkmark style) — cursor lives on the main panel.
         menu.Items.Add(BuildCaptureToggle("Show magnifier", _settings.ShowCaptureMagnifier,
             () => _settings.ShowCaptureMagnifier = !_settings.ShowCaptureMagnifier));
         menu.Items.Add(BuildCaptureToggle("Show selection size", _settings.ShowSelectionSize,
@@ -1352,17 +1345,13 @@ public partial class CaptureWidgetWindow : Window
         TriggerStandaloneTool(app => app.OnStandaloneRulerProxy());
     }
 
-    private void EnableEditorToggle_Changed(object sender, RoutedEventArgs e)
+    private void CaptureCursorToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (_suppressEditorToggle) return; // value pushed in from Settings — don't echo back
+        if (_suppressCaptureCursorToggle) return;
 
-        var enabled = EnableEditorToggle.IsChecked == true;
-        _settings.OpenEditorAfterCapture = enabled;
-        _settings.OpenVideoTrimmerAfterCapture = enabled;
-        _settings.OpenGifTrimmerAfterCapture = enabled;
+        _settings.SetCaptureCursorForAll(CaptureCursorToggle.IsChecked == true);
         _settingsService.Save();
-        // Keep the Settings window's "Enable editor" checkbox in lockstep when it's open.
-        ((App)System.Windows.Application.Current).SyncSettingsEnableEditorCheck();
+        ((App)System.Windows.Application.Current).SyncSettingsShowCursorCheck();
     }
 
     private void AutoCopyToggle_Changed(object sender, RoutedEventArgs e)

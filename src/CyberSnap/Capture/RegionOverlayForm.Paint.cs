@@ -242,69 +242,68 @@ public sealed partial class RegionOverlayForm
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // Draw buttons FIRST (underneath the frame so any overlap is covered)
-            var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
+            LayoutConfirmChromeRects();
             using (var btnFont = CreateConfirmButtonFont())
             {
-                bool confirmHover = _hoveredConfirmButton == 0;
-                bool cancelHover = _hoveredConfirmButton == 1;
-                bool closeHover = _hoveredConfirmButton == 2;
-
-                float confirmPress = _pressedConfirmButton == 0 ? _confirmPressAmt : 0f;
-                float cancelPress = _pressedConfirmButton == 1 ? _confirmPressAmt : 0f;
-                float closePress = _pressedConfirmButton == 2 ? _confirmPressAmt : 0f;
-
                 bool shineOn = _confirmShineTimer.Enabled && !UI.Motion.Disabled;
-                float confirmShine = shineOn ? _shinePhase[0] : -1f;
-                float cancelShine = shineOn ? _shinePhase[1] : -1f;
-                float closeShine = shineOn ? _shinePhase[2] : -1f;
-
-                float confirmFactor = UI.Motion.Disabled
-                    ? (_hoveredConfirmButton == 1 ? 0f : 1f)
-                    : _shineMain[0];
-                float cancelFactor = UI.Motion.Disabled
-                    ? (_hoveredConfirmButton == 0 ? 0f : 1f)
-                    : _shineMain[1];
-
-                // When any button is hovered, the others drop to this floor so they read as "off".
-                // (Lower floor + the face flattening inside DrawConfirmActionPill give a clear
-                // disabled look, not just a slight opacity dip.)
-                const float dimFloor = 0.28f;
                 bool anyHover = _hoveredConfirmButton >= 0;
-                float confirmOpacity = UI.Motion.Disabled
-                    ? (anyHover && _hoveredConfirmButton != 0 ? dimFloor : 1.0f)
-                    : (dimFloor + (1f - dimFloor) * _shineMain[0]);
-                float cancelOpacity = UI.Motion.Disabled
-                    ? (anyHover && _hoveredConfirmButton != 1 ? dimFloor : 1.0f)
-                    : (dimFloor + (1f - dimFloor) * _shineMain[1]);
-                float closeOpacity = UI.Motion.Disabled
-                    ? (anyHover && _hoveredConfirmButton != 2 ? dimFloor : 1.0f)
-                    : (dimFloor + (1f - dimFloor) * _shineMain[2]);
-
-                // Deactivated slate colors (solid cool gray, matches dark/light mode background style)
+                const float dimFloor = 0.28f;
                 Color deactColor = UiChrome.IsDark ? Color.FromArgb(74, 80, 86) : Color.FromArgb(170, 178, 186);
+                int primaryIdx = IndexOfPrimaryConfirmAction();
 
-                var activeConfirmColor = Color.FromArgb(34, 197, 94);  // green-500
-                var activeCancelColor = Color.FromArgb(239, 68, 68);   // red-500
+                for (int i = 0; i < _confirmChromeKinds.Length && i < _confirmChromeRects.Length; i++)
+                {
+                    var kind = _confirmChromeKinds[i];
+                    var btn = _confirmChromeRects[i];
+                    if (btn.Width <= 0) continue;
 
-                // Blend in 25% of the original active colors to keep a subtle, elegant hint of the green/red tone
-                Color deactConfirmColor = InterpolateColor(deactColor, activeConfirmColor, 0.25f);
-                Color deactCancelColor = InterpolateColor(deactColor, activeCancelColor, 0.25f);
+                    bool hover = _hoveredConfirmButton == i;
+                    bool disabled = IsConfirmChromeDisabled(kind);
+                    float press = (!disabled && _pressedConfirmButton == i) ? _confirmPressAmt : 0f;
+                    float shine = !disabled && shineOn && i < ConfirmShineSlots ? _shinePhase[i] : -1f;
+                    float main = i < ConfirmShineSlots ? _shineMain[i] : 1f;
+                    float dup = i < ConfirmShineSlots ? _shineDup[i] : 0f;
+                    float factor = UI.Motion.Disabled
+                        ? (anyHover && !hover ? 0f : 1f)
+                        : main;
+                    float opacity = UI.Motion.Disabled
+                        ? (anyHover && !hover ? dimFloor : 1.0f)
+                        : (dimFloor + (1f - dimFloor) * main);
 
-                Color confirmColor = InterpolateColor(deactConfirmColor, activeConfirmColor, confirmFactor);
-                Color cancelColor = InterpolateColor(deactCancelColor, activeCancelColor, cancelFactor);
+                    if (disabled)
+                    {
+                        // Stay visibly inactive even on hover (hover only exists for the tooltip).
+                        factor = 0f;
+                        opacity = hover ? dimFloor + 0.08f : dimFloor * 0.7f;
+                        shine = -1f;
+                        press = 0f;
+                    }
 
-                // 3D action buttons: green "Confirm" / red "Cancel" (Retry), each with a white icon
-                // badge, a hover-igniting glow, a click squash, and a glint traveling the
-                // border so they stay readable over any busy capture background.
-                DrawConfirmActionPill(g, confirmBtn, confirmColor,
-                    LocalizationService.Translate("Ready").ToUpperInvariant(), btnFont, confirmHover, 0, confirmPress, confirmShine, _shineMain[0], _shineDup[0], confirmOpacity, hasShine: true);
-                // Retry: icon-only (label intentionally empty — its meaning is shown via tooltip).
-                DrawConfirmActionPill(g, cancelBtn, cancelColor,
-                    "", btnFont, cancelHover, 1, cancelPress, cancelShine, _shineMain[1], _shineDup[1], cancelOpacity, hasShine: true);
-                // Cancel-all: icon-only, neutral silver, with the same shine treatment as Retry.
-                DrawConfirmActionPill(g, closeBtn, Color.FromArgb(160, 160, 160),
-                    "", btnFont, closeHover, 2, closePress, closeShine, _shineMain[2], _shineDup[2], closeOpacity, hasShine: true);
+                    bool isPrimaryDest = !disabled && i == primaryIdx;
+                    Color activeColor = ConfirmChromeAccent(kind, isPrimaryDest);
+                    Color deactTint = InterpolateColor(deactColor, activeColor, 0.25f);
+                    Color color = InterpolateColor(deactTint, activeColor, factor);
+
+                    int iconType = kind switch
+                    {
+                        ConfirmChromeKind.Retry => 1,
+                        ConfirmChromeKind.Cancel => 2,
+                        _ => 3 // fluent icon path
+                    };
+                    string? fluentIcon = ConfirmChromeFluentIcon(kind);
+
+                    DrawConfirmActionPill(g, btn, color, label: "", btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
+                        hasShine: !disabled, fluentIconId: fluentIcon, accent: activeColor);
+                }
+
+                if (!_confirmChromeSeparatorRect.IsEmpty)
+                {
+                    Color sep = UiChrome.IsDark
+                        ? Color.FromArgb(90, 255, 255, 255)
+                        : Color.FromArgb(90, 0, 0, 0);
+                    using var sepBrush = new SolidBrush(sep);
+                    g.FillRectangle(sepBrush, _confirmChromeSeparatorRect);
+                }
             }
 
             // Draw selection frame and handles ON TOP of buttons
@@ -312,7 +311,7 @@ public sealed partial class RegionOverlayForm
             SelectionFrameRenderer.DrawConfirmHandles(g, GetConfirmHandleRects());
 
             // Keep dimension pills visible after drag ends — still useful while resizing /
-            // confirming. Anchor follows the cursor (nearest free corner; avoids confirm buttons).
+            // confirming. Anchored to the locked region (not the live cursor) to avoid jump/ghosting.
             SelectionSizeReadout.Draw(
                 g,
                 GetReadoutCursorPoint(),
@@ -333,6 +332,31 @@ public sealed partial class RegionOverlayForm
         }
     }
 
+    /// <summary>Accent used for pill face tint, outer glow, outline, and traveling shine.</summary>
+    private static Color ConfirmChromeAccent(ConfirmChromeKind kind, bool isPrimary)
+    {
+        if (isPrimary)
+            return Color.FromArgb(34, 197, 94); // green-500
+
+        return kind switch
+        {
+            ConfirmChromeKind.Retry => Color.FromArgb(239, 68, 68),      // red-500
+            ConfirmChromeKind.Cancel => Color.FromArgb(160, 160, 160),   // neutral gray
+            ConfirmChromeKind.Save => Color.FromArgb(34, 197, 94),       // green
+            ConfirmChromeKind.Copy => Color.FromArgb(0, 162, 255),       // accent blue
+            ConfirmChromeKind.Edit => Color.FromArgb(139, 92, 246),      // violet
+            ConfirmChromeKind.Share => Color.FromArgb(6, 182, 212),      // cyan
+            ConfirmChromeKind.OcrExtract => Color.FromArgb(34, 197, 94), // green
+            _ => Color.FromArgb(0, 162, 255)
+        };
+    }
+
+    private static Color ConfirmChromeShineCore(Color accent)
+        => Color.FromArgb(
+            Math.Min(255, accent.R + 55),
+            Math.Min(255, accent.G + 55),
+            Math.Min(255, accent.B + 40));
+
     /// <summary>
     /// Draws a 3D rounded-rectangle confirm/cancel action button: a solid colored face
     /// with a vertical gradient sitting on a darker extruded "side" block, a white circular
@@ -343,11 +367,12 @@ public sealed partial class RegionOverlayForm
     private static void DrawConfirmActionPill(
         Graphics g, Rectangle rect, Color baseColor, string label, Font font,
         bool hover, int iconType, float pressAmt, float shinePhase, float shineMain, float shineDup,
-        float opacity, bool hasShine)
+        float opacity, bool hasShine, string? fluentIconId = null, Color? accent = null)
     {
         float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
         float depth = UiChrome.ScaleFloat(5f);   // 3D extrusion thickness
         float press = depth * pressAmt;           // how far the face sinks while pressed
+        Color accentColor = accent ?? baseColor;
 
         // Face sinks downward onto its fixed base while pressed.
         var face = new RectangleF(rect.X, rect.Y + press, rect.Width, rect.Height);
@@ -379,12 +404,6 @@ public sealed partial class RegionOverlayForm
             float glowSpread = UiChrome.ScaleFloat(hover ? 3.75f : 2.75f);
             int glowPeak = hover ? 32 : 17;
             const int glowSteps = 7;
-            Color glowColor = iconType switch
-            {
-                0 => Color.FromArgb(0, 162, 255),    // confirm: blue
-                1 => Color.FromArgb(168, 174, 184),  // retry: neutral silver
-                _ => Color.FromArgb(236, 56, 42)     // cancel: red (truer red, less orange)
-            };
             for (int i = glowSteps; i >= 1; i--)
             {
                 float frac = i / (float)glowSteps;          // 1 (outermost) … ~0.14 (innermost)
@@ -392,7 +411,7 @@ public sealed partial class RegionOverlayForm
                 float falloff = 1f - frac;                  // stronger nearer the button edge
                 int a = (int)(glowPeak * falloff * falloff * opacity);
                 if (a <= 0) continue;
-                using var glowPen = new Pen(Color.FromArgb(a, glowColor), glowSpread / glowSteps * 2.4f)
+                using var glowPen = new Pen(Color.FromArgb(a, accentColor), glowSpread / glowSteps * 2.4f)
                 {
                     LineJoin = LineJoin.Round
                 };
@@ -426,12 +445,7 @@ public sealed partial class RegionOverlayForm
             // Fino delineado del color del shine por todo el botón para definirlo
             int outlineA = hover ? 160 : 100;
             Color outlineColor = hasShine
-                ? iconType switch
-                {
-                    0 => Color.FromArgb(outlineA, 0, 162, 255),
-                    1 => Color.FromArgb(outlineA, 168, 174, 184),
-                    _ => Color.FromArgb(outlineA, 236, 56, 42)
-                }
+                ? Color.FromArgb(outlineA, accentColor)
                 : Color.FromArgb(hover ? 120 : 70, 150, 150, 150);
             // Fade the colored edge with the dim factor too, so an "off" button loses its accent ring.
             int borderA = (int)(outlineColor.A * (0.35f + 0.65f * opacity));
@@ -459,18 +473,8 @@ public sealed partial class RegionOverlayForm
         //    button shows a second comet half a lap behind; the other button fades out. ──
         if (hasShine && shinePhase >= 0f)
         {
-            Color shineGlow = iconType switch
-            {
-                0 => Color.FromArgb(0, 162, 255),
-                1 => Color.FromArgb(168, 174, 184),
-                _ => Color.FromArgb(236, 56, 42)
-            };
-            Color shineCore = iconType switch
-            {
-                0 => Color.FromArgb(0, 217, 255),
-                1 => Color.FromArgb(225, 230, 240),
-                _ => Color.FromArgb(255, 96, 72)
-            };
+            Color shineGlow = accentColor;
+            Color shineCore = ConfirmChromeShineCore(accentColor);
 
             if (shineMain > 0.01f)
                 DrawBorderShine(g, face, corner, shinePhase, shineGlow, shineCore, shineMain * opacity);
@@ -483,11 +487,16 @@ public sealed partial class RegionOverlayForm
         // unit in the face, so the icon sits close to the text and the whole pair is balanced
         // with symmetric padding on both sides (instead of the text floating left and the icon
         // pinned to the right edge).
+        //
+        // Icon-only Cancel/Retry are hand-stroked and fill most of their box. Destination
+        // Fluent glyphs carry intrinsic padding in the path, so they need a slightly larger
+        // box (and no extra inset) to match that visual weight.
+        bool useFluent = !string.IsNullOrEmpty(fluentIconId);
         float iconSize;
         float bx, by;
         if (string.IsNullOrEmpty(label))
         {
-            iconSize = face.Height * 0.65f;
+            iconSize = face.Height * (useFluent ? 0.82f : 0.65f);
             bx = face.X + (face.Width - iconSize) / 2f;
             by = face.Y + (face.Height - iconSize) / 2f;
         }
@@ -537,6 +546,12 @@ public sealed partial class RegionOverlayForm
 
         float stroke = string.IsNullOrEmpty(label) ? UiChrome.ScaleFloat(1.5f) : UiChrome.ScaleFloat(2f);
         Color iconColor = Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), Color.FromArgb(0xE6, 0xE7, 0xE9));
+
+        if (useFluent)
+        {
+            FluentIcons.DrawIcon(g, fluentIconId!, new RectangleF(bx, by, iconSize, iconSize), iconColor, iconInset: 0f);
+            return;
+        }
 
         // Draw shadow first for contrast
         using (var shadowPen = new Pen(Color.FromArgb((int)(120 * opacity), 0, 0, 0), stroke + 1f)
@@ -844,8 +859,10 @@ public sealed partial class RegionOverlayForm
         if (selection.Width <= 2 || selection.Height <= 2)
             return;
 
+        // Confirm mode ignores the live cursor — pills are anchored to the locked region.
+        var anchor = _isConfirmingSelection ? GetReadoutCursorPoint() : cursor;
         var readoutBounds = SelectionSizeReadout.GetBounds(
-            cursor,
+            anchor,
             selection,
             _readoutFont,
             ClientRectangle,
@@ -1077,11 +1094,7 @@ public sealed partial class RegionOverlayForm
 
     private void RenderCursorToolPreview(Graphics g)
     {
-        if (_isSelecting || _isConfirmingSelection || IsDraggingAnyAnnotation() || _isSelectDragging || _isSelectResizing) return;
-        if (_isTyping) return;
-        if (!ToolShowsCursorChip(_mode)) return;
-        if (IsPointInOverlayUi(_lastCursorPos)) return;
-        if (_moveHoverIndex >= 0 || _selectedAnnotationIndex >= 0 || _eraserHoverIndex >= 0) return;
+        if (!ShouldPaintCursorToolChip(_lastCursorPos)) return;
 
         bool hasStroke = ToolChipHasStroke(_mode);
         var color = _toolColor;
@@ -1095,22 +1108,13 @@ public sealed partial class RegionOverlayForm
             string label = hasStroke ? string.Format(LocalizationService.Translate("Thickness {0}"), (int)Math.Round(_strokeWidth)) : string.Empty;
 
             using var font = UiChrome.ChromeFont(8.5f, FontStyle.Regular);
-            SizeF textSize = label.Length > 0 ? g.MeasureString(label, font) : SizeF.Empty;
+            var (chipW, chipH, textSize) = MeasureCursorChipSize(label, font, glyphSize);
 
-            const int padX = 7, padY = 5, gap = 6;
-            float contentH = Math.Max(glyphSize, textSize.Height);
-            int chipW = padX + glyphSize
-                + (label.Length > 0 ? gap + (int)Math.Ceiling(textSize.Width) : 0) + padX;
-            int chipH = padY + (int)Math.Ceiling(contentH) + padY;
-
+            const int padX = 7, gap = 6;
             const int off = 18;
-            int x = _lastCursorPos.X + off;
-            int y = _lastCursorPos.Y + off;
-            if (x + chipW > ClientSize.Width) x = _lastCursorPos.X - off - chipW;
-            if (y + chipH > ClientSize.Height) y = _lastCursorPos.Y - off - chipH;
-            x = Math.Max(0, x);
-            y = Math.Max(0, y);
-            var chipRect = new Rectangle(x, y, chipW, chipH);
+            var chipRect = PlaceCursorChipRect(_lastCursorPos, chipW, chipH, off);
+            if (chipRect.Width <= 0 || chipRect.Height <= 0)
+                return;
 
             using (var shadowPath = RRect(new RectangleF(chipRect.X + 1, chipRect.Y + 2, chipRect.Width, chipRect.Height), 6))
             using (var shadow = new SolidBrush(Color.FromArgb(60, 0, 0, 0)))
@@ -1141,25 +1145,87 @@ public sealed partial class RegionOverlayForm
         }
     }
 
+    private bool ShouldPaintCursorToolChip(Point cursor)
+    {
+        if (_isSelecting || IsDraggingAnyAnnotation() || _isSelectDragging || _isSelectResizing) return false;
+        if (_isTyping) return false;
+        if (!ToolShowsCursorChip(_mode)) return false;
+        if (cursor.IsEmpty || IsPointInOverlayUi(cursor)) return false;
+        if (_moveHoverIndex >= 0 || _selectedAnnotationIndex >= 0 || _eraserHoverIndex >= 0) return false;
+
+        if (_isConfirmingSelection)
+        {
+            if (!ToolDef.IsAnnotationTool(_mode)) return false;
+            if (!_confirmRect.Contains(cursor)) return false;
+            if (HitTestConfirmHandle(cursor) >= 0 || HitTestConfirmButton(cursor) >= 0)
+                return false;
+        }
+
+        return true;
+    }
+
+    private static (int width, int height, SizeF textSize) MeasureCursorChipSize(string label, Font font, int glyphSize = 22)
+    {
+        const int padX = 7, padY = 5, gap = 6;
+        SizeF textSize = SizeF.Empty;
+        if (label.Length > 0)
+        {
+            var measured = TextRenderer.MeasureText(
+                label,
+                font,
+                new Size(int.MaxValue, int.MaxValue),
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+            textSize = measured;
+        }
+
+        float contentH = Math.Max(glyphSize, textSize.Height);
+        int chipW = padX + glyphSize
+            + (label.Length > 0 ? gap + (int)Math.Ceiling(textSize.Width) : 0) + padX;
+        int chipH = padY + (int)Math.Ceiling(contentH) + padY;
+        return (chipW, chipH, textSize);
+    }
+
     private Rectangle GetCursorChipRect(Point cursor)
     {
-        if (!ToolShowsCursorChip(_mode)) return Rectangle.Empty;
+        if (!ToolShowsCursorChip(_mode) || cursor.IsEmpty)
+            return Rectangle.Empty;
 
         bool hasStroke = ToolChipHasStroke(_mode);
         string label = hasStroke ? string.Format(LocalizationService.Translate("Thickness {0}"), (int)Math.Round(_strokeWidth)) : string.Empty;
 
-        int estW = 32 + (label.Length > 0 ? 6 + label.Length * 8 : 0);
-        int estH = 32;
+        using var font = UiChrome.ChromeFont(8.5f, FontStyle.Regular);
+        var (chipW, chipH, _) = MeasureCursorChipSize(label, font);
 
         const int off = 18;
+        var placed = PlaceCursorChipRect(cursor, chipW, chipH, off);
+        if (placed.Width <= 0)
+            return Rectangle.Empty;
+
+        // Inflate covers shadow + anti-alias fringe so invalidation clears the previous chip fully.
+        return Rectangle.Inflate(placed, 6, 6);
+    }
+
+    /// <summary>
+    /// Positions the tool-cursor chip near the pointer, flipping/clamping so it stays on-screen
+    /// and — in confirm mode — inside the locked selection (no spill into the dimmed outside).
+    /// </summary>
+    private Rectangle PlaceCursorChipRect(Point cursor, int chipW, int chipH, int off)
+    {
+        var clamp = new Rectangle(0, 0, ClientSize.Width, ClientSize.Height);
+        if (_isConfirmingSelection && _confirmRect.Width > 2 && _confirmRect.Height > 2)
+            clamp = Rectangle.Intersect(clamp, _confirmRect);
+
+        if (clamp.Width <= 0 || clamp.Height <= 0)
+            return Rectangle.Empty;
+
         int x = cursor.X + off;
         int y = cursor.Y + off;
-        if (x + estW > ClientSize.Width) x = cursor.X - off - estW;
-        if (y + estH > ClientSize.Height) y = cursor.Y - off - estH;
-        x = Math.Max(0, x);
-        y = Math.Max(0, y);
+        if (x + chipW > clamp.Right) x = cursor.X - off - chipW;
+        if (y + chipH > clamp.Bottom) y = cursor.Y - off - chipH;
 
-        return new Rectangle(x - 5, y - 5, estW + 15, estH + 15);
+        x = Math.Clamp(x, clamp.Left, Math.Max(clamp.Left, clamp.Right - chipW));
+        y = Math.Clamp(y, clamp.Top, Math.Max(clamp.Top, clamp.Bottom - chipH));
+        return new Rectangle(x, y, chipW, chipH);
     }
 
     private static bool ToolShowsCursorChip(CaptureMode mode) => mode is

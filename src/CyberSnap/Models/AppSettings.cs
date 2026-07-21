@@ -170,22 +170,22 @@ public sealed class AppSettings
         // (a preset is in charge) until they click "Manual" or drag a button in the preview.
         public bool Manual { get; set; }
 
-        public bool ShowClose { get; set; } = true;
+        public bool ShowClose { get; set; }
         public ToastButtonSlot CloseSlot { get; set; } = ToastButtonSlot.TopRight;
-        public bool ShowPin { get; set; } = true;
+        public bool ShowPin { get; set; }
         public ToastButtonSlot PinSlot { get; set; } = ToastButtonSlot.TopLeft;
         public bool ShowSave { get; set; } = true;
-        public ToastButtonSlot SaveSlot { get; set; } = ToastButtonSlot.TopInnerRight;
-        public bool ShowCopy { get; set; }
-        public ToastButtonSlot CopySlot { get; set; } = ToastButtonSlot.BottomInnerRight;
-        public bool ShowShare { get; set; }
-        public ToastButtonSlot ShareSlot { get; set; } = ToastButtonSlot.BottomLeft;
+        public ToastButtonSlot SaveSlot { get; set; } = ToastButtonSlot.TopLeft;
+        public bool ShowCopy { get; set; } = true;
+        public ToastButtonSlot CopySlot { get; set; } = ToastButtonSlot.TopInnerLeft;
+        public bool ShowShare { get; set; } = true;
+        public ToastButtonSlot ShareSlot { get; set; } = ToastButtonSlot.TopRight;
         public bool ShowDelete { get; set; }
         public ToastButtonSlot DeleteSlot { get; set; } = ToastButtonSlot.BottomLeft;
-        public bool ShowHistory { get; set; } = true;
+        public bool ShowHistory { get; set; }
         public ToastButtonSlot HistorySlot { get; set; } = ToastButtonSlot.TopInnerLeft;
-        public bool ShowEdit { get; set; }
-        public ToastButtonSlot EditSlot { get; set; } = ToastButtonSlot.BottomInnerLeft;
+        public bool ShowEdit { get; set; } = true;
+        public ToastButtonSlot EditSlot { get; set; } = ToastButtonSlot.TopInnerRight;
     }
 
     public bool AllowHotkeyOverride { get; set; }
@@ -480,6 +480,16 @@ public sealed class AppSettings
     /// <summary>Last Group-1 (annotation) tool id used during capture confirm, restored next time.</summary>
     public string? LastAnnotationToolId { get; set; }
     public bool ShowCursor { get; set; }
+    /// <summary>
+    /// Master capture-cursor switch: still images, MP4, and GIF together
+    /// (widget + Capture tab). Video/GIF tabs can still diverge afterward.
+    /// </summary>
+    public void SetCaptureCursorForAll(bool enabled)
+    {
+        ShowCursor = enabled;
+        VideoShowCursor = enabled;
+        GifShowCursor = enabled;
+    }
     public bool ShowCaptureMagnifier { get; set; } = true;
     public bool ShowSelectionSize { get; set; } = true;
     public bool OverlayCaptureAllMonitors { get; set; } = true;

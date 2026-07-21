@@ -204,6 +204,23 @@ public static class ToastButtonLayout
         ToastButtonKind.Edit
     };
 
+    /// <summary>
+    /// Actions that appear as confirm-mode pills after locking a capture region.
+    /// Pin / Close / Delete are toast-only. History is omitted: there is no saved
+    /// capture yet — confirming creates it; Gallery is a post-capture surface.
+    /// </summary>
+    public static readonly ToastButtonKind[] ConfirmActionButtons =
+    {
+        ToastButtonKind.Save,
+        ToastButtonKind.Copy,
+        ToastButtonKind.Edit,
+        ToastButtonKind.Share
+    };
+
+    public static bool IsConfirmActionButton(ToastButtonKind button)
+        => button is ToastButtonKind.Save or ToastButtonKind.Copy or ToastButtonKind.Edit
+            or ToastButtonKind.Share;
+
     public static ToastCorner SlotToCorner(ToastButtonSlot slot) => slot switch
     {
         ToastButtonSlot.TopLeft or ToastButtonSlot.TopInnerLeft => ToastCorner.TopLeft,
@@ -269,30 +286,25 @@ public static class ToastButtonLayout
         switch (preset)
         {
             case ToastButtonPreset.None:
-                // Intentionally empty: no overlay buttons. Preview-body click still works.
+                // "Basic": Cancel/Retry only on the confirm bar. Capture chrome still injects
+                // Save as a fallback so the region can always be committed.
                 break;
 
             case ToastButtonPreset.Minimal:
-                Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
+                // Legacy alias of Standard — Save stays in the leftmost destination slot.
+                Place(ToastButtonKind.Save, ToastButtonSlot.TopLeft);
                 break;
 
             case ToastButtonPreset.Full:
-                // Top row matches Standard: Pin, Gallery, Save, Close.
-                Place(ToastButtonKind.Pin, ToastButtonSlot.TopLeft);
-                Place(ToastButtonKind.History, ToastButtonSlot.TopInnerLeft);
-                Place(ToastButtonKind.Save, ToastButtonSlot.TopInnerRight);
-                Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
-                Place(ToastButtonKind.Copy, ToastButtonSlot.BottomLeft);
-                Place(ToastButtonKind.Share, ToastButtonSlot.BottomInnerLeft);
-                Place(ToastButtonKind.Delete, ToastButtonSlot.BottomInnerRight);
-                Place(ToastButtonKind.Edit, ToastButtonSlot.BottomRight);
+                // Save always leftmost among destinations; Copy / Edit / Share follow.
+                Place(ToastButtonKind.Save, ToastButtonSlot.TopLeft);
+                Place(ToastButtonKind.Copy, ToastButtonSlot.TopInnerLeft);
+                Place(ToastButtonKind.Edit, ToastButtonSlot.TopInnerRight);
+                Place(ToastButtonKind.Share, ToastButtonSlot.TopRight);
                 break;
 
-            default: // Standard — single top row: Pin, Gallery, Save, Close.
-                Place(ToastButtonKind.Pin, ToastButtonSlot.TopLeft);
-                Place(ToastButtonKind.History, ToastButtonSlot.TopInnerLeft);
-                Place(ToastButtonKind.Save, ToastButtonSlot.TopInnerRight);
-                Place(ToastButtonKind.Close, ToastButtonSlot.TopRight);
+            default: // Standard — Save only, same slot as in Full.
+                Place(ToastButtonKind.Save, ToastButtonSlot.TopLeft);
                 break;
         }
 
@@ -307,7 +319,14 @@ public static class ToastButtonLayout
     // or null when the layout has been customized.
     public static ToastButtonPreset? DetectPreset(AppSettings.ToastButtonLayoutSettings settings)
     {
-        foreach (ToastButtonPreset preset in Enum.GetValues(typeof(ToastButtonPreset)))
+        // Prefer named UI presets; Minimal is a legacy alias of Standard (same Save slot).
+        foreach (var preset in new[]
+                 {
+                     ToastButtonPreset.Full,
+                     ToastButtonPreset.Standard,
+                     ToastButtonPreset.None,
+                     ToastButtonPreset.Minimal
+                 })
         {
             if (MatchesPreset(settings, preset))
                 return preset;

@@ -13,12 +13,22 @@ namespace CyberSnap;
 
 public partial class App
 {
-    private void HandleCaptureResult(Bitmap result)
+    private void HandleCaptureResult(
+        Bitmap result,
+        RegionOverlayForm.ConfirmCommitAction commitAction = RegionOverlayForm.ConfirmCommitAction.Default)
     {
         var settings = _settingsService!.Settings;
         var ext = CaptureOutputService.GetExtension(settings.CaptureImageFormat);
         string? requestedPath = null;
-        if (settings.SaveToFile)
+
+        // Confirm-mode Save / Edit / History / Share need a file on disk.
+        bool forceSave = commitAction is RegionOverlayForm.ConfirmCommitAction.Save
+            or RegionOverlayForm.ConfirmCommitAction.Edit
+            or RegionOverlayForm.ConfirmCommitAction.History
+            or RegionOverlayForm.ConfirmCommitAction.Share
+            || settings.SaveToFile;
+
+        if (forceSave)
         {
             var defaultPath = Helpers.CaptureSavePath.BuildAvailablePath(
                 settings.SaveDirectory,
@@ -64,27 +74,29 @@ public partial class App
                 Dispatcher.BeginInvoke(() =>
                 {
                     var action = NormalizeAfterCaptureAction(settings.AfterCapture);
-                    // B1: image auto-copy is independent of the post-capture destination window.
-                    if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
-                        TryCopyCaptureOutputToClipboard(persisted.Output, persisted.FilePath);
+                    bool wantCopy = commitAction == RegionOverlayForm.ConfirmCommitAction.Copy
+                        || Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image);
+                    bool copied = false;
+                    if (wantCopy)
+                        copied = TryCopyCaptureOutputToClipboard(persisted.Output, persisted.FilePath);
                     ResetCapturing();
 
-                    // Counted once per capture, before the action branches, so every capture counts
-                    // toward milestones — including straight-to-editor and copy-only. Any earned
-                    // milestone/streak/first-of-day celebration is shown as a delayed follow-up toast
-                    // (separate from the functional toast below) so it's always noticeable.
                     CelebrateCaptureIfEarned(settings);
 
-                    // Editor owns the post-capture surface (no stacked notification/viewer).
-                    if (settings.OpenEditorAfterCapture &&
-                        persisted.HistoryEntry?.Kind != Services.HistoryKind.Video &&
-                        persisted.HistoryEntry?.Kind != Services.HistoryKind.Gif)
+                    bool openEditor = commitAction == RegionOverlayForm.ConfirmCommitAction.Edit
+                        || (commitAction == RegionOverlayForm.ConfirmCommitAction.Default
+                            && settings.OpenEditorAfterCapture
+                            && persisted.HistoryEntry?.Kind != Services.HistoryKind.Video
+                            && persisted.HistoryEntry?.Kind != Services.HistoryKind.Gif);
+
+                    // Confirm-mode action pills replace the preview toast overlay buttons.
+                    const bool skipPreviewToast = true;
+
+                    if (openEditor)
                     {
                         bool openedInEditor = false;
                         try
                         {
-                            // Editor clones for its canvas; on reject it disposes the clone we pass.
-                            // On success we still dispose the persisted output below.
                             openedInEditor = CyberSnap.UI.Editor.EditorForm.ShowEditor(
                                 new Bitmap(persisted.Output),
                                 persisted.FilePath,
@@ -97,44 +109,132 @@ public partial class App
 
                         if (!openedInEditor)
                         {
-                            // Fall back to the standard preview so the capture isn't lost
-                            // (size rejection, GDI failure, etc.).
                             TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
-                            ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
+                            ToastWindow.Show(
+                                LocalizationService.Translate("Screenshot ready"),
+                                "",
+                                persisted.FilePath);
+                            persisted.Output.Dispose();
+                            ScheduleIdleMemoryTrim();
                             return;
                         }
 
                         persisted.Output.Dispose();
-
-                        // No preview toast is shown when the editor opens directly, so surface a
-                        // lightweight system message confirming where the capture went. A text-only
-                        // toast (no preview bitmap) is treated as a system message by ToastWindow.
-                        ToastWindow.Show(
+                        ToastWindow.Show(ToastSpec.Standard(
                             LocalizationService.Translate("Sent to the editor"),
                             LocalizationService.Translate("Your capture is open in the editor."),
-                            persisted.FilePath);
+                            persisted.FilePath) with { PlayCaptureSound = true });
+                    }
+                    else if (commitAction == RegionOverlayForm.ConfirmCommitAction.History)
+                    {
+                        persisted.Output.Dispose();
+                        ShowHistory(persisted.FilePath);
+                    }
+                    else if (commitAction == RegionOverlayForm.ConfirmCommitAction.Share)
+                    {
+                        var shareBmp = persisted.Output;
+                        var sharePath = persisted.FilePath;
+                        _ = ShareCaptureFromConfirmAsync(shareBmp, sharePath);
                     }
                     else
                     {
-                        // System viewer stacks with notification: open the file first (path-only),
-                        // then hand the bitmap to the image preview when requested.
                         TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
 
-                        if (ShouldPreviewAfterCapture(action))
+                        if (!skipPreviewToast && ShouldPreviewAfterCapture(action))
                         {
                             ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
                         }
                         else
                         {
                             persisted.Output.Dispose();
-                            // Viewer-only (or save-only) keeps a lightweight confirmation toast.
-                            ToastWindow.Show("Screenshot ready", "", persisted.FilePath);
+                            ShowConfirmDestinationFeedback(commitAction, wantCopy, copied, persisted.FilePath);
                         }
                     }
 
                     ScheduleIdleMemoryTrim();
                 });
             }, TaskScheduler.Default);
+    }
+
+    private async Task ShareCaptureFromConfirmAsync(Bitmap bitmap, string? filePath)
+    {
+        try
+        {
+            var settings = _settingsService!.Settings;
+            var provider = Services.Upload.ImageUploadService.GetDefaultProvider(settings);
+            var owner = Current.MainWindow;
+            IntPtr ownerHandle = IntPtr.Zero;
+            try
+            {
+                if (owner is not null)
+                    ownerHandle = new System.Windows.Interop.WindowInteropHelper(owner).Handle;
+            }
+            catch { }
+
+            if (!UI.Share.ImageShareFlow.ConfirmThirdPartyUploadIfNeeded(owner, ownerHandle, provider, settings))
+                return;
+
+            var result = await UI.Share.ImageShareFlow.ShareBitmapAsync(bitmap).ConfigureAwait(true);
+            UI.Share.ImageShareFlow.PresentResult(result, settings);
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("capture.confirm-share", ex);
+            ToastWindow.Show(
+                LocalizationService.Translate("Upload failed"),
+                LocalizationService.Translate("CyberSnap could not share the capture. Check your network or upload configuration in Settings."),
+                filePath);
+        }
+        finally
+        {
+            try { bitmap.Dispose(); } catch { }
+            ScheduleIdleMemoryTrim();
+        }
+    }
+
+    /// <summary>
+    /// Minimal post-confirm status toast (no image-preview overlay). Wording follows the
+    /// destination pill the user chose; capture sound confirms the action completed.
+    /// </summary>
+    private static void ShowConfirmDestinationFeedback(
+        RegionOverlayForm.ConfirmCommitAction commitAction,
+        bool wantCopy,
+        bool copied,
+        string? filePath)
+    {
+        string title;
+        string body = "";
+
+        switch (commitAction)
+        {
+            case RegionOverlayForm.ConfirmCommitAction.Copy:
+                title = copied
+                    ? LocalizationService.Translate("Copied to clipboard")
+                    : LocalizationService.Translate("Clipboard copy failed");
+                if (!string.IsNullOrEmpty(filePath))
+                    body = LocalizationService.Translate("Saved");
+                break;
+            case RegionOverlayForm.ConfirmCommitAction.Save:
+                title = LocalizationService.Translate("Saved");
+                if (wantCopy)
+                {
+                    body = copied
+                        ? LocalizationService.Translate("Copied to clipboard")
+                        : LocalizationService.Translate("Clipboard copy failed");
+                }
+                break;
+            default:
+                title = LocalizationService.Translate("Screenshot ready");
+                if (wantCopy)
+                {
+                    body = copied
+                        ? LocalizationService.Translate("Copied to clipboard")
+                        : LocalizationService.Translate("Clipboard copy failed");
+                }
+                break;
+        }
+
+        ToastWindow.Show(ToastSpec.Standard(title, body, filePath) with { PlayCaptureSound = true });
     }
 
     private Task<PersistedCaptureResult> PersistCaptureAsync(

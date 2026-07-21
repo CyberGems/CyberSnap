@@ -960,7 +960,9 @@ public partial class SettingsWindow
             "interfacelanguage"         => InterfaceLanguageCombo,
             // General / Widgets
             "showcapturewidget"         => ShowCaptureWidgetCheck,
-            "widgetenableeditor"        => WidgetEnableEditorCheck,
+            "widgetenableeditor"        => WidgetCaptureCursorCheck,
+            "widgetcapturecursor"       => WidgetCaptureCursorCheck,
+            "capturecursor"             => WidgetCaptureCursorCheck,
             "videoenableeditor"         => VideoEnableEditorCheck,
             "openvideotrimmeraftercapture" => VideoEnableEditorCheck,
             "widgetdockedge"            => WidgetDockEdgeCombo,

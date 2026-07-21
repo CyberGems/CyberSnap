@@ -148,13 +148,41 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <summary>Edge inset (in client pixels) between the working-area edge and the banner pill.</summary>
     private const float EdgeMargin = 35f;
 
+    /// <summary>Union of every banner rect painted so far — used so fade/replace invalidates
+    /// cover the largest footprint and do not leave ghosts on the dimmed confirm overlay.</summary>
+    private Rectangle _dirtyUnion = Rectangle.Empty;
+
     private void ComputeBannerRect()
     {
         using var tmp = new Bitmap(1, 1);
         using var g = Graphics.FromImage(tmp);
         using var font = UiChrome.ChromeFont(16f, FontStyle.Regular);
-        var size = g.MeasureString(_text, font);
+        var size = MeasureContent(g, font);
+        ApplyBannerRect(size);
+    }
 
+    /// <summary>Match segment layout to <see cref="Render"/> (sum of typographic segment widths).</summary>
+    private SizeF MeasureContent(Graphics g, Font font)
+    {
+        var sf = StringFormat.GenericTypographic;
+        if (_segments is { Count: > 0 })
+        {
+            float w = 0f;
+            float h = 0f;
+            foreach (var seg in _segments)
+            {
+                var s = g.MeasureString(seg.Text, font, PointF.Empty, sf);
+                w += s.Width;
+                h = Math.Max(h, s.Height);
+            }
+            return new SizeF(w, Math.Max(h, 1f));
+        }
+
+        return g.MeasureString(_text, font, PointF.Empty, sf);
+    }
+
+    private void ApplyBannerRect(SizeF size)
+    {
         const int paddingH = 28;
         const int paddingV = 17;
         float iconBlock = _iconId != null ? size.Height * 0.92f + IconGap : 0f;
@@ -178,16 +206,19 @@ public sealed class StandaloneToolBanner : IDisposable
         get
         {
             var r = _bannerRect;
-            r.Inflate(12, 12);
-            return Rectangle.Round(r);
+            r.Inflate(16, 16);
+            var current = Rectangle.Round(r);
+            return _dirtyUnion.IsEmpty ? current : Rectangle.Union(_dirtyUnion, current);
         }
     }
 
     /// <summary>Trigger a host repaint — region-scoped when a rect callback was supplied, else full.</summary>
     private void RaiseInvalidate()
     {
+        var bounds = InvalidateBounds;
+        _dirtyUnion = bounds;
         if (_onInvalidateRect != null)
-            _onInvalidateRect(InvalidateBounds);
+            _onInvalidateRect(bounds);
         else
             _onInvalidate?.Invoke();
     }
@@ -206,19 +237,17 @@ public sealed class StandaloneToolBanner : IDisposable
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
             using var font = UiChrome.ChromeFont(16f, FontStyle.Regular);
-            var size = g.MeasureString(_text, font);
+            var size = MeasureContent(g, font);
+            ApplyBannerRect(size);
 
             const int paddingH = 28;
             const int paddingV = 17;
             float iconSize = size.Height * 0.92f;
             float iconBlock = _iconId != null ? iconSize + IconGap : 0f;
-            float width = size.Width + iconBlock + paddingH * 2;
-            float height = size.Height + paddingV * 2;
-
-            float y = ComputeBannerY(height);
-            float x = _workingArea.Left - _bounds.Left + (_workingArea.Width - width) / 2f;
-
-            _bannerRect = new RectangleF(x, y, width, height);
+            float width = _bannerRect.Width;
+            float height = _bannerRect.Height;
+            float x = _bannerRect.X;
+            float y = _bannerRect.Y;
 
             // Light uses a slightly translucent card so the dimmed capture still shows through;
             // dark/gray stay near-opaque so cyan/silver type stays readable on the screenshot.
@@ -261,6 +290,7 @@ public sealed class StandaloneToolBanner : IDisposable
             if (_segments != null)
             {
                 // Draw each segment with its own color, laid out left-to-right.
+                var typo = StringFormat.GenericTypographic;
                 float cursorX = x + paddingH + iconBlock;
                 float textTop = y + paddingV;
                 foreach (var seg in _segments)
@@ -268,8 +298,8 @@ public sealed class StandaloneToolBanner : IDisposable
                     // null → accent; pure white (legacy call sites) → theme label color
                     var segColor = ResolveSegmentColor(seg.Color, accent, label);
                     using var segBrush = new SolidBrush(Color.FromArgb(alphaText, segColor));
-                    g.DrawString(seg.Text, font, segBrush, cursorX, textTop);
-                    cursorX += g.MeasureString(seg.Text, font).Width;
+                    g.DrawString(seg.Text, font, segBrush, cursorX, textTop, typo);
+                    cursorX += g.MeasureString(seg.Text, font, PointF.Empty, typo).Width;
                 }
             }
             else
@@ -319,6 +349,10 @@ public sealed class StandaloneToolBanner : IDisposable
                     _opacity = 0.0f;
                     _fadeOutStep = AutoFadeOutStep;
                     _timer?.Stop();
+                    // Final clear of the union footprint (Render bails at opacity 0).
+                    RaiseInvalidate();
+                    _dirtyUnion = Rectangle.Empty;
+                    break;
                 }
                 RaiseInvalidate();
                 break;

@@ -216,6 +216,30 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("trimmer.persist-audio", ex); }
     }
 
+    /// <summary>
+    /// Persists Send-to-Trimmer for video or GIF on the live App settings instance
+    /// (recording-bar toggles must not write through a detached SettingsService).
+    /// </summary>
+    public void PersistOpenTrimmerAfterCapture(bool forGif, bool enabled)
+    {
+        if (_settingsService is null) return;
+
+        var settings = _settingsService.Settings;
+        if (forGif)
+        {
+            if (settings.OpenGifTrimmerAfterCapture == enabled) return;
+            settings.OpenGifTrimmerAfterCapture = enabled;
+        }
+        else
+        {
+            if (settings.OpenVideoTrimmerAfterCapture == enabled) return;
+            settings.OpenVideoTrimmerAfterCapture = enabled;
+        }
+
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("capture.persist-open-trimmer", ex); }
+    }
+
     /// <summary>Persists the editor undo limit (clamped 1–200).</summary>
     public void PersistEditorUndoLimit(int limit)
     {
@@ -433,17 +457,16 @@ public partial class App : Application
         _widgetWindow?.RefreshLayout();
     }
 
-    // Settings → widget: push the current OpenEditorAfterCapture value onto the widget's own
-    // "Enable editor" toggle so both controls always show the same state. No-op if no widget.
-    public void SyncWidgetEnableEditorToggle()
+    // Settings → widget: push ShowCursor onto the widget toggle.
+    public void SyncWidgetCaptureCursorToggle()
     {
         if (!Dispatcher.CheckAccess())
         {
-            _ = Dispatcher.BeginInvoke(SyncWidgetEnableEditorToggle);
+            _ = Dispatcher.BeginInvoke(SyncWidgetCaptureCursorToggle);
             return;
         }
 
-        _widgetWindow?.RefreshEnableEditorToggle();
+        _widgetWindow?.RefreshCaptureCursorToggle();
     }
 
     // Settings → widget: push the global Auto-copy master onto the widget toggle.
@@ -497,15 +520,15 @@ public partial class App : Application
         _settingsWindow?.RefreshAlwaysOnTopCheck();
     }
 
-    // Widget → Settings: when the widget's enable editor changes, pull the Settings window's checkbox back into sync.
-    public void SyncSettingsEnableEditorCheck()
+    // Widget → Settings: when the widget's capture-cursor toggle changes, refresh Settings.
+    public void SyncSettingsShowCursorCheck()
     {
         if (!Dispatcher.CheckAccess())
         {
-            _ = Dispatcher.BeginInvoke(SyncSettingsEnableEditorCheck);
+            _ = Dispatcher.BeginInvoke(SyncSettingsShowCursorCheck);
             return;
         }
 
-        _settingsWindow?.RefreshEnableEditorCheck();
+        _settingsWindow?.RefreshShowCursorCheck();
     }
 }

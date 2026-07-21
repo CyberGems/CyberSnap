@@ -20,8 +20,11 @@ public sealed partial class RecordingForm : Form
 {
     private const int RecordingWarmupDelayMs = 260;
 
-    /// <summary>Fires with (filePath, firstFrameBitmap). Caller must dispose the bitmap.</summary>
-    public event Action<string, Bitmap?>? RecordingCompleted;
+    /// <summary>
+    /// Fires with (filePath, firstFrameBitmap, openTrimmer). Caller must dispose the bitmap.
+    /// <paramref name="openTrimmer"/> reflects the live recording-bar toggle.
+    /// </summary>
+    public event Action<string, Bitmap?, bool>? RecordingCompleted;
     public event Action<Exception>? RecordingFailed;
     public event Action? RecordingCancelled;
 
@@ -65,7 +68,7 @@ public sealed partial class RecordingForm : Form
     private readonly bool _showMarginBorder = true; // dummy or keep
 #pragma warning restore CS0414
     private readonly bool _showMagnifier;
-    private readonly bool _openVideoTrimmerAfterCapture;
+    private bool _openTrimmerAfterCapture;
     private readonly Action<string>? _onGifEncodedForTrimmer;
     private readonly CaptureMagnifierHelper? _magHelper;
     private LiveSelectionAdornerForm? _selectionAdorner;
@@ -115,7 +118,7 @@ public sealed partial class RecordingForm : Form
         _recordDesktop = recordDesktop;
         _desktopDeviceId = desktopDeviceId;
         _showMagnifier = showMagnifier;
-        _openVideoTrimmerAfterCapture = openVideoTrimmerAfterCapture;
+        _openTrimmerAfterCapture = openVideoTrimmerAfterCapture;
         _onGifEncodedForTrimmer = onGifEncodedForTrimmer;
         if (_showMagnifier && screenshot is not null)
         {

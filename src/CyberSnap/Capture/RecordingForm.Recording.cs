@@ -68,14 +68,15 @@ public sealed partial class RecordingForm
                 gifRec?.StopAndEncode(_savePath);
                 vidRec?.StopAndEncode(_savePath);
 
-                if (gifRec != null && _onGifEncodedForTrimmer != null)
+                // Honor the live bar toggle (not a possibly-stale settings snapshot).
+                if (gifRec != null && _openTrimmerAfterCapture && _onGifEncodedForTrimmer != null)
                     _onGifEncodedForTrimmer(_savePath);
 
                 _desktopAudioSoundSuppression?.Dispose();
                 _desktopAudioSoundSuppression = null;
                 SoundService.PlayRecordStopSound();
 
-                if (!_openVideoTrimmerAfterCapture || gifRec == null)
+                if (!_openTrimmerAfterCapture || gifRec == null)
                 {
                     firstFrame = vidRec?.GetFirstFrame();
                     firstFrame ??= TryCreateToastPreviewFrame(_savePath);
@@ -85,7 +86,7 @@ public sealed partial class RecordingForm
                     firstFrame = vidRec?.GetFirstFrame();
                 }
                 
-                RecordingCompleted?.Invoke(_savePath, firstFrame);
+                RecordingCompleted?.Invoke(_savePath, firstFrame, _openTrimmerAfterCapture);
             }
             catch (Exception ex)
             {
@@ -152,6 +153,30 @@ public sealed partial class RecordingForm
         catch { /* settings may be locked */ }
     }
 
+    private static void PersistSendToTrimmer(Models.RecordingFormat format, bool enabled)
+    {
+        try
+        {
+            bool forGif = format == Models.RecordingFormat.GIF;
+            void Persist()
+            {
+                if (System.Windows.Application.Current is App app)
+                    app.PersistOpenTrimmerAfterCapture(forGif, enabled);
+            }
+
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher is null)
+                return;
+
+            // Sync so completion / next recording bar see the updated live settings.
+            if (dispatcher.CheckAccess())
+                Persist();
+            else
+                dispatcher.Invoke(Persist);
+        }
+        catch { /* settings may be locked */ }
+    }
+
     private void ShowControlBar()
     {
         CloseControlBar();
@@ -162,11 +187,16 @@ public sealed partial class RecordingForm
             _recordRegion.Width,
             _recordRegion.Height);
 
-        _controlBar = new RecordingControlBar(screenRegion, _format, _fps);
+        _controlBar = new RecordingControlBar(screenRegion, _format, _fps, _openTrimmerAfterCapture);
         _controlBar.FpsChanged += fps =>
         {
             _fps = fps;
             PersistRecordingFps(_format, fps);
+        };
+        _controlBar.SendToTrimmerChanged += enabled =>
+        {
+            _openTrimmerAfterCapture = enabled;
+            PersistSendToTrimmer(_format, enabled);
         };
         _controlBar.StartClicked += () =>
         {

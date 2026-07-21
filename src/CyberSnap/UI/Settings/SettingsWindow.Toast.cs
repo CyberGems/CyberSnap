@@ -40,8 +40,11 @@ public partial class SettingsWindow
     // Transient message (e.g. "corner is full") shown in place of the preset name until the next action.
     private string? _toastLayoutHint;
 
-    // Prevents RefreshEditorPreviewState from echoing IsChecked into a save/sync loop.
-    private bool _suppressNotificationsEditorToggle;
+    // Fixed Cancel/Retry chrome: arm on press, flash red if the user tries to drag them.
+    private Border? _fixedPillPressSource;
+    private Point _fixedPillPressStart;
+    private bool _fixedPillArmed;
+    private System.Windows.Threading.DispatcherTimer? _fixedPillFlashTimer;
 
     private AppSettings.ToastButtonLayoutSettings ToastButtons
     {
@@ -92,7 +95,7 @@ public partial class SettingsWindow
 
             string label = FormatToastButtonLabel(kind);
             string help = string.Format(
-                Services.LocalizationService.Translate("Drag to move the {0} button. Double-click to remove it, or right-click (or press the Menu key) for placement options."),
+                Services.LocalizationService.Translate("Drag to move the {0} pill. Double-click to remove it, or right-click (or press the Menu key) for placement options."),
                 label);
             ToolTipService.SetInitialShowDelay(border, 300);
             AutomationProperties.SetHelpText(border, help);
@@ -103,7 +106,7 @@ public partial class SettingsWindow
     {
         ToastButtonRows.Children.Clear();
 
-        foreach (var kind in ToastButtonLayout.AllButtons)
+        foreach (var kind in ToastButtonLayout.ConfirmActionButtons)
             ToastButtonRows.Children.Add(BuildToastButtonRow(kind));
     }
 
@@ -115,7 +118,7 @@ public partial class SettingsWindow
         // right-click / Menu-key context menu (Move to…). No per-row combo any more.
         var grid = new Grid
         {
-            Margin = new Thickness(0, 0, 0, 6),
+            Margin = new Thickness(0, 0, 14, 8),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Left
         };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -159,7 +162,7 @@ public partial class SettingsWindow
         // The whole row is a drag handle for adding this button to the preview (the icon stays in
         // the list; a ghost follows the cursor). Right-click / Menu key opens the same placement
         // menu as the preview buttons so the layout stays fully keyboard-accessible.
-        var rowTooltip = Services.LocalizationService.Translate("Drag onto the preview to add this button, or right-click (Menu key) to place it by keyboard.");
+        var rowTooltip = Services.LocalizationService.Translate("Drag onto the confirm bar to add this pill, or right-click (Menu key) to place it by keyboard.");
         var row = new Border
         {
             Child = grid,
@@ -172,7 +175,7 @@ public partial class SettingsWindow
         ToolTipService.SetInitialShowDelay(row, 300);
         AutomationProperties.SetName(row, $"{ToTitleCase(label)} button");
         AutomationProperties.SetHelpText(row, string.Format(
-            Services.LocalizationService.Translate("Drag onto the preview to add the {0} button, or right-click (or press the Menu key) to place it in a corner."),
+            Services.LocalizationService.Translate("Drag onto the confirm bar to add the {0} pill, or right-click (or press the Menu key) to place it."),
             label));
         row.PreviewMouseLeftButtonDown += ToastRow_PreviewMouseLeftButtonDown;
         row.PreviewMouseMove += ToastRow_PreviewMouseMove;
@@ -197,12 +200,15 @@ public partial class SettingsWindow
         ToastCorner? currentCorner = visible ? ToastButtonLayout.GetCorner(ToastButtons, kind) : null;
 
         var menu = new ContextMenu();
+        if (TryFindResource("HistoryActionsMenuStyle") is Style menuStyle)
+            menu.Style = menuStyle;
 
         var header = new MenuItem
         {
             Header = Services.LocalizationService.Translate("Move to"),
             IsEnabled = false
         };
+        ApplyToastMenuItemStyle(header);
         menu.Items.Add(header);
 
         foreach (var corner in new[] { ToastCorner.TopLeft, ToastCorner.TopRight, ToastCorner.BottomLeft, ToastCorner.BottomRight })
@@ -217,21 +223,32 @@ public partial class SettingsWindow
                 // A full corner can't take this button — unless the button already lives there.
                 IsEnabled = isCurrent || !IsCornerFull(ToastButtons, corner, kind)
             };
+            ApplyToastMenuItemStyle(item);
             item.Click += (_, _) => MoveToastButtonToCorner(kind, capturedCorner);
             menu.Items.Add(item);
         }
 
-        menu.Items.Add(new Separator());
+        var sep = new Separator();
+        if (TryFindResource("HistoryActionsMenuSeparator") is Style sepStyle)
+            sep.Style = sepStyle;
+        menu.Items.Add(sep);
 
         var remove = new MenuItem
         {
-            Header = Services.LocalizationService.Translate("Remove from notification"),
+            Header = Services.LocalizationService.Translate("Remove from confirm bar"),
             IsEnabled = visible
         };
+        ApplyToastMenuItemStyle(remove);
         remove.Click += (_, _) => RemoveToastButton(kind);
         menu.Items.Add(remove);
 
         return menu;
+    }
+
+    private void ApplyToastMenuItemStyle(MenuItem item)
+    {
+        if (TryFindResource("HistoryActionsMenuItem") is Style style)
+            item.Style = style;
     }
 
     // Place (or move) a button into a corner from the context menu — the keyboard-accessible
@@ -247,9 +264,88 @@ public partial class SettingsWindow
         }
 
         _toastLayoutHint = string.Format(
-            Services.LocalizationService.Translate("The {0} corner is full (2 buttons max). Move another button out first."),
+            Services.LocalizationService.Translate("The {0} pair is full (2 pills max). Move another pill out first."),
             FormatCornerMenuLabel(corner));
         PersistToastButtonLayout();
+    }
+
+    private void ConfirmFixedPill_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Border pill)
+            return;
+
+        // Immediate click feedback — these pills are not draggable.
+        FlashFixedConfirmPill(pill);
+
+        _fixedPillPressSource = pill;
+        _fixedPillPressStart = e.GetPosition(ToastDesignerRoot);
+        _fixedPillArmed = true;
+    }
+
+    private void ConfirmFixedPill_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_fixedPillArmed || e.LeftButton != MouseButtonState.Pressed || _fixedPillPressSource is null)
+        {
+            _fixedPillArmed = false;
+            return;
+        }
+
+        var pos = e.GetPosition(ToastDesignerRoot);
+        if (Math.Abs(pos.X - _fixedPillPressStart.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(pos.Y - _fixedPillPressStart.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        // Drag attempt: refresh the red flash so the rejection stays obvious.
+        _fixedPillArmed = false;
+        FlashFixedConfirmPill(_fixedPillPressSource);
+        e.Handled = true;
+    }
+
+    private void ConfirmFixedPill_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        _fixedPillArmed = false;
+        _fixedPillPressSource = null;
+    }
+
+    private void FlashFixedConfirmPill(Border pill)
+    {
+        var red = Theme.Brush(Color.FromRgb(0xEF, 0x44, 0x44));
+        pill.BorderBrush = red;
+        pill.BorderThickness = new Thickness(2);
+        pill.Opacity = 1;
+
+        if (pill.Child is TextBlock glyph)
+            glyph.Foreground = red;
+
+        _fixedPillFlashTimer?.Stop();
+        _fixedPillFlashTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(420)
+        };
+        _fixedPillFlashTimer.Tick += (_, _) =>
+        {
+            _fixedPillFlashTimer.Stop();
+            RestoreFixedConfirmPillChrome(pill);
+        };
+        _fixedPillFlashTimer.Start();
+    }
+
+    private static void RestoreFixedConfirmPillChrome(Border? pill)
+    {
+        if (pill is null)
+            return;
+
+        pill.Background = Theme.Brush(Theme.IsDark && !Theme.IsGray
+            ? Theme.BgSecondary
+            : Theme.IsGray
+            ? Color.FromArgb(215, 24, 26, 29)
+            : Color.FromArgb(210, 235, 246, 253));
+        pill.BorderBrush = Theme.Brush(Theme.BorderSubtle);
+        pill.BorderThickness = new Thickness(1);
+        pill.Opacity = 0.85;
+
+        if (pill.Child is TextBlock glyph)
+            glyph.Foreground = Theme.Brush(Theme.TextSecondary);
     }
 
     /// <summary>Whether the per-button placement controls should be interactive.
@@ -573,7 +669,7 @@ public partial class SettingsWindow
             if (!ToastButtonLayout.PlaceFromHidden(ToastButtons, kind, targetSlot))
             {
                 _toastLayoutHint = string.Format(
-                    Services.LocalizationService.Translate("The {0} corner is full (2 buttons max). Remove a button first."),
+                    Services.LocalizationService.Translate("The {0} pair is full (2 pills max). Remove a pill first."),
                     FormatCornerMenuLabel(ToastButtonLayout.SlotToCorner(targetSlot)));
                 PersistToastButtonLayout();
                 return;
@@ -665,7 +761,7 @@ public partial class SettingsWindow
 
         UpdateToastPreviewButton(ToastLayoutCloseBtn, ToastLayoutCloseIcon, "close", ToastButtonKind.Close);
         UpdateToastPreviewButton(ToastLayoutPinBtn, ToastLayoutPinIcon, "pin", ToastButtonKind.Pin);
-        UpdateToastPreviewButton(ToastLayoutSaveBtn, ToastLayoutSaveIcon, "download", ToastButtonKind.Save);
+        UpdateToastPreviewButton(ToastLayoutSaveBtn, ToastLayoutSaveIcon, "save", ToastButtonKind.Save);
         UpdateToastPreviewButton(ToastLayoutCopyBtn, ToastLayoutCopyIcon, "copy", ToastButtonKind.Copy);
         UpdateToastPreviewButton(ToastLayoutShareBtn, ToastLayoutShareIcon, "share", ToastButtonKind.Share);
         UpdateToastPreviewButton(ToastLayoutDeleteBtn, ToastLayoutDeleteIcon, "trash", ToastButtonKind.Delete);
@@ -677,7 +773,7 @@ public partial class SettingsWindow
     private void RefreshToastActionsPanelMetrics()
     {
         int maxRow = 0;
-        foreach (var btn in ToastButtonLayout.AllButtons)
+        foreach (var btn in ToastButtonLayout.ConfirmActionButtons)
         {
             if (!ToastButtonLayout.IsVisible(ToastButtons, btn))
                 continue;
@@ -686,10 +782,13 @@ public partial class SettingsWindow
             maxRow = Math.Max(maxRow, row + 1);
         }
 
+        // Always keep at least one destination row so empty slots stay drop targets
+        // (e.g. Basic preset still needs a place to drag Save/Copy/Edit/Share).
         const double rowHeight = 36;
-        ToastLayoutActionsPanel.RowDefinitions[0].Height = maxRow >= 1 ? new GridLength(rowHeight) : new GridLength(0);
-        ToastLayoutActionsPanel.RowDefinitions[1].Height = maxRow >= 2 ? new GridLength(rowHeight) : new GridLength(0);
-        ToastLayoutActionsPanel.Height = maxRow > 0 ? maxRow * rowHeight : 0;
+        int rows = Math.Max(1, maxRow);
+        ToastLayoutActionsPanel.RowDefinitions[0].Height = new GridLength(rowHeight);
+        ToastLayoutActionsPanel.RowDefinitions[1].Height = rows >= 2 ? new GridLength(rowHeight) : new GridLength(0);
+        ToastLayoutActionsPanel.Height = rows * rowHeight;
     }
 
     private void CollapseAllToastPreviewButtons()
@@ -706,7 +805,9 @@ public partial class SettingsWindow
 
     private void UpdateToastPreviewButton(Border border, Image icon, string iconId, ToastButtonKind kind)
     {
-        bool visible = ToastButtonLayout.IsVisible(ToastButtons, kind);
+        // Confirm-mode chrome only uses Save / Copy / Edit / Share / History.
+        bool visible = ToastButtonLayout.IsConfirmActionButton(kind)
+            && ToastButtonLayout.IsVisible(ToastButtons, kind);
         border.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         if (!visible)
             return;
@@ -739,6 +840,9 @@ public partial class SettingsWindow
             border.BorderBrush = Theme.Brush(Color.FromArgb(130, 0, 120, 215));
         }
         border.BorderThickness = new System.Windows.Thickness(1);
+        border.Width = 34;
+        border.Height = 34;
+        border.CornerRadius = new CornerRadius(14);
         icon.Source = Helpers.FluentIcons.RenderWpf(iconId, GetToastLayoutIconColor(active: false), 22);
 
         // Don't override tooltip - let XAML localization handle it
@@ -806,7 +910,7 @@ public partial class SettingsWindow
         bool manualActive = IsManualMode;
 
         // Preset buttons are highlighted when their preset is active AND Manual mode is off.
-        // Minimal was removed from the toolbar (redundant with No buttons); layouts that still
+        // Minimal was removed from the toolbar (redundant with Basic); layouts that still
         // match only-close simply leave every preset chip unhighlighted.
         HighlightToastPreset(ToastPresetNoneBtn, active == ToastButtonPreset.None && !manualActive);
         HighlightToastPreset(ToastPresetStandardBtn, active == ToastButtonPreset.Standard && !manualActive);
@@ -850,9 +954,8 @@ public partial class SettingsWindow
     }
 
     /// <summary>
-    /// Side-by-side mocks: left = fixed system alert (brief status when Send to Editor is on);
-    /// right = customizable capture notification (preview + buttons). Captions and guide use
-    /// that vocabulary so newcomers don't confuse media type with notification type.
+    /// Side-by-side mocks: left = system-alert examples (encoding / brief status);
+    /// right = confirm-destination button layout designer.
     /// </summary>
     private void RefreshEditorPreviewState()
     {
@@ -860,29 +963,8 @@ public partial class SettingsWindow
         if (EditorToastMockShell is null || EditorButtonsCard is null)
             return;
 
-        // Two related-but-separate settings: images → editor, video/GIF → trimmer.
-        // The widget toggle often sets both; Settings can set them independently.
-        bool editorOn = _settingsService.Settings.OpenEditorAfterCapture;
         bool trimmerOn = _settingsService.Settings.OpenVideoTrimmerAfterCapture
             || _settingsService.Settings.OpenGifTrimmerAfterCapture;
-        // Video/GIF "success" path skips the designed preview toast when the trimmer opens
-        // (only an encoding system wait toast). Images skip it when the editor opens.
-        bool designedToastForImages = !editorOn;
-        bool designedToastForVideo = !trimmerOn;
-        bool videoOnlyOnRight = editorOn && designedToastForVideo;
-        bool showVideoBadge = videoOnlyOnRight; // badge when the mock is video/GIF-only
-
-        // Mirror the widget: checked when either auto-open path is on (images→editor and/or video→trimmer).
-        if (NotificationsEditorToggle is not null)
-        {
-            bool eitherOn = editorOn || trimmerOn;
-            if (NotificationsEditorToggle.IsChecked != eitherOn)
-            {
-                _suppressNotificationsEditorToggle = true;
-                try { NotificationsEditorToggle.IsChecked = eitherOn; }
-                finally { _suppressNotificationsEditorToggle = false; }
-            }
-        }
 
         // Keep both previews faithful to the real notification shell + edge stroke.
         EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
@@ -890,14 +972,16 @@ public partial class SettingsWindow
         if (EditorToastMockCloseIcon is not null)
             EditorToastMockCloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", GetToastLayoutIconColor(active: false), 16);
 
-        // The big designer shell shares the same look so the two previews read as the same object.
+        // Confirm-bar destination designer (images) — selection silhouette, not a toast shell.
         if (ToastLayoutShell is not null)
         {
-            ToastLayoutShell.Background = Theme.Brush(Theme.ToastBg);
-            ToastLayoutShell.BorderBrush = ToastAccentStroke();
+            ToastLayoutShell.Background = Theme.Brush(Theme.IsDark
+                ? Theme.BgPrimary
+                : Color.FromRgb(0xF3, 0xF5, 0xF8));
+            ToastLayoutShell.BorderBrush = Theme.Brush(Theme.BorderSubtle);
         }
 
-        // Image placeholder. Default Dark: Settings BgSecondary well. Gray/light: prior nudges.
+        // Selected-region well — quiet silhouette, no accent “selection” ring.
         if (ToastLayoutImageArea is not null)
         {
             ToastLayoutImageArea.Background = Theme.Brush(Theme.IsGray
@@ -905,34 +989,24 @@ public partial class SettingsWindow
                 : Theme.IsDark
                 ? Theme.BgSecondary
                 : Color.FromRgb(0xE2, 0xE5, 0xED));
+            ToastLayoutImageArea.BorderBrush = Theme.Brush(Theme.BorderSubtle);
+            ToastLayoutImageArea.BorderThickness = new Thickness(1);
         }
         if (ToastLayoutImageGlyph is not null)
         {
-            // In video-only mock mode the play badge is enough — hide the photo glyph entirely.
-            if (showVideoBadge)
-            {
-                ToastLayoutImageGlyph.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                ToastLayoutImageGlyph.Visibility = Visibility.Visible;
-                ToastLayoutImageGlyph.Foreground = Theme.Brush(Theme.IsDark
-                    ? Color.FromRgb(255, 255, 255)
-                    : Color.FromRgb(0, 0, 0));
-                ToastLayoutImageGlyph.Opacity = Theme.IsDark ? 0.14 : 0.20;
-            }
+            ToastLayoutImageGlyph.Visibility = Visibility.Visible;
+            ToastLayoutImageGlyph.Foreground = Theme.Brush(Theme.IsDark
+                ? Color.FromRgb(255, 255, 255)
+                : Color.FromRgb(0, 0, 0));
+            ToastLayoutImageGlyph.Opacity = Theme.IsDark ? 0.14 : 0.20;
         }
 
-        // Neutral play badge when the right mock is video/GIF-only (matches the live notification).
-        UpdateCapturePreviewMediaBadge(videoMode: showVideoBadge);
+        UpdateCapturePreviewMediaBadge(videoMode: false);
+        RestoreFixedConfirmPillChrome(ConfirmMockCancelPill);
+        RestoreFixedConfirmPillChrome(ConfirmMockRetryPill);
 
-        // Both mock timeline rails carry the cyber cyan/purple/magenta gradient hardcoded in XAML.
-        // In grayscale, swap to the sober silver ramp so previews stay faithful.
         ApplyMockRail(EditorToastMockRail, EditorToastMockRailGlow);
-        ApplyMockRail(ToastLayoutRail, ToastLayoutRailGlow);
 
-        // Left: always show both system-alert examples as a stable reference (no show/hide flip).
-        // Which path is active is communicated by the cyan selection outline, not by dimming.
         if (EditorToastMockShell is not null)
         {
             EditorToastMockShell.Visibility = Visibility.Visible;
@@ -950,11 +1024,9 @@ public partial class SettingsWindow
         if (SystemAlertExampleLabel is not null)
             SystemAlertExampleLabel.Visibility = Visibility.Visible;
 
-        // Selection: wrap the active section with a cyan outline (Send to Editor on → left; off → right).
-        // Both panels stay fully visible so the layout never jumps or fades.
-        bool autoOpenOn = editorOn || trimmerOn;
-        ApplySectionSelectionHighlight(SystemAlertCard, selected: autoOpenOn);
-        ApplySectionSelectionHighlight(EditorButtonsCard, selected: !autoOpenOn);
+        // Both columns are informative now — no “selected side” accent ring.
+        ApplySectionSelectionHighlight(SystemAlertCard, selected: false);
+        ApplySectionSelectionHighlight(EditorButtonsCard, selected: false);
 
         if (ToastLayoutStack is not null)
             ToastLayoutStack.Opacity = 1.0;
@@ -970,27 +1042,18 @@ public partial class SettingsWindow
 
         if (EditorPreviewGuide is not null)
         {
-            string guide = Services.LocalizationService.Translate(BuildDesignerGuideKey(
-                editorOn, trimmerOn, designedToastForImages, designedToastForVideo));
+            string guide = Services.LocalizationService.Translate(BuildDesignerGuideKey(trimmerOn));
             EditorPreviewGuide.Text = guide;
             AutomationProperties.SetName(EditorPreviewGuide, guide);
         }
     }
 
-    private static string BuildDesignerGuideKey(
-        bool editorOn, bool trimmerOn, bool designedToastForImages, bool designedToastForVideo)
+    private static string BuildDesignerGuideKey(bool trimmerOn)
     {
-        // Short copy that points at the highlighted card without implying the other side vanished.
-        if (designedToastForImages && designedToastForVideo)
-            return "Send to Editor is off. Captures use the notification you design on the right (highlighted).";
+        if (!trimmerOn)
+            return "Left: fixed system alerts (encoding / recorded). Right: destination pills on the region confirm bar. Video and GIF use brief toasts unless you open the Trimmer from the recording bar.";
 
-        if (editorOn && trimmerOn)
-            return "Send to Editor is on. Images and video/GIF open automatically; system alerts on the left are highlighted.";
-
-        if (editorOn && designedToastForVideo)
-            return "Images open in the editor (system alerts). Video/GIF still use the capture notification on the right.";
-
-        return "Video/GIF open in the trimmer (system alerts). Images use the capture notification on the right.";
+        return "Left: fixed system alerts. Right: image confirm pills only. Video and GIF open in the Trimmer after recording (toggle on the recording bar).";
     }
 
     /// <summary>
@@ -1090,70 +1153,16 @@ public partial class SettingsWindow
         }
     }
 
-    // In-panel mirror of the widget's "Send to Editor" toggle: flips BOTH OpenEditorAfterCapture
-    // (images → Annotation Editor) and OpenVideoTrimmerAfterCapture (video/GIF → Trimmer), same as
-    // the floating widget, so the dual notification mock tracks a single mental model.
-    private void NotificationsEditorToggle_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressNotificationsEditorToggle)
-            return;
-
-        SetSendToEditorMode(NotificationsEditorToggle.IsChecked == true);
-    }
-
-    /// <summary>
-    /// Card click: any interaction with the system-alert card selects auto-open (Send to Editor on).
-    /// Preview tunnel so child visuals still receive the click; we never mark Handled.
-    /// </summary>
-    private void SystemAlertCard_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (!IsLoaded)
-            return;
-        SetSendToEditorMode(enabled: true);
-    }
-
-    /// <summary>
-    /// Card click: any interaction with the capture-design card selects the designed toast
-    /// (Send to Editor off). Preview tunnel so presets/drag/combo keep working.
-    /// </summary>
-    private void EditorButtonsCard_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (!IsLoaded)
-            return;
-        SetSendToEditorMode(enabled: false);
-    }
-
-    /// <summary>
-    /// Shared path for the Enviar a Editor toggle and the two designer cards. No-ops when already
-    /// in the requested state so highlight/toggle do not flicker on repeated clicks.
-    /// </summary>
-    private void SetSendToEditorMode(bool enabled)
-    {
-        var s = _settingsService.Settings;
-        if (s.OpenEditorAfterCapture == enabled
-            && s.OpenVideoTrimmerAfterCapture == enabled
-            && s.OpenGifTrimmerAfterCapture == enabled)
-            return;
-
-        s.OpenEditorAfterCapture = enabled;
-        s.OpenVideoTrimmerAfterCapture = enabled;
-        s.OpenGifTrimmerAfterCapture = enabled;
-        _settingsService.Save();
-        RefreshEnableEditorCheck();                                // Widget + Video & GIF tab checkboxes
-        ((App)Application.Current).SyncWidgetEnableEditorToggle(); // floating widget toggle
-        RefreshEditorPreviewState();                               // highlight + this toggle
-    }
-
     private static string? GetToastButtonDescription(ToastButtonKind button) => button switch
     {
-        ToastButtonKind.Close => Services.LocalizationService.Translate("Close the notification preview."),
-        ToastButtonKind.Pin => Services.LocalizationService.Translate("Keep the preview open until you dismiss it manually."),
-        ToastButtonKind.Save => Services.LocalizationService.Translate("Save the captured image to a file."),
-        ToastButtonKind.Copy => Services.LocalizationService.Translate("Copy capture to the clipboard."),
-        ToastButtonKind.Share => Services.LocalizationService.Translate("Upload and copy a shareable link."),
-        ToastButtonKind.Delete => Services.LocalizationService.Translate("Delete capture"),
-        ToastButtonKind.History => Services.LocalizationService.Translate("Open capture in Gallery."),
-        ToastButtonKind.Edit => Services.LocalizationService.Translate("Open this capture in the Annotations Editor."),
+        ToastButtonKind.Close => Services.LocalizationService.Translate("Not used in confirm mode (Cancel is always available)."),
+        ToastButtonKind.Pin => Services.LocalizationService.Translate("Not used in confirm mode."),
+        ToastButtonKind.Save => Services.LocalizationService.Translate("Save the capture when you confirm the selected region."),
+        ToastButtonKind.Copy => Services.LocalizationService.Translate("Copy the capture to the clipboard when confirming."),
+        ToastButtonKind.Share => Services.LocalizationService.Translate("Upload and copy a shareable link when confirming."),
+        ToastButtonKind.Delete => Services.LocalizationService.Translate("Not used in confirm mode."),
+        ToastButtonKind.History => Services.LocalizationService.Translate("Open the capture in Gallery when confirming."),
+        ToastButtonKind.Edit => Services.LocalizationService.Translate("Open the capture in the Annotations Editor when confirming."),
         _ => null
     };
 
@@ -1172,17 +1181,17 @@ public partial class SettingsWindow
 
     private static string FormatCornerMenuLabel(ToastCorner corner) => corner switch
     {
-        ToastCorner.TopLeft => Services.LocalizationService.Translate("Top Left"),
-        ToastCorner.TopRight => Services.LocalizationService.Translate("Top Right"),
-        ToastCorner.BottomLeft => Services.LocalizationService.Translate("Bottom Left"),
-        _ => Services.LocalizationService.Translate("Bottom Right")
+        ToastCorner.TopLeft => Services.LocalizationService.Translate("Left pair"),
+        ToastCorner.TopRight => Services.LocalizationService.Translate("Right pair"),
+        ToastCorner.BottomLeft => Services.LocalizationService.Translate("Lower left pair"),
+        _ => Services.LocalizationService.Translate("Lower right pair")
     };
 
     private static string ToastButtonIconId(ToastButtonKind button) => button switch
     {
         ToastButtonKind.Close => "close",
         ToastButtonKind.Pin => "pin",
-        ToastButtonKind.Save => "download",
+        ToastButtonKind.Save => "save",
         ToastButtonKind.Copy => "copy",
         ToastButtonKind.Share => "share",
         ToastButtonKind.Delete => "trash",

@@ -606,8 +606,7 @@ public partial class SettingsWindow
             {
                 if (GifEnableEditorCheck != null)
                     GifEnableEditorCheck.IsChecked = value;
-            },
-            value => ((App)Application.Current).SyncWidgetEnableEditorToggle());
+            });
 
         RefreshEditorPreviewState();
     }
