@@ -896,6 +896,7 @@ public sealed partial class AnnotationCanvas
         // Dragging the inline text box by its toolbar grip
         if (_textGripDragging && _inlineTextBox is not null)
         {
+            Cursor = CursorFactory.GrabbingCursor;
             int nx = e.X - _textGripDragOffset.X;
             int ny = e.Y - _textGripDragOffset.Y;
             _inlineTextOrigin = ScreenToImage(new Point(nx, ny));

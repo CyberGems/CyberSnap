@@ -195,30 +195,70 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Cursor over the capture/confirm dock: <see cref="Cursors.SizeAll"/> on drag surfaces
-    /// (Move button, empty chrome); <see cref="Cursors.Hand"/> on clickable controls including brand.
+    /// Tight click region around the logo icon and "CyberSnap" text label (+ 3px margin for accessibility)
+    /// that opens the Quick Start Guide.
+    /// </summary>
+    private bool IsPointInBrandClickArea(Point location)
+    {
+        if (_logoRect.IsEmpty)
+            return false;
+
+        // Bounding box of the visual brand logo icon + text label (approx 68px wide)
+        int brandWidth = Helpers.UiChrome.ScaleInt(68);
+        var contentRect = new Rectangle(
+            _logoRect.X - 3,
+            _logoRect.Y - 3,
+            brandWidth,
+            _logoRect.Height + 6);
+
+        return contentRect.Contains(location);
+    }
+
+    /// <summary>
+    /// Area of the toolbar reserved for dragging: the position move button OR the empty space
+    /// around the branding strip (excluding the clickable brand logo/text itself).
+    /// Gaps between tool buttons are NOT drag handles.
+    /// </summary>
+    private bool IsPointInToolbarDragArea(Point location)
+    {
+        int btn = GetToolbarButtonAt(location);
+        if (btn == PositionButtonIndex)
+            return true;
+
+        if (!_brandRect.IsEmpty && _brandRect.Contains(location) && !IsPointInBrandClickArea(location))
+            return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// Cursor over the capture/confirm dock: <see cref="CursorFactory.GrabCursor"/> on designated drag surfaces
+    /// (Move button, empty branding area); <see cref="Cursors.Hand"/> on clickable controls including brand;
+    /// <see cref="Cursors.Default"/> on all dead/background surfaces.
     /// </summary>
     private Cursor? TryGetToolbarHoverCursor(Point location)
     {
-        if (_menuActivatorRect.Contains(location))
-            return Cursors.Hand;
-
-        // Brand / logo: click opens the quick-start guide (not a drag handle).
-        if (_logoRect.Contains(location) || _brandRect.Contains(location))
-            return Cursors.Hand;
-
         bool overDock = _toolbarRect.Contains(location) || IsPointInToolbarChrome(location);
         if (!overDock)
             return null;
 
+        if (_menuActivatorRect.Contains(location))
+            return Cursors.Hand;
+
+        // Clickable branding (logo + text + 3px margin) -> Hand cursor for quick-start guide.
+        if (IsPointInBrandClickArea(location))
+            return Cursors.Hand;
+
+        // Dedicated drag zone (around branding or Move button) -> Grab cursor.
+        if (IsPointInToolbarDragArea(location))
+            return CursorFactory.GrabCursor;
+
         int btn = GetToolbarButtonAt(location);
-        if (btn == PositionButtonIndex)
-            return Cursors.SizeAll;
         if (btn >= 0)
             return Cursors.Hand;
 
-        // Padding / gaps between tools — drag the dock without hitting a control.
-        return Cursors.SizeAll;
+        // All other dead surfaces and gaps between tools on the dock -> Default arrow cursor.
+        return Cursors.Default;
     }
 
     private Rectangle PositionPopupFromAnchor(Rectangle anchor, int width, int height, int gap = -1)

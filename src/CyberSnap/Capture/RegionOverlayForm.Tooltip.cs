@@ -60,11 +60,11 @@ public sealed partial class RegionOverlayForm
             _toolbarToolTip ??= new WindowsToolTip();
             var brandText = LocalizationService.Translate("Quick Start guide")
                 + "\n" + LocalizationService.Translate("Click to open the capture guide");
-            var brandLocal = Rectangle.Union(
-                _logoRect.Width > 0 ? _logoRect : Rectangle.Empty,
-                _brandRect.Width > 0 ? _brandRect : Rectangle.Empty);
+            var brandLocal = !_logoRect.IsEmpty && !_brandRect.IsEmpty
+                ? Rectangle.Union(_logoRect, new Rectangle(_logoRect.X, _logoRect.Y, Math.Min(_brandRect.Width, Helpers.UiChrome.ScaleInt(85)), _logoRect.Height))
+                : (!_logoRect.IsEmpty ? _logoRect : _brandRect);
             if (brandLocal.IsEmpty)
-                brandLocal = _logoRect.Width > 0 ? _logoRect : _brandRect;
+                brandLocal = _logoRect;
             var brandAnchor = new Rectangle(
                 _virtualBounds.X + brandLocal.X,
                 _virtualBounds.Y + brandLocal.Y,
