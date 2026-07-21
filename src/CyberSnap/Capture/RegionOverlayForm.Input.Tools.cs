@@ -415,13 +415,15 @@ public sealed partial class RegionOverlayForm
         }
 
         bool hovBrand = IsPointInBrandClickArea(e.Location);
+        bool hovBrandDrag = !_brandRect.IsEmpty && _brandRect.Contains(e.Location) && !hovBrand;
         bool hovActivator = _menuActivatorRect.Contains(e.Location);
-        if (hovBrand != _hoveredBrand || hovActivator != _hoveredMenuActivator)
+        if (hovBrand != _hoveredBrand || hovBrandDrag != _hoveredBrandDragArea || hovActivator != _hoveredMenuActivator)
         {
             _hoveredBrand = hovBrand;
+            _hoveredBrandDragArea = hovBrandDrag;
             _hoveredMenuActivator = hovActivator;
             toolbarDirty = true;
-            // Reset tooltip so brand / ▼ can show their own hints after the delay.
+            // Reset tooltip so brand / drag / ▼ can show their own hints after the delay.
             HideToolbarTooltip();
             _tooltipDismissed = false;
             _hoverButtonStartTime = DateTime.UtcNow;
@@ -1247,6 +1249,7 @@ public sealed partial class RegionOverlayForm
             _eraserHoverIndex = -1;
             _hoveredButton = -1;
             _hoveredBrand = false;
+            _hoveredBrandDragArea = false;
             _hoveredMenuActivator = false;
             if (_hoveredTextBtn >= 0)
             {
