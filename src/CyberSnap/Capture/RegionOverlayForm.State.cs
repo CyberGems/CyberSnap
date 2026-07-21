@@ -1565,6 +1565,8 @@ public sealed partial class RegionOverlayForm
             menu.Font = UiChrome.ChromeFont(11.0f);
             _confirmContextMenu = menu;
             menu.Closed += (s, e) => {
+                _lastContextMenuClosedTime = DateTime.UtcNow;
+                _lastContextMenuBtnIndex = -99;
                 _confirmContextMenu = null;
             };
 

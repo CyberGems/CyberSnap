@@ -137,12 +137,28 @@ public sealed partial class RegionOverlayForm
             }
         }
 
+        bool recentlyClosedMenu = (DateTime.UtcNow - _lastContextMenuClosedTime).TotalMilliseconds < 250;
+        bool hadOpenPopup = _colorPickerOpen
+            || _fontPickerOpen
+            || _emojiPickerOpen
+            || _altCapturePopupOpen
+            || (_toolbarContextMenu != null && _toolbarContextMenu.Visible)
+            || (_confirmContextMenu != null && _confirmContextMenu.Visible);
+
+        // 1. Menu Activator (⋮ button): toggle open / close on second click
         if (_menuActivatorRect.Contains(e.Location))
         {
             HideToolbarTooltip();
+            if (recentlyClosedMenu && _lastContextMenuBtnIndex == -1)
+            {
+                // Closed by this click -> keep closed
+                return;
+            }
             ShowToolbarContextMenu(-1, e.Location);
             return;
         }
+
+        // 2. Interactive Pickers (Color, Font, Emoji) clicks inside their bounds
         if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
         {
             if (HandleColorPickerClick(e.Location))
@@ -188,12 +204,33 @@ public sealed partial class RegionOverlayForm
             InvalidateToolbarArea();
         }
 
+        // 3. Toolbar button clicks
         int btn = GetToolbarButtonAt(e.Location);
         if (btn >= 0)
         {
             if (btn == CloseButtonIndex) { Cancel(); return; }     // close (Cancel)
-            if (btn == StrokeWidthButtonIndex) { CycleStrokeWidth(); return; } // stroke width
-            if (btn == ColorButtonIndex) { ToggleColorPicker(); return; } // color dot
+            if (btn == StrokeWidthButtonIndex)
+            {
+                if (recentlyClosedMenu && _lastContextMenuBtnIndex == StrokeWidthButtonIndex)
+                    return;
+                CycleStrokeWidth();
+                return;
+            }
+            if (btn == ColorButtonIndex)
+            {
+                if (recentlyClosedMenu && _lastContextMenuBtnIndex == ColorButtonIndex)
+                    return;
+
+                if (_colorPickerOpen)
+                {
+                    _colorPickerOpen = false;
+                    RefreshToolbar();
+                    Invalidate();
+                    return;
+                }
+                ToggleColorPicker();
+                return;
+            }
             if (btn == PositionButtonIndex)
             {
                 _isDraggingToolbar = true;
@@ -238,34 +275,21 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        // Color picker popup: check if clicked a swatch
-        if (_colorPickerOpen)
+        // 4. Click outside any menu / popup:
+        // If a popup was open or a menu was just closed by this click, dismiss popups and RETURN
+        // without starting selection or capture!
+        if (hadOpenPopup || recentlyClosedMenu)
         {
-            if (HandleColorPickerClick(e.Location))
-                return;
             _colorPickerOpen = false;
-            Invalidate(InflateForRepaint(GetColorPickerBounds(), 12));
-        }
-
-        // Font picker popup
-        if (_fontPickerOpen)
-        {
-            if (HandleFontPickerClick(e.Location))
-                return;
             _fontPickerOpen = false;
-            HideFontSearchBox();
-            Invalidate(InflateForRepaint(GetFontPickerBounds(), 12));
-        }
-
-        // Emoji picker popup: check if clicked an emoji
-        if (_emojiPickerOpen)
-        {
-            if (HandleEmojiPickerClick(e.Location))
-                return;
-            // Clicked outside picker
             _emojiPickerOpen = false;
+            _altCapturePopupOpen = false;
+            HideFontSearchBox();
             HideEmojiSearchBox();
-            Invalidate(InflateForRepaint(GetEmojiPickerBounds(), 12));
+            HideToolbarTooltip();
+            RefreshToolbar();
+            Invalidate();
+            return;
         }
 
         // Emoji placing: click to stamp
