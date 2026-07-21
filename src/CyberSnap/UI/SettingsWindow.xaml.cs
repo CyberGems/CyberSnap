@@ -346,7 +346,6 @@ public partial class SettingsWindow : Window
                 UpdateSaveToFileState();
                 SettingsService.PublishAutoCopyState(_settingsService.Settings);
                 ((App)Application.Current).SyncWidgetAutoCopyToggle();
-                ((App)Application.Current).SyncWidgetEnableEditorToggle();
                 RefreshEditorPreviewState();
             });
     }

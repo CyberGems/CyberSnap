@@ -78,7 +78,7 @@ public sealed partial class RegionOverlayForm
 
     private void EnsureToolbarReady()
     {
-        if (IsDisposed || Disposing || !Visible || _isConfirmingSelection)
+        if (IsDisposed || Disposing || !Visible)
             return;
 
         if (_toolbarForm == null || _toolbarForm.IsDisposed)
@@ -389,14 +389,14 @@ public sealed partial class RegionOverlayForm
 
     internal void RefreshToolbar()
     {
-        if (_isConfirmingSelection)
-        {
-            HideToolbarImmediately();
-            return;
-        }
+        // Confirm mode now shows the annotation chrome on the same dock (stroke/color + flyout).
+        // Keep the toolbar visible and rebuild layout for the current phase.
         var oldUiBounds = _lastOverlayUiBounds;
         CalcToolbar();
-        PositionToolbarForm();
+        if (_toolbarForm is null || _toolbarForm.IsDisposed || !_toolbarForm.Visible)
+            EnsureToolbarReady();
+        else
+            PositionToolbarForm();
         MarkToolbarRenderDirty();
         _toolbarForm?.UpdateSurface();
         var newUiBounds = GetOverlayUiBounds();

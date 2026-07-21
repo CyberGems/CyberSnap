@@ -64,21 +64,8 @@ public sealed partial class RegionOverlayForm
         using (var path = WindowsDockRenderer.RoundedRect(r, cr))
         using (var brush = new SolidBrush(UiChrome.SurfaceTier1))
             g.FillPath(brush, path);
-        if (_flyoutTools.Length > 0)
-        {
-            RectangleF tier2Rect;
-            if (IsVerticalDock)
-            {
-                float dividerX = _toolbarRect.X + pad + buttonSize + buttonSpacing / 2f;
-                tier2Rect = new RectangleF(dividerX, r.Y, r.Right - dividerX, r.Height);
-            }
-            else
-            {
-                float dividerY = _toolbarRect.Y + pad + buttonSize + buttonSpacing / 2f;
-                tier2Rect = new RectangleF(r.X, dividerY, r.Width, r.Bottom - dividerY);
-            }
-            WindowsDockRenderer.PaintSurfaceBg(g, tier2Rect, UiChrome.SurfaceTier2, cr, IsVerticalDock);
-        }
+        // Capture phase is a single-row dock. Never paint the legacy tier-2 plate here —
+        // enabled annotation tools only appear after confirm (ShowAnnotationChrome).
 
         // Render sleek CyberGems premium accent border outline around the panel
         using (var path = WindowsDockRenderer.RoundedRect(r, cr))
@@ -203,15 +190,24 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            int tier1Width = GetToolbarPrimarySpan(_mainBarTools.Length + 4, 2, buttonSize, buttonSpacing, 0);
-            int tier2Width = GetToolbarPrimarySpan(_flyoutTools.Length, 2, buttonSize, buttonSpacing, 0);
-            bool canShowText = (tier2Width - tier1Width >= UiChrome.ScaleInt(80)) || (_mainBarTools.Length >= 6);
+            int tier1Width = ShowAnnotationChrome
+                ? GetToolbarPrimarySpan(_flyoutTools.Length + 4, GetAnnotationGroupSepFlyoutIndices().Count + 2, buttonSize, buttonSpacing, 0)
+                : GetToolbarPrimarySpan(_mainBarTools.Length + 2, 1, buttonSize, buttonSpacing, 0);
+            bool canShowText = ShowAnnotationChrome
+                || _mainBarTools.Length >= 6;
 
-            float availableBrandWidth = _toolbarButtons[0].X - _toolbarRect.X;
+            // Prefer the first laid-out tool (capture bar or annotation-only confirm dock).
+            // Empty capture slots in confirm mode must not be used — they sit at (0,0) and
+            // push the logo far away from the bar.
+            int firstToolX = GetFirstVisibleToolbarButtonX();
+            if (firstToolX < 0)
+                firstToolX = _toolbarRect.X + pad + UiChrome.ScaleInt(28);
+
+            float availableBrandWidth = Math.Max(0, firstToolX - _toolbarRect.X);
             int tempLogoSz = UiChrome.ScaleInt(10);
             float tempLx = _toolbarRect.X + pad + UiChrome.ScaleInt(6);
             float tempTextX = tempLx + tempLogoSz + UiChrome.ScaleInt(6);
-            float tempTextW = _toolbarButtons[0].X - tempTextX - UiChrome.ScaleInt(6);
+            float tempTextW = firstToolX - tempTextX - UiChrome.ScaleInt(6);
             
             bool drawText = canShowText && (tempTextW >= UiChrome.ScaleInt(60));
 
@@ -227,7 +223,13 @@ public sealed partial class RegionOverlayForm
             else
             {
                 logoSz = UiChrome.ScaleInt(14); // Enlarged and centered when text is hidden
-                lx = _toolbarRect.X + (availableBrandWidth - logoSz) / 2f;
+                // Keep the logo snug in the brand strip, just left of the first tool.
+                float brandPad = UiChrome.ScaleFloat(6f);
+                lx = _toolbarRect.X + Math.Max(brandPad, (availableBrandWidth - logoSz) / 2f);
+                // Never let the logo drift more than a few px away from the first tool.
+                float maxLx = firstToolX - logoSz - brandPad;
+                if (maxLx >= _toolbarRect.X + brandPad)
+                    lx = Math.Min(lx, maxLx);
                 ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
             }
             
@@ -270,26 +272,13 @@ public sealed partial class RegionOverlayForm
 
         g.TextRenderingHint = oldHint;
 
-        // 1. Divider line splitting Tier 1 from Tier 2
-        if (_flyoutTools.Length > 0)
-        {
-            // The divider runs perpendicular to the docked edge, so its ends meet a straight border
-            // (not a rounded corner) — a small inset lets it reach nearly to the extremes.
-            int dividerInset = UiChrome.ScaleInt(4);
-            if (IsVerticalDock)
-            {
-                int dividerX = _toolbarRect.X + pad + buttonSize + buttonSpacing / 2;
-                WindowsDockRenderer.PaintDivider(g, new Point(dividerX, r.Y + dividerInset), new Point(dividerX, r.Bottom - dividerInset));
-            }
-            else
-            {
-                int dividerY = _toolbarRect.Y + pad + buttonSize + buttonSpacing / 2;
-                WindowsDockRenderer.PaintDivider(g, new Point(r.X + dividerInset, dividerY), new Point(r.Right - dividerInset, dividerY));
-            }
-        }
+        // 1. Divider line splitting Tier 1 from Tier 2 — removed: capture is single-row;
+        // confirm is a single annotation dock (no second plate).
 
         // 2. Tier 1 Divider: after last visible capture/recording tool before the
         // utility section (OCR, Scan, Picker, Ruler), plus always after last capture.
+        if (!ShowAnnotationChrome)
+        {
         var tier1Group = new[] { "rect", "center", "scroll", "recordGif", "record" };
         var tier1Seps = new List<int>();
         int lastInGroup = -1;
@@ -308,6 +297,7 @@ public sealed partial class RegionOverlayForm
         foreach (int idx in tier1Seps)
         {
             if (idx < 0 || idx >= _toolbarButtons.Length) continue;
+            if (_toolbarButtons[idx].Width <= 0) continue;
             if (IsVerticalDock)
             {
                 int sy = _toolbarButtons[idx].Bottom + (buttonSpacing + GroupGap) / 2;
@@ -323,27 +313,38 @@ public sealed partial class RegionOverlayForm
                 WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
             }
         }
+        }
 
         // 2b. Divider before Move (position) so chrome controls (Move + Close) are grouped
-        // and Move is not visually attached to the color swatch.
-        if (ColorButtonIndex < _toolbarButtons.Length && PositionButtonIndex < _toolbarButtons.Length)
+        // and Move is not visually attached to the color swatch (or capture tools when color is hidden).
+        if (PositionButtonIndex < _toolbarButtons.Length)
         {
-            var colorBtn = _toolbarButtons[ColorButtonIndex];
             var posBtn = _toolbarButtons[PositionButtonIndex];
-            if (IsVerticalDock)
+            if (posBtn.Width > 0 && posBtn.Height > 0)
             {
-                int sy = (colorBtn.Bottom + posBtn.Y) / 2;
-                WindowsDockRenderer.PaintDivider(g, new Point(posBtn.X + 4, sy), new Point(posBtn.Right - 4, sy));
-            }
-            else
-            {
-                int sx = (colorBtn.Right + posBtn.X) / 2;
-                WindowsDockRenderer.PaintDivider(g, new Point(sx, posBtn.Y + 4), new Point(sx, posBtn.Bottom - 4));
+                var anchorBtn = ShowAnnotationChrome && ColorButtonIndex < _toolbarButtons.Length
+                    && _toolbarButtons[ColorButtonIndex].Width > 0
+                    ? _toolbarButtons[ColorButtonIndex]
+                    : (_mainBarTools.Length > 0 ? _toolbarButtons[_mainBarTools.Length - 1] : Rectangle.Empty);
+                if (anchorBtn.Width > 0)
+                {
+                    if (IsVerticalDock)
+                    {
+                        int sy = (anchorBtn.Bottom + posBtn.Y) / 2;
+                        WindowsDockRenderer.PaintDivider(g, new Point(posBtn.X + 4, sy), new Point(posBtn.Right - 4, sy));
+                    }
+                    else
+                    {
+                        int sx = (anchorBtn.Right + posBtn.X) / 2;
+                        WindowsDockRenderer.PaintDivider(g, new Point(sx, posBtn.Y + 4), new Point(sx, posBtn.Bottom - 4));
+                    }
+                }
             }
         }
 
-        // 3. Tier 2 Dividers: after the last visible tool in each group.
-        int drawingStartIdx = _mainBarTools.Length + 4;
+        // 3. Annotation group dividers (confirm-phase single dock, or legacy tier-2).
+        if (ShowAnnotationChrome)
+        {
         // Group 1: select/eraser/highlight — separator after last visible of the three.
         // Group 2: rectShape.
         var tier2Groups = new[] {
@@ -362,9 +363,13 @@ public sealed partial class RegionOverlayForm
             if (lastIdx >= 0)
                 tier2Seps.Add(_mainBarTools.Length + 4 + lastIdx);
         }
+        // Also separate annotation tools from stroke/color.
+        if (_flyoutTools.Length > 0)
+            tier2Seps.Add(_mainBarTools.Length + 4 + _flyoutTools.Length - 1);
         foreach (int idx in tier2Seps)
         {
             if (idx < 0 || idx >= _toolbarButtons.Length) continue;
+            if (_toolbarButtons[idx].Width <= 0) continue;
             if (IsVerticalDock)
             {
                 int sy = _toolbarButtons[idx].Bottom + (buttonSpacing + GroupGap) / 2;
@@ -380,6 +385,7 @@ public sealed partial class RegionOverlayForm
                 WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
             }
         }
+        } // ShowAnnotationChrome tier-2 dividers
 
         // 3b. Subtle chrome well behind Move + Close so they read as system controls,
         // not as another pair of tools next to color/stroke.
@@ -394,10 +400,14 @@ public sealed partial class RegionOverlayForm
                 g.FillPath(brush, path);
         }
 
+        int drawingStartIdx = _mainBarTools.Length + 4;
+
         // 4. Draw all buttons
         for (int i = 0; i < BtnCount; i++)
         {
             var btn = _toolbarButtons[i];
+            if (btn.Width <= 0 || btn.Height <= 0)
+                continue;
             bool active = _toolbarModes[i] is { } && string.Equals(_toolbarToolIds[i], _activeToolId, StringComparison.OrdinalIgnoreCase);
             bool hover = _hoveredButton == i;
             bool isTier2 = i >= drawingStartIdx;
@@ -496,7 +506,7 @@ public sealed partial class RegionOverlayForm
                 PaintCaptureHoldHint(g, btn, tierAccent);
         }
 
-        // Draw elegant mini menu activator (▼). Soft accent pulse while the quick-start guide is open.
+        // Draw menu activator (⋮). Soft accent pulse while the quick-start guide is open.
         // Pulse phase 0→1→0 over ~1.1s; driven by StartMenuActivatorPulse → UpdateToolbarSurfaceOnly.
         float guidePulse = 0f;
         if (_highlightMenuActivatorForGuide)
@@ -528,37 +538,34 @@ public sealed partial class RegionOverlayForm
             }
         }
 
-        int triW = UiChrome.ScaleInt(_highlightMenuActivatorForGuide ? 7 : 6);
-        int triH = UiChrome.ScaleInt(_highlightMenuActivatorForGuide ? 5 : 4);
-        float tcx = _menuActivatorRect.X + _menuActivatorRect.Width / 2f;
-        float tcy = _menuActivatorRect.Y + _menuActivatorRect.Height / 2f;
-
-        PointF[] points = new PointF[]
-        {
-            new PointF(tcx - triW / 2f, tcy - triH / 2f),
-            new PointF(tcx + triW / 2f, tcy - triH / 2f),
-            new PointF(tcx, tcy + triH / 2f)
-        };
-
-        Color arrowColor;
+        Color dotsColor;
         if (_highlightMenuActivatorForGuide)
         {
-            // Fully solid accent at peak; still clearly accent when dim.
             int a = (int)(200 + 55 * guidePulse);
-            arrowColor = Color.FromArgb(a, UiChrome.AccentColor);
+            dotsColor = Color.FromArgb(a, UiChrome.AccentColor);
         }
         else if (_hoveredMenuActivator)
         {
-            arrowColor = UiChrome.AccentColor;
+            dotsColor = UiChrome.AccentColor;
         }
         else
         {
-            arrowColor = Color.FromArgb((int)((UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f * 255), UiChrome.SurfaceTextPrimary);
+            dotsColor = Color.FromArgb((int)((UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f * 255), UiChrome.SurfaceTextPrimary);
         }
 
-        using (var brush = new SolidBrush(arrowColor))
+        // Vertical kebab — compact glyph centered in a taller hit target (hover/click area
+        // stays button-height; dots stay the classic tight ⋮ spacing).
+        float tcx = _menuActivatorRect.X + _menuActivatorRect.Width / 2f;
+        float tcy = _menuActivatorRect.Y + _menuActivatorRect.Height / 2f;
+        float dotR = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 1.7f : 1.45f);
+        float gap = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 4.4f : 3.9f);
+        using (var brush = new SolidBrush(dotsColor))
         {
-            g.FillPolygon(brush, points);
+            for (int i = -1; i <= 1; i++)
+            {
+                float cy = tcy + i * gap;
+                g.FillEllipse(brush, tcx - dotR, cy - dotR, dotR * 2f, dotR * 2f);
+            }
         }
 
         g.SmoothingMode = SmoothingMode.Default;

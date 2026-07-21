@@ -142,10 +142,13 @@ public partial class App
                 bool recMic = !isGifFormat && s.RecordMicrophone;
                 bool recDesktop = !isGifFormat && s.RecordDesktopAudio;
                 Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
-                bool openTrimmer = isGifFormat ? s.OpenGifTrimmerAfterCapture : s.OpenVideoTrimmerAfterCapture;
+                bool openTrimmerAtLaunch = isGifFormat ? s.OpenGifTrimmerAfterCapture : s.OpenVideoTrimmerAfterCapture;
+                // Always wire the GIF early-open callback; it re-checks settings so a mid-session
+                // bar toggle still works.
                 Action<string>? onGifEncodedForTrimmer = null;
-                if (openTrimmer && fmt == RecordingFormat.GIF)
+                if (fmt == RecordingFormat.GIF)
                 {
+                    // Form only invokes this when the live Send-to-Trimmer toggle is on.
                     onGifEncodedForTrimmer = path =>
                     {
                         try
@@ -171,7 +174,7 @@ public partial class App
                 var form = new RecordingForm(selectionScreenshot, bounds, fps, savePath, fmt, maxH,
                     showCursor, recMic, s.MicrophoneDeviceId, recDesktop, s.DesktopAudioDeviceId,
                     _settingsService!.Settings.ShowCaptureMagnifier,
-                    openTrimmer,
+                    openTrimmerAtLaunch,
                     onGifEncodedForTrimmer);
 
                 form.Shown += (_, _) =>
@@ -179,11 +182,13 @@ public partial class App
                     Dispatcher.BeginInvoke(() => _trayIcon?.UpdateRecordingState(true));
                 };
 
-                form.RecordingCompleted += (path, firstFrame) =>
+                form.RecordingCompleted += (path, firstFrame, openTrimmer) =>
                 {
                     Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
                     {
                         bool isGif = string.Equals(Path.GetExtension(path), ".gif", StringComparison.OrdinalIgnoreCase);
+                        // openTrimmer comes from the recording-bar toggle (live), not a stale snapshot.
+
                         if (!(openTrimmer && isGif))
                             _trayIcon?.UpdateRecordingState(false);
 
@@ -224,23 +229,27 @@ public partial class App
                             {
                                 try
                                 {
+                                    // Trimmer takes ownership of firstFrame (disposes poster on load).
                                     OpenVideoTrimmerAfterRecording(
                                         path,
                                         firstFrame,
                                         isGif: false,
                                         ephemeral: !persistRecording,
-                                        onFailure: () => ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false, ephemeral: !persistRecording));
+                                        onFailure: () => ShowRecordingToast(path, copiedToClipboard, isGif: false, ephemeral: !persistRecording));
+                                    firstFrame = null;
                                 }
                                 catch (Exception ex)
                                 {
                                     AppDiagnostics.LogError("capture.auto-open-trimmer", ex);
-                                    ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif: false, ephemeral: !persistRecording);
+                                    firstFrame?.Dispose();
+                                    ShowRecordingToast(path, copiedToClipboard, isGif: false, ephemeral: !persistRecording);
                                 }
                             }
                         }
                         else
                         {
-                            ShowRecordingToast(path, firstFrame, copiedToClipboard, isGif, ephemeral: !persistRecording);
+                            firstFrame?.Dispose();
+                            ShowRecordingToast(path, copiedToClipboard, isGif, ephemeral: !persistRecording);
                         }
 
                         ScheduleIdleMemoryTrim();
@@ -302,9 +311,9 @@ public partial class App
     /// true = copied, false = copy attempted and failed, null = auto-copy skipped for recordings.
     /// </param>
     /// <param name="ephemeral">When true, recording is temp (SaveToFile off); toast deletes it on dismiss.</param>
-    private void ShowRecordingToast(string path, Bitmap? firstFrame, bool? copiedToClipboard, bool isGif, bool ephemeral = false)
+    private void ShowRecordingToast(string path, bool? copiedToClipboard, bool isGif, bool ephemeral = false)
     {
-        string copyStatus = copiedToClipboard switch
+        string body = copiedToClipboard switch
         {
             true => LocalizationService.Translate("File copied to clipboard"),
             false => ephemeral
@@ -315,35 +324,15 @@ public partial class App
                 : LocalizationService.Translate("Saved")
         };
 
-        if (firstFrame != null)
+        string title = isGif
+            ? LocalizationService.Translate("GIF recorded")
+            : LocalizationService.Translate("Video recorded");
+
+        ToastWindow.Show(ToastSpec.Standard(title, body, path) with
         {
-            ToastWindow.Show(ToastSpec.ImagePreview(
-                firstFrame,
-                isGif ? LocalizationService.Translate("GIF recorded") : LocalizationService.Translate("Video recorded"),
-                copyStatus,
-                path,
-                false,
-                transparentShell: false,
-                showOverlayButtons: true,
-                hideEditButton: false,
-                deleteFileOnDismiss: ephemeral));
-        }
-        else
-        {
-            var fi = new FileInfo(path);
-            string label = fi.Extension.TrimStart('.').ToUpper();
-            string size = fi.Length > 1024 * 1024
-                ? $"{fi.Length / 1024.0 / 1024.0:F1} MB"
-                : $"{fi.Length / 1024:N0} KB";
-            ToastWindow.Show(new ToastSpec
-            {
-                Title = $"{label} recorded",
-                Body = $"{fi.Name} · {size} · {copyStatus}",
-                FilePath = path,
-                IsSystemMessage = true,
-                DeleteFileOnDismiss = ephemeral
-            });
-        }
+            PlayCaptureSound = true,
+            DeleteFileOnDismiss = ephemeral
+        });
     }
 
     private void LaunchScrollingCapture(Rectangle? preSelectedRegion = null)
@@ -594,7 +583,7 @@ public partial class App
                     StrokeWidth = _settingsService.Settings.StrokeWidth,
                     CaptureDockSide = _settingsService.Settings.CaptureDockSide,
                     UiScale = _settingsService.Settings.UiScale,
-                    ConfirmRegionBeforeCapture = _settingsService.Settings.ConfirmRegionBeforeCapture
+                    ConfirmRegionBeforeCapture = true // Permanent confirm for area capture redesign
                 };
                 overlay.SetEnabledTools(_settingsService.Settings.EnabledTools);
                 overlay.EnabledToolsChanged += enabledTools =>
@@ -650,13 +639,14 @@ public partial class App
                     if (overlay.ActiveMode == CaptureMode.Rectangle)
                         LastCaptureArea.PersistFromOverlaySelection(_settingsService!.Settings, _settingsService, sel, captureBounds);
 
+                    var commitAction = overlay.PendingCommitAction;
                     overlay.Hide();
                     UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(sel.Right, sel.Bottom));
                     using var annotated = overlay.RenderAnnotatedBitmap();
                     var cropped = ScreenCapture.CropRegion(annotated, sel);
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
-                    HandleCaptureResult(cropped);
+                    HandleCaptureResult(cropped, commitAction);
                 };
 
 

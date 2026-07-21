@@ -136,8 +136,15 @@ public static class WindowsDockRenderer
             // Stronger fill + ring so the active tool is obvious on bright monitors.
             using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 52 : 40, accentColor)))
                 g.FillPath(brush, path);
+            // Inset the ring so the full stroke stays inside the button bounds (GDI+ pens are
+            // centered on the path; without this, clip/AA often eats the bottom edge).
+            const float ringInset = 0.85f;
+            var ringRect = rect;
+            ringRect.Inflate(-ringInset, -ringInset);
+            float ringRadius = Math.Max(0.5f, radius - ringInset);
+            using var ringPath = RoundedRect(ringRect, ringRadius);
             using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 180 : 140, accentColor), 1.35f))
-                g.DrawPath(pen, path);
+                g.DrawPath(pen, ringPath);
         }
         else // Hovered
         {

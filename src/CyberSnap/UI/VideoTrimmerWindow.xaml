@@ -623,6 +623,21 @@
                                 <Path Data="M 2,4 L 8,4 L 10,6 L 16,6 L 16,14 L 2,14 Z" Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="1.5" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
                             </MenuItem.Icon>
                         </MenuItem>
+                        <MenuItem x:Name="MenuCopyFile"
+                                  Style="{StaticResource TrimmerMenuItemStyle}"
+                                  Click="MenuCopyFile_Click">
+                            <MenuItem.Icon>
+                                <Path Data="M 6,2 L 12,2 L 15,5 L 15,14 L 6,14 Z M 3,6 L 3,17 L 11,17" Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="1.5" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem x:Name="MenuOpenInGallery"
+                                  Style="{StaticResource TrimmerMenuItemStyle}"
+                                  Click="MenuOpenInGallery_Click">
+                            <MenuItem.Icon>
+                                <Path Data="M 2,4 L 18,4 L 18,16 L 2,16 Z M 2,12 L 7,8 L 10,11 L 13,9 L 18,13" Stroke="{DynamicResource ThemeTextPrimaryBrush}" StrokeThickness="1.5" Fill="Transparent" Width="14" Height="14" Stretch="Uniform"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <Separator Background="{DynamicResource ThemeSeparatorBrush}"/>
                         <MenuItem x:Name="MenuTrim"
                                   Style="{StaticResource TrimmerMenuItemStyle}"
                                   Click="MenuTrim_Click">
@@ -1022,6 +1037,15 @@
                                 FontWeight="Bold"
                                 IsEnabled="False"/>
                     </Border>
+
+                    <Button x:Name="CopyFileBtn"
+                            Content="Copy"
+                            Padding="16,8"
+                            Margin="0,0,10,0"
+                            Click="CopyFileBtn_Click"
+                            ToolTip="Copy the media file to the clipboard"
+                            Style="{StaticResource TrimmerFlatButtonStyle}"
+                            FontWeight="SemiBold"/>
 
                     <Button x:Name="SaveAsNewBtn"
                             Content="Save As New"

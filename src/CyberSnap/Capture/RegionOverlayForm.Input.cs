@@ -69,56 +69,71 @@ public sealed partial class RegionOverlayForm
         }
         if (e.Button != MouseButtons.Left) return;
 
-        // Region confirmation mode: handles and buttons take priority
+        // Confirm mode: toolbar / pickers stay interactive (annotation chrome is visible).
+        // Handles and action pills take priority over drawing; interior clicks with an
+        // annotation tool draw instead of dragging the crop.
         if (_isConfirmingSelection)
         {
-            int ch = HitTestConfirmHandle(e.Location);
-            if (ch >= 0)
+            if (_menuActivatorRect.Contains(e.Location)
+                || _logoRect.Contains(e.Location)
+                || _brandRect.Contains(e.Location)
+                || GetToolbarButtonAt(e.Location) >= 0
+                || _toolbarRect.Contains(e.Location)
+                || (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
+                || (_fontPickerOpen && _fontPickerRect.Contains(e.Location))
+                || (_emojiPickerOpen && _emojiPickerRect.Contains(e.Location)))
             {
-                _confirmHandleDragIndex = ch;
-                _isConfirmDragging = false;
-                _confirmDragStart = e.Location;
-                _confirmDragStartRect = _confirmRect;
-                return;
+                // Fall through to the normal toolbar / picker handlers below.
             }
-            int confirmBtnHit = HitTestConfirmButton(e.Location);
-            if (confirmBtnHit == 0)
+            else
             {
-                StartConfirmPress(0); // squash animation, then CommitConfirmedSelection
-                return;
-            }
-            if (confirmBtnHit == 1)
-            {
-                StartConfirmPress(1); // squash animation, then ExitConfirmMode
-                return;
-            }
-            if (confirmBtnHit == 2)
-            {
-                StartConfirmPress(2); // squash animation, then ConfirmAndCancelCapture
-                return;
-            }
-            if (_confirmRect.Contains(e.Location))
-            {
-                // Double-click inside the locked region commits immediately (Snipping Tool style).
-                if (e.Clicks >= 2)
+                int ch = HitTestConfirmHandle(e.Location);
+                if (ch >= 0)
                 {
+                    _confirmHandleDragIndex = ch;
                     _isConfirmDragging = false;
-                    _confirmHandleDragIndex = -1;
-                    StartConfirmPress(0);
+                    _confirmDragStart = e.Location;
+                    _confirmDragStartRect = _confirmRect;
                     return;
                 }
-
-                // Start dragging the confirmed region
-                _isConfirmDragging = true;
-                _confirmHandleDragIndex = -1;
-                _confirmDragStart = e.Location;
-                _confirmDragOffset = new Point(e.Location.X - _confirmRect.X, e.Location.Y - _confirmRect.Y);
-                _confirmDragStartRect = _confirmRect;
-                return;
+                int confirmBtnHit = HitTestConfirmButton(e.Location);
+                if (confirmBtnHit >= 0)
+                {
+                    StartConfirmPress(confirmBtnHit);
+                    return;
+                }
+                if (_confirmRect.Contains(e.Location))
+                {
+                    // Annotation / drawing tools: treat the locked region like a canvas.
+                    if (ToolDef.IsAnnotationTool(_mode))
+                    {
+                        // Fall through to annotation handlers below (do not drag the crop).
+                    }
+                    else if (e.Clicks >= 2)
+                    {
+                        // Double-click with a capture tool commits the primary destination.
+                        _isConfirmDragging = false;
+                        _confirmHandleDragIndex = -1;
+                        CommitPrimaryConfirmAction();
+                        return;
+                    }
+                    else
+                    {
+                        // Capture tool (or no tool): drag to reposition the crop.
+                        _isConfirmDragging = true;
+                        _confirmHandleDragIndex = -1;
+                        _confirmDragStart = e.Location;
+                        _confirmDragOffset = new Point(e.Location.X - _confirmRect.X, e.Location.Y - _confirmRect.Y);
+                        _confirmDragStartRect = _confirmRect;
+                        return;
+                    }
+                }
+                else
+                {
+                    // Left-click outside the confirm UI: ignore (Esc / right-click still cancel).
+                    return;
+                }
             }
-            // Left-click outside the confirm UI: ignore it, so a stray click never captures
-            // and the pending selection is kept. Esc and right-click still cancel/exit.
-            return;
         }
 
         if (_menuActivatorRect.Contains(e.Location))

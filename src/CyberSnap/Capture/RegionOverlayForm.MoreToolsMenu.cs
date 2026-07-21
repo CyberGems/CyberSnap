@@ -230,10 +230,7 @@ public sealed partial class RegionOverlayForm
             }
             else
             {
-                var hint = isSpanish
-                    ? "Clic en el logo para ver consejos"
-                    : "Click the logo for tips";
-                var headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}  •  {hint}";
+                var headerText = $"CyberSnap  {Services.UpdateService.GetCurrentVersionLabel()}";
 
                 var headerLabel = new ToolStripLabel(headerText)
                 {
@@ -246,8 +243,6 @@ public sealed partial class RegionOverlayForm
                 menu.Items.Add(new ToolStripSeparator());
             }
         }
-
-        // 1. Tip item removed — hint is now part of the header line
 
         // 2. Hide option (only if hideable button with tool clicked)
         if (tool != null)
@@ -274,19 +269,24 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(new ToolStripSeparator());
         }
 
-        // Show annotation bar checkable toggle — always shown.
-        var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
-        var showBarText = isSpanish ? "Mostrar barra de anotaciones" : "Show annotation bar";
-        var showBarItem = WindowsMenuRenderer.Item(showBarText, iconId: annotationToolsCount > 0 ? "check" : null, iconSize: 24);
-        showBarItem.Click += (s, e) => {
-            bool wasVisible = annotationToolsCount > 0;
-            if (wasVisible)
-                HideAllAnnotationTools();
-            else
-                ShowAllAnnotationTools();
-            _toolbarContextMenu?.Close();
-        };
-        menu.Items.Add(showBarItem);
+        // Bulk show/hide annotation tools — only while confirming (capture has no annot dock).
+        if (_isConfirmingSelection)
+        {
+            var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
+            bool toolsVisible = annotationToolsCount > 0;
+            var showAnnotItem = WindowsMenuRenderer.Item(
+                "Show annotation tools",
+                iconId: toolsVisible ? "check" : null,
+                iconSize: 24);
+            showAnnotItem.Click += (s, e) => {
+                if (toolsVisible)
+                    HideAllAnnotationTools();
+                else
+                    ShowAllAnnotationTools();
+                _toolbarContextMenu?.Close();
+            };
+            menu.Items.Add(showAnnotItem);
+        }
 
         // 3. Show Hidden — rendered as a flat section, NOT a nested submenu.
         // single window that spans every monitor, so on a multi-monitor setup with mixed DPI the
@@ -294,10 +294,11 @@ public sealed partial class RegionOverlayForm
         // its first hover (per-monitor-DPI support for ToolStrip is known to be unreliable). Listing
         // the hidden tools inline sidesteps that entire class of bug.
 
-        // When the entire annotation bar is toggled off, don't flood the menu with every
-        // individual annotation tool — the "Show annotation bar" toggle is enough to
-        // restore them all. Capture tools hidden one-by-one still appear here.
-        if (annotationToolsCount == 0)
+        // When annotation tools are bulk-hidden, don't flood the menu with every
+        // individual annotation tool — the "Show annotation tools" toggle restores them.
+        // Capture tools hidden one-by-one still appear here.
+        var annotationToolsEnabled = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
+        if (annotationToolsEnabled == 0)
             hiddenTools = hiddenTools.Where(t => t.Group != 1).ToList();
 
         if (hiddenTools.Count > 0)
@@ -324,7 +325,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // Confirm before exit toggle
-        menu.Items.Add(new ToolStripSeparator());
+        AddMenuSeparatorIfNeeded(menu);
         var confirmExitEnabled = settings.ConfirmBeforeExit;
         var confirmExitText = isSpanish ? "Confirmar antes de salir" : "Confirm before exit";
         var confirmExitItem = WindowsMenuRenderer.Item(confirmExitText, iconId: confirmExitEnabled ? "check" : null, iconSize: 24);
@@ -340,7 +341,7 @@ public sealed partial class RegionOverlayForm
         menu.Items.Add(confirmExitItem);
 
         // Help banners toggle
-        menu.Items.Add(new ToolStripSeparator());
+        AddMenuSeparatorIfNeeded(menu);
         var bannersEnabled = settings.ShowToolBanners;
         var bannersText = isSpanish ? "Mostrar banners de ayuda" : "Show help banners";
         var bannersItem = WindowsMenuRenderer.Item(bannersText, iconId: bannersEnabled ? "check" : null, iconSize: 24);
@@ -388,13 +389,19 @@ public sealed partial class RegionOverlayForm
         menu.Show(screenPoint);
     }
 
+    private static void AddMenuSeparatorIfNeeded(ContextMenuStrip menu)
+    {
+        if (menu.Items.Count == 0) return;
+        if (menu.Items[menu.Items.Count - 1] is ToolStripSeparator) return;
+        menu.Items.Add(new ToolStripSeparator());
+    }
+
     private void ShowAllTools()
     {
         var enabled = ToolDef.AllTools.Select(t => t.Id).ToList();
         EnabledToolsChanged?.Invoke(enabled);
         SetEnabledTools(enabled);
-        CalcToolbar();
-        InvalidateToolbarArea();
+        RefreshToolbar();
     }
 
     private void AddRestoreHiddenToolsItem(ContextMenuStrip menu, bool isSpanish, int hiddenCount)
@@ -429,8 +436,7 @@ public sealed partial class RegionOverlayForm
         }
         EnabledToolsChanged?.Invoke(enabled);
         SetEnabledTools(enabled);
-        CalcToolbar();
-        InvalidateToolbarArea();
+        RefreshToolbar();
     }
 
     private void ShowAllAnnotationTools()
@@ -458,8 +464,7 @@ public sealed partial class RegionOverlayForm
         }
         EnabledToolsChanged?.Invoke(enabled);
         SetEnabledTools(enabled);
-        CalcToolbar();
-        InvalidateToolbarArea();
+        RefreshToolbar();
     }
 
     private void HideTool(string toolId)
@@ -472,8 +477,7 @@ public sealed partial class RegionOverlayForm
             enabled.Remove(toolId);
             EnabledToolsChanged?.Invoke(enabled);
             SetEnabledTools(enabled);
-            CalcToolbar();
-            InvalidateToolbarArea();
+            RefreshToolbar();
 
             var tool = ToolDef.AllTools.FirstOrDefault(t => t.Id == toolId);
             var name = tool != null
@@ -497,8 +501,7 @@ public sealed partial class RegionOverlayForm
             enabled.Add(toolId);
             EnabledToolsChanged?.Invoke(enabled);
             SetEnabledTools(enabled);
-            CalcToolbar();
-            InvalidateToolbarArea();
+            RefreshToolbar();
         }
     }
 }

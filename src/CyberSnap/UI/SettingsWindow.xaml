@@ -749,6 +749,23 @@
             </Setter>
         </Style>
 
+        <Style x:Key="HistoryActionsMenuSeparator" TargetType="Separator">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Background" Value="{DynamicResource ThemeSeparatorBrush}"/>
+            <Setter Property="Margin" Value="8,4"/>
+            <Setter Property="Height" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Height="{TemplateBinding Height}"
+                                Margin="{TemplateBinding Margin}"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="ProviderIconFrame" TargetType="Border">
             <Setter Property="Width" Value="24"/>
             <Setter Property="Height" Value="24"/>
@@ -1446,11 +1463,14 @@
                                     <TextBlock Text="&#xE7B3;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Show cursor in captures and recordings" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Include the pointer in saved media. Scrolling captures never include the cursor." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Show cursor in captures and recordings" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Show cursor in captures and recordings"/>
+                                    <TextBlock Text="Include the pointer in image captures, video, and GIF. Scrolling captures never include the cursor. Same master control as the floating widget." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Include the pointer in image captures, video, and GIF. Scrolling captures never include the cursor. Same master control as the floating widget."/>
                                 </StackPanel>
                                 <CheckBox x:Name="ShowCursorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Include the pointer in saved media"
+                                          ToolTip="Include the pointer in image captures, video, and GIF"
+                                          Services:LocalizationService.SourceToolTip="Include the pointer in image captures, video, and GIF"
                                           AutomationProperties.Name="Show cursor in captures and recordings"
                                           Checked="ShowCursorCheck_Changed" Unchecked="ShowCursorCheck_Changed"/>
                             </Grid>
@@ -1515,8 +1535,9 @@
                                           AutomationProperties.Name="Show selection size"
                                           Checked="ShowSelectionSizeCheck_Changed" Unchecked="ShowSelectionSizeCheck_Changed"/>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
+                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"
+                                    Visibility="Collapsed"/>
+                            <Grid Style="{StaticResource SettingRow}" Visibility="Collapsed">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
@@ -3034,26 +3055,29 @@
                             </Grid>
                             <Border x:Name="WidgetAlwaysOnTopSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
 
-                            <!-- Enable Editor CheckBox (mirrors the widget's own "Enable editor" toggle) -->
-                            <Grid x:Name="WidgetEnableEditorRow" Style="{StaticResource SettingRow}">
+                            <!-- Capture cursor (mirrors the widget toggle) -->
+                            <Grid x:Name="WidgetCaptureCursorRow" Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE962;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Send to Editor" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Send image captures to the Annotation Editor and video/GIF to the Trimmer" Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Capture cursor" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Capture cursor"/>
+                                    <TextBlock Text="Include the mouse pointer in image captures, video, and GIF. Same control as on the floating widget." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Include the mouse pointer in image captures, video, and GIF. Same control as on the floating widget."/>
                                 </StackPanel>
-                                <CheckBox x:Name="WidgetEnableEditorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Send to Editor"
-                                          ToolTip="Send image captures to the Annotation Editor and video/GIF to the Trimmer"
-                                          Checked="WidgetEnableEditorCheck_Changed" Unchecked="WidgetEnableEditorCheck_Changed"/>
+                                <CheckBox x:Name="WidgetCaptureCursorCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                          AutomationProperties.Name="Capture cursor"
+                                          ToolTip="Include the mouse pointer in image captures, video, and GIF. Same control as on the floating widget."
+                                          Services:LocalizationService.SourceToolTip="Include the mouse pointer in image captures, video, and GIF. Same control as on the floating widget."
+                                          Checked="WidgetCaptureCursorCheck_Changed" Unchecked="WidgetCaptureCursorCheck_Changed"/>
                             </Grid>
-                            <Border x:Name="WidgetEnableEditorSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                            <Border x:Name="WidgetCaptureCursorSeparator" Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
 
                             <!-- Widget Dock Edge ComboBox -->
                             <Grid x:Name="WidgetDockEdgeRow" Style="{StaticResource SettingRow}">
@@ -3196,12 +3220,12 @@
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Services:LocalizationService.SourceText="System alerts" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Services:LocalizationService.SourceText="Show brief status alerts such as &quot;Sent to the editor&quot;. Capture notifications with preview are not affected." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Services:LocalizationService.SourceText="Show brief status alerts such as &quot;Video recorded&quot; or &quot;Encoding, please wait...&quot;. Confirm destination pills are designed separately." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
                                 <CheckBox x:Name="SystemNotificationsCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
                                           Width="150" HorizontalAlignment="Left"
                                           AutomationProperties.Name="System alerts"
-                                          Services:LocalizationService.SourceToolTip="Show brief status alerts such as &quot;Sent to the editor&quot;. Capture notifications with preview are not affected."
+                                          Services:LocalizationService.SourceToolTip="Show brief status alerts such as &quot;Video recorded&quot; or &quot;Encoding, please wait...&quot;. Confirm destination pills are designed separately."
                                           Checked="SystemNotificationsCheck_Changed" Unchecked="SystemNotificationsCheck_Changed"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
@@ -3546,13 +3570,12 @@
                     </Border>
                     </StackPanel>
 
-                    <!-- 4) Design workshop: one glossary, Send to Editor, dual designer -->
+                    <!-- Confirm-action button designer (region confirm pills) -->
                     <StackPanel x:Name="NotificationsDesignSection">
-                    <TextBlock Services:LocalizationService.SourceText="Capture notification design" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
+                    <TextBlock Services:LocalizationService.SourceText="Confirm action buttons" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
                     <Border Style="{StaticResource Card}">
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
@@ -3565,7 +3588,7 @@
                                         <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                    Margin="0,1,10,0" VerticalAlignment="Top"
                                                    Foreground="{DynamicResource ThemeAccentBrush}"/>
-                                        <TextBlock Services:LocalizationService.SourceText="Notification types glossary"
+                                        <TextBlock Services:LocalizationService.SourceText="Choose which actions appear after you select a region. Choosing a destination confirms the capture. Retry and Cancel stay available."
                                                    FontSize="12.5" TextWrapping="Wrap" MaxWidth="720"
                                                    Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                                     </StackPanel>
@@ -3578,44 +3601,24 @@
                                            AutomationProperties.LiveSetting="Polite"/>
                             </StackPanel>
 
-                            <Border Grid.Row="1" Margin="0,12,0,0" Style="{StaticResource Card}" Padding="14,12">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Border Style="{StaticResource SettingIconFrame}">
-                                        <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                        <TextBlock Services:LocalizationService.SourceText="Send to Editor" Style="{StaticResource SettingTitle}"/>
-                                        <TextBlock Services:LocalizationService.SourceText="Send image captures to the Annotation Editor and video/GIF to the Trimmer. Same control as on the floating widget."
-                                                   Style="{StaticResource SettingDescription}"/>
-                                    </StackPanel>
-                                    <CheckBox x:Name="NotificationsEditorToggle" Grid.Column="2" VerticalAlignment="Center"
-                                              AutomationProperties.Name="Send to Editor"
-                                              Services:LocalizationService.SourceToolTip="Send images to the Annotation Editor and video/GIF to the Trimmer. Toggle it to see how the notifications change. Same control as on the floating widget."
-                                              Checked="NotificationsEditorToggle_Changed" Unchecked="NotificationsEditorToggle_Changed"/>
-                                </Grid>
-                            </Border>
-
-                            <Border Grid.Row="2" Margin="0,10,0,0"
+                            <Border Grid.Row="1" Margin="0,10,0,0"
                                     CornerRadius="12"
                                     BorderBrush="{DynamicResource ThemeInputBorderBrush}"
                                     BorderThickness="1"
                                     Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                    Padding="18,18,20,18">
-                                <Grid x:Name="ToastDesignerRoot" HorizontalAlignment="Left" Background="Transparent"
-                                      AllowDrop="True" DragOver="ToastDesigner_DragOver">
+                                    Padding="14,16,14,16"
+                                    ClipToBounds="True">
+                                <Grid x:Name="ToastDesignerRoot" HorizontalAlignment="Stretch" Background="Transparent"
+                                      AllowDrop="True" DragOver="ToastDesigner_DragOver"
+                                      ClipToBounds="True">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="240" MaxWidth="240"/>
                                         <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*" MinWidth="280"/>
                                     </Grid.ColumnDefinitions>
 
                                     <!-- LEFT column: guide in the free gap; system card on the shared bottom edge. -->
-                                    <Grid x:Name="EditorToastMockCard" Grid.Column="0" Width="268" Margin="0,0,16,0"
+                                    <Grid x:Name="EditorToastMockCard" Grid.Column="0" Margin="0,0,12,0"
                                           VerticalAlignment="Stretch">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="*"/>
@@ -3643,15 +3646,14 @@
                                             </Grid>
                                         </Border>
 
-                                        <!-- System-alert card — click/any interaction selects this mode (Send to Editor on). -->
+                                        <!-- System-alert reference examples (encoding / brief status). -->
                                         <Border x:Name="SystemAlertCard" Grid.Row="1"
                                                 CornerRadius="12" Padding="16,16,16,18" BorderThickness="1"
                                                 Background="{DynamicResource ThemeCardBrush}"
                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                                VerticalAlignment="Bottom" Cursor="Hand"
+                                                VerticalAlignment="Bottom" Cursor="Arrow"
                                                 SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                                PreviewMouseLeftButtonDown="SystemAlertCard_PreviewMouseLeftButtonDown"
-                                                Services:LocalizationService.SourceToolTip="Select system notifications (Send to Editor on).">
+                                                Services:LocalizationService.SourceToolTip="System notification examples">
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                                     <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="13"
@@ -3660,16 +3662,8 @@
                                                     <TextBlock x:Name="EditorPreviewImagesCaption"
                                                                Services:LocalizationService.SourceText="System notifications"
                                                                FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                               TextWrapping="Wrap" MaxWidth="160"
+                                                               TextWrapping="Wrap"
                                                                Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                                    <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                            Background="{DynamicResource ThemeInputBackgroundBrush}"
-                                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
-                                                            Services:LocalizationService.SourceToolTip="Brief status alerts are fixed and cannot be customized here.">
-                                                        <TextBlock Services:LocalizationService.SourceText="Fixed"
-                                                                   FontSize="10.5" FontWeight="SemiBold"
-                                                                   Foreground="{DynamicResource ThemeMutedBrush}"/>
-                                                    </Border>
                                                 </StackPanel>
                                                 <TextBlock x:Name="SystemAlertExampleLabel" Margin="0,0,0,6" FontSize="11"
                                                            Opacity="0.7"
@@ -3693,12 +3687,12 @@
                                                             </Grid.ColumnDefinitions>
                                                             <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,6,0">
                                                                 <TextBlock x:Name="EditorToastMockTitle"
-                                                                           Services:LocalizationService.SourceText="Sent to the editor"
+                                                                           Services:LocalizationService.SourceText="Screenshot ready"
                                                                            FontSize="12.75" FontWeight="SemiBold" FontFamily="Segoe UI Variable Text"
                                                                            TextWrapping="Wrap" TextAlignment="Center"
                                                                            Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                                                 <TextBlock x:Name="EditorToastMockBody"
-                                                                           Services:LocalizationService.SourceText="Your capture is open in the editor."
+                                                                           Services:LocalizationService.SourceText="Copied to clipboard"
                                                                            FontSize="11.5" FontFamily="Segoe UI Variable Text"
                                                                            TextWrapping="Wrap" TextAlignment="Center" Opacity="0.72" Margin="0,2,0,0"
                                                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
@@ -3773,18 +3767,18 @@
                                     </Grid>
 
                                     <!-- Divider -->
-                                    <Border Grid.Column="1" Width="1" Margin="0,6,16,6" VerticalAlignment="Stretch"
+                                    <Border Grid.Column="1" Width="1" Margin="0,6,12,6" VerticalAlignment="Stretch"
                                             Background="{DynamicResource ThemeSeparatorBrush}"/>
 
-                                    <!-- RIGHT panel: click/any interaction selects this mode (Send to Editor off). -->
+                                    <!-- RIGHT panel: confirm-destination button layout designer. -->
                                     <Border x:Name="EditorButtonsCard" Grid.Column="2"
-                                            CornerRadius="12" Padding="18,16,18,18" BorderThickness="1"
+                                            CornerRadius="12" Padding="14,14,14,14" BorderThickness="1"
                                             Background="{DynamicResource ThemeCardBrush}"
                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                            VerticalAlignment="Stretch" Cursor="Hand"
+                                            VerticalAlignment="Stretch" Cursor="Arrow"
                                             SnapsToDevicePixels="True" UseLayoutRounding="True"
-                                            PreviewMouseLeftButtonDown="EditorButtonsCard_PreviewMouseLeftButtonDown"
-                                            Services:LocalizationService.SourceToolTip="Select the capture notification design (Send to Editor off).">
+                                            ClipToBounds="True"
+                                            Services:LocalizationService.SourceToolTip="Design the destination pills on the region confirm bar after you select an area.">
                                         <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
@@ -3796,14 +3790,14 @@
                                             <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="13"
                                                        Margin="0,1,8,0" VerticalAlignment="Center"
                                                        Foreground="{DynamicResource ThemeAccentBrush}"/>
-                                            <TextBlock Services:LocalizationService.SourceText="Capture notification with action buttons"
+                                            <TextBlock Services:LocalizationService.SourceText="Confirm destination pills"
                                                        FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                       TextWrapping="Wrap" MaxWidth="340"
+                                                       TextWrapping="Wrap" MaxWidth="220"
                                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                             <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
                                                     Background="{DynamicResource ThemeTabActiveBrush}"
                                                     BorderBrush="{DynamicResource ThemeAccentBrush}" BorderThickness="1"
-                                                    Services:LocalizationService.SourceToolTip="Design the capture notification: buttons and what a click on the image does.">
+                                                    Services:LocalizationService.SourceToolTip="Design the destination pills on the region confirm bar after you select an area.">
                                                 <TextBlock Services:LocalizationService.SourceText="Customizable"
                                                            FontSize="10.5" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource ThemeAccentBrush}"/>
@@ -3813,45 +3807,46 @@
                                         <!-- Presets live with the capture preview they control. -->
                                         <TextBlock Services:LocalizationService.SourceText="Presets" FontSize="12" FontWeight="SemiBold"
                                                    Margin="0,0,0,6" Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                        <StackPanel x:Name="ToastPresetRow" Orientation="Horizontal" Margin="0,0,0,10"
-                                                    VerticalAlignment="Center">
-                                            <Button x:Name="ToastPresetNoneBtn" Services:LocalizationService.SourceContent="No buttons" Margin="0,0,6,0"
+                                        <WrapPanel x:Name="ToastPresetRow" Margin="0,0,0,10"
+                                                   Orientation="Horizontal">
+                                            <Button x:Name="ToastPresetNoneBtn" Services:LocalizationService.SourceContent="Basic" Margin="0,0,6,6"
                                                     Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
                                                     VerticalContentAlignment="Center" Cursor="Hand"
-                                                    AutomationProperties.Name="No buttons preset"
-                                                    Services:LocalizationService.SourceToolTip="Hide every overlay button. Use the preview click action."
+                                                    AutomationProperties.Name="Basic preset"
+                                                    Services:LocalizationService.SourceToolTip="Cancel and Retry only. Save is still available as a fallback so you can always commit."
                                                     Click="ToastPresetNoneBtn_Click"/>
-                                            <Button x:Name="ToastPresetStandardBtn" Services:LocalizationService.SourceContent="Standard" Margin="0,0,6,0"
+                                            <Button x:Name="ToastPresetStandardBtn" Services:LocalizationService.SourceContent="Standard" Margin="0,0,6,6"
                                                     Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
                                                     VerticalContentAlignment="Center" Cursor="Hand"
                                                     AutomationProperties.Name="Standard preset"
-                                                    Services:LocalizationService.SourceToolTip="Show pin, close, gallery and save."
+                                                    Services:LocalizationService.SourceToolTip="Save as the primary confirm destination."
                                                     Click="ToastPresetStandardBtn_Click"/>
-                                            <Button x:Name="ToastPresetFullBtn" Services:LocalizationService.SourceContent="Full" Margin="0,0,6,0"
+                                            <Button x:Name="ToastPresetFullBtn" Services:LocalizationService.SourceContent="Full" Margin="0,0,6,6"
                                                     Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
                                                     VerticalContentAlignment="Center" Cursor="Hand"
                                                     AutomationProperties.Name="Full preset"
-                                                    Services:LocalizationService.SourceToolTip="Show every button."
+                                                    Services:LocalizationService.SourceToolTip="Save, Copy, Edit, and Share destination pills."
                                                     Click="ToastPresetFullBtn_Click"/>
-                                            <Button x:Name="ToastManualBtn" Services:LocalizationService.SourceContent="Manual" Margin="0,0,6,0"
+                                            <Button x:Name="ToastManualBtn" Services:LocalizationService.SourceContent="Manual" Margin="0,0,6,6"
                                                     Height="32" MinHeight="32" Padding="12,0" VerticalAlignment="Center"
                                                     VerticalContentAlignment="Center" Cursor="Hand"
                                                     AutomationProperties.Name="Manual layout"
                                                     Services:LocalizationService.SourceToolTip="Customize each button yourself"
                                                     Click="ToastManualBtn_Click"/>
                                             <Button x:Name="ResetToastButtonsBtn" Content="↺"
-                                                    Margin="16,0,0,0"
+                                                    Margin="0,0,0,6"
                                                     Width="32" Height="32" MinWidth="32" MinHeight="32" Padding="0"
                                                     VerticalAlignment="Center"
                                                     VerticalContentAlignment="Center"
                                                     HorizontalContentAlignment="Center"
                                                     FontSize="14" FontWeight="Bold" Cursor="Hand"
                                                     AutomationProperties.Name="Default notification layout"
-                                                    Services:LocalizationService.SourceToolTip="Restore the default button layout and preview click action."
+                                                    Services:LocalizationService.SourceToolTip="Restore the default destination pill layout."
                                                     Click="ResetToastButtonsBtn_Click"/>
-                                        </StackPanel>
+                                        </WrapPanel>
 
-                                        <Grid Margin="0,0,0,10">
+                                        <!-- Legacy ImagePreview toast click action — kept for settings persistence / search; hidden from the confirm-pill designer. -->
+                                        <Grid Margin="0,0,0,10" Visibility="Collapsed">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
@@ -3889,38 +3884,33 @@
                                     <!-- Capture mock + palette sit on the bottom edge so they line up with system mocks. -->
                                     <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
                                     <TextBlock x:Name="CaptureDesignIdleNote" Margin="0,0,0,10" FontSize="11.5"
-                                               TextWrapping="Wrap" MaxWidth="420" Opacity="0.9"
+                                               TextWrapping="Wrap" Opacity="0.9"
                                                Visibility="Collapsed"
                                                Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                               Services:LocalizationService.SourceText="Not used while captures open automatically in the Editor or Trimmer. Turn Send to Editor off to use this layout after every capture."/>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                    <StackPanel x:Name="ToastLayoutStack" Width="260" HorizontalAlignment="Left" VerticalAlignment="Bottom">
-                                    <!-- Capture-notification mock: Theme.ToastBg + accent edge (set in RefreshEditorPreviewState). -->
-                                    <Border x:Name="ToastLayoutShell" Width="260" Height="220" CornerRadius="12"
-                                            BorderThickness="1">
-                                        <Grid x:Name="ToastLayoutPreviewSurface" AllowDrop="True" PreviewMouseMove="ToastPreviewSurface_PreviewMouseMove">
-                                            <Grid.Clip>
-                                                <RectangleGeometry Rect="0,0,258,218" RadiusX="11" RadiusY="11"/>
-                                            </Grid.Clip>
+                                               Services:LocalizationService.SourceText="Layout used for confirm-mode destination pills after you select a region."/>
+                                    <StackPanel HorizontalAlignment="Stretch">
+                                    <StackPanel x:Name="ToastLayoutStack" HorizontalAlignment="Stretch" VerticalAlignment="Bottom">
+                                    <!-- Region confirm mock: selection silhouette + Cancel/Retry chrome + destination slots. -->
+                                    <Border x:Name="ToastLayoutShell" Height="200" CornerRadius="12"
+                                            BorderThickness="1" HorizontalAlignment="Stretch"
+                                            MaxWidth="360">
+                                        <Grid x:Name="ToastLayoutPreviewSurface" AllowDrop="True" PreviewMouseMove="ToastPreviewSurface_PreviewMouseMove"
+                                              ClipToBounds="True">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
                                                 <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="4"/>
                                             </Grid.RowDefinitions>
 
-                                            <Border x:Name="ToastLayoutImageArea" Grid.Row="0" Margin="0" Background="#FF1A4F96"
-                                                    Services:LocalizationService.SourceToolTip="Notification Preview">
+                                            <!-- Selected-region silhouette (not a toast preview). -->
+                                            <Border x:Name="ToastLayoutImageArea" Grid.Row="0" Margin="18,16,18,10"
+                                                    CornerRadius="8" BorderThickness="1.5"
+                                                    Services:LocalizationService.SourceToolTip="Selected region preview">
                                                 <Grid>
-                                                    <!-- Faint "your capture goes here" image glyph, behind the slots/buttons.
-                                                         Not hit-testable so drops still reach the slots underneath.
-                                                         Colours (area + glyph) set in code to track the theme. -->
                                                     <TextBlock x:Name="ToastLayoutImageGlyph"
-                                                               Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="54"
+                                                               Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="48"
                                                                Foreground="White" Opacity="0.15"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                IsHitTestVisible="False"/>
-                                                    <!-- Neutral play badge when this mock represents video/GIF captures
-                                                         (same control as the real notification — no corner chip). -->
                                                     <Border x:Name="ToastLayoutVideoBadge"
                                                             Width="40" Height="40" CornerRadius="20"
                                                             HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -3937,10 +3927,44 @@
                                                 </Grid>
                                             </Border>
 
-                                            <StackPanel Grid.Row="1">
-                                                <Border Height="1" Margin="10,0,10,6" Opacity="0.15"
-                                                        Background="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                                <Grid x:Name="ToastLayoutActionsPanel" Height="36" Margin="10,0,10,6">
+                                            <!-- Confirm chrome strip: fixed Cancel/Retry + editable destination slots. -->
+                                            <StackPanel Grid.Row="1" Margin="12,0,12,14">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                                            HorizontalAlignment="Left">
+                                                    <Border x:Name="ConfirmMockCancelPill" Width="34" Height="34" CornerRadius="14" Margin="0,0,10,0"
+                                                            Cursor="No" Opacity="0.85"
+                                                            Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                            PreviewMouseLeftButtonDown="ConfirmFixedPill_PreviewMouseLeftButtonDown"
+                                                            PreviewMouseMove="ConfirmFixedPill_PreviewMouseMove"
+                                                            PreviewMouseLeftButtonUp="ConfirmFixedPill_PreviewMouseLeftButtonUp"
+                                                            Services:LocalizationService.SourceToolTip="Cancel stays fixed on the confirm bar. It cannot be moved or removed."
+                                                            AutomationProperties.Name="Cancel (fixed)">
+                                                        <TextBlock x:Name="ConfirmMockCancelGlyph" Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                                                   IsHitTestVisible="False"/>
+                                                    </Border>
+                                                    <Border x:Name="ConfirmMockRetryPill" Width="34" Height="34" CornerRadius="14" Margin="0,0,12,0"
+                                                            Cursor="No" Opacity="0.85"
+                                                            Background="{DynamicResource ThemeInputBackgroundBrush}"
+                                                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"
+                                                            PreviewMouseLeftButtonDown="ConfirmFixedPill_PreviewMouseLeftButtonDown"
+                                                            PreviewMouseMove="ConfirmFixedPill_PreviewMouseMove"
+                                                            PreviewMouseLeftButtonUp="ConfirmFixedPill_PreviewMouseLeftButtonUp"
+                                                            Services:LocalizationService.SourceToolTip="Retry stays fixed on the confirm bar. It cannot be moved or removed."
+                                                            AutomationProperties.Name="Retry (fixed)">
+                                                        <TextBlock x:Name="ConfirmMockRetryGlyph" Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                                                   IsHitTestVisible="False"/>
+                                                    </Border>
+                                                    <Border Width="1" Height="22" Margin="0,0,12,0" Opacity="0.28"
+                                                            Background="{DynamicResource ThemeTextPrimaryBrush}"
+                                                            VerticalAlignment="Center"/>
+
+                                                    <Grid x:Name="ToastLayoutActionsPanel" Height="36" MinWidth="220"
+                                                          VerticalAlignment="Center">
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="36"/>
                                                     <RowDefinition Height="0"/>
@@ -3952,9 +3976,9 @@
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
 
-                                                <!-- Slot placeholders — always visible, dashed when empty, hidden when occupied -->
+                                                <!-- Slot placeholders — always visible when empty; invisible but hit-testable when occupied -->
                                                 <Border x:Name="ToastLayoutSlotTopLeft" Grid.Column="0"
-                                                        Width="28" Height="28" CornerRadius="7"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
                                                         Margin="0"
                                                         AllowDrop="True" Tag="TopLeft"
@@ -3963,7 +3987,7 @@
                                                         Opacity="0.22"
                                                         Background="Transparent"/>
                                                 <Border x:Name="ToastLayoutSlotTopInnerLeft" Grid.Column="1"
-                                                        Width="28" Height="28" CornerRadius="7"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
                                                         Margin="0"
                                                         AllowDrop="True" Tag="TopInnerLeft"
@@ -3972,7 +3996,7 @@
                                                         Opacity="0.22"
                                                         Background="Transparent"/>
                                                 <Border x:Name="ToastLayoutSlotTopInnerRight" Grid.Column="2"
-                                                        Width="28" Height="28" CornerRadius="7"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
                                                         Margin="0"
                                                         AllowDrop="True" Tag="TopInnerRight"
@@ -3981,7 +4005,7 @@
                                                         Opacity="0.22"
                                                         Background="Transparent"/>
                                                 <Border x:Name="ToastLayoutSlotTopRight" Grid.Column="3"
-                                                        Width="28" Height="28" CornerRadius="7"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
                                                         Margin="0"
                                                         AllowDrop="True" Tag="TopRight"
@@ -3990,7 +4014,7 @@
                                                         Opacity="0.22"
                                                         Background="Transparent"/>
                                                 <Border x:Name="ToastLayoutSlotBottomLeft" Grid.Row="1" Grid.Column="0"
-                                                        Width="28" Height="28" CornerRadius="7"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
                                                         Margin="0"
                                                         AllowDrop="True" Tag="BottomLeft"
@@ -3999,7 +4023,7 @@
                                                         Opacity="0.22"
                                                         Background="Transparent"/>
                                                 <Border x:Name="ToastLayoutSlotBottomInnerLeft" Grid.Row="1" Grid.Column="1"
-                                                        Width="28" Height="28" CornerRadius="7"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
                                                         Margin="0"
                                                         AllowDrop="True" Tag="BottomInnerLeft"
@@ -4008,7 +4032,7 @@
                                                         Opacity="0.22"
                                                         Background="Transparent"/>
                                                 <Border x:Name="ToastLayoutSlotBottomInnerRight" Grid.Row="1" Grid.Column="2"
-                                                        Width="28" Height="28" CornerRadius="7"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
                                                         Margin="0"
                                                         AllowDrop="True" Tag="BottomInnerRight"
@@ -4017,7 +4041,7 @@
                                                         Opacity="0.22"
                                                         Background="Transparent"/>
                                                 <Border x:Name="ToastLayoutSlotBottomRight" Grid.Row="1" Grid.Column="3"
-                                                        Width="28" Height="28" CornerRadius="7"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
                                                         Margin="0"
                                                         AllowDrop="True" Tag="BottomRight"
@@ -4027,114 +4051,103 @@
                                                         Background="Transparent"/>
 
                                                 <Border x:Name="ToastLayoutCloseBtn"
-                                                        Width="30" Height="30" CornerRadius="9"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                        Services:LocalizationService.SourceToolTip="Move the close notification button"
+                                                        Services:LocalizationService.SourceToolTip="Move the Cancel-related control"
                                                         AutomationProperties.Name="Close notification button" Tag="Close">
-                                                    <Image x:Name="ToastLayoutCloseIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                    <Image x:Name="ToastLayoutCloseIcon" Width="16" Height="16" Stretch="Uniform" Opacity="0.9"
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <Border x:Name="ToastLayoutPinBtn"
-                                                        Width="30" Height="30" CornerRadius="9"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                        Services:LocalizationService.SourceToolTip="Move the pin notification button"
+                                                        Services:LocalizationService.SourceToolTip="Not used in confirm mode."
                                                         AutomationProperties.Name="Pin notification button" Tag="Pin">
-                                                    <Image x:Name="ToastLayoutPinIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                    <Image x:Name="ToastLayoutPinIcon" Width="16" Height="16" Stretch="Uniform" Opacity="0.9"
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <Border x:Name="ToastLayoutSaveBtn"
-                                                        Width="30" Height="30" CornerRadius="9"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                        Services:LocalizationService.SourceToolTip="Move the save notification button"
-                                                        AutomationProperties.Name="Save notification button" Tag="Save">
-                                                    <Image x:Name="ToastLayoutSaveIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                        Services:LocalizationService.SourceToolTip="Move the Save destination pill"
+                                                        AutomationProperties.Name="Save destination pill" Tag="Save">
+                                                    <Image x:Name="ToastLayoutSaveIcon" Width="16" Height="16" Stretch="Uniform" Opacity="0.9"
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <Border x:Name="ToastLayoutCopyBtn"
-                                                        Width="30" Height="30" CornerRadius="9"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                        Services:LocalizationService.SourceToolTip="Move the copy notification button"
-                                                        AutomationProperties.Name="Copy notification button" Tag="Copy">
-                                                    <Image x:Name="ToastLayoutCopyIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                        Services:LocalizationService.SourceToolTip="Move the Copy destination pill"
+                                                        AutomationProperties.Name="Copy destination pill" Tag="Copy">
+                                                    <Image x:Name="ToastLayoutCopyIcon" Width="16" Height="16" Stretch="Uniform" Opacity="0.9"
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <Border x:Name="ToastLayoutShareBtn"
-                                                        Width="30" Height="30" CornerRadius="9"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                        Services:LocalizationService.SourceToolTip="Move the share notification button"
-                                                        AutomationProperties.Name="Share notification button" Tag="Share">
-                                                    <Image x:Name="ToastLayoutShareIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                        Services:LocalizationService.SourceToolTip="Move the Share destination pill"
+                                                        AutomationProperties.Name="Share destination pill" Tag="Share">
+                                                    <Image x:Name="ToastLayoutShareIcon" Width="16" Height="16" Stretch="Uniform" Opacity="0.9"
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <Border x:Name="ToastLayoutDeleteBtn"
-                                                        Width="30" Height="30" CornerRadius="9"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                        Services:LocalizationService.SourceToolTip="Move the delete notification button"
+                                                        Services:LocalizationService.SourceToolTip="Not used in confirm mode."
                                                         AutomationProperties.Name="Delete notification button" Tag="Delete">
-                                                    <Image x:Name="ToastLayoutDeleteIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                    <Image x:Name="ToastLayoutDeleteIcon" Width="16" Height="16" Stretch="Uniform" Opacity="0.9"
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <Border x:Name="ToastLayoutAiRedirectBtn"
-                                                        Width="30" Height="30" CornerRadius="9"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                        Services:LocalizationService.SourceToolTip="Move the gallery notification button"
+                                                        Services:LocalizationService.SourceToolTip="Not used in confirm mode."
                                                         AutomationProperties.Name="Gallery notification button" Tag="History">
-                                                    <Image x:Name="ToastLayoutAiRedirectIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                    <Image x:Name="ToastLayoutAiRedirectIcon" Width="16" Height="16" Stretch="Uniform" Opacity="0.9"
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <Border x:Name="ToastLayoutEditBtn"
-                                                        Width="30" Height="30" CornerRadius="9"
+                                                        Width="34" Height="34" CornerRadius="14"
                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" BorderBrush="{DynamicResource ThemeAccentSubtleBrush}" BorderThickness="1"
                                                         Cursor="Hand"
                                                         PreviewMouseLeftButtonDown="ToastPreviewButton_PreviewMouseLeftButtonDown"
-                                                        Services:LocalizationService.SourceToolTip="Move the edit notification button"
-                                                        AutomationProperties.Name="Edit notification button" Tag="Edit">
-                                                    <Image x:Name="ToastLayoutEditIcon" Width="14" Height="14" Stretch="Uniform" Opacity="0.9"
+                                                        Services:LocalizationService.SourceToolTip="Move the Edit destination pill"
+                                                        AutomationProperties.Name="Edit destination pill" Tag="Edit">
+                                                    <Image x:Name="ToastLayoutEditIcon" Width="16" Height="16" Stretch="Uniform" Opacity="0.9"
                                                            RenderOptions.BitmapScalingMode="HighQuality"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-                                            </Grid>
-                                            </StackPanel>
-
-                                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="14,10,14,8" Visibility="Collapsed">
-                                                <Border Width="30" Height="30" CornerRadius="9" Background="#12FFFFFF" Margin="0,0,12,0"/>
-                                                <StackPanel>
-                                                    <TextBlock Text="Screenshot saved" FontSize="12.5" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" Visibility="Collapsed"/>
-                                                    <TextBlock Text="Preview notification with overlay buttons." FontSize="11.5" Opacity="0.62"
-                                                               Foreground="{DynamicResource ThemeTextPrimaryBrush}" Visibility="Collapsed"/>
+                                                    </Grid>
                                                 </StackPanel>
+                                                <TextBlock Margin="0,8,0,0" FontSize="11" Opacity="0.65"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                                           Services:LocalizationService.SourceText="Cancel and Retry stay fixed. Drag destination pills into the slots."/>
                                             </StackPanel>
 
-                                            <Border x:Name="ToastLayoutRail" Grid.Row="2" HorizontalAlignment="Stretch">
-                                                <Border.Background>
-                                                    <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                                        <GradientStop Color="#FF00F2FF" Offset="0.0"/>
-                                                        <GradientStop Color="#FF7A00FF" Offset="0.5"/>
-                                                        <GradientStop Color="#FFFF00D0" Offset="1.0"/>
-                                                    </LinearGradientBrush>
-                                                </Border.Background>
+                                            <!-- Legacy toast rail kept for code references; unused in confirm-bar mock. -->
+                                            <Border x:Name="ToastLayoutRail" Visibility="Collapsed" HorizontalAlignment="Stretch">
                                                 <Border.Effect>
                                                     <DropShadowEffect x:Name="ToastLayoutRailGlow" Color="#FF7A00FF" BlurRadius="4" ShadowDepth="0" Opacity="0.45"/>
                                                 </Border.Effect>
@@ -4143,19 +4156,20 @@
                                     </Border>
                                     </StackPanel>
 
-                                    <!-- Button palette beside the capture-notification mock. -->
-                                    <StackPanel Margin="20,0,4,0" VerticalAlignment="Bottom">
-                                        <StackPanel Orientation="Horizontal" Margin="2,0,0,12" Opacity="0.55"
-                                                    Services:LocalizationService.SourceToolTip="Drag any button below onto the preview to add it">
+                                    <!-- Button palette under the confirm-bar mock (avoids horizontal overflow). -->
+                                    <StackPanel Margin="0,12,0,0" HorizontalAlignment="Stretch"
+                                                MaxWidth="360">
+                                        <StackPanel Orientation="Horizontal" Margin="2,0,0,8" Opacity="0.55"
+                                                    Services:LocalizationService.SourceToolTip="Drag any button below onto the preview to add it to confirm mode">
                                             <Path VerticalAlignment="Center" HorizontalAlignment="Left"
                                                   Width="14" Height="12" Stretch="Uniform" Margin="0,0,8,0"
                                                   Fill="{DynamicResource ThemeTextPrimaryBrush}"
-                                                  Data="M7,0 L0,6 L7,12 L7,8 L14,8 L14,4 L7,4 Z"/>
-                                            <TextBlock Services:LocalizationService.SourceText="Drag onto the preview" VerticalAlignment="Center"
-                                                       FontSize="11.5" TextWrapping="Wrap" MaxWidth="120"
+                                                  Data="M7,0 L0,7 L4,7 L4,14 L10,14 L10,7 L14,7 Z"/>
+                                            <TextBlock Services:LocalizationService.SourceText="Confirm actions" VerticalAlignment="Center"
+                                                       FontSize="11.5" TextWrapping="Wrap"
                                                        Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
                                         </StackPanel>
-                                        <StackPanel x:Name="ToastButtonRows"/>
+                                        <WrapPanel x:Name="ToastButtonRows" Orientation="Horizontal"/>
                                     </StackPanel>
                                     </StackPanel>
                                     </StackPanel>

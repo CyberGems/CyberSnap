@@ -76,7 +76,7 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        // Menu activator (▼ chevron)
+        // Menu activator (⋮ more options)
         if (_hoveredMenuActivator)
         {
             if (_tooltipButton == 998)
@@ -270,22 +270,37 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
+        if (_hoveredConfirmButton >= _confirmChromeKinds.Length)
+        {
+            HideToolbarTooltip();
+            return;
+        }
+
         _tooltipButton = 800 + _hoveredConfirmButton;
         _toolbarToolTip ??= new WindowsToolTip();
 
-        string text = _hoveredConfirmButton switch
+        var kind = _confirmChromeKinds[_hoveredConfirmButton];
+        bool isPrimary = _hoveredConfirmButton == IndexOfPrimaryConfirmAction();
+        string primaryHint = isPrimary
+            ? "  (Enter · " + LocalizationService.Translate("double-click") + ")"
+            : "";
+        string text = kind switch
         {
-            0 => LocalizationService.Translate("Confirm capture")
-                + "  (Enter · "
-                + LocalizationService.Translate("double-click")
-                + ")\n"
-                + LocalizationService.Translate("Save or process the selected region"),
-            1 => LocalizationService.Translate("Retry area")
+            ConfirmChromeKind.Retry => LocalizationService.Translate("Retry area")
                 + "  (R)\n"
                 + LocalizationService.Translate("Discard the current crop and select again"),
-            2 => LocalizationService.Translate("Cancel capture completely")
+            ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel capture completely")
                 + "  (Esc)\n"
                 + LocalizationService.Translate("Close the capture tool and discard everything"),
+            ConfirmChromeKind.Save => LocalizationService.Translate("Save capture") + primaryHint,
+            ConfirmChromeKind.Copy when IsConfirmChromeDisabled(kind) =>
+                LocalizationService.Translate("Copy unavailable")
+                + "\n"
+                + LocalizationService.Translate("Auto-copy is on — image captures already go to the clipboard"),
+            ConfirmChromeKind.Copy => LocalizationService.Translate("Copy to clipboard") + primaryHint,
+            ConfirmChromeKind.Edit => LocalizationService.Translate("Open in editor") + primaryHint,
+            ConfirmChromeKind.Share => LocalizationService.Translate("Share") + primaryHint,
+            ConfirmChromeKind.OcrExtract => GetOcrExtractTooltip() + primaryHint,
             _ => ""
         };
 
@@ -295,13 +310,8 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        var rects = GetConfirmButtonRects();
-        var anchor = _hoveredConfirmButton switch
-        {
-            0 => rects.confirm,
-            1 => rects.cancel,
-            _ => rects.close
-        };
+        LayoutConfirmChromeRects();
+        var anchor = _confirmChromeRects[_hoveredConfirmButton];
 
         var anchorScreen = new Rectangle(
             _virtualBounds.X + anchor.X,

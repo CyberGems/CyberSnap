@@ -194,6 +194,33 @@ public sealed partial class RegionOverlayForm
         return tbBounds.Contains(p);
     }
 
+    /// <summary>
+    /// Cursor over the capture/confirm dock: <see cref="Cursors.SizeAll"/> on drag surfaces
+    /// (Move button, empty chrome); <see cref="Cursors.Hand"/> on clickable controls including brand.
+    /// </summary>
+    private Cursor? TryGetToolbarHoverCursor(Point location)
+    {
+        if (_menuActivatorRect.Contains(location))
+            return Cursors.Hand;
+
+        // Brand / logo: click opens the quick-start guide (not a drag handle).
+        if (_logoRect.Contains(location) || _brandRect.Contains(location))
+            return Cursors.Hand;
+
+        bool overDock = _toolbarRect.Contains(location) || IsPointInToolbarChrome(location);
+        if (!overDock)
+            return null;
+
+        int btn = GetToolbarButtonAt(location);
+        if (btn == PositionButtonIndex)
+            return Cursors.SizeAll;
+        if (btn >= 0)
+            return Cursors.Hand;
+
+        // Padding / gaps between tools — drag the dock without hitting a control.
+        return Cursors.SizeAll;
+    }
+
     private Rectangle PositionPopupFromAnchor(Rectangle anchor, int width, int height, int gap = -1)
     {
         if (gap < 0)
@@ -254,8 +281,12 @@ public sealed partial class RegionOverlayForm
 
     private Point GetReadoutCursorPoint()
     {
-        // Prefer the active drag end; otherwise the last known cursor (confirm mode,
-        // hover after release) so dimension pills stay parked on the nearest corner.
+        // Confirm mode: park dimension pills on a fixed corner of the locked region so they
+        // do not jump/ghost as the cursor moves. Layout may still nudge once to clear confirm chrome.
+        if (_isConfirmingSelection && _confirmRect.Width > 2 && _confirmRect.Height > 2)
+            return new Point(_confirmRect.Right, _confirmRect.Bottom);
+
+        // While dragging a fresh selection, follow the drag end so the readout stays near the hand.
         if (_selectionEnd != Point.Empty)
             return _selectionEnd;
         if (_lastCursorPos != Point.Empty)
@@ -272,8 +303,8 @@ public sealed partial class RegionOverlayForm
         if (!_isConfirmingSelection)
             return null;
 
-        var (confirm, cancel, close) = GetConfirmButtonRects();
-        return new[] { confirm, cancel, close };
+        LayoutConfirmChromeRects();
+        return _confirmChromeRects.Where(r => r.Width > 0 && r.Height > 0).ToArray();
     }
 
     private Rectangle GetSelectionOverlayBounds(Rectangle rect, bool isOcr, bool isScan)
@@ -1097,9 +1128,13 @@ public sealed partial class RegionOverlayForm
 
     private void EnterConfirmMode(Rectangle rect, Point? releaseAnchor = null)
     {
-        _isConfirmingSelection = true;
+        PendingCommitAction = ConfirmCommitAction.Default;
         _confirmRect = rect;
         _confirmHandleDragIndex = -1;
+        // Snapshot capture purpose before any annotation-tool restore changes `_mode`.
+        _modeBeforeConfirm = _mode;
+        _toolIdBeforeConfirm = _activeToolId;
+        _isConfirmingSelection = true;
         // Remember where the drag ended as a fraction of the selection, so the Confirm/Retry
         // buttons appear near the release point (not forced to the center of a large area).
         if (releaseAnchor is { } a && rect.Width > 0 && rect.Height > 0)
@@ -1112,7 +1147,9 @@ public sealed partial class RegionOverlayForm
             _confirmButtonAnchorFracX = 0.5f;
             _confirmButtonAnchorFracY = 1f;
         }
+        RebuildConfirmChromeKinds();
         RecomputeConfirmButtonWidth();
+        LayoutConfirmChromeRects();
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
         // Keep the release point as the readout anchor until the cursor moves again.
@@ -1120,20 +1157,18 @@ public sealed partial class RegionOverlayForm
             _lastCursorPos = releasePt;
         _selectionEnd = Point.Empty;
         try { CloseCaptureMagnifier(); } catch { }
-        EnsureToolbarReady();
-        RefreshToolbar();
-        // Snapshot the capture tool *before* restoring the last annotation tool for confirm-mode editing.
-        _modeBeforeConfirm = _mode;
-        _toolIdBeforeConfirm = _activeToolId;
         // Restore the last annotation tool on the bar, but never flash its help banner here —
         // the user just finished selecting a region and should only see Confirm/Retry chrome.
         TryRestoreLastAnnotationTool();
         HideToolBannerImmediate();
-        _shinePhase[0] = 0f;
-        _shinePhase[1] = 0.5f;
-        _shinePhase[2] = 0.25f;
-        _shineMain[0] = _shineMain[1] = _shineMain[2] = 1f;
-        _shineDup[0] = _shineDup[1] = _shineDup[2] = 0f;
+        for (int i = 0; i < ConfirmShineSlots; i++)
+        {
+            _shinePhase[i] = (i * 0.17f) % 1f;
+            _shineMain[i] = 1f;
+            _shineDup[i] = 0f;
+        }
+        EnsureToolbarReady();
+        RefreshToolbar();
         if (!UI.Motion.Disabled) _confirmShineTimer.Start();
         Invalidate();
     }
@@ -1184,21 +1219,173 @@ public sealed partial class RegionOverlayForm
     private void CommitConfirmedSelection()
     {
         var rect = _confirmRect;
+        var captureMode = _modeBeforeConfirm;
         _isConfirmingSelection = false;
         _confirmRect = Rectangle.Empty;
         _confirmHandleDragIndex = -1;
         _hoveredConfirmButton = -1;
         ResetConfirmPress();
-        InvokeRegionSelected(rect);
+        InvokeRegionSelected(rect, captureMode);
     }
 
-    private void InvokeRegionSelected(Rectangle rect)
+    private void CommitConfirmedSelection(ConfirmCommitAction action)
     {
-        if (_mode == CaptureMode.Ocr) OcrRegionSelected?.Invoke(rect);
-        else if (_mode == CaptureMode.Scan) ScanRegionSelected?.Invoke(rect);
-        else if (_mode == CaptureMode.Sticker) StickerRegionSelected?.Invoke(rect);
-        else if (_mode == CaptureMode.Upscale) UpscaleRegionSelected?.Invoke(rect);
-        else if (_mode == CaptureMode.ScrollCapture) ScrollRegionSelected?.Invoke(rect);
+        PendingCommitAction = action;
+        CommitConfirmedSelection();
+    }
+
+    private int IndexOfConfirmChrome(ConfirmChromeKind kind)
+    {
+        for (int i = 0; i < _confirmChromeKinds.Length; i++)
+        {
+            if (_confirmChromeKinds[i] == kind)
+                return i;
+        }
+        return -1;
+    }
+
+    private void RebuildConfirmChromeKinds()
+    {
+        // Order left→right: Cancel, Retry, destination actions.
+        var kinds = new List<ConfirmChromeKind>
+        {
+            ConfirmChromeKind.Cancel,
+            ConfirmChromeKind.Retry
+        };
+
+        // OCR confirm: Cancel, Retry, and extract (primary). No Copy — text copy is
+        // handled by Auto-copy OCR after extraction.
+        if (_modeBeforeConfirm == CaptureMode.Ocr)
+        {
+            kinds.Add(ConfirmChromeKind.OcrExtract);
+            _confirmChromeKinds = kinds.ToArray();
+            _confirmChromeRects = new Rectangle[kinds.Count];
+            return;
+        }
+
+        var settings = Services.SettingsService.LoadStatic();
+        var toast = settings?.ToastButtons
+            ?? new AppSettings.ToastButtonLayoutSettings();
+        bool autoCopyImages = settings != null
+            && Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image);
+
+        var actions = new List<(ConfirmChromeKind kind, ToastButtonSlot slot)>();
+        if (toast.ShowSave) actions.Add((ConfirmChromeKind.Save, toast.SaveSlot));
+        if (toast.ShowCopy) actions.Add((ConfirmChromeKind.Copy, toast.CopySlot));
+        if (toast.ShowEdit) actions.Add((ConfirmChromeKind.Edit, toast.EditSlot));
+        if (toast.ShowShare) actions.Add((ConfirmChromeKind.Share, toast.ShareSlot));
+
+        // Always keep at least one usable destination so the capture can be confirmed.
+        // Copy alone is not usable while Auto-copy already puts the image on the clipboard.
+        bool onlyDisabledCopy = actions.Count > 0
+            && actions.All(a => a.kind == ConfirmChromeKind.Copy)
+            && autoCopyImages;
+        if (actions.Count == 0 || onlyDisabledCopy)
+        {
+            if (!actions.Any(a => a.kind == ConfirmChromeKind.Save))
+                actions.Add((ConfirmChromeKind.Save, ToastButtonSlot.TopLeft));
+        }
+
+        foreach (var entry in actions
+            .OrderBy(a => ToastButtonLayout.ToGridCell(a.slot).row)
+            .ThenBy(a => ToastButtonLayout.ToGridCell(a.slot).column))
+        {
+            kinds.Add(entry.kind);
+        }
+
+        _confirmChromeKinds = kinds.ToArray();
+        _confirmChromeRects = new Rectangle[kinds.Count];
+    }
+
+    private static bool IsImageAutoCopyEnabled()
+    {
+        var settings = Services.SettingsService.LoadStatic();
+        return settings != null
+            && Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image);
+    }
+
+    private static bool IsOcrAutoCopyEnabled()
+    {
+        var settings = Services.SettingsService.LoadStatic();
+        return settings != null
+            && Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Ocr);
+    }
+
+    private static string GetOcrExtractTooltip()
+        => LocalizationService.Translate(IsOcrAutoCopyEnabled()
+            ? "Extract and copy text from the selection"
+            : "Extract text from the selection");
+
+    private bool IsConfirmChromeDisabled(ConfirmChromeKind kind)
+        => kind == ConfirmChromeKind.Copy && IsImageAutoCopyEnabled();
+
+    /// <summary>
+    /// Preferred confirm destination for Enter / double-click.
+    /// OCR → extract text; otherwise Save, else first enabled destination.
+    /// </summary>
+    private int IndexOfPrimaryConfirmAction()
+    {
+        if (_modeBeforeConfirm == CaptureMode.Ocr)
+        {
+            int ocr = IndexOfConfirmChrome(ConfirmChromeKind.OcrExtract);
+            if (ocr >= 0) return ocr;
+        }
+
+        int save = IndexOfConfirmChrome(ConfirmChromeKind.Save);
+        if (save >= 0 && !IsConfirmChromeDisabled(ConfirmChromeKind.Save))
+            return save;
+        for (int i = 0; i < _confirmChromeKinds.Length; i++)
+        {
+            var kind = _confirmChromeKinds[i];
+            if (IsConfirmDestinationKind(kind) && !IsConfirmChromeDisabled(kind))
+                return i;
+        }
+        return -1;
+    }
+
+    private static bool IsConfirmDestinationKind(ConfirmChromeKind kind)
+        => kind is ConfirmChromeKind.Save or ConfirmChromeKind.Copy
+            or ConfirmChromeKind.Edit or ConfirmChromeKind.Share
+            or ConfirmChromeKind.OcrExtract;
+
+    private void CommitPrimaryConfirmAction()
+    {
+        int idx = IndexOfPrimaryConfirmAction();
+        if (idx >= 0)
+        {
+            StartConfirmPress(idx);
+            return;
+        }
+        CommitConfirmedSelection(ConfirmCommitAction.Save);
+    }
+
+    private static string? ConfirmChromeFluentIcon(ConfirmChromeKind kind) => kind switch
+    {
+        ConfirmChromeKind.Save => "save",
+        ConfirmChromeKind.Copy => "copy",
+        ConfirmChromeKind.Edit => "draw",
+        ConfirmChromeKind.Share => "share",
+        ConfirmChromeKind.OcrExtract => "ocr",
+        _ => null
+    };
+
+    private static bool ConfirmChromeIsIconOnly(ConfirmChromeKind kind)
+        => kind is ConfirmChromeKind.Cancel or ConfirmChromeKind.Retry
+            or ConfirmChromeKind.Save or ConfirmChromeKind.Copy
+            or ConfirmChromeKind.Edit or ConfirmChromeKind.Share
+            or ConfirmChromeKind.OcrExtract;
+
+    private int MeasureConfirmChromeButtonWidth(ConfirmChromeKind kind, int iconOnlySize)
+        => ConfirmChromeIsIconOnly(kind) ? iconOnlySize : _confirmButtonWidth;
+
+    private void InvokeRegionSelected(Rectangle rect, CaptureMode? captureMode = null)
+    {
+        var mode = captureMode ?? _mode;
+        if (mode == CaptureMode.Ocr) OcrRegionSelected?.Invoke(rect);
+        else if (mode == CaptureMode.Scan) ScanRegionSelected?.Invoke(rect);
+        else if (mode == CaptureMode.Sticker) StickerRegionSelected?.Invoke(rect);
+        else if (mode == CaptureMode.Upscale) UpscaleRegionSelected?.Invoke(rect);
+        else if (mode == CaptureMode.ScrollCapture) ScrollRegionSelected?.Invoke(rect);
         else RegionSelected?.Invoke(rect);
     }
 
@@ -1233,7 +1420,12 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        if (!directCapture && ConfirmRegionBeforeCapture && _mode != CaptureMode.ScrollCapture)
+        // Area / center / OCR always lock the region (annotation + action chrome),
+        // including Enter-to-commit during drag. Scroll still commits immediately.
+        // Scan/etc. honor ConfirmRegionBeforeCapture when not forcing a direct path.
+        bool forceConfirm = _mode is CaptureMode.Rectangle or CaptureMode.Center or CaptureMode.Ocr;
+        if (_mode != CaptureMode.ScrollCapture
+            && (forceConfirm || (!directCapture && ConfirmRegionBeforeCapture)))
             EnterConfirmMode(rect);
         else
             InvokeRegionSelected(rect);
@@ -1249,7 +1441,7 @@ public sealed partial class RegionOverlayForm
 
         if (_isConfirmingSelection)
         {
-            CommitConfirmedSelection();
+            CommitPrimaryConfirmAction();
             return true;
         }
 
@@ -1288,6 +1480,8 @@ public sealed partial class RegionOverlayForm
     private static readonly int ConfirmHandleSize = 16;
     private static readonly int ConfirmButtonHeight = 34;
     private static readonly int ConfirmButtonGap = 14;
+    /// <summary>Wider gap between Retry and the first destination (mirrors Settings designer divider).</summary>
+    private static readonly int ConfirmChromeGroupGap = 26;
 
     // Measured width for the confirm/cancel buttons; recomputed on entering confirm
     // mode so the localized label (e.g. "Confirmar") always fits on a single line.
@@ -1373,6 +1567,9 @@ public sealed partial class RegionOverlayForm
     private void StartConfirmPress(int button)
     {
         if (_pressedConfirmButton >= 0) return; // a press is already playing
+        if (button >= 0 && button < _confirmChromeKinds.Length
+            && IsConfirmChromeDisabled(_confirmChromeKinds[button]))
+            return;
         if (UI.Motion.Disabled)
         {
             RunConfirmAction(button);
@@ -1383,9 +1580,9 @@ public sealed partial class RegionOverlayForm
         _confirmPressAmt = 0f;
         _pressAnimStart = DateTime.UtcNow;
         _confirmPressTimer.Start();
-        var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
-        var targetBtn = button switch { 0 => confirmBtn, 1 => cancelBtn, _ => closeBtn };
-        Invalidate(InflateForRepaint(targetBtn, 24));
+        LayoutConfirmChromeRects();
+        if (button >= 0 && button < _confirmChromeRects.Length)
+            Invalidate(InflateForRepaint(_confirmChromeRects[button], 24));
     }
 
     private void ConfirmPressTick()
@@ -1395,12 +1592,8 @@ public sealed partial class RegionOverlayForm
         _confirmPressAmt = (float)Math.Sin(phase * Math.PI); // 0 → 1 → 0 squash-and-release
 
         int button = _pressedConfirmButton;
-        if (button >= 0)
-        {
-            var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
-            var targetBtn = button switch { 0 => confirmBtn, 1 => cancelBtn, _ => closeBtn };
-            Invalidate(InflateForRepaint(targetBtn, 24));
-        }
+        if (button >= 0 && button < _confirmChromeRects.Length)
+            Invalidate(InflateForRepaint(_confirmChromeRects[button], 24));
 
         if (phase >= 1f)
         {
@@ -1415,9 +1608,35 @@ public sealed partial class RegionOverlayForm
 
     private void RunConfirmAction(int button)
     {
-        if (button == 0) CommitConfirmedSelection();
-        else if (button == 1) ExitConfirmMode();
-        else if (button == 2) ConfirmAndCancelCapture();
+        if (button < 0 || button >= _confirmChromeKinds.Length)
+            return;
+        if (IsConfirmChromeDisabled(_confirmChromeKinds[button]))
+            return;
+
+        switch (_confirmChromeKinds[button])
+        {
+            case ConfirmChromeKind.Retry:
+                ExitConfirmMode();
+                break;
+            case ConfirmChromeKind.Cancel:
+                ConfirmAndCancelCapture();
+                break;
+            case ConfirmChromeKind.Save:
+                CommitConfirmedSelection(ConfirmCommitAction.Save);
+                break;
+            case ConfirmChromeKind.Copy:
+                CommitConfirmedSelection(ConfirmCommitAction.Copy);
+                break;
+            case ConfirmChromeKind.Edit:
+                CommitConfirmedSelection(ConfirmCommitAction.Edit);
+                break;
+            case ConfirmChromeKind.Share:
+                CommitConfirmedSelection(ConfirmCommitAction.Share);
+                break;
+            case ConfirmChromeKind.OcrExtract:
+                CommitConfirmedSelection(ConfirmCommitAction.Default);
+                break;
+        }
     }
 
     private void ResetConfirmPress()
@@ -1442,9 +1661,10 @@ public sealed partial class RegionOverlayForm
         }
         // Per button: advance the comet (2× speed while hovered) and ease its intensities.
         // The hovered button gains a second comet (dup→1); the other's comet fades (main→0).
-        int hov = _hoveredConfirmButton; // -1 none, 0 confirm, 1 retry, 2 cancel
+        int hov = _hoveredConfirmButton;
         float baseDelta = (float)(UiChrome.FrameIntervalMs / 2600.0); // full lap ~2.6s
-        for (int i = 0; i < 3; i++)
+        int count = Math.Min(ConfirmShineSlots, Math.Max(3, _confirmChromeKinds.Length));
+        for (int i = 0; i < count; i++)
         {
             _shinePhase[i] += baseDelta * (hov == i ? 2f : 1f);
             if (_shinePhase[i] >= 1f) _shinePhase[i] -= 1f;
@@ -1455,10 +1675,14 @@ public sealed partial class RegionOverlayForm
             _shineDup[i] += (targetDup - _shineDup[i]) * 0.22f;
         }
 
-        var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
-        Invalidate(InflateForRepaint(confirmBtn, 24));
-        Invalidate(InflateForRepaint(cancelBtn, 24));
-        Invalidate(InflateForRepaint(closeBtn, 24));
+        var union = Rectangle.Empty;
+        foreach (var r in _confirmChromeRects)
+        {
+            if (r.Width <= 0) continue;
+            union = union.IsEmpty ? r : Rectangle.Union(union, r);
+        }
+        if (!union.IsEmpty)
+            Invalidate(InflateForRepaint(union, 24));
     }
 
     // Label font for the Confirm / Retry pills. Centralized so the width measurement in
@@ -1490,32 +1714,9 @@ public sealed partial class RegionOverlayForm
 
     private void RecomputeConfirmButtonWidth()
     {
-        int min = UiChrome.ScaleInt(112);
-        // The label + icon are drawn as one centered group: [text][gap][icon]. Size the button
-        // so that group fits with symmetric side padding. These proportions MUST match the
-        // layout math in DrawConfirmActionPill().
-        float h = UiChrome.ScaleInt(ConfirmButtonHeight);
-        float iconSize = h * 0.58f;
-        float gap = h * 0.22f;
-        int sidePad = UiChrome.ScaleInt(16);
-        try
-        {
-            using var font = CreateConfirmButtonFont();
-            using var g = CreateGraphics();
-            using var sf = new StringFormat(StringFormat.GenericTypographic)
-            {
-                FormatFlags = StringFormatFlags.NoWrap,
-                Trimming = StringTrimming.None
-            };
-            var bounds = new SizeF(10000f, h);
-            // Only the Confirm button carries a text label now (Retry is icon-only).
-            float w = g.MeasureString(LocalizationService.Translate("Ready").ToUpperInvariant(), font, bounds, sf).Width;
-            _confirmButtonWidth = Math.Max(min, (int)Math.Ceiling(w + gap + iconSize + sidePad * 2));
-        }
-        catch
-        {
-            _confirmButtonWidth = min;
-        }
+        // All confirm chrome pills are icon-only; keep a sensible fallback width
+        // for MeasureConfirmChromeButtonWidth if a labeled pill is reintroduced.
+        _confirmButtonWidth = UiChrome.ScaleInt(112);
     }
 
     private Rectangle GetConfirmButtonMonitorClientBounds(Point anchorClient)
@@ -1536,23 +1737,61 @@ public sealed partial class RegionOverlayForm
 
     private (Rectangle confirm, Rectangle cancel, Rectangle close) GetConfirmButtonRects()
     {
-        int bw = _confirmButtonWidth;
+        // Compatibility wrapper for call sites that still expect the classic triple.
+        LayoutConfirmChromeRects();
+        Rectangle Find(ConfirmChromeKind kind)
+        {
+            int idx = IndexOfConfirmChrome(kind);
+            return idx >= 0 && idx < _confirmChromeRects.Length
+                ? _confirmChromeRects[idx]
+                : Rectangle.Empty;
+        }
+        int primaryIdx = IndexOfPrimaryConfirmAction();
+        var primary = primaryIdx >= 0 && primaryIdx < _confirmChromeRects.Length
+            ? _confirmChromeRects[primaryIdx]
+            : Rectangle.Empty;
+        return (primary, Find(ConfirmChromeKind.Retry), Find(ConfirmChromeKind.Cancel));
+    }
+
+    private Rectangle UnionConfirmChromeRects()
+    {
+        var union = Rectangle.Empty;
+        foreach (var r in _confirmChromeRects)
+        {
+            if (r.Width <= 0 || r.Height <= 0) continue;
+            union = union.IsEmpty ? r : Rectangle.Union(union, r);
+        }
+        return union;
+    }
+
+    private void LayoutConfirmChromeRects()
+    {
+        if (_confirmChromeKinds.Length == 0)
+        {
+            _confirmChromeRects = Array.Empty<Rectangle>();
+            _confirmChromeSeparatorRect = Rectangle.Empty;
+            return;
+        }
+
         int bh = UiChrome.ScaleInt(ConfirmButtonHeight);
         int gap = UiChrome.ScaleInt(ConfirmButtonGap);
+        int groupGap = UiChrome.ScaleInt(ConfirmChromeGroupGap);
         var r = _confirmRect;
 
-        int retryW = bh;     // Retry is icon-only (square, full height)
-        int cancelW = bh;    // Cancel is also an icon-only square, matching Retry
+        int[] widths = new int[_confirmChromeKinds.Length];
+        int clusterW = 0;
+        for (int i = 0; i < _confirmChromeKinds.Length; i++)
+        {
+            widths[i] = MeasureConfirmChromeButtonWidth(_confirmChromeKinds[i], bh);
+            clusterW += widths[i];
+            if (i > 0)
+                clusterW += GapBeforeConfirmChromeIndex(i, gap, groupGap);
+        }
 
         int offset = UiChrome.ScaleInt(12);
         int margin = UiChrome.ScaleInt(10);
-        // Prefer not covering the exact release point; a few px of air when parking inside.
         int cursorGap = UiChrome.ScaleInt(10);
 
-        // Horizontal: put the Confirm button directly under the point where the drag ended (its
-        // proportional position inside the selection). Retry sits to its left, then Cancel, so the
-        // primary action lands under the cursor and large selections don't force the cursor back
-        // to the middle.  Order (left→right): [Cancel] [Retry] [Confirm].
         float anchorX = r.Left + _confirmButtonAnchorFracX * r.Width;
         float anchorY = r.Top + _confirmButtonAnchorFracY * r.Height;
         var monitor = GetConfirmButtonMonitorClientBounds(new Point((int)Math.Round(anchorX), (int)Math.Round(anchorY)));
@@ -1562,20 +1801,11 @@ public sealed partial class RegionOverlayForm
         int maxY = monitor.Bottom - margin;
         int maxTop = Math.Max(minY, maxY - bh);
 
-        // Vertical placement priority (near the release/cursor point always wins):
-        //  1. Outside on the side nearest the release, if that side fits on the monitor.
-        //  2. Inside the selection next to the release (right-edge Listo anchor).
-        //  3. Outside on the far side only if inside cannot host the cluster either.
-        //
-        // Important: do NOT flip to the far outside edge just because it "fits". That is what
-        // put Listo at the top of a tall crop when the user released at the bottom-right
-        // (see artifacts photo of the Grok TUI selection).
         int outsideBelow = r.Bottom + offset;
         int outsideAbove = r.Top - bh - offset;
         bool belowFits = outsideBelow >= minY && outsideBelow + bh <= maxY;
         bool aboveFits = outsideAbove >= minY && outsideAbove + bh <= maxY;
 
-        // Which outside side is nearer the release point?
         float distBelow = Math.Abs((outsideBelow + bh * 0.5f) - anchorY);
         float distAbove = Math.Abs((outsideAbove + bh * 0.5f) - anchorY);
         bool preferBelow = distBelow <= distAbove;
@@ -1590,8 +1820,6 @@ public sealed partial class RegionOverlayForm
         int insideY = 0;
         if (canPlaceInside)
         {
-            // Prefer just above the release (common when releasing near the bottom edge),
-            // then just below — never straddle the selection frame through Listo's middle.
             int aboveCursor = Math.Clamp((int)Math.Round(anchorY - bh - cursorGap), insideMin, insideMax);
             int belowCursor = Math.Clamp((int)Math.Round(anchorY + cursorGap), insideMin, insideMax);
             float bestInside = Math.Abs(aboveCursor + bh * 0.5f - anchorY);
@@ -1609,75 +1837,90 @@ public sealed partial class RegionOverlayForm
             : (belowFits ? outsideBelow : null);
 
         if (preferredOutside is int preferredY)
-        {
-            // Nearest outside side has room — park there (close to the cursor).
             y = preferredY;
-        }
         else if (canPlaceInside)
         {
-            // Preferred outside is blocked (e.g. released at the bottom of the monitor).
-            // Stay next to the cursor inside the crop instead of jumping to the far top/bottom.
             y = insideY;
             insidePlacement = true;
         }
         else if (farOutside is int farY)
-        {
-            // Cluster cannot fit inside a short selection — last resort far outside.
             y = farY;
-        }
         else
         {
             y = Math.Clamp((int)Math.Round(anchorY - bh / 2f), minY, maxTop);
-            // Treat monitor-only clamp near the release as "inside-like" for horizontal anchor.
             if (y >= r.Top && y + bh <= r.Bottom)
                 insidePlacement = true;
         }
 
         y = Math.Clamp(y, minY, maxTop);
 
-        // Horizontal:
-        //  - Outside the crop: center Listo on the release X (existing behaviour).
-        //  - Inside the crop: right-edge of Listo at the release X — same as when the cluster
-        //    is forced against the screen edge — so the pill sits fully to the left of the
-        //    cursor and is not cut through the middle by the selection frame.
-        int confirmX;
+        // Anchor the rightmost destination pill near the release point.
+        int anchorBtnW = widths[^1];
+        int clusterLeft;
         if (insidePlacement)
-        {
-            confirmX = (int)Math.Round(anchorX - bw); // right edge of Listo at release point
-        }
+            clusterLeft = (int)Math.Round(anchorX - clusterW);
         else
         {
-            int confirmXCenter = (int)Math.Round(anchorX - bw / 2f);
-            int clusterLeftCenter = confirmXCenter - gap - retryW - gap - cancelW;
-            int clusterRightCenter = confirmXCenter + bw;
-            if (clusterRightCenter > maxX)
-                confirmX = (int)Math.Round(anchorX - bw); // right edge of Listo at release point
-            else if (clusterLeftCenter < minX)
-                confirmX = (int)Math.Round(anchorX); // left edge of Listo at release point
-            else
-                confirmX = confirmXCenter;
+            int anchorCenter = (int)Math.Round(anchorX - anchorBtnW / 2f);
+            clusterLeft = anchorCenter - (clusterW - anchorBtnW);
+            int clusterRight = clusterLeft + clusterW;
+            if (clusterRight > maxX)
+                clusterLeft = (int)Math.Round(anchorX - clusterW);
+            else if (clusterLeft < minX)
+                clusterLeft = (int)Math.Round(anchorX);
         }
 
-        int retryX = confirmX - gap - retryW;
-        int closeX = retryX - gap - cancelW;
-
-        // Shift the whole cluster back inside the current monitor if it still spills.
-        int clusterLeft = closeX;
-        int clusterRight = confirmX + bw;
         if (clusterLeft < minX)
+            clusterLeft = minX;
+        else if (clusterLeft + clusterW > maxX)
+            clusterLeft = maxX - clusterW;
+
+        if (_confirmChromeRects.Length != _confirmChromeKinds.Length)
+            _confirmChromeRects = new Rectangle[_confirmChromeKinds.Length];
+
+        int x = clusterLeft;
+        for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
-            int s = minX - clusterLeft; confirmX += s; retryX += s; closeX += s;
-        }
-        else if (clusterRight > maxX)
-        {
-            int s = maxX - clusterRight; confirmX += s; retryX += s; closeX += s;
+            _confirmChromeRects[i] = new Rectangle(x, y, widths[i], bh);
+            if (i + 1 < _confirmChromeKinds.Length)
+                x += widths[i] + GapBeforeConfirmChromeIndex(i + 1, gap, groupGap);
         }
 
-        return (
-            new Rectangle(confirmX, y, bw, bh),
-            new Rectangle(retryX, y, retryW, bh),
-            new Rectangle(closeX, y, cancelW, bh)
-        );
+        _confirmChromeSeparatorRect = Rectangle.Empty;
+        for (int i = 0; i + 1 < _confirmChromeKinds.Length; i++)
+        {
+            if (_confirmChromeKinds[i] != ConfirmChromeKind.Retry)
+                continue;
+            if (!IsConfirmDestinationKind(_confirmChromeKinds[i + 1])
+                && _confirmChromeKinds[i + 1] != ConfirmChromeKind.OcrExtract)
+                continue;
+
+            var left = _confirmChromeRects[i];
+            var right = _confirmChromeRects[i + 1];
+            int mid = (left.Right + right.Left) / 2;
+            int sepW = Math.Max(1, UiChrome.ScaleInt(1));
+            int sepH = Math.Max(UiChrome.ScaleInt(14), (int)(bh * 0.55f));
+            _confirmChromeSeparatorRect = new Rectangle(
+                mid - sepW / 2,
+                y + (bh - sepH) / 2,
+                sepW,
+                sepH);
+            break;
+        }
+    }
+
+    private int GapBeforeConfirmChromeIndex(int index, int gap, int groupGap)
+    {
+        if (index <= 0 || index >= _confirmChromeKinds.Length)
+            return gap;
+
+        // After Retry, open a wider channel before destinations / OCR extract (Settings preview divider).
+        if (_confirmChromeKinds[index - 1] == ConfirmChromeKind.Retry
+            && (_confirmChromeKinds[index] == ConfirmChromeKind.OcrExtract
+                || IsConfirmDestinationKind(_confirmChromeKinds[index])))
+            return groupGap;
+
+        return gap;
     }
 
     private int HitTestConfirmHandle(Point p)
@@ -1690,10 +1933,12 @@ public sealed partial class RegionOverlayForm
 
     private int HitTestConfirmButton(Point p)
     {
-        var (confirm, cancel, close) = GetConfirmButtonRects();
-        if (confirm.Contains(p)) return 0;
-        if (cancel.Contains(p)) return 1;
-        if (close.Contains(p)) return 2;
+        LayoutConfirmChromeRects();
+        for (int i = 0; i < _confirmChromeRects.Length; i++)
+        {
+            if (_confirmChromeRects[i].Contains(p))
+                return i;
+        }
         return -1;
     }
 

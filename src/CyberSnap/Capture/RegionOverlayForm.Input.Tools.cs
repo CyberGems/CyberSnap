@@ -88,6 +88,9 @@ public sealed partial class RegionOverlayForm
     {
         if (_isDraggingToolbar)
         {
+            if (!Cursor.Equals(Cursors.SizeAll))
+                Cursor = Cursors.SizeAll;
+
             int dx = e.Location.X - _toolbarDragStartMouse.X;
             int dy = e.Location.Y - _toolbarDragStartMouse.Y;
             if (Math.Abs(dx) > 3 || Math.Abs(dy) > 3)
@@ -132,14 +135,15 @@ public sealed partial class RegionOverlayForm
                 if (nb.Width > 5 && nb.Height > 5)
                 {
                     var oldRect = _confirmRect;
-                    var (oldConfirm, oldCancel, oldClose) = GetConfirmButtonRects();
+                    LayoutConfirmChromeRects();
+                    var oldUnion = UnionConfirmChromeRects();
                     _confirmRect = nb;
                     InvalidateSelectionChromePart(oldRect, _prevCursorPos);
                     InvalidateSelectionChromePart(_confirmRect, e.Location);
-                    var (confirm, cancel, close) = GetConfirmButtonRects();
-                    Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
-                    Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
-                    Invalidate(Rectangle.Union(InflateForRepaint(oldClose, 20), InflateForRepaint(close, 20)));
+                    LayoutConfirmChromeRects();
+                    var newUnion = UnionConfirmChromeRects();
+                    if (!oldUnion.IsEmpty || !newUnion.IsEmpty)
+                        Invalidate(Rectangle.Union(InflateForRepaint(oldUnion, 20), InflateForRepaint(newUnion, 20)));
                 }
                 return;
             }
@@ -152,14 +156,15 @@ public sealed partial class RegionOverlayForm
                 int newX = e.Location.X - _confirmDragOffset.X;
                 int newY = e.Location.Y - _confirmDragOffset.Y;
                 var oldRect = _confirmRect;
-                var (oldConfirm, oldCancel, oldClose) = GetConfirmButtonRects();
+                LayoutConfirmChromeRects();
+                var oldUnion = UnionConfirmChromeRects();
                 _confirmRect = new Rectangle(newX, newY, oldRect.Width, oldRect.Height);
                 InvalidateSelectionChromePart(oldRect, _prevCursorPos);
                 InvalidateSelectionChromePart(_confirmRect, e.Location);
-                var (confirm, cancel, close) = GetConfirmButtonRects();
-                Invalidate(Rectangle.Union(InflateForRepaint(oldConfirm, 20), InflateForRepaint(confirm, 20)));
-                Invalidate(Rectangle.Union(InflateForRepaint(oldCancel, 20), InflateForRepaint(cancel, 20)));
-                Invalidate(Rectangle.Union(InflateForRepaint(oldClose, 20), InflateForRepaint(close, 20)));
+                LayoutConfirmChromeRects();
+                var newUnion = UnionConfirmChromeRects();
+                if (!oldUnion.IsEmpty || !newUnion.IsEmpty)
+                    Invalidate(Rectangle.Union(InflateForRepaint(oldUnion, 20), InflateForRepaint(newUnion, 20)));
                 return;
             }
 
@@ -184,32 +189,97 @@ public sealed partial class RegionOverlayForm
                 confirmTarget = Cursors.Hand;
                 _hoveredConfirmButton = btnHit;
             }
+            else if (ToolDef.IsAnnotationTool(_mode))
+            {
+                // Let annotation / drawing mouse-move handlers run (stroke preview, text, etc.).
+                // Still update confirm hover chrome when over handles/buttons above.
+                if (_hoveredConfirmButton != prevHoveredConfirm)
+                {
+                    LayoutConfirmChromeRects();
+                    var union = UnionConfirmChromeRects();
+                    if (!union.IsEmpty)
+                        Invalidate(InflateForRepaint(union, 20));
+                    HideToolbarTooltip();
+                    _tooltipDismissed = false;
+                    _hoverButtonStartTime = DateTime.UtcNow;
+                }
+                // Fall through — do not return.
+            }
+            else if (_toolbarRect.Contains(e.Location)
+                || _menuActivatorRect.Contains(e.Location)
+                || IsPointInToolbarChrome(e.Location))
+            {
+                // Annotation tools may be hidden — still need Hand cursor / toolbar hover
+                // on the confirm-phase dock (stroke, color, Move, Close, branding).
+                if (_hoveredConfirmButton != prevHoveredConfirm)
+                {
+                    LayoutConfirmChromeRects();
+                    var union = UnionConfirmChromeRects();
+                    if (!union.IsEmpty)
+                        Invalidate(InflateForRepaint(union, 20));
+                    HideToolbarTooltip();
+                    _tooltipDismissed = false;
+                    _hoverButtonStartTime = DateTime.UtcNow;
+                }
+                // Fall through — do not return.
+            }
             else if (_confirmRect.Contains(e.Location))
+            {
                 confirmTarget = Cursors.SizeAll;
+                if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
+
+                if (_hoveredConfirmButton != prevHoveredConfirm)
+                {
+                    LayoutConfirmChromeRects();
+                    var union = UnionConfirmChromeRects();
+                    if (!union.IsEmpty)
+                        Invalidate(InflateForRepaint(union, 20));
+
+                    HideToolbarTooltip();
+                    _tooltipDismissed = false;
+                    _hoverButtonStartTime = DateTime.UtcNow;
+                }
+
+                return;
+            }
             else
+            {
                 confirmTarget = CursorFactory.PrecisionCursor;
+                if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
 
-            if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
+                if (_hoveredConfirmButton != prevHoveredConfirm)
+                {
+                    LayoutConfirmChromeRects();
+                    var union = UnionConfirmChromeRects();
+                    if (!union.IsEmpty)
+                        Invalidate(InflateForRepaint(union, 20));
 
-            if (_hoveredConfirmButton != prevHoveredConfirm)
-            {
-                var (confirmBtn, cancelBtn, closeBtn) = GetConfirmButtonRects();
-                Invalidate(InflateForRepaint(confirmBtn, 20));
-                Invalidate(InflateForRepaint(cancelBtn, 20));
-                Invalidate(InflateForRepaint(closeBtn, 20));
+                    HideToolbarTooltip();
+                    _tooltipDismissed = false;
+                    _hoverButtonStartTime = DateTime.UtcNow;
+                }
 
-                HideToolbarTooltip();
-                _tooltipDismissed = false;
-                _hoverButtonStartTime = DateTime.UtcNow;
+                return;
             }
 
-            // Dimension pills track the nearest corner — repaint when the hand moves.
-            if (_prevCursorPos != e.Location && _confirmRect.Width > 2)
+            if (ch >= 0 || btnHit >= 0)
             {
-                InvalidateSelectionReadout(_prevCursorPos, _confirmRect);
-                InvalidateSelectionReadout(e.Location, _confirmRect);
+                if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
+
+                if (_hoveredConfirmButton != prevHoveredConfirm)
+                {
+                    LayoutConfirmChromeRects();
+                    var union = UnionConfirmChromeRects();
+                    if (!union.IsEmpty)
+                        Invalidate(InflateForRepaint(union, 20));
+
+                    HideToolbarTooltip();
+                    _tooltipDismissed = false;
+                    _hoverButtonStartTime = DateTime.UtcNow;
+                }
+
+                return;
             }
-            return;
         }
 
         if (_isMarqueeSelecting)
@@ -513,10 +583,8 @@ public sealed partial class RegionOverlayForm
         else if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location))
             target = _hoveredAltCaptureBtn ? Cursors.Hand : Cursors.Default;
 
-        else if (_logoRect.Contains(e.Location))
-            target = Cursors.Hand;
-        else if (_toolbarRect.Contains(e.Location))
-            target = btn >= 0 ? Cursors.Hand : Cursors.Default;
+        else if (TryGetToolbarHoverCursor(e.Location) is { } toolbarCursor)
+            target = toolbarCursor;
         else if (_isTyping && _hoveredTextBtn == 8)
             target = Cursors.SizeAll;
         else if (_isTyping && _hoveredTextBtn >= 0)
@@ -613,10 +681,20 @@ public sealed partial class RegionOverlayForm
 
         if (!Cursor.Equals(target)) Cursor = target;
 
-        _prevCursorPos = _lastCursorPos;
-        var prevCursor = _lastCursorPos;
-        var oldCursor = prevCursor == Point.Empty ? e.Location : prevCursor;
-        _lastCursorPos = e.Location;
+        Point oldCursor;
+        if (_isConfirmingSelection && ToolDef.IsAnnotationTool(_mode))
+        {
+            // Confirm block already advanced _lastCursorPos; keep _prevCursorPos as the
+            // previous point so the tool-cursor chip invalidates correctly while moving.
+            oldCursor = _prevCursorPos == Point.Empty ? e.Location : _prevCursorPos;
+        }
+        else
+        {
+            _prevCursorPos = _lastCursorPos;
+            var prevCursor = _lastCursorPos;
+            oldCursor = prevCursor == Point.Empty ? e.Location : prevCursor;
+            _lastCursorPos = e.Location;
+        }
 
         if (_mode == CaptureMode.ColorPicker)
         {
@@ -801,12 +879,25 @@ public sealed partial class RegionOverlayForm
         else
             UpdateCrosshairGuides(_lastCursorPos);
 
-        if (!_isSelecting && !_isMarqueeSelecting && !_isConfirmingSelection && !_isConfirmDragging && !_textResizing && !_textDragging && !_isSelectDragging && !_isSelectResizing && ToolShowsCursorChip(_mode))
+        if (!_isSelecting && !_isMarqueeSelecting && !_isConfirmDragging && !_textResizing && !_textDragging && !_isSelectDragging && !_isSelectResizing && ToolShowsCursorChip(_mode))
         {
-            if (_moveHoverIndex < 0 && _selectedAnnotationIndex < 0 && _eraserHoverIndex < 0 && !IsPointInOverlayUi(e.Location))
+            bool chipOk = _moveHoverIndex < 0 && _selectedAnnotationIndex < 0 && _eraserHoverIndex < 0
+                && !IsPointInOverlayUi(e.Location);
+            if (_isConfirmingSelection)
             {
-                InvalidateLivePreview(GetCursorChipRect(oldCursor), GetCursorChipRect(_lastCursorPos), 0);
+                chipOk = chipOk
+                    && ToolDef.IsAnnotationTool(_mode)
+                    && _confirmRect.Contains(e.Location)
+                    && HitTestConfirmHandle(e.Location) < 0
+                    && HitTestConfirmButton(e.Location) < 0;
             }
+
+            var oldChip = GetCursorChipRect(oldCursor);
+            var newChip = chipOk ? GetCursorChipRect(_lastCursorPos) : Rectangle.Empty;
+            // Always clear the previous chip when hiding (leaving the region / hitting chrome),
+            // otherwise ghosts linger outside the selection.
+            if (chipOk || !oldChip.IsEmpty)
+                InvalidateLivePreview(oldChip, newChip, 8);
         }
 
         if (needsRepaint)
@@ -1078,10 +1169,7 @@ public sealed partial class RegionOverlayForm
                 {
                     _autoDetectRect = Rectangle.Empty;
                     _autoDetectActive = false;
-                    if (ConfirmRegionBeforeCapture)
-                        EnterConfirmMode(_selectionRect, e.Location);
-                    else
-                        RegionSelected?.Invoke(_selectionRect);
+                    EnterConfirmMode(_selectionRect, e.Location);
                 }
                 else if (isCenter)
                 {
@@ -1112,14 +1200,21 @@ public sealed partial class RegionOverlayForm
                     else if (isSticker) StickerRegionSelected?.Invoke(clickRect);
                     else if (isUpscale) UpscaleRegionSelected?.Invoke(clickRect);
                     else if (isScroll) ScrollRegionSelected?.Invoke(clickRect);
-                    else RegionSelected?.Invoke(clickRect);
+                    else
+                    {
+                        // Area / center capture: always lock the region first (annotation + actions).
+                        _autoDetectRect = Rectangle.Empty;
+                        _autoDetectActive = false;
+                        EnterConfirmMode(clickRect, e.Location);
+                    }
                 }
                 else if (_selectionRect.Width > 2 && _selectionRect.Height > 2)
                 {
                     _autoDetectRect = Rectangle.Empty;
                     _autoDetectActive = false;
                     // Scroll capture skips confirm — goes straight to the scrolling control bar.
-                    if (ConfirmRegionBeforeCapture && !isScroll)
+                    // Area capture always confirms (annotation toolbar + action pills).
+                    if (!isScroll && (ConfirmRegionBeforeCapture || _mode is CaptureMode.Rectangle or CaptureMode.Center))
                         EnterConfirmMode(_selectionRect, e.Location);
                     else if (isOcr) OcrRegionSelected?.Invoke(_selectionRect);
                     else if (isScan) ScanRegionSelected?.Invoke(_selectionRect);

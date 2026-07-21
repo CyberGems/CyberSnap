@@ -578,13 +578,27 @@ public sealed class SettingsService : IDisposable
     private static void NormalizeToastButtonLayout(AppSettings.ToastButtonLayoutSettings settings)
     {
         var used = new HashSet<ToastButtonSlot>();
-        settings.CloseSlot = TakeSlot(settings.CloseSlot, ToastButtonSlot.TopRight, used);
-        settings.PinSlot = TakeSlot(settings.PinSlot, ToastButtonSlot.TopLeft, used);
-        settings.SaveSlot = TakeSlot(settings.SaveSlot, ToastButtonSlot.TopInnerRight, used);
-        settings.CopySlot = TakeSlot(settings.CopySlot, ToastButtonSlot.BottomInnerRight, used);
-        settings.ShareSlot = TakeSlot(settings.ShareSlot, ToastButtonSlot.BottomLeft, used);
-        settings.HistorySlot = TakeSlot(settings.HistorySlot, ToastButtonSlot.TopInnerLeft, used);
-        settings.DeleteSlot = TakeSlot(settings.DeleteSlot, ToastButtonSlot.BottomLeft, used);
+
+        // Only *visible* buttons reserve slots. Hidden toast-only controls (Close/Pin/…)
+        // keep stale slot values in JSON but must not shove confirm destinations onto
+        // the bottom row when Settings load after an app restart.
+        if (settings.ShowSave)
+            settings.SaveSlot = TakeSlot(settings.SaveSlot, ToastButtonSlot.TopLeft, used);
+        if (settings.ShowCopy)
+            settings.CopySlot = TakeSlot(settings.CopySlot, ToastButtonSlot.TopInnerLeft, used);
+        if (settings.ShowEdit)
+            settings.EditSlot = TakeSlot(settings.EditSlot, ToastButtonSlot.TopInnerRight, used);
+        if (settings.ShowShare)
+            settings.ShareSlot = TakeSlot(settings.ShareSlot, ToastButtonSlot.TopRight, used);
+
+        if (settings.ShowClose)
+            settings.CloseSlot = TakeSlot(settings.CloseSlot, ToastButtonSlot.TopRight, used);
+        if (settings.ShowPin)
+            settings.PinSlot = TakeSlot(settings.PinSlot, ToastButtonSlot.TopLeft, used);
+        if (settings.ShowHistory)
+            settings.HistorySlot = TakeSlot(settings.HistorySlot, ToastButtonSlot.TopInnerLeft, used);
+        if (settings.ShowDelete)
+            settings.DeleteSlot = TakeSlot(settings.DeleteSlot, ToastButtonSlot.BottomLeft, used);
     }
 
     private static Dictionary<string, string> NormalizeOpenWithApps(Dictionary<string, string>? apps)
