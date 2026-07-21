@@ -275,117 +275,91 @@ public sealed partial class RegionOverlayForm
         // 1. Divider line splitting Tier 1 from Tier 2 — removed: capture is single-row;
         // confirm is a single annotation dock (no second plate).
 
-        // 2. Tier 1 Divider: after last visible capture/recording tool before the
-        // utility section (OCR, Scan, Picker, Ruler), plus always after last capture.
+        // Render sleek unified toolbar dividers (no duplicate lines)
+        var dividerPositions = new List<int>();
+
         if (!ShowAnnotationChrome)
         {
-        var tier1Group = new[] { "rect", "center", "scroll", "recordGif", "record" };
-        var tier1Seps = new List<int>();
-        int lastInGroup = -1;
-        for (int i = 0; i < _mainBarTools.Length; i++)
-        {
-            if (tier1Group.Contains(_mainBarTools[i].Id))
-                lastInGroup = i;
-        }
-        if (lastInGroup >= 0)
-            tier1Seps.Add(lastInGroup);
-        // Always add a separator after the last capture tool (before system buttons)
-        int lastCaptureIdx = _mainBarTools.Length - 1;
-        if (lastCaptureIdx >= 0 && !tier1Seps.Contains(lastCaptureIdx))
-            tier1Seps.Add(lastCaptureIdx);
-
-        foreach (int idx in tier1Seps)
-        {
-            if (idx < 0 || idx >= _toolbarButtons.Length) continue;
-            if (_toolbarButtons[idx].Width <= 0) continue;
-            if (IsVerticalDock)
+            var tier1Group = new[] { "rect", "center", "scroll", "recordGif", "record" };
+            int lastInGroup = -1;
+            for (int i = 0; i < _mainBarTools.Length; i++)
             {
-                int sy = _toolbarButtons[idx].Bottom + (buttonSpacing + GroupGap) / 2;
-                int sx1 = _toolbarButtons[idx].X + 4;
-                int sx2 = _toolbarButtons[idx].Right - 4;
-                WindowsDockRenderer.PaintDivider(g, new Point(sx1, sy), new Point(sx2, sy));
+                if (tier1Group.Contains(_mainBarTools[i].Id))
+                    lastInGroup = i;
             }
-            else
+            if (lastInGroup >= 0 && lastInGroup < _mainBarTools.Length - 1 && _toolbarButtons[lastInGroup].Width > 0)
             {
-                int sx = _toolbarButtons[idx].Right + (buttonSpacing + GroupGap) / 2;
-                int sy1 = _toolbarButtons[idx].Y + 4;
-                int sy2 = _toolbarButtons[idx].Bottom - 4;
-                WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
+                int p = IsVerticalDock
+                    ? _toolbarButtons[lastInGroup].Bottom + (buttonSpacing + GroupGap) / 2
+                    : _toolbarButtons[lastInGroup].Right + (buttonSpacing + GroupGap) / 2;
+                dividerPositions.Add(p);
             }
-        }
-        }
 
-        // 2b. Divider before Move (position) - matching standard divider height, inset, and opacity.
-        if (PositionButtonIndex < _toolbarButtons.Length)
-        {
-            var posBtn = _toolbarButtons[PositionButtonIndex];
-            if (posBtn.Width > 0 && posBtn.Height > 0)
+            // Divider before Position button (after last main bar tool)
+            if (_mainBarTools.Length > 0 && PositionButtonIndex < _toolbarButtons.Length)
             {
-                var anchorBtn = ShowAnnotationChrome && ColorButtonIndex < _toolbarButtons.Length
-                    && _toolbarButtons[ColorButtonIndex].Width > 0
-                    ? _toolbarButtons[ColorButtonIndex]
-                    : (_mainBarTools.Length > 0 ? _toolbarButtons[_mainBarTools.Length - 1] : Rectangle.Empty);
-                if (anchorBtn.Width > 0)
+                int lastIdx = _mainBarTools.Length - 1;
+                var lastBtn = _toolbarButtons[lastIdx];
+                var posBtn = _toolbarButtons[PositionButtonIndex];
+                if (lastBtn.Width > 0 && posBtn.Width > 0)
                 {
-                    int inset = UiChrome.ScaleInt(6);
-                    if (IsVerticalDock)
-                    {
-                        int sy = (anchorBtn.Bottom + posBtn.Y) / 2;
-                        WindowsDockRenderer.PaintDivider(g, new Point(posBtn.X + inset, sy), new Point(posBtn.Right - inset, sy));
-                    }
-                    else
-                    {
-                        int sx = (anchorBtn.Right + posBtn.X) / 2;
-                        WindowsDockRenderer.PaintDivider(g, new Point(sx, posBtn.Y + inset), new Point(sx, posBtn.Bottom - inset));
-                    }
+                    int p = IsVerticalDock
+                        ? (lastBtn.Bottom + posBtn.Y) / 2
+                        : (lastBtn.Right + posBtn.X) / 2;
+                    dividerPositions.Add(p);
+                }
+            }
+        }
+        else
+        {
+            var tier2Seps = GetAnnotationGroupSepFlyoutIndices();
+            int flyoutStartIdx = _mainBarTools.Length + 4;
+            foreach (int flyoutIdx in tier2Seps)
+            {
+                int btnIdx = flyoutStartIdx + flyoutIdx;
+                if (btnIdx < _toolbarButtons.Length && _toolbarButtons[btnIdx].Width > 0)
+                {
+                    int p = IsVerticalDock
+                        ? _toolbarButtons[btnIdx].Bottom + (buttonSpacing + GroupGap) / 2
+                        : _toolbarButtons[btnIdx].Right + (buttonSpacing + GroupGap) / 2;
+                    dividerPositions.Add(p);
+                }
+            }
+
+            // Divider before Position button (after Color button or last flyout tool)
+            if (PositionButtonIndex < _toolbarButtons.Length)
+            {
+                var posBtn = _toolbarButtons[PositionButtonIndex];
+                int anchorIdx = (ColorButtonIndex < _toolbarButtons.Length && _toolbarButtons[ColorButtonIndex].Width > 0)
+                    ? ColorButtonIndex
+                    : (_flyoutTools.Length > 0 ? flyoutStartIdx + _flyoutTools.Length - 1 : -1);
+
+                if (anchorIdx >= 0 && anchorIdx < _toolbarButtons.Length && _toolbarButtons[anchorIdx].Width > 0 && posBtn.Width > 0)
+                {
+                    var anchorBtn = _toolbarButtons[anchorIdx];
+                    int p = IsVerticalDock
+                        ? (anchorBtn.Bottom + posBtn.Y) / 2
+                        : (anchorBtn.Right + posBtn.X) / 2;
+                    dividerPositions.Add(p);
                 }
             }
         }
 
-        // 3. Annotation group dividers (confirm-phase single dock, or legacy tier-2).
-        if (ShowAnnotationChrome)
+        foreach (int pos in dividerPositions.Distinct())
         {
-        // Group 1: select/eraser/highlight — separator after last visible of the three.
-        // Group 2: rectShape.
-        var tier2Groups = new[] {
-            new[] { "select", "eraser", "highlight" },
-            new[] { "rectShape" }
-        };
-        var tier2Seps = new List<int>();
-        foreach (var group in tier2Groups)
-        {
-            int lastIdx = -1;
-            for (int i = 0; i < _flyoutTools.Length; i++)
-            {
-                if (group.Contains(_flyoutTools[i].Id))
-                    lastIdx = i;
-            }
-            if (lastIdx >= 0)
-                tier2Seps.Add(_mainBarTools.Length + 4 + lastIdx);
-        }
-        // Also separate annotation tools from stroke/color.
-        if (_flyoutTools.Length > 0)
-            tier2Seps.Add(_mainBarTools.Length + 4 + _flyoutTools.Length - 1);
-        foreach (int idx in tier2Seps)
-        {
-            if (idx < 0 || idx >= _toolbarButtons.Length) continue;
-            if (_toolbarButtons[idx].Width <= 0) continue;
             if (IsVerticalDock)
             {
-                int sy = _toolbarButtons[idx].Bottom + (buttonSpacing + GroupGap) / 2;
-                int sx1 = _toolbarButtons[idx].X + 4;
-                int sx2 = _toolbarButtons[idx].Right - 4;
-                WindowsDockRenderer.PaintDivider(g, new Point(sx1, sy), new Point(sx2, sy));
+                int sx1 = _toolbarRect.X + pad + 4;
+                int sx2 = _toolbarRect.Right - pad - 4;
+                WindowsDockRenderer.PaintDivider(g, new Point(sx1, pos), new Point(sx2, pos));
             }
             else
             {
-                int sx = _toolbarButtons[idx].Right + (buttonSpacing + GroupGap) / 2;
-                int sy1 = _toolbarButtons[idx].Y + 4;
-                int sy2 = _toolbarButtons[idx].Bottom - 4;
-                WindowsDockRenderer.PaintDivider(g, new Point(sx, sy1), new Point(sx, sy2));
+                int sy1 = _toolbarRect.Y + pad + 4;
+                int sy2 = _toolbarRect.Bottom - pad - 4;
+                WindowsDockRenderer.PaintDivider(g, new Point(pos, sy1), new Point(pos, sy2));
             }
         }
-        } // ShowAnnotationChrome tier-2 dividers
 
 
 
