@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
@@ -11,6 +11,7 @@ internal sealed class LiveSelectionAdornerForm : Form
 {
     private readonly Rectangle _virtualBounds;
     private readonly string _hint;
+    private readonly Color? _accentOverride;
     private readonly System.Diagnostics.Stopwatch _renderStopwatch = System.Diagnostics.Stopwatch.StartNew();
     private readonly System.Windows.Forms.Timer _renderTimer = new() { Interval = UiChrome.FrameIntervalMs };
 
@@ -27,10 +28,11 @@ internal sealed class LiveSelectionAdornerForm : Form
     private IReadOnlyList<string>? _readoutDetails;
     private bool _renderQueued;
 
-    public LiveSelectionAdornerForm(Rectangle virtualBounds, string hint)
+    public LiveSelectionAdornerForm(Rectangle virtualBounds, string hint, Color? accentOverride = null)
     {
         _virtualBounds = virtualBounds;
         _hint = hint;
+        _accentOverride = accentOverride;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         TopMost = true;
@@ -189,7 +191,11 @@ internal sealed class LiveSelectionAdornerForm : Form
 
     private void DrawSelection(Graphics g)
     {
-        SelectionFrameRenderer.DrawRectangle(g, _selection);
+        if (_accentOverride.HasValue)
+            RecordingForm.DrawRecordingFrame(g, _selection, _accentOverride.Value);
+        else
+            SelectionFrameRenderer.DrawRectangle(g, _selection);
+
         SelectionSizeReadout.Draw(
             g,
             _cursor,
