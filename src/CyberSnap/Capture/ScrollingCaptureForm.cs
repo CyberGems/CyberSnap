@@ -288,6 +288,8 @@ public sealed partial class ScrollingCaptureForm : Form
         // Handle resize/move during ready phase
         if (_isHandleDragging && _controlBar is not null)
         {
+            if (_handleDragIndex == 4)
+                Cursor = CursorFactory.GrabbingCursor;
             ApplyHandleDrag(e.Location);
             return;
         }
@@ -299,7 +301,7 @@ public sealed partial class ScrollingCaptureForm : Form
             if (hit >= 0)
                 Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
             else if (_selection.Contains(e.Location))
-                Cursor = Cursors.SizeAll;
+                Cursor = CursorFactory.GrabCursor;
             else
                 Cursor = Cursors.Default;
             return;

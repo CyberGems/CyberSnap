@@ -615,7 +615,7 @@ public sealed partial class AnnotationCanvas
 
         if (h >= 0)
         {
-            Cursor = h == 8 ? Cursors.SizeAll : Cursors.Hand;
+            Cursor = h == 8 ? CursorFactory.GrabCursor : Cursors.Hand;
             return true;
         }
         if (_textToolbarRect.Contains(loc))

@@ -88,8 +88,8 @@ public sealed partial class RegionOverlayForm
     {
         if (_isDraggingToolbar)
         {
-            if (!Cursor.Equals(Cursors.SizeAll))
-                Cursor = Cursors.SizeAll;
+            if (!Cursor.Equals(CursorFactory.GrabbingCursor))
+                Cursor = CursorFactory.GrabbingCursor;
 
             int dx = e.Location.X - _toolbarDragStartMouse.X;
             int dy = e.Location.Y - _toolbarDragStartMouse.Y;
@@ -347,6 +347,8 @@ public sealed partial class RegionOverlayForm
 
         if (_textDragging && _isTyping)
         {
+            if (!Cursor.Equals(CursorFactory.GrabbingCursor))
+                Cursor = CursorFactory.GrabbingCursor;
             var now = DateTime.UtcNow;
             if (_lastTextDragLocation != Point.Empty &&
                 Math.Abs(e.Location.X - _lastTextDragLocation.X) < 2 &&
@@ -412,7 +414,7 @@ public sealed partial class RegionOverlayForm
             _hoverButtonStartTime = DateTime.UtcNow;
         }
 
-        bool hovBrand = _logoRect.Contains(e.Location) || _brandRect.Contains(e.Location);
+        bool hovBrand = IsPointInBrandClickArea(e.Location);
         bool hovActivator = _menuActivatorRect.Contains(e.Location);
         if (hovBrand != _hoveredBrand || hovActivator != _hoveredMenuActivator)
         {
@@ -586,7 +588,7 @@ public sealed partial class RegionOverlayForm
         else if (TryGetToolbarHoverCursor(e.Location) is { } toolbarCursor)
             target = toolbarCursor;
         else if (_isTyping && _hoveredTextBtn == 8)
-            target = Cursors.SizeAll;
+            target = CursorFactory.GrabCursor;
         else if (_isTyping && _hoveredTextBtn >= 0)
             target = Cursors.Hand;
         else if (_isTyping && _textToolbarRect.Contains(e.Location))

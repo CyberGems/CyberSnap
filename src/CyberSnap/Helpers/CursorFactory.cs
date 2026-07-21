@@ -9,7 +9,8 @@ internal static class CursorFactory
 {
     private static Cursor? _eraserCursor;
     private static Cursor? _eyedropperCursor;
-    private static Cursor? _panCursor;
+    private static Cursor? _grabCursor;
+    private static Cursor? _grabbingCursor;
     private static Cursor? _precisionCursor;
     private static Cursor? _hiddenCursor;
 
@@ -46,19 +47,31 @@ internal static class CursorFactory
         public IntPtr hbmColor;
     }
 
-    public static Cursor PanCursor
+    public static Cursor PanCursor => GrabCursor;
+
+    public static Cursor GrabCursor
     {
         get
         {
-            if (_panCursor is null)
-                _panCursor = CreatePanCursor();
-            return _panCursor;
+            if (_grabCursor is null)
+                _grabCursor = CreateHandCursor("grab");
+            return _grabCursor;
         }
     }
 
-    private static Cursor CreatePanCursor()
+    public static Cursor GrabbingCursor
     {
-        const int size = 44;
+        get
+        {
+            if (_grabbingCursor is null)
+                _grabbingCursor = CreateHandCursor("grabbing");
+            return _grabbingCursor;
+        }
+    }
+
+    private static Cursor CreateHandCursor(string iconKey)
+    {
+        const int size = 48;
         const int cx = size / 2, cy = size / 2;
 
         using var bmp = new Bitmap(size, size);
@@ -67,17 +80,17 @@ internal static class CursorFactory
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-        const int iconSize = 30;
+        const int iconSize = 34;
         int offset = (size - iconSize) / 2;
 
-        var shadow = StreamlineIcons.RenderBitmap("pan", Color.FromArgb(160, 0, 0, 0), iconSize, active: true);
+        var shadow = StreamlineIcons.RenderBitmap(iconKey, Color.FromArgb(160, 0, 0, 0), iconSize, active: true);
         if (shadow != null)
         {
             g.DrawImage(shadow, offset + 1, offset + 1, iconSize, iconSize);
             shadow.Dispose();
         }
 
-        var icon = StreamlineIcons.RenderBitmap("pan", Color.FromArgb(245, 255, 255, 255), iconSize, active: true);
+        var icon = StreamlineIcons.RenderBitmap(iconKey, Color.FromArgb(245, 255, 255, 255), iconSize, active: true);
         if (icon != null)
         {
             g.DrawImage(icon, offset, offset, iconSize, iconSize);

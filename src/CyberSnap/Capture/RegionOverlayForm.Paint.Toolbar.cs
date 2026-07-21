@@ -558,7 +558,7 @@ public sealed partial class RegionOverlayForm
         float tcx = _menuActivatorRect.X + _menuActivatorRect.Width / 2f;
         float tcy = _menuActivatorRect.Y + _menuActivatorRect.Height / 2f;
         float dotR = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 1.7f : 1.45f);
-        float gap = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 4.4f : 3.9f);
+        float gap = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 5.6f : 5.2f);
         using (var brush = new SolidBrush(dotsColor))
         {
             for (int i = -1; i <= 1; i++)

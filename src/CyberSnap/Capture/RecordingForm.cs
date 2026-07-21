@@ -396,7 +396,7 @@ public sealed partial class RecordingForm : Form
             if (hit >= 0)
                 Cursor = hit is 0 or 3 ? Cursors.SizeNWSE : Cursors.SizeNESW;
             else if (_recordRegion.Contains(e.Location))
-                Cursor = Cursors.SizeAll;
+                Cursor = CursorFactory.GrabCursor;
             else
                 Cursor = Cursors.Default;
         }

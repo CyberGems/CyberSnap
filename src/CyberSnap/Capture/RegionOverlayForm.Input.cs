@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Windows.Forms;
+using CyberSnap.Helpers;
 using CyberSnap.Models;
 
 namespace CyberSnap.Capture;
@@ -12,7 +13,7 @@ public sealed partial class RegionOverlayForm
 
         // Logo / brand toggles the guide — handle before generic dismiss so click is not a no-op.
         if (e.Button == MouseButtons.Left
-            && (_logoRect.Contains(e.Location) || _brandRect.Contains(e.Location)))
+            && IsPointInBrandClickArea(e.Location))
         {
             HideToolbarTooltip();
             ShowQuickStartGuide();
@@ -199,6 +200,7 @@ public sealed partial class RegionOverlayForm
                 _toolbarDragStartMouse = e.Location;
                 _toolbarDragStartOffset = _toolbarCustomOffset;
                 _hasMovedToolbarByDrag = false;
+                Cursor = CursorFactory.GrabbingCursor;
                 return;
             }
             if (btn < _mainBarTools.Length)
@@ -224,12 +226,13 @@ public sealed partial class RegionOverlayForm
             }
             return;
         }
-        else if (_toolbarRect.Contains(e.Location))
+        else if (_toolbarRect.Contains(e.Location) || IsPointInToolbarChrome(e.Location))
         {
             _isDraggingToolbar = true;
             _toolbarDragStartMouse = e.Location;
             _toolbarDragStartOffset = _toolbarCustomOffset;
             _hasMovedToolbarByDrag = false;
+            Cursor = CursorFactory.GrabbingCursor;
             return;
         }
 
@@ -362,6 +365,7 @@ public sealed partial class RegionOverlayForm
                 _lastTextDragFrameUtc = default;
                 _textDragOffset = new Point(e.Location.X - _textPos.X, e.Location.Y - _textPos.Y);
                 ClearCrosshairGuides();
+                Cursor = CursorFactory.GrabbingCursor;
                 Invalidate();
                 return;
             }
