@@ -1786,8 +1786,17 @@
                                                 </Grid>
                                             </Border>
 
-                                            <!-- Confirm chrome strip: fixed Cancel/Retry + editable destination slots. -->
+                                            <!-- Confirm chrome strip at bottom of shell: hint (when shown) sits above buttons;
+                                                 row * image reflows so the button strip stays pinned to the bottom. -->
                                             <StackPanel Grid.Row="1" Margin="12,0,12,14">
+                                                <TextBlock x:Name="ConfirmBarInlineHint"
+                                                           Margin="0,0,0,6"
+                                                           FontSize="11.5" FontWeight="SemiBold"
+                                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                                           Foreground="#FFEF4444"
+                                                           TextAlignment="Center"
+                                                           Visibility="Collapsed"
+                                                           IsHitTestVisible="False"/>
                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                                             HorizontalAlignment="Left">
                                                     <Border x:Name="ConfirmMockCancelPill" Width="34" Height="34" CornerRadius="14" Margin="0,0,10,0"
@@ -1797,7 +1806,6 @@
                                                             PreviewMouseLeftButtonDown="ConfirmFixedPill_PreviewMouseLeftButtonDown"
                                                             PreviewMouseMove="ConfirmFixedPill_PreviewMouseMove"
                                                             PreviewMouseLeftButtonUp="ConfirmFixedPill_PreviewMouseLeftButtonUp"
-                                                            Services:LocalizationService.SourceToolTip="Cancel stays fixed on the confirm bar. It cannot be moved or removed."
                                                             AutomationProperties.Name="Cancel (fixed)">
                                                         <TextBlock x:Name="ConfirmMockCancelGlyph" Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -1811,7 +1819,6 @@
                                                             PreviewMouseLeftButtonDown="ConfirmFixedPill_PreviewMouseLeftButtonDown"
                                                             PreviewMouseMove="ConfirmFixedPill_PreviewMouseMove"
                                                             PreviewMouseLeftButtonUp="ConfirmFixedPill_PreviewMouseLeftButtonUp"
-                                                            Services:LocalizationService.SourceToolTip="Retry stays fixed on the confirm bar. It cannot be moved or removed."
                                                             AutomationProperties.Name="Retry (fixed)">
                                                         <TextBlock x:Name="ConfirmMockRetryGlyph" Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -1987,11 +1994,6 @@
                                                            TextWrapping="Wrap"
                                                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                                                            Services:LocalizationService.SourceText="Cancel and Retry stay fixed. Use × on a button to remove it; use + in the tray to add it back."/>
-                                                <TextBlock x:Name="ConfirmBarInlineHint"
-                                                           Margin="0,6,0,0" FontSize="11.5" FontWeight="SemiBold"
-                                                           TextWrapping="Wrap" Visibility="Collapsed"
-                                                           Foreground="#FFEF4444"
-                                                           TextAlignment="Center"/>
                                             </StackPanel>
 
                                             <!-- Legacy toast rail kept for code references; unused in confirm-bar mock. -->
