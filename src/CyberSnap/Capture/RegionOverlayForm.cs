@@ -137,7 +137,6 @@ public sealed partial class RegionOverlayForm : Form
     private bool _outsideReselectArmed;
     private Point _outsideReselectDown;
     private bool _outsideReselectMoved;
-    private bool _hoveredOutsideConfirmFrame;
 
     private static CaptureDockSide GetOppositeDockSide(CaptureDockSide side) => side switch
     {
@@ -1777,26 +1776,6 @@ public sealed partial class RegionOverlayForm : Form
                 {
                     HideToolbarTooltip();
                 }
-            }
-        }
-        else if (_isConfirmingSelection && _hoveredOutsideConfirmFrame && HasConfirmAnnotations())
-        {
-            if (!_tooltipVisible && !_tooltipDismissed)
-            {
-                if (_hoverButtonStartTime != DateTime.MinValue)
-                {
-                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 450)
-                        ShowToolbarTooltip();
-                }
-                else
-                {
-                    _hoverButtonStartTime = DateTime.UtcNow;
-                }
-            }
-            else if (_tooltipVisible)
-            {
-                if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 5000)
-                    HideToolbarTooltip();
             }
         }
         else if (IsToolbarInteractive())

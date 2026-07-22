@@ -189,8 +189,6 @@ public sealed partial class RegionOverlayForm
                 // 3. Confirm-mode hover takes priority
                 int prevHoveredConfirm = _hoveredConfirmButton;
                 _hoveredConfirmButton = -1;
-                bool prevOutside = _hoveredOutsideConfirmFrame;
-                _hoveredOutsideConfirmFrame = false;
 
                 System.Windows.Forms.Cursor confirmTarget = Cursors.Default;
                 int ch = HitTestConfirmHandle(e.Location);
@@ -225,27 +223,9 @@ public sealed partial class RegionOverlayForm
                 }
                 else if (IsOutsideLockedCaptureFrame(e.Location))
                 {
-                    _hoveredOutsideConfirmFrame = true;
-                    if (HasConfirmAnnotations())
-                    {
-                        confirmTarget = Cursors.Default;
-                        if (!Cursor.Equals(confirmTarget))
-                            Cursor = confirmTarget;
-                        if (!prevOutside)
-                        {
-                            HideToolbarTooltip();
-                            _tooltipDismissed = false;
-                            _hoverButtonStartTime = DateTime.UtcNow;
-                        }
-                    }
-                    else
-                    {
-                        confirmTarget = CursorFactory.PrecisionCursor;
-                        if (!Cursor.Equals(confirmTarget))
-                            Cursor = confirmTarget;
-                        if (_tooltipVisible)
-                            HideToolbarTooltip();
-                    }
+                    confirmTarget = HasConfirmAnnotations() ? Cursors.Default : CursorFactory.PrecisionCursor;
+                    if (!Cursor.Equals(confirmTarget))
+                        Cursor = confirmTarget;
                     return;
                 }
                 else if (ToolDef.IsAnnotationTool(_mode))
