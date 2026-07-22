@@ -120,6 +120,28 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
+        // Outside locked frame while annotations exist — protect work, guide the user.
+        if (_isConfirmingSelection && _hoveredOutsideConfirmFrame && HasConfirmAnnotations())
+        {
+            if (_tooltipButton == 994)
+                return;
+
+            _tooltipButton = 994;
+            _toolbarToolTip ??= new WindowsToolTip();
+            var outsideText = LocalizationService.Translate(
+                "Drag inside the frame to annotate · Right-click for more options");
+            // Anchor near the cursor so the hint follows the hand outside the crop.
+            var cursorScreen = new Rectangle(
+                _virtualBounds.X + _lastCursorPos.X - 1,
+                _virtualBounds.Y + _lastCursorPos.Y - 1,
+                2,
+                2);
+            _toolbarToolTip.ShowNear(this, outsideText, cursorScreen, IsBottomDock);
+            _tooltipVisible = true;
+            _tooltipShowTime = DateTime.UtcNow;
+            return;
+        }
+
         if (!IsToolbarInteractive() || _hoveredButton < 0 || _hoveredButton >= _toolbarLabels.Length)
         {
             HideToolbarTooltip();

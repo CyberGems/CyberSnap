@@ -164,130 +164,173 @@ public sealed partial class RegionOverlayForm
                 return;
             }
 
-            // 3. Confirm-mode hover takes priority
-            int prevHoveredConfirm = _hoveredConfirmButton;
-            _hoveredConfirmButton = -1;
-
-            System.Windows.Forms.Cursor confirmTarget = Cursors.Default;
-            int ch = HitTestConfirmHandle(e.Location);
-            int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
-            bool sizePillHover = ch < 0 && btnHit < 0 && HitTestConfirmSizeReadout(e.Location);
-            if (sizePillHover != _hoveredConfirmSizeReadout)
+            // 2b. Outside-frame reselect (no annotations): promote armed click to a new rubber-band.
+            if (_outsideReselectArmed && !HasConfirmAnnotations())
             {
-                _hoveredConfirmSizeReadout = sizePillHover;
-                if (!_confirmSizeReadoutRect.IsEmpty)
-                    Invalidate(InflateForRepaint(_confirmSizeReadoutRect, UiChrome.ScaleInt(8)));
-            }
-            if (ch >= 0)
-                confirmTarget = ch switch
+                int odx = e.Location.X - _outsideReselectDown.X;
+                int ody = e.Location.Y - _outsideReselectDown.Y;
+                if (!_outsideReselectMoved && (Math.Abs(odx) > 3 || Math.Abs(ody) > 3))
                 {
-                    0 or 3 => Cursors.SizeNWSE,
-                    1 or 2 => Cursors.SizeNESW,
-                    4 or 7 => Cursors.SizeNS,
-                    5 or 6 => Cursors.SizeWE,
-                    _ => Cursors.Default
-                };
-            else if (btnHit >= 0)
-            {
-                confirmTarget = Cursors.Hand;
-                _hoveredConfirmButton = btnHit;
-            }
-            else if (sizePillHover)
-            {
-                // Must apply + return: the ch/btnHit block below never ran for the size grip.
-                confirmTarget = Cursors.SizeAll;
-                if (!Cursor.Equals(confirmTarget))
-                    Cursor = confirmTarget;
-                return;
-            }
-            else if (ToolDef.IsAnnotationTool(_mode))
-            {
-                // Let annotation / drawing mouse-move handlers run (stroke preview, text, etc.).
-                // Still update confirm hover chrome when over handles/buttons above.
-                if (_hoveredConfirmButton != prevHoveredConfirm)
-                {
-                    OnConfirmHoverChanged(prevHoveredConfirm);
-                    HideToolbarTooltip();
-                    _tooltipDismissed = false;
-                    _hoverButtonStartTime = DateTime.UtcNow;
+                    _outsideReselectMoved = true;
+                    ExitConfirmMode();
+                    StartAreaSelectionFromPoint(_outsideReselectDown);
+                    // Fall through past confirm hover into normal selection mouse-move.
                 }
-                // Fall through — do not return.
-            }
-            else if (_toolbarRect.Contains(e.Location)
-                || _menuActivatorRect.Contains(e.Location)
-                || IsPointInToolbarChrome(e.Location))
-            {
-                // Annotation tools may be hidden — still need Hand cursor / toolbar hover
-                // on the confirm-phase dock (stroke, color, Move, Close, branding).
-                if (_hoveredConfirmButton != prevHoveredConfirm)
+                else if (!_outsideReselectMoved)
                 {
-                    OnConfirmHoverChanged(prevHoveredConfirm);
-                    HideToolbarTooltip();
-                    _tooltipDismissed = false;
-                    _hoverButtonStartTime = DateTime.UtcNow;
-                }
-                // Fall through — do not return.
-            }
-            else if (_confirmRect.Contains(e.Location)
-                     && (!ToolDef.IsAnnotationTool(_mode)
-                         || (_mode == CaptureMode.Move
-                             && HitTestAnnotation(e.Location) < 0
-                             && HitTestAnnotationSurface(e.Location) < 0)))
-            {
-                // SizeAll when the crop can be dragged (capture tools, or Pick on empty canvas).
-                confirmTarget = Cursors.SizeAll;
-                if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
-
-                if (_hoveredConfirmButton != prevHoveredConfirm)
-                {
-                    OnConfirmHoverChanged(prevHoveredConfirm);
-                    HideToolbarTooltip();
-                    _tooltipDismissed = false;
-                    _hoverButtonStartTime = DateTime.UtcNow;
-                }
-
-                return;
-            }
-            else if (ToolDef.IsAnnotationTool(_mode))
-            {
-                // Drawing tools: fall through to annotation mouse-move handlers below.
-                if (_hoveredConfirmButton != prevHoveredConfirm)
-                {
-                    OnConfirmHoverChanged(prevHoveredConfirm);
-                    HideToolbarTooltip();
-                    _tooltipDismissed = false;
-                    _hoverButtonStartTime = DateTime.UtcNow;
+                    Cursor = CursorFactory.PrecisionCursor;
+                    return;
                 }
             }
-            else
-            {
-                confirmTarget = CursorFactory.PrecisionCursor;
-                if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
 
-                if (_hoveredConfirmButton != prevHoveredConfirm)
+            // Still in confirm? (may have just exited via outside reselect promote)
+            if (_isConfirmingSelection)
+            {
+                // 3. Confirm-mode hover takes priority
+                int prevHoveredConfirm = _hoveredConfirmButton;
+                _hoveredConfirmButton = -1;
+                bool prevOutside = _hoveredOutsideConfirmFrame;
+                _hoveredOutsideConfirmFrame = false;
+
+                System.Windows.Forms.Cursor confirmTarget = Cursors.Default;
+                int ch = HitTestConfirmHandle(e.Location);
+                int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
+                bool sizePillHover = ch < 0 && btnHit < 0 && HitTestConfirmSizeReadout(e.Location);
+                if (sizePillHover != _hoveredConfirmSizeReadout)
                 {
-                    OnConfirmHoverChanged(prevHoveredConfirm);
-                    HideToolbarTooltip();
-                    _tooltipDismissed = false;
-                    _hoverButtonStartTime = DateTime.UtcNow;
+                    _hoveredConfirmSizeReadout = sizePillHover;
+                    if (!_confirmSizeReadoutRect.IsEmpty)
+                        Invalidate(InflateForRepaint(_confirmSizeReadoutRect, UiChrome.ScaleInt(8)));
+                }
+                if (ch >= 0)
+                    confirmTarget = ch switch
+                    {
+                        0 or 3 => Cursors.SizeNWSE,
+                        1 or 2 => Cursors.SizeNESW,
+                        4 or 7 => Cursors.SizeNS,
+                        5 or 6 => Cursors.SizeWE,
+                        _ => Cursors.Default
+                    };
+                else if (btnHit >= 0)
+                {
+                    confirmTarget = Cursors.Hand;
+                    _hoveredConfirmButton = btnHit;
+                }
+                else if (sizePillHover)
+                {
+                    confirmTarget = Cursors.SizeAll;
+                    if (!Cursor.Equals(confirmTarget))
+                        Cursor = confirmTarget;
+                    return;
+                }
+                else if (IsOutsideLockedCaptureFrame(e.Location))
+                {
+                    _hoveredOutsideConfirmFrame = true;
+                    if (HasConfirmAnnotations())
+                    {
+                        confirmTarget = Cursors.Default;
+                        if (!Cursor.Equals(confirmTarget))
+                            Cursor = confirmTarget;
+                        if (!prevOutside)
+                        {
+                            HideToolbarTooltip();
+                            _tooltipDismissed = false;
+                            _hoverButtonStartTime = DateTime.UtcNow;
+                        }
+                    }
+                    else
+                    {
+                        confirmTarget = CursorFactory.PrecisionCursor;
+                        if (!Cursor.Equals(confirmTarget))
+                            Cursor = confirmTarget;
+                        if (_tooltipVisible)
+                            HideToolbarTooltip();
+                    }
+                    return;
+                }
+                else if (ToolDef.IsAnnotationTool(_mode))
+                {
+                    if (_hoveredConfirmButton != prevHoveredConfirm)
+                    {
+                        OnConfirmHoverChanged(prevHoveredConfirm);
+                        HideToolbarTooltip();
+                        _tooltipDismissed = false;
+                        _hoverButtonStartTime = DateTime.UtcNow;
+                    }
+                    // Fall through — annotation mouse-move handlers below.
+                }
+                else if (_toolbarRect.Contains(e.Location)
+                    || _menuActivatorRect.Contains(e.Location)
+                    || IsPointInToolbarChrome(e.Location))
+                {
+                    if (_hoveredConfirmButton != prevHoveredConfirm)
+                    {
+                        OnConfirmHoverChanged(prevHoveredConfirm);
+                        HideToolbarTooltip();
+                        _tooltipDismissed = false;
+                        _hoverButtonStartTime = DateTime.UtcNow;
+                    }
+                    // Fall through for toolbar hover tracking below.
+                }
+                else if (_confirmRect.Contains(e.Location)
+                         && (!ToolDef.IsAnnotationTool(_mode)
+                             || (_mode == CaptureMode.Move
+                                 && HitTestAnnotation(e.Location) < 0
+                                 && HitTestAnnotationSurface(e.Location) < 0)))
+                {
+                    confirmTarget = Cursors.SizeAll;
+                    if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
+
+                    if (_hoveredConfirmButton != prevHoveredConfirm)
+                    {
+                        OnConfirmHoverChanged(prevHoveredConfirm);
+                        HideToolbarTooltip();
+                        _tooltipDismissed = false;
+                        _hoverButtonStartTime = DateTime.UtcNow;
+                    }
+
+                    return;
+                }
+                else if (ToolDef.IsAnnotationTool(_mode))
+                {
+                    if (_hoveredConfirmButton != prevHoveredConfirm)
+                    {
+                        OnConfirmHoverChanged(prevHoveredConfirm);
+                        HideToolbarTooltip();
+                        _tooltipDismissed = false;
+                        _hoverButtonStartTime = DateTime.UtcNow;
+                    }
+                }
+                else
+                {
+                    confirmTarget = CursorFactory.PrecisionCursor;
+                    if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
+
+                    if (_hoveredConfirmButton != prevHoveredConfirm)
+                    {
+                        OnConfirmHoverChanged(prevHoveredConfirm);
+                        HideToolbarTooltip();
+                        _tooltipDismissed = false;
+                        _hoverButtonStartTime = DateTime.UtcNow;
+                    }
+
+                    return;
                 }
 
-                return;
-            }
-
-            if (ch >= 0 || btnHit >= 0)
-            {
-                if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
-
-                if (_hoveredConfirmButton != prevHoveredConfirm)
+                if (ch >= 0 || btnHit >= 0)
                 {
-                    OnConfirmHoverChanged(prevHoveredConfirm);
-                    HideToolbarTooltip();
-                    _tooltipDismissed = false;
-                    _hoverButtonStartTime = DateTime.UtcNow;
-                }
+                    if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
 
-                return;
+                    if (_hoveredConfirmButton != prevHoveredConfirm)
+                    {
+                        OnConfirmHoverChanged(prevHoveredConfirm);
+                        HideToolbarTooltip();
+                        _tooltipDismissed = false;
+                        _hoverButtonStartTime = DateTime.UtcNow;
+                    }
+
+                    return;
+                }
             }
         }
 
@@ -1070,6 +1113,20 @@ public sealed partial class RegionOverlayForm
         // Second click on an open alt popup (mouse was not still held from the long-press).
         if (_altCapturePopupOpen && TryHandleAltToolPopupClick(e.Location))
             return;
+
+        // Outside-frame click (no annotations): Retry selection without starting a new rubber-band.
+        if (_outsideReselectArmed)
+        {
+            bool moved = _outsideReselectMoved;
+            _outsideReselectArmed = false;
+            if (!moved)
+            {
+                if (_isConfirmingSelection && !HasConfirmAnnotations())
+                    ExitConfirmMode();
+                return;
+            }
+            // Drag already promoted to selection — fall through to selection mouse-up below.
+        }
 
         // End confirm-mode handle drag
         if (_isConfirmingSelection && _confirmHandleDragIndex >= 0)

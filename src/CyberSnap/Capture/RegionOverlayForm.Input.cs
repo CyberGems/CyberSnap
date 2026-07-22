@@ -155,9 +155,22 @@ public sealed partial class RegionOverlayForm
                         return;
                     }
                 }
+                else if (IsOutsideLockedCaptureFrame(e.Location))
+                {
+                    // Exterior of the locked frame:
+                    //  - no annotations → click = Retry, drag = new rubber-band
+                    //  - with annotations → no-op (hint + right-click menu protect work)
+                    if (HasConfirmAnnotations())
+                        return;
+
+                    _outsideReselectArmed = true;
+                    _outsideReselectDown = e.Location;
+                    _outsideReselectMoved = false;
+                    HideToolbarTooltip();
+                    return;
+                }
                 else
                 {
-                    // Left-click outside the confirm UI: ignore (Esc / right-click still cancel).
                     return;
                 }
             }
