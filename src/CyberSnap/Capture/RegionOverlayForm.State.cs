@@ -1307,8 +1307,9 @@ public sealed partial class RegionOverlayForm
         _confirmChromeLayoutDirty = true;
         LayoutConfirmChromeRects();
         RefreshConfirmSizeReadoutRect();
-        EnsureToolbarReady();
+        MarkToolbarRenderDirty();
         PresentAnnotationToolbarNow();
+        EnsureToolbarReady();
 
         // Wrapper shine runs while confirming so the dock stays findable on busy wallpapers.
         if (!UI.Motion.Disabled) _confirmShineTimer.Start();
@@ -1500,6 +1501,8 @@ public sealed partial class RegionOverlayForm
         if (showToolbar)
         {
             CalcToolbar();
+            MarkToolbarRenderDirty();
+            PositionToolbarForm();
             EnsureToolbarReady();
             RefreshToolbar();
         }
