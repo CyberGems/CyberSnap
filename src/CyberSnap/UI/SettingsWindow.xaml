@@ -1610,14 +1610,14 @@
                                 <Border CornerRadius="8" Padding="12,9" BorderThickness="1"
                                         Background="{DynamicResource ThemeTabHoverBrush}"
                                         BorderBrush="{DynamicResource ThemeInputBorderBrush}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                                   Margin="0,1,10,0" VerticalAlignment="Top"
-                                                   Foreground="{DynamicResource ThemeAccentBrush}"/>
-                                        <TextBlock Services:LocalizationService.SourceText="Choose which actions appear after you select a region. Choosing a destination confirms the capture (the first destination button on the right is the default action triggered by Enter or double-click). Retry and Cancel stay available."
-                                                   FontSize="12.5" TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-                                    </StackPanel>
+                                    <DockPanel LastChildFill="True">
+                                         <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                    Margin="0,1,10,0" VerticalAlignment="Top" DockPanel.Dock="Left"
+                                                    Foreground="{DynamicResource ThemeAccentBrush}"/>
+                                         <TextBlock Services:LocalizationService.SourceText="Choose which actions appear after you select a region. Choosing a destination confirms the capture (the first destination button on the right is the default action triggered by Enter or double-click). Retry and Cancel stay available."
+                                                    FontSize="12.5" TextWrapping="Wrap"
+                                                    Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                     </DockPanel>
                                 </Border>
                                 <TextBlock x:Name="ToastLayoutSelectionText" Text="" Style="{StaticResource InfoText}"
                                            Visibility="Collapsed" Margin="0,4,0,0"
