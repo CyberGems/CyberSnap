@@ -243,12 +243,14 @@ public sealed partial class RegionOverlayForm
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
             LayoutConfirmChromeRects();
+            // Soft wrapper/glow must sit on a freshly painted opaque base for the full chrome
+            // region. Partial clips of low-alpha rings were leaving trails after the wrapper shipped.
+            EnsureConfirmChromeOpaqueBase(g, clip, committed);
+
+            DrawConfirmChromeWrapper(g);
             using (var btnFont = CreateConfirmButtonFont())
             {
                 bool shineOn = _confirmShineTimer.Enabled && !UI.Motion.Disabled;
-                bool anyHover = _hoveredConfirmButton >= 0;
-                const float dimFloor = 0.28f;
-                Color deactColor = UiChrome.IsDark ? Color.FromArgb(74, 80, 86) : Color.FromArgb(170, 178, 186);
                 int primaryIdx = IndexOfPrimaryConfirmAction();
 
                 for (int i = 0; i < _confirmChromeKinds.Length && i < _confirmChromeRects.Length; i++)
@@ -260,27 +262,24 @@ public sealed partial class RegionOverlayForm
                     bool hover = _hoveredConfirmButton == i;
                     bool disabled = IsConfirmChromeDisabled(kind);
                     float press = (!disabled && _pressedConfirmButton == i) ? _confirmPressAmt : 0f;
-                    float shine = !disabled && shineOn && i < ConfirmShineSlots ? _shinePhase[i] : -1f;
-                    float main = i < ConfirmShineSlots ? _shineMain[i] : 1f;
-                    float dup = i < ConfirmShineSlots ? _shineDup[i] : 0f;
-                    float factor = UI.Motion.Disabled
-                        ? (anyHover && !hover ? 0f : 1f)
-                        : main;
-                    float opacity = UI.Motion.Disabled
-                        ? (anyHover && !hover ? dimFloor : 1.0f)
-                        : (dimFloor + (1f - dimFloor) * main);
+                    // Per-button shine only while that button is hovered (never group dim/shine).
+                    float shine = !disabled && shineOn && hover && i < ConfirmShineSlots ? _shinePhase[i] : -1f;
+                    float main = 1f;
+                    float dup = (!disabled && hover && i < ConfirmShineSlots) ? _shineDup[i] : 0f;
+                    float factor = 1f;
+                    float opacity = 1f;
 
                     if (disabled)
                     {
-                        // Stay visibly inactive even on hover (hover only exists for the tooltip).
                         factor = 0f;
-                        opacity = hover ? dimFloor + 0.08f : dimFloor * 0.7f;
+                        opacity = hover ? 0.4f : 0.28f;
                         shine = -1f;
                         press = 0f;
                     }
 
                     bool isPrimaryDest = !disabled && i == primaryIdx;
-                    Color activeColor = ConfirmChromeAccent(kind, isPrimaryDest);
+                    Color activeColor = ConfirmChromeAccent(kind, isPrimary: false);
+                    Color deactColor = UiChrome.IsDark ? Color.FromArgb(74, 80, 86) : Color.FromArgb(170, 178, 186);
                     Color deactTint = InterpolateColor(deactColor, activeColor, 0.25f);
                     Color color = InterpolateColor(deactTint, activeColor, factor);
 
@@ -291,9 +290,10 @@ public sealed partial class RegionOverlayForm
                         _ => 3 // fluent icon path
                     };
                     string? fluentIcon = ConfirmChromeFluentIcon(kind);
+                    string label = ConfirmChromeDrawLabel(kind);
 
-                    DrawConfirmActionPill(g, btn, color, label: "", btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
-                        hasShine: !disabled, fluentIconId: fluentIcon, accent: activeColor);
+                    DrawConfirmActionPill(g, btn, color, label, btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
+                        hasShine: !disabled && hover, fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest);
                 }
 
                 if (!_confirmChromeSeparatorRect.IsEmpty)
@@ -335,9 +335,8 @@ public sealed partial class RegionOverlayForm
     /// <summary>Accent used for pill face tint, outer glow, outline, and traveling shine.</summary>
     private static Color ConfirmChromeAccent(ConfirmChromeKind kind, bool isPrimary)
     {
-        if (isPrimary)
-            return Color.FromArgb(34, 197, 94); // green-500
-
+        // Kind color is the source of truth; primary is emphasized via outline/glow, not a forced green.
+        _ = isPrimary;
         return kind switch
         {
             ConfirmChromeKind.Retry => Color.FromArgb(239, 68, 68),      // red-500
@@ -346,9 +345,125 @@ public sealed partial class RegionOverlayForm
             ConfirmChromeKind.Copy => Color.FromArgb(0, 162, 255),       // accent blue
             ConfirmChromeKind.Edit => Color.FromArgb(139, 92, 246),      // violet
             ConfirmChromeKind.Share => Color.FromArgb(6, 182, 212),      // cyan
+            ConfirmChromeKind.History => Color.FromArgb(245, 158, 11),   // amber (Gallery)
             ConfirmChromeKind.OcrExtract => Color.FromArgb(34, 197, 94), // green
             _ => Color.FromArgb(0, 162, 255)
         };
+    }
+
+    /// <summary>
+    /// Repaint the screenshot + dim base under the confirm dock (and a pad for glow/shadow)
+    /// whenever the paint clip touches that region. Prevents low-alpha glow trails.
+    /// </summary>
+    private void EnsureConfirmChromeOpaqueBase(Graphics g, Rectangle clip, Bitmap committed)
+    {
+        var union = UnionConfirmChromeRects();
+        if (union.IsEmpty)
+            return;
+
+        var area = InflateForRepaint(union, ConfirmChromeInvalidatePad);
+        if (!area.IntersectsWith(clip))
+            return;
+
+        area.Intersect(ClientRectangle);
+        if (area.Width <= 0 || area.Height <= 0)
+            return;
+
+        var state = g.Save();
+        try
+        {
+            g.SetClip(area, CombineMode.Replace);
+            g.CompositingMode = CompositingMode.SourceCopy;
+            g.InterpolationMode = InterpolationMode.NearestNeighbor;
+            g.PixelOffsetMode = PixelOffsetMode.None;
+            g.SmoothingMode = SmoothingMode.None;
+
+            var hole = GetSelectionDimHole();
+            if (ShouldDimOutsideSelection())
+            {
+                EnsureDesaturatedScreenshot();
+                var desat = _desaturatedScreenshot;
+                if (desat is not null)
+                    g.DrawImage(desat, area, area, GraphicsUnit.Pixel);
+                else
+                    g.DrawImage(committed, area, area, GraphicsUnit.Pixel);
+
+                // Restore full-color hole where it overlaps the chrome area.
+                if (hole.Width > 2 && hole.Height > 2)
+                {
+                    var holeClip = Rectangle.Intersect(hole, area);
+                    if (holeClip.Width > 0 && holeClip.Height > 0)
+                        g.DrawImage(committed, holeClip, holeClip, GraphicsUnit.Pixel);
+                }
+
+                g.CompositingMode = CompositingMode.SourceOver;
+                if (hole.Width > 2 && hole.Height > 2)
+                    g.ExcludeClip(hole);
+                using var dimBrush = new SolidBrush(SelectionDimColor);
+                g.FillRectangle(dimBrush, area);
+            }
+            else
+            {
+                g.DrawImage(committed, area, area, GraphicsUnit.Pixel);
+            }
+        }
+        finally
+        {
+            g.Restore(state);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.CompositingMode = CompositingMode.SourceOver;
+        }
+    }
+
+    /// <summary>Opaque dock behind the confirm pills, with a slow traveling border shine for visibility.</summary>
+    private void DrawConfirmChromeWrapper(Graphics g)
+    {
+        if (_confirmChromeWrapperRect.IsEmpty)
+            return;
+
+        float corner = UiChrome.ScaleFloat(16f);
+        var bounds = _confirmChromeWrapperRect;
+        var face = new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+
+        // Soft drop shadow — keep it tight so it stays inside the invalidate pad.
+        using (var shadowPath = WindowsDockRenderer.RoundedRect(
+                   new RectangleF(bounds.X, bounds.Y + UiChrome.ScaleFloat(2f), bounds.Width, bounds.Height),
+                   corner))
+        using (var shadowBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 110 : 55, 0, 0, 0)))
+            g.FillPath(shadowBrush, shadowPath);
+
+        using var path = WindowsDockRenderer.RoundedRect(face, corner);
+
+        // Fully opaque face so partial redraws never composite over old frames.
+        Color fillTop = UiChrome.IsDark
+            ? Color.FromArgb(255, 22, 23, 28)
+            : Color.FromArgb(255, 245, 247, 250);
+        Color fillBottom = UiChrome.IsDark
+            ? Color.FromArgb(255, 12, 13, 16)
+            : Color.FromArgb(255, 232, 236, 242);
+        using (var fill = new LinearGradientBrush(
+                   new RectangleF(bounds.X, bounds.Y - 1, bounds.Width, bounds.Height + 2),
+                   fillTop, fillBottom, LinearGradientMode.Vertical))
+            g.FillPath(fill, path);
+
+        Color border = UiChrome.IsDark
+            ? Color.FromArgb(100, 255, 255, 255)
+            : Color.FromArgb(80, 0, 0, 0);
+        using (var pen = new Pen(border, UiChrome.ScaleFloat(1f)))
+            g.DrawPath(pen, path);
+
+        // Subtle accent ring so the dock never disappears into a busy screenshot.
+        Color accent = Color.FromArgb(0, 162, 255);
+        using (var accentPen = new Pen(Color.FromArgb(UiChrome.IsDark ? 70 : 55, accent), UiChrome.ScaleFloat(1.25f)))
+            g.DrawPath(accentPen, path);
+
+        // Traveling shine on the wrapper only (not on every button).
+        if (!UI.Motion.Disabled && _confirmShineTimer.Enabled)
+        {
+            Color glow = accent;
+            Color core = ConfirmChromeShineCore(accent);
+            DrawBorderShine(g, face, corner, _confirmWrapperShinePhase, glow, core, 0.85f);
+        }
     }
 
     private static Color ConfirmChromeShineCore(Color accent)
@@ -367,12 +482,15 @@ public sealed partial class RegionOverlayForm
     private static void DrawConfirmActionPill(
         Graphics g, Rectangle rect, Color baseColor, string label, Font font,
         bool hover, int iconType, float pressAmt, float shinePhase, float shineMain, float shineDup,
-        float opacity, bool hasShine, string? fluentIconId = null, Color? accent = null)
+        float opacity, bool hasShine, string? fluentIconId = null, Color? accent = null,
+        bool isPrimary = false)
     {
         float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
         float depth = UiChrome.ScaleFloat(5f);   // 3D extrusion thickness
         float press = depth * pressAmt;           // how far the face sinks while pressed
         Color accentColor = accent ?? baseColor;
+        // Primary destination gets a slightly thicker accent ring for Enter / double-click affordance.
+        float primaryBoost = isPrimary ? 1.35f : 1f;
 
         // Face sinks downward onto its fixed base while pressed.
         var face = new RectangleF(rect.X, rect.Y + press, rect.Width, rect.Height);
@@ -401,8 +519,8 @@ public sealed partial class RegionOverlayForm
         if (hasShine)
         {
             var glowBounds = RectangleF.FromLTRB(rect.X, face.Y, rect.Right, baseRect.Bottom);
-            float glowSpread = UiChrome.ScaleFloat(hover ? 3.75f : 2.75f);
-            int glowPeak = hover ? 32 : 17;
+            float glowSpread = UiChrome.ScaleFloat((hover ? 3.75f : 2.75f) * primaryBoost);
+            int glowPeak = (int)((hover ? 32 : 17) * primaryBoost);
             const int glowSteps = 7;
             for (int i = glowSteps; i >= 1; i--)
             {
@@ -411,7 +529,7 @@ public sealed partial class RegionOverlayForm
                 float falloff = 1f - frac;                  // stronger nearer the button edge
                 int a = (int)(glowPeak * falloff * falloff * opacity);
                 if (a <= 0) continue;
-                using var glowPen = new Pen(Color.FromArgb(a, accentColor), glowSpread / glowSteps * 2.4f)
+                using var glowPen = new Pen(Color.FromArgb(Math.Min(255, a), accentColor), glowSpread / glowSteps * 2.4f)
                 {
                     LineJoin = LineJoin.Round
                 };
@@ -442,14 +560,15 @@ public sealed partial class RegionOverlayForm
                 LinearGradientMode.Vertical))
                 g.FillPath(fill, facePath);
 
-            // Fino delineado del color del shine por todo el botón para definirlo
-            int outlineA = hover ? 160 : 100;
+            // Accent outline — primary destination gets a thicker ring for Enter / double-click.
+            int outlineA = hover ? 160 : (isPrimary ? 140 : 100);
             Color outlineColor = hasShine
                 ? Color.FromArgb(outlineA, accentColor)
                 : Color.FromArgb(hover ? 120 : 70, 150, 150, 150);
             // Fade the colored edge with the dim factor too, so an "off" button loses its accent ring.
             int borderA = (int)(outlineColor.A * (0.35f + 0.65f * opacity));
-            using (var borderPen = new Pen(Color.FromArgb(borderA, outlineColor.R, outlineColor.G, outlineColor.B), UiChrome.ScaleFloat(1f)))
+            float outlineW = UiChrome.ScaleFloat(isPrimary ? 1.75f : 1f);
+            using (var borderPen = new Pen(Color.FromArgb(borderA, outlineColor.R, outlineColor.G, outlineColor.B), outlineW))
                 g.DrawPath(borderPen, facePath);
 
             // Glossy top highlight — a soft vertical fade to transparent (no hard bottom edge) so it
@@ -516,11 +635,9 @@ public sealed partial class RegionOverlayForm
             };
             SizeF textSize = g.MeasureString(label, font, new SizeF(10000f, face.Height), sf);
 
-            // Center the VISIBLE content (text + check). The check glyph only fills ~0.84 of its
-            // icon box (symmetric empty margins), so center using that visual width — otherwise the
-            // empty right margin makes the pair look nudged to the left.
-            float iconVisualW = iconSize * 0.84f;
-            float groupW = textSize.Width + gap + iconVisualW;
+            // Icon on the left, label on the right (standard action-pill reading order).
+            float iconVisualW = useFluent ? iconSize : iconSize * 0.84f;
+            float groupW = iconVisualW + gap + textSize.Width;
             float startX = face.X + (face.Width - groupW) / 2f;
 
             // Vertical optical centering: GDI+ centers the full ascent+descent line box, so an
@@ -534,14 +651,14 @@ public sealed partial class RegionOverlayForm
             float emPx = font.SizeInPoints * g.DpiY / 72f;
             float vNudge = ((ascent - capHeight - descent) / em) * emPx / 2f;
 
+            bx = startX;
+            by = face.Y + (face.Height - iconSize) / 2f;
+
             using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), Color.FromArgb(0xE6, 0xE7, 0xE9))))
             {
-                var textRect = new RectangleF(startX, face.Y - vNudge, textSize.Width + 1f, face.Height);
+                var textRect = new RectangleF(startX + iconVisualW + gap, face.Y - vNudge, textSize.Width + 1f, face.Height);
                 g.DrawString(label, font, textBrush, textRect, sf);
             }
-
-            bx = startX + textSize.Width + gap;
-            by = face.Y + (face.Height - iconSize) / 2f;
         }
 
         float stroke = string.IsNullOrEmpty(label) ? UiChrome.ScaleFloat(1.5f) : UiChrome.ScaleFloat(2f);

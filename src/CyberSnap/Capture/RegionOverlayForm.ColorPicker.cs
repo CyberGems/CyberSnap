@@ -19,6 +19,7 @@ public sealed partial class RegionOverlayForm
     private int _lastRenderedCapturePickerArgb;
     private Point _lastRenderedPickerPoint = Point.Empty;
     private Point _lastRenderedCapturePickerPoint = Point.Empty;
+    private Rectangle _lastMagnifierScreenBounds = Rectangle.Empty;
     private Point _pendingPickerPoint;
     private bool _pickerUpdateQueued;
     private readonly System.Diagnostics.Stopwatch _pickerStopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -124,7 +125,7 @@ public sealed partial class RegionOverlayForm
     {
         if (!ShouldShowCaptureMagnifierAt(overlayPoint))
         {
-            CloseCaptureMagnifier();
+            HideCaptureMagnifier();
             return;
         }
 
@@ -150,13 +151,13 @@ public sealed partial class RegionOverlayForm
     {
         if (!ShouldShowCaptureMagnifierAt(overlayPoint))
         {
-            CloseCaptureMagnifier();
+            HideCaptureMagnifier();
             return;
         }
 
         if (_lastRenderedCapturePickerPoint == overlayPoint &&
             _lastPickedArgb == _lastRenderedCapturePickerArgb &&
-            _captureMagnifierForm != null)
+            _captureMagnifierForm is { Visible: true })
             return;
 
         _pickerCursorPos = overlayPoint;
@@ -168,13 +169,28 @@ public sealed partial class RegionOverlayForm
 
         var avoidRect = GetCaptureMagnifierAvoidBounds();
         var (mx, my) = MagPos(_pickerCursorPos, showInfo: false, avoidRect);
-        magForm.Left = mx + _virtualBounds.X - 4;
-        magForm.Top = my + _virtualBounds.Y - 4;
+        int screenX = mx + _virtualBounds.X - 4;
+        int screenY = my + _virtualBounds.Y - 4;
+
+        // Invalidate the previous layered-window footprint on the overlay so soft lens
+        // shadows never leave a trail when the magnifier jumps (resize / avoid-rect flip).
+        if (magForm.Visible && (_lastMagnifierScreenBounds.Width > 0 || _lastMagnifierScreenBounds.Height > 0))
+        {
+            var oldClient = _lastMagnifierScreenBounds;
+            oldClient.Offset(-_virtualBounds.X, -_virtualBounds.Y);
+            if (!oldClient.IsEmpty)
+                Invalidate(InflateForRepaint(oldClient, 12));
+        }
+
+        magForm.Left = screenX;
+        magForm.Top = screenY;
         if (!magForm.Visible)
             magForm.Show(this);
         magForm.UpdateMagnifier(_magBitmap, _pickerCursorPos, _pickedColor, _hexStr, _rgbStr, showInfo: false);
         Native.User32.SetWindowPos(magForm.Handle, Native.User32.HWND_TOPMOST, 0, 0, 0, 0,
             Native.User32.SWP_NOMOVE | Native.User32.SWP_NOSIZE | Native.User32.SWP_NOACTIVATE | Native.User32.SWP_SHOWWINDOW);
+
+        _lastMagnifierScreenBounds = new Rectangle(screenX, screenY, magForm.Width, magForm.Height);
         _lastRenderedCapturePickerPoint = overlayPoint;
         _lastRenderedCapturePickerArgb = _lastPickedArgb;
         _capturePickerStopwatch.Restart();
@@ -192,20 +208,38 @@ public sealed partial class RegionOverlayForm
         _capturePickerUpdateQueued = false;
     }
 
-    private void CloseCaptureMagnifier()
+    /// <summary>Hide without disposing — avoids recreate flicker / trail when the cursor skims UI.</summary>
+    private void HideCaptureMagnifier()
     {
-        if (_captureMagnifierForm != null)
-            WindowDetector.UnregisterIgnoredWindow(_captureMagnifierForm.Handle);
-        _captureMagnifierForm?.Close();
-        _captureMagnifierForm?.Dispose();
-        _captureMagnifierForm = null;
+        if (_captureMagnifierForm is { Visible: true })
+        {
+            if (_lastMagnifierScreenBounds.Width > 0 || _lastMagnifierScreenBounds.Height > 0)
+            {
+                var oldClient = _lastMagnifierScreenBounds;
+                oldClient.Offset(-_virtualBounds.X, -_virtualBounds.Y);
+                if (!oldClient.IsEmpty)
+                    Invalidate(InflateForRepaint(oldClient, 12));
+            }
+            try { _captureMagnifierForm.Hide(); } catch { }
+        }
         _capturePickerUpdateQueued = false;
         _lastRenderedCapturePickerPoint = Point.Empty;
+        _lastMagnifierScreenBounds = Rectangle.Empty;
+        _capturePickerStopwatch.Reset();
+        _capturePickerStopwatch.Start();
+    }
+
+    private void CloseCaptureMagnifier()
+    {
+        HideCaptureMagnifier();
+        if (_captureMagnifierForm != null)
+            WindowDetector.UnregisterIgnoredWindow(_captureMagnifierForm.Handle);
+        try { _captureMagnifierForm?.Close(); } catch { }
+        try { _captureMagnifierForm?.Dispose(); } catch { }
+        _captureMagnifierForm = null;
         _lastMagnifierSamplePoint = new Point(-1, -1);
         _captureMagnifierPlacementIndex = 0;
         _captureMagnifierDragQuadrant = 0;
-        _capturePickerStopwatch.Reset();
-        _capturePickerStopwatch.Start();
     }
 
     private void ResetCaptureMagnifierDragPlacement()
@@ -240,23 +274,34 @@ public sealed partial class RegionOverlayForm
 
     private Rectangle GetCaptureMagnifierAvoidBounds()
     {
-        if (!_isSelecting)
-            return Rectangle.Empty;
-
         Rectangle selectionBounds = Rectangle.Empty;
-        if (_selectionRect.Width > 0 && _selectionRect.Height > 0)
+        if (_isSelecting && _selectionRect.Width > 0 && _selectionRect.Height > 0)
             selectionBounds = _selectionRect;
+        else if (_isConfirmingSelection && _confirmRect.Width > 0 && _confirmRect.Height > 0)
+            selectionBounds = _confirmRect;
+
         if (selectionBounds.IsEmpty)
             return Rectangle.Empty;
 
+        var avoid = selectionBounds;
         var readoutBounds = SelectionSizeReadout.GetBounds(
             GetReadoutCursorPoint(),
             selectionBounds,
             _readoutFont,
             ClientRectangle);
-        return readoutBounds.IsEmpty
-            ? selectionBounds
-            : Rectangle.Union(selectionBounds, InflateForRepaint(readoutBounds, 8));
+        if (!readoutBounds.IsEmpty)
+            avoid = Rectangle.Union(avoid, InflateForRepaint(readoutBounds, 8));
+
+        // Keep the lens off the confirm pill dock (wrapper + glow) while confirming.
+        if (_isConfirmingSelection)
+        {
+            LayoutConfirmChromeRects();
+            var chrome = UnionConfirmChromeRects();
+            if (!chrome.IsEmpty)
+                avoid = Rectangle.Union(avoid, InflateForRepaint(chrome, ConfirmChromeInvalidatePad));
+        }
+
+        return avoid;
     }
 
     private void BuildMagnifier()

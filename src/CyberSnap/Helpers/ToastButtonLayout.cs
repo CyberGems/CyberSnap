@@ -34,17 +34,34 @@ public enum ToastButtonPreset
 
 public static class ToastButtonLayout
 {
-    /// <summary>Map a slot to a 2×4 designer / toast action grid (row 0 = top, column 0 = left).</summary>
+    /// <summary>
+    /// Map a slot to the confirm-bar designer grid. Destinations live on a single horizontal
+    /// row (columns 0–4 for the five confirm actions: Save / Copy / Edit / Share / Gallery).
+    /// Remaining slots keep unique columns for drag targets but stay on row 0.
+    /// </summary>
     public static (int row, int column) ToGridCell(ToastButtonSlot slot) => slot switch
     {
         ToastButtonSlot.TopLeft => (0, 0),
         ToastButtonSlot.TopInnerLeft => (0, 1),
         ToastButtonSlot.TopInnerRight => (0, 2),
         ToastButtonSlot.TopRight => (0, 3),
-        ToastButtonSlot.BottomLeft => (1, 0),
-        ToastButtonSlot.BottomInnerLeft => (1, 1),
-        ToastButtonSlot.BottomInnerRight => (1, 2),
-        _ => (1, 3)
+        ToastButtonSlot.BottomLeft => (0, 4),          // 5th confirm slot (Gallery in Full)
+        ToastButtonSlot.BottomInnerLeft => (0, 5),
+        ToastButtonSlot.BottomInnerRight => (0, 6),
+        _ => (0, 7) // BottomRight
+    };
+
+    /// <summary>Confirm-bar designer exposes five destination slots in one row.</summary>
+    public const int ConfirmDestinationSlotCount = 5;
+
+    /// <summary>Ordered slots used by the confirm destination strip (left → right).</summary>
+    public static readonly ToastButtonSlot[] ConfirmDestinationSlots =
+    {
+        ToastButtonSlot.TopLeft,
+        ToastButtonSlot.TopInnerLeft,
+        ToastButtonSlot.TopInnerRight,
+        ToastButtonSlot.TopRight,
+        ToastButtonSlot.BottomLeft
     };
 
     public static (System.Windows.HorizontalAlignment horizontal, System.Windows.VerticalAlignment vertical, Thickness margin) ToPlacement(
@@ -206,20 +223,21 @@ public static class ToastButtonLayout
 
     /// <summary>
     /// Actions that appear as confirm-mode pills after locking a capture region.
-    /// Pin / Close / Delete are toast-only. History is omitted: there is no saved
-    /// capture yet — confirming creates it; Gallery is a post-capture surface.
+    /// Pin / Close / Delete are toast-only chrome leftovers and stay hidden in the designer.
+    /// History / Gallery commits with save-to-disk then opens Gallery on the new entry.
     /// </summary>
     public static readonly ToastButtonKind[] ConfirmActionButtons =
     {
         ToastButtonKind.Save,
         ToastButtonKind.Copy,
         ToastButtonKind.Edit,
-        ToastButtonKind.Share
+        ToastButtonKind.Share,
+        ToastButtonKind.History
     };
 
     public static bool IsConfirmActionButton(ToastButtonKind button)
         => button is ToastButtonKind.Save or ToastButtonKind.Copy or ToastButtonKind.Edit
-            or ToastButtonKind.Share;
+            or ToastButtonKind.Share or ToastButtonKind.History;
 
     public static ToastCorner SlotToCorner(ToastButtonSlot slot) => slot switch
     {
@@ -296,11 +314,12 @@ public static class ToastButtonLayout
                 break;
 
             case ToastButtonPreset.Full:
-                // Save always leftmost among destinations; Copy / Edit / Share follow.
+                // All five confirm destinations in one row: Save · Copy · Edit · Share · Gallery.
                 Place(ToastButtonKind.Save, ToastButtonSlot.TopLeft);
                 Place(ToastButtonKind.Copy, ToastButtonSlot.TopInnerLeft);
                 Place(ToastButtonKind.Edit, ToastButtonSlot.TopInnerRight);
                 Place(ToastButtonKind.Share, ToastButtonSlot.TopRight);
+                Place(ToastButtonKind.History, ToastButtonSlot.BottomLeft);
                 break;
 
             default: // Standard — Save only, same slot as in Full.

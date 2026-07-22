@@ -163,7 +163,11 @@ public sealed partial class RegionOverlayForm
         _activeToolId = toolId ?? _visibleTools.FirstOrDefault(t => t.Mode == m)?.Id;
 
         // Remember annotation tools so the next confirm session can restore them.
-        if (ToolDef.IsAnnotationTool(m) && !string.IsNullOrEmpty(_activeToolId))
+        // Skip placement tools — restoring Magnifier auto-selected a live ghost that looked
+        // like the capture pixel magnifier and left paint trails while hovering.
+        if (ToolDef.IsAnnotationTool(m)
+            && !string.IsNullOrEmpty(_activeToolId)
+            && m is not CaptureMode.Magnifier and not CaptureMode.Emoji and not CaptureMode.StepNumber)
             LastAnnotationToolChanged?.Invoke(_activeToolId);
 
         _hasSelection = false;
@@ -405,7 +409,14 @@ public sealed partial class RegionOverlayForm
         if (cursor == Point.Empty)
             return Rectangle.Empty;
         const int srcSize = 50;
-        return GetMagnifierPaintBounds(cursor, new Rectangle(cursor.X - srcSize / 2, cursor.Y - srcSize / 2, srcSize, srcSize), ClientSize);
+        // Include both placement sides (px/py may flip left of cursor when near the right edge).
+        var src = new Rectangle(cursor.X - srcSize / 2, cursor.Y - srcSize / 2, srcSize, srcSize);
+        var a = GetMagnifierPaintBounds(cursor, src, ClientSize);
+        // Conservative dual-side union so a flip mid-drag never leaves a smear.
+        int zoom = 3;
+        int dst = srcSize * zoom;
+        var b = new Rectangle(cursor.X - 20 - dst - 12, cursor.Y - 20 - dst - 12, (dst + 40) * 2, (dst + 40) * 2);
+        return Rectangle.Union(a, b);
     }
 
     private Rectangle GetEmojiPreviewRect(Point cursor)

@@ -596,7 +596,8 @@ public partial class SettingsWindow
         ApplyNotificationsDependentVisual(CelebrationsNotificationsRow, notificationsEnabled);
         ApplyNotificationsDependentVisual(NotificationsPlacementSection, notificationsEnabled);
         ApplyNotificationsDependentVisual(NotificationsTimingSection, notificationsEnabled);
-        ApplyNotificationsDependentVisual(NotificationsDesignSection, notificationsEnabled);
+        // Confirm destination designer lives under Capture now — not gated by toast master switch.
+        ApplyNotificationsDependentVisual(ConfirmPillsMovedBanner, notificationsEnabled);
     }
 
     // The "System messages" sub-toggle only applies while the master switch is on.
@@ -1444,63 +1445,42 @@ public partial class SettingsWindow
     {
         try
         {
-            // Capture-notification test: preview + the user's overlay button layout.
-            // Write a real temp file so buttons that require a path on disk (Delete) still appear.
-            string tempPath = Path.Combine(Path.GetTempPath(), $"CyberSnap_test_notif_{Guid.NewGuid():N}.png");
-            using (var bmp = new System.Drawing.Bitmap(280, 200))
+            // Celebration / achievement flourish preview (replaces the old capture-image toast mock).
+            // Same visual family as milestone / streak / welcome-back celebrations.
+            var settings = _settingsService.Settings;
+            int count = Math.Max(1, settings.CelebrationCaptureCount);
+            string title;
+            string body;
+            string? iconId = null;
+
+            if (CelebrationMilestones.IsMilestone(count))
             {
-                using (var g = System.Drawing.Graphics.FromImage(bmp))
-                {
-                    using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                        new System.Drawing.Point(0, 0),
-                        new System.Drawing.Point(280, 200),
-                        System.Drawing.Color.FromArgb(99, 102, 241),
-                        System.Drawing.Color.FromArgb(168, 85, 247)))
-                    {
-                        g.FillRectangle(brush, 0, 0, 280, 200);
-                    }
-
-                    using (var sf = new System.Drawing.StringFormat())
-                    {
-                        sf.Alignment = System.Drawing.StringAlignment.Center;
-                        string versionLabel = UpdateService.GetCurrentVersionLabel();
-                        string brandLine = string.Format(LocalizationService.Translate("CyberSnap {0}"), versionLabel);
-                        using (var font = new System.Drawing.Font("Segoe UI", 16, System.Drawing.FontStyle.Bold))
-                        using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.White))
-                        {
-                            g.DrawString(brandLine, font, brush, new System.Drawing.RectangleF(0, 24, 280, 40), sf);
-                        }
-
-                        using (var font = new System.Drawing.Font("Segoe UI", 10))
-                        using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(220, 255, 255, 255)))
-                        {
-                            g.DrawString(LocalizationService.Translate("This is a notification preview."), font, brush, new System.Drawing.RectangleF(0, 66, 280, 44), sf);
-                            g.DrawString(LocalizationService.Translate("Position, duration and alignment tests."), font, brush, new System.Drawing.RectangleF(0, 112, 280, 44), sf);
-                        }
-                    }
-                }
-
-                bmp.Save(tempPath, System.Drawing.Imaging.ImageFormat.Png);
-
-                ToastWindow.Show(ToastSpec.ImagePreview(
-                    (System.Drawing.Bitmap)bmp.Clone(),
-                    "Notification Preview",
-                    "Testing layout & alignment",
-                    filePath: tempPath,
-                    autoPin: false,
-                    transparentShell: false,
-                    showOverlayButtons: true
-                ) with
-                {
-                    IsSystemMessage = false,
-                    // Buttons are only for layout inspection — no open/save/delete/etc.
-                    DisableInteractiveActions = true
-                });
+                title = LocalizationService.Translate("Milestone reached!");
+                body = string.Format(LocalizationService.Translate("{0} captures and counting"), count);
+                iconId = "trophy";
             }
+            else if (settings.CurrentStreak >= 3 && CelebrationMilestones.IsStreakMilestone(settings.CurrentStreak))
+            {
+                title = LocalizationService.Translate("On a roll!");
+                body = string.Format(LocalizationService.Translate("{0}-day streak"), settings.CurrentStreak);
+            }
+            else
+            {
+                title = LocalizationService.Translate("Welcome back!");
+                body = LocalizationService.Translate("Your first capture today");
+            }
+
+            ToastWindow.Show(ToastSpec.Standard(title, body) with
+            {
+                Celebrate = true,
+                SuppressSound = false,
+                IsSystemMessage = false,
+                CelebrationBodyIconId = iconId
+            });
         }
         catch (Exception ex)
         {
-            AppDiagnostics.LogError("settings.test-toast", ex);
+            AppDiagnostics.LogError("settings.test-celebration-toast", ex);
             ToastWindow.ShowError(
                 LocalizationService.Translate("Test failed"),
                 $"{LocalizationService.Translate("Could not show test notification:")}\n{ex.Message}");

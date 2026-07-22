@@ -183,10 +183,17 @@ public sealed class AppSettings
         public bool ShowDelete { get; set; }
         public ToastButtonSlot DeleteSlot { get; set; } = ToastButtonSlot.BottomLeft;
         public bool ShowHistory { get; set; }
-        public ToastButtonSlot HistorySlot { get; set; } = ToastButtonSlot.TopInnerLeft;
+        /// <summary>Default is the 5th confirm-bar slot (after Save/Copy/Edit/Share).</summary>
+        public ToastButtonSlot HistorySlot { get; set; } = ToastButtonSlot.BottomLeft;
         public bool ShowEdit { get; set; } = true;
         public ToastButtonSlot EditSlot { get; set; } = ToastButtonSlot.TopInnerRight;
     }
+
+    /// <summary>
+    /// When true, confirm-mode destination pills show a short text label beside the icon.
+    /// Cancel / Retry stay icon-only. Toggleable from Settings → Notifications and the confirm bar context menu.
+    /// </summary>
+    public bool ConfirmPillShowLabels { get; set; }
 
     public bool AllowHotkeyOverride { get; set; }
 

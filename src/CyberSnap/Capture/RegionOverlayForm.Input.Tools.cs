@@ -115,11 +115,16 @@ public sealed partial class RegionOverlayForm
             _prevCursorPos = _lastCursorPos;
             _lastCursorPos = e.Location;
 
+            // Never keep the capture magnifier alive over confirm chrome or while resizing/moving.
+            if (_captureMagnifierForm is { Visible: true })
+                HideCaptureMagnifier();
+
             // 1. Confirm-mode handle resize
             if (_confirmHandleDragIndex >= 0)
             {
                 ClearCrosshairGuides();
                 SetSnapGuides(false, false);
+                InvalidateConfirmChromeLayout();
                 int dx = e.Location.X - _confirmDragStart.X;
                 int dy = e.Location.Y - _confirmDragStart.Y;
                 var ob = _confirmDragStartRect;
@@ -141,12 +146,12 @@ public sealed partial class RegionOverlayForm
                     LayoutConfirmChromeRects();
                     var oldUnion = UnionConfirmChromeRects();
                     _confirmRect = nb;
+                    InvalidateConfirmChromeLayout();
                     InvalidateSelectionChromePart(oldRect, _prevCursorPos);
                     InvalidateSelectionChromePart(_confirmRect, e.Location);
                     LayoutConfirmChromeRects();
                     var newUnion = UnionConfirmChromeRects();
-                    if (!oldUnion.IsEmpty || !newUnion.IsEmpty)
-                        Invalidate(Rectangle.Union(InflateForRepaint(oldUnion, 20), InflateForRepaint(newUnion, 20)));
+                    InvalidateConfirmChromeMove(oldUnion, newUnion, oldRect, _confirmRect);
                 }
                 return;
             }
@@ -156,18 +161,19 @@ public sealed partial class RegionOverlayForm
             {
                 ClearCrosshairGuides();
                 SetSnapGuides(false, false);
+                InvalidateConfirmChromeLayout();
                 int newX = e.Location.X - _confirmDragOffset.X;
                 int newY = e.Location.Y - _confirmDragOffset.Y;
                 var oldRect = _confirmRect;
                 LayoutConfirmChromeRects();
                 var oldUnion = UnionConfirmChromeRects();
                 _confirmRect = new Rectangle(newX, newY, oldRect.Width, oldRect.Height);
+                InvalidateConfirmChromeLayout();
                 InvalidateSelectionChromePart(oldRect, _prevCursorPos);
                 InvalidateSelectionChromePart(_confirmRect, e.Location);
                 LayoutConfirmChromeRects();
                 var newUnion = UnionConfirmChromeRects();
-                if (!oldUnion.IsEmpty || !newUnion.IsEmpty)
-                    Invalidate(Rectangle.Union(InflateForRepaint(oldUnion, 20), InflateForRepaint(newUnion, 20)));
+                InvalidateConfirmChromeMove(oldUnion, newUnion, oldRect, _confirmRect);
                 return;
             }
 
@@ -198,10 +204,7 @@ public sealed partial class RegionOverlayForm
                 // Still update confirm hover chrome when over handles/buttons above.
                 if (_hoveredConfirmButton != prevHoveredConfirm)
                 {
-                    LayoutConfirmChromeRects();
-                    var union = UnionConfirmChromeRects();
-                    if (!union.IsEmpty)
-                        Invalidate(InflateForRepaint(union, 20));
+                    OnConfirmHoverChanged(prevHoveredConfirm);
                     HideToolbarTooltip();
                     _tooltipDismissed = false;
                     _hoverButtonStartTime = DateTime.UtcNow;
@@ -216,10 +219,7 @@ public sealed partial class RegionOverlayForm
                 // on the confirm-phase dock (stroke, color, Move, Close, branding).
                 if (_hoveredConfirmButton != prevHoveredConfirm)
                 {
-                    LayoutConfirmChromeRects();
-                    var union = UnionConfirmChromeRects();
-                    if (!union.IsEmpty)
-                        Invalidate(InflateForRepaint(union, 20));
+                    OnConfirmHoverChanged(prevHoveredConfirm);
                     HideToolbarTooltip();
                     _tooltipDismissed = false;
                     _hoverButtonStartTime = DateTime.UtcNow;
@@ -233,11 +233,7 @@ public sealed partial class RegionOverlayForm
 
                 if (_hoveredConfirmButton != prevHoveredConfirm)
                 {
-                    LayoutConfirmChromeRects();
-                    var union = UnionConfirmChromeRects();
-                    if (!union.IsEmpty)
-                        Invalidate(InflateForRepaint(union, 20));
-
+                    OnConfirmHoverChanged(prevHoveredConfirm);
                     HideToolbarTooltip();
                     _tooltipDismissed = false;
                     _hoverButtonStartTime = DateTime.UtcNow;
@@ -252,11 +248,7 @@ public sealed partial class RegionOverlayForm
 
                 if (_hoveredConfirmButton != prevHoveredConfirm)
                 {
-                    LayoutConfirmChromeRects();
-                    var union = UnionConfirmChromeRects();
-                    if (!union.IsEmpty)
-                        Invalidate(InflateForRepaint(union, 20));
-
+                    OnConfirmHoverChanged(prevHoveredConfirm);
                     HideToolbarTooltip();
                     _tooltipDismissed = false;
                     _hoverButtonStartTime = DateTime.UtcNow;
@@ -271,11 +263,7 @@ public sealed partial class RegionOverlayForm
 
                 if (_hoveredConfirmButton != prevHoveredConfirm)
                 {
-                    LayoutConfirmChromeRects();
-                    var union = UnionConfirmChromeRects();
-                    if (!union.IsEmpty)
-                        Invalidate(InflateForRepaint(union, 20));
-
+                    OnConfirmHoverChanged(prevHoveredConfirm);
                     HideToolbarTooltip();
                     _tooltipDismissed = false;
                     _hoverButtonStartTime = DateTime.UtcNow;
@@ -711,8 +699,13 @@ public sealed partial class RegionOverlayForm
 
         if (ShowCaptureMagnifier && ToolDef.IsCaptureTool(_mode) && !_isSelecting && ShouldShowCaptureMagnifierAt(e.Location))
             UpdateCaptureMagnifier(e.Location);
-        else if (_captureMagnifierForm != null && (!ShowCaptureMagnifier || !ToolDef.IsCaptureTool(_mode) || IsPointInOverlayUi(e.Location)))
-            CloseCaptureMagnifier();
+        else if (_captureMagnifierForm is { Visible: true }
+                 && (!ShowCaptureMagnifier
+                     || !ToolDef.IsCaptureTool(_mode)
+                     || _isConfirmingSelection
+                     || IsPointInOverlayUi(e.Location)
+                     || !ShouldShowCaptureMagnifierAt(e.Location)))
+            HideCaptureMagnifier();
 
 
 
@@ -775,8 +768,11 @@ public sealed partial class RegionOverlayForm
                 if (_selectionRect.Width > 3 || _selectionRect.Height > 3) _hasDragged = true;
                 _hasSelection = _selectionRect.Width > 2 && _selectionRect.Height > 2;
                 InvalidateSelectionChromeThrottled(oldSelectionRect, oldSelectionCursor, _selectionRect, _selectionEnd);
+                // Capture pixel magnifier stays available during drag (idle path also updates it).
                 if (ShowCaptureMagnifier && ShouldShowCaptureMagnifierAt(e.Location))
                     UpdateCaptureMagnifier(e.Location);
+                else if (_captureMagnifierForm is { Visible: true })
+                    HideCaptureMagnifier();
                 break;
             case CaptureMode.Highlight when _isHighlighting:
                 InvalidateLivePreview(NormRect(_highlightStart, oldCursor), NormRect(_highlightStart, e.Location), 18);
@@ -818,7 +814,9 @@ public sealed partial class RegionOverlayForm
                 InvalidateLivePreview(GetEmojiPreviewRect(oldCursor), GetEmojiPreviewRect(e.Location), 10);
                 break;
             case CaptureMode.Magnifier when _isPlacingMagnifier:
-                InvalidateLivePreview(GetMagnifierPreviewRect(oldCursor), GetMagnifierPreviewRect(e.Location), 10);
+                // Ghost lens is large (~150px + flip offset). Always clear old+new with a wide pad.
+                // When entering chrome, still invalidate old position so the ghost disappears cleanly.
+                InvalidateLivePreview(GetMagnifierPreviewRect(oldCursor), GetMagnifierPreviewRect(e.Location), 32);
                 break;
             case CaptureMode.StepNumber:
                 InvalidateLivePreview(GetStepPreviewRect(oldCursor), GetStepPreviewRect(e.Location), 10);

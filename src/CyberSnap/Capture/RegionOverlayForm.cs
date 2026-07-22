@@ -45,6 +45,15 @@ public sealed partial class RegionOverlayForm : Form
         History
     }
 
+    /// <summary>
+    /// Raised when the user hides/shows a confirm destination pill via the right-click menu.
+    /// App should persist <see cref="AppSettings.ToastButtons"/> and refresh Settings if open.
+    /// </summary>
+    public event Action<AppSettings.ToastButtonLayoutSettings>? ToastButtonsChanged;
+
+    /// <summary>Raised when the user toggles icon+label mode on the confirm bar.</summary>
+    public event Action<bool>? ConfirmPillShowLabelsChanged;
+
     /// <summary>Action chosen when the user commits via a destination pill (or Enter / double-click primary).</summary>
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public ConfirmCommitAction PendingCommitAction { get; private set; } = ConfirmCommitAction.Default;
@@ -73,7 +82,7 @@ public sealed partial class RegionOverlayForm : Form
     private readonly float[] _shineDup = new float[ConfirmShineSlots];  // duplicate comet intensity (hover)
 
     // Confirm chrome: Cancel / Retry / destination pills (built in RebuildConfirmChrome)
-    private enum ConfirmChromeKind { Cancel, Retry, Save, Copy, Edit, Share, OcrExtract }
+    private enum ConfirmChromeKind { Cancel, Retry, Save, Copy, Edit, Share, History, OcrExtract }
     private ConfirmChromeKind[] _confirmChromeKinds =
     {
         ConfirmChromeKind.Cancel, ConfirmChromeKind.Retry, ConfirmChromeKind.Save
@@ -81,6 +90,14 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle[] _confirmChromeRects = Array.Empty<Rectangle>();
     /// <summary>Thin divider between fixed Cancel/Retry and destination pills (empty when unused).</summary>
     private Rectangle _confirmChromeSeparatorRect = Rectangle.Empty;
+    /// <summary>Rounded dock panel behind the confirm pills so they stay readable on any wallpaper.</summary>
+    private Rectangle _confirmChromeWrapperRect = Rectangle.Empty;
+    private bool _confirmPillShowLabels;
+    private bool _confirmChromeLayoutDirty = true;
+    private Rectangle _confirmChromeLaidOutForRect = Rectangle.Empty;
+    private bool _confirmChromeLaidOutWithLabels;
+    /// <summary>Traveling glint phase around the confirm dock wrapper (0..1).</summary>
+    private float _confirmWrapperShinePhase;
 
     private CaptureDockSide ActiveDockSide => _isEvading ? GetOppositeDockSide(CaptureDockSide) : CaptureDockSide;
 
@@ -1151,8 +1168,8 @@ public sealed partial class RegionOverlayForm : Form
             {
                 if (_hoverButtonStartTime != DateTime.MinValue)
                 {
-                    // Slow tooltip: 1200ms delay
-                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 1200)
+                    // Match toolbar discoverability (~450ms); icon-only pills need a quicker hint.
+                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 450)
                     {
                         ShowConfirmTooltip();
                     }
@@ -1246,34 +1263,57 @@ public sealed partial class RegionOverlayForm : Form
     }
 
     /// <summary>
-    /// Right-click menu shown while confirming a selection. Mirrors the destination pills
-    /// plus Retry and Cancel. Choosing a destination commits the capture.
+    /// Right-click menu while confirming. When <paramref name="focusedKind"/> is a destination,
+    /// offers Hide (like the annotation bar). Lists destinations, label toggle, Retry/Cancel.
     /// </summary>
-    private void ShowConfirmContextMenu(Point clickLocation)
+    private void ShowConfirmContextMenu(Point clickLocation, ConfirmChromeKind? focusedKind = null)
     {
-        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 240);
-        menu.Font = UiChrome.ChromeFont(11.0f); // larger text as requested
-
-        var isSpanish = string.Equals(
-            Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
-            "es", StringComparison.OrdinalIgnoreCase);
+        var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
+        menu.Font = UiChrome.ChromeFont(11.0f);
+        _confirmContextMenu = menu;
+        menu.Closed += (_, _) =>
+        {
+            _lastContextMenuClosedTime = DateTime.UtcNow;
+            _confirmContextMenu = null;
+        };
 
         var primaryColor = Color.FromArgb(34, 197, 94);
         int primaryIdx = IndexOfPrimaryConfirmAction();
 
+        // Hide the focused destination pill (mirrors annotation-tool RMB hide).
+        if (focusedKind is { } focus
+            && IsConfirmDestinationKind(focus)
+            && focus != ConfirmChromeKind.OcrExtract)
+        {
+            string hideTitle = string.Format(
+                LocalizationService.Translate("Hide \"{0}\""),
+                ConfirmChromeShortLabel(focus));
+            var hideItem = WindowsMenuRenderer.Item(
+                hideTitle,
+                iconId: ConfirmChromeFluentIcon(focus),
+                iconSize: 24);
+            int destCount = _confirmChromeKinds.Count(IsConfirmDestinationKind);
+            if (destCount <= 1 && focus == ConfirmChromeKind.Save)
+            {
+                hideItem.Enabled = false;
+                hideItem.ToolTipText = LocalizationService.Translate(
+                    "Keep at least one destination on the confirm bar.");
+            }
+            else
+            {
+                var captured = focus;
+                hideItem.Click += (_, _) => HideConfirmDestination(captured);
+            }
+            menu.Items.Add(hideItem);
+            menu.Items.Add(new ToolStripSeparator());
+        }
+
         void AddDestination(ConfirmChromeKind kind, int chromeIdx)
         {
-            string title = kind switch
-            {
-                ConfirmChromeKind.Save => "Save capture",
-                ConfirmChromeKind.Copy => "Copy to clipboard",
-                ConfirmChromeKind.Edit => "Open in editor",
-                ConfirmChromeKind.Share => "Share",
-                ConfirmChromeKind.OcrExtract => IsOcrAutoCopyEnabled()
-                    ? "Extract and copy text from the selection"
-                    : "Extract text from the selection",
-                _ => kind.ToString()
-            };
+            string title = ConfirmChromeTitle(kind);
+            string hotkey = ConfirmChromeHotkeyHint(kind);
+            if (!string.IsNullOrEmpty(hotkey) && kind != ConfirmChromeKind.OcrExtract)
+                title += "  (" + hotkey + ")";
             string? icon = ConfirmChromeFluentIcon(kind);
             bool disabled = IsConfirmChromeDisabled(kind);
             bool isPrimary = !disabled && chromeIdx == primaryIdx;
@@ -1283,13 +1323,7 @@ public sealed partial class RegionOverlayForm : Form
                 customColor: isPrimary ? primaryColor : null,
                 iconSize: 24);
             item.Enabled = !disabled;
-            if (disabled)
-            {
-                item.ToolTipText = LocalizationService.Translate("Copy unavailable")
-                    + " — "
-                    + LocalizationService.Translate("Auto-copy is on — image captures already go to the clipboard");
-            }
-            else
+            if (!disabled)
             {
                 int capturedIdx = chromeIdx;
                 item.Click += (_, _) => StartConfirmPress(capturedIdx);
@@ -1303,41 +1337,85 @@ public sealed partial class RegionOverlayForm : Form
                 AddDestination(_confirmChromeKinds[i], i);
         }
 
-        // Retry — discard this crop and select the area again.
+        // Restore hidden destinations (from Settings toast layout).
+        var toast = Services.SettingsService.LoadStatic()?.ToastButtons
+            ?? new AppSettings.ToastButtonLayoutSettings();
+        var hiddenDest = ToastButtonLayout.ConfirmActionButtons
+            .Where(b => !ToastButtonLayout.IsVisible(toast, b))
+            .ToList();
+        if (hiddenDest.Count > 0)
+        {
+            menu.Items.Add(new ToolStripSeparator());
+            var header = WindowsMenuRenderer.Item(
+                LocalizationService.Translate("Hidden destinations:"),
+                iconId: null,
+                iconSize: 24);
+            header.Enabled = false;
+            menu.Items.Add(header);
+
+            foreach (var b in hiddenDest)
+            {
+                var toastKind = b;
+                string label = b switch
+                {
+                    ToastButtonKind.Save => LocalizationService.Translate("Save"),
+                    ToastButtonKind.Copy => LocalizationService.Translate("Copy"),
+                    ToastButtonKind.Edit => LocalizationService.Translate("Edit"),
+                    ToastButtonKind.Share => LocalizationService.Translate("Share"),
+                    ToastButtonKind.History => LocalizationService.Translate("Gallery"),
+                    _ => b.ToString()
+                };
+                var showItem = WindowsMenuRenderer.Item(label, iconId: "add", iconSize: 24);
+                showItem.Padding = new Padding(24, 0, 0, 0);
+                showItem.Click += (_, _) => ShowConfirmDestination(toastKind);
+                menu.Items.Add(showItem);
+            }
+        }
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        var labelsItem = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Show labels on destination pills"),
+            iconId: _confirmPillShowLabels ? "check" : null,
+            iconSize: 24);
+        labelsItem.Click += (_, _) => ToggleConfirmPillShowLabels();
+        menu.Items.Add(labelsItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
         var retryItem = WindowsMenuRenderer.Item(
-            isSpanish ? "Reintentar selección" : "Retry selection",
-            iconId: "redo", iconSize: 24);
+            LocalizationService.Translate("Retry selection"),
+            iconId: "redo",
+            iconSize: 24);
         retryItem.Click += (_, _) => ExitConfirmMode();
         menu.Items.Add(retryItem);
 
-        if (_mode == CaptureMode.Ocr)
+        if (_modeBeforeConfirm == CaptureMode.Ocr || _mode == CaptureMode.Ocr)
         {
-            var autoCopy = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
+            var autoCopy = IsOcrAutoCopyEnabled();
             var autoCopyItem = WindowsMenuRenderer.Item(
-                isSpanish ? "Auto-copiar texto OCR" : "Auto-copy OCR text",
+                LocalizationService.Translate("Auto-copy OCR text"),
+                iconId: autoCopy ? "check" : null,
                 iconSize: 24);
-            autoCopyItem.ToolTipText = isSpanish
-                ? "Copia el texto OCR al portapapeles (usa el Auto-copy global; no abre la ventana de resultados)"
-                : "Copy OCR text to the clipboard (uses global Auto-copy; skips the result window)";
-            autoCopyItem.Image = autoCopy ? FluentIcons.RenderBitmap("check",
-                UiChrome.IsDark ? Color.FromArgb(75, 130, 246) : Color.FromArgb(0, 120, 215), 20, true) : null;
+            autoCopyItem.ToolTipText = LocalizationService.Translate(
+                "Copy OCR text to the clipboard (uses global Auto-copy; skips the result window)");
             autoCopyItem.Click += (_, _) =>
             {
-                var current = Services.SettingsService.LoadStatic()?.OcrAutoCopyToClipboard ?? false;
-                SettingsService.SetOcrAutoCopyToClipboard(!current);
+                SettingsService.SetOcrAutoCopyToClipboard(!IsOcrAutoCopyEnabled());
             };
             menu.Items.Add(autoCopyItem);
             menu.Items.Add(new ToolStripSeparator());
         }
 
-        // Cancel everything and close the overlay (routes through ConfirmAndCancelCapture).
         var cancelItem = WindowsMenuRenderer.Item(
-            isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit",
-            iconId: "signOut", danger: true, iconSize: 24);
+            LocalizationService.Translate("Cancel capture and exit"),
+            iconId: "signOut",
+            danger: true,
+            iconSize: 24);
         cancelItem.Click += (_, _) => ConfirmAndCancelCapture();
         menu.Items.Add(cancelItem);
 
-        WindowsMenuRenderer.NormalizeItemWidths(menu, 240, itemHeight: 46);
+        WindowsMenuRenderer.NormalizeItemWidths(menu, 260, itemHeight: 46);
         menu.Show(PointToScreen(clickLocation));
     }
 

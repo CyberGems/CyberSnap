@@ -302,25 +302,27 @@ public sealed partial class RegionOverlayForm
 
         var kind = _confirmChromeKinds[_hoveredConfirmButton];
         bool isPrimary = _hoveredConfirmButton == IndexOfPrimaryConfirmAction();
+        string hotkey = ConfirmChromeHotkeyHint(kind);
         string primaryHint = isPrimary
             ? "  (Enter · " + LocalizationService.Translate("double-click") + ")"
-            : "";
+            : (string.IsNullOrEmpty(hotkey) ? "" : "  (" + hotkey + ")");
+
         string text = kind switch
         {
-            ConfirmChromeKind.Retry => LocalizationService.Translate("Retry area")
+            ConfirmChromeKind.Retry => ConfirmChromeTitle(kind)
                 + "  (R)\n"
                 + LocalizationService.Translate("Discard the current crop and select again"),
-            ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel capture completely")
+            ConfirmChromeKind.Cancel => ConfirmChromeTitle(kind)
                 + "  (Esc)\n"
                 + LocalizationService.Translate("Close the capture tool and discard everything"),
-            ConfirmChromeKind.Save => LocalizationService.Translate("Save capture") + primaryHint,
-            ConfirmChromeKind.Copy when IsConfirmChromeDisabled(kind) =>
-                LocalizationService.Translate("Copy unavailable")
+            ConfirmChromeKind.Save => ConfirmChromeTitle(kind) + primaryHint,
+            ConfirmChromeKind.Copy => BuildCopyConfirmTooltip(primaryHint),
+            ConfirmChromeKind.Edit => ConfirmChromeTitle(kind) + primaryHint,
+            ConfirmChromeKind.Share => ConfirmChromeTitle(kind) + primaryHint,
+            ConfirmChromeKind.History => LocalizationService.Translate("Save and open in Gallery")
+                + primaryHint
                 + "\n"
-                + LocalizationService.Translate("Auto-copy is on — image captures already go to the clipboard"),
-            ConfirmChromeKind.Copy => LocalizationService.Translate("Copy to clipboard") + primaryHint,
-            ConfirmChromeKind.Edit => LocalizationService.Translate("Open in editor") + primaryHint,
-            ConfirmChromeKind.Share => LocalizationService.Translate("Share") + primaryHint,
+                + LocalizationService.Translate("Saves the capture to disk, then opens Gallery on that file"),
             ConfirmChromeKind.OcrExtract => GetOcrExtractTooltip() + primaryHint,
             _ => ""
         };
@@ -343,5 +345,18 @@ public sealed partial class RegionOverlayForm
         _toolbarToolTip.ShowNear(this, text, anchorScreen, IsBottomDock);
         _tooltipVisible = true;
         _tooltipShowTime = DateTime.UtcNow;
+    }
+
+    private static string BuildCopyConfirmTooltip(string primaryHint)
+    {
+        string text = LocalizationService.Translate("Copy to clipboard") + primaryHint;
+        if (IsImageAutoCopyEnabled())
+        {
+            text += "\n"
+                + LocalizationService.Translate("Auto-copy is on — image captures already go to the clipboard")
+                + "\n"
+                + LocalizationService.Translate("Click to copy again");
+        }
+        return text;
     }
 }

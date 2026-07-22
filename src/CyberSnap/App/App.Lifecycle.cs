@@ -123,6 +123,8 @@ public partial class App
             win.NavigateToUploadsSettings();
         else if (navigateTo == "about")
             win.NavigateToAboutSettings();
+        else if (navigateTo is "capture-confirm-pills" or "confirm-pills" or "confirm-destinations")
+            win.NavigateToCaptureConfirmPills();
     }
 
     private static void ShowSettingsOpenFailed(Exception ex, string diagnosticKey, string toastDiagnosticKey)
