@@ -32,18 +32,29 @@ public sealed partial class RegionOverlayForm
 
         if (e.Button == MouseButtons.Right)
         {
-            if (_isConfirmingSelection)
-            {
-                ShowConfirmContextMenu(e.Location);
-                return;
-            }
+            // Toolbar chrome keeps its hide/restore menu even during confirm mode.
             int rightClickBtn = GetToolbarButtonAt(e.Location);
-            if (rightClickBtn >= 0 || _toolbarRect.Contains(e.Location))
+            if (rightClickBtn >= 0 || _toolbarRect.Contains(e.Location)
+                || _menuActivatorRect.Contains(e.Location)
+                || _logoRect.Contains(e.Location)
+                || _brandRect.Contains(e.Location))
             {
                 HideToolbarTooltip();
                 ShowToolbarContextMenu(rightClickBtn, e.Location);
                 return;
             }
+
+            if (_isConfirmingSelection)
+            {
+                // Prefer the pill under the cursor so "Hide X" matches annotation-bar RMB.
+                ConfirmChromeKind? focused = null;
+                int pillHit = HitTestConfirmButton(e.Location);
+                if (pillHit >= 0 && pillHit < _confirmChromeKinds.Length)
+                    focused = _confirmChromeKinds[pillHit];
+                ShowConfirmContextMenu(e.Location, focused);
+                return;
+            }
+
             int hit = HitTestAnnotation(e.Location);
             if (hit >= 0)
             {
@@ -57,12 +68,6 @@ public sealed partial class RegionOverlayForm
                     Update();
                 }
                 ShowAnnotationContextMenu(e.Location);
-                return;
-            }
-            if (_isConfirmingSelection)
-            {
-                // Gentle exit while confirming: show a contextual Close instead of an abrupt cancel.
-                ShowConfirmContextMenu(e.Location);
                 return;
             }
             ShowEmptyAreaContextMenu(e.Location);
@@ -91,6 +96,8 @@ public sealed partial class RegionOverlayForm
                 int ch = HitTestConfirmHandle(e.Location);
                 if (ch >= 0)
                 {
+                    if (_captureMagnifierForm is { Visible: true })
+                        HideCaptureMagnifier();
                     _confirmHandleDragIndex = ch;
                     _isConfirmDragging = false;
                     _confirmDragStart = e.Location;
@@ -121,6 +128,8 @@ public sealed partial class RegionOverlayForm
                     else
                     {
                         // Capture tool (or no tool): drag to reposition the crop.
+                        if (_captureMagnifierForm is { Visible: true })
+                            HideCaptureMagnifier();
                         _isConfirmDragging = true;
                         _confirmHandleDragIndex = -1;
                         _confirmDragStart = e.Location;

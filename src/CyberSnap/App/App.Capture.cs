@@ -586,6 +586,7 @@ public partial class App
                     ConfirmRegionBeforeCapture = true // Permanent confirm for area capture redesign
                 };
                 overlay.SetEnabledTools(_settingsService.Settings.EnabledTools);
+                overlay.SetConfirmPillShowLabels(_settingsService.Settings.ConfirmPillShowLabels);
                 overlay.EnabledToolsChanged += enabledTools =>
                 {
                     // Merge with latest cached settings to avoid overwriting changes
@@ -595,6 +596,35 @@ public partial class App
                         _settingsService!.Settings = latest;
                     _settingsService.Settings.EnabledTools = enabledTools;
                     _settingsService.Save();
+                };
+                overlay.ToastButtonsChanged += toastLayout =>
+                {
+                    var latest = Services.SettingsService.LoadStatic();
+                    if (latest != null)
+                        _settingsService!.Settings = latest;
+                    _settingsService!.Settings.ToastButtons = toastLayout;
+                    _settingsService.Save();
+                    // Keep Settings → Notifications designer in sync while capture is open.
+                    try
+                    {
+                        if (_settingsWindow is { IsVisible: true })
+                            _settingsWindow.RefreshConfirmPillDesigner();
+                    }
+                    catch { /* settings may be closing */ }
+                };
+                overlay.ConfirmPillShowLabelsChanged += showLabels =>
+                {
+                    var latest = Services.SettingsService.LoadStatic();
+                    if (latest != null)
+                        _settingsService!.Settings = latest;
+                    _settingsService!.Settings.ConfirmPillShowLabels = showLabels;
+                    _settingsService.Save();
+                    try
+                    {
+                        if (_settingsWindow is { IsVisible: true })
+                            _settingsWindow.SyncConfirmPillShowLabels(showLabels);
+                    }
+                    catch { }
                 };
                 overlay.SetShowToolNumberBadges(_settingsService.Settings.ShowToolNumberBadges);
                 overlay.SetToolColor(System.Drawing.Color.FromArgb(_settingsService.Settings.ToolColorArgb));

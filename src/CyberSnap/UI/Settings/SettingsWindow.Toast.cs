@@ -17,6 +17,7 @@ using GiveFeedbackEventArgs = System.Windows.GiveFeedbackEventArgs;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
+using Orientation = System.Windows.Controls.Orientation;
 
 namespace CyberSnap.UI;
 
@@ -72,6 +73,19 @@ public partial class SettingsWindow
         BuildToastButtonRows();
         WireToastPreviewButtonGestures();
         RefreshToastButtonLayoutDesigner();
+
+        if (ConfirmPillShowLabelsCheck is not null)
+        {
+            _suppressToastPreferenceChange = true;
+            try
+            {
+                ConfirmPillShowLabelsCheck.IsChecked = _settingsService.Settings.ConfirmPillShowLabels;
+            }
+            finally
+            {
+                _suppressToastPreferenceChange = false;
+            }
+        }
     }
 
     // Each preview button can be dragged to move it, double-clicked to send it back to the list,
@@ -94,11 +108,11 @@ public partial class SettingsWindow
             };
 
             string label = FormatToastButtonLabel(kind);
-            string help = string.Format(
-                Services.LocalizationService.Translate("Drag to move the {0} pill. Double-click to remove it, or right-click (or press the Menu key) for placement options."),
-                label);
-            ToolTipService.SetInitialShowDelay(border, 300);
-            AutomationProperties.SetHelpText(border, help);
+            // No hover tooltips in the designer — they cover the mock constantly.
+            border.ToolTip = null;
+            AutomationProperties.SetHelpText(border, string.Format(
+                Services.LocalizationService.Translate("Click × to remove {0} from the confirm bar."),
+                ToTitleCase(label)));
         }
     }
 
@@ -106,86 +120,212 @@ public partial class SettingsWindow
     {
         ToastButtonRows.Children.Clear();
 
-        foreach (var kind in ToastButtonLayout.ConfirmActionButtons)
-            ToastButtonRows.Children.Add(BuildToastButtonRow(kind));
+        // Tray only lists destinations that are currently OFF the confirm bar.
+        var hidden = ToastButtonLayout.ConfirmActionButtons
+            .Where(k => !ToastButtonLayout.IsVisible(ToastButtons, k))
+            .ToList();
+
+        if (ToastTrayEmptyHint is not null)
+            ToastTrayEmptyHint.Visibility = hidden.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        foreach (var kind in hidden)
+            ToastButtonRows.Children.Add(BuildTrayChip(kind));
     }
 
-    private Border BuildToastButtonRow(ToastButtonKind kind)
+    /// <summary>
+    /// Chip in the centered "available" tray — click or press + to put the destination back on the bar.
+    /// </summary>
+    private Border BuildTrayChip(ToastButtonKind kind)
     {
         var label = FormatToastButtonLabel(kind);
 
-        // Icon + name only: placement is done by dragging the row onto the preview, or via the
-        // right-click / Menu-key context menu (Move to…). No per-row combo any more.
-        var grid = new Grid
-        {
-            Margin = new Thickness(0, 0, 14, 8),
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Left
-        };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
         var icon = new Image
         {
-            Source = Helpers.FluentIcons.RenderWpf(ToastButtonIconId(kind), GetToastLayoutIconColor(active: false), 20),
-            Width = 18,
-            Height = 18,
+            Source = Helpers.FluentIcons.RenderWpf(ToastButtonIconId(kind), GetToastLayoutIconColor(active: false), 18),
+            Width = 16,
+            Height = 16,
             Stretch = Stretch.Uniform,
             VerticalAlignment = System.Windows.VerticalAlignment.Center,
-            Margin = new Thickness(2, 0, 10, 0)
+            Margin = new Thickness(0, 0, 6, 0)
         };
         System.Windows.Media.RenderOptions.SetBitmapScalingMode(icon, System.Windows.Media.BitmapScalingMode.HighQuality);
-        Grid.SetColumn(icon, 0);
-        grid.Children.Add(icon);
 
-        var desc = GetToastButtonDescription(kind);
-        if (desc is not null)
+        var body = new StackPanel
         {
-            icon.ToolTip = desc;
-            ToolTipService.SetInitialShowDelay(icon, 200);
-        }
-
-        var name = new TextBlock
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Margin = new Thickness(10, 0, 12, 0)
+        };
+        body.Children.Add(icon);
+        body.Children.Add(new TextBlock
         {
             Text = ToTitleCase(label),
-            FontSize = 13,
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
             VerticalAlignment = System.Windows.VerticalAlignment.Center,
             Foreground = Theme.Brush(Theme.IsDark ? Color.FromRgb(232, 232, 232) : Color.FromRgb(24, 24, 24))
-        };
-        if (desc is not null)
-        {
-            name.ToolTip = desc;
-            ToolTipService.SetInitialShowDelay(name, 200);
-        }
-        Grid.SetColumn(name, 1);
-        grid.Children.Add(name);
+        });
 
-        // The whole row is a drag handle for adding this button to the preview (the icon stays in
-        // the list; a ghost follows the cursor). Right-click / Menu key opens the same placement
-        // menu as the preview buttons so the layout stays fully keyboard-accessible.
-        var rowTooltip = Services.LocalizationService.Translate("Drag onto the confirm bar to add this pill, or right-click (Menu key) to place it by keyboard.");
+        var host = new Grid
+        {
+            Margin = new Thickness(0, 4, 10, 4),
+            ClipToBounds = false
+        };
+        var chip = new Border
+        {
+            Background = Theme.Brush(Theme.IsDark ? Theme.BgSecondary : Color.FromRgb(235, 246, 253)),
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Height = 34,
+            MinWidth = 34,
+            Child = body,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center
+        };
+        host.Children.Add(chip);
+
+        // No tooltips on designer chrome — they cover the mock and tray constantly.
+        var plus = BuildCornerBadge("＋", accent: true, tooltip: null);
+        plus.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+        plus.VerticalAlignment = System.Windows.VerticalAlignment.Top;
+        plus.Margin = new Thickness(0, -6, -6, 0);
+        var captured = kind;
+        plus.MouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
+            AddConfirmDestination(captured);
+        };
+        host.Children.Add(plus);
+
         var row = new Border
         {
-            Child = grid,
+            Child = host,
             Tag = kind,
             Cursor = System.Windows.Input.Cursors.Hand,
             Background = System.Windows.Media.Brushes.Transparent,
             Focusable = true,
-            ToolTip = rowTooltip
+            ToolTip = null
         };
-        ToolTipService.SetInitialShowDelay(row, 300);
-        AutomationProperties.SetName(row, $"{ToTitleCase(label)} button");
-        AutomationProperties.SetHelpText(row, string.Format(
-            Services.LocalizationService.Translate("Drag onto the confirm bar to add the {0} pill, or right-click (or press the Menu key) to place it."),
-            label));
-        row.PreviewMouseLeftButtonDown += ToastRow_PreviewMouseLeftButtonDown;
-        row.PreviewMouseMove += ToastRow_PreviewMouseMove;
-        row.ContextMenuOpening += (_, _) =>
+        AutomationProperties.SetName(row, string.Format(
+            Services.LocalizationService.Translate("Add {0} to the confirm bar"), ToTitleCase(label)));
+        row.MouseLeftButtonUp += (_, e) =>
         {
-            row.ContextMenu = BuildToastButtonContextMenu(kind);
-            if (row.ContextMenu is not null)
-                row.ContextMenu.PlacementTarget = row;
+            if (e.Handled) return;
+            e.Handled = true;
+            AddConfirmDestination(captured);
         };
         return row;
+    }
+
+    /// <param name="accent">True = add (+); false = remove (×) red, hover-only on mock buttons.</param>
+    private static Border BuildCornerBadge(
+        string glyph,
+        bool accent,
+        string? tooltip,
+        bool hoverOnly = false,
+        FrameworkElement? hoverHost = null)
+    {
+        var label = new TextBlock
+        {
+            Text = glyph,
+            FontSize = 10,
+            FontWeight = FontWeights.Bold,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Margin = new Thickness(0, -1, 0, 0)
+        };
+
+        var badge = new Border
+        {
+            Width = 16,
+            Height = 16,
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            Cursor = System.Windows.Input.Cursors.Hand,
+            // Designer badges intentionally have no ToolTip — too noisy over the mock.
+            ToolTip = null,
+            Child = label
+        };
+        _ = tooltip; // reserved if we re-enable sparse tooltips later
+
+        if (accent)
+        {
+            // + add: muted, not neon — sits quietly on tray chips
+            if (Theme.IsDark)
+            {
+                badge.Background = Theme.Brush(Color.FromRgb(42, 52, 58));
+                badge.BorderBrush = Theme.Brush(Color.FromRgb(70, 90, 100));
+                label.Foreground = Theme.Brush(Color.FromRgb(160, 190, 200));
+            }
+            else
+            {
+                badge.Background = Theme.Brush(Color.FromRgb(230, 238, 242));
+                badge.BorderBrush = Theme.Brush(Color.FromRgb(160, 180, 190));
+                label.Foreground = Theme.Brush(Color.FromRgb(40, 80, 100));
+            }
+        }
+        else
+        {
+            // × remove — soft red, white glyph
+            badge.Background = Theme.Brush(Color.FromRgb(0xDC, 0x4C, 0x4C));
+            badge.BorderBrush = Theme.Brush(Color.FromRgb(0xB9, 0x1C, 0x1C));
+            label.Foreground = Theme.Brush(Color.FromRgb(255, 255, 255));
+        }
+
+        if (hoverOnly)
+        {
+            badge.Visibility = Visibility.Collapsed;
+            badge.Opacity = 0;
+            if (hoverHost is not null)
+            {
+                hoverHost.MouseEnter += (_, _) =>
+                {
+                    badge.Visibility = Visibility.Visible;
+                    badge.Opacity = 1;
+                };
+                hoverHost.MouseLeave += (_, _) =>
+                {
+                    if (badge.IsMouseOver) return;
+                    badge.Visibility = Visibility.Collapsed;
+                    badge.Opacity = 0;
+                };
+                badge.MouseLeave += (_, _) =>
+                {
+                    if (!hoverHost.IsMouseOver)
+                    {
+                        badge.Visibility = Visibility.Collapsed;
+                        badge.Opacity = 0;
+                    }
+                };
+            }
+        }
+
+        return badge;
+    }
+
+    private void AddConfirmDestination(ToastButtonKind kind)
+    {
+        if (!ToastButtonLayout.IsConfirmActionButton(kind))
+            return;
+        if (ToastButtonLayout.IsVisible(ToastButtons, kind))
+            return;
+
+        // Prefer next free confirm slot left→right.
+        bool placed = false;
+        foreach (var slot in ToastButtonLayout.ConfirmDestinationSlots)
+        {
+            if (ToastButtonLayout.PlaceFromHidden(ToastButtons, kind, slot))
+            {
+                placed = true;
+                break;
+            }
+        }
+        if (!placed)
+            ToastButtonLayout.SetVisible(ToastButtons, kind, true);
+
+        ToastButtons.Manual = true;
+        _toastLayoutHint = null;
+        PersistToastButtonLayout();
     }
 
     /// <summary>Build the placement context menu for a button (shared by the preview buttons and
@@ -588,16 +728,56 @@ public partial class SettingsWindow
         }
     }
 
-    // Send a preview button back to the list (double-click or right-click on it).
+    // Send a destination pill to the available tray (× on the mock, or legacy double-click).
     private void RemoveToastButton(ToastButtonKind kind)
     {
         if (!ToastButtonLayout.IsVisible(ToastButtons, kind))
             return;
 
+        // Keep at least one destination so the bar can always commit.
+        int visibleCount = ToastButtonLayout.ConfirmActionButtons
+            .Count(b => ToastButtonLayout.IsVisible(ToastButtons, b));
+        if (visibleCount <= 1)
+        {
+            ShowConfirmBarHint(Services.LocalizationService.Translate(
+                "Keep at least one destination on the confirm bar."));
+            return;
+        }
+
         ToastButtonLayout.SetVisible(ToastButtons, kind, false);
         ToastButtons.Manual = true;
         _toastLayoutHint = null;
         PersistToastButtonLayout();
+    }
+
+    /// <summary>Inline hint under the confirm mock (not the distant section header).</summary>
+    private void ShowConfirmBarHint(string message)
+    {
+        if (ConfirmBarInlineHint is null)
+        {
+            _toastLayoutHint = message;
+            RefreshToastLayoutStatus();
+            return;
+        }
+
+        ConfirmBarInlineHint.Text = message;
+        ConfirmBarInlineHint.Visibility = Visibility.Visible;
+        // Auto-clear after a short beat so it doesn't stick forever.
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2.5)
+        };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (ConfirmBarInlineHint is not null
+                && string.Equals(ConfirmBarInlineHint.Text, message, StringComparison.Ordinal))
+            {
+                ConfirmBarInlineHint.Text = "";
+                ConfirmBarInlineHint.Visibility = Visibility.Collapsed;
+            }
+        };
+        timer.Start();
     }
 
     private void ToastSlot_DragEnter(object sender, DragEventArgs e)
@@ -704,22 +884,9 @@ public partial class SettingsWindow
         return null;
     }
 
-    private void ToastPresetNoneBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.None);
-    private void ToastPresetStandardBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Standard);
-    private void ToastPresetFullBtn_Click(object sender, RoutedEventArgs e) => ApplyToastPreset(ToastButtonPreset.Full);
-
-    private void ToastManualBtn_Click(object sender, RoutedEventArgs e)
-    {
-        // Activate Manual mode without changing the current layout.
-        ToastButtons.Manual = true;
-        _toastLayoutHint = null;
-        PersistToastButtonLayout();
-    }
-
     private void ApplyToastPreset(ToastButtonPreset preset)
     {
         ToastButtonLayout.ApplyPreset(ToastButtons, preset);
-        // Returning to a preset turns off Manual mode: the combo boxes lock again.
         ToastButtons.Manual = false;
         _toastLayoutHint = null;
         PersistToastButtonLayout();
@@ -727,9 +894,10 @@ public partial class SettingsWindow
 
     private void ResetToastButtonsBtn_Click(object sender, RoutedEventArgs e)
     {
-        // "Default" restores the shipping layout AND the preview-body click action together —
-        // they form one notification interaction surface.
+        // Restore Full destination layout (Save/Copy/Edit/Share/Gallery) as the shipping default.
         _settingsService.Settings.ToastButtons = new AppSettings.ToastButtonLayoutSettings();
+        ToastButtonLayout.ApplyPreset(_settingsService.Settings.ToastButtons, ToastButtonPreset.Full);
+        _settingsService.Settings.ToastButtons.Manual = false;
         _settingsService.Settings.ToastPreviewClickAction = ToastPreviewClickAction.OpenInEditor;
         _toastLayoutHint = null;
         _suppressToastPreferenceChange = true;
@@ -748,6 +916,10 @@ public partial class SettingsWindow
     private void RefreshToastButtonLayoutDesigner()
     {
         RefreshToastPreview();
+        // Rebuild the available-destinations tray whenever the active set changes
+        // (× remove / + add). Without this, removed pills vanished from the mock and
+        // never reappeared under "Available destinations".
+        BuildToastButtonRows();
         RefreshToastSlotIndicators();
         RefreshToastPresetButtons();
         RefreshToastLayoutStatus();
@@ -772,23 +944,16 @@ public partial class SettingsWindow
 
     private void RefreshToastActionsPanelMetrics()
     {
-        int maxRow = 0;
-        foreach (var btn in ToastButtonLayout.ConfirmActionButtons)
-        {
-            if (!ToastButtonLayout.IsVisible(ToastButtons, btn))
-                continue;
-
-            var (row, _) = ToastButtonLayout.ToGridCell(ToastButtonLayout.GetSlot(ToastButtons, btn));
-            maxRow = Math.Max(maxRow, row + 1);
-        }
-
-        // Always keep at least one destination row so empty slots stay drop targets
-        // (e.g. Basic preset still needs a place to drag Save/Copy/Edit/Share).
+        // Confirm destinations always sit on a single horizontal strip (5 slots).
         const double rowHeight = 36;
-        int rows = Math.Max(1, maxRow);
-        ToastLayoutActionsPanel.RowDefinitions[0].Height = new GridLength(rowHeight);
-        ToastLayoutActionsPanel.RowDefinitions[1].Height = rows >= 2 ? new GridLength(rowHeight) : new GridLength(0);
-        ToastLayoutActionsPanel.Height = rows * rowHeight;
+        if (ToastLayoutActionsPanel.RowDefinitions.Count > 0)
+            ToastLayoutActionsPanel.RowDefinitions[0].Height = new GridLength(rowHeight);
+        ToastLayoutActionsPanel.Height = rowHeight;
+        bool labels = _settingsService.Settings.ConfirmPillShowLabels;
+        // Icon-only: ~40px each; with labels, leave room for short text.
+        ToastLayoutActionsPanel.MinWidth = labels ? 5 * 72 : 5 * 40;
+        if (ToastLayoutShell is not null)
+            ToastLayoutShell.MaxWidth = labels ? 560 : 420;
     }
 
     private void CollapseAllToastPreviewButtons()
@@ -840,12 +1005,142 @@ public partial class SettingsWindow
             border.BorderBrush = Theme.Brush(Color.FromArgb(130, 0, 120, 215));
         }
         border.BorderThickness = new System.Windows.Thickness(1);
-        border.Width = 34;
-        border.Height = 34;
         border.CornerRadius = new CornerRadius(14);
-        icon.Source = Helpers.FluentIcons.RenderWpf(iconId, GetToastLayoutIconColor(active: false), 22);
+        var iconColor = GetToastLayoutIconColor(active: false);
+        icon.Source = Helpers.FluentIcons.RenderWpf(iconId, iconColor, 22);
 
-        // Don't override tooltip - let XAML localization handle it
+        // Reflect ConfirmPillShowLabels: icon-only vs icon + short label (matches capture chrome).
+        bool showLabels = _settingsService.Settings.ConfirmPillShowLabels
+            && ToastButtonLayout.IsConfirmActionButton(kind);
+        ApplyConfirmPreviewPillChrome(border, icon, kind, showLabels);
+    }
+
+    private void ApplyConfirmPreviewPillChrome(
+        Border border,
+        Image icon,
+        ToastButtonKind kind,
+        bool showLabels)
+    {
+        // WPF forbids assigning a FrameworkElement that already has a logical parent.
+        DetachFromLogicalParent(icon);
+        if (border.Child is not null && !ReferenceEquals(border.Child, icon))
+            border.Child = null;
+
+        UIElement faceContent;
+        if (!showLabels)
+        {
+            border.Width = 34;
+            border.Height = 34;
+            border.MinWidth = 34;
+            border.Padding = new Thickness(0);
+            icon.Width = 22;
+            icon.Height = 22;
+            icon.Margin = new Thickness(0);
+            icon.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            icon.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+            faceContent = icon;
+        }
+        else
+        {
+            string label = kind switch
+            {
+                ToastButtonKind.Save => Services.LocalizationService.Translate("Save"),
+                ToastButtonKind.Copy => Services.LocalizationService.Translate("Copy"),
+                ToastButtonKind.Edit => Services.LocalizationService.Translate("Edit"),
+                ToastButtonKind.Share => Services.LocalizationService.Translate("Share"),
+                ToastButtonKind.History => Services.LocalizationService.Translate("Gallery"),
+                _ => FormatToastButtonLabel(kind)
+            };
+
+            icon.Width = 16;
+            icon.Height = 16;
+            icon.Margin = new Thickness(0, 0, 5, 0);
+            icon.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+
+            var row = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center
+            };
+            row.Children.Add(icon);
+            row.Children.Add(new TextBlock
+            {
+                Text = ToTitleCase(label),
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                Foreground = Theme.Brush(Theme.IsDark ? Color.FromRgb(230, 231, 233) : Color.FromRgb(30, 30, 30))
+            });
+
+            border.Width = double.NaN;
+            border.MinWidth = 34;
+            border.Height = 34;
+            border.Padding = new Thickness(8, 0, 10, 0);
+            faceContent = row;
+        }
+
+        // Face + micro × badge (top-right, red, hover-only) to remove the destination.
+        var faceHost = new Grid { ClipToBounds = false };
+        var face = new Border
+        {
+            Child = faceContent,
+            Background = System.Windows.Media.Brushes.Transparent,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+            VerticalAlignment = System.Windows.VerticalAlignment.Stretch
+        };
+        faceHost.Children.Add(face);
+
+        var remove = BuildCornerBadge(
+            "×",
+            accent: false,
+            tooltip: null,
+            hoverOnly: true,
+            hoverHost: border);
+        remove.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+        remove.VerticalAlignment = System.Windows.VerticalAlignment.Top;
+        remove.Margin = new Thickness(0, -7, -7, 0);
+        var captured = kind;
+        remove.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            // Don't start a drag when clicking ×
+            e.Handled = true;
+        };
+        remove.MouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
+            RemoveToastButton(captured);
+        };
+        faceHost.Children.Add(remove);
+
+        border.ClipToBounds = false;
+        border.Child = faceHost;
+        border.ToolTip = null;
+
+        AutomationProperties.SetHelpText(border, string.Format(
+            Services.LocalizationService.Translate("Click × to remove {0} from the confirm bar."),
+            ToTitleCase(FormatToastButtonLabel(kind))));
+    }
+
+    private static void DetachFromLogicalParent(FrameworkElement? element)
+    {
+        if (element?.Parent is null)
+            return;
+
+        switch (element.Parent)
+        {
+            case System.Windows.Controls.Panel panel:
+                panel.Children.Remove(element);
+                break;
+            case Decorator decorator: // Border, etc.
+                if (ReferenceEquals(decorator.Child, element))
+                    decorator.Child = null;
+                break;
+            case ContentControl content:
+                if (ReferenceEquals(content.Content, element))
+                    content.Content = null;
+                break;
+        }
     }
 
     private void RefreshToastSlotIndicators()
@@ -906,21 +1201,13 @@ public partial class SettingsWindow
 
     private void RefreshToastPresetButtons()
     {
-        var active = ToastButtonLayout.DetectPreset(ToastButtons);
-        bool manualActive = IsManualMode;
-
-        // Preset buttons are highlighted when their preset is active AND Manual mode is off.
-        // Minimal was removed from the toolbar (redundant with Basic); layouts that still
-        // match only-close simply leave every preset chip unhighlighted.
-        HighlightToastPreset(ToastPresetNoneBtn, active == ToastButtonPreset.None && !manualActive);
-        HighlightToastPreset(ToastPresetStandardBtn, active == ToastButtonPreset.Standard && !manualActive);
-        HighlightToastPreset(ToastPresetFullBtn, active == ToastButtonPreset.Full && !manualActive);
-        // Manual button is highlighted whenever Manual mode is active.
-        HighlightToastPreset(ToastManualBtn, manualActive);
+        // Preset chips (Basic / Standard / Full / Manual) were removed from the designer —
+        // drag-drop + RMB hide cover the same ground. Method kept as a no-op for callers.
     }
 
     private static void HighlightToastPreset(Button button, bool active)
     {
+        if (button is null) return;
         button.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
         button.BorderBrush = active
             ? Theme.Brush(Theme.IsDark ? Color.FromArgb(220, 255, 255, 255) : Color.FromArgb(150, 0, 0, 0))
@@ -930,19 +1217,17 @@ public partial class SettingsWindow
 
     private void RefreshToastLayoutStatus()
     {
-        // The preset buttons already make the active selection obvious, so this line stays hidden
-        // and only surfaces a transient warning (e.g. a corner being full).
-        if (_toastLayoutHint is not null)
-        {
-            ToastLayoutSelectionText.Text = _toastLayoutHint;
-            ToastLayoutSelectionText.ToolTip = _toastLayoutHint;
-            AutomationProperties.SetHelpText(ToastLayoutSelectionText, _toastLayoutHint);
-            ToastLayoutSelectionText.Visibility = Visibility.Visible;
-        }
-        else
+        // Legacy distant status line — keep collapsed; actionable hints use ConfirmBarInlineHint.
+        if (ToastLayoutSelectionText is not null)
         {
             ToastLayoutSelectionText.Text = string.Empty;
             ToastLayoutSelectionText.Visibility = Visibility.Collapsed;
+        }
+
+        if (_toastLayoutHint is not null && ConfirmBarInlineHint is not null)
+        {
+            ConfirmBarInlineHint.Text = _toastLayoutHint;
+            ConfirmBarInlineHint.Visibility = Visibility.Visible;
         }
     }
 
@@ -954,25 +1239,15 @@ public partial class SettingsWindow
     }
 
     /// <summary>
-    /// Side-by-side mocks: left = system-alert examples (encoding / brief status);
-    /// right = confirm-destination button layout designer.
+    /// Themes the confirm-destination pill designer mock (single column).
     /// </summary>
     private void RefreshEditorPreviewState()
     {
         // Guard: this runs from theme refreshes that can fire before the designer is built.
-        if (EditorToastMockShell is null || EditorButtonsCard is null)
+        if (EditorButtonsCard is null && ToastLayoutShell is null)
             return;
 
-        bool trimmerOn = _settingsService.Settings.OpenVideoTrimmerAfterCapture
-            || _settingsService.Settings.OpenGifTrimmerAfterCapture;
-
-        // Keep both previews faithful to the real notification shell + edge stroke.
-        EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
-        EditorToastMockShell.BorderBrush = ToastAccentStroke();
-        if (EditorToastMockCloseIcon is not null)
-            EditorToastMockCloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", GetToastLayoutIconColor(active: false), 16);
-
-        // Confirm-bar destination designer (images) — selection silhouette, not a toast shell.
+        // Confirm-bar destination designer — selection silhouette, not a toast shell.
         if (ToastLayoutShell is not null)
         {
             ToastLayoutShell.Background = Theme.Brush(Theme.IsDark
@@ -1005,47 +1280,12 @@ public partial class SettingsWindow
         RestoreFixedConfirmPillChrome(ConfirmMockCancelPill);
         RestoreFixedConfirmPillChrome(ConfirmMockRetryPill);
 
-        ApplyMockRail(EditorToastMockRail, EditorToastMockRailGlow);
-
-        if (EditorToastMockShell is not null)
-        {
-            EditorToastMockShell.Visibility = Visibility.Visible;
-            EditorToastMockShell.Background = Theme.Brush(Theme.ToastBg);
-            EditorToastMockShell.BorderBrush = ToastAccentStroke();
-        }
-        if (EncodingToastMockShell is not null)
-        {
-            EncodingToastMockShell.Visibility = Visibility.Visible;
-            EncodingToastMockShell.Background = Theme.Brush(Theme.ToastBg);
-            EncodingToastMockShell.BorderBrush = ToastAccentStroke();
-        }
-        ApplyMockRail(EncodingToastMockRail, EncodingToastMockRailGlow);
-
-        if (SystemAlertExampleLabel is not null)
-            SystemAlertExampleLabel.Visibility = Visibility.Visible;
-
-        // Both columns are informative now — no “selected side” accent ring.
-        ApplySectionSelectionHighlight(SystemAlertCard, selected: false);
         ApplySectionSelectionHighlight(EditorButtonsCard, selected: false);
 
         if (ToastLayoutStack is not null)
             ToastLayoutStack.Opacity = 1.0;
         if (CaptureDesignIdleNote is not null)
             CaptureDesignIdleNote.Visibility = Visibility.Collapsed;
-
-        if (EditorPreviewImagesCaption is not null)
-        {
-            string leftCaption = Services.LocalizationService.Translate("System notifications");
-            EditorPreviewImagesCaption.Text = leftCaption;
-            AutomationProperties.SetName(EditorPreviewImagesCaption, leftCaption);
-        }
-
-        if (EditorPreviewGuide is not null)
-        {
-            string guide = Services.LocalizationService.Translate(BuildDesignerGuideKey(trimmerOn));
-            EditorPreviewGuide.Text = guide;
-            AutomationProperties.SetName(EditorPreviewGuide, guide);
-        }
     }
 
     private static string BuildDesignerGuideKey(bool trimmerOn)
@@ -1161,10 +1401,77 @@ public partial class SettingsWindow
         ToastButtonKind.Copy => Services.LocalizationService.Translate("Copy the capture to the clipboard when confirming."),
         ToastButtonKind.Share => Services.LocalizationService.Translate("Upload and copy a shareable link when confirming."),
         ToastButtonKind.Delete => Services.LocalizationService.Translate("Not used in confirm mode."),
-        ToastButtonKind.History => Services.LocalizationService.Translate("Open the capture in Gallery when confirming."),
+        ToastButtonKind.History => Services.LocalizationService.Translate(
+            "Gallery: saves the capture to disk, then opens it in Gallery (hotkey G)."),
         ToastButtonKind.Edit => Services.LocalizationService.Translate("Open the capture in the Annotations Editor when confirming."),
         _ => null
     };
+
+    /// <summary>Called from capture overlay when the user hides/shows destination pills via RMB.</summary>
+    public void RefreshConfirmPillDesigner()
+    {
+        try
+        {
+            // Settings service already holds the updated ToastButtons; rebuild designer chrome.
+            RefreshToastButtonLayoutDesigner();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.refresh-confirm-pills", ex);
+        }
+    }
+
+    /// <summary>Keeps the labels checkbox aligned when toggled from the capture confirm bar.</summary>
+    public void SyncConfirmPillShowLabels(bool show)
+    {
+        try
+        {
+            if (ConfirmPillShowLabelsCheck is null) return;
+            if (ConfirmPillShowLabelsCheck.IsChecked == show) return;
+            _suppressToastPreferenceChange = true;
+            try { ConfirmPillShowLabelsCheck.IsChecked = show; }
+            finally { _suppressToastPreferenceChange = false; }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.sync-confirm-labels", ex);
+        }
+    }
+
+    private void ConfirmPillShowLabelsCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToastPreferenceChange) return;
+        bool show = ConfirmPillShowLabelsCheck.IsChecked == true;
+        if (_settingsService.Settings.ConfirmPillShowLabels == show) return;
+        _settingsService.Settings.ConfirmPillShowLabels = show;
+        _settingsService.Save();
+        // Live-update the confirm-bar mock so the toggle effect is visible immediately.
+        RefreshToastPreview();
+    }
+
+    private void OpenCaptureConfirmPills_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            NavigateToCaptureConfirmPills();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.open-capture-confirm-pills", ex);
+        }
+    }
+
+    public void NavigateToCaptureConfirmPills()
+    {
+        CaptureTab.IsChecked = true;
+        ApplyMainTabSelection();
+        if (CaptureConfirmPillsSection is FrameworkElement fe)
+        {
+            fe.BringIntoView();
+            try { CapturePanel.ScrollToVerticalOffset(Math.Max(0, fe.TranslatePoint(new Point(0, 0), CapturePanel).Y - 12)); }
+            catch { /* layout may not be ready */ }
+        }
+    }
 
     private static string FormatToastButtonLabel(ToastButtonKind button) => button switch
     {

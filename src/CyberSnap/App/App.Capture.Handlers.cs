@@ -223,6 +223,9 @@ public partial class App
                         : LocalizationService.Translate("Clipboard copy failed");
                 }
                 break;
+            case RegionOverlayForm.ConfirmCommitAction.History:
+                // Gallery window opens immediately; skip a redundant status toast.
+                return;
             default:
                 title = LocalizationService.Translate("Screenshot ready");
                 if (wantCopy)

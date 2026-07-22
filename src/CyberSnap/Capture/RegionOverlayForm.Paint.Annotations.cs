@@ -144,8 +144,9 @@ public sealed partial class RegionOverlayForm
                 _selectedEmoji, _emojiPlaceSize, 0.6f);
         }
 
-        // Magnifier placing preview (follow cursor)
-        if (_mode == CaptureMode.Magnifier && _isPlacingMagnifier)
+        // Magnifier placing preview (follow cursor). Suppressed over toolbar / confirm chrome
+        // so the ghost lens never paints over pills and leaves trails when moving away.
+        if (_mode == CaptureMode.Magnifier && _isPlacingMagnifier && !IsPointInOverlayUi(cursorPoint))
         {
             int srcSz = 50;
             int sx2 = Math.Clamp(cursorPoint.X - srcSz / 2, 0, _bmpW - srcSz);

@@ -33,6 +33,13 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
+        // Confirm mode: route through annotation-loss guard (Cancel pill path).
+        if (_isConfirmingSelection)
+        {
+            ConfirmAndCancelCapture();
+            return;
+        }
+
         Cancel();
     }
 
@@ -60,6 +67,12 @@ public sealed partial class RegionOverlayForm
             && !_emojiPickerOpen)
         {
             ExitConfirmMode();
+            return true;
+        }
+        // Confirm-mode destination shortcuts (S/C/E/G/U) — before annotation tool hotkeys.
+        if ((keyData & Keys.Modifiers) == Keys.None
+            && TryHandleConfirmDestinationHotkey(keyData & Keys.KeyCode))
+        {
             return true;
         }
         return base.ProcessCmdKey(ref msg, keyData);
@@ -147,6 +160,13 @@ public sealed partial class RegionOverlayForm
             e.SuppressKeyPress = true;
             e.Handled = true;
             ExitConfirmMode();
+            return;
+        }
+
+        if (e.Modifiers == Keys.None && TryHandleConfirmDestinationHotkey(e.KeyCode))
+        {
+            e.SuppressKeyPress = true;
+            e.Handled = true;
             return;
         }
 

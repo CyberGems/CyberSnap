@@ -177,6 +177,52 @@ public sealed partial class RegionOverlayForm
         if (_fontPickerOpen && _fontPickerRect.Contains(p)) return true;
         if (_colorPickerOpen && _colorPickerRect.Contains(p)) return true;
         if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(p)) return true;
+        // Confirm chrome (wrapper + pills + handles) counts as overlay UI so the
+        // capture magnifier never samples / paints over it (avoids trails).
+        if (_isConfirmingSelection && IsPointInConfirmChrome(p)) return true;
+        return false;
+    }
+
+    private bool IsPointInConfirmChrome(Point p)
+    {
+        if (!_isConfirmingSelection)
+            return false;
+
+        LayoutConfirmChromeRects();
+        // Generous pad: magnifier must vanish before the cursor "enters" the dock glow.
+        if (!_confirmChromeWrapperRect.IsEmpty)
+        {
+            var wrap = _confirmChromeWrapperRect;
+            wrap.Inflate(UiChrome.ScaleInt(28), UiChrome.ScaleInt(28));
+            if (wrap.Contains(p)) return true;
+        }
+
+        foreach (var r in _confirmChromeRects)
+        {
+            if (r.Width <= 0) continue;
+            var hit = r;
+            hit.Inflate(UiChrome.ScaleInt(10), UiChrome.ScaleInt(10));
+            if (hit.Contains(p)) return true;
+        }
+
+        foreach (var h in GetConfirmHandleRects())
+        {
+            var hit = h;
+            hit.Inflate(UiChrome.ScaleInt(6), UiChrome.ScaleInt(6));
+            if (hit.Contains(p)) return true;
+        }
+
+        // Selection frame edge / handle band while confirming — treat as chrome for magnifier.
+        if (!_confirmRect.IsEmpty)
+        {
+            var outer = _confirmRect;
+            outer.Inflate(UiChrome.ScaleInt(20), UiChrome.ScaleInt(20));
+            var inner = _confirmRect;
+            inner.Inflate(-UiChrome.ScaleInt(8), -UiChrome.ScaleInt(8));
+            if (outer.Contains(p) && (inner.Width <= 0 || !inner.Contains(p)))
+                return true;
+        }
+
         return false;
     }
 
@@ -313,10 +359,21 @@ public sealed partial class RegionOverlayForm
         return new PointF(x, y);
     }
 
+    /// <summary>
+    /// Magnifier only while idle-hovering the capture surface — never while dragging/resizing
+    /// a selection, confirming, or over chrome (toolbar / confirm wrapper / pills).
+    /// </summary>
+    /// <summary>
+    /// Capture pixel magnifier (not the annotation Magnifier tool). Shown while hovering the
+    /// surface with a capture tool — including during selection drag — but never in confirm mode,
+    /// never while resizing/moving the locked region, and never over chrome.
+    /// </summary>
     private bool ShouldShowCaptureMagnifierAt(Point p)
         => ShowCaptureMagnifier
            && ToolDef.IsCaptureTool(_mode)
            && !_isConfirmingSelection
+           && _confirmHandleDragIndex < 0
+           && !_isConfirmDragging
            && !IsPointInOverlayUi(p);
 
     private Point GetReadoutCursorPoint()
@@ -1187,8 +1244,11 @@ public sealed partial class RegionOverlayForm
             _confirmButtonAnchorFracX = 0.5f;
             _confirmButtonAnchorFracY = 1f;
         }
+        var settings = Services.SettingsService.LoadStatic();
+        _confirmPillShowLabels = settings?.ConfirmPillShowLabels ?? false;
         RebuildConfirmChromeKinds();
         RecomputeConfirmButtonWidth();
+        _confirmChromeLayoutDirty = true;
         LayoutConfirmChromeRects();
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
@@ -1203,14 +1263,31 @@ public sealed partial class RegionOverlayForm
         HideToolBannerImmediate();
         for (int i = 0; i < ConfirmShineSlots; i++)
         {
-            _shinePhase[i] = (i * 0.17f) % 1f;
+            _shinePhase[i] = 0f;
+            // Buttons start fully visible, no traveling shine until individually hovered.
             _shineMain[i] = 1f;
             _shineDup[i] = 0f;
         }
+        _confirmWrapperShinePhase = 0f;
         EnsureToolbarReady();
         RefreshToolbar();
+        // Wrapper shine runs while confirming so the dock stays findable on busy wallpapers.
         if (!UI.Motion.Disabled) _confirmShineTimer.Start();
         Invalidate();
+    }
+
+    /// <summary>Applies Settings → Confirm pill labels without re-entering confirm mode.</summary>
+    public void SetConfirmPillShowLabels(bool show)
+    {
+        if (_confirmPillShowLabels == show) return;
+        _confirmPillShowLabels = show;
+        _confirmChromeLayoutDirty = true;
+        if (_isConfirmingSelection)
+        {
+            RecomputeConfirmButtonWidth();
+            LayoutConfirmChromeRects();
+            Invalidate();
+        }
     }
 
     /// <summary>
@@ -1227,6 +1304,12 @@ public sealed partial class RegionOverlayForm
         var tool = ToolDef.AllTools.FirstOrDefault(t =>
             t.Group == 1 && string.Equals(t.Id, lastId, StringComparison.OrdinalIgnoreCase));
         if (tool is null || tool.Mode is null)
+            return;
+
+        // Never auto-restore placement tools that draw a large floating ghost under the cursor.
+        // Magnifier was being re-selected every confirm session (via LastAnnotationToolId) and
+        // its live preview was mistaken for the capture pixel magnifier / leaving trails.
+        if (tool.Mode is CaptureMode.Magnifier or CaptureMode.Emoji or CaptureMode.StepNumber)
             return;
 
         // Only restore if the tool is currently visible on the annotation bar.
@@ -1300,31 +1383,24 @@ public sealed partial class RegionOverlayForm
             kinds.Add(ConfirmChromeKind.OcrExtract);
             _confirmChromeKinds = kinds.ToArray();
             _confirmChromeRects = new Rectangle[kinds.Count];
+            _confirmChromeLayoutDirty = true;
             return;
         }
 
         var settings = Services.SettingsService.LoadStatic();
         var toast = settings?.ToastButtons
             ?? new AppSettings.ToastButtonLayoutSettings();
-        bool autoCopyImages = settings != null
-            && Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image);
 
         var actions = new List<(ConfirmChromeKind kind, ToastButtonSlot slot)>();
         if (toast.ShowSave) actions.Add((ConfirmChromeKind.Save, toast.SaveSlot));
         if (toast.ShowCopy) actions.Add((ConfirmChromeKind.Copy, toast.CopySlot));
         if (toast.ShowEdit) actions.Add((ConfirmChromeKind.Edit, toast.EditSlot));
         if (toast.ShowShare) actions.Add((ConfirmChromeKind.Share, toast.ShareSlot));
+        if (toast.ShowHistory) actions.Add((ConfirmChromeKind.History, toast.HistorySlot));
 
         // Always keep at least one usable destination so the capture can be confirmed.
-        // Copy alone is not usable while Auto-copy already puts the image on the clipboard.
-        bool onlyDisabledCopy = actions.Count > 0
-            && actions.All(a => a.kind == ConfirmChromeKind.Copy)
-            && autoCopyImages;
-        if (actions.Count == 0 || onlyDisabledCopy)
-        {
-            if (!actions.Any(a => a.kind == ConfirmChromeKind.Save))
-                actions.Add((ConfirmChromeKind.Save, ToastButtonSlot.TopLeft));
-        }
+        if (actions.Count == 0)
+            actions.Add((ConfirmChromeKind.Save, ToastButtonSlot.TopLeft));
 
         foreach (var entry in actions
             .OrderBy(a => ToastButtonLayout.ToGridCell(a.slot).row)
@@ -1335,6 +1411,7 @@ public sealed partial class RegionOverlayForm
 
         _confirmChromeKinds = kinds.ToArray();
         _confirmChromeRects = new Rectangle[kinds.Count];
+        _confirmChromeLayoutDirty = true;
     }
 
     private static bool IsImageAutoCopyEnabled()
@@ -1356,12 +1433,12 @@ public sealed partial class RegionOverlayForm
             ? "Extract and copy text from the selection"
             : "Extract text from the selection");
 
-    private bool IsConfirmChromeDisabled(ConfirmChromeKind kind)
-        => kind == ConfirmChromeKind.Copy && IsImageAutoCopyEnabled();
+    /// <summary>Confirm pills stay clickable; Copy remains available even when auto-copy is on.</summary>
+    private static bool IsConfirmChromeDisabled(ConfirmChromeKind kind) => false;
 
     /// <summary>
     /// Preferred confirm destination for Enter / double-click.
-    /// OCR → extract text; otherwise Save, else first enabled destination.
+    /// OCR → extract text; otherwise the first destination in the user's bar order.
     /// </summary>
     private int IndexOfPrimaryConfirmAction()
     {
@@ -1371,9 +1448,6 @@ public sealed partial class RegionOverlayForm
             if (ocr >= 0) return ocr;
         }
 
-        int save = IndexOfConfirmChrome(ConfirmChromeKind.Save);
-        if (save >= 0 && !IsConfirmChromeDisabled(ConfirmChromeKind.Save))
-            return save;
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
             var kind = _confirmChromeKinds[i];
@@ -1386,7 +1460,20 @@ public sealed partial class RegionOverlayForm
     private static bool IsConfirmDestinationKind(ConfirmChromeKind kind)
         => kind is ConfirmChromeKind.Save or ConfirmChromeKind.Copy
             or ConfirmChromeKind.Edit or ConfirmChromeKind.Share
+            or ConfirmChromeKind.History
             or ConfirmChromeKind.OcrExtract;
+
+    private static ToastButtonKind? ConfirmChromeToToastKind(ConfirmChromeKind kind) => kind switch
+    {
+        ConfirmChromeKind.Save => ToastButtonKind.Save,
+        ConfirmChromeKind.Copy => ToastButtonKind.Copy,
+        ConfirmChromeKind.Edit => ToastButtonKind.Edit,
+        ConfirmChromeKind.Share => ToastButtonKind.Share,
+        ConfirmChromeKind.History => ToastButtonKind.History,
+        _ => null
+    };
+
+
 
     private void CommitPrimaryConfirmAction()
     {
@@ -1405,18 +1492,86 @@ public sealed partial class RegionOverlayForm
         ConfirmChromeKind.Copy => "copy",
         ConfirmChromeKind.Edit => "draw",
         ConfirmChromeKind.Share => "share",
+        ConfirmChromeKind.History => "history",
         ConfirmChromeKind.OcrExtract => "ocr",
         _ => null
     };
 
-    private static bool ConfirmChromeIsIconOnly(ConfirmChromeKind kind)
-        => kind is ConfirmChromeKind.Cancel or ConfirmChromeKind.Retry
-            or ConfirmChromeKind.Save or ConfirmChromeKind.Copy
-            or ConfirmChromeKind.Edit or ConfirmChromeKind.Share
-            or ConfirmChromeKind.OcrExtract;
+    /// <summary>Short label for icon+text mode (and Settings-aligned wording).</summary>
+    private static string ConfirmChromeShortLabel(ConfirmChromeKind kind) => kind switch
+    {
+        ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel"),
+        ConfirmChromeKind.Retry => LocalizationService.Translate("Retry"),
+        ConfirmChromeKind.Save => LocalizationService.Translate("Save"),
+        ConfirmChromeKind.Copy => LocalizationService.Translate("Copy"),
+        ConfirmChromeKind.Edit => LocalizationService.Translate("Edit"),
+        ConfirmChromeKind.Share => LocalizationService.Translate("Share"),
+        ConfirmChromeKind.History => LocalizationService.Translate("Gallery"),
+        ConfirmChromeKind.OcrExtract => LocalizationService.Translate("Extract"),
+        _ => ""
+    };
+
+    /// <summary>Full title used in tooltips and context menus.</summary>
+    private static string ConfirmChromeTitle(ConfirmChromeKind kind) => kind switch
+    {
+        ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel capture completely"),
+        ConfirmChromeKind.Retry => LocalizationService.Translate("Retry area"),
+        ConfirmChromeKind.Save => LocalizationService.Translate("Save capture"),
+        ConfirmChromeKind.Copy => LocalizationService.Translate("Copy to clipboard"),
+        ConfirmChromeKind.Edit => LocalizationService.Translate("Open in editor"),
+        ConfirmChromeKind.Share => LocalizationService.Translate("Share"),
+        ConfirmChromeKind.History => LocalizationService.Translate("Save and open in Gallery"),
+        ConfirmChromeKind.OcrExtract => GetOcrExtractTooltip(),
+        _ => kind.ToString()
+    };
+
+    private static string ConfirmChromeHotkeyHint(ConfirmChromeKind kind) => kind switch
+    {
+        ConfirmChromeKind.Cancel => "Esc",
+        ConfirmChromeKind.Retry => "R",
+        ConfirmChromeKind.Save => "S",
+        ConfirmChromeKind.Copy => "C",
+        ConfirmChromeKind.Edit => "E",
+        ConfirmChromeKind.Share => "U",
+        ConfirmChromeKind.History => "G",
+        ConfirmChromeKind.OcrExtract => "X",
+        _ => ""
+    };
+
+    /// <summary>
+    /// Cancel/Retry stay icon-only. Destinations show labels only when
+    /// <see cref="_confirmPillShowLabels"/> is on.
+    /// </summary>
+    private bool ConfirmChromeIsIconOnly(ConfirmChromeKind kind)
+    {
+        if (kind is ConfirmChromeKind.Cancel or ConfirmChromeKind.Retry)
+            return true;
+        return !_confirmPillShowLabels;
+    }
 
     private int MeasureConfirmChromeButtonWidth(ConfirmChromeKind kind, int iconOnlySize)
-        => ConfirmChromeIsIconOnly(kind) ? iconOnlySize : _confirmButtonWidth;
+    {
+        if (ConfirmChromeIsIconOnly(kind))
+            return iconOnlySize;
+
+        string label = ConfirmChromeShortLabel(kind);
+        if (string.IsNullOrEmpty(label))
+            return iconOnlySize;
+
+        using var font = CreateConfirmButtonFont();
+        var textSize = TextRenderer.MeasureText(
+            label,
+            font,
+            new Size(int.MaxValue, iconOnlySize),
+            TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+        int iconPart = Math.Max(UiChrome.ScaleInt(16), (int)(iconOnlySize * 0.52f));
+        int gap = UiChrome.ScaleInt(6);
+        int padX = UiChrome.ScaleInt(12);
+        return Math.Max(iconOnlySize + UiChrome.ScaleInt(28), padX + iconPart + gap + textSize.Width + padX);
+    }
+
+    private string ConfirmChromeDrawLabel(ConfirmChromeKind kind)
+        => ConfirmChromeIsIconOnly(kind) ? "" : ConfirmChromeShortLabel(kind);
 
     private void InvokeRegionSelected(Rectangle rect, CaptureMode? captureMode = null)
     {
@@ -1557,10 +1712,6 @@ public sealed partial class RegionOverlayForm
     {
         if (_undoStack.Count > 0)
         {
-            var isSpanish = string.Equals(
-                Services.SettingsService.LoadStatic()?.InterfaceLanguage ?? "en",
-                "es", StringComparison.OrdinalIgnoreCase);
-
             var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
             menu.Font = UiChrome.ChromeFont(11.0f);
             _confirmContextMenu = menu;
@@ -1570,7 +1721,7 @@ public sealed partial class RegionOverlayForm
                 _confirmContextMenu = null;
             };
 
-            var titleLabel = new ToolStripLabel(isSpanish ? "Se perderán las anotaciones" : "Annotations will be lost")
+            var titleLabel = new ToolStripLabel(LocalizationService.Translate("Annotations will be lost"))
             {
                 ForeColor = UiChrome.SurfaceTextMuted,
                 Font = UiChrome.ChromeFont(9f),
@@ -1580,13 +1731,18 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(titleLabel);
             menu.Items.Add(new ToolStripSeparator());
 
-            var yesLabel = isSpanish ? "Confirmar cancelación" : "Confirm cancellation";
-            var yesItem = WindowsMenuRenderer.Item(yesLabel, iconId: "signOut", danger: true, iconSize: 24);
+            var yesItem = WindowsMenuRenderer.Item(
+                LocalizationService.Translate("Confirm cancellation"),
+                iconId: "signOut",
+                danger: true,
+                iconSize: 24);
             yesItem.Click += (_, _) => Cancel();
             menu.Items.Add(yesItem);
 
-            var noLabel = isSpanish ? "Continuar selección" : "Continue selection";
-            var noItem = WindowsMenuRenderer.Item(noLabel, iconId: "check", iconSize: 24);
+            var noItem = WindowsMenuRenderer.Item(
+                LocalizationService.Translate("Continue selection"),
+                iconId: "check",
+                iconSize: 24);
             noItem.Click += (_, _) => menu.Close();
             menu.Items.Add(noItem);
 
@@ -1675,10 +1831,123 @@ public sealed partial class RegionOverlayForm
             case ConfirmChromeKind.Share:
                 CommitConfirmedSelection(ConfirmCommitAction.Share);
                 break;
+            case ConfirmChromeKind.History:
+                CommitConfirmedSelection(ConfirmCommitAction.History);
+                break;
             case ConfirmChromeKind.OcrExtract:
                 CommitConfirmedSelection(ConfirmCommitAction.Default);
                 break;
         }
+    }
+
+    private bool TryHandleConfirmDestinationHotkey(Keys keyCode)
+    {
+        if (!_isConfirmingSelection || _isTyping || _emojiPickerOpen)
+            return false;
+
+        ConfirmChromeKind? kind = keyCode switch
+        {
+            Keys.S => ConfirmChromeKind.Save,
+            Keys.C => ConfirmChromeKind.Copy,
+            Keys.E => ConfirmChromeKind.Edit,
+            Keys.G => ConfirmChromeKind.History,
+            Keys.U => ConfirmChromeKind.Share,
+            Keys.X when _modeBeforeConfirm == CaptureMode.Ocr => ConfirmChromeKind.OcrExtract,
+            _ => null
+        };
+        if (kind is null)
+            return false;
+
+        int idx = IndexOfConfirmChrome(kind.Value);
+        if (idx < 0 || IsConfirmChromeDisabled(kind.Value))
+            return false;
+
+        StartConfirmPress(idx);
+        return true;
+    }
+
+    /// <summary>Hides a destination pill from the confirm bar and persists via ToastButtonsChanged.</summary>
+    private void HideConfirmDestination(ConfirmChromeKind kind)
+    {
+        var toastKind = ConfirmChromeToToastKind(kind);
+        if (toastKind is null)
+            return;
+
+        var settings = Services.SettingsService.LoadStatic() ?? new AppSettings();
+        var toast = settings.ToastButtons ?? new AppSettings.ToastButtonLayoutSettings();
+        if (!ToastButtonLayout.IsVisible(toast, toastKind.Value))
+            return;
+
+        // Keep at least one destination: if this is the last visible confirm action, inject Save
+        // (or refuse hide when already on Save alone).
+        int visibleCount = ToastButtonLayout.ConfirmActionButtons
+            .Count(b => ToastButtonLayout.IsVisible(toast, b));
+        if (visibleCount <= 1)
+        {
+            if (toastKind == ToastButtonKind.Save)
+                return; // cannot hide the last fallback destination
+            ToastButtonLayout.SetVisible(toast, toastKind.Value, false);
+            ToastButtonLayout.SetVisible(toast, ToastButtonKind.Save, true);
+        }
+        else
+        {
+            ToastButtonLayout.SetVisible(toast, toastKind.Value, false);
+        }
+
+        toast.Manual = true;
+        settings.ToastButtons = toast;
+        ToastButtonsChanged?.Invoke(toast);
+
+        if (_isConfirmingSelection)
+        {
+            RebuildConfirmChromeKinds();
+            RecomputeConfirmButtonWidth();
+            LayoutConfirmChromeRects();
+            Invalidate();
+        }
+    }
+
+    private void ShowConfirmDestination(ToastButtonKind toastKind)
+    {
+        if (!ToastButtonLayout.IsConfirmActionButton(toastKind))
+            return;
+
+        var settings = Services.SettingsService.LoadStatic() ?? new AppSettings();
+        var toast = settings.ToastButtons ?? new AppSettings.ToastButtonLayoutSettings();
+        if (ToastButtonLayout.IsVisible(toast, toastKind))
+            return;
+
+        // Prefer left-to-right free slot among confirm destinations.
+        if (!ToastButtonLayout.PlaceFromHidden(toast, toastKind, ToastButtonSlot.TopLeft)
+            && !ToastButtonLayout.AssignCorner(toast, toastKind, ToastCorner.TopLeft)
+            && !ToastButtonLayout.AssignCorner(toast, toastKind, ToastCorner.TopRight)
+            && !ToastButtonLayout.AssignCorner(toast, toastKind, ToastCorner.BottomLeft)
+            && !ToastButtonLayout.AssignCorner(toast, toastKind, ToastCorner.BottomRight))
+        {
+            ToastButtonLayout.SetVisible(toast, toastKind, true);
+        }
+
+        toast.Manual = true;
+        settings.ToastButtons = toast;
+        ToastButtonsChanged?.Invoke(toast);
+
+        if (_isConfirmingSelection)
+        {
+            RebuildConfirmChromeKinds();
+            RecomputeConfirmButtonWidth();
+            LayoutConfirmChromeRects();
+            Invalidate();
+        }
+    }
+
+    private void ToggleConfirmPillShowLabels()
+    {
+        _confirmPillShowLabels = !_confirmPillShowLabels;
+        ConfirmPillShowLabelsChanged?.Invoke(_confirmPillShowLabels);
+        _confirmChromeLayoutDirty = true;
+        RecomputeConfirmButtonWidth();
+        LayoutConfirmChromeRects();
+        Invalidate();
     }
 
     private void ResetConfirmPress()
@@ -1691,8 +1960,9 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Advances the glint that travels around the confirm/cancel borders. A perpetual
-    /// loop while confirming, gated by the "disable animations" setting (UI.Motion.Disabled).
+    /// Confirm chrome animation:
+    /// - Wrapper always gets a slow traveling shine (keeps the dock visible on busy desktops).
+    /// - Individual pills only shine while THAT pill is hovered — never a group dim/shine.
     /// </summary>
     private void ConfirmShineTick()
     {
@@ -1701,30 +1971,33 @@ public sealed partial class RegionOverlayForm
             _confirmShineTimer.Stop();
             return;
         }
-        // Per button: advance the comet (2× speed while hovered) and ease its intensities.
-        // The hovered button gains a second comet (dup→1); the other's comet fades (main→0).
+
+        // Dock wrapper: perpetual slow lap (~3.2s).
+        _confirmWrapperShinePhase += (float)(UiChrome.FrameIntervalMs / 3200.0);
+        if (_confirmWrapperShinePhase >= 1f) _confirmWrapperShinePhase -= 1f;
+
         int hov = _hoveredConfirmButton;
-        float baseDelta = (float)(UiChrome.FrameIntervalMs / 2600.0); // full lap ~2.6s
+        float baseDelta = (float)(UiChrome.FrameIntervalMs / 2200.0);
         int count = Math.Min(ConfirmShineSlots, Math.Max(3, _confirmChromeKinds.Length));
         for (int i = 0; i < count; i++)
         {
-            _shinePhase[i] += baseDelta * (hov == i ? 2f : 1f);
-            if (_shinePhase[i] >= 1f) _shinePhase[i] -= 1f;
-
-            float targetMain = (hov >= 0 && hov != i) ? 0f : 1f;
-            float targetDup = (hov == i) ? 1f : 0f;
-            _shineMain[i] += (targetMain - _shineMain[i]) * 0.22f;
-            _shineDup[i] += (targetDup - _shineDup[i]) * 0.22f;
+            // Buttons stay fully visible (no group dim). Only the hovered one animates a comet.
+            _shineMain[i] = 1f;
+            if (hov == i)
+            {
+                _shinePhase[i] += baseDelta * 2f;
+                if (_shinePhase[i] >= 1f) _shinePhase[i] -= 1f;
+                _shineDup[i] += (1f - _shineDup[i]) * 0.3f;
+            }
+            else
+            {
+                _shineDup[i] += (0f - _shineDup[i]) * 0.3f;
+                if (_shineDup[i] < 0.01f) _shineDup[i] = 0f;
+            }
         }
 
-        var union = Rectangle.Empty;
-        foreach (var r in _confirmChromeRects)
-        {
-            if (r.Width <= 0) continue;
-            union = union.IsEmpty ? r : Rectangle.Union(union, r);
-        }
-        if (!union.IsEmpty)
-            Invalidate(InflateForRepaint(union, 24));
+        // Full chrome union (includes wrapper) so soft glow never leaves a partial smear.
+        InvalidateConfirmChromeHover();
     }
 
     // Label font for the Confirm / Retry pills. Centralized so the width measurement in
@@ -1803,6 +2076,8 @@ public sealed partial class RegionOverlayForm
             if (r.Width <= 0 || r.Height <= 0) continue;
             union = union.IsEmpty ? r : Rectangle.Union(union, r);
         }
+        if (!_confirmChromeWrapperRect.IsEmpty)
+            union = union.IsEmpty ? _confirmChromeWrapperRect : Rectangle.Union(union, _confirmChromeWrapperRect);
         return union;
     }
 
@@ -1812,8 +2087,22 @@ public sealed partial class RegionOverlayForm
         {
             _confirmChromeRects = Array.Empty<Rectangle>();
             _confirmChromeSeparatorRect = Rectangle.Empty;
+            _confirmChromeWrapperRect = Rectangle.Empty;
+            _confirmChromeLayoutDirty = false;
+            _confirmChromeLaidOutForRect = Rectangle.Empty;
             return;
         }
+
+        // Paint + hit-test call this often; skip when the selection and chrome set are unchanged.
+        if (!_confirmChromeLayoutDirty
+            && _confirmChromeLaidOutForRect == _confirmRect
+            && _confirmChromeLaidOutWithLabels == _confirmPillShowLabels
+            && _confirmChromeRects.Length == _confirmChromeKinds.Length)
+            return;
+
+        _confirmChromeLayoutDirty = false;
+        _confirmChromeLaidOutForRect = _confirmRect;
+        _confirmChromeLaidOutWithLabels = _confirmPillShowLabels;
 
         int bh = UiChrome.ScaleInt(ConfirmButtonHeight);
         int gap = UiChrome.ScaleInt(ConfirmButtonGap);
@@ -1949,6 +2238,82 @@ public sealed partial class RegionOverlayForm
                 sepH);
             break;
         }
+
+        // Dock wrapper behind all pills so icon buttons stay readable on light/busy wallpapers.
+        var pillUnion = Rectangle.Empty;
+        foreach (var pr in _confirmChromeRects)
+        {
+            if (pr.Width <= 0 || pr.Height <= 0) continue;
+            pillUnion = pillUnion.IsEmpty ? pr : Rectangle.Union(pillUnion, pr);
+        }
+        if (pillUnion.IsEmpty)
+        {
+            _confirmChromeWrapperRect = Rectangle.Empty;
+        }
+        else
+        {
+            int padX = UiChrome.ScaleInt(10);
+            int padY = UiChrome.ScaleInt(8);
+            _confirmChromeWrapperRect = Rectangle.Inflate(pillUnion, padX, padY);
+        }
+    }
+
+    /// <summary>Mark confirm chrome for re-layout after move/resize or settings change.</summary>
+    private void InvalidateConfirmChromeLayout()
+    {
+        _confirmChromeLayoutDirty = true;
+    }
+
+    /// <summary>
+    /// Padding used when invalidating confirm chrome so the wrapper shadow + pill glow
+    /// never leave trails when the cluster moves or hover state changes.
+    /// </summary>
+    private static int ConfirmChromeInvalidatePad => UiChrome.ScaleInt(36);
+
+    /// <summary>Invalidate old + new confirm chrome and selection frames after a move/resize.</summary>
+    private void InvalidateConfirmChromeMove(
+        Rectangle oldChromeUnion,
+        Rectangle newChromeUnion,
+        Rectangle oldSelection,
+        Rectangle newSelection)
+    {
+        var dirty = Rectangle.Empty;
+        if (!oldChromeUnion.IsEmpty)
+            dirty = InflateForRepaint(oldChromeUnion, ConfirmChromeInvalidatePad);
+        if (!newChromeUnion.IsEmpty)
+        {
+            var n = InflateForRepaint(newChromeUnion, ConfirmChromeInvalidatePad);
+            dirty = dirty.IsEmpty ? n : Rectangle.Union(dirty, n);
+        }
+        if (!oldSelection.IsEmpty)
+        {
+            var s = InflateForRepaint(oldSelection, UiChrome.ScaleInt(24));
+            dirty = dirty.IsEmpty ? s : Rectangle.Union(dirty, s);
+        }
+        if (!newSelection.IsEmpty)
+        {
+            var s = InflateForRepaint(newSelection, UiChrome.ScaleInt(24));
+            dirty = dirty.IsEmpty ? s : Rectangle.Union(dirty, s);
+        }
+        if (!dirty.IsEmpty)
+            Invalidate(dirty);
+    }
+
+    private void InvalidateConfirmChromeHover()
+    {
+        LayoutConfirmChromeRects();
+        var union = UnionConfirmChromeRects();
+        if (!union.IsEmpty)
+            Invalidate(InflateForRepaint(union, ConfirmChromeInvalidatePad));
+    }
+
+    /// <summary>Hover entered/left a confirm pill — repaint dock; wrapper timer stays running.</summary>
+    private void OnConfirmHoverChanged(int previousHovered)
+    {
+        _ = previousHovered;
+        InvalidateConfirmChromeHover();
+        if (!UI.Motion.Disabled && _isConfirmingSelection && !_confirmShineTimer.Enabled)
+            _confirmShineTimer.Start();
     }
 
     private int GapBeforeConfirmChromeIndex(int index, int gap, int groupGap)
