@@ -1483,7 +1483,6 @@ public sealed partial class RegionOverlayForm
         _confirmRect = Rectangle.Empty;
         _confirmHandleDragIndex = -1;
         _hoveredConfirmButton = -1;
-        _hoveredOutsideConfirmFrame = false;
         _outsideReselectArmed = false;
         _outsideReselectMoved = false;
         _confirmDocksHiddenForFrameManip = false;
