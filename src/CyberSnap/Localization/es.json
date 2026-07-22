@@ -171,6 +171,7 @@
   "Click to open the color palette": "Clic para abrir la paleta de color",
   "Hold to show Area Capture tool": "Mantén pulsado para ver Captura de área",
   "Hold to show From Center tool": "Mantén pulsado para ver Desde el centro",
+  "Hold to switch tool": "Mantén pulsado para cambiar de herramienta",
   "Right-click to hide": "Clic derecho para ocultar",
   "Extract text (OCR)": "Extraer texto (OCR)",
   "Save or process the selected region": "Guarda o procesa la región seleccionada",
@@ -2031,8 +2032,6 @@
   "Retry": "Reintentar",
   "Save, Copy, Edit, Share, and Gallery destination pills.": "Botones de destino Guardar, Copiar, Editar, Compartir y Galería.",
   "Confirm destination bar": "Barra de destino al confirmar",
-  "Confirm destination pills moved to Capture": "Los botones de destino al confirmar están ahora en Captura: diseña la barra que aparece tras seleccionar un área.",
-  "Open Capture settings": "Abrir ajustes de Captura",
   "Celebration preview": "Vista previa de celebración",
   "Send a celebration or system alert toast to verify position and timing.": "Envía un toast de celebración o de sistema para comprobar posición y duración.",
   "Send a sample celebrations / achievements toast (milestone, streak, or welcome-back flourish).": "Envía un toast de ejemplo de celebraciones / logros (hito, racha o bienvenida).",
@@ -2057,7 +2056,6 @@
   "Confirm destination buttons": "Botones de destino al confirmar",
   "Show labels on destination buttons": "Mostrar etiquetas en los botones de destino",
   "Cancel and Retry stay fixed. Use × on a button to remove it; use + in the tray to add it back.": "Cancelar y Reintentar quedan fijos. Usa × en un botón para quitarlo; usa + en la bandeja para devolverlo.",
-  "Confirm destination buttons moved to Capture": "Los botones de destino al confirmar están ahora en Captura: diseña la barra que aparece tras seleccionar un área.",
   "Restore the default destination button layout.": "Restaura el diseño predeterminado de botones de destino.",
   "Show brief status alerts such as \"Video recorded\" or \"Encoding, please wait...\". Confirm destination buttons are designed separately.": "Mostrar avisos de estado breves como \"Vídeo grabado\" o \"Codificando, por favor espera...\". Los botones de destino se diseñan aparte."
 }

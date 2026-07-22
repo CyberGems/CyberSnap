@@ -99,7 +99,39 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>Traveling glint phase around the confirm dock wrapper (0..1).</summary>
     private float _confirmWrapperShinePhase;
 
-    private CaptureDockSide ActiveDockSide => _isEvading ? GetOppositeDockSide(CaptureDockSide) : CaptureDockSide;
+    /// <summary>
+    /// Effective dock for chrome paint / alt-popup direction. Annotation confirm dock is always
+    /// a vertical column on the left or right of the capture frame (not the screen edge).
+    /// </summary>
+    private CaptureDockSide ActiveDockSide
+    {
+        get
+        {
+            if (ShowAnnotationChrome)
+                return _annotationFrameDockSide;
+            return _isEvading ? GetOppositeDockSide(CaptureDockSide) : CaptureDockSide;
+        }
+    }
+
+    /// <summary>Right/Left of the locked capture frame for the annotation tool column.</summary>
+    private CaptureDockSide _annotationFrameDockSide = CaptureDockSide.Right;
+
+    /// <summary>
+    /// Client-space bounds of the monitor where the user started the current area selection
+    /// (full monitor Bounds, not WorkingArea). Manual selection and region drag stay inside it.
+    /// </summary>
+    private Rectangle _selectionMonitorClientBounds;
+
+    /// <summary>Confirm-mode permanent size pill + grip (drag handle) — above the frame, top-left.</summary>
+    private Rectangle _confirmSizeReadoutRect = Rectangle.Empty;
+    private bool _hoveredConfirmSizeReadout;
+    /// <summary>Throttle layered-toolbar presents while the capture frame is being dragged.</summary>
+    private DateTime _lastConfirmDragToolbarPresentUtc = DateTime.MinValue;
+    /// <summary>
+    /// Destination pills + annotation toolbar are fully hidden while the user moves/resizes the
+    /// locked frame (avoids freeze-glitches and floating docks). Restored on mouse-up.
+    /// </summary>
+    private bool _confirmDocksHiddenForFrameManip;
 
     private static CaptureDockSide GetOppositeDockSide(CaptureDockSide side) => side switch
     {
@@ -129,14 +161,36 @@ public sealed partial class RegionOverlayForm : Form
     private int _tooltipButton = -1;
     private WindowsToolTip? _toolbarToolTip;
 
-    // Hybrid button variables
+    // Hybrid / hold-to-switch buttons (capture Area↔Center; annotation shape/stroke/mark groups)
     private bool _altCapturePopupOpen = false;
+    /// <summary>Union bounds of all alt popup slots (hit-test + invalidation).</summary>
     private Rectangle _altCaptureButtonRect = Rectangle.Empty;
     private bool _hoveredAltCaptureBtn = false;
+    private int _hoveredAltSlotIndex = -1;
     private System.Windows.Forms.Timer? _hoverHoldTimer;
     private DateTime _mouseDownStartTime = DateTime.MinValue;
     private bool _isMouseDownOnCaptureBtn = false;
     private int _mergedCaptureButtonIndex = -1;
+    /// <summary>Toolbar button currently held for an alt-tool popup (capture or annotation merge).</summary>
+    private int _mergedHoldButtonIndex = -1;
+    /// <summary>Primary tool id → enabled sibling ids not shown on the bar (annotation merges only).</summary>
+    private readonly Dictionary<string, string[]> _annotationMergeAltsByPrimaryId =
+        new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Toolbar button index → alternate tool ids for hold-to-switch annotation groups.</summary>
+    private readonly Dictionary<int, string[]> _annotationMergeAltsByButton = new();
+    /// <summary>Laid-out alt popup slots (container rect, tool id, icon id).</summary>
+    private readonly List<(Rectangle Container, string ToolId, string IconId)> _altPopupSlots = new();
+
+    /// <summary>
+    /// Annotation tools collapsed into one hold-to-switch slot (primary first = default).
+    /// Capture bar merges (rect/center) stay separate and unchanged.
+    /// </summary>
+    private static readonly string[][] AnnotationMergeGroups =
+    {
+        new[] { "rectShape", "circleShape" },
+        new[] { "arrow", "line", "curvedArrow" },
+        new[] { "highlight", "blur" },
+    };
 
     // Tooltip timer variables
     private DateTime _hoverButtonStartTime = DateTime.MinValue;
@@ -779,116 +833,448 @@ public sealed partial class RegionOverlayForm : Form
     }
 
     /// <summary>
-    /// Confirm-phase dock: annotation tools only + stroke/color + Move/Close.
-    /// Capture tools stay in metadata but are not laid out (empty hit targets).
+    /// Confirm-phase dock: vertical annotation column anchored to the capture frame
+    /// (prefer right edge, flip to left when there is no room). No Position/Close.
     /// </summary>
     private void CalcAnnotationOnlyToolbar(Rectangle screenBounds, int pad, int buttonSize, int buttonSpacing)
     {
         var annotSepIndices = GetAnnotationGroupSepFlyoutIndices();
         int annotSepCount = annotSepIndices.Count;
-        // Gaps: annotation group seps + before stroke/color + before Move/Close
-        int sepCount = annotSepCount + 2;
-        int buttonCount = _flyoutTools.Length + 4; // annot + stroke + color + pos + close
+        // Gaps: annotation group seps + before stroke/color. Position/Close are omitted.
+        int sepCount = annotSepCount + 1;
+        int buttonCount = _flyoutTools.Length + 2; // annot + stroke + color
 
-        int activatorW = UiChrome.ScaleInt(14);
-        int activatorH = buttonSize;
-        int activatorSpacing = buttonSpacing;
-        int primarySpan = GetToolbarPrimarySpan(buttonCount, sepCount, buttonSize, buttonSpacing, pad);
-        if (!IsVerticalDock)
-            primarySpan += activatorW + activatorSpacing;
+        int activatorW = buttonSize;
+        int activatorH = UiChrome.ScaleInt(14);
+        int toolsSpan = GetToolbarPrimarySpan(buttonCount, sepCount, buttonSize, buttonSpacing, 0);
+        // Logo strip above the first tool (compact; no horizontal brand text).
+        int brandStripH = UiChrome.ScaleInt(22);
+        int gapBrandToTools = UiChrome.ScaleInt(4);
+        int gapToolsToActivator = buttonSpacing;
 
-        int w, h;
-        int brandWidth = 0;
-        if (IsVerticalDock)
-        {
-            w = pad * 2 + buttonSize;
-            h = primarySpan;
-        }
-        else
-        {
-            int logoSize = UiChrome.ScaleInt(10);
-            int textWidth = UiChrome.ScaleInt(60);
-            // Confirm dock always uses full branding (logo + "CyberSnap") so a tools-hidden
-            // bar does not collapse to a tiny logo strip.
-            brandWidth = logoSize + textWidth + UiChrome.ScaleInt(24);
-            w = primarySpan + brandWidth;
-            h = pad * 2 + buttonSize;
-        }
+        int w = pad * 2 + buttonSize;
+        int h = pad + brandStripH + gapBrandToTools + toolsSpan + gapToolsToActivator + activatorH + pad;
 
         AllocateToolbarButtonMetadata();
 
-        _toolbarRect = ToolbarLayout.GetToolbarRect(
-            _virtualBounds, screenBounds, w, h, CaptureDockSide, UiChrome.ScaledToolbarTopMargin);
-        if (!_toolbarCustomOffset.IsEmpty)
-            _toolbarRect.Offset(_toolbarCustomOffset);
-
-        // Capture tools are hidden in confirm mode.
+        // Capture tools + chrome buttons not on this dock.
         for (int i = 0; i < _mainBarTools.Length; i++)
             _toolbarButtons[i] = Rectangle.Empty;
+        _toolbarButtons[PositionButtonIndex] = Rectangle.Empty;
+        _toolbarButtons[CloseButtonIndex] = Rectangle.Empty;
 
-        int drawingStartIdx = _mainBarTools.Length + 4;
+        int frameGap = UiChrome.ScaleInt(10);
+        var frame = _confirmRect;
+        if (frame.Width <= 0 || frame.Height <= 0)
+            frame = screenBounds;
 
-        if (IsVerticalDock)
+        // Prefer the selection monitor so the column stays on the same display as the crop.
+        var clampBounds = !_selectionMonitorClientBounds.IsEmpty
+            ? _selectionMonitorClientBounds
+            : GetMonitorClientBoundsAtClientPoint(new Point(frame.X + frame.Width / 2, frame.Y + frame.Height / 2));
+        if (clampBounds.IsEmpty)
+            clampBounds = new Rectangle(0, 0, Math.Max(1, ClientSize.Width), Math.Max(1, ClientSize.Height));
+
+        int edgePad = UiChrome.ScaleInt(4);
+        // Escuadra: bottom-align with the capture frame so the annotation column and the
+        // destination pills meet at the bottom corner (L-shape), not hanging past the frame.
+        int y = frame.Bottom - h;
+        int xRight = frame.Right + frameGap;
+        int xLeft = frame.Left - frameGap - w;
+
+        bool fitsRight = xRight + w <= clampBounds.Right - edgePad;
+        bool fitsLeft = xLeft >= clampBounds.Left + edgePad;
+
+        if (fitsRight || (!fitsLeft && xRight >= clampBounds.Left))
         {
-            int colHeight = GetToolbarPrimarySpan(buttonCount, sepCount, buttonSize, buttonSpacing, 0);
-            int startY = _toolbarRect.Y + pad + (_toolbarRect.Height - pad * 2 - colHeight) / 2;
-            int colX = _toolbarRect.X + pad;
-            // Brand sits in the small strip above the first annotation tool (same column).
-            int brandH = Math.Max(buttonSize, startY - (_toolbarRect.Y + pad));
-            _brandRect = new Rectangle(colX, _toolbarRect.Y + pad, buttonSize, brandH);
-            int actY = _toolbarRect.Y + (_toolbarRect.Height - activatorH) / 2;
-            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorW, actY, activatorW, activatorH);
-
-            int cy = startY;
-            for (int i = 0; i < _flyoutTools.Length; i++)
-            {
-                _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
-                cy += buttonSize + buttonSpacing;
-                if (annotSepIndices.Contains(i))
-                    cy += GroupGap;
-            }
-            cy += GroupGap;
-            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
-            cy += buttonSize + buttonSpacing;
-            _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
-            cy += buttonSize + buttonSpacing + GroupGap;
-            _toolbarButtons[PositionButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
-            cy += buttonSize + buttonSpacing;
-            _toolbarButtons[CloseButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+            _annotationFrameDockSide = CaptureDockSide.Right;
+            _toolbarRect = new Rectangle(xRight, y, w, h);
         }
         else
         {
-            // Pack tools left-to-right immediately after the brand strip (no centering gap).
-            int rowWidth = GetToolbarPrimarySpan(buttonCount, sepCount, buttonSize, buttonSpacing, 0);
-            int startX = _toolbarRect.X + brandWidth;
-            int rowY = _toolbarRect.Y + (h - buttonSize) / 2;
-            _brandRect = new Rectangle(_toolbarRect.X, rowY, brandWidth, buttonSize);
-            int actY = _toolbarRect.Y + (_toolbarRect.Height - activatorH) / 2;
-            _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorW, actY, activatorW, activatorH);
-
-            int cx = startX;
-            for (int i = 0; i < _flyoutTools.Length; i++)
-            {
-                _toolbarButtons[drawingStartIdx + i] = new Rectangle(cx, rowY, buttonSize, buttonSize);
-                cx += buttonSize + buttonSpacing;
-                if (annotSepIndices.Contains(i))
-                    cx += GroupGap;
-            }
-            cx += GroupGap;
-            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(cx, rowY, buttonSize, buttonSize);
-            cx += buttonSize + buttonSpacing;
-            _toolbarButtons[ColorButtonIndex] = new Rectangle(cx, rowY, buttonSize, buttonSize);
-            cx += buttonSize + buttonSpacing + GroupGap;
-            _toolbarButtons[PositionButtonIndex] = new Rectangle(cx, rowY, buttonSize, buttonSize);
-            cx += buttonSize + buttonSpacing;
-            _toolbarButtons[CloseButtonIndex] = new Rectangle(cx, rowY, buttonSize, buttonSize);
-
-            // Trim unused right padding from centering leftovers so the dock hugs content.
-            int contentRight = Math.Max(cx, _menuActivatorRect.Right + pad);
-            int desiredW = Math.Max(contentRight - _toolbarRect.X, brandWidth + rowWidth + pad);
-            if (desiredW < _toolbarRect.Width)
-                _toolbarRect.Width = desiredW;
+            _annotationFrameDockSide = CaptureDockSide.Left;
+            _toolbarRect = new Rectangle(xLeft, y, w, h);
         }
+
+        // Keep the whole column on the clamp monitor; bottom-flush with the frame (escuadra).
+        int maxX = Math.Max(clampBounds.Left + edgePad, clampBounds.Right - w - edgePad);
+        int maxY = Math.Max(clampBounds.Top + edgePad, clampBounds.Bottom - h - edgePad);
+        int preferredX = _toolbarRect.X + _toolbarCustomOffset.X;
+        int preferredY = frame.Bottom - h + _toolbarCustomOffset.Y;
+        _toolbarRect.X = Math.Clamp(preferredX, clampBounds.Left + edgePad, maxX);
+        _toolbarRect.Y = Math.Clamp(preferredY, clampBounds.Top + edgePad, maxY);
+
+        int drawingStartIdx = _mainBarTools.Length + 4;
+        int colX = _toolbarRect.X + pad;
+        int cy = _toolbarRect.Y + pad;
+
+        _brandRect = new Rectangle(colX, cy, buttonSize, brandStripH);
+        cy += brandStripH + gapBrandToTools;
+
+        for (int i = 0; i < _flyoutTools.Length; i++)
+        {
+            _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
+            cy += buttonSize + buttonSpacing;
+            if (annotSepIndices.Contains(i))
+                cy += GroupGap;
+        }
+        cy += GroupGap;
+        _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+        cy += buttonSize + buttonSpacing;
+        _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+        cy += buttonSize + gapToolsToActivator;
+
+        // ⋮ at the bottom of the column (full button width hit target, compact glyph height).
+        int actY = Math.Min(cy, _toolbarRect.Bottom - pad - activatorH);
+        _menuActivatorRect = new Rectangle(colX, actY, activatorW, activatorH);
+    }
+
+    /// <summary>Monitor Bounds (full display) containing a client point, in overlay client coords.</summary>
+    private Rectangle GetMonitorClientBoundsAtClientPoint(Point clientPt)
+    {
+        var screenPt = new Point(_virtualBounds.X + clientPt.X, _virtualBounds.Y + clientPt.Y);
+        var bounds = Screen.FromPoint(screenPt).Bounds;
+        return new Rectangle(
+            bounds.X - _virtualBounds.X,
+            bounds.Y - _virtualBounds.Y,
+            bounds.Width,
+            bounds.Height);
+    }
+
+    private void CaptureSelectionMonitorAt(Point clientPt)
+    {
+        _selectionMonitorClientBounds = GetMonitorClientBoundsAtClientPoint(clientPt);
+    }
+
+    private Point ClampPointToSelectionMonitor(Point p)
+    {
+        var b = _selectionMonitorClientBounds;
+        if (b.IsEmpty || b.Width <= 0 || b.Height <= 0)
+            return p;
+        int maxX = Math.Max(b.Left, b.Right - 1);
+        int maxY = Math.Max(b.Top, b.Bottom - 1);
+        return new Point(Math.Clamp(p.X, b.Left, maxX), Math.Clamp(p.Y, b.Top, maxY));
+    }
+
+    /// <summary>
+    /// Keeps a rectangle fully inside the selection monitor (shrinks if larger than the monitor).
+    /// Used for live selection, confirm move, and confirm resize.
+    /// </summary>
+    private Rectangle ClampRectToSelectionMonitor(Rectangle rect)
+    {
+        var b = _selectionMonitorClientBounds;
+        if (b.IsEmpty || b.Width <= 0 || b.Height <= 0 || rect.Width <= 0 || rect.Height <= 0)
+            return rect;
+
+        int w = Math.Min(rect.Width, b.Width);
+        int h = Math.Min(rect.Height, b.Height);
+        if (w < 1) w = 1;
+        if (h < 1) h = 1;
+        int x = Math.Clamp(rect.X, b.Left, b.Right - w);
+        int y = Math.Clamp(rect.Y, b.Top, b.Bottom - h);
+        return new Rectangle(x, y, w, h);
+    }
+
+    /// <summary>
+    /// Moves/resizes the locked crop during confirm with a lightweight invalidation path.
+    /// Destination + annotation docks are hidden for the gesture (see
+    /// <see cref="HideConfirmDocksForFrameManip"/>) so only the hole/frame/size-pill update live.
+    /// </summary>
+    private void ApplyConfirmRectDrag(Rectangle newRect)
+    {
+        newRect = ClampRectToSelectionMonitor(newRect);
+        if (newRect == _confirmRect)
+            return;
+
+        var oldRect = _confirmRect;
+        int dx = newRect.X - oldRect.X;
+        int dy = newRect.Y - oldRect.Y;
+        var oldPill = _confirmSizeReadoutRect;
+
+        _confirmRect = newRect;
+
+        // Size chip follows the frame; docks are hidden for the whole gesture.
+        if ((dx != 0 || dy != 0) && !_confirmSizeReadoutRect.IsEmpty)
+            _confirmSizeReadoutRect.Offset(dx, dy);
+
+        InvalidateConfirmHoleMove(oldRect, newRect, oldPill, _confirmSizeReadoutRect);
+    }
+
+    /// <summary>
+    /// Vanish destination pills + annotation toolbar while adjusting the capture frame.
+    /// Clears their pixels once so nothing freezes mid-screen or glitches over the dim veil.
+    /// </summary>
+    private void HideConfirmDocksForFrameManip()
+    {
+        if (_confirmDocksHiddenForFrameManip)
+            return;
+
+        // Snapshot dock bounds to erase before we stop painting them.
+        LayoutConfirmChromeRects();
+        var clear = UnionConfirmChromeRects();
+        if (!_confirmChromeWrapperRect.IsEmpty)
+            clear = clear.IsEmpty
+                ? InflateForRepaint(_confirmChromeWrapperRect, ConfirmChromeInvalidatePad)
+                : Rectangle.Union(clear, InflateForRepaint(_confirmChromeWrapperRect, ConfirmChromeInvalidatePad));
+        else if (!clear.IsEmpty)
+            clear = InflateForRepaint(clear, ConfirmChromeInvalidatePad);
+
+        if (ShowAnnotationChrome && !_toolbarRect.IsEmpty)
+        {
+            var tb = InflateForRepaint(_toolbarRect, UiChrome.ScaleInt(20));
+            clear = clear.IsEmpty ? tb : Rectangle.Union(clear, tb);
+        }
+
+        _confirmDocksHiddenForFrameManip = true;
+        _hoveredConfirmButton = -1;
+        _confirmShineTimer.Stop();
+
+        // Annotation dock first (layered), then clear destination pixels in the same tick.
+        if (_toolbarForm is { IsDisposed: false })
+        {
+            try
+            {
+                _toolbarForm.SurfaceAlpha = 0;
+                _toolbarForm.Hide();
+            }
+            catch { }
+        }
+
+        if (!clear.IsEmpty)
+            Invalidate(clear);
+        try { Update(); } catch { }
+    }
+
+    /// <summary>Bring both docks back after the frame gesture, re-seated to the new rect.</summary>
+    private void ShowConfirmDocksAfterFrameManip()
+    {
+        // Layout both docks BEFORE revealing either, so they appear in the same visual tick.
+        InvalidateConfirmChromeLayout();
+        CalcToolbar();
+        _confirmChromeLayoutDirty = true;
+        LayoutConfirmChromeRects();
+        RefreshConfirmSizeReadoutRect();
+
+        _confirmDocksHiddenForFrameManip = false;
+
+        EnsureToolbarReady();
+        if (_toolbarForm is { IsDisposed: false })
+        {
+            try
+            {
+                PositionToolbarForm();
+                _toolbarForm.SurfaceAlpha = 255;
+                MarkToolbarRenderDirty();
+                // Paint layered surface while still deciding visibility.
+                _toolbarForm.UpdateSurface();
+                if (!_toolbarForm.Visible)
+                    _toolbarForm.Show(this);
+                else
+                    _toolbarForm.UpdateSurface();
+            }
+            catch { }
+        }
+
+        var dirty = Rectangle.Empty;
+        if (!_confirmRect.IsEmpty)
+            dirty = InflateForRepaint(_confirmRect, UiChrome.ScaleInt(28));
+        if (!_confirmChromeWrapperRect.IsEmpty)
+            dirty = dirty.IsEmpty
+                ? InflateForRepaint(_confirmChromeWrapperRect, ConfirmChromeInvalidatePad)
+                : Rectangle.Union(dirty, InflateForRepaint(_confirmChromeWrapperRect, ConfirmChromeInvalidatePad));
+        if (!_confirmSizeReadoutRect.IsEmpty)
+            dirty = dirty.IsEmpty
+                ? InflateForRepaint(_confirmSizeReadoutRect, UiChrome.ScaleInt(12))
+                : Rectangle.Union(dirty, InflateForRepaint(_confirmSizeReadoutRect, UiChrome.ScaleInt(12)));
+        if (ShowAnnotationChrome && !_toolbarRect.IsEmpty)
+            dirty = dirty.IsEmpty
+                ? InflateForRepaint(_toolbarRect, UiChrome.ScaleInt(20))
+                : Rectangle.Union(dirty, InflateForRepaint(_toolbarRect, UiChrome.ScaleInt(20)));
+        if (!dirty.IsEmpty)
+            Invalidate(dirty);
+
+        // Force overlay paint now so destination pills don't lag a frame behind the annotation dock.
+        try { Update(); } catch { }
+
+        if (_isConfirmingSelection && !UI.Motion.Disabled && !_confirmShineTimer.Enabled)
+            _confirmShineTimer.Start();
+    }
+
+    /// <summary>
+    /// Invalidates only the dim-hole strips that actually changed (XOR of old/new frames)
+    /// plus size-pill bounds — not the whole chrome dock. Matches pre-confirm selection fluidness.
+    /// </summary>
+    private void InvalidateConfirmHoleMove(
+        Rectangle oldHole,
+        Rectangle newHole,
+        Rectangle oldSizePill,
+        Rectangle newSizePill)
+    {
+        int pad = UiChrome.ScaleInt(22); // frame stroke + handles
+        using var region = new Region();
+        region.MakeEmpty();
+
+        if (oldHole.Width > 0 && oldHole.Height > 0)
+        {
+            var o = oldHole;
+            o.Inflate(pad, pad);
+            region.Union(o);
+        }
+        if (newHole.Width > 0 && newHole.Height > 0)
+        {
+            var n = newHole;
+            n.Inflate(pad, pad);
+            region.Union(n);
+        }
+
+        // Prefer XOR for the hole fill so large moves only dirty the edge strips...
+        // (Union of padded frames already covers borders; XOR of unpadded holes tightens fill.)
+        if (oldHole.Width > 2 && oldHole.Height > 2 && newHole.Width > 2 && newHole.Height > 2)
+        {
+            using var xor = new Region(oldHole);
+            xor.Xor(newHole);
+            region.Union(xor);
+        }
+
+        if (!oldSizePill.IsEmpty)
+        {
+            var p = oldSizePill;
+            p.Inflate(UiChrome.ScaleInt(8), UiChrome.ScaleInt(8));
+            region.Union(p);
+        }
+        if (!newSizePill.IsEmpty)
+        {
+            var p = newSizePill;
+            p.Inflate(UiChrome.ScaleInt(8), UiChrome.ScaleInt(8));
+            region.Union(p);
+        }
+
+        region.Intersect(ClientRectangle);
+        Invalidate(region);
+    }
+
+    private void PresentAnnotationToolbarNow()
+    {
+        _lastConfirmDragToolbarPresentUtc = DateTime.UtcNow;
+        PositionToolbarForm();
+        UpdateToolbarSurfaceOnly();
+    }
+
+    /// <summary>Restore docks after frame drag/resize ends.</summary>
+    private void EndConfirmFrameDragVisuals()
+    {
+        ShowConfirmDocksAfterFrameManip();
+    }
+
+    private void OffsetConfirmChromeBy(int dx, int dy)
+    {
+        if (dx == 0 && dy == 0)
+            return;
+        for (int i = 0; i < _confirmChromeRects.Length; i++)
+        {
+            if (_confirmChromeRects[i].Width > 0)
+                _confirmChromeRects[i].Offset(dx, dy);
+        }
+        if (!_confirmChromeWrapperRect.IsEmpty)
+            _confirmChromeWrapperRect.Offset(dx, dy);
+        if (!_confirmChromeSeparatorRect.IsEmpty)
+            _confirmChromeSeparatorRect.Offset(dx, dy);
+    }
+
+    private void OffsetAnnotationToolbarBy(int dx, int dy)
+    {
+        if (!ShowAnnotationChrome || (dx == 0 && dy == 0))
+            return;
+
+        if (!_toolbarRect.IsEmpty)
+            _toolbarRect.Offset(dx, dy);
+        if (!_brandRect.IsEmpty)
+            _brandRect.Offset(dx, dy);
+        if (!_logoRect.IsEmpty)
+            _logoRect.Offset(dx, dy);
+        if (!_menuActivatorRect.IsEmpty)
+            _menuActivatorRect.Offset(dx, dy);
+
+        for (int i = 0; i < _toolbarButtons.Length; i++)
+        {
+            if (_toolbarButtons[i].Width > 0)
+                _toolbarButtons[i].Offset(dx, dy);
+        }
+    }
+
+    private bool AnnotationToolbarNeedsRelayout()
+    {
+        if (!ShowAnnotationChrome || _toolbarRect.IsEmpty || _confirmRect.IsEmpty)
+            return false;
+
+        int gap = UiChrome.ScaleInt(10);
+        int edgePad = UiChrome.ScaleInt(4);
+        var clamp = !_selectionMonitorClientBounds.IsEmpty
+            ? _selectionMonitorClientBounds
+            : GetMonitorClientBoundsAtClientPoint(new Point(
+                _confirmRect.X + _confirmRect.Width / 2,
+                _confirmRect.Y + _confirmRect.Height / 2));
+
+        // Off the monitor — must re-seat.
+        if (_toolbarRect.Left < clamp.Left + edgePad - 2
+            || _toolbarRect.Top < clamp.Top + edgePad - 2
+            || _toolbarRect.Right > clamp.Right - edgePad + 2
+            || _toolbarRect.Bottom > clamp.Bottom - edgePad + 2)
+            return true;
+
+        // Horizontal seat relative to the frame (allow 2px slack after integer offset).
+        if (_annotationFrameDockSide == CaptureDockSide.Right)
+        {
+            int expectedX = _confirmRect.Right + gap;
+            if (Math.Abs(_toolbarRect.X - expectedX) > 2)
+                return true;
+        }
+        else if (_annotationFrameDockSide == CaptureDockSide.Left)
+        {
+            int expectedX = _confirmRect.Left - gap - _toolbarRect.Width;
+            if (Math.Abs(_toolbarRect.X - expectedX) > 2)
+                return true;
+        }
+
+        // Escuadra: bottom of the column flush with the frame bottom (when it fits).
+        int idealY = _confirmRect.Bottom - _toolbarRect.Height;
+        if (idealY >= clamp.Top + edgePad
+            && Math.Abs(_toolbarRect.Bottom - _confirmRect.Bottom) > 2)
+            return true;
+
+        return false;
+    }
+
+    private void RefreshConfirmSizeReadoutRect()
+    {
+        if (!_isConfirmingSelection || _confirmRect.Width <= 2)
+        {
+            _confirmSizeReadoutRect = Rectangle.Empty;
+            return;
+        }
+
+        _confirmSizeReadoutRect = SelectionSizeReadout.GetConfirmDragPillBounds(
+            _confirmRect,
+            _readoutFont,
+            ClientRectangle,
+            GetConfirmReadoutAvoidRects());
+    }
+
+    private bool HitTestConfirmSizeReadout(Point p)
+        => !_confirmSizeReadoutRect.IsEmpty && _confirmSizeReadoutRect.Contains(p);
+
+    private void BeginConfirmFrameDrag(Point location)
+    {
+        if (_captureMagnifierForm is { Visible: true })
+            HideCaptureMagnifier();
+        _isConfirmDragging = true;
+        _confirmHandleDragIndex = -1;
+        _confirmDragStart = location;
+        _confirmDragOffset = new Point(location.X - _confirmRect.X, location.Y - _confirmRect.Y);
+        _confirmDragStartRect = _confirmRect;
+        Cursor = CursorFactory.GrabbingCursor;
+        HideToolbarTooltip();
+        HideConfirmDocksForFrameManip();
     }
 
     private int GetFirstVisibleToolbarButtonX()
@@ -905,9 +1291,10 @@ public sealed partial class RegionOverlayForm : Form
 
     private HashSet<int> GetAnnotationGroupSepFlyoutIndices()
     {
+        // Separators after edit tools and after shape tools (ids may be merge primaries).
         var groups = new[] {
-            new[] { "select", "eraser", "highlight" },
-            new[] { "rectShape" }
+            new[] { "select", "eraser", "highlight", "blur" },
+            new[] { "rectShape", "circleShape" }
         };
         var seps = new HashSet<int>();
         foreach (var group in groups)
@@ -915,7 +1302,7 @@ public sealed partial class RegionOverlayForm : Form
             int lastIdx = -1;
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
-                if (group.Contains(_flyoutTools[i].Id))
+                if (group.Contains(_flyoutTools[i].Id, StringComparer.OrdinalIgnoreCase))
                     lastIdx = i;
             }
             if (lastIdx >= 0)
@@ -931,6 +1318,7 @@ public sealed partial class RegionOverlayForm : Form
         _toolbarLabels = new string[BtnCount];
         _toolbarToolIds = new string[BtnCount];
         _toolbarModes = new CaptureMode?[BtnCount];
+        _annotationMergeAltsByButton.Clear();
 
         for (int i = 0; i < _mainBarTools.Length; i++)
         {
@@ -972,6 +1360,12 @@ public sealed partial class RegionOverlayForm : Form
             _toolbarLabels[btnIdx] = LocalizationService.Translate(_flyoutTools[i].Label);
             _toolbarToolIds[btnIdx] = _flyoutTools[i].Id;
             _toolbarModes[btnIdx] = _flyoutTools[i].Mode;
+
+            if (_annotationMergeAltsByPrimaryId.TryGetValue(_flyoutTools[i].Id, out var alts)
+                && alts.Length > 0)
+            {
+                _annotationMergeAltsByButton[btnIdx] = alts;
+            }
         }
     }
 
@@ -1000,6 +1394,8 @@ public sealed partial class RegionOverlayForm : Form
             }
         }
 
+        flyoutTools = CollapseAnnotationMergeGroups(flyoutTools);
+
         _mainBarTools = mainBarTools.ToArray();
         _flyoutTools = flyoutTools.ToArray();
 
@@ -1011,6 +1407,192 @@ public sealed partial class RegionOverlayForm : Form
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// Collapses each annotation merge group into one bar slot. The preferred tool is the
+    /// currently active annotation tool (if in the group), else LastAnnotationToolId, else
+    /// the first enabled member in group definition order. Siblings become hold-to-switch alts.
+    /// </summary>
+    private List<ToolDef> CollapseAnnotationMergeGroups(List<ToolDef> flyoutTools)
+    {
+        _annotationMergeAltsByPrimaryId.Clear();
+        if (flyoutTools.Count == 0)
+            return flyoutTools;
+
+        var settings = Services.SettingsService.LoadStatic();
+        var lastId = settings?.LastAnnotationToolId;
+        string? preferredId = null;
+        if (!string.IsNullOrEmpty(_activeToolId)
+            && ToolDef.AllTools.Any(t => t.Group == 1
+                && string.Equals(t.Id, _activeToolId, StringComparison.OrdinalIgnoreCase)))
+        {
+            preferredId = _activeToolId;
+        }
+        else if (!string.IsNullOrWhiteSpace(lastId))
+        {
+            preferredId = lastId;
+        }
+
+        var byId = flyoutTools.ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
+        var consumed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<ToolDef>(flyoutTools.Count);
+
+        foreach (var tool in flyoutTools)
+        {
+            if (consumed.Contains(tool.Id))
+                continue;
+
+            var group = FindAnnotationMergeGroup(tool.Id);
+            if (group is null)
+            {
+                result.Add(tool);
+                continue;
+            }
+
+            var enabled = new List<ToolDef>();
+            foreach (var id in group)
+            {
+                if (byId.TryGetValue(id, out var member))
+                    enabled.Add(member);
+            }
+
+            if (enabled.Count <= 1)
+            {
+                result.Add(tool);
+                foreach (var m in enabled)
+                    consumed.Add(m.Id);
+                continue;
+            }
+
+            ToolDef? primary = null;
+            if (!string.IsNullOrEmpty(preferredId))
+            {
+                primary = enabled.FirstOrDefault(t =>
+                    string.Equals(t.Id, preferredId, StringComparison.OrdinalIgnoreCase));
+            }
+            if (primary is null)
+            {
+                foreach (var id in group)
+                {
+                    primary = enabled.FirstOrDefault(t =>
+                        string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase));
+                    if (primary is not null)
+                        break;
+                }
+            }
+            primary ??= enabled[0];
+
+            result.Add(primary);
+            var alts = enabled
+                .Where(t => !string.Equals(t.Id, primary.Id, StringComparison.OrdinalIgnoreCase))
+                .Select(t => t.Id)
+                .ToArray();
+            if (alts.Length > 0)
+                _annotationMergeAltsByPrimaryId[primary.Id] = alts;
+
+            foreach (var m in enabled)
+                consumed.Add(m.Id);
+        }
+
+        return result;
+    }
+
+    private static string[]? FindAnnotationMergeGroup(string toolId)
+    {
+        foreach (var group in AnnotationMergeGroups)
+        {
+            if (group.Any(id => string.Equals(id, toolId, StringComparison.OrdinalIgnoreCase)))
+                return group;
+        }
+        return null;
+    }
+
+    private bool IsAnnotationMergeButton(int buttonIndex) =>
+        _annotationMergeAltsByButton.ContainsKey(buttonIndex);
+
+    private bool IsMergedHoldButton(int buttonIndex) =>
+        buttonIndex == _mergedCaptureButtonIndex || IsAnnotationMergeButton(buttonIndex);
+
+    private void BeginMergedButtonHold(int buttonIndex)
+    {
+        _mergedHoldButtonIndex = buttonIndex;
+        _isMouseDownOnCaptureBtn = true;
+        _mouseDownStartTime = DateTime.UtcNow;
+        HideToolbarTooltip();
+        DismissQuickStartGuide();
+        InvalidateToolbarArea();
+    }
+
+    private void CloseAltToolPopup(bool invalidate = true)
+    {
+        if (!_altCapturePopupOpen && _mergedHoldButtonIndex < 0 && _altPopupSlots.Count == 0)
+            return;
+
+        _altCapturePopupOpen = false;
+        _hoveredAltCaptureBtn = false;
+        _hoveredAltSlotIndex = -1;
+        _mergedHoldButtonIndex = -1;
+        _altPopupSlots.Clear();
+        _altCaptureButtonRect = Rectangle.Empty;
+        if (invalidate)
+            InvalidateToolbarArea();
+    }
+
+    private void SelectAltPopupTool(string toolId)
+    {
+        var targetTool = ToolDef.AllTools.FirstOrDefault(t =>
+            string.Equals(t.Id, toolId, StringComparison.OrdinalIgnoreCase));
+        if (targetTool is null)
+        {
+            CloseAltToolPopup();
+            return;
+        }
+
+        // Capture Area ↔ From Center: persist default capture mode (same as before).
+        if (targetTool.Mode is CaptureMode.Rectangle or CaptureMode.Center)
+            DefaultCaptureModeChanged?.Invoke(targetTool.Mode.Value);
+
+        SetTool(targetTool);
+        // SetTool → RefreshToolbar rebuilds merge primaries so the chosen tool becomes the slot.
+        CloseAltToolPopup();
+    }
+
+    private bool IsPointInAltToolPopup(Point location)
+    {
+        if (!_altCapturePopupOpen)
+            return false;
+        if (!_altCaptureButtonRect.IsEmpty && _altCaptureButtonRect.Contains(location))
+            return true;
+        return GetAltPopupSlotAt(location) >= 0;
+    }
+
+    /// <summary>
+    /// Click (or release) on an open hold-to-switch alt slot, or dismiss when clicking away.
+    /// Returns true when the event was fully handled.
+    /// </summary>
+    private bool TryHandleAltToolPopupClick(Point location)
+    {
+        if (!_altCapturePopupOpen)
+            return false;
+
+        int altSlot = GetAltPopupSlotAt(location);
+        if (altSlot >= 0 && altSlot < _altPopupSlots.Count)
+        {
+            SelectAltPopupTool(_altPopupSlots[altSlot].ToolId);
+            return true;
+        }
+
+        // Click outside the alt slots (and not on the primary held button) dismisses the popup.
+        int btnUnder = GetToolbarButtonAt(location);
+        if (btnUnder == _mergedHoldButtonIndex
+            || (btnUnder == _mergedCaptureButtonIndex && _mergedCaptureButtonIndex >= 0))
+        {
+            return false; // let primary button handlers run (re-hold / short press)
+        }
+
+        CloseAltToolPopup();
+        return true;
     }
 
     private static int[] GetToolbarSeparatorIndices(IReadOnlyList<ToolDef> mainBarTools, bool hasMore)
@@ -1146,15 +1728,19 @@ public sealed partial class RegionOverlayForm : Form
         // 1. Mouse hold check (0.3 seconds) + progress ring redraw while holding
         if (_isMouseDownOnCaptureBtn && _mouseDownStartTime != DateTime.MinValue)
         {
-            // Repaint so the hold progress arc on the capture button advances.
+            // Repaint so the hold progress arc on the merged button advances.
             if (!_altCapturePopupOpen)
                 changed = true;
 
             if ((DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds >= 300)
             {
-                if (!_altCapturePopupOpen)
+                if (!_altCapturePopupOpen && _mergedHoldButtonIndex >= 0
+                    && IsMergedHoldButton(_mergedHoldButtonIndex))
                 {
                     _altCapturePopupOpen = true;
+                    EnsureAltPopupSlotsLaidOut();
+                    // Grow ToolbarForm so multi-slot alts stay painted inside the layered surface.
+                    PositionToolbarForm();
                     changed = true;
                     HideToolbarTooltip();
                 }

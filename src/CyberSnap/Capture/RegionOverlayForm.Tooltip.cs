@@ -23,26 +23,28 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        if (_hoveredAltCaptureBtn && _altCapturePopupOpen)
+        if (_hoveredAltSlotIndex >= 0 && _altCapturePopupOpen && _hoveredAltSlotIndex < _altPopupSlots.Count)
         {
-            if (_tooltipButton == 999)
+            // One tooltip id per slot so switching between multi-alt slots refreshes the text.
+            int tipId = 900 + _hoveredAltSlotIndex;
+            if (_tooltipButton == tipId)
                 return;
 
-            _tooltipButton = 999;
+            _tooltipButton = tipId;
             _toolbarToolTip ??= new WindowsToolTip();
 
             var settings = Services.SettingsService.LoadStatic();
-            var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
-            var altToolId = (defaultMode == CaptureMode.Center) ? "rect" : "center";
+            var altToolId = _altPopupSlots[_hoveredAltSlotIndex].ToolId;
             var altTool = ToolDef.AllTools.FirstOrDefault(t => t.Id == altToolId);
             if (altTool != null)
             {
                 var label = BuildToolTooltip(altTool, settings, includeHideHint: false);
+                var slot = _altPopupSlots[_hoveredAltSlotIndex].Container;
                 var altAnchorScreen = new Rectangle(
-                    _virtualBounds.X + _altCaptureButtonRect.X,
-                    _virtualBounds.Y + _altCaptureButtonRect.Y,
-                    _altCaptureButtonRect.Width,
-                    _altCaptureButtonRect.Height);
+                    _virtualBounds.X + slot.X,
+                    _virtualBounds.Y + slot.Y,
+                    slot.Width,
+                    slot.Height);
                 _toolbarToolTip.ShowNear(this, label, altAnchorScreen, IsBottomDock);
                 _tooltipVisible = true;
                 _tooltipShowTime = DateTime.UtcNow;
@@ -209,7 +211,16 @@ public sealed partial class RegionOverlayForm
         {
             int flyoutIdx = button - (CloseButtonIndex + 1);
             if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length)
-                return BuildToolTooltip(_flyoutTools[flyoutIdx], settings, includeHideHint: true);
+            {
+                var text = BuildToolTooltip(_flyoutTools[flyoutIdx], settings, includeHideHint: true);
+                if (IsAnnotationMergeButton(button)
+                    && _annotationMergeAltsByButton.TryGetValue(button, out var alts)
+                    && alts.Length > 0)
+                {
+                    text += "\n" + LocalizationService.Translate("Hold to switch tool");
+                }
+                return text;
+            }
         }
 
         // Fallback: plain label
