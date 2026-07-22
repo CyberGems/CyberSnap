@@ -1498,8 +1498,7 @@ public sealed partial class RegionOverlayForm
         // restored for confirm-mode editing, which made Eraser stick after Retry).
         SetMode(_modeBeforeConfirm, _toolIdBeforeConfirm, showHelpBanner: false);
         HideToolBannerImmediate();
-        EnsureToolbarReady();
-        RefreshToolbar();
+        HideToolbarImmediately();
         Invalidate();
     }
 
