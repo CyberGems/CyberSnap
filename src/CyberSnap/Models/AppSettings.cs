@@ -345,7 +345,7 @@ public sealed class AppSettings
     /// <summary>When true, exported trimmer output excludes the audio track.</summary>
     public bool VideoTrimmerExportMuted { get; set; }
     // Editor: when a capture loads, auto-fit it to the canvas (true) or show it at real 100% size (false).
-    public bool EditorFitToWindowOnOpen { get; set; } = true;
+    public bool EditorFitToWindowOnOpen { get; set; } = false;
     public bool EditorPanModeLockObjects { get; set; } = true;
     public bool EditorShowBanners { get; set; } = true;
     /// <summary>Show the welcome overlay on a pristine blank canvas in the editor.</summary>

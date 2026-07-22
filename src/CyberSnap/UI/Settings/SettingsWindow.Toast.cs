@@ -546,7 +546,12 @@ public partial class SettingsWindow
         pill.Opacity = 0.85;
 
         if (pill.Child is TextBlock glyph)
-            glyph.Foreground = Theme.Brush(Theme.TextSecondary);
+        {
+            if (pill.Name == "ConfirmMockCancelPill")
+                glyph.Foreground = Theme.Brush(Color.FromRgb(239, 68, 68));
+            else
+                glyph.Foreground = Theme.Brush(Theme.TextSecondary);
+        }
     }
 
     /// <summary>Whether the per-button placement controls should be interactive.

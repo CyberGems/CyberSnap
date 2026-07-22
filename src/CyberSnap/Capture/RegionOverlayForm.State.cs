@@ -577,7 +577,7 @@ public sealed partial class RegionOverlayForm
     }
 
     // Softer veil on top of the desaturated outside so color loss stays readable.
-    private static readonly Color SelectionDimColor = Color.FromArgb(72, 0, 0, 0);
+    private static readonly Color SelectionDimColor = Color.FromArgb(105, 0, 0, 0);
 
     private static readonly ColorMatrix DesaturateColorMatrix = new(new[]
     {
@@ -1662,6 +1662,7 @@ public sealed partial class RegionOverlayForm
 
     private static string? ConfirmChromeFluentIcon(ConfirmChromeKind kind) => kind switch
     {
+        ConfirmChromeKind.Cancel => "signOut",
         ConfirmChromeKind.Save => "save",
         ConfirmChromeKind.Copy => "copy",
         ConfirmChromeKind.Edit => "draw",

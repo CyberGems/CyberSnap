@@ -293,7 +293,7 @@ public sealed partial class RegionOverlayForm
                         int iconType = kind switch
                         {
                             ConfirmChromeKind.Retry => 1,
-                            ConfirmChromeKind.Cancel => 2,
+                            ConfirmChromeKind.Cancel => 3, // use signOut fluent icon
                             _ => 3 // fluent icon path
                         };
                         string? fluentIcon = ConfirmChromeFluentIcon(kind);
@@ -349,8 +349,8 @@ public sealed partial class RegionOverlayForm
         _ = isPrimary;
         return kind switch
         {
-            ConfirmChromeKind.Retry => Color.FromArgb(239, 68, 68),      // red-500
-            ConfirmChromeKind.Cancel => Color.FromArgb(160, 160, 160),   // neutral gray
+            ConfirmChromeKind.Retry => Color.FromArgb(160, 160, 160),   // neutral gray
+            ConfirmChromeKind.Cancel => UiChrome.SurfaceDanger,          // reddish (danger)
             ConfirmChromeKind.Save => Color.FromArgb(34, 197, 94),       // green
             ConfirmChromeKind.Copy => Color.FromArgb(0, 162, 255),       // accent blue
             ConfirmChromeKind.Edit => Color.FromArgb(139, 92, 246),      // violet
@@ -445,16 +445,8 @@ public sealed partial class RegionOverlayForm
         using var path = WindowsDockRenderer.RoundedRect(face, corner);
 
         // Fully opaque face so partial redraws never composite over old frames.
-        Color fillTop = UiChrome.IsDark
-            ? Color.FromArgb(255, 22, 23, 28)
-            : Color.FromArgb(255, 245, 247, 250);
-        Color fillBottom = UiChrome.IsDark
-            ? Color.FromArgb(255, 12, 13, 16)
-            : Color.FromArgb(255, 232, 236, 242);
-        using (var fill = new LinearGradientBrush(
-                   new RectangleF(bounds.X, bounds.Y - 1, bounds.Width, bounds.Height + 2),
-                   fillTop, fillBottom, LinearGradientMode.Vertical))
-            g.FillPath(fill, path);
+        using (var brush = new SolidBrush(UiChrome.SurfaceTier1))
+            g.FillPath(brush, path);
 
         Color border = UiChrome.IsDark
             ? Color.FromArgb(100, 255, 255, 255)
@@ -496,130 +488,23 @@ public sealed partial class RegionOverlayForm
         bool isPrimary = false)
     {
         float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
-        float depth = UiChrome.ScaleFloat(5f);   // 3D extrusion thickness
-        float press = depth * pressAmt;           // how far the face sinks while pressed
         Color accentColor = accent ?? baseColor;
-        // Primary destination gets a slightly thicker accent ring for Enter / double-click affordance.
-        float primaryBoost = isPrimary ? 1.35f : 1f;
 
         // Face sinks downward onto its fixed base while pressed.
-        var face = new RectangleF(rect.X, rect.Y + press, rect.Width, rect.Height);
-        var baseRect = new RectangleF(rect.X, rect.Y + depth, rect.Width, rect.Height);
+        var face = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
 
-        // CyberGems premium dark theme background palette (shared by all three pills so the
-        // Cancel button reads as a sibling of Retry/Confirm instead of a separate widget).
-        Color fillTop = hover ? Color.FromArgb(39, 39, 42) : Color.FromArgb(24, 24, 27);
-        Color fillBottom = hover ? Color.FromArgb(24, 24, 27) : Color.FromArgb(15, 15, 18);
-        Color sideColor = Color.FromArgb(9, 9, 11);
-
-        // ── "Disabled / off" fade ── When another button is hovered, `opacity` drops toward the dim
-        // floor. Collapse this button's face toward a single flat, desaturated slate so the gradient,
-        // gloss and accent all recede and it clearly reads as inactive (not just slightly faded).
-        if (opacity < 0.999f)
+        // Background:
+        // Idle: transparent. Hovered: flat low-opacity accent fill (like annotation tools on hover).
+        if (hover)
         {
-            Color flatFace = UiChrome.IsDark ? Color.FromArgb(28, 29, 33) : Color.FromArgb(150, 156, 165);
-            Color flatSide = UiChrome.IsDark ? Color.FromArgb(14, 14, 16) : Color.FromArgb(120, 126, 134);
-            fillTop = InterpolateColor(flatFace, fillTop, opacity);
-            fillBottom = InterpolateColor(flatFace, fillBottom, opacity);
-            sideColor = InterpolateColor(flatSide, sideColor, opacity);
+            using (var path = WindowsDockRenderer.RoundedRect(face, corner))
+            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 20 : 16, accentColor)))
+                g.FillPath(brush, path);
         }
 
-        // ── Soft diffused outer glow — concentric low-alpha rings fade outward so it reads
-        //    as a halo, not a hard border. Brightest at the edge, always glowing, flares on hover. ──
-        if (hasShine)
-        {
-            var glowBounds = RectangleF.FromLTRB(rect.X, face.Y, rect.Right, baseRect.Bottom);
-            float glowSpread = UiChrome.ScaleFloat((hover ? 3.75f : 2.75f) * primaryBoost);
-            int glowPeak = (int)((hover ? 32 : 17) * primaryBoost);
-            const int glowSteps = 7;
-            for (int i = glowSteps; i >= 1; i--)
-            {
-                float frac = i / (float)glowSteps;          // 1 (outermost) … ~0.14 (innermost)
-                float inflate = glowSpread * frac;
-                float falloff = 1f - frac;                  // stronger nearer the button edge
-                int a = (int)(glowPeak * falloff * falloff * opacity);
-                if (a <= 0) continue;
-                using var glowPen = new Pen(Color.FromArgb(Math.Min(255, a), accentColor), glowSpread / glowSteps * 2.4f)
-                {
-                    LineJoin = LineJoin.Round
-                };
-                using var glowPath = WindowsDockRenderer.RoundedRect(
-                    RectangleF.Inflate(glowBounds, inflate, inflate), corner + inflate);
-                g.DrawPath(glowPen, glowPath);
-            }
-        }
-
-        // ── Soft drop shadow under the base ──
-        using (var shadowPath = WindowsDockRenderer.RoundedRect(
-            new RectangleF(rect.X, rect.Y + depth + 3f, rect.Width, rect.Height), corner))
-        using (var shadowBrush = new SolidBrush(Color.FromArgb((int)((UiChrome.IsDark ? 110 : 55) * opacity), 0, 0, 0)))
-            g.FillPath(shadowBrush, shadowPath);
-
-        // ── 3D side: darker extruded block beneath the face ──
-        using (var sidePath = WindowsDockRenderer.RoundedRect(baseRect, corner))
-        using (var sideBrush = new SolidBrush(Color.FromArgb(255, sideColor)))
-            g.FillPath(sideBrush, sidePath);
-
-        // ── Face body (vertical gradient, fully opaque to block background) ──
-        using (var facePath = WindowsDockRenderer.RoundedRect(face, corner))
-        {
-            using (var fill = new LinearGradientBrush(
-                new RectangleF(face.X, face.Y - 1, face.Width, face.Height + 2),
-                Color.FromArgb(255, fillTop),
-                Color.FromArgb(255, fillBottom),
-                LinearGradientMode.Vertical))
-                g.FillPath(fill, facePath);
-
-            // Accent outline — primary destination gets a thicker ring for Enter / double-click.
-            int outlineA = hover ? 160 : (isPrimary ? 140 : 100);
-            Color outlineColor = hasShine
-                ? Color.FromArgb(outlineA, accentColor)
-                : Color.FromArgb(hover ? 120 : 70, 150, 150, 150);
-            // Fade the colored edge with the dim factor too, so an "off" button loses its accent ring.
-            int borderA = (int)(outlineColor.A * (0.35f + 0.65f * opacity));
-            float outlineW = UiChrome.ScaleFloat(isPrimary ? 1.75f : 1f);
-            using (var borderPen = new Pen(Color.FromArgb(borderA, outlineColor.R, outlineColor.G, outlineColor.B), outlineW))
-                g.DrawPath(borderPen, facePath);
-
-            // Glossy top highlight — a soft vertical fade to transparent (no hard bottom edge) so it
-            // reads as a gentle sheen instead of a bright band with a visible cut line. Kept subtle so
-            // it doesn't make centered text look like it sits low.
-            int glossA = (int)((hover ? 40 : 26) * (1f - 0.5f * pressAmt) * opacity);
-            if (glossA > 0)
-            {
-                var glossRect = new RectangleF(face.X + 2, face.Y + 1.5f, face.Width - 4, face.Height * 0.5f);
-                using var glossPath = WindowsDockRenderer.RoundedRect(glossRect, Math.Min(corner, glossRect.Height / 2f));
-                using var glossBrush = new LinearGradientBrush(
-                    new RectangleF(glossRect.X, glossRect.Y - 1f, glossRect.Width, glossRect.Height + 2f),
-                    Color.FromArgb(glossA, 255, 255, 255),
-                    Color.FromArgb(0, 255, 255, 255),
-                    LinearGradientMode.Vertical);
-                g.FillPath(glossBrush, glossPath);
-            }
-        }
-
-        // ── Traveling glint(s) along the border (off when shinePhase < 0). The hovered
-        //    button shows a second comet half a lap behind; the other button fades out. ──
-        if (hasShine && shinePhase >= 0f)
-        {
-            Color shineGlow = accentColor;
-            Color shineCore = ConfirmChromeShineCore(accentColor);
-
-            if (shineMain > 0.01f)
-                DrawBorderShine(g, face, corner, shinePhase, shineGlow, shineCore, shineMain * opacity);
-            if (shineDup > 0.01f)
-                DrawBorderShine(g, face, corner, (shinePhase + 0.5f) % 1f, shineGlow, shineCore, shineDup * opacity);
-        }
+        // No outline in idle to keep it flat like annotation tools.
 
         // ── Label + icon laid out as a single centered group ──
-        // The uppercase label and its icon badge are measured together and centered as one
-        // unit in the face, so the icon sits close to the text and the whole pair is balanced
-        // with symmetric padding on both sides (instead of the text floating left and the icon
-        // pinned to the right edge).
-        //
-        // Icon-only Cancel/Retry are hand-stroked and fill most of their box. Destination
-        // Fluent glyphs carry intrinsic padding in the path, so they need a slightly larger
-        // box (and no extra inset) to match that visual weight.
         bool useFluent = !string.IsNullOrEmpty(fluentIconId);
         float iconSize;
         float bx, by;
@@ -638,21 +523,15 @@ public sealed partial class RegionOverlayForm
             {
                 Alignment = StringAlignment.Near,
                 LineAlignment = StringAlignment.Center,
-                // NoClip: don't clip glyph overhang against the tight text rect (the "L" was losing
-                // a sliver at the bottom). NoWrap: keep on one line.
                 FormatFlags = StringFormatFlags.NoWrap | StringFormatFlags.NoClip,
                 Trimming = StringTrimming.None
             };
             SizeF textSize = g.MeasureString(label, font, new SizeF(10000f, face.Height), sf);
 
-            // Icon on the left, label on the right (standard action-pill reading order).
             float iconVisualW = useFluent ? iconSize : iconSize * 0.84f;
             float groupW = iconVisualW + gap + textSize.Width;
             float startX = face.X + (face.Width - groupW) / 2f;
 
-            // Vertical optical centering: GDI+ centers the full ascent+descent line box, so an
-            // all-caps label (no descenders) ends up sitting low. Shift up so the cap-height block
-            // is centered instead.
             var fam = font.FontFamily;
             float em = fam.GetEmHeight(font.Style);
             float ascent = fam.GetCellAscent(font.Style);
@@ -664,7 +543,11 @@ public sealed partial class RegionOverlayForm
             bx = startX;
             by = face.Y + (face.Height - iconSize) / 2f;
 
-            using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), Color.FromArgb(0xE6, 0xE7, 0xE9))))
+            Color baseTextColor = (accentColor.ToArgb() == UiChrome.SurfaceDanger.ToArgb())
+                ? UiChrome.SurfaceDanger
+                : UiChrome.SurfaceTextPrimary;
+
+            using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), baseTextColor)))
             {
                 var textRect = new RectangleF(startX + iconVisualW + gap, face.Y - vNudge, textSize.Width + 1f, face.Height);
                 g.DrawString(label, font, textBrush, textRect, sf);
@@ -672,7 +555,10 @@ public sealed partial class RegionOverlayForm
         }
 
         float stroke = string.IsNullOrEmpty(label) ? UiChrome.ScaleFloat(1.5f) : UiChrome.ScaleFloat(2f);
-        Color iconColor = Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), Color.FromArgb(0xE6, 0xE7, 0xE9));
+        Color baseIconColor = (accentColor.ToArgb() == UiChrome.SurfaceDanger.ToArgb())
+            ? UiChrome.SurfaceDanger
+            : UiChrome.SurfaceTextPrimary;
+        Color iconColor = Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), baseIconColor);
 
         if (useFluent)
         {
