@@ -4,6 +4,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
@@ -248,9 +249,13 @@ public partial class SettingsWindow
         };
         _ = tooltip; // reserved if we re-enable sparse tooltips later
 
-        if (accent)
+        // Scale transform for hover polish (especially + badges).
+        var scale = new ScaleTransform(1, 1);
+        badge.RenderTransform = scale;
+        badge.RenderTransformOrigin = new Point(0.5, 0.5);
+
+        void ApplyAccentRest()
         {
-            // + add: muted, not neon — sits quietly on tray chips
             if (Theme.IsDark)
             {
                 badge.Background = Theme.Brush(Color.FromRgb(42, 52, 58));
@@ -263,6 +268,52 @@ public partial class SettingsWindow
                 badge.BorderBrush = Theme.Brush(Color.FromRgb(160, 180, 190));
                 label.Foreground = Theme.Brush(Color.FromRgb(40, 80, 100));
             }
+        }
+
+        void ApplyAccentHover()
+        {
+            // Lift: slightly larger, brighter cyan edge without full neon flood.
+            if (Theme.IsDark)
+            {
+                badge.Background = Theme.Brush(Color.FromRgb(28, 70, 78));
+                badge.BorderBrush = Theme.Brush(Color.FromRgb(80, 200, 210));
+                label.Foreground = Theme.Brush(Color.FromRgb(200, 245, 250));
+            }
+            else
+            {
+                badge.Background = Theme.Brush(Color.FromRgb(210, 240, 245));
+                badge.BorderBrush = Theme.Brush(Color.FromRgb(0, 140, 160));
+                label.Foreground = Theme.Brush(Color.FromRgb(0, 100, 120));
+            }
+        }
+
+        if (accent)
+        {
+            ApplyAccentRest();
+            badge.MouseEnter += (_, _) =>
+            {
+                ApplyAccentHover();
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1, 1.18, TimeSpan.FromMilliseconds(120))
+                {
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                });
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1, 1.18, TimeSpan.FromMilliseconds(120))
+                {
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                });
+            };
+            badge.MouseLeave += (_, _) =>
+            {
+                ApplyAccentRest();
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(1.18, 1, TimeSpan.FromMilliseconds(140))
+                {
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                });
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(1.18, 1, TimeSpan.FromMilliseconds(140))
+                {
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                });
+            };
         }
         else
         {
@@ -414,8 +465,9 @@ public partial class SettingsWindow
         if (sender is not Border pill)
             return;
 
-        // Immediate click feedback — these pills are not draggable.
+        // Immediate click feedback — these buttons are not removable.
         FlashFixedConfirmPill(pill);
+        ShowFixedButtonHint(pill);
 
         _fixedPillPressSource = pill;
         _fixedPillPressStart = e.GetPosition(ToastDesignerRoot);
@@ -435,9 +487,10 @@ public partial class SettingsWindow
             && Math.Abs(pos.Y - _fixedPillPressStart.Y) < SystemParameters.MinimumVerticalDragDistance)
             return;
 
-        // Drag attempt: refresh the red flash so the rejection stays obvious.
+        // Drag attempt: refresh the red flash + banner so the rejection stays obvious.
         _fixedPillArmed = false;
         FlashFixedConfirmPill(_fixedPillPressSource);
+        ShowFixedButtonHint(_fixedPillPressSource);
         e.Handled = true;
     }
 
@@ -445,6 +498,14 @@ public partial class SettingsWindow
     {
         _fixedPillArmed = false;
         _fixedPillPressSource = null;
+    }
+
+    private void ShowFixedButtonHint(Border pill)
+    {
+        string message = ReferenceEquals(pill, ConfirmMockRetryPill)
+            ? Services.LocalizationService.Translate("Retry stays fixed on the confirm bar. It cannot be moved or removed.")
+            : Services.LocalizationService.Translate("Cancel stays fixed on the confirm bar. It cannot be moved or removed.");
+        ShowConfirmBarHint(message);
     }
 
     private void FlashFixedConfirmPill(Border pill)
@@ -750,7 +811,12 @@ public partial class SettingsWindow
         PersistToastButtonLayout();
     }
 
-    /// <summary>Inline hint under the confirm mock (not the distant section header).</summary>
+    private System.Windows.Threading.DispatcherTimer? _confirmBarHintTimer;
+
+    /// <summary>
+    /// Banner just above the confirm buttons. Collapsed when idle (no gap); when shown the shell's
+    /// image row (*) shrinks so buttons stay pinned to the bottom of the mock.
+    /// </summary>
     private void ShowConfirmBarHint(string message)
     {
         if (ConfirmBarInlineHint is null)
@@ -760,24 +826,44 @@ public partial class SettingsWindow
             return;
         }
 
+        ConfirmBarInlineHint.BeginAnimation(UIElement.OpacityProperty, null);
         ConfirmBarInlineHint.Text = message;
         ConfirmBarInlineHint.Visibility = Visibility.Visible;
-        // Auto-clear after a short beat so it doesn't stick forever.
-        var timer = new System.Windows.Threading.DispatcherTimer
+        ConfirmBarInlineHint.Opacity = 0;
+        ConfirmBarInlineHint.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(140))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        });
+
+        _confirmBarHintTimer?.Stop();
+        _confirmBarHintTimer = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(2.5)
         };
-        timer.Tick += (_, _) =>
+        var captured = message;
+        _confirmBarHintTimer.Tick += (_, _) =>
         {
-            timer.Stop();
-            if (ConfirmBarInlineHint is not null
-                && string.Equals(ConfirmBarInlineHint.Text, message, StringComparison.Ordinal))
+            _confirmBarHintTimer.Stop();
+            if (ConfirmBarInlineHint is null
+                || !string.Equals(ConfirmBarInlineHint.Text, captured, StringComparison.Ordinal))
+                return;
+
+            var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(160))
             {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+            };
+            fade.Completed += (_, _) =>
+            {
+                if (ConfirmBarInlineHint is null
+                    || !string.Equals(ConfirmBarInlineHint.Text, captured, StringComparison.Ordinal))
+                    return;
                 ConfirmBarInlineHint.Text = "";
                 ConfirmBarInlineHint.Visibility = Visibility.Collapsed;
-            }
+                ConfirmBarInlineHint.Opacity = 1;
+            };
+            ConfirmBarInlineHint.BeginAnimation(UIElement.OpacityProperty, fade);
         };
-        timer.Start();
+        _confirmBarHintTimer.Start();
     }
 
     private void ToastSlot_DragEnter(object sender, DragEventArgs e)
@@ -1224,11 +1310,9 @@ public partial class SettingsWindow
             ToastLayoutSelectionText.Visibility = Visibility.Collapsed;
         }
 
-        if (_toastLayoutHint is not null && ConfirmBarInlineHint is not null)
-        {
-            ConfirmBarInlineHint.Text = _toastLayoutHint;
-            ConfirmBarInlineHint.Visibility = Visibility.Visible;
-        }
+        // Don't clobber a live inline banner on routine designer refresh.
+        if (_toastLayoutHint is not null)
+            ShowConfirmBarHint(_toastLayoutHint);
     }
 
     private void PersistToastButtonLayout()
