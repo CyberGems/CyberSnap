@@ -172,7 +172,7 @@ public sealed partial class RegionOverlayForm
                 if (!_outsideReselectMoved && (Math.Abs(odx) > 3 || Math.Abs(ody) > 3))
                 {
                     _outsideReselectMoved = true;
-                    ExitConfirmMode();
+                    ExitConfirmMode(showToolbar: false);
                     StartAreaSelectionFromPoint(_outsideReselectDown);
                     // Fall through past confirm hover into normal selection mouse-move.
                 }

@@ -1477,7 +1477,7 @@ public sealed partial class RegionOverlayForm
         Invalidate();
     }
 
-    private void ExitConfirmMode()
+    private void ExitConfirmMode(bool showToolbar = true)
     {
         _isConfirmingSelection = false;
         _confirmRect = Rectangle.Empty;
@@ -1497,9 +1497,16 @@ public sealed partial class RegionOverlayForm
         // restored for confirm-mode editing, which made Eraser stick after Retry).
         SetMode(_modeBeforeConfirm, _toolIdBeforeConfirm, showHelpBanner: false);
         HideToolBannerImmediate();
-        CalcToolbar();
-        EnsureToolbarReady();
-        RefreshToolbar();
+        if (showToolbar)
+        {
+            CalcToolbar();
+            EnsureToolbarReady();
+            RefreshToolbar();
+        }
+        else
+        {
+            HideToolbarImmediately();
+        }
         Invalidate();
     }
 
