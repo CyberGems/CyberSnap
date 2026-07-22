@@ -231,6 +231,8 @@ public sealed partial class RegionOverlayForm
                 if (recentlyClosedMenu && _lastContextMenuBtnIndex == StrokeWidthButtonIndex)
                     return;
                 CycleStrokeWidth();
+                _tooltipButton = -1;
+                ShowToolbarTooltip();
                 return;
             }
             if (btn == ColorButtonIndex)

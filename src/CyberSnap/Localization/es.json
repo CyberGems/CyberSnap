@@ -1970,7 +1970,7 @@
 
   "Confirm action buttons": "Botones de acción al confirmar",
   "Confirm action button layout": "Diseño de botones de destino al confirmar",
-  "Choose which actions appear after you select a region. Choosing a destination confirms the capture. Retry and Cancel stay available.": "Elige qué acciones aparecen después de seleccionar un área. Elegir un destino confirma la captura. Reintentar y Cancelar siguen disponibles.",
+  "Choose which actions appear after you select a region. Choosing a destination confirms the capture (the first destination button on the right is the default action triggered by Enter or double-click). Retry and Cancel stay available.": "Elige qué acciones aparecen después de seleccionar un área. Elegir un destino confirma la captura (el primer botón de destino a la derecha es la acción predeterminada que se activa con Enter o doble clic). Reintentar y Cancelar siguen disponibles.",
   "Confirm actions": "Acciones de confirmación",
   "Drag any button below onto the preview to add it to confirm mode": "Arrastra cualquier botón de abajo a la barra de confirmación para añadirlo",
   "System notification examples": "Ejemplos de notificaciones de sistema",
@@ -1996,7 +1996,7 @@
   "Drag to move the {0} pill. Double-click to remove it, or right-click (or press the Menu key) for placement options.": "Arrastra para mover el botón {0}. Doble clic para quitarla, o clic derecho (o tecla Menú) para opciones de colocación.",
   "Left: fixed system alerts (encoding / recorded). Right: destination pills on the region confirm bar. Video and GIF use brief toasts unless you open the Trimmer from the recording bar.": "Izquierda: avisos de sistema fijos (codificación / grabado). Derecha: botones de destino en la barra de confirmación. Vídeo y GIF usan toasts breves salvo que abras el Recortador desde la barra de grabación.",
   "Left: fixed system alerts. Right: image confirm pills only. Video and GIF open in the Trimmer after recording (toggle on the recording bar).": "Izquierda: avisos de sistema fijos. Derecha: solo botones de confirmación de imagen. Vídeo y GIF se abren en el Recortador tras grabar (interruptor en la barra de grabación).",
-  "Layout used for confirm-mode destination pills after you select a region.": "Diseño de los botones de destino en modo confirmación tras seleccionar una región.",
+  "Layout used for confirm-mode destination pills after you select a region (the first button in the list is the default action triggered by Enter or double-click).": "Diseño de los botones de destino en modo confirmación tras seleccionar una región (el primer botón de la lista es la acción predeterminada que se activa con Enter o doble clic).",
 
   "These buttons appear on the confirm bar after you select a region. Choosing a destination confirms the capture; Retry and Cancel are always available.": "Estos botones aparecen en la barra de confirmación después de seleccionar un área. Elegir un destino confirma la captura; Reintentar y Cancelar siempre están disponibles.",
   "Send to Editor is on. Images and video/GIF open automatically after confirm; system alerts on the left are highlighted.": "Enviar al editor está activado. Las imágenes y el video/GIF se abren automáticamente al confirmar; las alertas del sistema a la izquierda están resaltadas.",
