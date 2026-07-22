@@ -66,7 +66,7 @@ public sealed partial class RegionOverlayForm
             && !_isTyping
             && !_emojiPickerOpen)
         {
-            ExitConfirmMode();
+            RequestRetrySelection();
             return true;
         }
         // Confirm-mode destination shortcuts (S/C/E/G/U) — before annotation tool hotkeys.
@@ -159,7 +159,7 @@ public sealed partial class RegionOverlayForm
         {
             e.SuppressKeyPress = true;
             e.Handled = true;
-            ExitConfirmMode();
+            RequestRetrySelection();
             return;
         }
 

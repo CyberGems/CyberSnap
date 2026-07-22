@@ -133,6 +133,12 @@ public sealed partial class RegionOverlayForm : Form
     /// </summary>
     private bool _confirmDocksHiddenForFrameManip;
 
+    /// <summary>Left-button down outside the locked frame (no annotations) may become Retry or a new rubber-band.</summary>
+    private bool _outsideReselectArmed;
+    private Point _outsideReselectDown;
+    private bool _outsideReselectMoved;
+    private bool _hoveredOutsideConfirmFrame;
+
     private static CaptureDockSide GetOppositeDockSide(CaptureDockSide side) => side switch
     {
         CaptureDockSide.Top => CaptureDockSide.Bottom,
@@ -1773,6 +1779,26 @@ public sealed partial class RegionOverlayForm : Form
                 }
             }
         }
+        else if (_isConfirmingSelection && _hoveredOutsideConfirmFrame && HasConfirmAnnotations())
+        {
+            if (!_tooltipVisible && !_tooltipDismissed)
+            {
+                if (_hoverButtonStartTime != DateTime.MinValue)
+                {
+                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 450)
+                        ShowToolbarTooltip();
+                }
+                else
+                {
+                    _hoverButtonStartTime = DateTime.UtcNow;
+                }
+            }
+            else if (_tooltipVisible)
+            {
+                if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 5000)
+                    HideToolbarTooltip();
+            }
+        }
         else if (IsToolbarInteractive())
         {
             if (_isMouseDownOnCaptureBtn)
@@ -1973,7 +1999,9 @@ public sealed partial class RegionOverlayForm : Form
             LocalizationService.Translate("Retry selection"),
             iconId: "redo",
             iconSize: 24);
-        retryItem.Click += (_, _) => ExitConfirmMode();
+        if (HasConfirmAnnotations())
+            retryItem.ToolTipText = LocalizationService.Translate("This will discard the annotations on this capture.");
+        retryItem.Click += (_, _) => RequestRetrySelection();
         menu.Items.Add(retryItem);
 
         if (_modeBeforeConfirm == CaptureMode.Ocr || _mode == CaptureMode.Ocr)

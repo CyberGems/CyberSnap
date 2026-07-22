@@ -1361,17 +1361,139 @@ public sealed partial class RegionOverlayForm
         SetTool(tool, showHelpBanner: false);
     }
 
+    private bool HasConfirmAnnotations() => _undoStack.Count > 0;
+
+    /// <summary>
+    /// Retry / reselect: with annotations, ask first. Without, leave confirm immediately.
+    /// </summary>
+    private void RequestRetrySelection()
+    {
+        if (!_isConfirmingSelection)
+            return;
+
+        if (HasConfirmAnnotations())
+        {
+            bool ok = false;
+            try
+            {
+                ok = UI.ThemedConfirmDialog.Confirm(
+                    Handle,
+                    LocalizationService.Translate("Retry selection?"),
+                    LocalizationService.Translate("This will discard the annotations on this capture."),
+                    LocalizationService.Translate("Retry"),
+                    LocalizationService.Translate("Cancel"),
+                    danger: true,
+                    iconId: "redo");
+            }
+            catch
+            {
+                ok = false;
+            }
+            if (!ok)
+                return;
+        }
+
+        ExitConfirmMode();
+    }
+
+    private void ClearConfirmSessionAnnotations()
+    {
+        if (_undoStack.Count == 0 && _editUndoStack.Count == 0 && _editRedoStack.Count == 0)
+            return;
+
+        _undoStack.Clear();
+        ClearEditHistory();
+        _selectedAnnotationIndex = -1;
+        _multiSelectedIndices.Clear();
+        _moveHoverIndex = -1;
+        _eraserHoverIndex = -1;
+        _renderSkipIndex = -1;
+        _selectPreviewAnnotation = null;
+        _selectResizeOriginalAnnotation = null;
+        _isSelectDragging = false;
+        _isSelectResizing = false;
+        if (_isTyping)
+        {
+            try { CommitOrCancelInlineText(commit: false); } catch { }
+        }
+        RefreshNextStepNumber();
+        MarkCommittedAnnotationsDirty();
+    }
+
+    /// <summary>True when the point is in the dimmed exterior (not frame, docks, or size pill).</summary>
+    private bool IsOutsideLockedCaptureFrame(Point p)
+    {
+        if (!_isConfirmingSelection || _confirmDocksHiddenForFrameManip)
+            return false;
+        if (_confirmRect.Width > 2 && _confirmRect.Contains(p))
+            return false;
+        if (HitTestConfirmHandle(p) >= 0)
+            return false;
+        if (HitTestConfirmButton(p) >= 0)
+            return false;
+        if (HitTestConfirmSizeReadout(p))
+            return false;
+        if (_toolbarRect.Width > 0 && _toolbarRect.Contains(p))
+            return false;
+        if (IsPointInToolbarChrome(p))
+            return false;
+        if (_menuActivatorRect.Contains(p) || _brandRect.Contains(p) || _logoRect.Contains(p))
+            return false;
+        if (IsPointInAltToolPopup(p))
+            return false;
+        if (_colorPickerOpen && _colorPickerRect.Contains(p))
+            return false;
+        if (_fontPickerOpen && _fontPickerRect.Contains(p))
+            return false;
+        if (_emojiPickerOpen && _emojiPickerRect.Contains(p))
+            return false;
+        return true;
+    }
+
+    private void StartAreaSelectionFromPoint(Point clientPt)
+    {
+        HideToolbarForCaptureTool();
+        if (_windowDetectionMode == WindowDetectionMode.Off)
+        {
+            _autoDetectRect = Rectangle.Empty;
+            _autoDetectActive = false;
+        }
+        else
+        {
+            _autoDetectRect = WindowDetector.GetDetectionRectAtPoint(
+                clientPt, _virtualBounds, _windowDetectionMode);
+            _autoDetectActive = _autoDetectRect.Width > 0 && _autoDetectRect.Height > 0;
+        }
+
+        CaptureSelectionMonitorAt(clientPt);
+        var start = ClampPointToSelectionMonitor(clientPt);
+        _isSelecting = true;
+        _selectionStart = _selectionEnd = start;
+        _selectionRect = Rectangle.Empty;
+        _hasSelection = false;
+        _hasDragged = false;
+        ResetCaptureMagnifierDragPlacement();
+        CloseSelectionAdorner();
+        Invalidate();
+    }
+
     private void ExitConfirmMode()
     {
         _isConfirmingSelection = false;
         _confirmRect = Rectangle.Empty;
         _confirmHandleDragIndex = -1;
         _hoveredConfirmButton = -1;
+        _hoveredOutsideConfirmFrame = false;
+        _outsideReselectArmed = false;
+        _outsideReselectMoved = false;
+        _confirmDocksHiddenForFrameManip = false;
         ResetConfirmPress();
         CloseAltToolPopup(invalidate: false);
+        ClearConfirmSessionAnnotations();
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
         _selectionEnd = Point.Empty;
+        _confirmSizeReadoutRect = Rectangle.Empty;
         // Retry = re-select area: put the original capture tool back (not the annotation tool
         // restored for confirm-mode editing, which made Eraser stick after Retry).
         SetMode(_modeBeforeConfirm, _toolIdBeforeConfirm, showHelpBanner: false);
@@ -1904,7 +2026,7 @@ public sealed partial class RegionOverlayForm
         switch (_confirmChromeKinds[button])
         {
             case ConfirmChromeKind.Retry:
-                ExitConfirmMode();
+                RequestRetrySelection();
                 break;
             case ConfirmChromeKind.Cancel:
                 ConfirmAndCancelCapture();
