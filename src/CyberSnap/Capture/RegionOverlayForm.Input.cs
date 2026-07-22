@@ -75,6 +75,12 @@ public sealed partial class RegionOverlayForm
         }
         if (e.Button != MouseButtons.Left) return;
 
+        // Hold-to-switch alt popup: handle before confirm-mode early-outs. The popup sits
+        // outside the toolbar rect (and often over the crop), so it was previously ignored
+        // by the "click outside confirm UI" path and never reached SelectAltPopupTool.
+        if (e.Button == MouseButtons.Left && TryHandleAltToolPopupClick(e.Location))
+            return;
+
         // Confirm mode: toolbar / pickers stay interactive (annotation chrome is visible).
         // Handles and action pills take priority over drawing; interior clicks with an
         // annotation tool draw instead of dragging the crop.
@@ -85,6 +91,7 @@ public sealed partial class RegionOverlayForm
                 || _brandRect.Contains(e.Location)
                 || GetToolbarButtonAt(e.Location) >= 0
                 || _toolbarRect.Contains(e.Location)
+                || IsPointInAltToolPopup(e.Location)
                 || (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
                 || (_fontPickerOpen && _fontPickerRect.Contains(e.Location))
                 || (_emojiPickerOpen && _emojiPickerRect.Contains(e.Location)))
@@ -102,6 +109,7 @@ public sealed partial class RegionOverlayForm
                     _isConfirmDragging = false;
                     _confirmDragStart = e.Location;
                     _confirmDragStartRect = _confirmRect;
+                    HideConfirmDocksForFrameManip();
                     return;
                 }
                 int confirmBtnHit = HitTestConfirmButton(e.Location);
@@ -110,12 +118,27 @@ public sealed partial class RegionOverlayForm
                     StartConfirmPress(confirmBtnHit);
                     return;
                 }
+                // Permanent size pill (top-left): dedicated drag handle for the capture frame.
+                if (HitTestConfirmSizeReadout(e.Location))
+                {
+                    BeginConfirmFrameDrag(e.Location);
+                    return;
+                }
                 if (_confirmRect.Contains(e.Location))
                 {
-                    // Annotation / drawing tools: treat the locked region like a canvas.
+                    // Pick/Move on empty canvas (no annotation hit): drag the capture frame.
+                    // Drawing tools still use the interior as a canvas.
                     if (ToolDef.IsAnnotationTool(_mode))
                     {
-                        // Fall through to annotation handlers below (do not drag the crop).
+                        bool pickEmpty = _mode == CaptureMode.Move
+                            && HitTestAnnotation(e.Location) < 0
+                            && HitTestAnnotationSurface(e.Location) < 0;
+                        if (pickEmpty)
+                        {
+                            BeginConfirmFrameDrag(e.Location);
+                            return;
+                        }
+                        // Fall through to annotation handlers below (draw / select).
                     }
                     else if (e.Clicks >= 2)
                     {
@@ -128,13 +151,7 @@ public sealed partial class RegionOverlayForm
                     else
                     {
                         // Capture tool (or no tool): drag to reposition the crop.
-                        if (_captureMagnifierForm is { Visible: true })
-                            HideCaptureMagnifier();
-                        _isConfirmDragging = true;
-                        _confirmHandleDragIndex = -1;
-                        _confirmDragStart = e.Location;
-                        _confirmDragOffset = new Point(e.Location.X - _confirmRect.X, e.Location.Y - _confirmRect.Y);
-                        _confirmDragStartRect = _confirmRect;
+                        BeginConfirmFrameDrag(e.Location);
                         return;
                     }
                 }
@@ -184,40 +201,18 @@ public sealed partial class RegionOverlayForm
                 return;
         }
 
-        if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location))
-        {
-            var settings = Services.SettingsService.LoadStatic();
-            var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
-            var targetMode = (defaultMode == CaptureMode.Center) ? CaptureMode.Rectangle : CaptureMode.Center;
-
-            // Notify settings service and save the preference
-            DefaultCaptureModeChanged?.Invoke(targetMode);
-
-            var targetTool = ToolDef.AllTools.FirstOrDefault(t => t.Mode == targetMode);
-            if (targetTool != null)
-            {
-                SetTool(targetTool);
-            }
-
-            // Immediately rebuild the toolbar tools to swap the buttons visually on screen
-            CalcToolbar();
-
-            _altCapturePopupOpen = false;
-            InvalidateToolbarArea();
-            return;
-        }
-
-        if (_altCapturePopupOpen && GetToolbarButtonAt(e.Location) != _mergedCaptureButtonIndex)
-        {
-            _altCapturePopupOpen = false;
-            InvalidateToolbarArea();
-        }
-
         // 3. Toolbar button clicks
         int btn = GetToolbarButtonAt(e.Location);
         if (btn >= 0)
         {
-            if (btn == CloseButtonIndex) { Cancel(); return; }     // close (Cancel)
+            // Close is capture-phase only (empty rect during annotation dock).
+            if (btn == CloseButtonIndex
+                && btn < _toolbarButtons.Length
+                && _toolbarButtons[btn].Width > 0)
+            {
+                Cancel();
+                return;
+            }
             if (btn == StrokeWidthButtonIndex)
             {
                 if (recentlyClosedMenu && _lastContextMenuBtnIndex == StrokeWidthButtonIndex)
@@ -240,7 +235,9 @@ public sealed partial class RegionOverlayForm
                 ToggleColorPicker();
                 return;
             }
-            if (btn == PositionButtonIndex)
+            if (btn == PositionButtonIndex
+                && btn < _toolbarButtons.Length
+                && _toolbarButtons[btn].Width > 0)
             {
                 _isDraggingToolbar = true;
                 _toolbarDragStartMouse = e.Location;
@@ -254,10 +251,7 @@ public sealed partial class RegionOverlayForm
             {
                 if (btn == _mergedCaptureButtonIndex)
                 {
-                    _isMouseDownOnCaptureBtn = true;
-                    _mouseDownStartTime = DateTime.UtcNow;
-                    HideToolbarTooltip();
-                    DismissQuickStartGuide();
+                    BeginMergedButtonHold(btn);
                 }
                 else
                 {
@@ -269,7 +263,12 @@ public sealed partial class RegionOverlayForm
             {
                 int flyoutIdx = btn - (CloseButtonIndex + 1);
                 if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length && _flyoutTools[flyoutIdx].Mode.HasValue)
-                    SetTool(_flyoutTools[flyoutIdx]);
+                {
+                    if (IsAnnotationMergeButton(btn))
+                        BeginMergedButtonHold(btn);
+                    else
+                        SetTool(_flyoutTools[flyoutIdx]);
+                }
             }
             return;
         }
@@ -706,7 +705,10 @@ public sealed partial class RegionOverlayForm
                     _autoDetectActive = _autoDetectRect.Width > 0 && _autoDetectRect.Height > 0;
                 }
                 _isSelecting = true;
-                _selectionStart = _selectionEnd = e.Location;
+                // Manual area selection is confined to the monitor where the drag started.
+                CaptureSelectionMonitorAt(e.Location);
+                var start = ClampPointToSelectionMonitor(e.Location);
+                _selectionStart = _selectionEnd = start;
                 _selectionRect = Rectangle.Empty;
                 _hasSelection = false;
                 ResetCaptureMagnifierDragPlacement();

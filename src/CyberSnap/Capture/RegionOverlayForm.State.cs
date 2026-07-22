@@ -58,7 +58,11 @@ public sealed partial class RegionOverlayForm
         }
     }
 
-    private bool IsVerticalDock => CaptureDockSide is CaptureDockSide.Left or CaptureDockSide.Right;
+    /// <summary>
+    /// Annotation confirm dock is always a vertical column. Capture-phase dock follows user setting.
+    /// </summary>
+    private bool IsVerticalDock =>
+        ShowAnnotationChrome || CaptureDockSide is CaptureDockSide.Left or CaptureDockSide.Right;
     private bool IsBottomDock => CaptureDockSide == CaptureDockSide.Bottom;
     private bool IsTopDock => CaptureDockSide == CaptureDockSide.Top;
     private bool IsLeftDock => CaptureDockSide == CaptureDockSide.Left;
@@ -210,6 +214,13 @@ public sealed partial class RegionOverlayForm
             var hit = h;
             hit.Inflate(UiChrome.ScaleInt(6), UiChrome.ScaleInt(6));
             if (hit.Contains(p)) return true;
+        }
+
+        if (!_confirmSizeReadoutRect.IsEmpty)
+        {
+            var sizeHit = _confirmSizeReadoutRect;
+            sizeHit.Inflate(UiChrome.ScaleInt(6), UiChrome.ScaleInt(6));
+            if (sizeHit.Contains(p)) return true;
         }
 
         // Selection frame edge / handle band while confirming — treat as chrome for magnifier.
@@ -378,10 +389,10 @@ public sealed partial class RegionOverlayForm
 
     private Point GetReadoutCursorPoint()
     {
-        // Confirm mode: park dimension pills on a fixed corner of the locked region so they
-        // do not jump/ghost as the cursor moves. Layout may still nudge once to clear confirm chrome.
+        // Confirm mode uses a dedicated top-left drag pill (see RefreshConfirmSizeReadoutRect).
+        // Live selection still follows the drag end so the readout stays near the hand.
         if (_isConfirmingSelection && _confirmRect.Width > 2 && _confirmRect.Height > 2)
-            return new Point(_confirmRect.Right, _confirmRect.Bottom);
+            return new Point(_confirmRect.Left, _confirmRect.Top);
 
         // While dragging a fresh selection, follow the drag end so the readout stays near the hand.
         if (_selectionEnd != Point.Empty)
@@ -392,16 +403,26 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Confirm-mode action pills occupy a corner near the release point — size readout
-    /// layout must treat them as reserved so the dimension chips never stack on top.
+    /// Confirm-mode action pills + annotation column are reserved so the size drag-pill
+    /// never stacks on chrome.
     /// </summary>
     private IReadOnlyList<Rectangle>? GetConfirmReadoutAvoidRects()
     {
-        if (!_isConfirmingSelection)
+        if (!_isConfirmingSelection || _confirmDocksHiddenForFrameManip)
             return null;
 
         LayoutConfirmChromeRects();
-        return _confirmChromeRects.Where(r => r.Width > 0 && r.Height > 0).ToArray();
+        var list = new List<Rectangle>();
+        foreach (var r in _confirmChromeRects)
+        {
+            if (r.Width > 0 && r.Height > 0)
+                list.Add(r);
+        }
+        if (!_confirmChromeWrapperRect.IsEmpty)
+            list.Add(_confirmChromeWrapperRect);
+        if (ShowAnnotationChrome && _toolbarRect.Width > 0)
+            list.Add(_toolbarRect);
+        return list.Count > 0 ? list : null;
     }
 
     private Rectangle GetSelectionOverlayBounds(Rectangle rect, bool isOcr, bool isScan)
@@ -1226,12 +1247,21 @@ public sealed partial class RegionOverlayForm
     private void EnterConfirmMode(Rectangle rect, Point? releaseAnchor = null)
     {
         PendingCommitAction = ConfirmCommitAction.Default;
-        _confirmRect = rect;
+        // Ensure monitor clamp is set (click-to-select / auto-detect paths may skip drag start).
+        if (_selectionMonitorClientBounds.IsEmpty)
+        {
+            var anchor = releaseAnchor
+                ?? new Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
+            CaptureSelectionMonitorAt(anchor);
+        }
+        _confirmRect = ClampRectToSelectionMonitor(rect);
         _confirmHandleDragIndex = -1;
         // Snapshot capture purpose before any annotation-tool restore changes `_mode`.
         _modeBeforeConfirm = _mode;
         _toolIdBeforeConfirm = _activeToolId;
         _isConfirmingSelection = true;
+        // Fresh anchor on the frame — do not keep a leftover drag offset from capture phase.
+        _toolbarCustomOffset = Point.Empty;
         // Remember where the drag ended as a fraction of the selection, so the Confirm/Retry
         // buttons appear near the release point (not forced to the center of a large area).
         if (releaseAnchor is { } a && rect.Width > 0 && rect.Height > 0)
@@ -1248,8 +1278,6 @@ public sealed partial class RegionOverlayForm
         _confirmPillShowLabels = settings?.ConfirmPillShowLabels ?? false;
         RebuildConfirmChromeKinds();
         RecomputeConfirmButtonWidth();
-        _confirmChromeLayoutDirty = true;
-        LayoutConfirmChromeRects();
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
         // Keep the release point as the readout anchor until the cursor moves again.
@@ -1269,11 +1297,24 @@ public sealed partial class RegionOverlayForm
             _shineDup[i] = 0f;
         }
         _confirmWrapperShinePhase = 0f;
+        _hoveredConfirmSizeReadout = false;
+
+        // Annotation column FIRST, then destination pills. Laying out pills before CalcToolbar
+        // used the capture-phase toolbar rect and shoved the dock toward the left of the monitor
+        // (especially for selections on the right half).
+        _confirmChromeLayoutDirty = true;
+        CalcToolbar();
+        _confirmChromeLayoutDirty = true;
+        LayoutConfirmChromeRects();
+        RefreshConfirmSizeReadoutRect();
         EnsureToolbarReady();
-        RefreshToolbar();
+        PresentAnnotationToolbarNow();
+
         // Wrapper shine runs while confirming so the dock stays findable on busy wallpapers.
         if (!UI.Motion.Disabled) _confirmShineTimer.Start();
         Invalidate();
+        // One synchronous paint so destination pills + frame appear with the annotation dock.
+        try { Update(); } catch { }
     }
 
     /// <summary>Applies Settings → Confirm pill labels without re-entering confirm mode.</summary>
@@ -1327,6 +1368,7 @@ public sealed partial class RegionOverlayForm
         _confirmHandleDragIndex = -1;
         _hoveredConfirmButton = -1;
         ResetConfirmPress();
+        CloseAltToolPopup(invalidate: false);
         _hasSelection = false;
         _selectionRect = Rectangle.Empty;
         _selectionEnd = Point.Empty;
@@ -1706,6 +1748,54 @@ public sealed partial class RegionOverlayForm
             new Rectangle(r.Right - h2, midY - h2, hs, hs),      // 6 Right
             new Rectangle(midX - h2, r.Bottom - h2, hs, hs),     // 7 Bottom
         };
+    }
+
+    /// <summary>
+    /// Hit-test for frame resize: corner grips first, then full border bands (not only mid-edge dots).
+    /// Indices match <see cref="GetConfirmHandleRects"/> (0–3 corners, 4–7 edges).
+    /// </summary>
+    private int HitTestConfirmFrameBorder(Point p)
+    {
+        if (_confirmRect.Width <= 2 || _confirmRect.Height <= 2)
+            return -1;
+
+        int edge = Math.Max(UiChrome.ScaleInt(8), UiChrome.ScaleInt(ConfirmHandleSize) / 2 + 2);
+        int corner = Math.Max(edge + 2, UiChrome.ScaleInt(14));
+        var r = _confirmRect;
+
+        // Expanded outer/inner band around the frame.
+        var outer = r;
+        outer.Inflate(edge, edge);
+        if (!outer.Contains(p))
+            return -1;
+
+        bool nearLeft = p.X <= r.Left + edge;
+        bool nearRight = p.X >= r.Right - edge;
+        bool nearTop = p.Y <= r.Top + edge;
+        bool nearBottom = p.Y >= r.Bottom - edge;
+
+        // Interior of the crop (outside the border band) is not a resize hit.
+        if (!nearLeft && !nearRight && !nearTop && !nearBottom)
+            return -1;
+
+        // Corners win over pure edges.
+        if (nearTop && nearLeft) return 0;
+        if (nearTop && nearRight) return 1;
+        if (nearBottom && nearLeft) return 2;
+        if (nearBottom && nearRight) return 3;
+
+        // Full-length edges (excluding corner zones so cursor/resize mode stays clean).
+        if (nearTop && p.X > r.Left + corner && p.X < r.Right - corner) return 4;
+        if (nearBottom && p.X > r.Left + corner && p.X < r.Right - corner) return 7;
+        if (nearLeft && p.Y > r.Top + corner && p.Y < r.Bottom - corner) return 5;
+        if (nearRight && p.Y > r.Top + corner && p.Y < r.Bottom - corner) return 6;
+
+        // Near a side but also near a corner zone without both flags: still treat as nearest edge.
+        if (nearTop) return 4;
+        if (nearBottom) return 7;
+        if (nearLeft) return 5;
+        if (nearRight) return 6;
+        return -1;
     }
 
     private void ConfirmAndCancelCapture()
@@ -2185,23 +2275,57 @@ public sealed partial class RegionOverlayForm
 
         y = Math.Clamp(y, minY, maxTop);
 
-        // Anchor the rightmost destination pill near the release point.
+        // Escuadra: keep the destination dock clear of the annotation column corner.
+        // When the tools sit on the right of the frame, pills must not extend under that column;
+        // when on the left, they must not start under it.
+        if (ShowAnnotationChrome && _toolbarRect.Width > 0 && _toolbarRect.Height > 0)
+        {
+            int clear = UiChrome.ScaleInt(8);
+            if (_annotationFrameDockSide == CaptureDockSide.Right)
+                maxX = Math.Min(maxX, _toolbarRect.Left - clear);
+            else if (_annotationFrameDockSide == CaptureDockSide.Left)
+                minX = Math.Max(minX, _toolbarRect.Right + clear);
+        }
+
+        // Prefer the pill strip under the capture frame width (L-shape), not past the
+        // frame edge that hosts the annotation column.
+        if (ShowAnnotationChrome && r.Width > 0)
+        {
+            if (_annotationFrameDockSide == CaptureDockSide.Right)
+                maxX = Math.Min(maxX, r.Right);
+            else if (_annotationFrameDockSide == CaptureDockSide.Left)
+                minX = Math.Max(minX, r.Left);
+        }
+
+        if (maxX < minX)
+            maxX = minX;
+
+        // Prefer the dock under the frame, near the release point, but always clamped to
+        // [minX, maxX] after escuadra limits (never jump to the far side of the monitor).
         int anchorBtnW = widths[^1];
         int clusterLeft;
         if (insidePlacement)
+        {
             clusterLeft = (int)Math.Round(anchorX - clusterW);
+        }
         else
         {
+            // Center the cluster under the anchor, with a slight bias so the primary (last) pill
+            // stays near the release point.
             int anchorCenter = (int)Math.Round(anchorX - anchorBtnW / 2f);
             clusterLeft = anchorCenter - (clusterW - anchorBtnW);
-            int clusterRight = clusterLeft + clusterW;
-            if (clusterRight > maxX)
-                clusterLeft = (int)Math.Round(anchorX - clusterW);
-            else if (clusterLeft < minX)
-                clusterLeft = (int)Math.Round(anchorX);
+            // Soft preference: keep as much of the dock under the frame as possible.
+            int frameCenterLeft = r.Left + (r.Width - clusterW) / 2;
+            // Blend toward frame center when the pure anchor would sit far outside the frame band.
+            if (clusterLeft + clusterW < r.Left || clusterLeft > r.Right)
+                clusterLeft = frameCenterLeft;
         }
 
-        if (clusterLeft < minX)
+        // Hard clamp last — this is what keeps right-side selections from parking the dock
+        // on the left of the monitor when maxX was temporarily wrong.
+        if (clusterW >= maxX - minX)
+            clusterLeft = minX;
+        else if (clusterLeft < minX)
             clusterLeft = minX;
         else if (clusterLeft + clusterW > maxX)
             clusterLeft = maxX - clusterW;
@@ -2332,14 +2456,24 @@ public sealed partial class RegionOverlayForm
 
     private int HitTestConfirmHandle(Point p)
     {
+        // Prefer explicit grip squares (slightly larger hit than the painted dots).
         var handles = GetConfirmHandleRects();
         for (int i = 0; i < handles.Length; i++)
-            if (handles[i].Contains(p)) return i;
-        return -1;
+        {
+            var h = handles[i];
+            h.Inflate(UiChrome.ScaleInt(2), UiChrome.ScaleInt(2));
+            if (h.Contains(p)) return i;
+        }
+
+        // Then the full perimeter so any point on the border can resize (not only the mid-edge grips).
+        return HitTestConfirmFrameBorder(p);
     }
 
     private int HitTestConfirmButton(Point p)
     {
+        if (_confirmDocksHiddenForFrameManip)
+            return -1;
+
         LayoutConfirmChromeRects();
         for (int i = 0; i < _confirmChromeRects.Length; i++)
         {

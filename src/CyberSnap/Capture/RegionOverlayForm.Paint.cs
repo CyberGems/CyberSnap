@@ -242,67 +242,75 @@ public sealed partial class RegionOverlayForm
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            LayoutConfirmChromeRects();
-            // Soft wrapper/glow must sit on a freshly painted opaque base for the full chrome
-            // region. Partial clips of low-alpha rings were leaving trails after the wrapper shipped.
-            EnsureConfirmChromeOpaqueBase(g, clip, committed);
+            // During live frame drag/resize both docks are hidden (destination + annotation).
+            bool frameManipulating = _confirmDocksHiddenForFrameManip
+                || _isConfirmDragging
+                || _confirmHandleDragIndex >= 0;
 
-            DrawConfirmChromeWrapper(g);
-            using (var btnFont = CreateConfirmButtonFont())
+            if (!frameManipulating)
             {
-                bool shineOn = _confirmShineTimer.Enabled && !UI.Motion.Disabled;
-                int primaryIdx = IndexOfPrimaryConfirmAction();
+                LayoutConfirmChromeRects();
+                // Soft wrapper/glow must sit on a freshly painted opaque base for the full chrome
+                // region. Partial clips of low-alpha rings were leaving trails after the wrapper shipped.
+                EnsureConfirmChromeOpaqueBase(g, clip, committed);
 
-                for (int i = 0; i < _confirmChromeKinds.Length && i < _confirmChromeRects.Length; i++)
+                DrawConfirmChromeWrapper(g);
+                using (var btnFont = CreateConfirmButtonFont())
                 {
-                    var kind = _confirmChromeKinds[i];
-                    var btn = _confirmChromeRects[i];
-                    if (btn.Width <= 0) continue;
+                    bool shineOn = _confirmShineTimer.Enabled && !UI.Motion.Disabled;
+                    int primaryIdx = IndexOfPrimaryConfirmAction();
 
-                    bool hover = _hoveredConfirmButton == i;
-                    bool disabled = IsConfirmChromeDisabled(kind);
-                    float press = (!disabled && _pressedConfirmButton == i) ? _confirmPressAmt : 0f;
-                    // Per-button shine only while that button is hovered (never group dim/shine).
-                    float shine = !disabled && shineOn && hover && i < ConfirmShineSlots ? _shinePhase[i] : -1f;
-                    float main = 1f;
-                    float dup = (!disabled && hover && i < ConfirmShineSlots) ? _shineDup[i] : 0f;
-                    float factor = 1f;
-                    float opacity = 1f;
-
-                    if (disabled)
+                    for (int i = 0; i < _confirmChromeKinds.Length && i < _confirmChromeRects.Length; i++)
                     {
-                        factor = 0f;
-                        opacity = hover ? 0.4f : 0.28f;
-                        shine = -1f;
-                        press = 0f;
+                        var kind = _confirmChromeKinds[i];
+                        var btn = _confirmChromeRects[i];
+                        if (btn.Width <= 0) continue;
+
+                        bool hover = _hoveredConfirmButton == i;
+                        bool disabled = IsConfirmChromeDisabled(kind);
+                        float press = (!disabled && _pressedConfirmButton == i) ? _confirmPressAmt : 0f;
+                        // Per-button shine only while that button is hovered (never group dim/shine).
+                        float shine = !disabled && shineOn && hover && i < ConfirmShineSlots ? _shinePhase[i] : -1f;
+                        float main = 1f;
+                        float dup = (!disabled && hover && i < ConfirmShineSlots) ? _shineDup[i] : 0f;
+                        float factor = 1f;
+                        float opacity = 1f;
+
+                        if (disabled)
+                        {
+                            factor = 0f;
+                            opacity = hover ? 0.4f : 0.28f;
+                            shine = -1f;
+                            press = 0f;
+                        }
+
+                        bool isPrimaryDest = !disabled && i == primaryIdx;
+                        Color activeColor = ConfirmChromeAccent(kind, isPrimary: false);
+                        Color deactColor = UiChrome.IsDark ? Color.FromArgb(74, 80, 86) : Color.FromArgb(170, 178, 186);
+                        Color deactTint = InterpolateColor(deactColor, activeColor, 0.25f);
+                        Color color = InterpolateColor(deactTint, activeColor, factor);
+
+                        int iconType = kind switch
+                        {
+                            ConfirmChromeKind.Retry => 1,
+                            ConfirmChromeKind.Cancel => 2,
+                            _ => 3 // fluent icon path
+                        };
+                        string? fluentIcon = ConfirmChromeFluentIcon(kind);
+                        string label = ConfirmChromeDrawLabel(kind);
+
+                        DrawConfirmActionPill(g, btn, color, label, btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
+                            hasShine: !disabled && hover, fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest);
                     }
 
-                    bool isPrimaryDest = !disabled && i == primaryIdx;
-                    Color activeColor = ConfirmChromeAccent(kind, isPrimary: false);
-                    Color deactColor = UiChrome.IsDark ? Color.FromArgb(74, 80, 86) : Color.FromArgb(170, 178, 186);
-                    Color deactTint = InterpolateColor(deactColor, activeColor, 0.25f);
-                    Color color = InterpolateColor(deactTint, activeColor, factor);
-
-                    int iconType = kind switch
+                    if (!_confirmChromeSeparatorRect.IsEmpty)
                     {
-                        ConfirmChromeKind.Retry => 1,
-                        ConfirmChromeKind.Cancel => 2,
-                        _ => 3 // fluent icon path
-                    };
-                    string? fluentIcon = ConfirmChromeFluentIcon(kind);
-                    string label = ConfirmChromeDrawLabel(kind);
-
-                    DrawConfirmActionPill(g, btn, color, label, btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
-                        hasShine: !disabled && hover, fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest);
-                }
-
-                if (!_confirmChromeSeparatorRect.IsEmpty)
-                {
-                    Color sep = UiChrome.IsDark
-                        ? Color.FromArgb(90, 255, 255, 255)
-                        : Color.FromArgb(90, 0, 0, 0);
-                    using var sepBrush = new SolidBrush(sep);
-                    g.FillRectangle(sepBrush, _confirmChromeSeparatorRect);
+                        Color sep = UiChrome.IsDark
+                            ? Color.FromArgb(90, 255, 255, 255)
+                            : Color.FromArgb(90, 0, 0, 0);
+                        using var sepBrush = new SolidBrush(sep);
+                        g.FillRectangle(sepBrush, _confirmChromeSeparatorRect);
+                    }
                 }
             }
 
@@ -310,15 +318,17 @@ public sealed partial class RegionOverlayForm
             SelectionFrameRenderer.DrawRectangle(g, _confirmRect, fill: false);
             SelectionFrameRenderer.DrawConfirmHandles(g, GetConfirmHandleRects());
 
-            // Keep dimension pills visible after drag ends — still useful while resizing /
-            // confirming. Anchored to the locked region (not the live cursor) to avoid jump/ghosting.
-            SelectionSizeReadout.Draw(
+            // Permanent top-left size chip (also the frame drag handle).
+            // Mid-drag: keep the cached hit-rect (offset with the frame); draw from selection geometry.
+            if (!frameManipulating)
+                RefreshConfirmSizeReadoutRect();
+            SelectionSizeReadout.DrawConfirmDragPill(
                 g,
-                GetReadoutCursorPoint(),
                 _confirmRect,
                 _readoutFont,
                 ClientRectangle,
-                avoidRects: GetConfirmReadoutAvoidRects());
+                avoidRects: frameManipulating ? null : GetConfirmReadoutAvoidRects(),
+                hovered: _hoveredConfirmSizeReadout || _isConfirmDragging);
         }
 
         g.SmoothingMode = SmoothingMode.Default;

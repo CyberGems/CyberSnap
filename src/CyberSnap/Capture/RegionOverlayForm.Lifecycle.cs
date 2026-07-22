@@ -81,6 +81,10 @@ public sealed partial class RegionOverlayForm
         if (IsDisposed || Disposing || !Visible)
             return;
 
+        // Frame move/resize hides both docks — do not resurrect the annotation bar mid-gesture.
+        if (_confirmDocksHiddenForFrameManip)
+            return;
+
         if (_toolbarForm == null || _toolbarForm.IsDisposed)
         {
             _toolbarForm = new ToolbarForm(this);

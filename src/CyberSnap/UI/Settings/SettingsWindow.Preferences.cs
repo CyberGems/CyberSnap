@@ -596,8 +596,6 @@ public partial class SettingsWindow
         ApplyNotificationsDependentVisual(CelebrationsNotificationsRow, notificationsEnabled);
         ApplyNotificationsDependentVisual(NotificationsPlacementSection, notificationsEnabled);
         ApplyNotificationsDependentVisual(NotificationsTimingSection, notificationsEnabled);
-        // Confirm destination designer lives under Capture now — not gated by toast master switch.
-        ApplyNotificationsDependentVisual(ConfirmPillsMovedBanner, notificationsEnabled);
     }
 
     // The "System messages" sub-toggle only applies while the master switch is on.

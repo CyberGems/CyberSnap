@@ -142,16 +142,12 @@ public sealed partial class RegionOverlayForm
                 };
                 if (nb.Width > 5 && nb.Height > 5)
                 {
+                    // Same lightweight path as move: freeze docks, only repaint the hole/frame.
                     var oldRect = _confirmRect;
-                    LayoutConfirmChromeRects();
-                    var oldUnion = UnionConfirmChromeRects();
-                    _confirmRect = nb;
-                    InvalidateConfirmChromeLayout();
-                    InvalidateSelectionChromePart(oldRect, _prevCursorPos);
-                    InvalidateSelectionChromePart(_confirmRect, e.Location);
-                    LayoutConfirmChromeRects();
-                    var newUnion = UnionConfirmChromeRects();
-                    InvalidateConfirmChromeMove(oldUnion, newUnion, oldRect, _confirmRect);
+                    var oldPill = _confirmSizeReadoutRect;
+                    _confirmRect = ClampRectToSelectionMonitor(nb);
+                    RefreshConfirmSizeReadoutRect();
+                    InvalidateConfirmHoleMove(oldRect, _confirmRect, oldPill, _confirmSizeReadoutRect);
                 }
                 return;
             }
@@ -161,19 +157,10 @@ public sealed partial class RegionOverlayForm
             {
                 ClearCrosshairGuides();
                 SetSnapGuides(false, false);
-                InvalidateConfirmChromeLayout();
                 int newX = e.Location.X - _confirmDragOffset.X;
                 int newY = e.Location.Y - _confirmDragOffset.Y;
-                var oldRect = _confirmRect;
-                LayoutConfirmChromeRects();
-                var oldUnion = UnionConfirmChromeRects();
-                _confirmRect = new Rectangle(newX, newY, oldRect.Width, oldRect.Height);
-                InvalidateConfirmChromeLayout();
-                InvalidateSelectionChromePart(oldRect, _prevCursorPos);
-                InvalidateSelectionChromePart(_confirmRect, e.Location);
-                LayoutConfirmChromeRects();
-                var newUnion = UnionConfirmChromeRects();
-                InvalidateConfirmChromeMove(oldUnion, newUnion, oldRect, _confirmRect);
+                // Cheap path: single dirty union + translate chrome/toolbar (no per-pixel rebuild).
+                ApplyConfirmRectDrag(new Rectangle(newX, newY, _confirmRect.Width, _confirmRect.Height));
                 return;
             }
 
@@ -184,6 +171,13 @@ public sealed partial class RegionOverlayForm
             System.Windows.Forms.Cursor confirmTarget = Cursors.Default;
             int ch = HitTestConfirmHandle(e.Location);
             int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
+            bool sizePillHover = ch < 0 && btnHit < 0 && HitTestConfirmSizeReadout(e.Location);
+            if (sizePillHover != _hoveredConfirmSizeReadout)
+            {
+                _hoveredConfirmSizeReadout = sizePillHover;
+                if (!_confirmSizeReadoutRect.IsEmpty)
+                    Invalidate(InflateForRepaint(_confirmSizeReadoutRect, UiChrome.ScaleInt(8)));
+            }
             if (ch >= 0)
                 confirmTarget = ch switch
                 {
@@ -197,6 +191,14 @@ public sealed partial class RegionOverlayForm
             {
                 confirmTarget = Cursors.Hand;
                 _hoveredConfirmButton = btnHit;
+            }
+            else if (sizePillHover)
+            {
+                // Must apply + return: the ch/btnHit block below never ran for the size grip.
+                confirmTarget = Cursors.SizeAll;
+                if (!Cursor.Equals(confirmTarget))
+                    Cursor = confirmTarget;
+                return;
             }
             else if (ToolDef.IsAnnotationTool(_mode))
             {
@@ -226,8 +228,13 @@ public sealed partial class RegionOverlayForm
                 }
                 // Fall through — do not return.
             }
-            else if (_confirmRect.Contains(e.Location))
+            else if (_confirmRect.Contains(e.Location)
+                     && (!ToolDef.IsAnnotationTool(_mode)
+                         || (_mode == CaptureMode.Move
+                             && HitTestAnnotation(e.Location) < 0
+                             && HitTestAnnotationSurface(e.Location) < 0)))
             {
+                // SizeAll when the crop can be dragged (capture tools, or Pick on empty canvas).
                 confirmTarget = Cursors.SizeAll;
                 if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
 
@@ -240,6 +247,17 @@ public sealed partial class RegionOverlayForm
                 }
 
                 return;
+            }
+            else if (ToolDef.IsAnnotationTool(_mode))
+            {
+                // Drawing tools: fall through to annotation mouse-move handlers below.
+                if (_hoveredConfirmButton != prevHoveredConfirm)
+                {
+                    OnConfirmHoverChanged(prevHoveredConfirm);
+                    HideToolbarTooltip();
+                    _tooltipDismissed = false;
+                    _hoverButtonStartTime = DateTime.UtcNow;
+                }
             }
             else
             {
@@ -420,9 +438,10 @@ public sealed partial class RegionOverlayForm
             _hoverButtonStartTime = DateTime.UtcNow;
         }
 
-        bool prevHoveredAlt = _hoveredAltCaptureBtn;
-        _hoveredAltCaptureBtn = _altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location);
-        if (_hoveredAltCaptureBtn != prevHoveredAlt)
+        int prevAltSlot = _hoveredAltSlotIndex;
+        _hoveredAltSlotIndex = GetAltPopupSlotAt(e.Location);
+        _hoveredAltCaptureBtn = _hoveredAltSlotIndex >= 0;
+        if (_hoveredAltSlotIndex != prevAltSlot)
         {
             toolbarDirty = true;
             HideToolbarTooltip();
@@ -433,14 +452,14 @@ public sealed partial class RegionOverlayForm
         if (_altCapturePopupOpen)
         {
             bool nearToolbar = _toolbarRect.Contains(e.Location) || IsPointInOverlayUi(e.Location);
-            bool nearAltBtn = _altCaptureButtonRect.Contains(e.Location);
+            bool nearAltBtn = _altCaptureButtonRect.Contains(e.Location) || _hoveredAltSlotIndex >= 0;
             if (!nearToolbar && !nearAltBtn)
             {
                 int distToolbar = DistToRect(e.Location, _toolbarRect);
                 int distAlt = DistToRect(e.Location, _altCaptureButtonRect);
                 if (Math.Min(distToolbar, distAlt) > 40)
                 {
-                    _altCapturePopupOpen = false;
+                    CloseAltToolPopup(invalidate: false);
                     toolbarDirty = true;
                 }
             }
@@ -575,8 +594,8 @@ public sealed partial class RegionOverlayForm
         }
         else if (_colorPickerOpen && _colorPickerRect.Contains(e.Location))
             target = IsPointInColorPickerSwatch(e.Location) ? Cursors.Hand : Cursors.Default;
-        else if (_altCapturePopupOpen && _altCaptureButtonRect.Contains(e.Location))
-            target = _hoveredAltCaptureBtn ? Cursors.Hand : Cursors.Default;
+        else if (_altCapturePopupOpen && (_altCaptureButtonRect.Contains(e.Location) || _hoveredAltSlotIndex >= 0))
+            target = _hoveredAltSlotIndex >= 0 ? Cursors.Hand : Cursors.Default;
 
         else if (TryGetToolbarHoverCursor(e.Location) is { } toolbarCursor)
             target = toolbarCursor;
@@ -751,12 +770,14 @@ public sealed partial class RegionOverlayForm
                 CheckEvasion(e.Location);
                 var oldSelectionRect = _selectionRect;
                 var oldSelectionCursor = _selectionEnd;
-                var nextSelectionEnd = e.Location;
+                // Do not allow the rubber-band past the monitor where the drag started.
+                var nextSelectionEnd = ClampPointToSelectionMonitor(e.Location);
                 var nextSelectionRect = _mode == CaptureMode.Center
                     ? GetCenterSelectionRect(_selectionStart, nextSelectionEnd)
                     : _mode == CaptureMode.Rectangle && (ModifierKeys & Keys.Shift) != 0
                     ? GetSquareSelectionRect(_selectionStart, nextSelectionEnd)
                     : NormRect(_selectionStart, nextSelectionEnd);
+                nextSelectionRect = ClampRectToSelectionMonitor(nextSelectionRect);
                 if (nextSelectionEnd == oldSelectionCursor && nextSelectionRect == oldSelectionRect)
                 {
                     if (ShowCrosshairGuides)
@@ -1006,28 +1027,55 @@ public sealed partial class RegionOverlayForm
             _isMouseDownOnCaptureBtn = false;
             var holdTime = (DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds;
             _mouseDownStartTime = DateTime.MinValue;
+            int heldBtn = _mergedHoldButtonIndex;
+
+            // Hold-and-slide: release over an alt slot selects that tool.
+            if (_altCapturePopupOpen || holdTime >= 300)
+            {
+                EnsureAltPopupSlotsLaidOut();
+                int altSlot = GetAltPopupSlotAt(e.Location);
+                if (altSlot >= 0 && altSlot < _altPopupSlots.Count)
+                {
+                    SelectAltPopupTool(_altPopupSlots[altSlot].ToolId);
+                    return;
+                }
+            }
 
             if (holdTime < 300)
             {
-                if (_mergedCaptureButtonIndex >= 0 && _mergedCaptureButtonIndex < _mainBarTools.Length)
+                // Short press activates the primary tool shown on the merged slot.
+                if (heldBtn == _mergedCaptureButtonIndex
+                    && heldBtn >= 0 && heldBtn < _mainBarTools.Length)
                 {
-                    var tool = _mainBarTools[_mergedCaptureButtonIndex];
+                    var tool = _mainBarTools[heldBtn];
                     if (tool.Mode.HasValue)
-                    {
                         SetTool(tool);
+                }
+                else if (heldBtn >= CloseButtonIndex + 1 && heldBtn < BtnCount)
+                {
+                    int flyoutIdx = heldBtn - (CloseButtonIndex + 1);
+                    if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length
+                        && _flyoutTools[flyoutIdx].Mode.HasValue)
+                    {
+                        SetTool(_flyoutTools[flyoutIdx]);
                     }
                 }
-                _altCapturePopupOpen = false;
-                InvalidateToolbarArea();
+
+                CloseAltToolPopup();
             }
+            // Long press without landing on an alt: leave popup open for a second click.
             return;
         }
+
+        // Second click on an open alt popup (mouse was not still held from the long-press).
+        if (_altCapturePopupOpen && TryHandleAltToolPopupClick(e.Location))
+            return;
 
         // End confirm-mode handle drag
         if (_isConfirmingSelection && _confirmHandleDragIndex >= 0)
         {
             _confirmHandleDragIndex = -1;
-            Invalidate();
+            EndConfirmFrameDragVisuals();
             return;
         }
 
@@ -1035,7 +1083,7 @@ public sealed partial class RegionOverlayForm
         if (_isConfirmingSelection && _isConfirmDragging)
         {
             _isConfirmDragging = false;
-            Invalidate();
+            EndConfirmFrameDragVisuals();
             return;
         }
 

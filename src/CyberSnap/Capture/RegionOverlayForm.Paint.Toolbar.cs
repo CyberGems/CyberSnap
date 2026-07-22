@@ -150,6 +150,13 @@ public sealed partial class RegionOverlayForm
             // Draw logo icon at the top of Column 1 (centered)
             float lx = _toolbarRect.X + pad + (buttonSize - logoSz) / 2f;
             float ly = _toolbarRect.Y + pad + UiChrome.ScaleInt(6);
+            // Annotation frame dock: keep logo inside the compact brand strip (no rotated wordmark).
+            if (ShowAnnotationChrome && !_brandRect.IsEmpty)
+            {
+                logoSz = Math.Min(logoSz + UiChrome.ScaleInt(2), Math.Max(8, _brandRect.Height - UiChrome.ScaleInt(4)));
+                lx = _brandRect.X + (_brandRect.Width - logoSz) / 2f;
+                ly = _brandRect.Y + (_brandRect.Height - logoSz) / 2f;
+            }
             _logoRect = new Rectangle((int)lx, (int)ly, logoSz, logoSz);
             
             if (_brandBitmap != null)
@@ -169,29 +176,33 @@ public sealed partial class RegionOverlayForm
                 FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary), 0f);
             }
 
-            // Draw rotated CyberSnap label running vertically downwards
-            using (var brandFont = UiChrome.ChromeFont(5.2f, FontStyle.Bold))
-            using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
+            // Rotated wordmark only on screen-edge vertical docks (capture phase) — annotation
+            // column is too narrow/tall for it without covering tools.
+            if (!ShowAnnotationChrome)
             {
-                var state = g.Save();
-                g.TranslateTransform(_toolbarRect.X + pad + buttonSize / 2f, ly + logoSz + UiChrome.ScaleInt(8));
-                g.RotateTransform(90);
-                
-                var sf = new StringFormat
+                using (var brandFont = UiChrome.ChromeFont(5.2f, FontStyle.Bold))
+                using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
                 {
-                    Alignment = StringAlignment.Near,
-                    LineAlignment = StringAlignment.Center,
-                    FormatFlags = StringFormatFlags.NoWrap
-                };
-                
-                g.DrawString("CyberSnap", brandFont, textBrush, 0f, 0f, sf);
-                g.Restore(state);
+                    var state = g.Save();
+                    g.TranslateTransform(_toolbarRect.X + pad + buttonSize / 2f, ly + logoSz + UiChrome.ScaleInt(8));
+                    g.RotateTransform(90);
+
+                    var sf = new StringFormat
+                    {
+                        Alignment = StringAlignment.Near,
+                        LineAlignment = StringAlignment.Center,
+                        FormatFlags = StringFormatFlags.NoWrap
+                    };
+
+                    g.DrawString("CyberSnap", brandFont, textBrush, 0f, 0f, sf);
+                    g.Restore(state);
+                }
             }
         }
         else
         {
             int tier1Width = ShowAnnotationChrome
-                ? GetToolbarPrimarySpan(_flyoutTools.Length + 4, GetAnnotationGroupSepFlyoutIndices().Count + 2, buttonSize, buttonSpacing, 0)
+                ? GetToolbarPrimarySpan(_flyoutTools.Length + 2, GetAnnotationGroupSepFlyoutIndices().Count + 1, buttonSize, buttonSpacing, 0)
                 : GetToolbarPrimarySpan(_mainBarTools.Length + 2, 1, buttonSize, buttonSpacing, 0);
             bool canShowText = ShowAnnotationChrome
                 || _mainBarTools.Length >= 6;
@@ -326,20 +337,20 @@ public sealed partial class RegionOverlayForm
                 }
             }
 
-            // Divider before Position button (after Color button or last flyout tool)
-            if (PositionButtonIndex < _toolbarButtons.Length)
+            // Divider before stroke/color (after last annotation tool). Position/Close are not on this dock.
+            if (_flyoutTools.Length > 0
+                && StrokeWidthButtonIndex < _toolbarButtons.Length
+                && _toolbarButtons[StrokeWidthButtonIndex].Width > 0)
             {
-                var posBtn = _toolbarButtons[PositionButtonIndex];
-                int anchorIdx = (ColorButtonIndex < _toolbarButtons.Length && _toolbarButtons[ColorButtonIndex].Width > 0)
-                    ? ColorButtonIndex
-                    : (_flyoutTools.Length > 0 ? flyoutStartIdx + _flyoutTools.Length - 1 : -1);
-
-                if (anchorIdx >= 0 && anchorIdx < _toolbarButtons.Length && _toolbarButtons[anchorIdx].Width > 0 && posBtn.Width > 0)
+                int lastFlyoutIdx = flyoutStartIdx + _flyoutTools.Length - 1;
+                if (lastFlyoutIdx >= 0 && lastFlyoutIdx < _toolbarButtons.Length
+                    && _toolbarButtons[lastFlyoutIdx].Width > 0)
                 {
-                    var anchorBtn = _toolbarButtons[anchorIdx];
+                    var lastFlyout = _toolbarButtons[lastFlyoutIdx];
+                    var strokeBtn = _toolbarButtons[StrokeWidthButtonIndex];
                     int p = IsVerticalDock
-                        ? (anchorBtn.Bottom + posBtn.Y) / 2
-                        : (anchorBtn.Right + posBtn.X) / 2;
+                        ? (lastFlyout.Bottom + strokeBtn.Y) / 2
+                        : (lastFlyout.Right + strokeBtn.X) / 2;
                     dividerPositions.Add(p);
                 }
             }
@@ -464,9 +475,9 @@ public sealed partial class RegionOverlayForm
             if (active)
                 WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
 
-            // Hold-to-switch affordance on the merged capture button (rect ↔ center).
-            if (i == _mergedCaptureButtonIndex)
-                PaintCaptureHoldHint(g, btn, tierAccent);
+            // Hold-to-switch affordance on merged capture (rect ↔ center) and annotation groups.
+            if (IsMergedHoldButton(i))
+                PaintCaptureHoldHint(g, btn, tierAccent, buttonIndex: i);
         }
 
         // Draw menu activator (⋮). Soft accent pulse while the quick-start guide is open.
@@ -576,12 +587,20 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Small chevron badge + hold-progress arc on the primary capture button so users
-    /// discover the long-press alternate mode (Area ↔ From Center).
+    /// Small chevron badge + hold-progress arc on a merged tool button so users
+    /// discover the long-press alternate mode (Area ↔ From Center, shape/stroke groups, …).
     /// </summary>
-    private void PaintCaptureHoldHint(Graphics g, Rectangle btn, Color accent)
+    private void PaintCaptureHoldHint(Graphics g, Rectangle btn, Color accent, int buttonIndex)
     {
-        // Tiny corner chevron (always visible when this is the merged capture button).
+        bool holdingThis = _isMouseDownOnCaptureBtn
+            && (_mergedHoldButtonIndex == buttonIndex
+                || (_mergedHoldButtonIndex < 0 && buttonIndex == _mergedCaptureButtonIndex));
+
+        bool popupForThis = _altCapturePopupOpen
+            && (_mergedHoldButtonIndex == buttonIndex
+                || (_mergedHoldButtonIndex < 0 && buttonIndex == _mergedCaptureButtonIndex));
+
+        // Tiny corner chevron (always visible on merged slots).
         float s = UiChrome.ScaleFloat(3.2f);
         float cx = btn.Right - UiChrome.ScaleFloat(7f);
         float cy = btn.Bottom - UiChrome.ScaleFloat(7f);
@@ -591,12 +610,12 @@ public sealed partial class RegionOverlayForm
             new PointF(cx + s, cy - s * 0.35f),
             new PointF(cx, cy + s * 0.75f),
         };
-        int chevA = _isMouseDownOnCaptureBtn || _altCapturePopupOpen ? 230 : 120;
+        int chevA = holdingThis || popupForThis ? 230 : 120;
         using (var brush = new SolidBrush(Color.FromArgb(chevA, accent)))
             g.FillPolygon(brush, chev);
 
         // Progress ring while holding toward the 300ms threshold.
-        if (_isMouseDownOnCaptureBtn && _mouseDownStartTime != DateTime.MinValue)
+        if (holdingThis && _mouseDownStartTime != DateTime.MinValue)
         {
             float raw = (float)(DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds / 300f;
             float t = Math.Clamp(raw, 0f, 1f);
@@ -634,69 +653,166 @@ public sealed partial class RegionOverlayForm
 
     private void PaintAltCaptureButton(Graphics g)
     {
-        if (_mergedCaptureButtonIndex < 0 || _mergedCaptureButtonIndex >= _toolbarButtons.Length)
+        EnsureAltPopupSlotsLaidOut();
+        if (_altPopupSlots.Count == 0)
+            return;
+
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        float cr = UiChrome.ScaledToolbarCornerRadius;
+        int buttonSize = UiChrome.ScaledToolbarButtonSize;
+        int containerPadding = UiChrome.ScaleInt(4);
+        var accent = ShowAnnotationChrome ? UiChrome.AccentTier2 : UiChrome.AccentColor;
+
+        Rectangle union = Rectangle.Empty;
+        for (int i = 0; i < _altPopupSlots.Count; i++)
+        {
+            var slot = _altPopupSlots[i];
+            var container = slot.Container;
+            union = union.IsEmpty ? container : Rectangle.Union(union, container);
+
+            WindowsDockRenderer.PaintShadow(g, container, cr);
+
+            using (var path = WindowsDockRenderer.RoundedRect(container, cr))
+            using (var brush = new SolidBrush(UiChrome.SurfaceTier1))
+                g.FillPath(brush, path);
+
+            using (var path = WindowsDockRenderer.RoundedRect(container, cr))
+            using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 80 : 50, accent), 1f))
+                g.DrawPath(pen, path);
+
+            bool hover = _hoveredAltSlotIndex == i;
+            var btnRect = new Rectangle(
+                container.X + containerPadding,
+                container.Y + containerPadding,
+                buttonSize,
+                buttonSize);
+
+            WindowsDockRenderer.PaintButton(g, btnRect, active: false, hovered: hover, accent: accent);
+
+            int ia = hover ? 240 : 200;
+            var iconColor = UiChrome.SurfaceTextPrimary;
+            DrawIcon(g, slot.IconId, btnRect, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active: false);
+        }
+
+        _altCaptureButtonRect = union;
+        _hoveredAltCaptureBtn = _hoveredAltSlotIndex >= 0;
+    }
+
+    /// <summary>
+    /// Builds alt popup slots from the held merged button: one slot for capture Area/Center,
+    /// one or more for annotation merge groups (e.g. Line + Curved Arrow under Arrow).
+    /// </summary>
+    private void EnsureAltPopupSlotsLaidOut()
+    {
+        _altPopupSlots.Clear();
+        int primaryIdx = _mergedHoldButtonIndex;
+        if (primaryIdx < 0 || primaryIdx >= _toolbarButtons.Length)
+            primaryIdx = _mergedCaptureButtonIndex;
+        if (primaryIdx < 0 || primaryIdx >= _toolbarButtons.Length)
+            return;
+
+        var primaryBtn = _toolbarButtons[primaryIdx];
+        if (primaryBtn.Width <= 0 || primaryBtn.Height <= 0)
+            return;
+
+        var altIds = ResolveAltToolIdsForButton(primaryIdx);
+        if (altIds.Count == 0)
             return;
 
         int buttonSize = UiChrome.ScaledToolbarButtonSize;
         int containerPadding = UiChrome.ScaleInt(4);
         int containerSize = buttonSize + containerPadding * 2;
-        var primaryBtn = _toolbarButtons[_mergedCaptureButtonIndex];
         int gap = UiChrome.ScaledToolbarInnerPadding;
-
-        int x = primaryBtn.X + (primaryBtn.Width - containerSize) / 2;
-        int y = primaryBtn.Y + (primaryBtn.Height - containerSize) / 2;
-
         var dock = ActiveDockSide;
-        if (dock == CaptureDockSide.Bottom)
+
+        int baseX = primaryBtn.X + (primaryBtn.Width - containerSize) / 2;
+        int baseY = primaryBtn.Y + (primaryBtn.Height - containerSize) / 2;
+
+        for (int i = 0; i < altIds.Count; i++)
         {
-            y = primaryBtn.Y - containerSize - gap;
+            int step = i * (containerSize + gap);
+            int x = baseX;
+            int y = baseY;
+
+            if (ShowAnnotationChrome)
+            {
+                // Frame-anchored column: open alts *away* from the crop so they don't cover it.
+                if (dock == CaptureDockSide.Right)
+                    x = primaryBtn.Right + gap + step;
+                else if (dock == CaptureDockSide.Left)
+                    x = primaryBtn.X - containerSize - gap - step;
+                else
+                    y = primaryBtn.Bottom + gap + step;
+            }
+            else if (dock == CaptureDockSide.Bottom)
+                y = primaryBtn.Y - containerSize - gap - step;
+            else if (dock == CaptureDockSide.Top)
+                y = primaryBtn.Bottom + gap + step;
+            else if (dock == CaptureDockSide.Left)
+                x = primaryBtn.Right + gap + step;
+            else if (dock == CaptureDockSide.Right)
+                x = primaryBtn.X - containerSize - gap - step;
+            else
+                y = primaryBtn.Bottom + gap + step;
+
+            var toolId = altIds[i];
+            var iconId = toolId switch { "crop" => "rect", "rect" => "captureRect", var id => id };
+            _altPopupSlots.Add((new Rectangle(x, y, containerSize, containerSize), toolId, iconId));
         }
-        else if (dock == CaptureDockSide.Top)
+
+        if (_altPopupSlots.Count > 0)
         {
-            y = primaryBtn.Bottom + gap;
+            var union = _altPopupSlots[0].Container;
+            for (int i = 1; i < _altPopupSlots.Count; i++)
+                union = Rectangle.Union(union, _altPopupSlots[i].Container);
+            _altCaptureButtonRect = union;
         }
-        else if (dock == CaptureDockSide.Left)
+    }
+
+    private List<string> ResolveAltToolIdsForButton(int buttonIndex)
+    {
+        var alts = new List<string>();
+        if (buttonIndex == _mergedCaptureButtonIndex)
         {
-            x = primaryBtn.Right + gap;
+            var settings = Services.SettingsService.LoadStatic();
+            var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
+            alts.Add(defaultMode == CaptureMode.Center ? "rect" : "center");
+            return alts;
         }
-        else if (dock == CaptureDockSide.Right)
+
+        if (_annotationMergeAltsByButton.TryGetValue(buttonIndex, out var annAlts))
         {
-            x = primaryBtn.X - containerSize - gap;
+            // Keep stable group order from AnnotationMergeGroups.
+            var primaryId = buttonIndex < _toolbarToolIds.Length ? _toolbarToolIds[buttonIndex] : null;
+            var group = !string.IsNullOrEmpty(primaryId) ? FindAnnotationMergeGroup(primaryId) : null;
+            if (group is not null)
+            {
+                foreach (var id in group)
+                {
+                    if (annAlts.Any(a => string.Equals(a, id, StringComparison.OrdinalIgnoreCase)))
+                        alts.Add(id);
+                }
+            }
+            else
+            {
+                alts.AddRange(annAlts);
+            }
         }
 
-        _altCaptureButtonRect = new Rectangle(x, y, containerSize, containerSize);
+        return alts;
+    }
 
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-
-        float cr = UiChrome.ScaledToolbarCornerRadius;
-        WindowsDockRenderer.PaintShadow(g, _altCaptureButtonRect, cr);
-
-        using (var path = WindowsDockRenderer.RoundedRect(_altCaptureButtonRect, cr))
-        using (var brush = new SolidBrush(UiChrome.SurfaceTier1))
-            g.FillPath(brush, path);
-
-        using (var path = WindowsDockRenderer.RoundedRect(_altCaptureButtonRect, cr))
-        using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 80 : 50, UiChrome.AccentColor), 1f))
-            g.DrawPath(pen, path);
-
-        bool hover = _hoveredAltCaptureBtn;
-        var btnRect = new Rectangle(
-            _altCaptureButtonRect.X + containerPadding,
-            _altCaptureButtonRect.Y + containerPadding,
-            buttonSize,
-            buttonSize);
-
-        WindowsDockRenderer.PaintButton(g, btnRect, active: false, hovered: hover, accent: UiChrome.AccentColor);
-
-        var settings = Services.SettingsService.LoadStatic();
-        var defaultMode = settings?.DefaultCaptureMode ?? CaptureMode.Rectangle;
-        var altToolId = (defaultMode == CaptureMode.Center) ? "rect" : "center";
-
-        var altIcon = altToolId switch { "crop" => "rect", "rect" => "captureRect", var id => id };
-
-        int ia = hover ? 240 : 200;
-        var iconColor = UiChrome.SurfaceTextPrimary;
-        DrawIcon(g, altIcon, btnRect, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active: false);
+    private int GetAltPopupSlotAt(Point location)
+    {
+        if (!_altCapturePopupOpen)
+            return -1;
+        EnsureAltPopupSlotsLaidOut();
+        for (int i = 0; i < _altPopupSlots.Count; i++)
+        {
+            if (_altPopupSlots[i].Container.Contains(location))
+                return i;
+        }
+        return -1;
     }
 
     private void PaintColorPicker(Graphics g)

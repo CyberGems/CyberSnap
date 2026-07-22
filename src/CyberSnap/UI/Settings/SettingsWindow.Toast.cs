@@ -1533,18 +1533,6 @@ public partial class SettingsWindow
         RefreshToastPreview();
     }
 
-    private void OpenCaptureConfirmPills_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            NavigateToCaptureConfirmPills();
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.open-capture-confirm-pills", ex);
-        }
-    }
-
     public void NavigateToCaptureConfirmPills()
     {
         CaptureTab.IsChecked = true;

@@ -87,6 +87,174 @@ internal static class SelectionSizeReadout
         g.SmoothingMode = oldSmoothing;
     }
 
+    /// <summary>Width of the drag-grip chip that sits left of the confirm size pill.</summary>
+    public static int ConfirmDragGripWidth(Font font)
+    {
+        int lineH = LineHeight(font);
+        return Math.Max(UiChrome.ScaleInt(18), lineH + PadY * 2);
+    }
+
+    /// <summary>
+    /// Confirm-mode size chip: above the frame, left-aligned (top-left outside).
+    /// Falls back to interior top-left. Includes a left grip handle in the returned hit bounds.
+    /// </summary>
+    public static Rectangle GetConfirmDragPillBounds(
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects = null)
+    {
+        if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2)
+            return Rectangle.Empty;
+
+        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, out var pillRect, out var gripRect, out _))
+            return Rectangle.Empty;
+
+        return Rectangle.Union(pillRect, gripRect);
+    }
+
+    public static void DrawConfirmDragPill(
+        Graphics g,
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects = null,
+        bool hovered = false)
+    {
+        if (!ShowDimensions)
+            return;
+
+        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, out var pillRect, out var gripRect, out var lines))
+            return;
+
+        var oldSmoothing = g.SmoothingMode;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        int lineH = LineHeight(font);
+        int iconBox = IconBox(lineH);
+
+        DrawPill(g, new Pill { Lines = lines, Rect = pillRect }, font, lineH, iconBox, emphasize: hovered);
+        DrawDragGrip(g, gripRect, hovered);
+
+        g.SmoothingMode = oldSmoothing;
+    }
+
+    private static bool TryLayoutConfirmDragPill(
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects,
+        out Rectangle pillRect,
+        out Rectangle gripRect,
+        out List<Seg[]> lines)
+    {
+        pillRect = Rectangle.Empty;
+        gripRect = Rectangle.Empty;
+        lines = new List<Seg[]>();
+
+        if (selection.Width <= 2 || selection.Height <= 2)
+            return false;
+
+        int lineH = LineHeight(font);
+        int iconBox = IconBox(lineH);
+        var widthSeg = new Seg(Arrow.Horizontal, selection.Width.ToString());
+        var heightSeg = new Seg(Arrow.Vertical, selection.Height.ToString());
+        lines = new List<Seg[]> { new[] { widthSeg, heightSeg } };
+        var size = MeasurePill(lines, font, lineH, iconBox);
+        int gripW = ConfirmDragGripWidth(font);
+        int gripGap = UiChrome.ScaleInt(4);
+        int unitW = gripW + gripGap + size.Width;
+        int unitH = Math.Max(size.Height, gripW); // grip is square-ish
+
+        // 1) Outside top edge, left-aligned (preferred: above the selection).
+        var unitTop = new Rectangle(
+            selection.Left,
+            selection.Top - EdgeGap - unitH,
+            unitW,
+            unitH);
+
+        // 2) Interior top-left when the exterior clips the monitor or hits chrome.
+        var unitInterior = new Rectangle(
+            selection.Left + EdgeGap,
+            selection.Top + EdgeGap,
+            unitW,
+            unitH);
+
+        foreach (var unit in new[] { unitTop, unitInterior })
+        {
+            if (!FitsInClient(unit, clientBounds))
+                continue;
+            if (HitsObstacle(unit, avoidRects))
+                continue;
+
+            // Grip on the left of the size chip.
+            gripRect = new Rectangle(unit.X, unit.Y + (unit.Height - unitH) / 2, gripW, unitH);
+            // Center grip vertically in unit (unitH == grip height here).
+            gripRect = new Rectangle(unit.X, unit.Y, gripW, unitH);
+            pillRect = new Rectangle(
+                unit.X + gripW + gripGap,
+                unit.Y + (unitH - size.Height) / 2,
+                size.Width,
+                size.Height);
+            return true;
+        }
+
+        // Last resort: clamp interior unit into client / selection.
+        var clampedUnit = ClampToClient(unitInterior, clientBounds);
+        if (selection.Width > unitW + EdgeGap * 2 && selection.Height > unitH + EdgeGap * 2)
+        {
+            clampedUnit.X = Math.Clamp(clampedUnit.X, selection.Left + EdgeGap, selection.Right - unitW - EdgeGap);
+            clampedUnit.Y = Math.Clamp(clampedUnit.Y, selection.Top + EdgeGap, selection.Bottom - unitH - EdgeGap);
+        }
+        gripRect = new Rectangle(clampedUnit.X, clampedUnit.Y, gripW, unitH);
+        pillRect = new Rectangle(
+            clampedUnit.X + gripW + gripGap,
+            clampedUnit.Y + (unitH - size.Height) / 2,
+            size.Width,
+            size.Height);
+        return true;
+    }
+
+    private static void DrawDragGrip(Graphics g, Rectangle rect, bool hovered)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0)
+            return;
+
+        var accent = UiChrome.AccentColor;
+        float radius = Radius;
+
+        using (var shadowPath = WindowsDockRenderer.RoundedRect(
+                   new RectangleF(rect.X, rect.Y + 1.5f, rect.Width, rect.Height), radius))
+        using (var shadowBrush = new SolidBrush(Color.FromArgb(hovered ? 100 : 70, 0, 0, 0)))
+            g.FillPath(shadowBrush, shadowPath);
+
+        using (var path = WindowsDockRenderer.RoundedRect(rect, radius))
+        {
+            int bgA = hovered ? 240 : 225;
+            using var bg = new SolidBrush(Color.FromArgb(bgA, 18, 18, 20));
+            g.FillPath(bg, path);
+            using var border = new Pen(Color.FromArgb(hovered ? 220 : 150, accent), hovered ? 1.4f : 1f);
+            g.DrawPath(border, path);
+        }
+
+        // 2×3 grip dots (reorder / drag affordance).
+        float cx = rect.X + rect.Width / 2f;
+        float cy = rect.Y + rect.Height / 2f;
+        float stepX = UiChrome.ScaleFloat(4.2f);
+        float stepY = UiChrome.ScaleFloat(4.2f);
+        float r = UiChrome.ScaleFloat(1.35f);
+        int a = hovered ? 240 : 190;
+        using var dot = new SolidBrush(Color.FromArgb(a, accent));
+        for (int row = -1; row <= 1; row++)
+        {
+            for (int col = -1; col <= 0; col++)
+            {
+                float dx = (col + 0.5f) * stepX;
+                float dy = row * stepY;
+                g.FillEllipse(dot, cx + dx - r, cy + dy - r, r * 2f, r * 2f);
+            }
+        }
+    }
+
     // ── Layout ────────────────────────────────────────────────────────────────
 
     private static List<Pill> Layout(
@@ -380,20 +548,21 @@ internal static class SelectionSizeReadout
 
     // ── Rendering ───────────────────────────────────────────────────────────────
 
-    private static void DrawPill(Graphics g, Pill pill, Font font, int lineH, int iconBox)
+    private static void DrawPill(Graphics g, Pill pill, Font font, int lineH, int iconBox, bool emphasize = false)
     {
         var accent = UiChrome.AccentColor;
         var rect = pill.Rect;
 
         using (var shadowPath = WindowsDockRenderer.RoundedRect(new RectangleF(rect.X, rect.Y + 1.5f, rect.Width, rect.Height), Radius))
-        using (var shadowBrush = new SolidBrush(Color.FromArgb(70, 0, 0, 0)))
+        using (var shadowBrush = new SolidBrush(Color.FromArgb(emphasize ? 100 : 70, 0, 0, 0)))
             g.FillPath(shadowBrush, shadowPath);
 
         using (var path = WindowsDockRenderer.RoundedRect(rect, Radius))
         {
-            using var bg = new SolidBrush(Color.FromArgb(225, 18, 18, 20));
+            int bgA = emphasize ? 240 : 225;
+            using var bg = new SolidBrush(Color.FromArgb(bgA, 18, 18, 20));
             g.FillPath(bg, path);
-            using var border = new Pen(Color.FromArgb(150, accent), 1f);
+            using var border = new Pen(Color.FromArgb(emphasize ? 220 : 150, accent), emphasize ? 1.4f : 1f);
             g.DrawPath(border, path);
         }
 
