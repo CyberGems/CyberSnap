@@ -1268,6 +1268,7 @@ public sealed partial class RegionOverlayForm
         _isConfirmingSelection = true;
         // Fresh anchor on the frame — do not keep a leftover drag offset from capture phase.
         _toolbarCustomOffset = Point.Empty;
+        _confirmCustomOffset = Point.Empty;
         // Remember where the drag ended as a fraction of the selection, so the Confirm/Retry
         // buttons appear near the release point (not forced to the center of a large area).
         if (releaseAnchor is { } a && rect.Width > 0 && rect.Height > 0)
@@ -1493,6 +1494,7 @@ public sealed partial class RegionOverlayForm
         _outsideReselectArmed = false;
         _outsideReselectMoved = false;
         _confirmDocksHiddenForFrameManip = false;
+        _confirmCustomOffset = Point.Empty;
         ResetConfirmPress();
         CloseAltToolPopup(invalidate: false);
         ClearConfirmSessionAnnotations();
@@ -2512,6 +2514,21 @@ public sealed partial class RegionOverlayForm
             int padY = UiChrome.ScaleInt(8);
             var union = Rectangle.Union(_confirmGripRect, pillUnion);
             _confirmChromeWrapperRect = Rectangle.Inflate(union, padX, padY);
+        }
+
+        if (!_confirmCustomOffset.IsEmpty)
+        {
+            _confirmGripRect.Offset(_confirmCustomOffset);
+            for (int i = 0; i < _confirmChromeRects.Length; i++)
+            {
+                _confirmChromeRects[i].Offset(_confirmCustomOffset);
+            }
+            if (!_confirmChromeSeparatorRect1.IsEmpty)
+                _confirmChromeSeparatorRect1.Offset(_confirmCustomOffset);
+            if (!_confirmChromeSeparatorRect2.IsEmpty)
+                _confirmChromeSeparatorRect2.Offset(_confirmCustomOffset);
+            if (!_confirmChromeWrapperRect.IsEmpty)
+                _confirmChromeWrapperRect.Offset(_confirmCustomOffset);
         }
     }
 
