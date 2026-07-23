@@ -103,27 +103,29 @@ internal static class SelectionSizeReadout
         Rectangle selection,
         Font font,
         Rectangle clientBounds,
-        IReadOnlyList<Rectangle>? avoidRects = null)
+        IReadOnlyList<Rectangle>? avoidRects = null,
+        bool showGrip = true)
     {
         if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2)
             return Rectangle.Empty;
 
-        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, out var pillRect, out var gripRect, out _))
+        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out var pillRect, out var gripRect, out _))
             return Rectangle.Empty;
 
-        return Rectangle.Union(pillRect, gripRect);
+        return showGrip ? Rectangle.Union(pillRect, gripRect) : pillRect;
     }
 
     public static Rectangle GetConfirmDragGripBounds(
         Rectangle selection,
         Font font,
         Rectangle clientBounds,
-        IReadOnlyList<Rectangle>? avoidRects = null)
+        IReadOnlyList<Rectangle>? avoidRects = null,
+        bool showGrip = true)
     {
-        if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2)
+        if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2 || !showGrip)
             return Rectangle.Empty;
 
-        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, out _, out var gripRect, out _))
+        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out _, out var gripRect, out _))
             return Rectangle.Empty;
 
         return gripRect;
@@ -135,12 +137,13 @@ internal static class SelectionSizeReadout
         Font font,
         Rectangle clientBounds,
         IReadOnlyList<Rectangle>? avoidRects = null,
-        bool hovered = false)
+        bool hovered = false,
+        bool showGrip = true)
     {
         if (!ShowDimensions)
             return;
 
-        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, out var pillRect, out var gripRect, out var lines))
+        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out var pillRect, out var gripRect, out var lines))
             return;
 
         var oldSmoothing = g.SmoothingMode;
@@ -149,7 +152,8 @@ internal static class SelectionSizeReadout
         int iconBox = IconBox(lineH);
 
         DrawPill(g, new Pill { Lines = lines, Rect = pillRect }, font, lineH, iconBox, emphasize: false);
-        DrawDragGrip(g, gripRect, hovered);
+        if (showGrip)
+            DrawDragGrip(g, gripRect, hovered);
 
         g.SmoothingMode = oldSmoothing;
     }
@@ -159,6 +163,7 @@ internal static class SelectionSizeReadout
         Font font,
         Rectangle clientBounds,
         IReadOnlyList<Rectangle>? avoidRects,
+        bool showGrip,
         out Rectangle pillRect,
         out Rectangle gripRect,
         out List<Seg[]> lines)
@@ -176,8 +181,8 @@ internal static class SelectionSizeReadout
         var heightSeg = new Seg(Arrow.Vertical, selection.Height.ToString());
         lines = new List<Seg[]> { new[] { widthSeg, heightSeg } };
         var size = MeasurePill(lines, font, lineH, iconBox);
-        int gripW = ConfirmDragGripWidth(font);
-        int gripGap = UiChrome.ScaleInt(4);
+        int gripW = showGrip ? ConfirmDragGripWidth(font) : 0;
+        int gripGap = showGrip ? UiChrome.ScaleInt(4) : 0;
         int unitW = gripW + gripGap + size.Width;
         int unitH = Math.Max(size.Height, gripW); // grip is square-ish
 

@@ -130,6 +130,8 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _confirmSizeReadoutRect = Rectangle.Empty;
     private Rectangle _confirmSizeReadoutGripRect = Rectangle.Empty;
     private bool _hoveredConfirmSizeReadout;
+    private Rectangle _centerMoveGripRect = Rectangle.Empty;
+    private bool _hoveredCenterMoveGrip;
     /// <summary>Throttle layered-toolbar presents while the capture frame is being dragged.</summary>
     private DateTime _lastConfirmDragToolbarPresentUtc = DateTime.MinValue;
     /// <summary>
@@ -1315,20 +1317,38 @@ public sealed partial class RegionOverlayForm : Form
         {
             _confirmSizeReadoutRect = Rectangle.Empty;
             _confirmSizeReadoutGripRect = Rectangle.Empty;
+            _centerMoveGripRect = Rectangle.Empty;
             return;
         }
+
+        bool showGrip = HasConfirmAnnotations();
 
         _confirmSizeReadoutRect = SelectionSizeReadout.GetConfirmDragPillBounds(
             _confirmRect,
             _readoutFont,
             ClientRectangle,
-            GetConfirmReadoutAvoidRects());
+            GetConfirmReadoutAvoidRects(),
+            showGrip);
 
         _confirmSizeReadoutGripRect = SelectionSizeReadout.GetConfirmDragGripBounds(
             _confirmRect,
             _readoutFont,
             ClientRectangle,
-            GetConfirmReadoutAvoidRects());
+            GetConfirmReadoutAvoidRects(),
+            showGrip);
+
+        if (!showGrip && !_confirmRect.IsEmpty)
+        {
+            int d = UiChrome.ScaleInt(36);
+            _centerMoveGripRect = new Rectangle(
+                _confirmRect.X + (_confirmRect.Width - d) / 2,
+                _confirmRect.Y + (_confirmRect.Height - d) / 2,
+                d, d);
+        }
+        else
+        {
+            _centerMoveGripRect = Rectangle.Empty;
+        }
     }
 
     private bool HitTestConfirmSizeReadout(Point p)

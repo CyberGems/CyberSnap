@@ -273,12 +273,20 @@ public sealed partial class RegionOverlayForm
                 bool gripHover = ch < 0 && btnHit < 0 && !sizePillHover
                     && ((ShowAnnotationChrome && !_annotationGripRect.IsEmpty && _annotationGripRect.Contains(e.Location))
                         || (!_confirmGripRect.IsEmpty && _confirmGripRect.Contains(e.Location)));
+                bool centerGripHover = ch < 0 && btnHit < 0 && !sizePillHover && !gripHover
+                    && !_centerMoveGripRect.IsEmpty && _centerMoveGripRect.Contains(e.Location);
 
                 if (sizePillHover != _hoveredConfirmSizeReadout)
                 {
                     _hoveredConfirmSizeReadout = sizePillHover;
                     if (!_confirmSizeReadoutRect.IsEmpty)
                         Invalidate(InflateForRepaint(_confirmSizeReadoutRect, UiChrome.ScaleInt(8)));
+                }
+                if (centerGripHover != _hoveredCenterMoveGrip)
+                {
+                    _hoveredCenterMoveGrip = centerGripHover;
+                    if (!_centerMoveGripRect.IsEmpty)
+                        Invalidate(InflateForRepaint(_centerMoveGripRect, UiChrome.ScaleInt(4)));
                 }
                 if (ch >= 0)
                     confirmTarget = ch switch
@@ -302,6 +310,10 @@ public sealed partial class RegionOverlayForm
                     return;
                 }
                 else if (gripHover)
+                {
+                    confirmTarget = CursorFactory.GrabCursor;
+                }
+                else if (centerGripHover)
                 {
                     confirmTarget = CursorFactory.GrabCursor;
                 }
@@ -381,7 +393,7 @@ public sealed partial class RegionOverlayForm
                     return;
                 }
 
-                if (ch >= 0 || btnHit >= 0 || gripHover)
+                if (ch >= 0 || btnHit >= 0 || gripHover || centerGripHover)
                 {
                     if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
 

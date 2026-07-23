@@ -128,8 +128,8 @@ public sealed partial class RegionOverlayForm
                     Cursor = CursorFactory.GrabbingCursor;
                     return;
                 }
-                // Permanent size pill (top-left): dedicated drag handle for the capture frame.
-                if (HitTestConfirmSizeReadout(e.Location))
+                // Permanent size pill (top-left) OR center move cross: dedicated drag handles for the capture frame.
+                if (HitTestConfirmSizeReadout(e.Location) || (!_centerMoveGripRect.IsEmpty && _centerMoveGripRect.Contains(e.Location)))
                 {
                     BeginConfirmFrameDrag(e.Location);
                     return;
