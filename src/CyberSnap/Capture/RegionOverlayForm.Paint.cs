@@ -337,7 +337,13 @@ public sealed partial class RegionOverlayForm
                 _readoutFont,
                 ClientRectangle,
                 avoidRects: frameManipulating ? null : GetConfirmReadoutAvoidRects(),
-                hovered: _hoveredConfirmSizeReadout || _isConfirmDragging);
+                hovered: _hoveredConfirmSizeReadout || _isConfirmDragging,
+                showGrip: HasConfirmAnnotations());
+
+            if (!HasConfirmAnnotations() && !_centerMoveGripRect.IsEmpty)
+            {
+                DrawCenterMoveGrip(g);
+            }
         }
 
         g.SmoothingMode = SmoothingMode.Default;
@@ -1430,6 +1436,80 @@ public sealed partial class RegionOverlayForm
 
         using (var brush = new SolidBrush(Color.FromArgb((int)(255 * opacity), thumbColor)))
             g.FillEllipse(brush, thumbRect);
+    }
+
+    private void DrawCenterMoveGrip(Graphics g)
+    {
+        if (_centerMoveGripRect.IsEmpty)
+            return;
+
+        var oldSmoothing = g.SmoothingMode;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        // Draw elegant circular background (semitransparent glassmorphic look)
+        bool hover = _hoveredCenterMoveGrip || _isConfirmDragging;
+        int bgAlpha = hover ? 180 : 130;
+        int val = UiChrome.IsDark ? 30 : 230;
+        Color bgColor = Color.FromArgb(bgAlpha, val, val, val);
+        using (var bgBrush = new SolidBrush(bgColor))
+        {
+            g.FillEllipse(bgBrush, _centerMoveGripRect);
+        }
+
+        // subtle border
+        Color borderColor = Color.FromArgb(hover ? 90 : 50, UiChrome.SurfaceTextPrimary);
+        using (var borderPen = new Pen(borderColor, UiChrome.ScaleFloat(1f)))
+        {
+            g.DrawEllipse(borderPen, _centerMoveGripRect.X + 0.5f, _centerMoveGripRect.Y + 0.5f, _centerMoveGripRect.Width - 1f, _centerMoveGripRect.Height - 1f);
+        }
+
+        // Draw move cross icon (4 arrows pointing out)
+        float cx = _centerMoveGripRect.X + _centerMoveGripRect.Width / 2f;
+        float cy = _centerMoveGripRect.Y + _centerMoveGripRect.Height / 2f;
+        float iconSz = UiChrome.ScaleFloat(16f);
+        float arrowSz = UiChrome.ScaleFloat(5f);
+
+        Color iconColor = Color.FromArgb(hover ? 230 : 170, UiChrome.SurfaceTextPrimary);
+        using (var iconBrush = new SolidBrush(iconColor))
+        using (var iconPen = new Pen(iconColor, UiChrome.ScaleFloat(1.5f)))
+        {
+            iconPen.EndCap = LineCap.Flat;
+
+            // Draw center point and lines
+            g.DrawLine(iconPen, cx - iconSz / 2f, cy, cx + iconSz / 2f, cy);
+            g.DrawLine(iconPen, cx, cy - iconSz / 2f, cx, cy + iconSz / 2f);
+
+            // Draw arrow tips using filled polygons
+            PointF[] leftArrow = {
+                new PointF(cx - iconSz / 2f, cy),
+                new PointF(cx - iconSz / 2f + arrowSz, cy - arrowSz / 2f),
+                new PointF(cx - iconSz / 2f + arrowSz, cy + arrowSz / 2f)
+            };
+            g.FillPolygon(iconBrush, leftArrow);
+
+            PointF[] rightArrow = {
+                new PointF(cx + iconSz / 2f, cy),
+                new PointF(cx + iconSz / 2f - arrowSz, cy - arrowSz / 2f),
+                new PointF(cx + iconSz / 2f - arrowSz, cy + arrowSz / 2f)
+            };
+            g.FillPolygon(iconBrush, rightArrow);
+
+            PointF[] upArrow = {
+                new PointF(cx, cy - iconSz / 2f),
+                new PointF(cx - arrowSz / 2f, cy - iconSz / 2f + arrowSz),
+                new PointF(cx + arrowSz / 2f, cy - iconSz / 2f + arrowSz)
+            };
+            g.FillPolygon(iconBrush, upArrow);
+
+            PointF[] downArrow = {
+                new PointF(cx, cy + iconSz / 2f),
+                new PointF(cx - arrowSz / 2f, cy + iconSz / 2f - arrowSz),
+                new PointF(cx + arrowSz / 2f, cy + iconSz / 2f - arrowSz)
+            };
+            g.FillPolygon(iconBrush, downArrow);
+        }
+
+        g.SmoothingMode = oldSmoothing;
     }
 
 }
