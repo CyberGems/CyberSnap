@@ -228,7 +228,7 @@ public sealed partial class RegionOverlayForm
                     GetReadoutCursorPoint(),
                     _selectionRect,
                     _readoutFont,
-                    ClientRectangle);
+                    !_selectionMonitorClientBounds.IsEmpty ? _selectionMonitorClientBounds : ClientRectangle);
                 _lastSelectionRect = _selectionRect;
                 break;
 
@@ -889,7 +889,7 @@ public sealed partial class RegionOverlayForm
             anchor,
             selection,
             _readoutFont,
-            ClientRectangle,
+            !_selectionMonitorClientBounds.IsEmpty ? _selectionMonitorClientBounds : ClientRectangle,
             avoidRects: GetConfirmReadoutAvoidRects());
         if (!readoutBounds.IsEmpty)
             Invalidate(InflateForRepaint(readoutBounds, 10));

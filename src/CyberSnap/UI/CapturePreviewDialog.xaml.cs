@@ -13,6 +13,7 @@ namespace CyberSnap.UI
     {
         private readonly SettingsService _settingsService;
         private readonly Bitmap _capturedBitmap;
+        private bool _isPinned = true;
 
         public RegionOverlayForm.ConfirmCommitAction SelectedAction { get; private set; } = RegionOverlayForm.ConfirmCommitAction.Default;
 
@@ -22,6 +23,7 @@ namespace CyberSnap.UI
             _settingsService = settingsService;
 
             InitializeComponent();
+            TitleBar.IsPinActive = _isPinned;
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
             UiScale.ApplyToWindow(this, RootBorder, scaleWindowBounds: true);
@@ -79,6 +81,13 @@ namespace CyberSnap.UI
         {
             DialogResult = false;
             Close();
+        }
+
+        private void TitleBar_PinRequested(object sender, EventArgs e)
+        {
+            _isPinned = !_isPinned;
+            TitleBar.IsPinActive = _isPinned;
+            Topmost = _isPinned;
         }
 
         private void SaveBtn_Click(object sender, RoutedEventArgs e)

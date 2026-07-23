@@ -25,6 +25,7 @@ internal sealed class LiveSelectionAdornerForm : Form
     private Rectangle _contentBounds;
     private Rectangle _selection;
     private Point _cursor;
+    private Rectangle _selectionMonitorBounds;
     private IReadOnlyList<string>? _readoutDetails;
     private bool _renderQueued;
 
@@ -61,13 +62,15 @@ internal sealed class LiveSelectionAdornerForm : Form
         UpdateSurface();
     }
 
-    public void SetSelection(Rectangle selection, Point cursor, IReadOnlyList<string>? readoutDetails = null)
+    public void SetSelection(Rectangle selection, Point cursor, Rectangle? selectionMonitorBounds = null, IReadOnlyList<string>? readoutDetails = null)
     {
-        if (_selection == selection && _cursor == cursor && ReferenceEquals(_readoutDetails, readoutDetails))
+        var targetMonitorBounds = selectionMonitorBounds ?? Rectangle.Empty;
+        if (_selection == selection && _cursor == cursor && _selectionMonitorBounds == targetMonitorBounds && ReferenceEquals(_readoutDetails, readoutDetails))
             return;
 
         _selection = selection;
         _cursor = cursor;
+        _selectionMonitorBounds = targetMonitorBounds;
         _readoutDetails = readoutDetails;
         if (_renderStopwatch.ElapsedMilliseconds < UiChrome.FrameIntervalMs)
         {
@@ -158,11 +161,14 @@ internal sealed class LiveSelectionAdornerForm : Form
     private Rectangle GetSelectionContentBounds()
     {
         var bounds = Rectangle.Inflate(_selection, 8, 8);
+        var clamp = !_selectionMonitorBounds.IsEmpty
+            ? _selectionMonitorBounds
+            : new Rectangle(0, 0, _virtualBounds.Width, _virtualBounds.Height);
         var readoutBounds = SelectionSizeReadout.GetBounds(
             _cursor,
             _selection,
             _readoutFont,
-            new Rectangle(0, 0, _virtualBounds.Width, _virtualBounds.Height),
+            clamp,
             _readoutDetails);
         if (!readoutBounds.IsEmpty)
             bounds = Rectangle.Union(bounds, readoutBounds);
@@ -196,12 +202,15 @@ internal sealed class LiveSelectionAdornerForm : Form
         else
             SelectionFrameRenderer.DrawRectangle(g, _selection);
 
+        var clamp = !_selectionMonitorBounds.IsEmpty
+            ? _selectionMonitorBounds
+            : new Rectangle(0, 0, _virtualBounds.Width, _virtualBounds.Height);
         SelectionSizeReadout.Draw(
             g,
             _cursor,
             _selection,
             _readoutFont,
-            new Rectangle(0, 0, _virtualBounds.Width, _virtualBounds.Height),
+            clamp,
             _readoutDetails);
     }
 

@@ -288,7 +288,7 @@ public sealed partial class RegionOverlayForm
             GetReadoutCursorPoint(),
             selectionBounds,
             _readoutFont,
-            ClientRectangle);
+            !_selectionMonitorClientBounds.IsEmpty ? _selectionMonitorClientBounds : ClientRectangle);
         if (!readoutBounds.IsEmpty)
             avoid = Rectangle.Union(avoid, InflateForRepaint(readoutBounds, 8));
 

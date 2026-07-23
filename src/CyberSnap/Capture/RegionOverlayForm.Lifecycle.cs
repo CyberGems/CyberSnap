@@ -530,7 +530,7 @@ public sealed partial class RegionOverlayForm
     private void UpdateSelectionAdorner()
     {
         EnsureSelectionAdorner();
-        _selectionAdorner?.SetSelection(_selectionRect, GetReadoutCursorPoint());
+        _selectionAdorner?.SetSelection(_selectionRect, GetReadoutCursorPoint(), _selectionMonitorClientBounds);
     }
 
     private void CloseSelectionAdorner()
