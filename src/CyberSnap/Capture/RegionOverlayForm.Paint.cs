@@ -1443,12 +1443,16 @@ public sealed partial class RegionOverlayForm
         if (_centerMoveGripRect.IsEmpty)
             return;
 
+        float opacity = _centerMoveGripOpacity;
+        if (opacity <= 0f)
+            return;
+
         var oldSmoothing = g.SmoothingMode;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
         // Draw elegant circular background (semitransparent glassmorphic look)
         bool hover = _hoveredCenterMoveGrip || _isConfirmDragging;
-        int bgAlpha = hover ? 180 : 130;
+        int bgAlpha = (int)((hover ? 180 : 130) * opacity);
         int val = UiChrome.IsDark ? 30 : 230;
         Color bgColor = Color.FromArgb(bgAlpha, val, val, val);
         using (var bgBrush = new SolidBrush(bgColor))
@@ -1457,7 +1461,7 @@ public sealed partial class RegionOverlayForm
         }
 
         // subtle border
-        Color borderColor = Color.FromArgb(hover ? 90 : 50, UiChrome.SurfaceTextPrimary);
+        Color borderColor = Color.FromArgb((int)((hover ? 90 : 50) * opacity), UiChrome.SurfaceTextPrimary);
         using (var borderPen = new Pen(borderColor, UiChrome.ScaleFloat(1f)))
         {
             g.DrawEllipse(borderPen, _centerMoveGripRect.X + 0.5f, _centerMoveGripRect.Y + 0.5f, _centerMoveGripRect.Width - 1f, _centerMoveGripRect.Height - 1f);
@@ -1469,7 +1473,7 @@ public sealed partial class RegionOverlayForm
         float iconSz = UiChrome.ScaleFloat(16f);
         float arrowSz = UiChrome.ScaleFloat(5f);
 
-        Color iconColor = Color.FromArgb(hover ? 230 : 170, UiChrome.SurfaceTextPrimary);
+        Color iconColor = Color.FromArgb((int)((hover ? 230 : 170) * opacity), UiChrome.SurfaceTextPrimary);
         using (var iconBrush = new SolidBrush(iconColor))
         using (var iconPen = new Pen(iconColor, UiChrome.ScaleFloat(1.5f)))
         {
