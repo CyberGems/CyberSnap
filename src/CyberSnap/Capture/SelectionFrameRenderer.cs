@@ -103,7 +103,7 @@ internal static class SelectionFrameRenderer
         float x1 = outline.Right;
         float y1 = outline.Bottom;
 
-        Color bracketAccent = Color.FromArgb(0x00, 0xD4, 0xFF); // #00D4FF cyan for image capture
+        Color bracketAccent = Color.FromArgb(0x00, 0xFF, 0xFF); // #00FFFF — matches the widget capture icon cyan
 
         using (var cornerGlow = new Pen(Color.FromArgb(provisional ? 50 : 70, bracketAccent), cornerPenWidth + 3f * scale)
         {
@@ -153,7 +153,7 @@ internal static class SelectionFrameRenderer
         var oldSmoothing = g.SmoothingMode;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        var accent = Color.FromArgb(0x00, 0xD4, 0xFF); // Cyan for capture
+        var accent = Color.FromArgb(0x00, 0xFF, 0xFF); // #00FFFF — matches the widget capture icon cyan
         float scale = Math.Max(1f, (float)UiChrome.UiScale);
         float dotRadius = 4.5f * scale;     // main dot radius
         float glowRadius = dotRadius + 3f * scale;

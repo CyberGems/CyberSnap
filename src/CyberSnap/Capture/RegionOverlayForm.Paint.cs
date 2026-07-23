@@ -338,7 +338,7 @@ public sealed partial class RegionOverlayForm
                 ClientRectangle,
                 avoidRects: frameManipulating ? null : GetConfirmReadoutAvoidRects(),
                 hovered: _hoveredConfirmSizeReadout || _isConfirmDragging,
-                showGrip: HasConfirmAnnotations());
+                showGrip: true);
 
             if (!HasConfirmAnnotations() && !_centerMoveGripRect.IsEmpty)
             {
@@ -1450,67 +1450,66 @@ public sealed partial class RegionOverlayForm
         var oldSmoothing = g.SmoothingMode;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        // Draw elegant circular background (semitransparent glassmorphic look)
         bool hover = _hoveredCenterMoveGrip || _isConfirmDragging;
-        int bgAlpha = (int)((hover ? 180 : 130) * opacity);
-        int val = UiChrome.IsDark ? 30 : 230;
-        Color bgColor = Color.FromArgb(bgAlpha, val, val, val);
-        using (var bgBrush = new SolidBrush(bgColor))
-        {
-            g.FillEllipse(bgBrush, _centerMoveGripRect);
-        }
 
-        // subtle border
-        Color borderColor = Color.FromArgb((int)((hover ? 90 : 50) * opacity), UiChrome.SurfaceTextPrimary);
-        using (var borderPen = new Pen(borderColor, UiChrome.ScaleFloat(1f)))
-        {
-            g.DrawEllipse(borderPen, _centerMoveGripRect.X + 0.5f, _centerMoveGripRect.Y + 0.5f, _centerMoveGripRect.Width - 1f, _centerMoveGripRect.Height - 1f);
-        }
+        // Scale badge up slightly while active — same feel as pill hover inflate.
+        var baseRect = _centerMoveGripRect;
+        float inflate = hover ? UiChrome.ScaleFloat(2f) : 0f;
+        var drawRect = new RectangleF(
+            baseRect.X - inflate,
+            baseRect.Y - inflate,
+            baseRect.Width  + inflate * 2f,
+            baseRect.Height + inflate * 2f);
 
-        // Draw move cross icon (4 arrows pointing out)
-        float cx = _centerMoveGripRect.X + _centerMoveGripRect.Width / 2f;
-        float cy = _centerMoveGripRect.Y + _centerMoveGripRect.Height / 2f;
-        float iconSz = UiChrome.ScaleFloat(16f);
-        float arrowSz = UiChrome.ScaleFloat(5f);
+        float cx = drawRect.X + drawRect.Width  / 2f;
+        float cy = drawRect.Y + drawRect.Height / 2f;
 
-        Color iconColor = Color.FromArgb((int)((hover ? 230 : 170) * opacity), UiChrome.SurfaceTextPrimary);
+        var accent = UiChrome.AccentColor;
+
+        // ── Drop shadow (same offset/alpha recipe as DrawDragGrip) ────────────
+        int shadowAlpha = (int)((hover ? 100 : 70) * opacity);
+        using (var shadowBrush = new SolidBrush(Color.FromArgb(shadowAlpha, 0, 0, 0)))
+            g.FillEllipse(shadowBrush,
+                drawRect.X, drawRect.Y + 1.5f, drawRect.Width, drawRect.Height);
+
+        // ── Dark body (18, 18, 20) ─────────────────────────────────────────
+        int bgA = (int)((hover ? 240 : 225) * opacity);
+        using (var bgBrush = new SolidBrush(Color.FromArgb(bgA, 18, 18, 20)))
+            g.FillEllipse(bgBrush, drawRect);
+
+        // ── Accent border ─────────────────────────────────────────────────
+        float borderW = hover ? 1.4f : 1f;
+        int borderA = (int)((hover ? 220 : 150) * opacity);
+        using (var borderPen = new Pen(Color.FromArgb(borderA, accent), borderW))
+            g.DrawEllipse(borderPen,
+                drawRect.X + 0.5f, drawRect.Y + 0.5f,
+                drawRect.Width - 1f, drawRect.Height - 1f);
+
+        // ── 4-directional move icon (accent-colored, same alpha as grip dots) ───
+        float iconSz  = UiChrome.ScaleFloat(12f);  // arm half-extent
+        float stemW   = UiChrome.ScaleFloat(1.8f); // stem thickness
+        float arrowH  = UiChrome.ScaleFloat(4.8f); // arrowhead depth
+        float arrowHW = UiChrome.ScaleFloat(3.2f); // arrowhead half-width
+        float stemEnd = iconSz - arrowH;            // stem stops here
+
+        int iconA = (int)((hover ? 240 : 190) * opacity);
+        Color iconColor = Color.FromArgb(iconA, accent);
+
         using (var iconBrush = new SolidBrush(iconColor))
-        using (var iconPen = new Pen(iconColor, UiChrome.ScaleFloat(1.5f)))
+        using (var stemPen   = new Pen(iconColor, stemW)
+               { StartCap = LineCap.Round, EndCap = LineCap.Flat })
         {
-            iconPen.EndCap = LineCap.Flat;
+            g.DrawLine(stemPen, cx - stemEnd, cy, cx + stemEnd, cy);
+            g.DrawLine(stemPen, cx, cy - stemEnd, cx, cy + stemEnd);
 
-            // Draw center point and lines
-            g.DrawLine(iconPen, cx - iconSz / 2f, cy, cx + iconSz / 2f, cy);
-            g.DrawLine(iconPen, cx, cy - iconSz / 2f, cx, cy + iconSz / 2f);
-
-            // Draw arrow tips using filled polygons
-            PointF[] leftArrow = {
-                new PointF(cx - iconSz / 2f, cy),
-                new PointF(cx - iconSz / 2f + arrowSz, cy - arrowSz / 2f),
-                new PointF(cx - iconSz / 2f + arrowSz, cy + arrowSz / 2f)
-            };
-            g.FillPolygon(iconBrush, leftArrow);
-
-            PointF[] rightArrow = {
-                new PointF(cx + iconSz / 2f, cy),
-                new PointF(cx + iconSz / 2f - arrowSz, cy - arrowSz / 2f),
-                new PointF(cx + iconSz / 2f - arrowSz, cy + arrowSz / 2f)
-            };
-            g.FillPolygon(iconBrush, rightArrow);
-
-            PointF[] upArrow = {
-                new PointF(cx, cy - iconSz / 2f),
-                new PointF(cx - arrowSz / 2f, cy - iconSz / 2f + arrowSz),
-                new PointF(cx + arrowSz / 2f, cy - iconSz / 2f + arrowSz)
-            };
-            g.FillPolygon(iconBrush, upArrow);
-
-            PointF[] downArrow = {
-                new PointF(cx, cy + iconSz / 2f),
-                new PointF(cx - arrowSz / 2f, cy + iconSz / 2f - arrowSz),
-                new PointF(cx + arrowSz / 2f, cy + iconSz / 2f - arrowSz)
-            };
-            g.FillPolygon(iconBrush, downArrow);
+            g.FillPolygon(iconBrush, new PointF[]    // left
+                { new(cx - iconSz, cy), new(cx - stemEnd, cy - arrowHW), new(cx - stemEnd, cy + arrowHW) });
+            g.FillPolygon(iconBrush, new PointF[]    // right
+                { new(cx + iconSz, cy), new(cx + stemEnd, cy - arrowHW), new(cx + stemEnd, cy + arrowHW) });
+            g.FillPolygon(iconBrush, new PointF[]    // up
+                { new(cx, cy - iconSz), new(cx - arrowHW, cy - stemEnd), new(cx + arrowHW, cy - stemEnd) });
+            g.FillPolygon(iconBrush, new PointF[]    // down
+                { new(cx, cy + iconSz), new(cx - arrowHW, cy + stemEnd), new(cx + arrowHW, cy + stemEnd) });
         }
 
         g.SmoothingMode = oldSmoothing;

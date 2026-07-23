@@ -1548,6 +1548,7 @@ public sealed partial class RegionOverlayForm
         _selectionEnd = Point.Empty;
         _confirmSizeReadoutRect = Rectangle.Empty;
         _confirmSizeReadoutGripRect = Rectangle.Empty;
+        InvalidateCenterGripArea(_centerMoveGripRect);
         _centerMoveGripRect = Rectangle.Empty;
         // Retry = re-select area: put the original capture tool back (not the annotation tool
         // restored for confirm-mode editing, which made Eraser stick after Retry).

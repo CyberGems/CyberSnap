@@ -136,26 +136,25 @@ public sealed partial class RegionOverlayForm
                 }
                 if (_confirmRect.Contains(e.Location))
                 {
-                    // Pick/Move on empty canvas (no annotation hit): drag the capture frame.
-                    // Drawing tools still use the interior as a canvas.
-                    if (ToolDef.IsAnnotationTool(_mode))
+                    // Entire frame interior is a drag target when the canvas is clean AND
+                    // the active tool is Pick/Move or a non-annotation capture tool.
+                    // Matches the same condition that shows the center badge.
+                    bool cleanCanvas = !HasConfirmAnnotations();
+                    bool isPickOrNonAnnot = _mode == CaptureMode.Move || !ToolDef.IsAnnotationTool(_mode);
+                    if (cleanCanvas && isPickOrNonAnnot)
                     {
-                        // In annotation tools (Draw, Move/Pick, etc.), dragging empty space does marquee-select/draw rather than moving the crop frame.
-                    }
-                    else if (e.Clicks >= 2)
-                    {
-                        // Double-click with a capture tool commits the primary destination.
-                        _isConfirmDragging = false;
-                        _confirmHandleDragIndex = -1;
-                        CommitPrimaryConfirmAction();
-                        return;
-                    }
-                    else
-                    {
-                        // Capture tool (or no tool): drag to reposition the crop.
+                        if (e.Clicks >= 2)
+                        {
+                            // Double-click commits the primary destination.
+                            _isConfirmDragging = false;
+                            _confirmHandleDragIndex = -1;
+                            CommitPrimaryConfirmAction();
+                            return;
+                        }
                         BeginConfirmFrameDrag(e.Location);
                         return;
                     }
+                    // Annotation tool with dirty canvas (or non-pick tool): fall through to annotation handlers.
                 }
                 else if (IsOutsideLockedCaptureFrame(e.Location))
                 {
