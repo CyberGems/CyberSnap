@@ -31,7 +31,9 @@ namespace CyberSnap.UI
             LocalizationService.ApplyCurrentCulture(settingsService.Settings.InterfaceLanguage);
             LocalizationService.ApplyTo(this, settingsService.Settings.InterfaceLanguage);
 
-            TitleBar.Title = LocalizationService.Translate("Preview");
+            var lang = settingsService.Settings.InterfaceLanguage;
+            Helpers.WindowTitles.ApplyTaskbar(this, Helpers.WindowTitles.Preview, lang);
+            TitleBar.Title = LocalizationService.Translate("Capture Preview");
             SaveText.Text = LocalizationService.Translate("Save");
             CopyText.Text = LocalizationService.Translate("Copy");
             EditText.Text = LocalizationService.Translate("Edit");

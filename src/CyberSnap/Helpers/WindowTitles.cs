@@ -10,6 +10,7 @@ public static class WindowTitles
     public const string Trimmer = "Video & GIF Trimmer ᐧ CyberSnap";
     public const string Ocr = "Text extraction (OCR) ᐧ CyberSnap";
     public const string Settings = "Configuration ᐧ CyberSnap";
+    public const string Preview = "Capture Preview ᐧ CyberSnap";
 
     public static string Taskbar(string key, string? languageCode = null) =>
         languageCode != null
