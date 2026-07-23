@@ -1079,9 +1079,14 @@ public sealed partial class RegionOverlayForm : Form
 
         _confirmRect = newRect;
 
-        // Size chip follows the frame; docks are hidden for the whole gesture.
-        if ((dx != 0 || dy != 0) && !_confirmSizeReadoutRect.IsEmpty)
-            _confirmSizeReadoutRect.Offset(dx, dy);
+        // Size chip and center move grip follow the frame; docks are hidden for the whole gesture.
+        if (dx != 0 || dy != 0)
+        {
+            if (!_confirmSizeReadoutRect.IsEmpty)
+                _confirmSizeReadoutRect.Offset(dx, dy);
+            if (!_centerMoveGripRect.IsEmpty)
+                _centerMoveGripRect.Offset(dx, dy);
+        }
 
         InvalidateConfirmHoleMove(oldRect, newRect, oldPill, _confirmSizeReadoutRect);
     }
@@ -1339,11 +1344,15 @@ public sealed partial class RegionOverlayForm : Form
         {
             _confirmSizeReadoutRect = Rectangle.Empty;
             _confirmSizeReadoutGripRect = Rectangle.Empty;
+            // Erase any glow ghost before clearing the field.
+            InvalidateCenterGripArea(_centerMoveGripRect);
             _centerMoveGripRect = Rectangle.Empty;
             return;
         }
 
-        bool showGrip = HasConfirmAnnotations();
+        // The drag grip on the size pill is always shown in confirm mode — it lets the user
+        // reposition the frame regardless of whether any annotations have been drawn.
+        const bool showGrip = true;
 
         _confirmSizeReadoutRect = SelectionSizeReadout.GetConfirmDragPillBounds(
             _confirmRect,
@@ -1359,8 +1368,10 @@ public sealed partial class RegionOverlayForm : Form
             GetConfirmReadoutAvoidRects(),
             showGrip);
 
+        // Center badge complements the grip: show it only when there are no annotations
+        // (clean canvas) so it offers a large drag target in the middle of an empty selection.
         bool isPickOrNonAnnot = _mode == CaptureMode.Move || !ToolDef.IsAnnotationTool(_mode);
-        if (!showGrip && isPickOrNonAnnot && !_confirmRect.IsEmpty)
+        if (!HasConfirmAnnotations() && isPickOrNonAnnot && !_confirmRect.IsEmpty)
         {
             int d = UiChrome.ScaleInt(36);
             _centerMoveGripRect = new Rectangle(
@@ -1370,6 +1381,8 @@ public sealed partial class RegionOverlayForm : Form
         }
         else
         {
+            // Erase any glow ghost before hiding the badge.
+            InvalidateCenterGripArea(_centerMoveGripRect);
             _centerMoveGripRect = Rectangle.Empty;
         }
     }
@@ -1380,9 +1393,18 @@ public sealed partial class RegionOverlayForm : Form
     private void InvalidateCenterGrip()
     {
         if (!_centerMoveGripRect.IsEmpty)
-        {
-            Invalidate(InflateForRepaint(_centerMoveGripRect, UiChrome.ScaleInt(4)));
-        }
+            InvalidateCenterGripArea(_centerMoveGripRect);
+    }
+
+    /// <summary>
+    /// Dirties the area occupied by the center-move grip badge including its glow halo.
+    /// Pass the OLD rect explicitly when the field is about to be cleared, so the ghost is erased.
+    /// </summary>
+    private void InvalidateCenterGripArea(Rectangle r)
+    {
+        if (!r.IsEmpty)
+            // 16px covers the glow halo (up to ~9px scaled) plus stroke/AA fringe.
+            Invalidate(InflateForRepaint(r, UiChrome.ScaleInt(16)));
     }
 
     private void BeginConfirmFrameDrag(Point location)

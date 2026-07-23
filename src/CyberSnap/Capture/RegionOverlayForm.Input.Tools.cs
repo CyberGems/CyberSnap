@@ -298,8 +298,7 @@ public sealed partial class RegionOverlayForm
                 if (centerGripHover != _hoveredCenterMoveGrip)
                 {
                     _hoveredCenterMoveGrip = centerGripHover;
-                    if (!_centerMoveGripRect.IsEmpty)
-                        Invalidate(InflateForRepaint(_centerMoveGripRect, UiChrome.ScaleInt(4)));
+                    InvalidateCenterGripArea(_centerMoveGripRect);
                 }
                 if (ch >= 0)
                     confirmTarget = ch switch
@@ -335,6 +334,14 @@ public sealed partial class RegionOverlayForm
                     confirmTarget = HasConfirmAnnotations() ? Cursors.Default : CursorFactory.PrecisionCursor;
                     if (!Cursor.Equals(confirmTarget))
                         Cursor = confirmTarget;
+                    return;
+                }
+                else if (!HasConfirmAnnotations() && insideFrame
+                    && (_mode == CaptureMode.Move || !ToolDef.IsAnnotationTool(_mode)))
+                {
+                    // Clean canvas + Pick/non-annotation tool: whole interior is a drag target.
+                    confirmTarget = CursorFactory.GrabCursor;
+                    if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
                     return;
                 }
                 else if (ToolDef.IsAnnotationTool(_mode))
