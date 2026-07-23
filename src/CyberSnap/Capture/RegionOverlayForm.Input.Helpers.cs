@@ -45,11 +45,21 @@ public sealed partial class RegionOverlayForm
         return -1;
     }
 
-    private static Rectangle GetSquareSelectionRect(Point start, Point current)
+    private Rectangle GetSquareSelectionRect(Point start, Point current)
     {
         int dx = current.X - start.X;
         int dy = current.Y - start.Y;
         int size = Math.Max(Math.Abs(dx), Math.Abs(dy));
+
+        var b = _selectionMonitorClientBounds;
+        if (!b.IsEmpty && b.Width > 0 && b.Height > 0)
+        {
+            int maxW = dx >= 0 ? b.Right - 1 - start.X : start.X - b.Left;
+            int maxH = dy >= 0 ? b.Bottom - 1 - start.Y : start.Y - b.Top;
+            int maxSize = Math.Min(maxW, maxH);
+            size = Math.Min(size, maxSize);
+        }
+
         int x2 = start.X + Math.Sign(dx == 0 ? 1 : dx) * size;
         int y2 = start.Y + Math.Sign(dy == 0 ? 1 : dy) * size;
         return NormRect(start, new Point(x2, y2));
@@ -72,8 +82,9 @@ public sealed partial class RegionOverlayForm
             ApplyCenterAspectRatio(aspectRatio, ref halfW, ref halfH);
         }
 
-        int maxHalfW = Math.Max(0, Math.Min(center.X, _bmpW - center.X));
-        int maxHalfH = Math.Max(0, Math.Min(center.Y, _bmpH - center.Y));
+        var b = _selectionMonitorClientBounds;
+        int maxHalfW = b.IsEmpty ? Math.Max(0, Math.Min(center.X, _bmpW - center.X)) : Math.Max(0, Math.Min(center.X - b.Left, b.Right - center.X));
+        int maxHalfH = b.IsEmpty ? Math.Max(0, Math.Min(center.Y, _bmpH - center.Y)) : Math.Max(0, Math.Min(center.Y - b.Top, b.Bottom - center.Y));
         double scale = Math.Min(1d, Math.Min(maxHalfW / Math.Max(1d, halfW), maxHalfH / Math.Max(1d, halfH)));
         halfW = Math.Max(0, (int)Math.Floor(halfW * scale));
         halfH = Math.Max(0, (int)Math.Floor(halfH * scale));

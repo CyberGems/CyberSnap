@@ -66,8 +66,9 @@
 
             <controls:CyberSnapTitleBar x:Name="TitleBar" Grid.Row="0"
                                       Title="Capture Preview"
-                                      ShowPinButton="False"
-                                      CloseRequested="TitleBar_CloseRequested"/>
+                                      ShowPinButton="True"
+                                      CloseRequested="TitleBar_CloseRequested"
+                                      PinRequested="TitleBar_PinRequested"/>
 
             <!-- Image Preview Box -->
             <Border Grid.Row="1" Margin="14,2,14,0" CornerRadius="8" Padding="6"

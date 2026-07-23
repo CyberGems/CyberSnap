@@ -920,18 +920,43 @@ public sealed partial class RegionOverlayForm : Form
         _brandRect = new Rectangle(colX, cy, buttonSize, brandStripH);
         cy += brandStripH + gapBrandToTools;
 
+        // Color + stroke width belong with the shape tools that consume them, so they render
+        // directly above the rectangle (rectShape) button. Fall back to the top of the column
+        // when the rectangle tool isn't enabled on the bar.
+        int rectToolFlyoutIdx = -1;
         for (int i = 0; i < _flyoutTools.Length; i++)
         {
+            if (string.Equals(_flyoutTools[i].Id, "rectShape", StringComparison.OrdinalIgnoreCase))
+            {
+                rectToolFlyoutIdx = i;
+                break;
+            }
+        }
+
+        void PlaceColorAndStroke()
+        {
+            _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+            cy += buttonSize + buttonSpacing;
+            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+            cy += buttonSize + buttonSpacing;
+        }
+
+        if (rectToolFlyoutIdx < 0)
+            PlaceColorAndStroke();
+
+        // Reversed layout: last tool (emoji) sits near the top, first tool (pick) ends up at the
+        // bottom of the column. Group separators sit between the same tool pairs.
+        for (int i = _flyoutTools.Length - 1; i >= 0; i--)
+        {
+            if (i == rectToolFlyoutIdx)
+                PlaceColorAndStroke();
+
             _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
             cy += buttonSize + buttonSpacing;
-            if (annotSepIndices.Contains(i))
+            // A separator originally sat after tool (i-1); in reverse it falls between i and i-1.
+            if (annotSepIndices.Contains(i - 1))
                 cy += GroupGap;
         }
-        cy += GroupGap;
-        _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
-        cy += buttonSize + buttonSpacing;
-        _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
-        cy += buttonSize + gapToolsToActivator;
 
         // ⋮ at the bottom of the column (full button width hit target, compact glyph height).
         int actY = Math.Min(cy, _toolbarRect.Bottom - pad - activatorH);

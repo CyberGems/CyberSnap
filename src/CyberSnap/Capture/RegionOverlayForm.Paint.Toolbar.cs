@@ -327,30 +327,54 @@ public sealed partial class RegionOverlayForm
             int flyoutStartIdx = _mainBarTools.Length + 4;
             foreach (int flyoutIdx in tier2Seps)
             {
-                int btnIdx = flyoutStartIdx + flyoutIdx;
-                if (btnIdx < _toolbarButtons.Length && _toolbarButtons[btnIdx].Width > 0)
+                // Reversed column: the group boundary that was "after tool sep" now sits between
+                // tool sep+1 (above) and tool sep (below). Draw the divider at their midpoint.
+                int belowIdx = flyoutStartIdx + flyoutIdx;
+                int aboveIdx = belowIdx + 1;
+                if (aboveIdx < _toolbarButtons.Length
+                    && _toolbarButtons[belowIdx].Width > 0
+                    && _toolbarButtons[aboveIdx].Width > 0)
                 {
                     int p = IsVerticalDock
-                        ? _toolbarButtons[btnIdx].Bottom + (buttonSpacing + GroupGap) / 2
-                        : _toolbarButtons[btnIdx].Right + (buttonSpacing + GroupGap) / 2;
+                        ? (_toolbarButtons[aboveIdx].Bottom + _toolbarButtons[belowIdx].Y) / 2
+                        : (_toolbarButtons[aboveIdx].Right + _toolbarButtons[belowIdx].X) / 2;
                     dividerPositions.Add(p);
                 }
             }
 
-            // Divider before stroke/color (after last annotation tool). Position/Close are not on this dock.
-            if (_flyoutTools.Length > 0
-                && StrokeWidthButtonIndex < _toolbarButtons.Length
+            // Divider framing the color/stroke pair, which now sits directly above the
+            // rectShape ("cuadro") tool. Draw a line above the color button to separate the
+            // styling controls from the non-color tools stacked above them.
+            if (StrokeWidthButtonIndex < _toolbarButtons.Length
+                && ColorButtonIndex < _toolbarButtons.Length
+                && _toolbarButtons[ColorButtonIndex].Width > 0
                 && _toolbarButtons[StrokeWidthButtonIndex].Width > 0)
             {
-                int lastFlyoutIdx = flyoutStartIdx + _flyoutTools.Length - 1;
-                if (lastFlyoutIdx >= 0 && lastFlyoutIdx < _toolbarButtons.Length
-                    && _toolbarButtons[lastFlyoutIdx].Width > 0)
+                // Color is placed first (top of the pair), stroke second. Find the button
+                // directly above the color button to anchor the divider midpoint.
+                var colorBtn = _toolbarButtons[ColorButtonIndex];
+                Rectangle? above = null;
+                for (int i = 0; i < _toolbarButtons.Length; i++)
                 {
-                    var lastFlyout = _toolbarButtons[lastFlyoutIdx];
-                    var strokeBtn = _toolbarButtons[StrokeWidthButtonIndex];
+                    if (i == ColorButtonIndex || i == StrokeWidthButtonIndex) continue;
+                    var rb = _toolbarButtons[i];
+                    if (rb.Width <= 0) continue;
+                    if (IsVerticalDock)
+                    {
+                        if (rb.Bottom <= colorBtn.Y && (above == null || rb.Bottom > above.Value.Bottom))
+                            above = rb;
+                    }
+                    else
+                    {
+                        if (rb.Right <= colorBtn.X && (above == null || rb.Right > above.Value.Right))
+                            above = rb;
+                    }
+                }
+                if (above != null)
+                {
                     int p = IsVerticalDock
-                        ? (lastFlyout.Bottom + strokeBtn.Y) / 2
-                        : (lastFlyout.Right + strokeBtn.X) / 2;
+                        ? (above.Value.Bottom + colorBtn.Y) / 2
+                        : (above.Value.Right + colorBtn.X) / 2;
                     dividerPositions.Add(p);
                 }
             }
@@ -527,18 +551,21 @@ public sealed partial class RegionOverlayForm
             dotsColor = Color.FromArgb((int)((UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f * 255), UiChrome.SurfaceTextPrimary);
         }
 
-        // Vertical kebab — compact glyph centered in a taller hit target (hover/click area
-        // stays button-height; dots stay the classic tight ⋮ spacing).
+        // Kebab dots — orientation follows the activator's hit-target shape: the annotation
+        // column uses a wide/short target (horizontal ⋯), the capture bar a narrow/tall one
+        // (vertical ⋮). Drawing code is shared, so pick the axis from the rect.
         float tcx = _menuActivatorRect.X + _menuActivatorRect.Width / 2f;
         float tcy = _menuActivatorRect.Y + _menuActivatorRect.Height / 2f;
         float dotR = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 1.7f : 1.45f);
         float gap = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 5.6f : 5.2f);
+        bool horizontalDots = _menuActivatorRect.Width >= _menuActivatorRect.Height;
         using (var brush = new SolidBrush(dotsColor))
         {
             for (int i = -1; i <= 1; i++)
             {
-                float cy = tcy + i * gap;
-                g.FillEllipse(brush, tcx - dotR, cy - dotR, dotR * 2f, dotR * 2f);
+                float cx = horizontalDots ? tcx + i * gap : tcx;
+                float cy = horizontalDots ? tcy : tcy + i * gap;
+                g.FillEllipse(brush, cx - dotR, cy - dotR, dotR * 2f, dotR * 2f);
             }
         }
 

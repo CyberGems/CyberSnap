@@ -128,24 +128,82 @@ public sealed partial class RegionOverlayForm
                 int dx = e.Location.X - _confirmDragStart.X;
                 int dy = e.Location.Y - _confirmDragStart.Y;
                 var ob = _confirmDragStartRect;
-                Rectangle nb = _confirmHandleDragIndex switch
+                var b = _selectionMonitorClientBounds;
+                int minX = b.IsEmpty ? 0 : b.Left;
+                int maxX = b.IsEmpty ? _bmpW - 1 : b.Right - 1;
+                int minY = b.IsEmpty ? 0 : b.Top;
+                int maxY = b.IsEmpty ? _bmpH - 1 : b.Bottom - 1;
+
+                Rectangle nb;
+                switch (_confirmHandleDragIndex)
                 {
-                    0 => Rectangle.FromLTRB(ob.Left + dx, ob.Top + dy, ob.Right, ob.Bottom),  // TL
-                    1 => Rectangle.FromLTRB(ob.Left, ob.Top + dy, ob.Right + dx, ob.Bottom),  // TR
-                    2 => Rectangle.FromLTRB(ob.Left + dx, ob.Top, ob.Right, ob.Bottom + dy),  // BL
-                    3 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + dx, ob.Bottom + dy),  // BR
-                    4 => Rectangle.FromLTRB(ob.Left, ob.Top + dy, ob.Right, ob.Bottom),       // Top
-                    5 => Rectangle.FromLTRB(ob.Left + dx, ob.Top, ob.Right, ob.Bottom),       // Left
-                    6 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right + dx, ob.Bottom),       // Right
-                    7 => Rectangle.FromLTRB(ob.Left, ob.Top, ob.Right, ob.Bottom + dy),       // Bottom
-                    _ => ob
-                };
+                    case 0: // TL
+                        nb = Rectangle.FromLTRB(
+                            Math.Clamp(ob.Left + dx, minX, ob.Right - 5),
+                            Math.Clamp(ob.Top + dy, minY, ob.Bottom - 5),
+                            ob.Right,
+                            ob.Bottom);
+                        break;
+                    case 1: // TR
+                        nb = Rectangle.FromLTRB(
+                            ob.Left,
+                            Math.Clamp(ob.Top + dy, minY, ob.Bottom - 5),
+                            Math.Clamp(ob.Right + dx, ob.Left + 5, maxX),
+                            ob.Bottom);
+                        break;
+                    case 2: // BL
+                        nb = Rectangle.FromLTRB(
+                            Math.Clamp(ob.Left + dx, minX, ob.Right - 5),
+                            ob.Top,
+                            ob.Right,
+                            Math.Clamp(ob.Bottom + dy, ob.Top + 5, maxY));
+                        break;
+                    case 3: // BR
+                        nb = Rectangle.FromLTRB(
+                            ob.Left,
+                            ob.Top,
+                            Math.Clamp(ob.Right + dx, ob.Left + 5, maxX),
+                            Math.Clamp(ob.Bottom + dy, ob.Top + 5, maxY));
+                        break;
+                    case 4: // Top
+                        nb = Rectangle.FromLTRB(
+                            ob.Left,
+                            Math.Clamp(ob.Top + dy, minY, ob.Bottom - 5),
+                            ob.Right,
+                            ob.Bottom);
+                        break;
+                    case 5: // Left
+                        nb = Rectangle.FromLTRB(
+                            Math.Clamp(ob.Left + dx, minX, ob.Right - 5),
+                            ob.Top,
+                            ob.Right,
+                            ob.Bottom);
+                        break;
+                    case 6: // Right
+                        nb = Rectangle.FromLTRB(
+                            ob.Left,
+                            ob.Top,
+                            Math.Clamp(ob.Right + dx, ob.Left + 5, maxX),
+                            ob.Bottom);
+                        break;
+                    case 7: // Bottom
+                        nb = Rectangle.FromLTRB(
+                            ob.Left,
+                            ob.Top,
+                            ob.Right,
+                            Math.Clamp(ob.Bottom + dy, ob.Top + 5, maxY));
+                        break;
+                    default:
+                        nb = ob;
+                        break;
+                }
+
                 if (nb.Width > 5 && nb.Height > 5)
                 {
                     // Same lightweight path as move: freeze docks, only repaint the hole/frame.
                     var oldRect = _confirmRect;
                     var oldPill = _confirmSizeReadoutRect;
-                    _confirmRect = ClampRectToSelectionMonitor(nb);
+                    _confirmRect = nb;
                     RefreshConfirmSizeReadoutRect();
                     InvalidateConfirmHoleMove(oldRect, _confirmRect, oldPill, _confirmSizeReadoutRect);
                 }
@@ -361,7 +419,11 @@ public sealed partial class RegionOverlayForm
         bool needsRepaint = false;
         bool toolbarDirty = false;
 
-        if (UpdateToolbarAnchorForClientPoint(e.Location))
+        Point anchorPoint = _isSelecting && !_selectionMonitorClientBounds.IsEmpty
+            ? ClampPointToSelectionMonitor(e.Location)
+            : e.Location;
+
+        if (UpdateToolbarAnchorForClientPoint(anchorPoint))
             toolbarDirty = true;
 
         if (_textSelecting && _isTyping && _textBox != null)

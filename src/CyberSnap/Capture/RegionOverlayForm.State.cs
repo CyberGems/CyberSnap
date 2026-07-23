@@ -437,7 +437,7 @@ public sealed partial class RegionOverlayForm
             GetReadoutCursorPoint(),
             rect,
             _readoutFont,
-            ClientRectangle);
+            !_selectionMonitorClientBounds.IsEmpty ? _selectionMonitorClientBounds : ClientRectangle);
         if (!readoutBounds.IsEmpty)
             dirty = Rectangle.Union(dirty, InflateForRepaint(readoutBounds, 8));
 
@@ -462,7 +462,7 @@ public sealed partial class RegionOverlayForm
             GetReadoutCursorPoint(),
             rect,
             _readoutFont,
-            ClientRectangle);
+            !_selectionMonitorClientBounds.IsEmpty ? _selectionMonitorClientBounds : ClientRectangle);
         if (!readoutBounds.IsEmpty)
             region.Union(InflateForRepaint(readoutBounds, 8));
 
