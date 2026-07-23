@@ -214,6 +214,7 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _menuActivatorRect;
     private Rectangle _annotationGripRect;
     private Rectangle _captureGripRect;
+    private Rectangle _confirmGripRect;
     private bool _hoveredBrand;
     private bool _hoveredBrandDragArea;
     private bool _hoveredMenuActivator;
@@ -1328,7 +1329,7 @@ public sealed partial class RegionOverlayForm : Form
         _confirmDragStart = location;
         _confirmDragOffset = new Point(location.X - _confirmRect.X, location.Y - _confirmRect.Y);
         _confirmDragStartRect = _confirmRect;
-        Cursor = CursorFactory.GrabbingCursor;
+        Cursor = Cursors.Hand;
         HideToolbarTooltip();
         HideConfirmDocksForFrameManip();
     }

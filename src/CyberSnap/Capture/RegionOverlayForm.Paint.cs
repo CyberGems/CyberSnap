@@ -476,6 +476,11 @@ public sealed partial class RegionOverlayForm
             Color core = ConfirmChromeShineCore(accent);
             DrawBorderShine(g, face, corner, _confirmWrapperShinePhase, glow, core, 0.85f);
         }
+
+        if (!_confirmGripRect.IsEmpty)
+        {
+            DrawToolbarGripDots(g, _confirmGripRect, UiChrome.AccentColor);
+        }
     }
 
     private static Color ConfirmChromeShineCore(Color accent)
