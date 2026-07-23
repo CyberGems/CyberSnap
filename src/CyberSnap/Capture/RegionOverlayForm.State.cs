@@ -302,7 +302,7 @@ public sealed partial class RegionOverlayForm
         if ((ShowAnnotationChrome && !_annotationGripRect.IsEmpty && _annotationGripRect.Contains(location))
             || (!ShowAnnotationChrome && !_captureGripRect.IsEmpty && _captureGripRect.Contains(location)))
         {
-            return Cursors.Hand;
+            return CursorFactory.GrabCursor;
         }
 
         if (_menuActivatorRect.Contains(location))
@@ -312,9 +312,9 @@ public sealed partial class RegionOverlayForm
         if (IsPointInBrandClickArea(location))
             return Cursors.Hand;
 
-        // Dedicated drag zone (around branding or Move button) -> Hand cursor.
+        // Dedicated drag zone (around branding or Move button) -> Grab cursor.
         if (IsPointInToolbarDragArea(location))
-            return Cursors.Hand;
+            return CursorFactory.GrabCursor;
 
         int btn = GetToolbarButtonAt(location);
         if (btn >= 0)
@@ -1502,6 +1502,7 @@ public sealed partial class RegionOverlayForm
         _selectionRect = Rectangle.Empty;
         _selectionEnd = Point.Empty;
         _confirmSizeReadoutRect = Rectangle.Empty;
+        _confirmSizeReadoutGripRect = Rectangle.Empty;
         // Retry = re-select area: put the original capture tool back (not the annotation tool
         // restored for confirm-mode editing, which made Eraser stick after Retry).
         SetMode(_modeBeforeConfirm, _toolIdBeforeConfirm, showHelpBanner: false);
@@ -2332,7 +2333,7 @@ public sealed partial class RegionOverlayForm
         int gripToContentGap = UiChrome.ScaleInt(10);
         clusterW += gripW + gripToContentGap;
 
-        int offset = UiChrome.ScaleInt(12);
+        int offset = UiChrome.ScaleInt(18);
         int margin = UiChrome.ScaleInt(10);
         int cursorGap = UiChrome.ScaleInt(10);
 

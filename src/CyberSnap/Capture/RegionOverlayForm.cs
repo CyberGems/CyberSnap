@@ -128,6 +128,7 @@ public sealed partial class RegionOverlayForm : Form
 
     /// <summary>Confirm-mode permanent size pill + grip (drag handle) — above the frame, top-left.</summary>
     private Rectangle _confirmSizeReadoutRect = Rectangle.Empty;
+    private Rectangle _confirmSizeReadoutGripRect = Rectangle.Empty;
     private bool _hoveredConfirmSizeReadout;
     /// <summary>Throttle layered-toolbar presents while the capture frame is being dragged.</summary>
     private DateTime _lastConfirmDragToolbarPresentUtc = DateTime.MinValue;
@@ -1313,6 +1314,7 @@ public sealed partial class RegionOverlayForm : Form
         if (!_isConfirmingSelection || _confirmRect.Width <= 2)
         {
             _confirmSizeReadoutRect = Rectangle.Empty;
+            _confirmSizeReadoutGripRect = Rectangle.Empty;
             return;
         }
 
@@ -1321,10 +1323,16 @@ public sealed partial class RegionOverlayForm : Form
             _readoutFont,
             ClientRectangle,
             GetConfirmReadoutAvoidRects());
+
+        _confirmSizeReadoutGripRect = SelectionSizeReadout.GetConfirmDragGripBounds(
+            _confirmRect,
+            _readoutFont,
+            ClientRectangle,
+            GetConfirmReadoutAvoidRects());
     }
 
     private bool HitTestConfirmSizeReadout(Point p)
-        => !_confirmSizeReadoutRect.IsEmpty && _confirmSizeReadoutRect.Contains(p);
+        => !_confirmSizeReadoutGripRect.IsEmpty && _confirmSizeReadoutGripRect.Contains(p);
 
     private void BeginConfirmFrameDrag(Point location)
     {
