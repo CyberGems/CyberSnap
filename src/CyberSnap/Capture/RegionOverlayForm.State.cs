@@ -1543,48 +1543,20 @@ public sealed partial class RegionOverlayForm
 
     private void RebuildConfirmChromeKinds()
     {
-        // Order left→right: Cancel, Retry, destination actions.
-        var kinds = new List<ConfirmChromeKind>
+        _confirmChromeKinds = new[]
         {
+            ConfirmChromeKind.ModeImage,
+            ConfirmChromeKind.ModeOcr,
+            ConfirmChromeKind.ModeVideo,
+            ConfirmChromeKind.ModeGif,
+            ConfirmChromeKind.ModeScroll,
+            ConfirmChromeKind.ModeQr,
+            ConfirmChromeKind.TogglePreview,
+            ConfirmChromeKind.Retry,
             ConfirmChromeKind.Cancel,
-            ConfirmChromeKind.Retry
+            ConfirmChromeKind.Done
         };
-
-        // OCR confirm: Cancel, Retry, and extract (primary). No Copy — text copy is
-        // handled by Auto-copy OCR after extraction.
-        if (_modeBeforeConfirm == CaptureMode.Ocr)
-        {
-            kinds.Add(ConfirmChromeKind.OcrExtract);
-            _confirmChromeKinds = kinds.ToArray();
-            _confirmChromeRects = new Rectangle[kinds.Count];
-            _confirmChromeLayoutDirty = true;
-            return;
-        }
-
-        var settings = Services.SettingsService.LoadStatic();
-        var toast = settings?.ToastButtons
-            ?? new AppSettings.ToastButtonLayoutSettings();
-
-        var actions = new List<(ConfirmChromeKind kind, ToastButtonSlot slot)>();
-        if (toast.ShowSave) actions.Add((ConfirmChromeKind.Save, toast.SaveSlot));
-        if (toast.ShowCopy) actions.Add((ConfirmChromeKind.Copy, toast.CopySlot));
-        if (toast.ShowEdit) actions.Add((ConfirmChromeKind.Edit, toast.EditSlot));
-        if (toast.ShowShare) actions.Add((ConfirmChromeKind.Share, toast.ShareSlot));
-        if (toast.ShowHistory) actions.Add((ConfirmChromeKind.History, toast.HistorySlot));
-
-        // Always keep at least one usable destination so the capture can be confirmed.
-        if (actions.Count == 0)
-            actions.Add((ConfirmChromeKind.Save, ToastButtonSlot.TopLeft));
-
-        foreach (var entry in actions
-            .OrderBy(a => ToastButtonLayout.ToGridCell(a.slot).row)
-            .ThenBy(a => ToastButtonLayout.ToGridCell(a.slot).column))
-        {
-            kinds.Add(entry.kind);
-        }
-
-        _confirmChromeKinds = kinds.ToArray();
-        _confirmChromeRects = new Rectangle[kinds.Count];
+        _confirmChromeRects = new Rectangle[_confirmChromeKinds.Length];
         _confirmChromeLayoutDirty = true;
     }
 
@@ -1607,45 +1579,21 @@ public sealed partial class RegionOverlayForm
             ? "Extract and copy text from the selection"
             : "Extract text from the selection");
 
-    /// <summary>Confirm pills stay clickable; Copy remains available even when auto-copy is on.</summary>
     private static bool IsConfirmChromeDisabled(ConfirmChromeKind kind) => false;
 
-    /// <summary>
-    /// Preferred confirm destination for Enter / double-click.
-    /// OCR → extract text; otherwise the first destination in the user's bar order.
-    /// </summary>
     private int IndexOfPrimaryConfirmAction()
     {
-        if (_modeBeforeConfirm == CaptureMode.Ocr)
-        {
-            int ocr = IndexOfConfirmChrome(ConfirmChromeKind.OcrExtract);
-            if (ocr >= 0) return ocr;
-        }
-
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
-            var kind = _confirmChromeKinds[i];
-            if (IsConfirmDestinationKind(kind) && !IsConfirmChromeDisabled(kind))
+            if (_confirmChromeKinds[i] == ConfirmChromeKind.Done)
                 return i;
         }
         return -1;
     }
 
-    private static bool IsConfirmDestinationKind(ConfirmChromeKind kind)
-        => kind is ConfirmChromeKind.Save or ConfirmChromeKind.Copy
-            or ConfirmChromeKind.Edit or ConfirmChromeKind.Share
-            or ConfirmChromeKind.History
-            or ConfirmChromeKind.OcrExtract;
+    private static bool IsConfirmDestinationKind(ConfirmChromeKind kind) => false;
 
-    private static ToastButtonKind? ConfirmChromeToToastKind(ConfirmChromeKind kind) => kind switch
-    {
-        ConfirmChromeKind.Save => ToastButtonKind.Save,
-        ConfirmChromeKind.Copy => ToastButtonKind.Copy,
-        ConfirmChromeKind.Edit => ToastButtonKind.Edit,
-        ConfirmChromeKind.Share => ToastButtonKind.Share,
-        ConfirmChromeKind.History => ToastButtonKind.History,
-        _ => null
-    };
+    private static ToastButtonKind? ConfirmChromeToToastKind(ConfirmChromeKind kind) => null;
 
 
 
@@ -1663,40 +1611,44 @@ public sealed partial class RegionOverlayForm
     private static string? ConfirmChromeFluentIcon(ConfirmChromeKind kind) => kind switch
     {
         ConfirmChromeKind.Cancel => "signOut",
-        ConfirmChromeKind.Save => "save",
-        ConfirmChromeKind.Copy => "copy",
-        ConfirmChromeKind.Edit => "draw",
-        ConfirmChromeKind.Share => "share",
-        ConfirmChromeKind.History => "history",
-        ConfirmChromeKind.OcrExtract => "ocr",
+        ConfirmChromeKind.Retry => "redo",
+        ConfirmChromeKind.Done => "check",
+        ConfirmChromeKind.ModeImage => "captureRect",
+        ConfirmChromeKind.ModeOcr => "ocr",
+        ConfirmChromeKind.ModeVideo => "record",
+        ConfirmChromeKind.ModeGif => "recordGif",
+        ConfirmChromeKind.ModeScroll => "scrollCapture",
+        ConfirmChromeKind.ModeQr => "scan",
         _ => null
     };
 
-    /// <summary>Short label for icon+text mode (and Settings-aligned wording).</summary>
     private static string ConfirmChromeShortLabel(ConfirmChromeKind kind) => kind switch
     {
         ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel"),
         ConfirmChromeKind.Retry => LocalizationService.Translate("Retry"),
-        ConfirmChromeKind.Save => LocalizationService.Translate("Save"),
-        ConfirmChromeKind.Copy => LocalizationService.Translate("Copy"),
-        ConfirmChromeKind.Edit => LocalizationService.Translate("Edit"),
-        ConfirmChromeKind.Share => LocalizationService.Translate("Share"),
-        ConfirmChromeKind.History => LocalizationService.Translate("Gallery"),
-        ConfirmChromeKind.OcrExtract => LocalizationService.Translate("Extract"),
+        ConfirmChromeKind.Done => LocalizationService.Translate("Done"),
+        ConfirmChromeKind.TogglePreview => LocalizationService.Translate("Preview"),
+        ConfirmChromeKind.ModeImage => LocalizationService.Translate("Image"),
+        ConfirmChromeKind.ModeOcr => "OCR",
+        ConfirmChromeKind.ModeVideo => "Video",
+        ConfirmChromeKind.ModeGif => "GIF",
+        ConfirmChromeKind.ModeScroll => LocalizationService.Translate("Scroll"),
+        ConfirmChromeKind.ModeQr => "QR",
         _ => ""
     };
 
-    /// <summary>Full title used in tooltips and context menus.</summary>
     private static string ConfirmChromeTitle(ConfirmChromeKind kind) => kind switch
     {
         ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel capture completely"),
         ConfirmChromeKind.Retry => LocalizationService.Translate("Retry area"),
-        ConfirmChromeKind.Save => LocalizationService.Translate("Save capture"),
-        ConfirmChromeKind.Copy => LocalizationService.Translate("Copy to clipboard"),
-        ConfirmChromeKind.Edit => LocalizationService.Translate("Open in editor"),
-        ConfirmChromeKind.Share => LocalizationService.Translate("Share"),
-        ConfirmChromeKind.History => LocalizationService.Translate("Save and open in Gallery"),
-        ConfirmChromeKind.OcrExtract => GetOcrExtractTooltip(),
+        ConfirmChromeKind.Done => LocalizationService.Translate("Done"),
+        ConfirmChromeKind.TogglePreview => LocalizationService.Translate("Show preview after capture"),
+        ConfirmChromeKind.ModeImage => LocalizationService.Translate("Capture as Image"),
+        ConfirmChromeKind.ModeOcr => LocalizationService.Translate("Extract Text (OCR)"),
+        ConfirmChromeKind.ModeVideo => LocalizationService.Translate("Record Video"),
+        ConfirmChromeKind.ModeGif => LocalizationService.Translate("Record GIF"),
+        ConfirmChromeKind.ModeScroll => LocalizationService.Translate("Scrolling Capture"),
+        ConfirmChromeKind.ModeQr => LocalizationService.Translate("Scan QR & Barcode"),
         _ => kind.ToString()
     };
 
@@ -1704,28 +1656,42 @@ public sealed partial class RegionOverlayForm
     {
         ConfirmChromeKind.Cancel => "Esc",
         ConfirmChromeKind.Retry => "R",
-        ConfirmChromeKind.Save => "S",
-        ConfirmChromeKind.Copy => "C",
-        ConfirmChromeKind.Edit => "E",
-        ConfirmChromeKind.Share => "U",
-        ConfirmChromeKind.History => "G",
-        ConfirmChromeKind.OcrExtract => "X",
+        ConfirmChromeKind.Done => "Enter",
+        ConfirmChromeKind.ModeImage => "I",
+        ConfirmChromeKind.ModeOcr => "O",
+        ConfirmChromeKind.ModeVideo => "V",
+        ConfirmChromeKind.ModeGif => "G",
+        ConfirmChromeKind.ModeScroll => "S",
+        ConfirmChromeKind.ModeQr => "Q",
         _ => ""
     };
 
-    /// <summary>
-    /// Cancel/Retry stay icon-only. Destinations show labels only when
-    /// <see cref="_confirmPillShowLabels"/> is on.
-    /// </summary>
     private bool ConfirmChromeIsIconOnly(ConfirmChromeKind kind)
     {
         if (kind is ConfirmChromeKind.Cancel or ConfirmChromeKind.Retry)
             return true;
+        if (kind == ConfirmChromeKind.TogglePreview)
+            return false;
         return !_confirmPillShowLabels;
     }
 
     private int MeasureConfirmChromeButtonWidth(ConfirmChromeKind kind, int iconOnlySize)
     {
+        if (kind == ConfirmChromeKind.TogglePreview)
+        {
+            string labelText = ConfirmChromeShortLabel(kind);
+            using var toggleFont = CreateConfirmButtonFont();
+            var toggleTextSize = TextRenderer.MeasureText(
+                labelText,
+                toggleFont,
+                new Size(int.MaxValue, iconOnlySize),
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+            int trackWidth = UiChrome.ScaleInt(34);
+            int toggleGap = UiChrome.ScaleInt(8);
+            int togglePadX = UiChrome.ScaleInt(12);
+            return togglePadX + toggleTextSize.Width + toggleGap + trackWidth + togglePadX;
+        }
+
         if (ConfirmChromeIsIconOnly(kind))
             return iconOnlySize;
 
@@ -2042,23 +2008,31 @@ public sealed partial class RegionOverlayForm
             case ConfirmChromeKind.Cancel:
                 ConfirmAndCancelCapture();
                 break;
-            case ConfirmChromeKind.Save:
-                CommitConfirmedSelection(ConfirmCommitAction.Save);
-                break;
-            case ConfirmChromeKind.Copy:
-                CommitConfirmedSelection(ConfirmCommitAction.Copy);
-                break;
-            case ConfirmChromeKind.Edit:
-                CommitConfirmedSelection(ConfirmCommitAction.Edit);
-                break;
-            case ConfirmChromeKind.Share:
-                CommitConfirmedSelection(ConfirmCommitAction.Share);
-                break;
-            case ConfirmChromeKind.History:
-                CommitConfirmedSelection(ConfirmCommitAction.History);
-                break;
-            case ConfirmChromeKind.OcrExtract:
+            case ConfirmChromeKind.Done:
+            case ConfirmChromeKind.ModeImage:
                 CommitConfirmedSelection(ConfirmCommitAction.Default);
+                break;
+            case ConfirmChromeKind.TogglePreview:
+                var settings = Services.SettingsService.LoadStatic() ?? new AppSettings();
+                bool newValue = !settings.ShowCapturePreview;
+                SettingsService.SaveShowCapturePreview(newValue);
+                _confirmChromeLayoutDirty = true;
+                Invalidate();
+                break;
+            case ConfirmChromeKind.ModeOcr:
+                OcrRegionSelected?.Invoke(_confirmRect);
+                break;
+            case ConfirmChromeKind.ModeVideo:
+                RecordingRequested?.Invoke(Models.RecordingFormat.MP4);
+                break;
+            case ConfirmChromeKind.ModeGif:
+                RecordingRequested?.Invoke(Models.RecordingFormat.GIF);
+                break;
+            case ConfirmChromeKind.ModeScroll:
+                ScrollRegionSelected?.Invoke(_confirmRect);
+                break;
+            case ConfirmChromeKind.ModeQr:
+                ScanRegionSelected?.Invoke(_confirmRect);
                 break;
         }
     }
@@ -2070,12 +2044,13 @@ public sealed partial class RegionOverlayForm
 
         ConfirmChromeKind? kind = keyCode switch
         {
-            Keys.S => ConfirmChromeKind.Save,
-            Keys.C => ConfirmChromeKind.Copy,
-            Keys.E => ConfirmChromeKind.Edit,
-            Keys.G => ConfirmChromeKind.History,
-            Keys.U => ConfirmChromeKind.Share,
-            Keys.X when _modeBeforeConfirm == CaptureMode.Ocr => ConfirmChromeKind.OcrExtract,
+            Keys.I => ConfirmChromeKind.ModeImage,
+            Keys.O => ConfirmChromeKind.ModeOcr,
+            Keys.V => ConfirmChromeKind.ModeVideo,
+            Keys.G => ConfirmChromeKind.ModeGif,
+            Keys.S => ConfirmChromeKind.ModeScroll,
+            Keys.Q => ConfirmChromeKind.ModeQr,
+            Keys.Enter => ConfirmChromeKind.Done,
             _ => null
         };
         if (kind is null)
@@ -2309,7 +2284,8 @@ public sealed partial class RegionOverlayForm
         if (_confirmChromeKinds.Length == 0)
         {
             _confirmChromeRects = Array.Empty<Rectangle>();
-            _confirmChromeSeparatorRect = Rectangle.Empty;
+            _confirmChromeSeparatorRect1 = Rectangle.Empty;
+            _confirmChromeSeparatorRect2 = Rectangle.Empty;
             _confirmChromeWrapperRect = Rectangle.Empty;
             _confirmChromeLayoutDirty = false;
             _confirmChromeLaidOutForRect = Rectangle.Empty;
@@ -2474,26 +2450,36 @@ public sealed partial class RegionOverlayForm
                 x += widths[i] + GapBeforeConfirmChromeIndex(i + 1, gap, groupGap);
         }
 
-        _confirmChromeSeparatorRect = Rectangle.Empty;
-        for (int i = 0; i + 1 < _confirmChromeKinds.Length; i++)
-        {
-            if (_confirmChromeKinds[i] != ConfirmChromeKind.Retry)
-                continue;
-            if (!IsConfirmDestinationKind(_confirmChromeKinds[i + 1])
-                && _confirmChromeKinds[i + 1] != ConfirmChromeKind.OcrExtract)
-                continue;
+        _confirmChromeSeparatorRect1 = Rectangle.Empty;
+        _confirmChromeSeparatorRect2 = Rectangle.Empty;
 
-            var left = _confirmChromeRects[i];
-            var right = _confirmChromeRects[i + 1];
+        int sepW = Math.Max(1, UiChrome.ScaleInt(1));
+        int sepH = Math.Max(UiChrome.ScaleInt(14), (int)(bh * 0.55f));
+
+        // Separator 1: Between ModeQr (index 5) and Done (index 6)
+        if (_confirmChromeRects.Length > 6)
+        {
+            var left = _confirmChromeRects[5];
+            var right = _confirmChromeRects[6];
             int mid = (left.Right + right.Left) / 2;
-            int sepW = Math.Max(1, UiChrome.ScaleInt(1));
-            int sepH = Math.Max(UiChrome.ScaleInt(14), (int)(bh * 0.55f));
-            _confirmChromeSeparatorRect = new Rectangle(
+            _confirmChromeSeparatorRect1 = new Rectangle(
                 mid - sepW / 2,
                 y + (bh - sepH) / 2,
                 sepW,
                 sepH);
-            break;
+        }
+
+        // Separator 2: Between Done (index 6) and TogglePreview (index 7)
+        if (_confirmChromeRects.Length > 7)
+        {
+            var left = _confirmChromeRects[6];
+            var right = _confirmChromeRects[7];
+            int mid = (left.Right + right.Left) / 2;
+            _confirmChromeSeparatorRect2 = new Rectangle(
+                mid - sepW / 2,
+                y + (bh - sepH) / 2,
+                sepW,
+                sepH);
         }
 
         // Dock wrapper behind all pills so icon buttons stay readable on light/busy wallpapers.
@@ -2578,10 +2564,7 @@ public sealed partial class RegionOverlayForm
         if (index <= 0 || index >= _confirmChromeKinds.Length)
             return gap;
 
-        // After Retry, open a wider channel before destinations / OCR extract (Settings preview divider).
-        if (_confirmChromeKinds[index - 1] == ConfirmChromeKind.Retry
-            && (_confirmChromeKinds[index] == ConfirmChromeKind.OcrExtract
-                || IsConfirmDestinationKind(_confirmChromeKinds[index])))
+        if (index == 6 || index == 7)
             return groupGap;
 
         return gap;

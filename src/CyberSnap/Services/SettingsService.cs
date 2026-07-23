@@ -182,6 +182,28 @@ public sealed class SettingsService : IDisposable
         }
     }
 
+    public static void SaveShowCapturePreview(bool value)
+    {
+        lock (CacheGate)
+        {
+            if (s_cachedSettings != null)
+                s_cachedSettings.ShowCapturePreview = value;
+        }
+
+        try
+        {
+            var svc = new SettingsService();
+            svc.Load();
+            svc.Settings.ShowCapturePreview = value;
+            svc.Save();
+            svc.FlushPendingWrites();
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.show-capture-preview.static-save", ex);
+        }
+    }
+
     public SettingsService(string? settingsPath = null, TimeSpan? saveDelay = null)
     {
         _settingsPath = ResolveSettingsPath(settingsPath);

@@ -326,16 +326,10 @@ public sealed partial class RegionOverlayForm
             ConfirmChromeKind.Cancel => ConfirmChromeTitle(kind)
                 + "  (Esc)\n"
                 + LocalizationService.Translate("Close the capture tool and discard everything"),
-            ConfirmChromeKind.Save => ConfirmChromeTitle(kind) + primaryHint,
-            ConfirmChromeKind.Copy => BuildCopyConfirmTooltip(primaryHint),
-            ConfirmChromeKind.Edit => ConfirmChromeTitle(kind) + primaryHint,
-            ConfirmChromeKind.Share => ConfirmChromeTitle(kind) + primaryHint,
-            ConfirmChromeKind.History => LocalizationService.Translate("Save and open in Gallery")
-                + primaryHint
+            ConfirmChromeKind.TogglePreview => ConfirmChromeTitle(kind)
                 + "\n"
-                + LocalizationService.Translate("Saves the capture to disk, then opens Gallery on that file"),
-            ConfirmChromeKind.OcrExtract => GetOcrExtractTooltip() + primaryHint,
-            _ => ""
+                + LocalizationService.Translate("Show the destination chooser after confirming capture"),
+            _ => ConfirmChromeTitle(kind) + primaryHint
         };
 
         if (string.IsNullOrWhiteSpace(text))

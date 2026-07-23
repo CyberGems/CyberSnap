@@ -195,6 +195,11 @@ public sealed class AppSettings
     /// </summary>
     public bool ConfirmPillShowLabels { get; set; }
 
+    /// <summary>
+    /// When true, show the preview window after capture instead of executing automatic destinations directly.
+    /// </summary>
+    public bool ShowCapturePreview { get; set; } = true;
+
     public bool AllowHotkeyOverride { get; set; }
 
     public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;

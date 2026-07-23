@@ -100,7 +100,7 @@ public partial class App
         LaunchGifRecording(fmt);
     }
 
-    private void LaunchGifRecording(RecordingFormat? formatOverride = null)
+    private void LaunchGifRecording(RecordingFormat? formatOverride = null, System.Drawing.Rectangle? initialSelection = null)
     {
         var thread = new Thread(() =>
         {
@@ -175,7 +175,8 @@ public partial class App
                     showCursor, recMic, s.MicrophoneDeviceId, recDesktop, s.DesktopAudioDeviceId,
                     _settingsService!.Settings.ShowCaptureMagnifier,
                     openTrimmerAtLaunch,
-                    onGifEncodedForTrimmer);
+                    onGifEncodedForTrimmer,
+                    initialSelection);
 
                 form.Shown += (_, _) =>
                 {
@@ -561,6 +562,10 @@ public partial class App
             try
             {
                 Theme.Refresh();
+                var latestSettings = Services.SettingsService.LoadStatic();
+                if (latestSettings != null)
+                    _settingsService!.Settings = latestSettings;
+
                 bool showCursor = _settingsService!.Settings.ShowCursor;
                 var (bmp, bounds) = _settingsService.Settings.OverlayCaptureAllMonitors
                     ? ScreenCapture.CaptureAllScreens(showCursor)
@@ -676,7 +681,32 @@ public partial class App
                     var cropped = ScreenCapture.CropRegion(annotated, sel);
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
-                    HandleCaptureResult(cropped, commitAction);
+
+                    Dispatcher.BeginInvoke(() =>
+                    {
+                        var latest = Services.SettingsService.LoadStatic();
+                        if (latest != null)
+                            _settingsService!.Settings = latest;
+
+                        var settings = _settingsService!.Settings;
+                        if (settings.ShowCapturePreview)
+                        {
+                            var dialog = new UI.CapturePreviewDialog(cropped, _settingsService);
+                            if (dialog.ShowDialog() == true)
+                            {
+                                HandleCaptureResult(cropped, dialog.SelectedAction);
+                            }
+                            else
+                            {
+                                cropped.Dispose();
+                                ResetCapturing();
+                            }
+                        }
+                        else
+                        {
+                            HandleCaptureResult(cropped, commitAction);
+                        }
+                    });
                 };
 
 
@@ -748,10 +778,11 @@ public partial class App
 
                 overlay.RecordingRequested += fmt =>
                 {
+                    var rect = overlay.ConfirmRect;
                     overlay.Hide();
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
-                    Dispatcher.BeginInvoke(() => LaunchGifRecording(fmt));
+                    Dispatcher.BeginInvoke(() => LaunchGifRecording(fmt, rect));
                 };
 
                 overlay.ColorPicked += hex =>
