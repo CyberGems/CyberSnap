@@ -67,7 +67,8 @@ internal static class SelectionSizeReadout
         Font font,
         Rectangle clientBounds,
         IReadOnlyList<string>? details = null,
-        IReadOnlyList<Rectangle>? avoidRects = null)
+        IReadOnlyList<Rectangle>? avoidRects = null,
+        Color? accentOverride = null)
     {
         if (!ShowDimensions)
             return;
@@ -82,7 +83,7 @@ internal static class SelectionSizeReadout
         int lineH = LineHeight(font);
         int iconBox = IconBox(lineH);
         foreach (var pill in pills)
-            DrawPill(g, pill, font, lineH, iconBox);
+            DrawPill(g, pill, font, lineH, iconBox, accentOverride: accentOverride);
 
         g.SmoothingMode = oldSmoothing;
     }
@@ -111,6 +112,21 @@ internal static class SelectionSizeReadout
             return Rectangle.Empty;
 
         return Rectangle.Union(pillRect, gripRect);
+    }
+
+    public static Rectangle GetConfirmDragGripBounds(
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects = null)
+    {
+        if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2)
+            return Rectangle.Empty;
+
+        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, out _, out var gripRect, out _))
+            return Rectangle.Empty;
+
+        return gripRect;
     }
 
     public static void DrawConfirmDragPill(
@@ -548,9 +564,9 @@ internal static class SelectionSizeReadout
 
     // ── Rendering ───────────────────────────────────────────────────────────────
 
-    private static void DrawPill(Graphics g, Pill pill, Font font, int lineH, int iconBox, bool emphasize = false)
+    private static void DrawPill(Graphics g, Pill pill, Font font, int lineH, int iconBox, bool emphasize = false, Color? accentOverride = null)
     {
-        var accent = UiChrome.AccentColor;
+        var accent = accentOverride ?? UiChrome.AccentColor;
         var rect = pill.Rect;
 
         using (var shadowPath = WindowsDockRenderer.RoundedRect(new RectangleF(rect.X, rect.Y + 1.5f, rect.Width, rect.Height), Radius))
