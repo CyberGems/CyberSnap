@@ -140,15 +140,7 @@ public sealed partial class RegionOverlayForm
                     // Drawing tools still use the interior as a canvas.
                     if (ToolDef.IsAnnotationTool(_mode))
                     {
-                        bool pickEmpty = _mode == CaptureMode.Move
-                            && HitTestAnnotation(e.Location) < 0
-                            && HitTestAnnotationSurface(e.Location) < 0;
-                        if (pickEmpty)
-                        {
-                            BeginConfirmFrameDrag(e.Location);
-                            return;
-                        }
-                        // Fall through to annotation handlers below (draw / select).
+                        // In annotation tools (Draw, Move/Pick, etc.), dragging empty space does marquee-select/draw rather than moving the crop frame.
                     }
                     else if (e.Clicks >= 2)
                     {
