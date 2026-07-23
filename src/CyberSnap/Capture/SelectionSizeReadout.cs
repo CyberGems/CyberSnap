@@ -148,7 +148,7 @@ internal static class SelectionSizeReadout
         int lineH = LineHeight(font);
         int iconBox = IconBox(lineH);
 
-        DrawPill(g, new Pill { Lines = lines, Rect = pillRect }, font, lineH, iconBox, emphasize: hovered);
+        DrawPill(g, new Pill { Lines = lines, Rect = pillRect }, font, lineH, iconBox, emphasize: false);
         DrawDragGrip(g, gripRect, hovered);
 
         g.SmoothingMode = oldSmoothing;
