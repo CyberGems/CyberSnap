@@ -118,8 +118,18 @@ public sealed partial class RegionOverlayForm
                     StartConfirmPress(confirmBtnHit);
                     return;
                 }
-                // Permanent size pill (top-left) OR confirm grip handle: dedicated drag handle for the capture frame.
-                if (HitTestConfirmSizeReadout(e.Location) || (!_confirmGripRect.IsEmpty && _confirmGripRect.Contains(e.Location)))
+                // Confirm grip handle: drag the confirm bar itself.
+                if (!_confirmGripRect.IsEmpty && _confirmGripRect.Contains(e.Location))
+                {
+                    _isDraggingConfirm = true;
+                    _confirmDragStartMouse = e.Location;
+                    _confirmDragStartOffset = _confirmCustomOffset;
+                    HideToolbarTooltip();
+                    Cursor = CursorFactory.GrabbingCursor;
+                    return;
+                }
+                // Permanent size pill (top-left): dedicated drag handle for the capture frame.
+                if (HitTestConfirmSizeReadout(e.Location))
                 {
                     BeginConfirmFrameDrag(e.Location);
                     return;

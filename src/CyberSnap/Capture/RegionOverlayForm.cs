@@ -231,6 +231,10 @@ public sealed partial class RegionOverlayForm : Form
     private Point _toolbarDragStartOffset;
     private bool _hasMovedToolbarByDrag;
     private Point _toolbarCustomOffset;
+    private bool _isDraggingConfirm;
+    private Point _confirmDragStartMouse;
+    private Point _confirmDragStartOffset;
+    private Point _confirmCustomOffset;
     private Point _lastCursorPos;
     private Point _prevCursorPos; // crosshair ghosting fix
     private Rectangle _lastSelectionRect;

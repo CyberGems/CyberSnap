@@ -91,8 +91,8 @@ public sealed partial class RegionOverlayForm
             if (_tooltipVisible)
                 HideToolbarTooltip();
 
-            if (!Cursor.Equals(Cursors.Hand))
-                Cursor = Cursors.Hand;
+            if (!Cursor.Equals(CursorFactory.GrabbingCursor))
+                Cursor = CursorFactory.GrabbingCursor;
 
             int dx = e.Location.X - _toolbarDragStartMouse.X;
             int dy = e.Location.Y - _toolbarDragStartMouse.Y;
@@ -107,6 +107,24 @@ public sealed partial class RegionOverlayForm
                 PositionToolbarForm();
                 UpdateToolbarSurfaceOnly();
             }
+            return;
+        }
+
+        if (_isDraggingConfirm)
+        {
+            if (_tooltipVisible)
+                HideToolbarTooltip();
+
+            if (!Cursor.Equals(CursorFactory.GrabbingCursor))
+                Cursor = CursorFactory.GrabbingCursor;
+
+            int dx = e.Location.X - _confirmDragStartMouse.X;
+            int dy = e.Location.Y - _confirmDragStartMouse.Y;
+
+            _confirmCustomOffset = new Point(_confirmDragStartOffset.X + dx, _confirmDragStartOffset.Y + dy);
+            
+            InvalidateConfirmChromeLayout();
+            Invalidate();
             return;
         }
 
@@ -278,14 +296,14 @@ public sealed partial class RegionOverlayForm
                 }
                 else if (sizePillHover)
                 {
-                    confirmTarget = Cursors.Hand;
+                    confirmTarget = CursorFactory.GrabCursor;
                     if (!Cursor.Equals(confirmTarget))
                         Cursor = confirmTarget;
                     return;
                 }
                 else if (gripHover)
                 {
-                    confirmTarget = Cursors.Hand;
+                    confirmTarget = CursorFactory.GrabCursor;
                 }
                 else if (IsOutsideLockedCaptureFrame(e.Location))
                 {
@@ -324,7 +342,7 @@ public sealed partial class RegionOverlayForm
                                  && HitTestAnnotation(e.Location) < 0
                                  && HitTestAnnotationSurface(e.Location) < 0)))
                 {
-                    confirmTarget = Cursors.Hand;
+                    confirmTarget = CursorFactory.GrabCursor;
                     if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
 
                     if (_hoveredConfirmButton != prevHoveredConfirm)
@@ -1092,6 +1110,13 @@ public sealed partial class RegionOverlayForm
     {
         if (e.Button != MouseButtons.Left) return;
 
+        if (_isDraggingConfirm)
+        {
+            _isDraggingConfirm = false;
+            Cursor = CursorFactory.GrabCursor;
+            return;
+        }
+
         if (_isDraggingToolbar)
         {
             _isDraggingToolbar = false;
@@ -1103,6 +1128,7 @@ public sealed partial class RegionOverlayForm
                     ToggleToolbarPosition();
                 }
             }
+            Cursor = CursorFactory.GrabCursor;
             return;
         }
 
