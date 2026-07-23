@@ -214,9 +214,9 @@ public sealed partial class RegionOverlayForm
             if (firstToolX < 0)
                 firstToolX = _toolbarRect.X + pad + UiChrome.ScaleInt(28);
 
-            float availableBrandWidth = Math.Max(0, firstToolX - _toolbarRect.X);
+            float availableBrandWidth = Math.Max(0, firstToolX - _brandRect.X);
             int tempLogoSz = UiChrome.ScaleInt(10);
-            float tempLx = _toolbarRect.X + pad + UiChrome.ScaleInt(6);
+            float tempLx = _brandRect.X + UiChrome.ScaleInt(6);
             float tempTextX = tempLx + tempLogoSz + UiChrome.ScaleInt(6);
             float tempTextW = firstToolX - tempTextX - UiChrome.ScaleInt(6);
             
@@ -236,10 +236,10 @@ public sealed partial class RegionOverlayForm
                 logoSz = UiChrome.ScaleInt(14); // Enlarged and centered when text is hidden
                 // Keep the logo snug in the brand strip, just left of the first tool.
                 float brandPad = UiChrome.ScaleFloat(6f);
-                lx = _toolbarRect.X + Math.Max(brandPad, (availableBrandWidth - logoSz) / 2f);
+                lx = _brandRect.X + Math.Max(brandPad, (availableBrandWidth - logoSz) / 2f);
                 // Never let the logo drift more than a few px away from the first tool.
                 float maxLx = firstToolX - logoSz - brandPad;
-                if (maxLx >= _toolbarRect.X + brandPad)
+                if (maxLx >= _brandRect.X + brandPad)
                     lx = Math.Min(lx, maxLx);
                 ly = _toolbarRect.Y + pad + (buttonSize - logoSz) / 2f - UiChrome.ScaleFloat(0.5f);
             }
@@ -569,8 +569,58 @@ public sealed partial class RegionOverlayForm
             }
         }
 
+        if (ShowAnnotationChrome && !_annotationGripRect.IsEmpty)
+        {
+            DrawToolbarGripDots(g, _annotationGripRect, UiChrome.AccentColor);
+        }
+        else if (!ShowAnnotationChrome && !_captureGripRect.IsEmpty)
+        {
+            DrawToolbarGripDots(g, _captureGripRect, UiChrome.AccentColor);
+        }
+
         g.SmoothingMode = SmoothingMode.Default;
         g.PixelOffsetMode = PixelOffsetMode.Default;
+    }
+
+    private static void DrawToolbarGripDots(Graphics g, Rectangle rect, Color accent)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0)
+            return;
+
+        float cx = rect.X + rect.Width / 2f;
+        float cy = rect.Y + rect.Height / 2f;
+        float stepX = UiChrome.ScaleFloat(4.2f);
+        float stepY = UiChrome.ScaleFloat(4.2f);
+        float dotRadius = UiChrome.ScaleFloat(1.2f);
+        
+        int alpha = (int)((UiChrome.IsDark ? 0.5f : 0.60f) * 255);
+        using var dotBrush = new SolidBrush(Color.FromArgb(alpha, accent));
+
+        bool horizontal = rect.Width >= rect.Height;
+        if (horizontal)
+        {
+            for (int col = -1; col <= 1; col++)
+            {
+                for (int row = -1; row <= 0; row++)
+                {
+                    float dx = col * stepX;
+                    float dy = (row + 0.5f) * stepY;
+                    g.FillEllipse(dotBrush, cx + dx - dotRadius, cy + dy - dotRadius, dotRadius * 2f, dotRadius * 2f);
+                }
+            }
+        }
+        else
+        {
+            for (int row = -1; row <= 1; row++)
+            {
+                for (int col = -1; col <= 0; col++)
+                {
+                    float dx = (col + 0.5f) * stepX;
+                    float dy = row * stepY;
+                    g.FillEllipse(dotBrush, cx + dx - dotRadius, cy + dy - dotRadius, dotRadius * 2f, dotRadius * 2f);
+                }
+            }
+        }
     }
 
     /// <summary>Path tracing the docked edge of the bar including its two corner arcs, so the neon
