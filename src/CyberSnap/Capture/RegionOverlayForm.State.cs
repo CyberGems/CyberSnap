@@ -2329,7 +2329,8 @@ public sealed partial class RegionOverlayForm
         int gripW = UiChrome.ScaleInt(8);
         int gripGap = UiChrome.ScaleInt(4);
         int gripLen = UiChrome.ScaleInt(16);
-        clusterW += gripW + gripGap;
+        int gripToContentGap = UiChrome.ScaleInt(10);
+        clusterW += gripW + gripToContentGap;
 
         int offset = UiChrome.ScaleInt(12);
         int margin = UiChrome.ScaleInt(10);
@@ -2457,7 +2458,7 @@ public sealed partial class RegionOverlayForm
 
         _confirmGripRect = new Rectangle(clusterLeft, y + (bh - gripLen) / 2, gripW, gripLen);
 
-        int x = clusterLeft + gripW + gripGap;
+        int x = clusterLeft + gripW + gripToContentGap;
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
             _confirmChromeRects[i] = new Rectangle(x, y, widths[i], bh);

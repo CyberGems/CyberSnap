@@ -768,11 +768,12 @@ public sealed partial class RegionOverlayForm : Form
         int gripSize = UiChrome.ScaleInt(8);
         int gripGap = UiChrome.ScaleInt(4);
         int gripLen = UiChrome.ScaleInt(16);
+        int gripToContentGap = UiChrome.ScaleInt(10);
 
         if (IsVerticalDock)
         {
             w = pad * 2 + buttonSize;
-            h = tier1PrimarySpan + gripSize + gripGap;
+            h = tier1PrimarySpan + gripSize + gripToContentGap;
         }
         else
         {
@@ -782,7 +783,7 @@ public sealed partial class RegionOverlayForm : Form
             brandWidth = canShowText
                 ? logoSize + textWidth + UiChrome.ScaleInt(24)
                 : logoSize + UiChrome.ScaleInt(16);
-            w = tier1PrimarySpan + brandWidth + gripSize + gripGap;
+            w = tier1PrimarySpan + brandWidth + gripSize + gripToContentGap;
             h = pad * 2 + buttonSize;
         }
 
@@ -810,9 +811,9 @@ public sealed partial class RegionOverlayForm : Form
         {
             _captureGripRect = new Rectangle(_toolbarRect.X + (_toolbarRect.Width - gripLen) / 2, _toolbarRect.Y + pad, gripLen, gripSize);
             int col1Height = GetToolbarPrimarySpan(_mainBarTools.Length + tier1UtilityCount, tier1SepCount, buttonSize, buttonSpacing, 0);
-            int col1StartY = _toolbarRect.Y + pad + gripSize + gripGap + (_toolbarRect.Height - pad * 2 - gripSize - gripGap - col1Height) / 2;
+            int col1StartY = _toolbarRect.Y + pad + gripSize + gripToContentGap + (_toolbarRect.Height - pad * 2 - gripSize - gripToContentGap - col1Height) / 2;
             int col1X = _toolbarRect.X + pad;
-            _brandRect = new Rectangle(col1X, _toolbarRect.Y + pad + gripSize + gripGap, buttonSize, col1StartY - (_toolbarRect.Y + pad + gripSize + gripGap));
+            _brandRect = new Rectangle(col1X, _toolbarRect.Y + pad + gripSize + gripToContentGap, buttonSize, col1StartY - (_toolbarRect.Y + pad + gripSize + gripToContentGap));
             int actY = _toolbarRect.Y + (_toolbarRect.Height - activatorH) / 2;
             _menuActivatorRect = new Rectangle(_toolbarRect.Right - pad - activatorW, actY, activatorW, activatorH);
 
@@ -833,10 +834,10 @@ public sealed partial class RegionOverlayForm : Form
         {
             int row1Y = _toolbarRect.Y + (h - buttonSize) / 2;
             _captureGripRect = new Rectangle(_toolbarRect.X + pad, row1Y + (buttonSize - gripLen) / 2, gripSize, gripLen);
-            _brandRect = new Rectangle(_toolbarRect.X + pad + gripSize + gripGap, row1Y, brandWidth, buttonSize);
+            _brandRect = new Rectangle(_toolbarRect.X + pad + gripSize + gripToContentGap, row1Y, brandWidth, buttonSize);
 
             int row1Width = GetToolbarPrimarySpan(_mainBarTools.Length + tier1UtilityCount, tier1SepCount, buttonSize, buttonSpacing, 0);
-            int row1StartX = _toolbarRect.X + pad + gripSize + gripGap + (_toolbarRect.Width - pad * 2 - gripSize - gripGap - row1Width - activatorW - activatorSpacing) / 2;
+            int row1StartX = _toolbarRect.X + pad + gripSize + gripToContentGap + (_toolbarRect.Width - pad * 2 - gripSize - gripToContentGap - row1Width - activatorW - activatorSpacing) / 2;
             if (row1StartX < _brandRect.Right)
                 row1StartX = _brandRect.Right;
             int actY = _toolbarRect.Y + (_toolbarRect.Height - activatorH) / 2;
@@ -879,9 +880,10 @@ public sealed partial class RegionOverlayForm : Form
 
         int gripH = UiChrome.ScaleInt(8);
         int gripGap = UiChrome.ScaleInt(4);
+        int gripToContentGap = UiChrome.ScaleInt(10);
 
         int w = pad * 2 + buttonSize;
-        int h = pad + gripH + gripGap + brandStripH + gapBrandToTools + toolsSpan + gapToolsToActivator + activatorH + pad;
+        int h = pad + gripH + gripToContentGap + brandStripH + gapBrandToTools + toolsSpan + gapToolsToActivator + activatorH + pad;
 
         AllocateToolbarButtonMetadata();
 
@@ -940,7 +942,7 @@ public sealed partial class RegionOverlayForm : Form
 
         int gripW = UiChrome.ScaleInt(16);
         _annotationGripRect = new Rectangle(_toolbarRect.X + (_toolbarRect.Width - gripW) / 2, cy, gripW, gripH);
-        cy += gripH + gripGap;
+        cy += gripH + gripToContentGap;
 
         _brandRect = new Rectangle(colX, cy, buttonSize, brandStripH);
         cy += brandStripH + gapBrandToTools;
@@ -1333,7 +1335,7 @@ public sealed partial class RegionOverlayForm : Form
         _confirmDragStart = location;
         _confirmDragOffset = new Point(location.X - _confirmRect.X, location.Y - _confirmRect.Y);
         _confirmDragStartRect = _confirmRect;
-        Cursor = Cursors.Hand;
+        Cursor = CursorFactory.GrabbingCursor;
         HideToolbarTooltip();
         HideConfirmDocksForFrameManip();
     }
