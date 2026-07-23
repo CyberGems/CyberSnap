@@ -785,6 +785,7 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Draw:
                 HideToolbarForCaptureTool();
+                Invalidate(GetCursorChipRect(e.Location));
                 _isSelecting = true;
                 _currentStroke = new List<Point> { e.Location };
                 break;

@@ -1372,6 +1372,60 @@ public sealed partial class RegionOverlayForm
     private bool HasConfirmAnnotations() => _undoStack.Count > 0;
 
     /// <summary>
+    /// Shows a themed confirm over the TopMost capture overlay without the overlay
+    /// stealing focus back, centered on the locked frame's monitor.
+    /// </summary>
+    private bool ShowOverlayConfirm(
+        string title,
+        string message,
+        string primaryText,
+        string secondaryText,
+        string? iconId,
+        bool danger = true)
+    {
+        bool prevAllowDeactivation = _allowDeactivation;
+        _allowDeactivation = true;
+        try
+        {
+            var anchorClient = _confirmRect.Width > 0 && _confirmRect.Height > 0
+                ? new Point(
+                    _confirmRect.X + Math.Max(0, _confirmRect.Width / 2),
+                    _confirmRect.Y + Math.Max(0, _confirmRect.Height / 2))
+                : new Point(ClientSize.Width / 2, ClientSize.Height / 2);
+            UI.PopupWindowHelper.SetMonitorHintPoint(new Point(
+                _virtualBounds.X + anchorClient.X,
+                _virtualBounds.Y + anchorClient.Y));
+
+            return UI.ThemedConfirmDialog.Confirm(
+                Handle,
+                title,
+                message,
+                primaryText,
+                secondaryText,
+                danger,
+                iconId);
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            UI.PopupWindowHelper.ClearMonitorHintPoint();
+            _allowDeactivation = prevAllowDeactivation;
+            if (!_allowDeactivation && Visible && !IsDisposed && !Disposing)
+            {
+                try
+                {
+                    Activate();
+                    Focus();
+                }
+                catch { }
+            }
+        }
+    }
+
+    /// <summary>
     /// Retry / reselect: with annotations, ask first. Without, leave confirm immediately.
     /// </summary>
     private void RequestRetrySelection()
@@ -1381,22 +1435,13 @@ public sealed partial class RegionOverlayForm
 
         if (HasConfirmAnnotations())
         {
-            bool ok = false;
-            try
-            {
-                ok = UI.ThemedConfirmDialog.Confirm(
-                    Handle,
-                    LocalizationService.Translate("Retry selection?"),
-                    LocalizationService.Translate("This will discard the annotations on this capture."),
-                    LocalizationService.Translate("Retry"),
-                    LocalizationService.Translate("Cancel"),
-                    danger: true,
-                    iconId: "redo");
-            }
-            catch
-            {
-                ok = false;
-            }
+            bool ok = ShowOverlayConfirm(
+                LocalizationService.Translate("Retry selection?"),
+                LocalizationService.Translate("This will discard the annotations on this capture."),
+                LocalizationService.Translate("Retry"),
+                LocalizationService.Translate("Cancel"),
+                iconId: "redo",
+                danger: true);
             if (!ok)
                 return;
         }
@@ -1909,49 +1954,20 @@ public sealed partial class RegionOverlayForm
 
     private void ConfirmAndCancelCapture()
     {
-        if (_undoStack.Count > 0)
+        if (HasConfirmAnnotations())
         {
-            var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 220);
-            menu.Font = UiChrome.ChromeFont(11.0f);
-            _confirmContextMenu = menu;
-            menu.Closed += (s, e) => {
-                _lastContextMenuClosedTime = DateTime.UtcNow;
-                _lastContextMenuBtnIndex = -99;
-                _confirmContextMenu = null;
-            };
-
-            var titleLabel = new ToolStripLabel(LocalizationService.Translate("Annotations will be lost"))
-            {
-                ForeColor = UiChrome.SurfaceTextMuted,
-                Font = UiChrome.ChromeFont(9f),
-                Padding = new System.Windows.Forms.Padding(10, 8, 0, 2),
-                AutoSize = true,
-            };
-            menu.Items.Add(titleLabel);
-            menu.Items.Add(new ToolStripSeparator());
-
-            var yesItem = WindowsMenuRenderer.Item(
+            bool ok = ShowOverlayConfirm(
+                LocalizationService.Translate("Cancel capture?"),
+                LocalizationService.Translate("This will discard the annotations on this capture."),
                 LocalizationService.Translate("Confirm cancellation"),
-                iconId: "signOut",
-                danger: true,
-                iconSize: 24);
-            yesItem.Click += (_, _) => Cancel();
-            menu.Items.Add(yesItem);
-
-            var noItem = WindowsMenuRenderer.Item(
                 LocalizationService.Translate("Continue selection"),
-                iconId: "check",
-                iconSize: 24);
-            noItem.Click += (_, _) => menu.Close();
-            menu.Items.Add(noItem);
+                iconId: "signOut",
+                danger: true);
+            if (!ok)
+                return;
+        }
 
-            WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 44);
-            menu.Show(System.Windows.Forms.Cursor.Position);
-        }
-        else
-        {
-            Cancel();
-        }
+        Cancel();
     }
 
     private const float ConfirmPressDurationMs = 160f;

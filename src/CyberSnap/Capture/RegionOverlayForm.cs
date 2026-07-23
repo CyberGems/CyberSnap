@@ -1359,7 +1359,8 @@ public sealed partial class RegionOverlayForm : Form
             GetConfirmReadoutAvoidRects(),
             showGrip);
 
-        if (!showGrip && !_confirmRect.IsEmpty)
+        bool isPickOrNonAnnot = _mode == CaptureMode.Move || !ToolDef.IsAnnotationTool(_mode);
+        if (!showGrip && isPickOrNonAnnot && !_confirmRect.IsEmpty)
         {
             int d = UiChrome.ScaleInt(36);
             _centerMoveGripRect = new Rectangle(
