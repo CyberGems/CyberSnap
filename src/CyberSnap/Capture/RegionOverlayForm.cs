@@ -132,6 +132,9 @@ public sealed partial class RegionOverlayForm : Form
     private bool _hoveredConfirmSizeReadout;
     private Rectangle _centerMoveGripRect = Rectangle.Empty;
     private bool _hoveredCenterMoveGrip;
+    private float _centerMoveGripOpacity = 0f;
+    private float _centerMoveGripTargetOpacity = 0f;
+    private System.Windows.Forms.Timer? _centerMoveGripAnimTimer;
     /// <summary>Throttle layered-toolbar presents while the capture frame is being dragged.</summary>
     private DateTime _lastConfirmDragToolbarPresentUtc = DateTime.MinValue;
     /// <summary>
@@ -584,6 +587,25 @@ public sealed partial class RegionOverlayForm : Form
         _pickerTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
         _pickerTimer.Tick += OnPickerTick;
         if (_mode == CaptureMode.ColorPicker) _pickerTimer.Start();
+
+        _centerMoveGripAnimTimer = new System.Windows.Forms.Timer { Interval = 16 };
+        _centerMoveGripAnimTimer.Tick += (s, e) => {
+            float step = 0.1f; // ~160ms transition
+            if (_centerMoveGripOpacity < _centerMoveGripTargetOpacity)
+            {
+                _centerMoveGripOpacity = Math.Min(_centerMoveGripTargetOpacity, _centerMoveGripOpacity + step);
+                InvalidateCenterGrip();
+            }
+            else if (_centerMoveGripOpacity > _centerMoveGripTargetOpacity)
+            {
+                _centerMoveGripOpacity = Math.Max(_centerMoveGripTargetOpacity, _centerMoveGripOpacity - step);
+                InvalidateCenterGrip();
+            }
+            else
+            {
+                _centerMoveGripAnimTimer.Stop();
+            }
+        };
         InitHoverHoldTimer();
 
         _autoDetectTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
@@ -1353,6 +1375,14 @@ public sealed partial class RegionOverlayForm : Form
 
     private bool HitTestConfirmSizeReadout(Point p)
         => !_confirmSizeReadoutGripRect.IsEmpty && _confirmSizeReadoutGripRect.Contains(p);
+
+    private void InvalidateCenterGrip()
+    {
+        if (!_centerMoveGripRect.IsEmpty)
+        {
+            Invalidate(InflateForRepaint(_centerMoveGripRect, UiChrome.ScaleInt(4)));
+        }
+    }
 
     private void BeginConfirmFrameDrag(Point location)
     {

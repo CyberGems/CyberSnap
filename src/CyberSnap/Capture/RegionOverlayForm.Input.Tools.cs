@@ -266,6 +266,19 @@ public sealed partial class RegionOverlayForm
                 int prevHoveredConfirm = _hoveredConfirmButton;
                 _hoveredConfirmButton = -1;
 
+                bool insideFrame = _confirmRect.Contains(e.Location);
+                bool shouldShow = insideFrame
+                    && _isConfirmingSelection
+                    && !HasConfirmAnnotations()
+                    && (_mode == CaptureMode.Move || !ToolDef.IsAnnotationTool(_mode));
+
+                float targetOpacity = shouldShow ? 1f : 0f;
+                if (_centerMoveGripTargetOpacity != targetOpacity)
+                {
+                    _centerMoveGripTargetOpacity = targetOpacity;
+                    _centerMoveGripAnimTimer?.Start();
+                }
+
                 System.Windows.Forms.Cursor confirmTarget = Cursors.Default;
                 int ch = HitTestConfirmHandle(e.Location);
                 int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
@@ -1458,6 +1471,11 @@ public sealed partial class RegionOverlayForm
             _lastAutoDetectRect = Rectangle.Empty;
             _autoDetectRect = Rectangle.Empty;
             _autoDetectActive = false;
+            if (_centerMoveGripTargetOpacity != 0f)
+            {
+                _centerMoveGripTargetOpacity = 0f;
+                _centerMoveGripAnimTimer?.Start();
+            }
             Invalidate();
             RefreshToolbar();
         }
