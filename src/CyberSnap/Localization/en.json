@@ -1904,5 +1904,17 @@
   "Click × to remove {0} from the confirm bar.": "Click × to remove {0} from the confirm bar.",
   "Gallery: saves the capture to disk, then opens it in Gallery (hotkey G).": "Gallery: saves the capture to disk, then opens it in Gallery (hotkey G).",
   "Saves the capture to disk, then opens Gallery on that file": "Saves the capture to disk, then opens Gallery on that file",
-  "Save the capture and open it in Gallery when confirming.": "Gallery: saves the capture to disk, then opens it in Gallery (hotkey G)."
+  "Save the capture and open it in Gallery when confirming.": "Gallery: saves the capture to disk, then opens it in Gallery (hotkey G).",
+  "Done": "Done",
+  "Preview": "Preview",
+  "Image": "Image",
+  "Scroll": "Scroll",
+  "Show labels on buttons": "Show labels on buttons",
+  "Show preview after capture": "Show preview after capture",
+  "Capture as Image": "Capture as Image",
+  "Extract Text (OCR)": "Extract Text (OCR)",
+  "Record Video": "Record Video",
+  "Record GIF": "Record GIF",
+  "Scrolling Capture": "Scrolling Capture",
+  "Scan QR & Barcode": "Scan QR & Barcode"
 }

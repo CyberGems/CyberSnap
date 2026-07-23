@@ -2060,5 +2060,17 @@
   "Show labels on destination buttons": "Mostrar etiquetas en los botones de destino",
   "Cancel and Retry stay fixed. Use × on a button to remove it; use + in the tray to add it back.": "Cancelar y Reintentar quedan fijos. Usa × en un botón para quitarlo; usa + en la bandeja para devolverlo.",
   "Restore the default destination button layout.": "Restaura el diseño predeterminado de botones de destino.",
-  "Show brief status alerts such as \"Video recorded\" or \"Encoding, please wait...\". Confirm destination buttons are designed separately.": "Mostrar avisos de estado breves como \"Vídeo grabado\" o \"Codificando, por favor espera...\". Los botones de destino se diseñan aparte."
+  "Show brief status alerts such as \"Video recorded\" or \"Encoding, please wait...\". Confirm destination buttons are designed separately.": "Mostrar avisos de estado breves como \"Vídeo grabado\" o \"Codificando, por favor espera...\". Los botones de destino se diseñan aparte.",
+  "Done": "Listo",
+  "Preview": "Vista previa",
+  "Image": "Imagen",
+  "Scroll": "Desplazamiento",
+  "Show labels on buttons": "Mostrar etiquetas en los botones",
+  "Show preview after capture": "Mostrar vista previa después de capturar",
+  "Capture as Image": "Capturar como imagen",
+  "Extract Text (OCR)": "Extraer texto (OCR)",
+  "Record Video": "Grabar video",
+  "Record GIF": "Grabar GIF",
+  "Scrolling Capture": "Captura con desplazamiento",
+  "Scan QR & Barcode": "Escanear QR y código de barras"
 }

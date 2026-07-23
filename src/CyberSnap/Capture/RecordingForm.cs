@@ -102,7 +102,8 @@ public sealed partial class RecordingForm : Form
                          bool recordDesktop = false, string? desktopDeviceId = null,
                          bool showMagnifier = false,
                          bool openVideoTrimmerAfterCapture = false,
-                         Action<string>? onGifEncodedForTrimmer = null)
+                         Action<string>? onGifEncodedForTrimmer = null,
+                         Rectangle? initialSelection = null)
     {
         CyberSnap.UI.Theme.Refresh();
         _screenshot = screenshot;
@@ -120,6 +121,11 @@ public sealed partial class RecordingForm : Form
         _showMagnifier = showMagnifier;
         _openTrimmerAfterCapture = openVideoTrimmerAfterCapture;
         _onGifEncodedForTrimmer = onGifEncodedForTrimmer;
+        if (initialSelection.HasValue)
+        {
+            _selection = initialSelection.Value;
+            _state = State.PreRecording;
+        }
         if (_showMagnifier && screenshot is not null)
         {
             _magHelper = new CaptureMagnifierHelper();
@@ -133,7 +139,7 @@ public sealed partial class RecordingForm : Form
         Bounds = new Rectangle(virtualBounds.X, virtualBounds.Y, virtualBounds.Width, virtualBounds.Height);
         Cursor = CursorFactory.PrecisionCursor;
         BackColor = UiChrome.SurfaceWindowBackground;
-        if (screenshot is null)
+        if (screenshot is null && _state == State.Selecting)
         {
             Opacity = 0.01;
             var adornerAccent = _format == Models.RecordingFormat.GIF ? Color.FromArgb(255, 140, 0) : UiChrome.AccentColor;
@@ -202,6 +208,11 @@ public sealed partial class RecordingForm : Form
 
             WindowDetector.ClearSnapshot();
             Task.Run(() => WindowDetector.SnapshotWindows(new Rectangle(_virtualBounds.X, _virtualBounds.Y, _virtualBounds.Width, _virtualBounds.Height)));
+        }
+
+        if (_state == State.PreRecording)
+        {
+            PrepareRecording();
         }
     }
 

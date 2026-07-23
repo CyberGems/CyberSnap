@@ -269,6 +269,13 @@ public sealed partial class RegionOverlayForm
                         bool hover = _hoveredConfirmButton == i;
                         bool disabled = IsConfirmChromeDisabled(kind);
                         float press = (!disabled && _pressedConfirmButton == i) ? _confirmPressAmt : 0f;
+
+                        if (kind == ConfirmChromeKind.TogglePreview)
+                        {
+                            DrawConfirmTogglePreview(g, btn, hover, press, 1f);
+                            continue;
+                        }
+
                         // Per-button shine only while that button is hovered (never group dim/shine).
                         float shine = !disabled && shineOn && hover && i < ConfirmShineSlots ? _shinePhase[i] : -1f;
                         float main = 1f;
@@ -300,16 +307,18 @@ public sealed partial class RegionOverlayForm
                         string label = ConfirmChromeDrawLabel(kind);
 
                         DrawConfirmActionPill(g, btn, color, label, btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
-                            hasShine: !disabled && hover, fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest);
+                            hasShine: !disabled && hover, fluentIconId: fluentIcon, accent: activeColor, isPrimary: isPrimaryDest, kind: kind);
                     }
 
-                    if (!_confirmChromeSeparatorRect.IsEmpty)
+                    Color sep = UiChrome.IsDark
+                        ? Color.FromArgb(90, 255, 255, 255)
+                        : Color.FromArgb(90, 0, 0, 0);
+                    using (var sepBrush = new SolidBrush(sep))
                     {
-                        Color sep = UiChrome.IsDark
-                            ? Color.FromArgb(90, 255, 255, 255)
-                            : Color.FromArgb(90, 0, 0, 0);
-                        using var sepBrush = new SolidBrush(sep);
-                        g.FillRectangle(sepBrush, _confirmChromeSeparatorRect);
+                        if (!_confirmChromeSeparatorRect1.IsEmpty)
+                            g.FillRectangle(sepBrush, _confirmChromeSeparatorRect1);
+                        if (!_confirmChromeSeparatorRect2.IsEmpty)
+                            g.FillRectangle(sepBrush, _confirmChromeSeparatorRect2);
                     }
                 }
             }
@@ -345,18 +354,19 @@ public sealed partial class RegionOverlayForm
     /// <summary>Accent used for pill face tint, outer glow, outline, and traveling shine.</summary>
     private static Color ConfirmChromeAccent(ConfirmChromeKind kind, bool isPrimary)
     {
-        // Kind color is the source of truth; primary is emphasized via outline/glow, not a forced green.
         _ = isPrimary;
         return kind switch
         {
-            ConfirmChromeKind.Retry => Color.FromArgb(160, 160, 160),   // neutral gray
-            ConfirmChromeKind.Cancel => UiChrome.SurfaceDanger,          // reddish (danger)
-            ConfirmChromeKind.Save => Color.FromArgb(34, 197, 94),       // green
-            ConfirmChromeKind.Copy => Color.FromArgb(0, 162, 255),       // accent blue
-            ConfirmChromeKind.Edit => Color.FromArgb(139, 92, 246),      // violet
-            ConfirmChromeKind.Share => Color.FromArgb(6, 182, 212),      // cyan
-            ConfirmChromeKind.History => Color.FromArgb(245, 158, 11),   // amber (Gallery)
-            ConfirmChromeKind.OcrExtract => Color.FromArgb(34, 197, 94), // green
+            ConfirmChromeKind.Retry => Color.FromArgb(160, 160, 160),      // neutral gray
+            ConfirmChromeKind.Cancel => UiChrome.SurfaceDanger,             // reddish (danger)
+            ConfirmChromeKind.Done => Color.FromArgb(34, 197, 94),          // green
+            ConfirmChromeKind.TogglePreview => Color.FromArgb(0, 162, 255), // accent blue
+            ConfirmChromeKind.ModeImage => Color.FromArgb(0, 162, 255),     // accent blue
+            ConfirmChromeKind.ModeOcr => Color.FromArgb(139, 92, 246),       // violet
+            ConfirmChromeKind.ModeVideo => Color.FromArgb(239, 68, 68),     // red
+            ConfirmChromeKind.ModeGif => Color.FromArgb(249, 115, 22),       // orange
+            ConfirmChromeKind.ModeScroll => Color.FromArgb(6, 182, 212),     // cyan
+            ConfirmChromeKind.ModeQr => Color.FromArgb(245, 158, 11),        // amber
             _ => Color.FromArgb(0, 162, 255)
         };
     }
@@ -485,7 +495,7 @@ public sealed partial class RegionOverlayForm
         Graphics g, Rectangle rect, Color baseColor, string label, Font font,
         bool hover, int iconType, float pressAmt, float shinePhase, float shineMain, float shineDup,
         float opacity, bool hasShine, string? fluentIconId = null, Color? accent = null,
-        bool isPrimary = false)
+        bool isPrimary = false, ConfirmChromeKind kind = ConfirmChromeKind.Done)
     {
         float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
         Color accentColor = accent ?? baseColor;
@@ -494,11 +504,12 @@ public sealed partial class RegionOverlayForm
         var face = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
 
         // Background:
-        // Idle: transparent. Hovered: flat low-opacity accent fill (like annotation tools on hover).
-        if (hover)
+        // Idle: transparent. Hovered or selected: flat low-opacity accent fill.
+        bool isSelectedMode = (kind == ConfirmChromeKind.ModeImage);
+        if (hover || isSelectedMode)
         {
             using (var path = WindowsDockRenderer.RoundedRect(face, corner))
-            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 20 : 16, accentColor)))
+            using (var brush = new SolidBrush(Color.FromArgb(isSelectedMode ? (UiChrome.IsDark ? 36 : 28) : (UiChrome.IsDark ? 20 : 16), accentColor)))
                 g.FillPath(brush, path);
         }
 
@@ -557,7 +568,7 @@ public sealed partial class RegionOverlayForm
         float stroke = string.IsNullOrEmpty(label) ? UiChrome.ScaleFloat(1.5f) : UiChrome.ScaleFloat(2f);
         Color baseIconColor = (accentColor.ToArgb() == UiChrome.SurfaceDanger.ToArgb())
             ? UiChrome.SurfaceDanger
-            : UiChrome.SurfaceTextPrimary;
+            : (kind == ConfirmChromeKind.Done ? Color.FromArgb(34, 197, 94) : UiChrome.SurfaceTextPrimary);
         Color iconColor = Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), baseIconColor);
 
         if (useFluent)
@@ -1339,6 +1350,81 @@ public sealed partial class RegionOverlayForm
         return new PointF(
             pivot.X + dx * c - dy * s,
             pivot.Y + dx * s + dy * c);
+    }
+
+    private void DrawConfirmTogglePreview(Graphics g, Rectangle rect, bool hover, float pressAmt, float opacity)
+    {
+        var settings = Services.SettingsService.LoadStatic() ?? new AppSettings();
+        bool showPreview = settings.ShowCapturePreview;
+
+        float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
+        var face = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
+
+        if (hover)
+        {
+            using (var path = WindowsDockRenderer.RoundedRect(face, corner))
+            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 20 : 16, UiChrome.AccentColor)))
+                g.FillPath(brush, path);
+        }
+
+        string label = ConfirmChromeShortLabel(ConfirmChromeKind.TogglePreview);
+        using var font = CreateConfirmButtonFont();
+        using var sf = new StringFormat(StringFormat.GenericTypographic)
+        {
+            Alignment = StringAlignment.Near,
+            LineAlignment = StringAlignment.Center,
+            FormatFlags = StringFormatFlags.NoWrap | StringFormatFlags.NoClip,
+            Trimming = StringTrimming.None
+        };
+        
+        SizeF textSize = g.MeasureString(label, font, new SizeF(10000f, face.Height), sf);
+        int trackW = UiChrome.ScaleInt(34);
+        int trackH = UiChrome.ScaleInt(18);
+        int gap = UiChrome.ScaleInt(8);
+
+        float groupW = textSize.Width + gap + trackW;
+        float startX = face.X + (face.Width - groupW) / 2f;
+
+        Color textColor = UiChrome.SurfaceTextPrimary;
+        using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), textColor)))
+        {
+            var textRect = new RectangleF(startX, face.Y, textSize.Width + 1f, face.Height);
+            g.DrawString(label, font, textBrush, textRect, sf);
+        }
+
+        float trackX = startX + textSize.Width + gap;
+        float trackY = face.Y + (face.Height - trackH) / 2f;
+        var trackRect = new RectangleF(trackX, trackY, trackW, trackH);
+        float trackCorner = trackH * 0.5f;
+
+        Color trackBgColor = showPreview 
+            ? UiChrome.AccentColor 
+            : (UiChrome.IsDark ? Color.FromArgb(42, 42, 42) : Color.FromArgb(200, 200, 200));
+        Color trackBorderColor = showPreview
+            ? UiChrome.AccentColor
+            : (UiChrome.IsDark ? Color.FromArgb(68, 68, 68) : Color.FromArgb(160, 160, 160));
+
+        using (var path = WindowsDockRenderer.RoundedRect(trackRect, trackCorner))
+        {
+            using (var brush = new SolidBrush(Color.FromArgb((int)(255 * opacity), trackBgColor)))
+                g.FillPath(brush, path);
+            using (var pen = new Pen(Color.FromArgb((int)(255 * opacity), trackBorderColor), 1f))
+                g.DrawPath(pen, path);
+        }
+
+        int thumbSz = UiChrome.ScaleInt(12);
+        float thumbX = showPreview 
+            ? (trackRect.Right - thumbSz - UiChrome.ScaleInt(3)) 
+            : (trackRect.Left + UiChrome.ScaleInt(3));
+        float thumbY = trackRect.Y + (trackRect.Height - thumbSz) / 2f;
+        var thumbRect = new RectangleF(thumbX, thumbY, thumbSz, thumbSz);
+
+        Color thumbColor = showPreview 
+            ? Color.White 
+            : (UiChrome.IsDark ? Color.FromArgb(136, 136, 136) : Color.FromArgb(100, 100, 100));
+
+        using (var brush = new SolidBrush(Color.FromArgb((int)(255 * opacity), thumbColor)))
+            g.FillEllipse(brush, thumbRect);
     }
 
 }
