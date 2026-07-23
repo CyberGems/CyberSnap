@@ -58,10 +58,58 @@ internal static class PopupWindowHelper
     public static void CenterOnCurrentScreen(Window window)
     {
         var wa = GetCurrentWorkArea();
-        var width = double.IsNaN(window.Width) ? window.ActualWidth : window.Width;
-        var height = double.IsNaN(window.Height) ? window.ActualHeight : window.Height;
+        // Prefer Actual* once laid out — Width/Height can disagree with LayoutTransform / SizeToContent.
+        var width = window.ActualWidth > 0 ? window.ActualWidth
+            : (double.IsNaN(window.Width) ? 0 : window.Width);
+        var height = window.ActualHeight > 0 ? window.ActualHeight
+            : (double.IsNaN(window.Height) ? 0 : window.Height);
+        if (width <= 0 || height <= 0)
+            return;
         window.Left = wa.Left + (wa.Width - width) / 2;
         window.Top = wa.Top + (wa.Height - height) / 2;
+    }
+
+    /// <summary>
+    /// Centers a shown window on the monitor under the hint point / cursor using physical
+    /// pixels via SetWindowPos. Avoids WPF DIP rounding drift on mixed-DPI multi-monitor setups.
+    /// Consumes <see cref="SetMonitorHintPoint"/> if one was set.
+    /// </summary>
+    public static void CenterWindowOnPhysicalMonitor(Window window)
+    {
+        var helper = new WindowInteropHelper(window);
+        var hwnd = helper.Handle;
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        window.UpdateLayout();
+        if (!User32.GetWindowRect(hwnd, out var wr))
+            return;
+
+        var anchor = _monitorHintPoint ?? System.Windows.Forms.Cursor.Position;
+        _monitorHintPoint = null;
+
+        var screen = Screen.FromPoint(anchor);
+        System.Drawing.Rectangle work;
+        if (TryGetNativeMonitorInfo(screen, out _, out var nativeWork) && !nativeWork.IsEmpty)
+            work = nativeWork;
+        else
+            work = screen.WorkingArea;
+
+        int dlgW = wr.Right - wr.Left;
+        int dlgH = wr.Bottom - wr.Top;
+        if (dlgW <= 0 || dlgH <= 0)
+            return;
+
+        int x = work.Left + Math.Max(0, (work.Width - dlgW) / 2);
+        int y = work.Top + Math.Max(0, (work.Height - dlgH) / 2);
+        User32.SetWindowPos(
+            hwnd,
+            IntPtr.Zero,
+            x,
+            y,
+            0,
+            0,
+            User32.SWP_NOSIZE | User32.SWP_NOZORDER | User32.SWP_NOACTIVATE);
     }
 
     public static void ApplyNoActivateChrome(Window window)

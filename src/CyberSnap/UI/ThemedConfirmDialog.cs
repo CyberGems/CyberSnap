@@ -77,6 +77,10 @@ internal sealed class ThemedConfirmDialog : Window
         var content = BuildContent(title, message, primaryText, secondaryText, kind, iconId, showSuppressCheck);
         Content = content;
         UiScale.ApplyToWindow(this, content, scaleWindowBounds: true);
+        // ApplyToWindow floors MinHeight at 240 for large windows; this dialog is SizeToContent
+        // and that floor leaves empty space below the panel (looks shifted up on high-DPI).
+        ClearValue(MinWidthProperty);
+        ClearValue(MinHeightProperty);
 
         PreviewKeyDown += (_, e) =>
         {
@@ -639,6 +643,8 @@ internal sealed class ThemedConfirmDialog : Window
                 owner.WindowState = WindowState.Normal;
             dialog.Owner = owner;
             dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            if (owner.Topmost)
+                dialog.Topmost = true;
             return;
         }
 
@@ -652,7 +658,54 @@ internal sealed class ThemedConfirmDialog : Window
             User32.ShowWindow(ownerHandle, User32.SW_RESTORE);
 
         new WindowInteropHelper(dialog).Owner = ownerHandle;
-        dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+
+        // TopMost WinForms owners (capture overlay) do not automatically keep a WPF owned
+        // window above them — pin the dialog so it stays clickable.
+        int exStyle = User32.GetWindowLongA(ownerHandle, User32.GWL_EXSTYLE);
+        if ((exStyle & User32.WS_EX_TOPMOST) != 0)
+            dialog.Topmost = true;
+
+        // CenterOwner on a multi-monitor spanning overlay lands between/on the wrong display.
+        // Center in physical pixels on the hinted / cursor monitor (DPI-safe).
+        if (OwnerSpansMultipleMonitors(ownerHandle))
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.Manual;
+            dialog.Loaded += (_, _) =>
+            {
+                try { PopupWindowHelper.CenterWindowOnPhysicalMonitor(dialog); }
+                catch { /* keep whatever position we have */ }
+            };
+        }
+        else
+        {
+            dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+    }
+
+    private static bool OwnerSpansMultipleMonitors(IntPtr ownerHandle)
+    {
+        try
+        {
+            if (!User32.GetWindowRect(ownerHandle, out var rect))
+                return false;
+
+            var bounds = rect.ToRectangle();
+            int hits = 0;
+            foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+            {
+                if (!screen.Bounds.IntersectsWith(bounds))
+                    continue;
+                hits++;
+                if (hits > 1)
+                    return true;
+            }
+        }
+        catch
+        {
+            // Fall through — treat as single-monitor.
+        }
+
+        return false;
     }
 
     private static DropShadowEffect Glow(WpfColor color, double blur, double opacity) => new()

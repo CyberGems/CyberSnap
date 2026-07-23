@@ -508,7 +508,8 @@ public sealed partial class RecordingForm : Form
                 _selection,
                 _readoutFont,
                 ClientRectangle,
-                null);
+                null,
+                accentOverride: selAccent);
         }
         else if (_autoDetectActive && !_autoDetectRect.IsEmpty)
         {
@@ -570,7 +571,8 @@ public sealed partial class RecordingForm : Form
                 _recordRegion,
                 _readoutFont,
                 ClientRectangle,
-                null);
+                null,
+                accentOverride: accentColor);
         }
     }
 

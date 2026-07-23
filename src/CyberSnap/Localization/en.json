@@ -131,6 +131,7 @@
   "Hold to switch tool": "Hold to switch tool",
   "Drag inside the frame to annotate · Right-click for more options": "Drag inside the frame to annotate · Right-click for more options",
   "Retry selection?": "Retry selection?",
+  "Cancel capture?": "Cancel capture?",
   "This will discard the annotations on this capture.": "This will discard the annotations on this capture.",
   "Right-click to hide": "Right-click to hide",
   "Extract text (OCR)": "Extract text (OCR)",
