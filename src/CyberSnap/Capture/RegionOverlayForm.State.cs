@@ -299,6 +299,12 @@ public sealed partial class RegionOverlayForm
         if (!overDock)
             return null;
 
+        if ((ShowAnnotationChrome && !_annotationGripRect.IsEmpty && _annotationGripRect.Contains(location))
+            || (!ShowAnnotationChrome && !_captureGripRect.IsEmpty && _captureGripRect.Contains(location)))
+        {
+            return Cursors.Hand;
+        }
+
         if (_menuActivatorRect.Contains(location))
             return Cursors.Hand;
 
@@ -306,9 +312,9 @@ public sealed partial class RegionOverlayForm
         if (IsPointInBrandClickArea(location))
             return Cursors.Hand;
 
-        // Dedicated drag zone (around branding or Move button) -> Grab cursor.
+        // Dedicated drag zone (around branding or Move button) -> Hand cursor.
         if (IsPointInToolbarDragArea(location))
-            return CursorFactory.GrabCursor;
+            return Cursors.Hand;
 
         int btn = GetToolbarButtonAt(location);
         if (btn >= 0)
@@ -2318,6 +2324,11 @@ public sealed partial class RegionOverlayForm
                 clusterW += GapBeforeConfirmChromeIndex(i, gap, groupGap);
         }
 
+        int gripW = UiChrome.ScaleInt(8);
+        int gripGap = UiChrome.ScaleInt(4);
+        int gripLen = UiChrome.ScaleInt(16);
+        clusterW += gripW + gripGap;
+
         int offset = UiChrome.ScaleInt(12);
         int margin = UiChrome.ScaleInt(10);
         int cursorGap = UiChrome.ScaleInt(10);
@@ -2442,7 +2453,9 @@ public sealed partial class RegionOverlayForm
         if (_confirmChromeRects.Length != _confirmChromeKinds.Length)
             _confirmChromeRects = new Rectangle[_confirmChromeKinds.Length];
 
-        int x = clusterLeft;
+        _confirmGripRect = new Rectangle(clusterLeft, y + (bh - gripLen) / 2, gripW, gripLen);
+
+        int x = clusterLeft + gripW + gripGap;
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
             _confirmChromeRects[i] = new Rectangle(x, y, widths[i], bh);
@@ -2497,7 +2510,8 @@ public sealed partial class RegionOverlayForm
         {
             int padX = UiChrome.ScaleInt(10);
             int padY = UiChrome.ScaleInt(8);
-            _confirmChromeWrapperRect = Rectangle.Inflate(pillUnion, padX, padY);
+            var union = Rectangle.Union(_confirmGripRect, pillUnion);
+            _confirmChromeWrapperRect = Rectangle.Inflate(union, padX, padY);
         }
     }
 
