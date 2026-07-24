@@ -10,7 +10,7 @@
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
-        Topmost="True"
+        Topmost="False"
         Icon="pack://application:,,,/Assets/Icons/CyberSnap.ico"
         PreviewKeyDown="Window_PreviewKeyDown">
 
@@ -62,6 +62,8 @@
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <controls:CyberSnapTitleBar x:Name="TitleBar" Grid.Row="0"
@@ -71,7 +73,7 @@
                                       PinRequested="TitleBar_PinRequested"/>
 
             <!-- Image Preview Box -->
-            <Border Grid.Row="1" Margin="14,2,14,0" CornerRadius="8" Padding="6"
+            <Border Grid.Row="1" Margin="14,2,14,8" CornerRadius="8" Padding="6"
                     Background="{DynamicResource ThemeInputBackgroundBrush}"
                     BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
                 <Grid ClipToBounds="True">
@@ -80,55 +82,100 @@
                 </Grid>
             </Border>
 
-            <!-- Buttons bar -->
-            <Grid Grid.Row="2" Margin="14,12,14,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+            <!-- After capture active options bar (bottom bar above action buttons) -->
+            <Border Grid.Row="2" Margin="14,0,14,0" Padding="10,6" CornerRadius="8"
+                    Background="{DynamicResource ThemeCardBrush}"
+                    BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- Dest buttons -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Button x:Name="SaveBtn" Click="SaveBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
+                    <DockPanel Grid.Column="0" LastChildFill="True" VerticalAlignment="Center">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Image x:Name="AfterCaptureHeaderIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="AfterCaptureHeaderLabel" Text="Automatic actions:" FontSize="11.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <WrapPanel x:Name="AfterCapturePillsPanel" Orientation="Horizontal" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <!-- Edit options button (opens Settings on Captura tab) -->
+                    <Button x:Name="EditAfterCaptureSettingsBtn" Grid.Column="1" Click="EditAfterCaptureSettingsBtn_Click"
+                            Style="{StaticResource PreviewActionButton}" Height="26" Padding="8,0" Margin="8,0,0,0" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image x:Name="SaveIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="SaveText" Text="Save" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                            <Image x:Name="EditSettingsBtnIcon" Width="12" Height="12" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="EditSettingsBtnText" Text="Edit" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="CopyBtn" Click="CopyBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image x:Name="CopyIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="CopyText" Text="Copy" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="EditBtn" Click="EditBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image x:Name="EditIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="EditText" Text="Edit" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="ShareBtn" Click="ShareBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image x:Name="ShareIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="ShareText" Text="Share" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="GalleryBtn" Click="GalleryBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Image x:Name="GalleryIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="GalleryText" Text="Gallery" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
-                        </StackPanel>
-                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Optional actions bar -->
+            <StackPanel Grid.Row="3" Margin="14,12,14,0">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock x:Name="OptionalActionsHeaderLabel" Text="Optional actions" FontSize="11.5" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"
+                               ToolTip="Buttons covered by an active automatic action are disabled."
+                               TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- Cancel button -->
-                <Button Grid.Column="1" x:Name="CancelBtn" Click="CancelBtn_Click" Style="{StaticResource PreviewCancelButton}" MinWidth="95" Height="32">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="CancelText" Text="Cancel" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                    <!-- Dest buttons -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Button x:Name="SaveBtn" Click="SaveBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image x:Name="SaveIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="SaveText" Text="Save" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="CopyBtn" Click="CopyBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image x:Name="CopyIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="CopyText" Text="Copy" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="EditBtn" Click="EditBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image x:Name="EditIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="EditText" Text="Edit" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="ShareBtn" Click="ShareBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image x:Name="ShareIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ShareText" Text="Share" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="GalleryBtn" Click="GalleryBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image x:Name="GalleryIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="GalleryText" Text="Gallery" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
-                </Button>
-            </Grid>
+
+                    <!-- Close button (neutral style, replaces old red Cancel button) -->
+                    <Button Grid.Column="1" x:Name="CancelBtn" Click="CancelBtn_Click" Style="{StaticResource PreviewActionButton}" MinWidth="95" Height="32">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="CancelText" Text="Close" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </StackPanel>
+
+            <TextBlock Grid.Row="4" x:Name="ViewerHintBadge"
+                       Text="The system viewer opens when this window closes."
+                       Visibility="Collapsed" Margin="14,8,14,0" FontSize="11"
+                       TextWrapping="Wrap" TextAlignment="Center"
+                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                       ToolTip="The system viewer opens when this window closes."/>
         </Grid>
     </Border>
 </Window>

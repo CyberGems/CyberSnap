@@ -1370,9 +1370,33 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Capture + Saving -->
             <ScrollViewer x:Name="CapturePanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
                 <StackPanel>
+                    <TextBlock Services:LocalizationService.SourceText="Behavior after captures"
+                               Text="Behavior after captures" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,10,0">
+                                    <TextBlock Text="&#xE930;" Style="{StaticResource SettingIconGlyph}"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                                    <TextBlock Text="After capture" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="After capture"/>
+                                    <TextBlock Text="Choose what happens when a capture finishes. Add steps with + and remove them with ×."
+                                               Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Choose what happens when a capture finishes. Add steps with + and remove them with ×."
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                            <controls:AfterCaptureOutcomeEditor x:Name="AfterCaptureOutcomeEditor"/>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Selection" Style="{StaticResource SectionLabel}" Services:LocalizationService.SourceText="Selection"/>
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -2051,6 +2075,8 @@
                         </Grid>
                     </Border>
                     </StackPanel>
+
+
 
                     <TextBlock Text="Capture behavior" Style="{StaticResource SectionLabel}" Margin="4,16,0,9"/>
                     <Border Style="{StaticResource Card}">
@@ -3245,30 +3271,7 @@
                                Visibility="Collapsed"
                                Margin="4,8,0,0"/>
 
-                    <TextBlock Services:LocalizationService.SourceText="Behavior after captures"
-                               Text="Behavior after captures" Style="{StaticResource SectionLabel}"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}" Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}" VerticalAlignment="Top" Margin="0,2,10,0">
-                                    <TextBlock Text="&#xE930;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Top">
-                                    <TextBlock Text="After capture" Style="{StaticResource SettingTitle}"
-                                               Services:LocalizationService.SourceText="After capture"/>
-                                    <TextBlock Text="Choose what happens when a capture finishes. Add steps with + and remove them with ×."
-                                               Style="{StaticResource SettingDescription}"
-                                               Services:LocalizationService.SourceText="Choose what happens when a capture finishes. Add steps with + and remove them with ×."
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                            <controls:AfterCaptureOutcomeEditor x:Name="AfterCaptureOutcomeEditor"/>
-                        </StackPanel>
-                    </Border>
+
 
                     <TextBlock Services:LocalizationService.SourceText="Standalone tools" Text="Standalone tools" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">

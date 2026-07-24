@@ -22,7 +22,8 @@ public readonly record struct AfterCaptureOutcomeState(
     bool Save,
     AfterCaptureDestination Destination,
     bool SystemViewer,
-    bool Clipboard)
+    bool Clipboard,
+    bool Preview)
 {
     public bool RequiresSave =>
         Destination is AfterCaptureDestination.Editor || SystemViewer;
@@ -33,6 +34,7 @@ public readonly record struct AfterCaptureOutcomeState(
 public enum AfterCapturePillKind
 {
     Save,
+    Preview,
     Notification,
     Editor,
     SystemViewer,
@@ -44,6 +46,7 @@ public static class AfterCaptureOutcomeModel
     public static AfterCapturePillKind[] AllPills { get; } =
     [
         AfterCapturePillKind.Save,
+        AfterCapturePillKind.Preview,
         AfterCapturePillKind.Notification,
         AfterCapturePillKind.Editor,
         AfterCapturePillKind.SystemViewer,
@@ -71,8 +74,9 @@ public static class AfterCaptureOutcomeModel
         bool requiresSave = destination is AfterCaptureDestination.Editor || systemViewer;
         bool save = settings.SaveToFile || requiresSave;
         bool clipboard = settings.AutoCopyToClipboard;
+        bool preview = settings.ShowCapturePreview;
 
-        return Normalize(new AfterCaptureOutcomeState(save, destination, systemViewer, clipboard));
+        return Normalize(new AfterCaptureOutcomeState(save, destination, systemViewer, clipboard, preview));
     }
 
     public static void ApplyToSettings(AfterCaptureOutcomeState state, AppSettings settings)
@@ -80,6 +84,7 @@ public static class AfterCaptureOutcomeModel
         state = Normalize(state);
 
         settings.SaveToFile = state.EffectiveSave;
+        settings.ShowCapturePreview = state.Preview;
         settings.OpenInSystemViewerAfterCapture = state.SystemViewer
             && state.Destination != AfterCaptureDestination.Editor;
 
@@ -120,18 +125,20 @@ public static class AfterCaptureOutcomeModel
         if (!save
             && destination == AfterCaptureDestination.None
             && !systemViewer
-            && !state.Clipboard)
+            && !state.Clipboard
+            && !state.Preview)
         {
             save = true;
         }
 
-        return new AfterCaptureOutcomeState(save, destination, systemViewer, state.Clipboard);
+        return new AfterCaptureOutcomeState(save, destination, systemViewer, state.Clipboard, state.Preview);
     }
 
     public static bool IsActive(AfterCaptureOutcomeState state, AfterCapturePillKind pill) =>
         pill switch
         {
             AfterCapturePillKind.Save => state.EffectiveSave,
+            AfterCapturePillKind.Preview => state.Preview,
             AfterCapturePillKind.Notification => state.Destination == AfterCaptureDestination.Notification,
             AfterCapturePillKind.Editor => state.Destination == AfterCaptureDestination.Editor,
             AfterCapturePillKind.SystemViewer => state.SystemViewer,
@@ -159,6 +166,7 @@ public static class AfterCaptureOutcomeModel
         state = pill switch
         {
             AfterCapturePillKind.Save => state with { Save = true },
+            AfterCapturePillKind.Preview => state with { Preview = true },
             AfterCapturePillKind.Notification => state with
             {
                 Destination = AfterCaptureDestination.Notification
@@ -200,6 +208,7 @@ public static class AfterCaptureOutcomeModel
         pill switch
         {
             AfterCapturePillKind.Save => state with { Save = false },
+            AfterCapturePillKind.Preview => state with { Preview = false },
             AfterCapturePillKind.Notification
                 when state.Destination == AfterCaptureDestination.Notification
                 => state with { Destination = AfterCaptureDestination.None },
@@ -214,6 +223,7 @@ public static class AfterCaptureOutcomeModel
     public static string LabelKey(AfterCapturePillKind pill) => pill switch
     {
         AfterCapturePillKind.Save => "Outcome step: save file",
+        AfterCapturePillKind.Preview => "Outcome step: preview",
         AfterCapturePillKind.Notification => "Outcome step: show notification",
         AfterCapturePillKind.Editor => "Outcome step: open editor",
         AfterCapturePillKind.SystemViewer => "Outcome step: open in system viewer",
@@ -224,6 +234,7 @@ public static class AfterCaptureOutcomeModel
     public static string TooltipKey(AfterCapturePillKind pill) => pill switch
     {
         AfterCapturePillKind.Save => "Write the capture to the configured save folder.",
+        AfterCapturePillKind.Preview => "Show the capture preview window after selection.",
         AfterCapturePillKind.Notification => "Show the post-capture notification window.",
         AfterCapturePillKind.Editor => "Open the capture in the annotation editor.",
         AfterCapturePillKind.SystemViewer =>

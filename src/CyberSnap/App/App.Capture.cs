@@ -691,6 +691,11 @@ public partial class App
                         var settings = _settingsService!.Settings;
                         if (settings.ShowCapturePreview)
                         {
+                            if (Helpers.AutoCopyPreferences.ShouldCopy(settings, Helpers.AutoCopyKind.Image))
+                            {
+                                TryCopyCaptureOutputToClipboard(cropped, null);
+                            }
+
                             var dialog = new UI.CapturePreviewDialog(cropped, _settingsService);
                             if (dialog.ShowDialog() == true)
                             {

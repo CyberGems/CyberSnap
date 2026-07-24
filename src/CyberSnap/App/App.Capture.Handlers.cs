@@ -21,12 +21,14 @@ public partial class App
         var ext = CaptureOutputService.GetExtension(settings.CaptureImageFormat);
         string? requestedPath = null;
 
-        // Confirm-mode Save / Edit / History / Share need a file on disk.
+        // Confirm-mode Save / Edit / History / Share / SystemViewer need a file on disk.
         bool forceSave = commitAction is RegionOverlayForm.ConfirmCommitAction.Save
             or RegionOverlayForm.ConfirmCommitAction.Edit
             or RegionOverlayForm.ConfirmCommitAction.History
             or RegionOverlayForm.ConfirmCommitAction.Share
-            || settings.SaveToFile;
+            || settings.SaveToFile
+            || settings.OpenInSystemViewerAfterCapture
+            || settings.AfterCapture == AfterCaptureAction.OpenInSystemViewer;
 
         if (forceSave)
         {
@@ -89,8 +91,9 @@ public partial class App
                             && persisted.HistoryEntry?.Kind != Services.HistoryKind.Video
                             && persisted.HistoryEntry?.Kind != Services.HistoryKind.Gif);
 
-                    // Confirm-mode action pills replace the preview toast overlay buttons.
-                    const bool skipPreviewToast = true;
+                    // Respect the After Capture Notification pill setting
+                    var outcomeState = Helpers.AfterCaptureOutcomeModel.FromSettings(settings);
+                    bool wantNotification = outcomeState.Destination == Helpers.AfterCaptureDestination.Notification;
 
                     if (openEditor)
                     {
@@ -110,20 +113,26 @@ public partial class App
                         if (!openedInEditor)
                         {
                             TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
-                            ToastWindow.Show(
-                                LocalizationService.Translate("Screenshot ready"),
-                                "",
-                                persisted.FilePath);
+                            if (wantNotification)
+                            {
+                                ToastWindow.Show(
+                                    LocalizationService.Translate("Screenshot ready"),
+                                    "",
+                                    persisted.FilePath);
+                            }
                             persisted.Output.Dispose();
                             ScheduleIdleMemoryTrim();
                             return;
                         }
 
                         persisted.Output.Dispose();
-                        ToastWindow.Show(ToastSpec.Standard(
-                            LocalizationService.Translate("Sent to the editor"),
-                            LocalizationService.Translate("Your capture is open in the editor."),
-                            persisted.FilePath) with { PlayCaptureSound = true });
+                        if (wantNotification)
+                        {
+                            ToastWindow.Show(ToastSpec.Standard(
+                                LocalizationService.Translate("Sent to the editor"),
+                                LocalizationService.Translate("Your capture is open in the editor."),
+                                persisted.FilePath) with { PlayCaptureSound = true });
+                        }
                     }
                     else if (commitAction == RegionOverlayForm.ConfirmCommitAction.History)
                     {
@@ -139,14 +148,10 @@ public partial class App
                     else
                     {
                         TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
+                        persisted.Output.Dispose();
 
-                        if (!skipPreviewToast && ShouldPreviewAfterCapture(action))
+                        if (wantNotification)
                         {
-                            ToastWindow.ShowImagePreview(persisted.Output, persisted.FilePath, settings.AutoPinPreviews);
-                        }
-                        else
-                        {
-                            persisted.Output.Dispose();
                             ShowConfirmDestinationFeedback(commitAction, wantCopy, copied, persisted.FilePath);
                         }
                     }
@@ -550,20 +555,37 @@ public partial class App
         if (!wantViewer || string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             return false;
 
-        try
+        _ = Task.Run(async () =>
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            try
             {
-                FileName = filePath,
-                UseShellExecute = true
-            });
-            return true;
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("capture.auto-open", ex);
-            return false;
-        }
+                await Task.Delay(100).ConfigureAwait(false);
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c start \"\" \"{filePath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                };
+                System.Diagnostics.Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogError("capture.auto-open-async", ex);
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        UseShellExecute = true
+                    });
+                }
+                catch { }
+            }
+        });
+
+        return true;
     }
 
     private static bool TryCopyCaptureOutputToClipboard(Bitmap output, string? filePath = null)
