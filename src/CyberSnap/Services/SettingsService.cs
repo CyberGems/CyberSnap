@@ -31,6 +31,7 @@ public sealed class SettingsService : IDisposable
 
     public static event Action<bool>? OcrAutoCopyToClipboardChanged;
     public static event Action<bool>? AutoCopyToClipboardChanged;
+    public static event Action? SettingsChanged;
 
     /// <summary>
     /// Legacy OCR toggle. Maps onto global auto-copy + OCR exclusion.
@@ -133,6 +134,7 @@ public sealed class SettingsService : IDisposable
 
         AutoCopyToClipboardChanged?.Invoke(settings.AutoCopyToClipboard);
         OcrAutoCopyToClipboardChanged?.Invoke(settings.OcrAutoCopyToClipboard);
+        SettingsChanged?.Invoke();
     }
 
     public static void SetEditorExportFormat(int format)
@@ -299,6 +301,7 @@ public sealed class SettingsService : IDisposable
             _settingsDirty = true;
             _flushTimer.Change(_saveDelay, System.Threading.Timeout.InfiniteTimeSpan);
         }
+        SettingsChanged?.Invoke();
     }
 
     public void FlushPendingWrites()

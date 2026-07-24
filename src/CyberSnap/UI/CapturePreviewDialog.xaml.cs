@@ -25,8 +25,11 @@ namespace CyberSnap.UI
 
             InitializeComponent();
             TitleBar.IsPinActive = _isPinned;
-            Topmost = _isPinned;
+            Topmost = true; // Temporary topmost to force it to the foreground on launch
+            ContentRendered += (s, e) => Topmost = _isPinned;
             Activated += CapturePreviewDialog_Activated;
+            SettingsService.SettingsChanged += SettingsService_SettingsChanged;
+            Closed += (s, e) => SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
 
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
@@ -74,6 +77,21 @@ namespace CyberSnap.UI
         }
 
         private void CapturePreviewDialog_Activated(object? sender, EventArgs e)
+        {
+            RefreshLiveSettings();
+        }
+
+        private void SettingsService_SettingsChanged()
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(SettingsService_SettingsChanged));
+                return;
+            }
+            RefreshLiveSettings();
+        }
+
+        private void RefreshLiveSettings()
         {
             if (!IsLoaded) return;
 
@@ -195,12 +213,20 @@ namespace CyberSnap.UI
         {
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
             bool viewerOn = state.SystemViewer;
+            bool editorOn = state.Destination == AfterCaptureDestination.Editor;
 
-            if (viewerOn)
+            if (viewerOn || editorOn)
             {
                 CancelText.Text = LocalizationService.Translate("Continue");
                 CancelIcon.Visibility = Visibility.Collapsed;
-                ViewerHintBadge.Text = LocalizationService.Translate("The system viewer opens when this window closes.");
+                if (editorOn)
+                {
+                    ViewerHintBadge.Text = LocalizationService.Translate("The annotation editor opens when this window closes.");
+                }
+                else
+                {
+                    ViewerHintBadge.Text = LocalizationService.Translate("The system viewer opens when this window closes.");
+                }
                 ViewerHintBadge.Visibility = Visibility.Visible;
                 CancelBtn.ToolTip = ViewerHintBadge.Text;
             }
@@ -276,7 +302,7 @@ namespace CyberSnap.UI
         private void CancelBtn_Click(object sender, RoutedEventArgs e)
         {
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
-            if (state.SystemViewer)
+            if (state.SystemViewer || state.Destination == AfterCaptureDestination.Editor)
             {
                 SelectedAction = RegionOverlayForm.ConfirmCommitAction.Default;
                 DialogResult = true;

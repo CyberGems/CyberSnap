@@ -2082,5 +2082,7 @@
   "Scrolling Capture": "Captura con desplazamiento",
   "Scan QR & Barcode": "Escanear QR y código de barras",
   "Capture Preview ᐧ CyberSnap": "Vista previa de captura ⋅ CyberSnap",
-  "Capture Preview": "Vista previa de captura"
+  "Capture Preview": "Vista previa de captura",
+  "The system viewer opens when this window closes.": "El visor de imágenes del sistema se abre al cerrar esta ventana.",
+  "The annotation editor opens when this window closes.": "El editor de anotaciones se abre al cerrar esta ventana."
 }
