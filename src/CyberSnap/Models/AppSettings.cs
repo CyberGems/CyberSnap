@@ -360,6 +360,10 @@ public sealed class AppSettings
     // When dragging the canvas resize handles: false = extend/trim the canvas area only
     // (default), true = scale (resample) the image and annotations to the new size.
     public bool EditorResizeHandlesScaleContent { get; set; }
+    /// <summary>Persists the aspect lock preference of the resize dialog (default true).</summary>
+    public bool EditorResizeDialogLockAspect { get; set; } = true;
+    /// <summary>Persists the content scaling preference of the resize dialog (default false).</summary>
+    public bool EditorResizeDialogScaleContent { get; set; } = false;
     // When true, the "Don't show again" checkbox was checked in the handle-drag resize
     // confirmation dialog, so future handle-drag resizes apply immediately.
     public bool EditorSuppressResizeConfirm { get; set; }

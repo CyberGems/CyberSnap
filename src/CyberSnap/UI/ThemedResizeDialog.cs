@@ -11,6 +11,8 @@ using System.Windows.Shapes;
 using CyberSnap.Helpers;
 using CyberSnap.Models.Commands;
 using Button = System.Windows.Controls.Button;
+using ComboBox = System.Windows.Controls.ComboBox;
+using ComboBoxItem = System.Windows.Controls.ComboBoxItem;
 using WpfBrushes = System.Windows.Media.Brushes;
 using WpfColor = System.Windows.Media.Color;
 using WpfCursors = System.Windows.Input.Cursors;
@@ -67,7 +69,7 @@ internal sealed class ThemedResizeDialog : Window
     private int _width;
     private int _height;
     private bool _lockAspect = true;
-    private bool _scaleContent = true;
+    private bool _scaleContent = false;
     private double _aspect;
     private AnchorPosition _anchor = AnchorPosition.Center;
     private bool _confirmed;
@@ -96,9 +98,9 @@ internal sealed class ThemedResizeDialog : Window
     private TextBlock _alterationValText = null!;
     private TextBlock _resultValText = null!;
     private Border? _lastClickedPresetBorder;
+    private ComboBox _resCombo = null!;
+    private ComboBox _aspCombo = null!;
 
-    private readonly System.Collections.Generic.List<(Border Border, int W, int H)> _resolutionChipElements = new();
-    private readonly System.Collections.Generic.List<(Border Border, double Ratio)> _aspectChipElements = new();
     private readonly System.Collections.Generic.List<(Border Border, double Scale)> _scaleChipElements = new();
 
     private ThemedResizeDialog(int curW, int curH)
@@ -109,6 +111,13 @@ internal sealed class ThemedResizeDialog : Window
         _width = curW;
         _height = curH;
         _aspect = curH > 0 ? (double)curW / curH : 1.0;
+
+        var settings = Services.SettingsService.LoadStatic();
+        if (settings != null)
+        {
+            _lockAspect = settings.EditorResizeDialogLockAspect;
+            _scaleContent = settings.EditorResizeDialogScaleContent;
+        }
 
         Title = Services.LocalizationService.Translate("Resize canvas");
         Width = PanelWidth + (GlowMargin * 2);
@@ -224,51 +233,51 @@ internal sealed class ThemedResizeDialog : Window
         bodyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });                       // Spacer
         bodyGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.0, GridUnitType.Star) }); // Right column
 
+        _anchorSection = BuildAnchorSection();
+        _anchorSection.Visibility = _scaleContent ? Visibility.Collapsed : Visibility.Visible;
+
         // LEFT COLUMN
         var leftStack = new StackPanel();
 
-        // Quick Presets groups
+        // 1. Resolution dropdown
         leftStack.Children.Add(SectionLabel("Resolution", 0));
-        var resWrap = new UniformGrid { Columns = 4 };
-        _resolutionChipElements.Clear();
+        _resCombo = BuildThemedComboBox();
+        _resCombo.Items.Add(BuildThemedComboBoxItem(Services.LocalizationService.Translate("Resolutions..."), null));
         foreach (var (label, w, h) in ResolutionPresets)
         {
-            var chip = MakeChip(label, border => {
-                _lastClickedPresetBorder = border;
-                ApplyResolution(w, h);
-            });
-            _resolutionChipElements.Add((chip, w, h));
-            resWrap.Children.Add(chip);
+            _resCombo.Items.Add(BuildThemedComboBoxItem(label, (w, h)));
         }
-        leftStack.Children.Add(resWrap);
+        _resCombo.SelectedIndex = 0;
+        _resCombo.SelectionChanged += (s, e) =>
+        {
+            if (_suppress) return;
+            if (_resCombo.SelectedItem is ComboBoxItem item && item.Tag is ValueTuple<int, int> dim)
+            {
+                _lastClickedPresetBorder = null;
+                ApplyResolution(dim.Item1, dim.Item2);
+            }
+        };
+        leftStack.Children.Add(_resCombo);
 
-        leftStack.Children.Add(SectionLabel("Aspect ratio", 10));
-        var aspWrap = new UniformGrid { Columns = 3 };
-        _aspectChipElements.Clear();
+        // 2. Aspect ratio dropdown
+        leftStack.Children.Add(SectionLabel("Aspect ratio", 6));
+        _aspCombo = BuildThemedComboBox();
+        _aspCombo.Items.Add(BuildThemedComboBoxItem(Services.LocalizationService.Translate("Aspect ratios..."), null));
         foreach (var (label, ratio) in AspectPresets)
         {
-            var chip = MakeChip(label, border => {
-                _lastClickedPresetBorder = border;
-                ApplyAspect(ratio);
-            });
-            _aspectChipElements.Add((chip, ratio));
-            aspWrap.Children.Add(chip);
+            _aspCombo.Items.Add(BuildThemedComboBoxItem(label, ratio));
         }
-        leftStack.Children.Add(aspWrap);
-
-        leftStack.Children.Add(SectionLabel("Scale", 10));
-        var scaleWrap = new UniformGrid { Columns = 3 };
-        _scaleChipElements.Clear();
-        foreach (var (label, scale) in ScalePresets)
+        _aspCombo.SelectedIndex = 0;
+        _aspCombo.SelectionChanged += (s, e) =>
         {
-            var chip = MakeChip(label, border => {
-                _lastClickedPresetBorder = border;
-                ApplyScalePreset(scale);
-            });
-            _scaleChipElements.Add((chip, scale));
-            scaleWrap.Children.Add(chip);
-        }
-        leftStack.Children.Add(scaleWrap);
+            if (_suppress) return;
+            if (_aspCombo.SelectedItem is ComboBoxItem item && item.Tag is double ratio)
+            {
+                _lastClickedPresetBorder = null;
+                ApplyAspect(ratio);
+            }
+        };
+        leftStack.Children.Add(_aspCombo);
 
         // Toggles
         leftStack.Children.Add(BuildToggleWithDescription(
@@ -289,9 +298,13 @@ internal sealed class ThemedResizeDialog : Window
                 _scaleContent = v;
                 _anchorSection.Visibility = v ? Visibility.Collapsed : Visibility.Visible;
                 RecalculateWindowHeight();
+                if (System.Windows.Application.Current is CyberSnap.App app)
+                    app.PersistEditorResizeDialogScaleContent(v);
             },
             topMargin: 12
         ));
+
+        leftStack.Children.Add(_anchorSection);
 
         Grid.SetColumn(leftStack, 0);
         bodyGrid.Children.Add(leftStack);
@@ -482,6 +495,23 @@ internal sealed class ThemedResizeDialog : Window
         _sliderLockedContainer.Visibility = _lockAspect ? Visibility.Visible : Visibility.Collapsed;
         _sliderUnlockedContainer.Visibility = _lockAspect ? Visibility.Collapsed : Visibility.Visible;
 
+        // Quick scale buttons under the slider in the HUD panel
+        var quickScalePanel = new UniformGrid { Columns = 4, Margin = new Thickness(0, 8, 0, 0) };
+        _scaleChipElements.Clear();
+        var scaleOptions = new (string Label, double Scale)[] { ("25%", 0.25), ("50%", 0.50), ("100%", 1.00), ("200%", 2.00) };
+        foreach (var (label, scale) in scaleOptions)
+        {
+            var chip = MakeChip(label, border => {
+                _lastClickedPresetBorder = border;
+                ApplyScalePreset(scale);
+            });
+            chip.Padding = new Thickness(4, 3, 4, 3);
+            chip.Margin = new Thickness(2, 0, 2, 0);
+            _scaleChipElements.Add((chip, scale));
+            quickScalePanel.Children.Add(chip);
+        }
+        hudStack.Children.Add(quickScalePanel);
+
         // Horizontal Line
         hudStack.Children.Add(new Border
         {
@@ -548,9 +578,7 @@ internal sealed class ThemedResizeDialog : Window
         // content is NOT scaled, so the user can pick where existing annotations sit in
         // the new canvas. Placing it here (instead of the taller left column) keeps the
         // dialog from growing off-screen when "Scale content" is toggled off.
-        _anchorSection = BuildAnchorSection();
-        _anchorSection.Visibility = _scaleContent ? Visibility.Collapsed : Visibility.Visible;
-        hudStack.Children.Add(_anchorSection);
+
 
         hudPanel.Child = hudStack;
         Grid.SetColumn(hudPanel, 2);
@@ -697,6 +725,9 @@ internal sealed class ThemedResizeDialog : Window
         SyncSlidersFromInputs();
         UpdateStats();
         RecalculateWindowHeight();
+
+        if (System.Windows.Application.Current is CyberSnap.App app)
+            app.PersistEditorResizeDialogLockAspect(locked);
     }
 
     private void OnSliderValueChanged(double val)
@@ -823,25 +854,41 @@ internal sealed class ThemedResizeDialog : Window
         double scaleH = _origHeight > 0 ? (double)_height / _origHeight : 1.0;
         bool scalesMatch = Math.Abs(scaleW - scaleH) < 0.005;
 
-        // 1. Resolution chips
-        foreach (var chip in _resolutionChipElements)
+        bool prev = _suppress;
+        _suppress = true;
+        try
         {
-            bool active = (chip.Border == _lastClickedPresetBorder) || (_width == chip.W && _height == chip.H);
-            SetChipActiveState(chip.Border, active);
-        }
+            ComboBoxItem? matchedRes = null;
+            foreach (var itemObj in _resCombo.Items)
+            {
+                if (itemObj is ComboBoxItem item && item.Tag is ValueTuple<int, int> dim && dim.Item1 == _width && dim.Item2 == _height)
+                {
+                    matchedRes = item;
+                    break;
+                }
+            }
+            _resCombo.SelectedItem = matchedRes ?? _resCombo.Items[0];
 
-        // 2. Aspect ratio chips
-        foreach (var chip in _aspectChipElements)
-        {
-            bool active = (chip.Border == _lastClickedPresetBorder) || (Math.Abs(currentRatio - chip.Ratio) < 0.01);
-            SetChipActiveState(chip.Border, active);
-        }
+            ComboBoxItem? matchedAsp = null;
+            foreach (var itemObj in _aspCombo.Items)
+            {
+                if (itemObj is ComboBoxItem item && item.Tag is double ratio && Math.Abs(currentRatio - ratio) < 0.01)
+                {
+                    matchedAsp = item;
+                    break;
+                }
+            }
+            _aspCombo.SelectedItem = matchedAsp ?? _aspCombo.Items[0];
 
-        // 3. Scale chips
-        foreach (var chip in _scaleChipElements)
+            foreach (var chip in _scaleChipElements)
+            {
+                bool active = (chip.Border == _lastClickedPresetBorder) || (scalesMatch && (Math.Abs(scaleW - chip.Scale) < 0.005));
+                SetChipActiveState(chip.Border, active);
+            }
+        }
+        finally
         {
-            bool active = (chip.Border == _lastClickedPresetBorder) || (scalesMatch && (Math.Abs(scaleW - chip.Scale) < 0.005));
-            SetChipActiveState(chip.Border, active);
+            _suppress = prev;
         }
     }
 
@@ -1011,23 +1058,17 @@ internal sealed class ThemedResizeDialog : Window
             _aspectToggleKnob = knob;
         }
 
-        var textStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) };
-        textStack.Children.Add(new TextBlock
+        var labelText = new TextBlock
         {
             Text = Services.LocalizationService.Translate(label),
             FontSize = 12.5,
             FontWeight = FontWeights.SemiBold,
             Foreground = Theme.Brush(Theme.TextSecondary),
-        });
-        textStack.Children.Add(new TextBlock
-        {
-            Text = Services.LocalizationService.Translate(desc),
-            FontSize = 10.5,
-            Foreground = Theme.Brush(Theme.TextMuted),
-            Margin = new Thickness(0, 2, 0, 0),
-            TextWrapping = TextWrapping.Wrap,
-            MaxWidth = 240
-        });
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(10, 0, 0, 0)
+        };
+
+        ToolTipService.SetToolTip(labelText, Services.LocalizationService.Translate(desc));
 
         var grid = new Grid
         {
@@ -1039,9 +1080,9 @@ internal sealed class ThemedResizeDialog : Window
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         
         Grid.SetColumn(track, 0);
-        Grid.SetColumn(textStack, 1);
+        Grid.SetColumn(labelText, 1);
         grid.Children.Add(track);
-        grid.Children.Add(textStack);
+        grid.Children.Add(labelText);
 
         grid.MouseLeftButtonDown += (_, e) =>
         {
@@ -1052,6 +1093,38 @@ internal sealed class ThemedResizeDialog : Window
             onChanged(state);
         };
         return grid;
+    }
+
+    private ComboBox BuildThemedComboBox()
+    {
+        return new ComboBox
+        {
+            Height = 34,
+            Background = Theme.Brush(FieldBackground),
+            Foreground = Theme.Brush(Theme.TextPrimary),
+            BorderBrush = Theme.Brush(WithAlpha(Theme.Accent, 90)),
+            BorderThickness = new Thickness(1),
+            VerticalContentAlignment = VerticalAlignment.Center,
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 11.5,
+            Padding = new Thickness(8, 0, 8, 0),
+            Margin = new Thickness(0, 0, 0, 10),
+            MaxDropDownHeight = 240,
+        };
+    }
+
+    private ComboBoxItem BuildThemedComboBoxItem(string text, object? tag)
+    {
+        return new ComboBoxItem
+        {
+            Content = text,
+            Tag = tag,
+            Height = 28,
+            Padding = new Thickness(8, 4, 8, 4),
+            Foreground = Theme.Brush(Theme.TextPrimary),
+            Background = WpfBrushes.Transparent,
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
     }
 
     private Slider BuildSlider(Action<double> onValueChanged)
@@ -1146,21 +1219,7 @@ internal sealed class ThemedResizeDialog : Window
         return wrap;
     }
 
-    private FrameworkElement BuildResolutionChips()
-    {
-        var wrap = new WrapPanel();
-        foreach (var (label, w, h) in ResolutionPresets)
-            wrap.Children.Add(MakeChip(label, _ => ApplyResolution(w, h)));
-        return wrap;
-    }
 
-    private FrameworkElement BuildAspectChips()
-    {
-        var wrap = new WrapPanel();
-        foreach (var (label, ratio) in AspectPresets)
-            wrap.Children.Add(MakeChip(label, _ => ApplyAspect(ratio)));
-        return wrap;
-    }
 
     private Border MakeChip(string text, Action<Border> onClick)
     {

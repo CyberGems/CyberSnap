@@ -1419,6 +1419,7 @@ public sealed partial class AnnotationCanvas : UserControl, IEditorContext
             _resizeHandlesTimer?.Dispose();
             DisposeScrollbarTimers();
             _scaledCache?.Dispose();
+            _checkerboardBrush?.Dispose();
             ClearEditHistory();
             _emojiRenderer.Dispose();
             _blurScratch?.Dispose();

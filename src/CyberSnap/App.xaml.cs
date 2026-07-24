@@ -159,6 +159,26 @@ public partial class App : Application
         catch (Exception ex) { AppDiagnostics.LogError("editor.persist-resize-scale", ex); }
     }
 
+    /// <summary>Persists the resize dialog's lock-aspect preference.</summary>
+    public void PersistEditorResizeDialogLockAspect(bool lockAspect)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorResizeDialogLockAspect == lockAspect) return;
+        _settingsService.Settings.EditorResizeDialogLockAspect = lockAspect;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-resize-dialog-lock-aspect", ex); }
+    }
+
+    /// <summary>Persists the resize dialog's scale-content preference.</summary>
+    public void PersistEditorResizeDialogScaleContent(bool scaleContent)
+    {
+        if (_settingsService is null) return;
+        if (_settingsService.Settings.EditorResizeDialogScaleContent == scaleContent) return;
+        _settingsService.Settings.EditorResizeDialogScaleContent = scaleContent;
+        try { _settingsService.Save(); }
+        catch (Exception ex) { AppDiagnostics.LogError("editor.persist-resize-dialog-scale-content", ex); }
+    }
+
     /// <summary>Persists whether the handle-drag resize confirmation dialog was suppressed.</summary>
     public void PersistEditorSuppressResizeConfirm(bool suppress)
     {
