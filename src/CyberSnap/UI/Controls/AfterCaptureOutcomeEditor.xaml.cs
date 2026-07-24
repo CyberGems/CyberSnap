@@ -19,7 +19,8 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         Save: true,
         AfterCaptureDestination.Notification,
         SystemViewer: false,
-        Clipboard: true);
+        Clipboard: true,
+        Preview: true);
     private bool _suppress;
 
     public AfterCaptureOutcomeEditor()
