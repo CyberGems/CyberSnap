@@ -51,29 +51,32 @@ namespace CyberSnap.UI
             CancelText.Text = LocalizationService.Translate("Close");
             EditSettingsBtnText.Text = LocalizationService.Translate("Edit");
 
-            var greenBrush = System.Drawing.Color.FromArgb(255, 34, 197, 94);
-            var blueBrush = System.Drawing.Color.FromArgb(255, 0, 162, 255);
-            var violetBrush = System.Drawing.Color.FromArgb(255, 139, 92, 246);
-            var cyanBrush = System.Drawing.Color.FromArgb(255, 6, 182, 212);
-            var amberBrush = System.Drawing.Color.FromArgb(255, 245, 158, 11);
-            var neutralBrush = System.Drawing.Color.FromArgb(255, 160, 160, 160);
-
-            SaveIcon.Source = FluentIcons.RenderWpf("save", greenBrush, 14, active: true);
-            CopyIcon.Source = FluentIcons.RenderWpf("copy", blueBrush, 14, active: true);
-            EditIcon.Source = FluentIcons.RenderWpf("draw", violetBrush, 14, active: true);
-            ShareIcon.Source = FluentIcons.RenderWpf("share", cyanBrush, 14, active: true);
-            GalleryIcon.Source = FluentIcons.RenderWpf("history", amberBrush, 14, active: true);
-            CancelIcon.Source = FluentIcons.RenderWpf("cross", neutralBrush, 14, active: true);
-            EditSettingsBtnIcon.Source = FluentIcons.RenderWpf("settings", neutralBrush, 12, active: true);
-
-            AfterCaptureHeaderIcon.Source = FluentIcons.RenderWpf("settings", neutralBrush, 14, active: true);
-            AfterCaptureHeaderLabel.Text = LocalizationService.Translate("Automatic actions") + ":";
+            UpdateIcons();
 
             PreviewImage.Source = BitmapPerf.ToBitmapSource(bitmap);
             PopulateAfterCapturePills();
             UpdateContinueOrExitButton();
             UpdateOptionalActionsAvailability();
             _lastOutcomeState = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+        }
+
+        private void UpdateIcons()
+        {
+            var cPrimary = Theme.TextPrimary;
+            var primaryIconColor = System.Drawing.Color.FromArgb(cPrimary.A, cPrimary.R, cPrimary.G, cPrimary.B);
+
+            var cSecondary = Theme.TextSecondary;
+            var secondaryIconColor = System.Drawing.Color.FromArgb(cSecondary.A, cSecondary.R, cSecondary.G, cSecondary.B);
+
+            SaveIcon.Source = FluentIcons.RenderWpf("save", primaryIconColor, 14, active: true);
+            CopyIcon.Source = FluentIcons.RenderWpf("copy", primaryIconColor, 14, active: true);
+            EditIcon.Source = FluentIcons.RenderWpf("draw", primaryIconColor, 14, active: true);
+            ShareIcon.Source = FluentIcons.RenderWpf("share", primaryIconColor, 14, active: true);
+            GalleryIcon.Source = FluentIcons.RenderWpf("history", primaryIconColor, 14, active: true);
+            CancelIcon.Source = FluentIcons.RenderWpf("cross", primaryIconColor, 14, active: true);
+            EditSettingsBtnIcon.Source = FluentIcons.RenderWpf("settings", secondaryIconColor, 12, active: true);
+
+            AfterCaptureHeaderIcon.Source = FluentIcons.RenderWpf("settings", secondaryIconColor, 14, active: true);
         }
 
         private void CapturePreviewDialog_Activated(object? sender, EventArgs e)
@@ -128,6 +131,7 @@ namespace CyberSnap.UI
             Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
             Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
 
+            UpdateIcons();
             PopulateAfterCapturePills();
             UpdateContinueOrExitButton();
             UpdateOptionalActionsAvailability();
