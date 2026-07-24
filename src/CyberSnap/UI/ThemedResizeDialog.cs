@@ -1100,9 +1100,9 @@ internal sealed class ThemedResizeDialog : Window
         return new ComboBox
         {
             Height = 34,
-            Background = Theme.Brush(FieldBackground),
+            Background = Theme.Brush(Theme.BgSecondary),
             Foreground = Theme.Brush(Theme.TextPrimary),
-            BorderBrush = Theme.Brush(WithAlpha(Theme.Accent, 90)),
+            BorderBrush = Theme.Brush(Theme.BorderSubtle),
             BorderThickness = new Thickness(1),
             VerticalContentAlignment = VerticalAlignment.Center,
             FontWeight = FontWeights.SemiBold,
@@ -1110,6 +1110,7 @@ internal sealed class ThemedResizeDialog : Window
             Padding = new Thickness(8, 0, 8, 0),
             Margin = new Thickness(0, 0, 0, 10),
             MaxDropDownHeight = 240,
+            Style = GetThemedComboBoxStyle()
         };
     }
 
@@ -1123,8 +1124,157 @@ internal sealed class ThemedResizeDialog : Window
             Padding = new Thickness(8, 4, 8, 4),
             Foreground = Theme.Brush(Theme.TextPrimary),
             Background = WpfBrushes.Transparent,
-            VerticalContentAlignment = VerticalAlignment.Center
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Style = GetThemedComboBoxItemStyle()
         };
+    }
+
+    private static Style GetThemedComboBoxStyle()
+    {
+        string xaml = @"
+<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+       xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
+       TargetType='ComboBox'>
+    <Setter Property='MinHeight' Value='34'/>
+    <Setter Property='Padding' Value='8,4,8,4'/>
+    <Setter Property='FontSize' Value='12'/>
+    <Setter Property='VerticalContentAlignment' Value='Center'/>
+    <Setter Property='Foreground' Value='{DynamicResource ThemeTextPrimaryBrush}'/>
+    <Setter Property='Background' Value='{DynamicResource ThemeInputBackgroundBrush}'/>
+    <Setter Property='BorderBrush' Value='{DynamicResource ThemeInputBorderBrush}'/>
+    <Setter Property='BorderThickness' Value='1'/>
+    <Setter Property='ScrollViewer.CanContentScroll' Value='True'/>
+    <Setter Property='MaxDropDownHeight' Value='280'/>
+    <Setter Property='Template'>
+        <Setter.Value>
+            <ControlTemplate TargetType='ComboBox'>
+                <Grid SnapsToDevicePixels='True'>
+                    <ToggleButton x:Name='ToggleSite'
+                                  HorizontalAlignment='Stretch'
+                                  VerticalAlignment='Stretch'
+                                  Background='Transparent'
+                                  BorderThickness='0'
+                                  Focusable='False'
+                                  IsChecked='{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}'
+                                  ClickMode='Press'>
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType='ToggleButton'>
+                                <ContentPresenter HorizontalAlignment='Stretch' VerticalAlignment='Stretch'/>
+                            </ControlTemplate>
+                        </ToggleButton.Template>
+                        <Border x:Name='Bd'
+                                HorizontalAlignment='Stretch'
+                                MinHeight='{TemplateBinding MinHeight}'
+                                Background='{TemplateBinding Background}'
+                                BorderBrush='{TemplateBinding BorderBrush}'
+                                BorderThickness='{TemplateBinding BorderThickness}'
+                                CornerRadius='3'
+                                Padding='{TemplateBinding Padding}'>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width='*'/>
+                                    <ColumnDefinition Width='18'/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter x:Name='ContentSite'
+                                                  Content='{TemplateBinding SelectionBoxItem}'
+                                                  ContentTemplate='{TemplateBinding SelectionBoxItemTemplate}'
+                                                  ContentStringFormat='{TemplateBinding SelectionBoxItemStringFormat}'
+                                                  IsHitTestVisible='False'
+                                                  Margin='0,0,6,0'
+                                                  RecognizesAccessKey='True'
+                                                  TextBlock.Foreground='{Binding Foreground, RelativeSource={RelativeSource AncestorType=ComboBox}}'
+                                                  VerticalAlignment='{TemplateBinding VerticalContentAlignment}'/>
+                                <Path Grid.Column='1'
+                                      Width='8'
+                                      Height='4'
+                                      HorizontalAlignment='Center'
+                                      VerticalAlignment='Center'
+                                      Data='M 0 0 L 4 4 L 8 0 Z'
+                                      Fill='{DynamicResource ThemeTextSecondaryBrush}'/>
+                            </Grid>
+                        </Border>
+                    </ToggleButton>
+                    <Popup x:Name='PART_Popup'
+                           AllowsTransparency='True'
+                           Focusable='False'
+                           IsOpen='{TemplateBinding IsDropDownOpen}'
+                           Placement='Bottom'
+                           PopupAnimation='Fade'>
+                        <Border MinWidth='{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}'
+                                MaxHeight='{TemplateBinding MaxDropDownHeight}'
+                                Margin='0,4,0,0'
+                                Background='{DynamicResource ThemeCardBrush}'
+                                BorderBrush='{DynamicResource ThemeInputBorderBrush}'
+                                BorderThickness='1'
+                                CornerRadius='6'
+                                SnapsToDevicePixels='True'>
+                            <ScrollViewer Padding='4'
+                                          CanContentScroll='{TemplateBinding ScrollViewer.CanContentScroll}'
+                                          HorizontalScrollBarVisibility='Disabled'
+                                          VerticalScrollBarVisibility='Auto'>
+                                <ItemsPresenter KeyboardNavigation.DirectionalNavigation='Contained'/>
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+                </Grid>
+                <ControlTemplate.Triggers>
+                    <Trigger Property='IsMouseOver' Value='True'>
+                        <Setter TargetName='Bd' Property='BorderBrush' Value='#35FFFFFF'/>
+                    </Trigger>
+                    <Trigger Property='IsKeyboardFocusWithin' Value='True'>
+                        <Setter TargetName='Bd' Property='BorderBrush' Value='{DynamicResource ThemeTextPrimaryBrush}'/>
+                    </Trigger>
+                    <Trigger Property='IsEnabled' Value='False'>
+                        <Setter TargetName='Bd' Property='Opacity' Value='0.45'/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>";
+        return (Style)System.Windows.Markup.XamlReader.Parse(xaml);
+    }
+
+    private static Style GetThemedComboBoxItemStyle()
+    {
+        string xaml = @"
+<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+       xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
+       TargetType='ComboBoxItem'>
+    <Setter Property='MinHeight' Value='28'/>
+    <Setter Property='Padding' Value='9,5'/>
+    <Setter Property='Foreground' Value='{DynamicResource ThemeTextPrimaryBrush}'/>
+    <Setter Property='Background' Value='Transparent'/>
+    <Setter Property='HorizontalContentAlignment' Value='Stretch'/>
+    <Setter Property='VerticalContentAlignment' Value='Center'/>
+    <Setter Property='Template'>
+        <Setter.Value>
+            <ControlTemplate TargetType='ComboBoxItem'>
+                <Border x:Name='Bd'
+                        Background='{TemplateBinding Background}'
+                        CornerRadius='4'
+                        Padding='{TemplateBinding Padding}'
+                        SnapsToDevicePixels='True'>
+                    <ContentPresenter HorizontalAlignment='{TemplateBinding HorizontalContentAlignment}'
+                                      RecognizesAccessKey='True'
+                                      VerticalAlignment='{TemplateBinding VerticalContentAlignment}'/>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property='IsHighlighted' Value='True'>
+                        <Setter TargetName='Bd' Property='Background' Value='{DynamicResource ThemeTabActiveBrush}'/>
+                    </Trigger>
+                    <Trigger Property='IsSelected' Value='True'>
+                        <Setter TargetName='Bd' Property='Background' Value='{DynamicResource ThemeTabHoverBrush}'/>
+                    </Trigger>
+                    <Trigger Property='IsEnabled' Value='False'>
+                        <Setter TargetName='Bd' Property='Opacity' Value='0.4'/>
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>";
+        return (Style)System.Windows.Markup.XamlReader.Parse(xaml);
     }
 
     private Slider BuildSlider(Action<double> onValueChanged)
