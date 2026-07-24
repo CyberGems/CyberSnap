@@ -9,8 +9,6 @@ internal static class CursorFactory
 {
     private static Cursor? _eraserCursor;
     private static Cursor? _eyedropperCursor;
-    private static Cursor? _grabCursor;
-    private static Cursor? _grabbingCursor;
     private static Cursor? _precisionCursor;
     private static Cursor? _hiddenCursor;
 
@@ -49,85 +47,11 @@ internal static class CursorFactory
 
     public static Cursor PanCursor => GrabCursor;
 
-    public static Cursor GrabCursor
-    {
-        get
-        {
-            if (_grabCursor is null)
-                _grabCursor = CreateHandCursor("grab");
-            return _grabCursor;
-        }
-    }
+    // Drag ("grab") and dragging ("grabbing") now use the traditional 4-way move cross
+    // (SizeAll) instead of the hand icon, per user request.
+    public static Cursor GrabCursor => Cursors.SizeAll;
 
-    public static Cursor GrabbingCursor
-    {
-        get
-        {
-            if (_grabbingCursor is null)
-                _grabbingCursor = CreateHandCursor("grabbing");
-            return _grabbingCursor;
-        }
-    }
-
-    private static Cursor CreateHandCursor(string iconKey)
-    {
-        const int size = 48;
-        const int cx = size / 2, cy = size / 2;
-
-        using var bmp = new Bitmap(size, size);
-        using var g = Graphics.FromImage(bmp);
-        g.Clear(Color.Transparent);
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-        const int iconSize = 34;
-        int offset = (size - iconSize) / 2;
-
-        var shadow = StreamlineIcons.RenderBitmap(iconKey, Color.FromArgb(160, 0, 0, 0), iconSize, active: true);
-        if (shadow != null)
-        {
-            g.DrawImage(shadow, offset + 1, offset + 1, iconSize, iconSize);
-            shadow.Dispose();
-        }
-
-        var icon = StreamlineIcons.RenderBitmap(iconKey, Color.FromArgb(245, 255, 255, 255), iconSize, active: true);
-        if (icon != null)
-        {
-            g.DrawImage(icon, offset, offset, iconSize, iconSize);
-            icon.Dispose();
-        }
-
-        IntPtr hIcon = bmp.GetHicon();
-        try
-        {
-            var iconInfo = new IconInfo();
-            if (GetIconInfo(hIcon, ref iconInfo))
-            {
-                iconInfo.fIcon = false;
-                iconInfo.xHotspot = cx;
-                iconInfo.yHotspot = cy;
-
-                IntPtr hCursor = CreateIconIndirect(ref iconInfo);
-
-                if (iconInfo.hbmMask != IntPtr.Zero)
-                    DeleteObject(iconInfo.hbmMask);
-                if (iconInfo.hbmColor != IntPtr.Zero)
-                    DeleteObject(iconInfo.hbmColor);
-
-                if (hCursor != IntPtr.Zero)
-                {
-                    DestroyIcon(hIcon);
-                    return new Cursor(hCursor);
-                }
-            }
-        }
-        catch
-        {
-            DestroyIcon(hIcon);
-        }
-
-        return Cursors.Hand;
-    }
+    public static Cursor GrabbingCursor => Cursors.SizeAll;
 
     public static Cursor EraserCursor
     {
