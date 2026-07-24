@@ -1157,6 +1157,7 @@
   "Close": "Close",
   "Continue": "Continue",
   "The system viewer opens when this window closes.": "The system viewer opens when this window closes.",
+  "The annotation editor opens when this window closes.": "The annotation editor opens when this window closes.",
   "Sent to": "Sent to",
   "close": "close",
   "pin": "pin",
