@@ -128,7 +128,7 @@ public sealed class ResizeCanvasCommand : IEditCommand
     private static void RefitView(IEditorContext ctx)
     {
         if (ctx is CyberSnap.UI.Controls.AnnotationCanvas canvas)
-            canvas.ZoomFit();
+            canvas.Invalidate();
     }
 
     private static (int offX, int offY) AnchorOffset(int oldW, int oldH, int newW, int newH, AnchorPosition anchor)

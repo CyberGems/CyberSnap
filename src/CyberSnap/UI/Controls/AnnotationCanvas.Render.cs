@@ -76,11 +76,49 @@ public sealed partial class AnnotationCanvas
     private int _scaledCacheW = -1;
     private int _scaledCacheH = -1;
 
+    private TextureBrush? _checkerboardBrush;
+    private bool _checkerboardBrushIsDark;
+
+    private void PaintCheckerboardBackground(Graphics g, float x, float y, float width, float height)
+    {
+        bool isDark = EditorColors.IsDark;
+        if (_checkerboardBrush == null || _checkerboardBrushIsDark != isDark)
+        {
+            _checkerboardBrush?.Dispose();
+
+            var color1 = isDark ? Color.FromArgb(20, 22, 33) : Color.FromArgb(245, 246, 250);
+            var color2 = isDark ? Color.FromArgb(28, 30, 43) : Color.FromArgb(233, 235, 243);
+
+            int size = 16;
+            using (var tempBmp = new Bitmap(size * 2, size * 2))
+            {
+                using (var tempG = Graphics.FromImage(tempBmp))
+                {
+                    tempG.Clear(color1);
+                    using (var b = new SolidBrush(color2))
+                    {
+                        tempG.FillRectangle(b, 0, 0, size, size);
+                        tempG.FillRectangle(b, size, size, size, size);
+                    }
+                }
+                _checkerboardBrush = new TextureBrush(tempBmp);
+            }
+            _checkerboardBrushIsDark = isDark;
+        }
+
+        _checkerboardBrush.ResetTransform();
+        _checkerboardBrush.ScaleTransform((float)_zoom, (float)_zoom);
+        _checkerboardBrush.TranslateTransform(x / (float)_zoom, y / (float)_zoom);
+        g.FillRectangle(_checkerboardBrush, x, y, width, height);
+    }
+
     /// <summary>Draws the base bitmap at the current zoom/pan, using the pre-scaled cache.</summary>
     private void DrawBaseImage(Graphics g)
     {
         int scaledW = Math.Max(1, (int)Math.Round(_baseBitmap.Width * _zoom));
         int scaledH = Math.Max(1, (int)Math.Round(_baseBitmap.Height * _zoom));
+
+        PaintCheckerboardBackground(g, _pan.X, _pan.Y, scaledW, scaledH);
 
         // Zoomed in (>= 1): NearestNeighbor straight from the source is already cheap —
         // GDI+ clips rasterization to the visible region, so cost scales with on-screen
