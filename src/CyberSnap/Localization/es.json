@@ -179,7 +179,7 @@
   "Right-click to hide": "Clic derecho para ocultar",
   "Extract text (OCR)": "Extraer texto (OCR)",
   "Save or process the selected region": "Guarda o procesa la región seleccionada",
-  "Retry area": "Reintentar área",
+  "Retry selection": "Reintentar selección",
   "Discard the current crop and select again": "Descarta el recorte actual y vuelve a seleccionar",
   "Cancel capture completely": "Cancelar captura completa",
   "Close the capture tool and discard everything": "Cierra la captura y descarta todo",
@@ -2107,6 +2107,7 @@
   "Scroll": "Desplazamiento",
   "Show labels on buttons": "Mostrar etiquetas en los botones",
   "Show preview after capture": "Mostrar vista previa después de capturar",
+  "Toggle capture preview on confirm": "Activar vista previa de captura al confirmar",
   "Capture as Image": "Capturar como imagen",
   "Extract Text (OCR)": "Extraer texto (OCR)",
   "Record Video": "Grabar video",
@@ -2119,5 +2120,6 @@
   "The annotation editor opens when this window closes.": "El editor de anotaciones se abre al cerrar esta ventana.",
   "The notification appears when this window closes.": "La notificación de captura aparece al cerrar esta ventana.",
   "Resolutions...": "Resoluciones...",
-  "Aspect ratios...": "Relaciones de aspecto..."
+  "Aspect ratios...": "Relaciones de aspecto...",
+  "Confirm screenshot": "Confirmar captura de imagen"
 }

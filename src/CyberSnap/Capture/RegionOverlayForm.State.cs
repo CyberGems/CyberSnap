@@ -1666,7 +1666,7 @@ public sealed partial class RegionOverlayForm
 
     private static string? ConfirmChromeFluentIcon(ConfirmChromeKind kind) => kind switch
     {
-        ConfirmChromeKind.Cancel => "signOut",
+        ConfirmChromeKind.Cancel => "close",
         ConfirmChromeKind.Retry => "redo",
         ConfirmChromeKind.Done => "check",
         ConfirmChromeKind.ModeImage => "captureRect",
@@ -1695,10 +1695,10 @@ public sealed partial class RegionOverlayForm
 
     private static string ConfirmChromeTitle(ConfirmChromeKind kind) => kind switch
     {
-        ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel capture completely"),
-        ConfirmChromeKind.Retry => LocalizationService.Translate("Retry area"),
-        ConfirmChromeKind.Done => LocalizationService.Translate("Done"),
-        ConfirmChromeKind.TogglePreview => LocalizationService.Translate("Show preview after capture"),
+        ConfirmChromeKind.Cancel => LocalizationService.Translate("Cancel capture"),
+        ConfirmChromeKind.Retry => LocalizationService.Translate("Retry selection"),
+        ConfirmChromeKind.Done => LocalizationService.Translate("Confirm screenshot"),
+        ConfirmChromeKind.TogglePreview => LocalizationService.Translate("Toggle capture preview on confirm"),
         ConfirmChromeKind.ModeImage => LocalizationService.Translate("Capture as Image"),
         ConfirmChromeKind.ModeOcr => LocalizationService.Translate("Extract Text (OCR)"),
         ConfirmChromeKind.ModeVideo => LocalizationService.Translate("Record Video"),
@@ -1713,6 +1713,7 @@ public sealed partial class RegionOverlayForm
         ConfirmChromeKind.Cancel => "Esc",
         ConfirmChromeKind.Retry => "R",
         ConfirmChromeKind.Done => "Enter",
+        ConfirmChromeKind.TogglePreview => "P",
         ConfirmChromeKind.ModeImage => "I",
         ConfirmChromeKind.ModeOcr => "O",
         ConfirmChromeKind.ModeVideo => "V",
@@ -2040,11 +2041,7 @@ public sealed partial class RegionOverlayForm
                 CommitConfirmedSelection(ConfirmCommitAction.Default);
                 break;
             case ConfirmChromeKind.TogglePreview:
-                var settings = Services.SettingsService.LoadStatic() ?? new AppSettings();
-                bool newValue = !settings.ShowCapturePreview;
-                SettingsService.SaveShowCapturePreview(newValue);
-                _confirmChromeLayoutDirty = true;
-                Invalidate();
+                ToggleConfirmPreview();
                 break;
             case ConfirmChromeKind.ModeOcr:
                 OcrRegionSelected?.Invoke(_confirmRect);
@@ -2062,6 +2059,15 @@ public sealed partial class RegionOverlayForm
                 ScanRegionSelected?.Invoke(_confirmRect);
                 break;
         }
+    }
+
+    private void ToggleConfirmPreview()
+    {
+        var settings = Services.SettingsService.LoadStatic() ?? new AppSettings();
+        bool newValue = !settings.ShowCapturePreview;
+        SettingsService.SaveShowCapturePreview(newValue);
+        _confirmChromeLayoutDirty = true;
+        Invalidate();
     }
 
     private bool TryHandleConfirmDestinationHotkey(Keys keyCode)

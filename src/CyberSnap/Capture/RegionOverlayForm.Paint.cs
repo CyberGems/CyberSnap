@@ -299,11 +299,11 @@ public sealed partial class RegionOverlayForm
 
                         int iconType = kind switch
                         {
-                            ConfirmChromeKind.Retry => 1,
+                            ConfirmChromeKind.Retry => 1, // custom circular arc + arrowhead
                             ConfirmChromeKind.Cancel => 3, // use signOut fluent icon
                             _ => 3 // fluent icon path
                         };
-                        string? fluentIcon = ConfirmChromeFluentIcon(kind);
+                        string? fluentIcon = kind == ConfirmChromeKind.Retry ? null : ConfirmChromeFluentIcon(kind);
                         string label = ConfirmChromeDrawLabel(kind);
 
                         DrawConfirmActionPill(g, btn, color, label, btnFont, hover && !disabled, iconType, press, shine, main, dup, opacity,
@@ -508,7 +508,7 @@ public sealed partial class RegionOverlayForm
         float opacity, bool hasShine, string? fluentIconId = null, Color? accent = null,
         bool isPrimary = false, ConfirmChromeKind kind = ConfirmChromeKind.Done)
     {
-        float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
+        float hoverCorner = UiChrome.ScaleFloat(5f); // match annotation toolbar corner radius
         Color accentColor = accent ?? baseColor;
 
         // Face sinks downward onto its fixed base while pressed.
@@ -519,8 +519,8 @@ public sealed partial class RegionOverlayForm
         bool isSelectedMode = (kind == ConfirmChromeKind.ModeImage);
         if (hover || isSelectedMode)
         {
-            using (var path = WindowsDockRenderer.RoundedRect(face, corner))
-            using (var brush = new SolidBrush(Color.FromArgb(isSelectedMode ? (UiChrome.IsDark ? 36 : 28) : (UiChrome.IsDark ? 20 : 16), accentColor)))
+            using (var path = WindowsDockRenderer.RoundedRect(face, hoverCorner))
+            using (var brush = new SolidBrush(Color.FromArgb(isSelectedMode ? (UiChrome.IsDark ? 36 : 28) : (UiChrome.IsDark ? 26 : 20), accentColor)))
                 g.FillPath(brush, path);
         }
 
@@ -1368,13 +1368,13 @@ public sealed partial class RegionOverlayForm
         var settings = Services.SettingsService.LoadStatic() ?? new AppSettings();
         bool showPreview = settings.ShowCapturePreview;
 
-        float corner = Math.Min(UiChrome.ScaleFloat(14f), rect.Height * 0.48f);
+        float hoverCorner = UiChrome.ScaleFloat(5f);
         var face = new RectangleF(rect.X, rect.Y, rect.Width, rect.Height);
 
         if (hover)
         {
-            using (var path = WindowsDockRenderer.RoundedRect(face, corner))
-            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 20 : 16, UiChrome.AccentColor)))
+            using (var path = WindowsDockRenderer.RoundedRect(face, hoverCorner))
+            using (var brush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 26 : 20, UiChrome.AccentColor)))
                 g.FillPath(brush, path);
         }
 

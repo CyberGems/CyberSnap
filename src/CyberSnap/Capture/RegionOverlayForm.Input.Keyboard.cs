@@ -69,6 +69,16 @@ public sealed partial class RegionOverlayForm
             RequestRetrySelection();
             return true;
         }
+        // Confirm-mode: P toggles capture preview on/off.
+        if ((keyData & Keys.KeyCode) == Keys.P
+            && (keyData & Keys.Modifiers) == Keys.None
+            && _isConfirmingSelection
+            && !_isTyping
+            && !_emojiPickerOpen)
+        {
+            ToggleConfirmPreview();
+            return true;
+        }
         // Confirm-mode destination shortcuts (S/C/E/G/U) — before annotation tool hotkeys.
         if ((keyData & Keys.Modifiers) == Keys.None
             && TryHandleConfirmDestinationHotkey(keyData & Keys.KeyCode))
@@ -160,6 +170,15 @@ public sealed partial class RegionOverlayForm
             e.SuppressKeyPress = true;
             e.Handled = true;
             RequestRetrySelection();
+            return;
+        }
+
+        if (e.KeyCode == Keys.P && e.Modifiers == Keys.None
+            && _isConfirmingSelection && !_isTyping && !_emojiPickerOpen)
+        {
+            e.SuppressKeyPress = true;
+            e.Handled = true;
+            ToggleConfirmPreview();
             return;
         }
 
