@@ -20,7 +20,8 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         AfterCaptureDestination.Notification,
         SystemViewer: false,
         Clipboard: true,
-        Preview: true);
+        Preview: true,
+        Share: false);
     private bool _suppress;
 
     public AfterCaptureOutcomeEditor()

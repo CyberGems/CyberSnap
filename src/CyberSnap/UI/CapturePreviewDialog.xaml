@@ -188,7 +188,7 @@
                                 </StackPanel>
                             </DockPanel>
 
-                            <WrapPanel x:Name="AfterCapturePillsPanel" Orientation="Horizontal"/>
+                            <StackPanel x:Name="AfterCapturePillsPanel" Orientation="Vertical"/>
 
                             <TextBlock x:Name="NoAutomaticActionsLabel"
                                        Text="None"

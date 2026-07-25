@@ -83,38 +83,4 @@ internal sealed record ToastSpec
         FilePath = filePath
     };
 
-    public static ToastSpec ImagePreview(
-        Bitmap preview,
-        string title,
-        string body,
-        string? filePath,
-        bool autoPin,
-        bool transparentShell,
-        bool showOverlayButtons,
-        string? clickActionUrl = null,
-        string? clickActionLabel = null,
-        bool hideEditButton = false,
-        bool deleteFileOnDismiss = false) => new()
-    {
-        Title = title,
-        Body = body,
-        PreviewBitmap = preview,
-        FilePath = filePath,
-        ClickActionUrl = clickActionUrl,
-        ClickActionLabel = clickActionLabel,
-        AutoPin = autoPin,
-        TransparentShell = transparentShell,
-        ShowOverlayButtons = showOverlayButtons,
-        HideEditButton = hideEditButton,
-        DeleteFileOnDismiss = deleteFileOnDismiss
-    };
-
-    public static ToastSpec Sticker(Bitmap sticker) => new()
-    {
-        PreviewBitmap = sticker,
-        TransparentShell = false,
-        PreviewStretch = Stretch.Uniform,
-        PreviewMargin = new Thickness(0),
-        ShowOverlayButtons = false
-    };
 }

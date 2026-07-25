@@ -247,6 +247,7 @@ public partial class SettingsWindow
         (SoundEvent.Achievement, "Achievement", "trophy"),
         // Brief status toasts: "Sent to the editor", encoding wait, etc. (not capture previews).
         (SoundEvent.System, "System notification", "info"),
+        (SoundEvent.Preview, "Capture preview", "eye"),
         (SoundEvent.Error, "Error", "warning"),
     ];
 

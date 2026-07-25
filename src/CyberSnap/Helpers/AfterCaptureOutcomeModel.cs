@@ -16,14 +16,15 @@ public enum AfterCaptureDestination
 /// <summary>
 /// Composable after-capture outcome used by the minipill editor.
 /// Maps onto existing settings (AfterCapture, OpenEditorAfterCapture,
-/// OpenInSystemViewerAfterCapture, SaveToFile, AutoCopy*).
+/// OpenInSystemViewerAfterCapture, SaveToFile, AutoCopy*, AutoShareAfterCapture).
 /// </summary>
 public readonly record struct AfterCaptureOutcomeState(
     bool Save,
     AfterCaptureDestination Destination,
     bool SystemViewer,
     bool Clipboard,
-    bool Preview)
+    bool Preview,
+    bool Share = false)
 {
     // Saving to disk is no longer forced for any destination: Editor works from
     // the in-memory bitmap, and System viewer gets a temp file when SaveToFile
@@ -41,7 +42,17 @@ public enum AfterCapturePillKind
     Notification,
     Editor,
     SystemViewer,
-    Clipboard
+    Clipboard,
+    Share
+}
+
+/// <summary>Whether an active pill already ran or still waits for Done/Continue.</summary>
+public enum AfterCapturePillTiming
+{
+    /// <summary>Already applied when the preview window opened (e.g. auto-copy).</summary>
+    Done,
+    /// <summary>Runs when the user confirms the preview (save, editor, viewer, share).</summary>
+    Pending
 }
 
 public static class AfterCaptureOutcomeModel
@@ -53,7 +64,8 @@ public static class AfterCaptureOutcomeModel
         AfterCapturePillKind.Notification,
         AfterCapturePillKind.Editor,
         AfterCapturePillKind.SystemViewer,
-        AfterCapturePillKind.Clipboard
+        AfterCapturePillKind.Clipboard,
+        AfterCapturePillKind.Share
     ];
 
     public static AfterCaptureOutcomeState FromSettings(AppSettings settings)
@@ -77,8 +89,9 @@ public static class AfterCaptureOutcomeModel
         bool save = settings.SaveToFile;
         bool clipboard = settings.AutoCopyToClipboard;
         bool preview = settings.ShowCapturePreview;
+        bool share = settings.AutoShareAfterCapture;
 
-        return Normalize(new AfterCaptureOutcomeState(save, destination, systemViewer, clipboard, preview));
+        return Normalize(new AfterCaptureOutcomeState(save, destination, systemViewer, clipboard, preview, share));
     }
 
     public static void ApplyToSettings(AfterCaptureOutcomeState state, AppSettings settings)
@@ -87,6 +100,7 @@ public static class AfterCaptureOutcomeModel
 
         settings.SaveToFile = state.EffectiveSave;
         settings.ShowCapturePreview = state.Preview;
+        settings.AutoShareAfterCapture = state.Share;
         settings.OpenInSystemViewerAfterCapture = state.SystemViewer
             && state.Destination != AfterCaptureDestination.Editor;
 
@@ -129,12 +143,13 @@ public static class AfterCaptureOutcomeModel
             && destination == AfterCaptureDestination.None
             && !systemViewer
             && !state.Clipboard
-            && !state.Preview)
+            && !state.Preview
+            && !state.Share)
         {
-            return new AfterCaptureOutcomeState(save, destination, systemViewer, state.Clipboard, Preview: true);
+            return new AfterCaptureOutcomeState(save, destination, systemViewer, state.Clipboard, Preview: true, Share: false);
         }
 
-        return new AfterCaptureOutcomeState(save, destination, systemViewer, state.Clipboard, state.Preview);
+        return new AfterCaptureOutcomeState(save, destination, systemViewer, state.Clipboard, state.Preview, state.Share);
     }
 
     public static bool IsActive(AfterCaptureOutcomeState state, AfterCapturePillKind pill) =>
@@ -146,8 +161,29 @@ public static class AfterCaptureOutcomeModel
             AfterCapturePillKind.Editor => state.Destination == AfterCaptureDestination.Editor,
             AfterCapturePillKind.SystemViewer => state.SystemViewer,
             AfterCapturePillKind.Clipboard => state.Clipboard,
+            AfterCapturePillKind.Share => state.Share,
             _ => false
         };
+
+    /// <summary>
+    /// Timing for pills shown inside the capture preview dialog.
+    /// Clipboard (and Save when not asking for a file name) run before/as the dialog opens;
+    /// Editor / Viewer / Share wait for confirm.
+    /// </summary>
+    public static AfterCapturePillTiming GetPreviewTiming(AfterCapturePillKind pill, AppSettings? settings = null)
+    {
+        if (pill == AfterCapturePillKind.Clipboard)
+            return AfterCapturePillTiming.Done;
+
+        // Save is immediate when the path is known up front (no Save-As prompt).
+        if (pill == AfterCapturePillKind.Save
+            && settings is not null
+            && settings.SaveToFile
+            && !settings.AskForFileNameOnSave)
+            return AfterCapturePillTiming.Done;
+
+        return AfterCapturePillTiming.Pending;
+    }
 
     public static bool CanRemove(AfterCaptureOutcomeState state, AfterCapturePillKind pill)
     {
@@ -188,6 +224,7 @@ public static class AfterCaptureOutcomeModel
                     : state.Destination
             },
             AfterCapturePillKind.Clipboard => state with { Clipboard = true },
+            AfterCapturePillKind.Share => state with { Share = true },
             _ => state
         };
         return Normalize(state);
@@ -215,6 +252,7 @@ public static class AfterCaptureOutcomeModel
                 => state with { Destination = AfterCaptureDestination.None },
             AfterCapturePillKind.SystemViewer => state with { SystemViewer = false },
             AfterCapturePillKind.Clipboard => state with { Clipboard = false },
+            AfterCapturePillKind.Share => state with { Share = false },
             _ => state
         };
 
@@ -226,6 +264,7 @@ public static class AfterCaptureOutcomeModel
         AfterCapturePillKind.Editor => "Outcome step: open editor",
         AfterCapturePillKind.SystemViewer => "Outcome step: open in system viewer",
         AfterCapturePillKind.Clipboard => "Auto-copy",
+        AfterCapturePillKind.Share => "Outcome step: share",
         _ => pill.ToString()
     };
 
@@ -233,11 +272,13 @@ public static class AfterCaptureOutcomeModel
     {
         AfterCapturePillKind.Save => "Write the capture to the configured save folder.",
         AfterCapturePillKind.Preview => "Show the capture preview window after selection.",
-        AfterCapturePillKind.Notification => "Show the post-capture notification window.",
+        AfterCapturePillKind.Notification =>
+            "Show a compact status toast after capture (or status chips when Preview is on).",
         AfterCapturePillKind.Editor => "Open the capture in the annotation editor.",
         AfterCapturePillKind.SystemViewer =>
             "Open the saved file in the system default viewer. Can be combined with the notification.",
         AfterCapturePillKind.Clipboard => "Copy captures, OCR text, and recordings to the clipboard when they finish.",
+        AfterCapturePillKind.Share => "Open the share flow after capture (off by default).",
         _ => ""
     };
 

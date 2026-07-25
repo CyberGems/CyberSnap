@@ -52,6 +52,8 @@ public enum SoundEvent
     Upload,
     /// <summary>Brief system toasts (e.g. "Sent to the editor"). File: Assets/Sounds/system.mp3.</summary>
     System,
+    /// <summary>Capture preview dialog opened. File: Assets/Sounds/preview.mp3.</summary>
+    Preview,
 }
 
 public enum RecordingFormat
@@ -199,6 +201,11 @@ public sealed class AppSettings
     /// When true, show the preview window after capture instead of executing automatic destinations directly.
     /// </summary>
     public bool ShowCapturePreview { get; set; } = true;
+
+    /// <summary>
+    /// When true, open the share flow after capture confirm (off by default).
+    /// </summary>
+    public bool AutoShareAfterCapture { get; set; }
 
     /// <summary>
     /// Timeout in seconds before the capture preview window auto-closes and executes the deferred action (0 = Off / no limit, 5, 10, 20, 30).
