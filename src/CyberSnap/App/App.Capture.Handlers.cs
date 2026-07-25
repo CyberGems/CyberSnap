@@ -21,14 +21,14 @@ public partial class App
         var ext = CaptureOutputService.GetExtension(settings.CaptureImageFormat);
         string? requestedPath = null;
 
-        // Confirm-mode Save / Edit / History / Share / SystemViewer need a file on disk.
+        // Confirm-mode Save / Edit / History / Share always need a file on disk.
+        // SaveToFile is the user's explicit save choice. System viewer no longer
+        // forces a save here: when SaveToFile is off it gets a temp file instead.
         bool forceSave = commitAction is RegionOverlayForm.ConfirmCommitAction.Save
             or RegionOverlayForm.ConfirmCommitAction.Edit
             or RegionOverlayForm.ConfirmCommitAction.History
             or RegionOverlayForm.ConfirmCommitAction.Share
-            || settings.SaveToFile
-            || settings.OpenInSystemViewerAfterCapture
-            || settings.AfterCapture == AfterCaptureAction.OpenInSystemViewer;
+            || settings.SaveToFile;
 
         if (forceSave)
         {
@@ -147,7 +147,32 @@ public partial class App
                     }
                     else
                     {
-                        TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
+                        bool wantViewer = settings.OpenInSystemViewerAfterCapture
+                            || action == AfterCaptureAction.OpenInSystemViewer;
+                        bool hadPersistentFile = !string.IsNullOrEmpty(persisted.FilePath)
+                            && File.Exists(persisted.FilePath);
+                        string? viewerPath = hadPersistentFile ? persisted.FilePath : null;
+                        bool openedViewer = false;
+
+                        // System viewer needs a path to open; materialize a temp PNG only
+                        // when nothing was persisted (SaveToFile off). Best-effort cleanup
+                        // runs below so the temp file does not linger permanently.
+                        if (wantViewer && !hadPersistentFile)
+                            viewerPath = MaterializeTempViewerFile(persisted.Output);
+
+                        if (viewerPath != null)
+                            openedViewer = TryOpenSystemViewerAfterCapture(settings, action, viewerPath);
+
+                        bool createdTempForViewer = wantViewer && !hadPersistentFile && viewerPath != null;
+                        if (createdTempForViewer)
+                        {
+                            var cleanupPath = viewerPath;
+                            _ = Task.Delay(TimeSpan.FromSeconds(90))
+                                .ContinueWith(_ => Helpers.CaptureSavePath.TryDeleteTempRecording(cleanupPath));
+                            if (!openedViewer)
+                                Helpers.CaptureSavePath.TryDeleteTempRecording(cleanupPath);
+                        }
+
                         persisted.Output.Dispose();
 
                         if (wantNotification)
@@ -243,6 +268,25 @@ public partial class App
         }
 
         ToastWindow.Show(ToastSpec.Standard(title, body, filePath) with { PlayCaptureSound = true });
+    }
+
+    /// <summary>
+    /// Materializes a temp PNG so a file-dependent after-capture step (system viewer)
+    /// can run when SaveToFile is off. The caller schedules best-effort cleanup.
+    /// </summary>
+    private static string? MaterializeTempViewerFile(Bitmap output)
+    {
+        try
+        {
+            var tempPath = Helpers.CaptureSavePath.BuildTempCapturePath(".png");
+            Services.CaptureOutputService.SavePng(output, tempPath);
+            return tempPath;
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("capture.viewer-temp-file", ex.Message, ex);
+            return null;
+        }
     }
 
     private Task<PersistedCaptureResult> PersistCaptureAsync(

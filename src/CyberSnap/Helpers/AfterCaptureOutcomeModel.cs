@@ -25,10 +25,13 @@ public readonly record struct AfterCaptureOutcomeState(
     bool Clipboard,
     bool Preview)
 {
-    public bool RequiresSave =>
-        Destination is AfterCaptureDestination.Editor || SystemViewer;
+    // Saving to disk is no longer forced for any destination: Editor works from
+    // the in-memory bitmap, and System viewer gets a temp file when SaveToFile
+    // is off. Kept (always false) as an explicit, documented invariant so the
+    // outcome never silently regresses to requiring a save.
+    public bool RequiresSave => false;
 
-    public bool EffectiveSave => Save || RequiresSave;
+    public bool EffectiveSave => Save;
 }
 
 public enum AfterCapturePillKind
@@ -71,8 +74,7 @@ public static class AfterCaptureOutcomeModel
         if (destination == AfterCaptureDestination.Editor)
             systemViewer = false;
 
-        bool requiresSave = destination is AfterCaptureDestination.Editor || systemViewer;
-        bool save = settings.SaveToFile || requiresSave;
+        bool save = settings.SaveToFile;
         bool clipboard = settings.AutoCopyToClipboard;
         bool preview = settings.ShowCapturePreview;
 
@@ -105,8 +107,9 @@ public static class AfterCaptureOutcomeModel
     }
 
     /// <summary>
-    /// Enforces Editor exclusivity (clears SystemViewer), forced save for Editor/Viewer,
-    /// and never-empty outcome (at least Save when nothing else is on).
+    /// Enforces Editor exclusivity (clears SystemViewer) and a never-empty
+    /// outcome: when nothing else is active, Preview is enabled instead of
+    /// forcing a save. Saving to disk is never forced by a destination.
     /// Notification + SystemViewer is allowed.
     /// </summary>
     public static AfterCaptureOutcomeState Normalize(AfterCaptureOutcomeState state)
@@ -118,17 +121,17 @@ public static class AfterCaptureOutcomeModel
         if (destination == AfterCaptureDestination.Editor)
             systemViewer = false;
 
-        bool requiresSave = destination is AfterCaptureDestination.Editor || systemViewer;
-        bool save = state.Save || requiresSave;
+        bool save = state.Save;
 
-        // Never empty: if nothing would happen, keep Save.
+        // Never empty: when nothing else is active, fall back to Preview
+        // instead of forcing a save to disk.
         if (!save
             && destination == AfterCaptureDestination.None
             && !systemViewer
             && !state.Clipboard
             && !state.Preview)
         {
-            save = true;
+            return new AfterCaptureOutcomeState(save, destination, systemViewer, state.Clipboard, Preview: true);
         }
 
         return new AfterCaptureOutcomeState(save, destination, systemViewer, state.Clipboard, state.Preview);
@@ -151,11 +154,8 @@ public static class AfterCaptureOutcomeModel
         if (!IsActive(state, pill))
             return false;
 
-        // Save is forced while Editor or System viewer needs a file on disk.
-        if (pill == AfterCapturePillKind.Save && state.RequiresSave)
-            return false;
-
-        // If Normalize would put this pill back, offering × is a no-op.
+        // No pill is locked. Only suppress a no-op remove that Normalize
+        // (e.g. empty-fallback to Preview) would immediately undo.
         var trial = ApplyRemove(state, pill);
         var normalized = Normalize(trial);
         return !IsActive(normalized, pill);
@@ -175,13 +175,11 @@ public static class AfterCaptureOutcomeModel
             AfterCapturePillKind.Editor => state with
             {
                 Destination = AfterCaptureDestination.Editor,
-                SystemViewer = false,
-                Save = true
+                SystemViewer = false
             },
             AfterCapturePillKind.SystemViewer => state with
             {
                 SystemViewer = true,
-                Save = true,
                 // Adding Viewer while Editor is active replaces Editor with Notification-capable
                 // surface only if Destination was Editor — drop Editor so Viewer can stack
                 // with Notification or stand alone.
@@ -243,10 +241,4 @@ public static class AfterCaptureOutcomeModel
         _ => ""
     };
 
-    public static string ForcedSaveTooltipKey =>
-        "Save is required when opening the editor or system viewer.";
-
-    /// <summary>Shown on a locked Save chip when it is the only remaining outcome step.</summary>
-    public static string RequiredOutcomeTooltipKey =>
-        "Keep at least one after-capture step.";
 }
