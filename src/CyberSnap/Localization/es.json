@@ -1463,7 +1463,7 @@
   "Continue": "Continuar",
   "The system viewer opens when this window closes.": "El visor se abrirá al cerrar esta ventana.",
   "The annotation editor opens when this window closes.": "El editor de anotaciones se abre al cerrar esta ventana.",
-  "The notification appears when this window closes.": "La notificación aparece al cerrar esta ventana.",
+  "The notification appears when this window closes.": "La notificación de captura aparece al cerrar esta ventana.",
   "Sent to": "Enviar a",
   "close": "cerrar",
   "pin": "fijar",
@@ -2109,7 +2109,7 @@
   "Capture Preview": "Vista previa de captura",
   "The system viewer opens when this window closes.": "El visor de imágenes del sistema se abre al cerrar esta ventana.",
   "The annotation editor opens when this window closes.": "El editor de anotaciones se abre al cerrar esta ventana.",
-  "The notification appears when this window closes.": "La notificación aparece al cerrar esta ventana.",
+  "The notification appears when this window closes.": "La notificación de captura aparece al cerrar esta ventana.",
   "Resolutions...": "Resoluciones...",
   "Aspect ratios...": "Relaciones de aspecto..."
 }

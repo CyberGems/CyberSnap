@@ -115,10 +115,13 @@ public partial class App
                             TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
                             if (wantNotification)
                             {
-                                ToastWindow.Show(
-                                    LocalizationService.Translate("Screenshot ready"),
-                                    "",
-                                    persisted.FilePath);
+                                ToastWindow.Show(new ToastSpec
+                                {
+                                    Title = LocalizationService.Translate("Screenshot ready"),
+                                    FilePath = persisted.FilePath,
+                                    PlayCaptureSound = true,
+                                    IsSystemMessage = false
+                                });
                             }
                             persisted.Output.Dispose();
                             ScheduleIdleMemoryTrim();
@@ -128,10 +131,14 @@ public partial class App
                         persisted.Output.Dispose();
                         if (wantNotification)
                         {
-                            ToastWindow.Show(ToastSpec.Standard(
-                                LocalizationService.Translate("Sent to the editor"),
-                                LocalizationService.Translate("Your capture is open in the editor."),
-                                persisted.FilePath) with { PlayCaptureSound = true });
+                            ToastWindow.Show(new ToastSpec
+                            {
+                                Title = LocalizationService.Translate("Sent to the editor"),
+                                Body = LocalizationService.Translate("Your capture is open in the editor."),
+                                FilePath = persisted.FilePath,
+                                PlayCaptureSound = true,
+                                IsSystemMessage = false
+                            });
                         }
                     }
                     else if (commitAction == RegionOverlayForm.ConfirmCommitAction.History)
@@ -173,11 +180,45 @@ public partial class App
                                 Helpers.CaptureSavePath.TryDeleteTempRecording(cleanupPath);
                         }
 
-                        persisted.Output.Dispose();
-
                         if (wantNotification)
                         {
-                            ShowConfirmDestinationFeedback(commitAction, wantCopy, copied, persisted.FilePath);
+                            // Notification pill = capture image toast (not a system-alert text toast).
+                            // Clone before dispose; ToastWindow owns and disposes the preview bitmap.
+                            Bitmap? toastPreview = null;
+                            try { toastPreview = new Bitmap(persisted.Output); }
+                            catch (Exception ex) { AppDiagnostics.LogWarning("capture.notification-preview", ex.Message, ex); }
+
+                            persisted.Output.Dispose();
+
+                            string toastBody = "";
+                            if (wantCopy)
+                            {
+                                toastBody = copied
+                                    ? LocalizationService.Translate("Copied to clipboard")
+                                    : LocalizationService.Translate("Clipboard copy failed");
+                            }
+
+                            if (toastPreview != null)
+                            {
+                                ToastWindow.ShowImagePreview(
+                                    toastPreview,
+                                    LocalizationService.Translate("Screenshot ready"),
+                                    toastBody,
+                                    persisted.FilePath,
+                                    settings.AutoPinPreviews);
+                            }
+                            else
+                            {
+                                ShowConfirmDestinationFeedback(commitAction, wantCopy, copied, persisted.FilePath);
+                            }
+                        }
+                        else
+                        {
+                            persisted.Output.Dispose();
+
+                            // Without the Notification pill, still confirm auto-copy / explicit copy.
+                            if (wantCopy)
+                                ShowClipboardCaptureFeedback(copied, persisted.FilePath);
                         }
                     }
 
@@ -225,6 +266,8 @@ public partial class App
     /// <summary>
     /// Minimal post-confirm status toast (no image-preview overlay). Wording follows the
     /// destination pill the user chose; capture sound confirms the action completed.
+    /// Not marked as a system message so the "System alerts" toggle cannot suppress
+    /// after-capture feedback the user opted into via the Notification pill / copy action.
     /// </summary>
     private static void ShowConfirmDestinationFeedback(
         RegionOverlayForm.ConfirmCommitAction commitAction,
@@ -267,7 +310,36 @@ public partial class App
                 break;
         }
 
-        ToastWindow.Show(ToastSpec.Standard(title, body, filePath) with { PlayCaptureSound = true });
+        ToastWindow.Show(new ToastSpec
+        {
+            Title = title,
+            Body = body,
+            FilePath = filePath,
+            PlayCaptureSound = true,
+            IsSystemMessage = false
+        });
+    }
+
+    /// <summary>
+    /// Brief clipboard confirmation when Auto-copy / Copy ran without the Notification pill.
+    /// </summary>
+    private static void ShowClipboardCaptureFeedback(bool copied, string? filePath)
+    {
+        string title = copied
+            ? LocalizationService.Translate("Copied to clipboard")
+            : LocalizationService.Translate("Clipboard copy failed");
+        string body = copied && !string.IsNullOrEmpty(filePath)
+            ? LocalizationService.Translate("Saved")
+            : "";
+
+        ToastWindow.Show(new ToastSpec
+        {
+            Title = title,
+            Body = body,
+            FilePath = filePath,
+            PlayCaptureSound = copied,
+            IsSystemMessage = false
+        });
     }
 
     /// <summary>

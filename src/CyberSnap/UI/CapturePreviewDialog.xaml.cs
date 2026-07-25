@@ -390,7 +390,10 @@ namespace CyberSnap.UI
             state.SystemViewer
             || state.Destination == AfterCaptureDestination.Editor
             || state.Destination == AfterCaptureDestination.Notification
-            || state.EffectiveSave;
+            || state.EffectiveSave
+            // Clipboard may already have run before the dialog; still commit so
+            // HandleCaptureResult can show copy confirmation when Notification is off.
+            || state.Clipboard;
 
         private void CommitOrDismissFromPrimaryButton()
         {
