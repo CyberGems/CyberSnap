@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -83,6 +85,7 @@ namespace CyberSnap.UI
             _lastTimeoutSeconds = _settingsService.Settings.CapturePreviewTimeoutSeconds;
             InitAutoCloseTimer();
             ApplyLayoutMode(force: true);
+            SoundService.PlayPreviewSound();
         }
 
         private void ApplyLocalizedLabels()
@@ -208,7 +211,8 @@ namespace CyberSnap.UI
             GalleryIcon.Source = FluentIcons.RenderWpf("history", primaryIconColor, 14, active: true);
             MoreIcon.Source = FluentIcons.RenderWpf("more", primaryIconColor, 13, active: true);
             EditSettingsBtnIcon.Source = FluentIcons.RenderWpf("gear", secondaryIconColor, 14, active: true);
-            AfterCaptureHeaderIcon.Source = FluentIcons.RenderWpf("check", secondaryIconColor, 13, active: true);
+            // List metaphor for the active-actions section (not a "done" check).
+            AfterCaptureHeaderIcon.Source = FluentIcons.RenderWpf("menu", secondaryIconColor, 13, active: true);
         }
 
         private System.Drawing.Color GetPrimaryButtonIconColor()
@@ -391,8 +395,9 @@ namespace CyberSnap.UI
             || state.Destination == AfterCaptureDestination.Editor
             || state.Destination == AfterCaptureDestination.Notification
             || state.EffectiveSave
+            || state.Share
             // Clipboard may already have run before the dialog; still commit so
-            // HandleCaptureResult can show copy confirmation when Notification is off.
+            // deferred save/share/editor paths and compact toasts can finish.
             || state.Clipboard;
 
         private void CommitOrDismissFromPrimaryButton()
@@ -436,10 +441,14 @@ namespace CyberSnap.UI
                 Padding = new Thickness(4)
             };
 
-            menu.Items.Add(CreateMoreMenuItem(
-                LocalizationService.Translate("Share"),
-                ShareIcon.Source,
-                () => ShareBtn_Click(ShareBtn, new RoutedEventArgs())));
+            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            if (!state.Share)
+            {
+                menu.Items.Add(CreateMoreMenuItem(
+                    LocalizationService.Translate("Share"),
+                    ShareIcon.Source,
+                    () => ShareBtn_Click(ShareBtn, new RoutedEventArgs())));
+            }
 
             menu.Items.Add(CreateMoreMenuItem(
                 LocalizationService.Translate("Gallery"),
@@ -509,45 +518,102 @@ namespace CyberSnap.UI
             AfterCapturePillsPanel.Children.Clear();
 
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
-            int added = 0;
+            var settings = _settingsService.Settings;
 
+            // Completed first, then pending — keeps the status column easy to scan.
+            var doneGreen = System.Drawing.Color.FromArgb(255, 34, 197, 94);
+            var pendingBlue = System.Drawing.Color.FromArgb(255, 0, 162, 255);
+
+            var rows = new List<(AfterCapturePillKind Pill, AfterCapturePillTiming Timing, string IconId, string LabelKey, string TooltipKey)>();
             foreach (var pill in AfterCaptureOutcomeModel.AllPills)
             {
                 if (!AfterCaptureOutcomeModel.IsActive(state, pill))
                     continue;
 
-                // Already inside the preview dialog — the Preview pill is noise here.
-                if (pill == AfterCapturePillKind.Preview)
+                // Already inside the preview dialog — Preview / Notification are noise here.
+                if (pill is AfterCapturePillKind.Preview or AfterCapturePillKind.Notification)
                     continue;
 
-                var (iconId, color, labelKey, tooltipKey) = pill switch
+                string iconId = pill switch
                 {
-                    AfterCapturePillKind.Save => ("save", System.Drawing.Color.FromArgb(255, 34, 197, 94), "Outcome step: save file", AfterCaptureOutcomeModel.TooltipKey(pill)),
-                    AfterCapturePillKind.Clipboard => ("copy", System.Drawing.Color.FromArgb(255, 0, 162, 255), "Auto-copy", AfterCaptureOutcomeModel.TooltipKey(pill)),
-                    AfterCapturePillKind.Notification => ("info", System.Drawing.Color.FromArgb(255, 245, 158, 11), "Outcome step: show notification", AfterCaptureOutcomeModel.TooltipKey(pill)),
-                    AfterCapturePillKind.Editor => ("draw", System.Drawing.Color.FromArgb(255, 139, 92, 246), "Outcome step: open editor", AfterCaptureOutcomeModel.TooltipKey(pill)),
-                    AfterCapturePillKind.SystemViewer => ("folder", System.Drawing.Color.FromArgb(255, 6, 182, 212), "Outcome step: open in system viewer", AfterCaptureOutcomeModel.TooltipKey(pill)),
-                    _ => ("gear", System.Drawing.Color.FromArgb(255, 150, 150, 150), pill.ToString(), "")
+                    AfterCapturePillKind.Save => "save",
+                    AfterCapturePillKind.Clipboard => "copy",
+                    AfterCapturePillKind.Editor => "draw",
+                    AfterCapturePillKind.SystemViewer => "folder",
+                    AfterCapturePillKind.Share => "share",
+                    _ => "gear"
                 };
 
-                string label = LocalizationService.Translate(labelKey);
-                string tooltip = LocalizationService.Translate(tooltipKey);
-
-                var chip = CreateAfterCapturePillChip(iconId, color, label, tooltip);
-                AfterCapturePillsPanel.Children.Add(chip);
-                added++;
+                rows.Add((
+                    pill,
+                    AfterCaptureOutcomeModel.GetPreviewTiming(pill, settings),
+                    iconId,
+                    AfterCaptureOutcomeModel.LabelKey(pill),
+                    AfterCaptureOutcomeModel.TooltipKey(pill)));
             }
 
-            NoAutomaticActionsLabel.Visibility = added == 0 ? Visibility.Visible : Visibility.Collapsed;
+            foreach (var row in rows.OrderBy(r => r.Timing == AfterCapturePillTiming.Done ? 0 : 1))
+            {
+                var color = row.Timing == AfterCapturePillTiming.Done ? doneGreen : pendingBlue;
+                string label = LocalizationService.Translate(row.LabelKey);
+                string statusTip = row.Timing == AfterCapturePillTiming.Done
+                    ? LocalizationService.Translate("Already completed")
+                    : LocalizationService.Translate("Runs when you continue");
+                string tooltip = LocalizationService.Translate(row.TooltipKey);
+                if (!string.IsNullOrWhiteSpace(tooltip))
+                    tooltip = $"{tooltip}\n{statusTip}";
+                else
+                    tooltip = statusTip;
+
+                AfterCapturePillsPanel.Children.Add(
+                    CreateAfterCapturePillChip(row.IconId, color, label, tooltip, row.Timing));
+            }
+
+            NoAutomaticActionsLabel.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        private FrameworkElement CreateAfterCapturePillChip(string iconId, System.Drawing.Color color, string label, string tooltip)
+        private FrameworkElement CreateAfterCapturePillChip(
+            string iconId,
+            System.Drawing.Color color,
+            string label,
+            string tooltip,
+            AfterCapturePillTiming timing)
         {
+            // Row: [pill]  status — status glyph stays outside the chip.
+            var row = new DockPanel
+            {
+                Margin = new Thickness(0, 0, 0, 6),
+                LastChildFill = true
+            };
+
+            // Status glyph matches pill family: green check (done) / blue arrow (pending = Listo).
+            var statusColor = timing == AfterCapturePillTiming.Done
+                ? System.Drawing.Color.FromArgb(255, 34, 197, 94)
+                : System.Drawing.Color.FromArgb(255, 0, 162, 255);
+            var statusIcon = new System.Windows.Controls.Image
+            {
+                Width = 12,
+                Height = 12,
+                Margin = new Thickness(8, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Opacity = timing == AfterCapturePillTiming.Done ? 1.0 : 0.9,
+                Source = FluentIcons.RenderWpf(
+                    timing == AfterCapturePillTiming.Done ? "check" : "arrow",
+                    statusColor,
+                    12,
+                    active: true),
+                ToolTip = timing == AfterCapturePillTiming.Done
+                    ? LocalizationService.Translate("Already completed")
+                    : LocalizationService.Translate("Runs when you continue")
+            };
+            DockPanel.SetDock(statusIcon, Dock.Right);
+            row.Children.Add(statusIcon);
+
             var border = new Border
             {
                 CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(7, 3, 9, 3),
-                Margin = new Thickness(0, 0, 6, 6),
+                Padding = new Thickness(8, 4, 10, 4),
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
                 Background = Theme.Brush(System.Windows.Media.Color.FromArgb(22, color.R, color.G, color.B)),
                 BorderBrush = Theme.Brush(System.Windows.Media.Color.FromArgb(55, color.R, color.G, color.B)),
                 BorderThickness = new Thickness(1),
@@ -576,14 +642,15 @@ namespace CyberSnap.UI
                 FontSize = 10.5,
                 FontWeight = FontWeights.Medium,
                 Foreground = Theme.Brush(Theme.TextPrimary),
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
             };
 
             stack.Children.Add(img);
             stack.Children.Add(txt);
             border.Child = stack;
-
-            return border;
+            row.Children.Add(border);
+            return row;
         }
 
         private void UpdateContinueOrExitButton()
@@ -591,15 +658,16 @@ namespace CyberSnap.UI
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
             bool viewerOn = state.SystemViewer;
             bool editorOn = state.Destination == AfterCaptureDestination.Editor;
-            bool notificationOn = state.Destination == AfterCaptureDestination.Notification;
             bool continuesToSurface = viewerOn || editorOn;
             var iconColor = GetPrimaryButtonIconColor();
+
+            // Same arrow as pending chips: confirm runs the remaining deferred actions.
+            CancelIcon.Source = FluentIcons.RenderWpf("arrow", iconColor, 14, active: true);
+            CancelIcon.Visibility = Visibility.Visible;
 
             if (continuesToSurface)
             {
                 CancelText.Text = LocalizationService.Translate("Continue");
-                CancelIcon.Source = FluentIcons.RenderWpf("arrow", iconColor, 14, active: true);
-                CancelIcon.Visibility = Visibility.Visible;
                 if (editorOn)
                 {
                     ViewerHintBadge.Text = LocalizationService.Translate("The annotation editor opens when this window closes.");
@@ -614,19 +682,8 @@ namespace CyberSnap.UI
             else
             {
                 CancelText.Text = LocalizationService.Translate("Done");
-                CancelIcon.Source = FluentIcons.RenderWpf("check", iconColor, 14, active: true);
-                CancelIcon.Visibility = Visibility.Visible;
-                if (notificationOn)
-                {
-                    ViewerHintBadge.Text = LocalizationService.Translate("The notification appears when this window closes.");
-                    ViewerHintBadge.Visibility = Visibility.Visible;
-                    CancelBtn.ToolTip = ViewerHintBadge.Text;
-                }
-                else
-                {
-                    ViewerHintBadge.Visibility = Visibility.Collapsed;
-                    CancelBtn.ToolTip = null;
-                }
+                ViewerHintBadge.Visibility = Visibility.Collapsed;
+                CancelBtn.ToolTip = null;
             }
         }
 

@@ -13,6 +13,7 @@ The project automatically embeds every `Assets/Sounds/*.mp3` (`EmbeddedResource`
 | `record-stop.mp3`     | `RecordStop`         | A recording ends                                 |
 | `upload.mp3`          | `Upload`             | Successful upload / Share (Editor or Gallery)    |
 | `system.mp3`          | `System`             | System notices (e.g. "Sent to editor")           |
+| `preview.mp3`         | `Preview`            | Capture preview dialog opens                     |
 | `error.mp3`           | `Error`              | An error occurs                                  |
 | `startup.mp3`         | `Startup`            | "CyberSnap ready" toast on app launch            |
 | `achievement.mp3`     | `Achievement`        | An achievement is unlocked                       |

@@ -113,6 +113,8 @@ public static class SoundService
     public static void PlayUploadSound() => Play(SoundEvent.Upload);
     /// <summary>Brief system-status toasts (Sent to the editor, encoding wait, etc.).</summary>
     public static void PlaySystemSound() => Play(SoundEvent.System);
+    /// <summary>Capture preview dialog opened.</summary>
+    public static void PlayPreviewSound() => Play(SoundEvent.Preview);
 
     /// <summary>Play a sound by event type. Respects global mute, per-sound mute, and suppression.</summary>
     public static void Play(SoundEvent evt)
@@ -193,6 +195,7 @@ public static class SoundService
             SoundEvent.Achievement => "achievement",
             SoundEvent.Upload => "upload",
             SoundEvent.System => "system",
+            SoundEvent.Preview => "preview",
             _ => null
         };
         if (name is null) return null;

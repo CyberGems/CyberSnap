@@ -15,7 +15,8 @@ public partial class App
 {
     private void HandleCaptureResult(
         Bitmap result,
-        RegionOverlayForm.ConfirmCommitAction commitAction = RegionOverlayForm.ConfirmCommitAction.Default)
+        RegionOverlayForm.ConfirmCommitAction commitAction = RegionOverlayForm.ConfirmCommitAction.Default,
+        string? alreadySavedPath = null)
     {
         var settings = _settingsService!.Settings;
         var ext = CaptureOutputService.GetExtension(settings.CaptureImageFormat);
@@ -28,9 +29,15 @@ public partial class App
             or RegionOverlayForm.ConfirmCommitAction.Edit
             or RegionOverlayForm.ConfirmCommitAction.History
             or RegionOverlayForm.ConfirmCommitAction.Share
-            || settings.SaveToFile;
+            || settings.SaveToFile
+            || settings.AutoShareAfterCapture;
 
-        if (forceSave)
+        if (!string.IsNullOrEmpty(alreadySavedPath) && File.Exists(alreadySavedPath))
+        {
+            // Preview already wrote the file (immediate Save); reuse path for history / share.
+            requestedPath = alreadySavedPath;
+        }
+        else if (forceSave)
         {
             var defaultPath = Helpers.CaptureSavePath.BuildAvailablePath(
                 settings.SaveDirectory,
@@ -94,6 +101,9 @@ public partial class App
                     // Respect the After Capture Notification pill setting
                     var outcomeState = Helpers.AfterCaptureOutcomeModel.FromSettings(settings);
                     bool wantNotification = outcomeState.Destination == Helpers.AfterCaptureDestination.Notification;
+                    // When Preview was shown, status chips are the feedback — no summary toast after.
+                    bool showCompactToast = wantNotification && !settings.ShowCapturePreview;
+                    bool savedToDisk = !string.IsNullOrEmpty(persisted.FilePath) && File.Exists(persisted.FilePath);
 
                     if (openEditor)
                     {
@@ -113,32 +123,33 @@ public partial class App
                         if (!openedInEditor)
                         {
                             TryOpenSystemViewerAfterCapture(settings, action, persisted.FilePath);
-                            if (wantNotification)
-                            {
-                                ToastWindow.Show(new ToastSpec
-                                {
-                                    Title = LocalizationService.Translate("Screenshot ready"),
-                                    FilePath = persisted.FilePath,
-                                    PlayCaptureSound = true,
-                                    IsSystemMessage = false
-                                });
-                            }
                             persisted.Output.Dispose();
+                            if (showCompactToast)
+                            {
+                                ShowDynamicAfterCaptureToast(
+                                    saved: savedToDisk,
+                                    copied: copied,
+                                    copyWanted: wantCopy,
+                                    shared: false,
+                                    openedEditor: false,
+                                    openedViewer: true,
+                                    filePath: persisted.FilePath);
+                            }
                             ScheduleIdleMemoryTrim();
                             return;
                         }
 
                         persisted.Output.Dispose();
-                        if (wantNotification)
+                        if (showCompactToast)
                         {
-                            ToastWindow.Show(new ToastSpec
-                            {
-                                Title = LocalizationService.Translate("Sent to the editor"),
-                                Body = LocalizationService.Translate("Your capture is open in the editor."),
-                                FilePath = persisted.FilePath,
-                                PlayCaptureSound = true,
-                                IsSystemMessage = false
-                            });
+                            ShowDynamicAfterCaptureToast(
+                                saved: savedToDisk,
+                                copied: copied,
+                                copyWanted: wantCopy,
+                                shared: false,
+                                openedEditor: true,
+                                openedViewer: false,
+                                filePath: persisted.FilePath);
                         }
                     }
                     else if (commitAction == RegionOverlayForm.ConfirmCommitAction.History)
@@ -156,8 +167,7 @@ public partial class App
                     {
                         bool wantViewer = settings.OpenInSystemViewerAfterCapture
                             || action == AfterCaptureAction.OpenInSystemViewer;
-                        bool hadPersistentFile = !string.IsNullOrEmpty(persisted.FilePath)
-                            && File.Exists(persisted.FilePath);
+                        bool hadPersistentFile = savedToDisk;
                         string? viewerPath = hadPersistentFile ? persisted.FilePath : null;
                         bool openedViewer = false;
 
@@ -180,45 +190,36 @@ public partial class App
                                 Helpers.CaptureSavePath.TryDeleteTempRecording(cleanupPath);
                         }
 
-                        if (wantNotification)
+                        bool wantAutoShare = settings.AutoShareAfterCapture
+                            && commitAction == RegionOverlayForm.ConfirmCommitAction.Default;
+
+                        if (wantAutoShare)
                         {
-                            // Notification pill = capture image toast (not a system-alert text toast).
-                            // Clone before dispose; ToastWindow owns and disposes the preview bitmap.
-                            Bitmap? toastPreview = null;
-                            try { toastPreview = new Bitmap(persisted.Output); }
-                            catch (Exception ex) { AppDiagnostics.LogWarning("capture.notification-preview", ex.Message, ex); }
-
-                            persisted.Output.Dispose();
-
-                            string toastBody = "";
-                            if (wantCopy)
-                            {
-                                toastBody = copied
-                                    ? LocalizationService.Translate("Copied to clipboard")
-                                    : LocalizationService.Translate("Clipboard copy failed");
-                            }
-
-                            if (toastPreview != null)
-                            {
-                                ToastWindow.ShowImagePreview(
-                                    toastPreview,
-                                    LocalizationService.Translate("Screenshot ready"),
-                                    toastBody,
-                                    persisted.FilePath,
-                                    settings.AutoPinPreviews);
-                            }
-                            else
-                            {
-                                ShowConfirmDestinationFeedback(commitAction, wantCopy, copied, persisted.FilePath);
-                            }
+                            var shareBmp = persisted.Output;
+                            var sharePath = persisted.FilePath;
+                            _ = ShareCaptureThenMaybeToastAsync(
+                                shareBmp,
+                                sharePath,
+                                showCompactToast,
+                                savedToDisk,
+                                copied,
+                                wantCopy,
+                                openedViewer);
                         }
                         else
                         {
                             persisted.Output.Dispose();
-
-                            // Without the Notification pill, still confirm auto-copy / explicit copy.
-                            if (wantCopy)
-                                ShowClipboardCaptureFeedback(copied, persisted.FilePath);
+                            if (showCompactToast)
+                            {
+                                ShowDynamicAfterCaptureToast(
+                                    saved: savedToDisk,
+                                    copied: copied,
+                                    copyWanted: wantCopy,
+                                    shared: false,
+                                    openedEditor: false,
+                                    openedViewer: openedViewer,
+                                    filePath: persisted.FilePath);
+                            }
                         }
                     }
 
@@ -228,6 +229,55 @@ public partial class App
     }
 
     private async Task ShareCaptureFromConfirmAsync(Bitmap bitmap, string? filePath)
+    {
+        try
+        {
+            await TryShareCaptureAsync(bitmap, filePath, presentResultToast: true).ConfigureAwait(true);
+        }
+        finally
+        {
+            try { bitmap.Dispose(); } catch { }
+            ScheduleIdleMemoryTrim();
+        }
+    }
+
+    private async Task ShareCaptureThenMaybeToastAsync(
+        Bitmap bitmap,
+        string? filePath,
+        bool showCompactToast,
+        bool saved,
+        bool copied,
+        bool copyWanted,
+        bool openedViewer)
+    {
+        bool shared = false;
+        try
+        {
+            // When a compact summary toast will list "Shared", skip PresentResult's own toast.
+            shared = await TryShareCaptureAsync(bitmap, filePath, presentResultToast: !showCompactToast)
+                .ConfigureAwait(true);
+        }
+        finally
+        {
+            try { bitmap.Dispose(); } catch { }
+        }
+
+        if (showCompactToast)
+        {
+            ShowDynamicAfterCaptureToast(
+                saved: saved,
+                copied: copied,
+                copyWanted: copyWanted,
+                shared: shared,
+                openedEditor: false,
+                openedViewer: openedViewer,
+                filePath: filePath);
+        }
+
+        ScheduleIdleMemoryTrim();
+    }
+
+    private async Task<bool> TryShareCaptureAsync(Bitmap bitmap, string? filePath, bool presentResultToast)
     {
         try
         {
@@ -243,10 +293,12 @@ public partial class App
             catch { }
 
             if (!UI.Share.ImageShareFlow.ConfirmThirdPartyUploadIfNeeded(owner, ownerHandle, provider, settings))
-                return;
+                return false;
 
             var result = await UI.Share.ImageShareFlow.ShareBitmapAsync(bitmap).ConfigureAwait(true);
-            UI.Share.ImageShareFlow.PresentResult(result, settings);
+            if (presentResultToast)
+                UI.Share.ImageShareFlow.PresentResult(result, settings);
+            return result.Success;
         }
         catch (Exception ex)
         {
@@ -255,60 +307,43 @@ public partial class App
                 LocalizationService.Translate("Upload failed"),
                 LocalizationService.Translate("CyberSnap could not share the capture. Check your network or upload configuration in Settings."),
                 filePath);
-        }
-        finally
-        {
-            try { bitmap.Dispose(); } catch { }
-            ScheduleIdleMemoryTrim();
+            return false;
         }
     }
 
     /// <summary>
-    /// Minimal post-confirm status toast (no image-preview overlay). Wording follows the
-    /// destination pill the user chose; capture sound confirms the action completed.
-    /// Not marked as a system message so the "System alerts" toggle cannot suppress
-    /// after-capture feedback the user opted into via the Notification pill / copy action.
+    /// Compact status toast listing automatic steps completed when Notification is on
+    /// and Preview is off. Not a system-alert toast (master Notifications toggle still applies).
     /// </summary>
-    private static void ShowConfirmDestinationFeedback(
-        RegionOverlayForm.ConfirmCommitAction commitAction,
-        bool wantCopy,
+    private static void ShowDynamicAfterCaptureToast(
+        bool saved,
         bool copied,
+        bool copyWanted,
+        bool shared,
+        bool openedEditor,
+        bool openedViewer,
         string? filePath)
     {
-        string title;
-        string body = "";
-
-        switch (commitAction)
+        var parts = new List<string>();
+        if (saved)
+            parts.Add(LocalizationService.Translate("Saved"));
+        if (copyWanted)
         {
-            case RegionOverlayForm.ConfirmCommitAction.Copy:
-                title = copied
-                    ? LocalizationService.Translate("Copied to clipboard")
-                    : LocalizationService.Translate("Clipboard copy failed");
-                if (!string.IsNullOrEmpty(filePath))
-                    body = LocalizationService.Translate("Saved");
-                break;
-            case RegionOverlayForm.ConfirmCommitAction.Save:
-                title = LocalizationService.Translate("Saved");
-                if (wantCopy)
-                {
-                    body = copied
-                        ? LocalizationService.Translate("Copied to clipboard")
-                        : LocalizationService.Translate("Clipboard copy failed");
-                }
-                break;
-            case RegionOverlayForm.ConfirmCommitAction.History:
-                // Gallery window opens immediately; skip a redundant status toast.
-                return;
-            default:
-                title = LocalizationService.Translate("Screenshot ready");
-                if (wantCopy)
-                {
-                    body = copied
-                        ? LocalizationService.Translate("Copied to clipboard")
-                        : LocalizationService.Translate("Clipboard copy failed");
-                }
-                break;
+            parts.Add(copied
+                ? LocalizationService.Translate("Copied to clipboard")
+                : LocalizationService.Translate("Clipboard copy failed"));
         }
+        if (shared)
+            parts.Add(LocalizationService.Translate("Shared"));
+        if (openedEditor)
+            parts.Add(LocalizationService.Translate("Opened in editor"));
+        if (openedViewer)
+            parts.Add(LocalizationService.Translate("Opened in system viewer"));
+
+        string title = LocalizationService.Translate("Screenshot ready");
+        string body = parts.Count > 0
+            ? string.Join(" · ", parts)
+            : "";
 
         ToastWindow.Show(new ToastSpec
         {
@@ -321,25 +356,47 @@ public partial class App
     }
 
     /// <summary>
-    /// Brief clipboard confirmation when Auto-copy / Copy ran without the Notification pill.
+    /// Writes the capture to disk before the preview dialog opens when Save is on and
+    /// no Save-As prompt is required. Does not dispose <paramref name="source"/>.
     /// </summary>
-    private static void ShowClipboardCaptureFeedback(bool copied, string? filePath)
+    private string? TrySaveCaptureFileEarly(Bitmap source, AppSettings settings)
     {
-        string title = copied
-            ? LocalizationService.Translate("Copied to clipboard")
-            : LocalizationService.Translate("Clipboard copy failed");
-        string body = copied && !string.IsNullOrEmpty(filePath)
-            ? LocalizationService.Translate("Saved")
-            : "";
+        if (!settings.SaveToFile || settings.AskForFileNameOnSave)
+            return null;
 
-        ToastWindow.Show(new ToastSpec
+        try
         {
-            Title = title,
-            Body = body,
-            FilePath = filePath,
-            PlayCaptureSound = copied,
-            IsSystemMessage = false
-        });
+            var ext = CaptureOutputService.GetExtension(settings.CaptureImageFormat);
+            var path = Helpers.CaptureSavePath.BuildAvailablePath(
+                settings.SaveDirectory,
+                $"{Helpers.FileNameTemplate.Format(settings.FileNameTemplate, source.Width, source.Height)}.{ext}",
+                settings.SaveInMonthlyFolders);
+
+            var directory = Path.GetDirectoryName(path);
+            if (string.IsNullOrWhiteSpace(directory))
+                return null;
+
+            Directory.CreateDirectory(directory);
+
+            using var clone = new Bitmap(source);
+            var prepared = CaptureOutputService.PrepareBitmap(clone, settings.CaptureMaxLongEdge);
+            try
+            {
+                CaptureOutputService.SaveBitmap(prepared, path, settings.CaptureImageFormat, settings.JpegQuality);
+            }
+            finally
+            {
+                if (!ReferenceEquals(prepared, clone))
+                    prepared.Dispose();
+            }
+
+            return path;
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("capture.early-save", ex.Message, ex);
+            return null;
+        }
     }
 
     /// <summary>

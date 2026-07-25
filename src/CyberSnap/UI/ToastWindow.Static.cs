@@ -12,8 +12,6 @@ namespace CyberSnap.UI;
 
 public partial class ToastWindow
 {
-    private const string DefaultImagePreviewTitle = "";
-
     public static void SetPosition(CyberSnap.Models.ToastPosition position) => _position = position;
     public static void SetMonitorIndex(int index) => _monitorIndex = index;
     public static void SetDuration(double seconds) => _durationSeconds = Math.Clamp(seconds, 1, 60);
@@ -119,9 +117,6 @@ public partial class ToastWindow
         toast.Show();
     }
 
-    public static void ShowSticker(Bitmap sticker)
-        => Show(ToastSpec.Sticker(sticker));
-
     public static void ShowWithColor(string title, string body, Color color, bool suppressSound = false)
         => Show(ToastSpec.WithColor(title, body, color) with { SuppressSound = suppressSound });
 
@@ -130,37 +125,6 @@ public partial class ToastWindow
 
     public static void ShowError(string title, string body = "", string? filePath = null)
         => Show(ToastSpec.Error(title, body, filePath));
-
-    public static void ShowImagePreview(Bitmap screenshot, string? filePath, bool autoPin, bool celebrate = false)
-    {
-        ShowImagePreview(screenshot, DefaultImagePreviewTitle, "", filePath, autoPin, celebrate);
-    }
-
-    public static void ShowImagePreview(Bitmap screenshot, string title, string body, string? filePath, bool autoPin, bool celebrate = false)
-    {
-        Show(ToastSpec.ImagePreview(
-            screenshot,
-            title,
-            body,
-            filePath,
-            autoPin,
-            transparentShell: false,
-            showOverlayButtons: true) with { Celebrate = celebrate });
-    }
-
-    public static void ShowImagePreview(Bitmap screenshot, string title, string body, string? filePath, bool autoPin, string? clickActionUrl, string? clickActionLabel)
-    {
-        Show(ToastSpec.ImagePreview(
-            screenshot,
-            title,
-            body,
-            filePath,
-            autoPin,
-            transparentShell: false,
-            showOverlayButtons: true,
-            clickActionUrl,
-            clickActionLabel));
-    }
 
     private static bool OpenFileLocation(string? filePath)
     {
