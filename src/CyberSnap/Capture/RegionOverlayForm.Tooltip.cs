@@ -320,15 +320,9 @@ public sealed partial class RegionOverlayForm
 
         string text = kind switch
         {
-            ConfirmChromeKind.Retry => ConfirmChromeTitle(kind)
-                + "  (R)\n"
-                + LocalizationService.Translate("Discard the current crop and select again"),
-            ConfirmChromeKind.Cancel => ConfirmChromeTitle(kind)
-                + "  (Esc)\n"
-                + LocalizationService.Translate("Close the capture tool and discard everything"),
-            ConfirmChromeKind.TogglePreview => ConfirmChromeTitle(kind)
-                + "\n"
-                + LocalizationService.Translate("Show the destination chooser after confirming capture"),
+            ConfirmChromeKind.Retry => ConfirmChromeTitle(kind) + "  (R)",
+            ConfirmChromeKind.Cancel => ConfirmChromeTitle(kind) + primaryHint,
+            ConfirmChromeKind.TogglePreview => ConfirmChromeTitle(kind) + primaryHint,
             _ => ConfirmChromeTitle(kind) + primaryHint
         };
 
