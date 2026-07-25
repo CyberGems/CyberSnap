@@ -774,7 +774,9 @@ public partial class App
                             }
                             else
                             {
-                                ToastWindow.Show("Scan", "No QR & Barcode found");
+                                ToastWindow.Show(
+                                    LocalizationService.Translate("Scan"),
+                                    LocalizationService.Translate("No QR/barcode found"));
                             }
                         }
                         catch (Exception ex)

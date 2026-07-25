@@ -2203,8 +2203,8 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        // Dock wrapper: perpetual slow lap (~3.2s).
-        _confirmWrapperShinePhase += (float)(UiChrome.FrameIntervalMs / 3200.0);
+        // Dock wrapper: perpetual slow lap (~4s, 20% slower than original 3.2s).
+        _confirmWrapperShinePhase += (float)(UiChrome.FrameIntervalMs / 4000.0);
         if (_confirmWrapperShinePhase >= 1f) _confirmWrapperShinePhase -= 1f;
 
         int hov = _hoveredConfirmButton;
