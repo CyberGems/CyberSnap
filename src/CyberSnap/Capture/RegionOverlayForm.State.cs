@@ -2457,7 +2457,7 @@ public sealed partial class RegionOverlayForm
             if (_annotationFrameDockSide == CaptureDockSide.Right)
                 maxX = Math.Min(maxX, r.Right);
             else if (_annotationFrameDockSide == CaptureDockSide.Left)
-                minX = Math.Max(minX, r.Left);
+                minX = Math.Max(minX, r.Left - clusterW - Math.Max(UiChrome.ScaleInt(20), r.Width / 3));
         }
 
         if (maxX < minX)
