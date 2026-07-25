@@ -2359,7 +2359,6 @@ public sealed partial class RegionOverlayForm
 
         int offset = UiChrome.ScaleInt(18);
         int margin = UiChrome.ScaleInt(10);
-        int cursorGap = UiChrome.ScaleInt(10);
 
         float anchorX = r.Left + _confirmButtonAnchorFracX * r.Width;
         float anchorY = r.Top + _confirmButtonAnchorFracY * r.Height;
@@ -2375,45 +2374,49 @@ public sealed partial class RegionOverlayForm
         bool belowFits = outsideBelow >= minY && outsideBelow + bh <= maxY;
         bool aboveFits = outsideAbove >= minY && outsideAbove + bh <= maxY;
 
-        float distBelow = Math.Abs((outsideBelow + bh * 0.5f) - anchorY);
-        float distAbove = Math.Abs((outsideAbove + bh * 0.5f) - anchorY);
-        bool preferBelow = distBelow <= distAbove;
-
         int y;
         bool insidePlacement = false;
+        bool sidePlacement = false;
 
         int insidePad = Math.Max(offset, UiChrome.ScaleInt(ConfirmHandleSize));
         int insideMin = r.Top + insidePad;
         int insideMax = r.Bottom - insidePad - bh;
         bool canPlaceInside = insideMax >= insideMin;
-        int insideY = 0;
-        if (canPlaceInside)
+        // Inside fallback docks to the bottom edge of the frame (near the lower border),
+        // not to the cursor/release anchor, so a click-picked tall window keeps the
+        // confirm pills at the bottom of the selection instead of the middle of the screen.
+        int insideY = insideMax;
+
+        // Side fallback for short selections with no room below: park the pill strip beside
+        // the frame on the side opposite the annotation column so it stays clear of it.
+        int sideGap = UiChrome.ScaleInt(12);
+        int sideLeft = r.Left - sideGap - clusterW;
+        int sideRight = r.Right + sideGap;
+        bool leftSideFits = sideLeft >= monitor.Left + margin;
+        bool rightSideFits = sideRight + clusterW <= monitor.Right - margin;
+        bool annotationRight = _annotationFrameDockSide == CaptureDockSide.Right;
+        bool oppositeSideFits = annotationRight ? leftSideFits : rightSideFits;
+
+        // Priority: below the frame (near the lower edge) -> inside the frame docked to its
+        // bottom edge -> beside the frame -> above -> last-resort clamp to the monitor.
+        if (belowFits)
         {
-            int aboveCursor = Math.Clamp((int)Math.Round(anchorY - bh - cursorGap), insideMin, insideMax);
-            int belowCursor = Math.Clamp((int)Math.Round(anchorY + cursorGap), insideMin, insideMax);
-            float bestInside = Math.Abs(aboveCursor + bh * 0.5f - anchorY);
-            insideY = aboveCursor;
-            float distBelowCursor = Math.Abs(belowCursor + bh * 0.5f - anchorY);
-            if (distBelowCursor < bestInside)
-                insideY = belowCursor;
+            y = outsideBelow;
         }
-
-        int? preferredOutside = preferBelow
-            ? (belowFits ? outsideBelow : null)
-            : (aboveFits ? outsideAbove : null);
-        int? farOutside = preferBelow
-            ? (aboveFits ? outsideAbove : null)
-            : (belowFits ? outsideBelow : null);
-
-        if (preferredOutside is int preferredY)
-            y = preferredY;
         else if (canPlaceInside)
         {
             y = insideY;
             insidePlacement = true;
         }
-        else if (farOutside is int farY)
-            y = farY;
+        else if (oppositeSideFits)
+        {
+            y = Math.Clamp(r.Bottom - bh, minY, maxTop);
+            sidePlacement = true;
+        }
+        else if (aboveFits)
+        {
+            y = outsideAbove;
+        }
         else
         {
             y = Math.Clamp((int)Math.Round(anchorY - bh / 2f), minY, maxTop);
@@ -2452,7 +2455,13 @@ public sealed partial class RegionOverlayForm
         // [minX, maxX] after escuadra limits (never jump to the far side of the monitor).
         int anchorBtnW = widths[^1];
         int clusterLeft;
-        if (insidePlacement)
+        if (sidePlacement)
+        {
+            // Park the pill strip beside the frame on the side opposite the annotation
+            // column so the destination pills stay clear of the tool column.
+            clusterLeft = annotationRight ? sideLeft : sideRight;
+        }
+        else if (insidePlacement)
         {
             clusterLeft = (int)Math.Round(anchorX - clusterW);
         }

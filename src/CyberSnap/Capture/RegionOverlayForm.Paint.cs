@@ -481,7 +481,7 @@ public sealed partial class RegionOverlayForm
         {
             Color glow = accent;
             Color core = ConfirmChromeShineCore(accent);
-            DrawBorderShine(g, face, corner, _confirmWrapperShinePhase, glow, core, 0.85f);
+            DrawBorderShine(g, face, corner, _confirmWrapperShinePhase, glow, core, 0.85f, thicknessScale: 0.75f);
         }
 
         if (!_confirmGripRect.IsEmpty)
@@ -692,7 +692,7 @@ public sealed partial class RegionOverlayForm
     /// is flattened to a polyline, and a neon blue gradient is painted with multiple passes. The shine
     /// has a symmetric gradient that fades smoothly at both ends.
     /// </summary>
-    private static void DrawBorderShine(Graphics g, RectangleF face, float corner, float phase, Color glowColor, Color coreColor, float intensity)
+    private static void DrawBorderShine(Graphics g, RectangleF face, float corner, float phase, Color glowColor, Color coreColor, float intensity, float thicknessScale = 1f)
     {
         using var path = WindowsDockRenderer.RoundedRect(face, corner);
         path.Flatten();
@@ -746,7 +746,7 @@ public sealed partial class RegionOverlayForm
                 int a = (int)(95 * intensity * factor * factor);
                 if (a > 0)
                 {
-                    glowPen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(3.5f) * factor);
+                    glowPen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(3.5f * thicknessScale) * factor);
                     glowPen.Color = Color.FromArgb(a, glowColor);
                     g.DrawLine(glowPen, prev, cur);
                 }
@@ -766,7 +766,7 @@ public sealed partial class RegionOverlayForm
                 int a = (int)(200 * intensity * factor * factor);
                 if (a > 0)
                 {
-                    corePen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(1.8f) * factor);
+                    corePen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(1.8f * thicknessScale) * factor);
                     corePen.Color = Color.FromArgb(a, coreColor);
                     g.DrawLine(corePen, prev, cur);
                 }
@@ -786,7 +786,7 @@ public sealed partial class RegionOverlayForm
                 int a = (int)(255 * intensity * factor * factor * factor);
                 if (a > 0)
                 {
-                    centerPen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(0.8f) * factor);
+                    centerPen.Width = Math.Max(0.5f, UiChrome.ScaleFloat(0.8f * thicknessScale) * factor);
                     centerPen.Color = Color.FromArgb(a, Color.White);
                     g.DrawLine(centerPen, prev, cur);
                 }
