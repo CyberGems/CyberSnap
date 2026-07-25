@@ -471,7 +471,8 @@ public sealed partial class RegionOverlayForm
             g.DrawPath(pen, path);
 
         // Subtle accent ring so the dock never disappears into a busy screenshot.
-        Color accent = Color.FromArgb(0, 162, 255);
+        // Uses UiChrome.AccentColor to match the annotation toolbar's docked-edge neon accent.
+        Color accent = UiChrome.AccentColor;
         using (var accentPen = new Pen(Color.FromArgb(UiChrome.IsDark ? 70 : 55, accent), UiChrome.ScaleFloat(1.25f)))
             g.DrawPath(accentPen, path);
 
