@@ -433,14 +433,6 @@ public partial class SettingsWindow : Window
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
-        // Editor / System viewer require save-to-file (locked on the outcome pills too).
-        var outcome = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
-        if (outcome.RequiresSave && SaveToFileCheck.IsChecked != true)
-        {
-            SaveToFileCheck.IsChecked = true;
-            return;
-        }
-
         var previous = _settingsService.Settings.SaveToFile;
         var selected = SaveToFileCheck.IsChecked == true;
         UpdateCaptureSavePreference(
@@ -451,11 +443,6 @@ public partial class SettingsWindow : Window
             value =>
             {
                 _settingsService.Settings.SaveToFile = value;
-                // Never-empty outcome: if turning Save off leaves nothing active,
-                // Normalize would still show Save — persist that so UI and settings match.
-                var normalized = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
-                if (normalized.EffectiveSave)
-                    _settingsService.Settings.SaveToFile = true;
             },
             value =>
             {
@@ -469,7 +456,6 @@ public partial class SettingsWindow : Window
             },
             () =>
             {
-                // Re-sync checkbox if Normalize forced Save back on.
                 _suppressCaptureSavePreferenceChange = true;
                 try { SaveToFileCheck.IsChecked = _settingsService.Settings.SaveToFile; }
                 finally { _suppressCaptureSavePreferenceChange = false; }
@@ -482,10 +468,11 @@ public partial class SettingsWindow : Window
 
     private void UpdateSaveToFileState()
     {
-        var outcome = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
-        bool requiresSaveToFile = outcome.RequiresSave;
-        SaveToFileCheck.IsEnabled = !requiresSaveToFile;
-        SaveToFileCheck.Opacity = requiresSaveToFile ? 0.5 : 1.0;
+        // Saving is optional for every outcome. The toggle is always enabled;
+        // destinations that need a file (editor: in-memory; system viewer: temp)
+        // no longer lock it here.
+        SaveToFileCheck.IsEnabled = true;
+        SaveToFileCheck.Opacity = 1.0;
     }
 
     private void AskFileNameCheck_Changed(object sender, RoutedEventArgs e)

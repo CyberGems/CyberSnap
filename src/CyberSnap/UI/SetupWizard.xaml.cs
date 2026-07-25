@@ -748,25 +748,14 @@ public partial class SetupWizard : Window
             return;
         }
 
-        // Keep the Save outcome pill in lockstep with the wizard checkbox.
         if (WizAfterCaptureOutcomeEditor != null)
         {
             var state = WizAfterCaptureOutcomeEditor.State;
             bool save = WizSaveToFileCheck.IsChecked == true;
-            if (state.RequiresSave && !save)
-            {
-                _suppressAfterCaptureChange = true;
-                try { WizSaveToFileCheck.IsChecked = true; }
-                finally { _suppressAfterCaptureChange = false; }
-                UpdateSaveDirectoryState();
-                return;
-            }
 
             if (state.EffectiveSave != save)
             {
                 WizAfterCaptureOutcomeEditor.SetState(state with { Save = save });
-                // Normalize may force Save back (never-empty outcome). Re-sync the checkbox
-                // so it doesn't stay off while the Save pill is still active.
                 var effective = WizAfterCaptureOutcomeEditor.State.EffectiveSave;
                 if (WizSaveToFileCheck.IsChecked != effective)
                 {
@@ -782,13 +771,10 @@ public partial class SetupWizard : Window
 
     private void UpdateSaveDirectoryState()
     {
-        var outcome = WizAfterCaptureOutcomeEditor?.State
-            ?? AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
-        bool requiresSaveToFile = outcome.RequiresSave;
-        WizSaveToFileCheck.IsEnabled = !requiresSaveToFile;
-        WizSaveToFileCheck.Opacity = requiresSaveToFile ? 0.5 : 1.0;
+        WizSaveToFileCheck.IsEnabled = true;
+        WizSaveToFileCheck.Opacity = 1.0;
 
-        var saveEnabled = WizSaveToFileCheck.IsChecked == true || requiresSaveToFile;
+        var saveEnabled = WizSaveToFileCheck.IsChecked == true;
         WizSaveDirRow.Opacity = saveEnabled ? 1 : 0.48;
         WizBrowseSaveDirBtn.IsEnabled = saveEnabled;
         WizSaveDirText.Visibility = saveEnabled ? Visibility.Visible : Visibility.Collapsed;
@@ -954,7 +940,6 @@ public partial class SetupWizard : Window
                         var state = WizAfterCaptureOutcomeEditor.State with
                         {
                             Save = WizSaveToFileCheck.IsChecked == true
-                                   || WizAfterCaptureOutcomeEditor.State.RequiresSave
                         };
                         AfterCaptureOutcomeModel.ApplyToSettings(state, s);
                         s.AutoCopySettingsSchemaVersion = AutoCopyPreferences.SchemaVersion;

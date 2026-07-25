@@ -70,6 +70,14 @@ internal static class CaptureSavePath
         return GetAvailablePath(Path.Combine(TempRecordingsDirectory, fileName));
     }
 
+    /// <summary>
+    /// Temp path for file-dependent after-capture steps (e.g. system viewer) when
+    /// SaveToFile is off. Shares the CyberSnap temp root so the existing temp-cleanup
+    /// helpers (toast dismiss / delayed delete) apply to it as well.
+    /// </summary>
+    public static string BuildTempCapturePath(string extension) =>
+        BuildTempRecordingPath(extension);
+
     public static bool IsTempRecordingPath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))

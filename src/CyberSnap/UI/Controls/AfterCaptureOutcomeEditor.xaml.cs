@@ -122,7 +122,7 @@ public partial class AfterCaptureOutcomeEditor : UserControl
     {
         bool canRemove = AfterCaptureOutcomeModel.CanRemove(_state, pill);
         string label = LocalizationService.Translate(AfterCaptureOutcomeModel.LabelKey(pill));
-        string tip = ResolveActiveTooltip(pill, canRemove);
+        string tip = LocalizationService.Translate(AfterCaptureOutcomeModel.TooltipKey(pill));
 
         var root = CreatePillChrome(isActive: true, tip);
         var row = new StackPanel
@@ -132,7 +132,7 @@ public partial class AfterCaptureOutcomeEditor : UserControl
             Height = PillContentHeight
         };
 
-        // Small gap before × / lock so hover fill doesn't crowd the label.
+        // Small gap before × so hover fill doesn't crowd the label.
         row.Children.Add(new TextBlock
         {
             Text = label,
@@ -150,36 +150,9 @@ public partial class AfterCaptureOutcomeEditor : UserControl
                 onClick: () => RemovePill(pill));
             row.Children.Add(remove);
         }
-        else
-        {
-            // Locked save: subtle lock glyph so forced / sole-step state is visible.
-            row.Children.Add(new TextBlock
-            {
-                Text = "\uE72E",
-                FontFamily = new WpfFontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-                FontSize = 10,
-                Opacity = 0.55,
-                VerticalAlignment = VerticalAlignment.Center,
-                Width = GlyphHitSize,
-                TextAlignment = TextAlignment.Center,
-                ToolTip = tip
-            });
-        }
 
         root.Child = row;
         return root;
-    }
-
-    private string ResolveActiveTooltip(AfterCapturePillKind pill, bool canRemove)
-    {
-        if (canRemove)
-            return LocalizationService.Translate(AfterCaptureOutcomeModel.TooltipKey(pill));
-
-        // Locked Save: distinguish forced-by-destination vs sole remaining step.
-        if (pill == AfterCapturePillKind.Save && _state.RequiresSave)
-            return LocalizationService.Translate(AfterCaptureOutcomeModel.ForcedSaveTooltipKey);
-
-        return LocalizationService.Translate(AfterCaptureOutcomeModel.RequiredOutcomeTooltipKey);
     }
 
     private FrameworkElement BuildAvailablePill(AfterCapturePillKind pill)
