@@ -581,7 +581,22 @@ public sealed partial class RegionOverlayForm
         Color baseIconColor = (accentColor.ToArgb() == UiChrome.SurfaceDanger.ToArgb())
             ? UiChrome.SurfaceDanger
             : (kind == ConfirmChromeKind.Done ? Color.FromArgb(34, 197, 94) : UiChrome.SurfaceTextPrimary);
-        Color iconColor = Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), baseIconColor);
+
+        float baseAlphaFactor = 0.25f + 0.75f * opacity;
+        if (kind == ConfirmChromeKind.More)
+        {
+            if (hover)
+            {
+                baseIconColor = UiChrome.AccentColor;
+                baseAlphaFactor = 1f;
+            }
+            else
+            {
+                baseAlphaFactor = UiChrome.IsDark ? 0.28f : 0.32f;
+            }
+        }
+
+        Color iconColor = Color.FromArgb((int)(255 * baseAlphaFactor), baseIconColor);
 
         if (useFluent)
         {
@@ -1379,32 +1394,20 @@ public sealed partial class RegionOverlayForm
                 g.FillPath(brush, path);
         }
 
-        string label = ConfirmChromeShortLabel(ConfirmChromeKind.TogglePreview);
-        using var font = CreateConfirmButtonFont();
-        using var sf = new StringFormat(StringFormat.GenericTypographic)
-        {
-            Alignment = StringAlignment.Near,
-            LineAlignment = StringAlignment.Center,
-            FormatFlags = StringFormatFlags.NoWrap | StringFormatFlags.NoClip,
-            Trimming = StringTrimming.None
-        };
-        
-        SizeF textSize = g.MeasureString(label, font, new SizeF(10000f, face.Height), sf);
+        int iconW = UiChrome.ScaleInt(16);
         int trackW = UiChrome.ScaleInt(34);
         int trackH = UiChrome.ScaleInt(18);
         int gap = UiChrome.ScaleInt(8);
 
-        float groupW = textSize.Width + gap + trackW;
+        float groupW = iconW + gap + trackW;
         float startX = face.X + (face.Width - groupW) / 2f;
 
-        Color textColor = UiChrome.SurfaceTextPrimary;
-        using (var textBrush = new SolidBrush(Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), textColor)))
-        {
-            var textRect = new RectangleF(startX, face.Y, textSize.Width + 1f, face.Height);
-            g.DrawString(label, font, textBrush, textRect, sf);
-        }
+        float iconY = face.Y + (face.Height - iconW) / 2f;
+        Color baseIconColor = UiChrome.SurfaceTextPrimary;
+        Color iconColor = Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), baseIconColor);
+        FluentIcons.DrawIcon(g, "eye", new RectangleF(startX, iconY, iconW, iconW), iconColor, iconInset: 0f);
 
-        float trackX = startX + textSize.Width + gap;
+        float trackX = startX + iconW + gap;
         float trackY = face.Y + (face.Height - trackH) / 2f;
         var trackRect = new RectangleF(trackX, trackY, trackW, trackH);
         float trackCorner = trackH * 0.5f;

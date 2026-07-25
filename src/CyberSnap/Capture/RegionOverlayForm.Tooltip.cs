@@ -296,7 +296,9 @@ public sealed partial class RegionOverlayForm
 
     private void ShowConfirmTooltip()
     {
-        if (!_isConfirmingSelection || _hoveredConfirmButton < 0 || (_confirmContextMenu != null && _confirmContextMenu.Visible))
+        if (!_isConfirmingSelection || _hoveredConfirmButton < 0 
+            || (_confirmContextMenu != null && _confirmContextMenu.Visible)
+            || (_toolbarContextMenu != null && _toolbarContextMenu.Visible))
         {
             HideToolbarTooltip();
             return;

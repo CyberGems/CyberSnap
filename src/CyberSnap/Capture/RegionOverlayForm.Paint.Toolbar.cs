@@ -548,7 +548,12 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            dotsColor = Color.FromArgb((int)((UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f * 255), UiChrome.SurfaceTextPrimary);
+            float baseAlpha = (UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f;
+            if (ShowAnnotationChrome)
+            {
+                baseAlpha = UiChrome.IsDark ? 0.22f : 0.26f;
+            }
+            dotsColor = Color.FromArgb((int)(baseAlpha * 255), UiChrome.SurfaceTextPrimary);
         }
 
         // Kebab dots — orientation follows the activator's hit-target shape: the annotation
@@ -571,18 +576,18 @@ public sealed partial class RegionOverlayForm
 
         if (ShowAnnotationChrome && !_annotationGripRect.IsEmpty)
         {
-            DrawToolbarGripDots(g, _annotationGripRect, UiChrome.AccentColor);
+            DrawToolbarGripDots(g, _annotationGripRect, UiChrome.AccentColor, isAnnotationBar: true);
         }
         else if (!ShowAnnotationChrome && !_captureGripRect.IsEmpty)
         {
-            DrawToolbarGripDots(g, _captureGripRect, UiChrome.AccentColor);
+            DrawToolbarGripDots(g, _captureGripRect, UiChrome.AccentColor, isAnnotationBar: false);
         }
 
         g.SmoothingMode = SmoothingMode.Default;
         g.PixelOffsetMode = PixelOffsetMode.Default;
     }
 
-    private static void DrawToolbarGripDots(Graphics g, Rectangle rect, Color accent)
+    private static void DrawToolbarGripDots(Graphics g, Rectangle rect, Color accent, bool isAnnotationBar = false)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
             return;
@@ -593,7 +598,12 @@ public sealed partial class RegionOverlayForm
         float stepY = UiChrome.ScaleFloat(4.2f);
         float dotRadius = UiChrome.ScaleFloat(1.2f);
         
-        int alpha = (int)((UiChrome.IsDark ? 0.28f : 0.32f) * 255);
+        float baseAlpha = UiChrome.IsDark ? 0.28f : 0.32f;
+        if (isAnnotationBar)
+        {
+            baseAlpha = UiChrome.IsDark ? 0.22f : 0.26f;
+        }
+        int alpha = (int)(baseAlpha * 255);
         using var dotBrush = new SolidBrush(Color.FromArgb(alpha, UiChrome.SurfaceTextPrimary));
 
         bool horizontal = rect.Width >= rect.Height;

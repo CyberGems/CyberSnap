@@ -83,12 +83,12 @@ public sealed partial class RegionOverlayForm : Form
     private readonly float[] _shineDup = new float[ConfirmShineSlots];  // duplicate comet intensity (hover)
 
     // Confirm chrome: Cancel / Retry / modes (built in RebuildConfirmChrome)
-    private enum ConfirmChromeKind { Cancel, Retry, Done, TogglePreview, ModeImage, ModeOcr, ModeVideo, ModeGif, ModeScroll, ModeQr }
+    private enum ConfirmChromeKind { Cancel, Retry, Done, TogglePreview, ModeImage, ModeOcr, ModeVideo, ModeGif, ModeScroll, ModeQr, More }
     private ConfirmChromeKind[] _confirmChromeKinds =
     {
         ConfirmChromeKind.ModeImage, ConfirmChromeKind.ModeOcr, ConfirmChromeKind.ModeVideo, ConfirmChromeKind.ModeGif,
         ConfirmChromeKind.ModeScroll, ConfirmChromeKind.ModeQr,
-        ConfirmChromeKind.TogglePreview, ConfirmChromeKind.Retry, ConfirmChromeKind.Cancel, ConfirmChromeKind.Done
+        ConfirmChromeKind.TogglePreview, ConfirmChromeKind.Retry, ConfirmChromeKind.Done, ConfirmChromeKind.Cancel, ConfirmChromeKind.More
     };
     private Rectangle[] _confirmChromeRects = Array.Empty<Rectangle>();
     /// <summary>Thin divider between fixed Cancel/Retry and destination pills (empty when unused).</summary>
@@ -763,6 +763,16 @@ public sealed partial class RegionOverlayForm : Form
         // Confirm: annotation-only dock (no capture tools) — single row/column.
         if (ShowAnnotationChrome)
         {
+            var settings = Services.SettingsService.LoadStatic();
+            var currentlyEnabled = settings?.EnabledTools ?? ToolDef.DefaultEnabledIds();
+            bool hasAnnotations = currentlyEnabled.Any(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
+            if (!hasAnnotations)
+            {
+                _toolbarRect = Rectangle.Empty;
+                _annotationGripRect = Rectangle.Empty;
+                _menuActivatorRect = Rectangle.Empty;
+                return;
+            }
             CalcAnnotationOnlyToolbar(screenBounds, pad, buttonSize, buttonSpacing);
             return;
         }
@@ -1149,7 +1159,12 @@ public sealed partial class RegionOverlayForm : Form
         _confirmDocksHiddenForFrameManip = false;
 
         EnsureToolbarReady();
-        if (_toolbarForm is { IsDisposed: false })
+        var settings = Services.SettingsService.LoadStatic();
+        var currentlyEnabled = settings?.EnabledTools ?? ToolDef.DefaultEnabledIds();
+        bool hasAnnotations = currentlyEnabled.Any(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
+        bool shouldShowToolbar = !ShowAnnotationChrome || hasAnnotations;
+
+        if (shouldShowToolbar && _toolbarForm is { IsDisposed: false })
         {
             try
             {

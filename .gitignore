@@ -1,4 +1,4 @@
-﻿## .NET
+## .NET
 bin/
 obj/
 *.user
@@ -51,6 +51,7 @@ src/CyberSnap/CyberSnap_*.png
 
 
 ## AI agent instruction files (LOCAL ONLY)
+*_TODO.md
 AGENTS.md
 CLAUDE.md
 .cursorrules
