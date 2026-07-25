@@ -85,6 +85,21 @@ public sealed partial class RegionOverlayForm
         if (_confirmDocksHiddenForFrameManip)
             return;
 
+        if (ShowAnnotationChrome)
+        {
+            var settings = Services.SettingsService.LoadStatic();
+            var currentlyEnabled = settings?.EnabledTools ?? ToolDef.DefaultEnabledIds();
+            bool hasAnnotations = currentlyEnabled.Any(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
+            if (!hasAnnotations)
+            {
+                if (_toolbarForm != null && _toolbarForm.Visible)
+                {
+                    _toolbarForm.Hide();
+                }
+                return;
+            }
+        }
+
         if (_toolbarForm == null || _toolbarForm.IsDisposed)
         {
             _toolbarForm = new ToolbarForm(this);

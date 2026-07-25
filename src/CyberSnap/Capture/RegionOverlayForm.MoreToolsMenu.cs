@@ -153,6 +153,7 @@ public sealed partial class RegionOverlayForm
 
     private void ShowToolbarContextMenu(int buttonIndex, Point clickLocation)
     {
+        HideToolbarTooltip();
         ToolDef? tool = null;
         bool isHideable = buttonIndex >= 0 &&
                           buttonIndex != ColorButtonIndex &&
@@ -192,6 +193,13 @@ public sealed partial class RegionOverlayForm
         // Compute hidden tools early — needed for header separators and Restore item below
         var allTools = ToolDef.AllTools;
         var hiddenTools = allTools.Where(t => !currentlyEnabled.Contains(t.Id)).ToList();
+        bool isClickOnConfirmDock = _isConfirmingSelection && !_confirmChromeWrapperRect.IsEmpty && _confirmChromeWrapperRect.Contains(clickLocation);
+        bool isClickOnCaptureDock = !_isConfirmingSelection;
+        if (isClickOnConfirmDock || isClickOnCaptureDock)
+        {
+            // Exclude individual hidden annotation tools from the capture/confirm modes dock menus
+            hiddenTools = hiddenTools.Where(t => t.Group != 1).ToList();
+        }
 
         // CyberSnap header — always shown when a system button or toolbar background is clicked
         if (tool == null)
@@ -271,13 +279,13 @@ public sealed partial class RegionOverlayForm
             menu.Items.Add(new ToolStripSeparator());
         }
 
-        // Bulk show/hide annotation tools — only while confirming (capture has no annot dock).
-        if (_isConfirmingSelection)
+        // Bulk show/hide annotation tools
+        if (_isConfirmingSelection || buttonIndex == -1 || tool == null)
         {
             var annotationToolsCount = currentlyEnabled.Count(id => ToolDef.AllTools.Any(t => t.Id == id && t.Group == 1));
             bool toolsVisible = annotationToolsCount > 0;
             var showAnnotItem = WindowsMenuRenderer.Item(
-                "Show annotation tools",
+                LocalizationService.Translate("Show annotation tools"),
                 iconId: toolsVisible ? "check" : null,
                 iconSize: 24);
             showAnnotItem.Click += (s, e) => {
