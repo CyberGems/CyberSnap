@@ -252,15 +252,6 @@
 
                         <!-- Primary CTA + hint -->
                         <StackPanel Grid.Row="2" Margin="0,14,0,0">
-                            <TextBlock x:Name="ViewerHintBadge"
-                                       Text=""
-                                       Visibility="Collapsed"
-                                       Margin="0,0,0,8"
-                                       FontSize="10.5"
-                                       TextWrapping="Wrap"
-                                       TextAlignment="Left"
-                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
-
                             <Button x:Name="CancelBtn" Click="CancelBtn_Click"
                                     Style="{StaticResource PreviewPrimaryButton}"
                                     HorizontalAlignment="Stretch">
@@ -269,6 +260,16 @@
                                     <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
                                 </StackPanel>
                             </Button>
+
+                            <TextBlock x:Name="ViewerHintBadge"
+                                       Text=""
+                                       Visibility="Collapsed"
+                                       Margin="0,8,0,0"
+                                       FontSize="10.5"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       Opacity="0.85"
+                                       Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                         </StackPanel>
                     </Grid>
                 </Border>
