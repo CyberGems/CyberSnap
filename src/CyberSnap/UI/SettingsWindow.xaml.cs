@@ -338,12 +338,14 @@ public partial class SettingsWindow : Window
                 AfterCaptureOutcomeEditor.LoadFromSettings(_settingsService.Settings);
                 // If rollback, restore settings snapshot already in _settingsService from setValue(previous).
                 SyncSaveToFileCheckFromSettings();
+                RefreshCapturePreviewTimeoutVisibility();
                 RefreshEditorPreviewState();
             },
             value =>
             {
                 SyncSaveToFileCheckFromSettings();
                 UpdateSaveToFileState();
+                RefreshCapturePreviewTimeoutVisibility();
                 SettingsService.PublishAutoCopyState(_settingsService.Settings);
                 ((App)Application.Current).SyncWidgetAutoCopyToggle();
                 RefreshEditorPreviewState();

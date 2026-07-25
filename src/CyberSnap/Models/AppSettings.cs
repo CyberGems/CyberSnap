@@ -200,6 +200,11 @@ public sealed class AppSettings
     /// </summary>
     public bool ShowCapturePreview { get; set; } = true;
 
+    /// <summary>
+    /// Timeout in seconds before the capture preview window auto-closes and executes the deferred action (0 = Off / no limit, 5, 10, 20, 30).
+    /// </summary>
+    public int CapturePreviewTimeoutSeconds { get; set; } = 20;
+
     public bool AllowHotkeyOverride { get; set; }
 
     public uint HotkeyModifiers { get; set; } = Native.User32.MOD_ALT | Native.User32.MOD_SHIFT;

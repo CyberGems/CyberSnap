@@ -676,7 +676,11 @@ public partial class App
 
                     var commitAction = overlay.PendingCommitAction;
                     overlay.Hide();
-                    UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(sel.Right, sel.Bottom));
+                    // sel is bitmap/overlay-client relative; convert to virtual-screen pixels.
+                    var monitorPoint = new System.Drawing.Point(
+                        captureBounds.X + sel.X + sel.Width / 2,
+                        captureBounds.Y + sel.Y + sel.Height / 2);
+                    UI.PopupWindowHelper.SetMonitorHintPoint(monitorPoint);
                     using var annotated = overlay.RenderAnnotatedBitmap();
                     var cropped = ScreenCapture.CropRegion(annotated, sel);
                     overlay.Close();
@@ -696,7 +700,7 @@ public partial class App
                                 TryCopyCaptureOutputToClipboard(cropped, null);
                             }
 
-                            var dialog = new UI.CapturePreviewDialog(cropped, _settingsService);
+                            var dialog = new UI.CapturePreviewDialog(cropped, _settingsService, monitorPoint);
                             if (dialog.ShowDialog() == true)
                             {
                                 HandleCaptureResult(cropped, dialog.SelectedAction);
@@ -718,7 +722,8 @@ public partial class App
                 overlay.OcrRegionSelected += sel =>
                 {
                     overlay.Hide();
-                    UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(sel.Right, sel.Bottom));
+                    UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(
+                        captureBounds.X + sel.Right, captureBounds.Y + sel.Bottom));
                     using var annotated = overlay.RenderAnnotatedBitmap();
                     var cropped = ScreenCapture.CropRegion(annotated, sel);
                     overlay.Close();
@@ -729,7 +734,8 @@ public partial class App
                 overlay.ScrollRegionSelected += sel =>
                 {
                     overlay.Hide();
-                    UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(sel.Right, sel.Bottom));
+                    UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(
+                        captureBounds.X + sel.Right, captureBounds.Y + sel.Bottom));
                     overlay.Close();
                     System.Windows.Forms.Application.ExitThread();
                     Dispatcher.BeginInvoke(() => LaunchScrollingCapture(sel));
@@ -739,7 +745,8 @@ public partial class App
                 {
                     overlay.Hide();
                     SoundService.PlayScanSound();
-                    UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(sel.Right, sel.Bottom));
+                    UI.PopupWindowHelper.SetMonitorHintPoint(new System.Drawing.Point(
+                        captureBounds.X + sel.Right, captureBounds.Y + sel.Bottom));
                     using var annotated = overlay.RenderAnnotatedBitmap();
                     var scanned = ScreenCapture.CropRegion(annotated, sel);
                     overlay.Close();

@@ -405,6 +405,46 @@ public partial class SettingsWindow
             });
     }
 
+    private void CapturePreviewTimeoutCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressToastPreferenceChange) return;
+        if (CapturePreviewTimeoutCombo.SelectedItem is not ComboBoxItem item || item.Tag is not string tag)
+            return;
+
+        if (!int.TryParse(tag, out int seconds))
+            return;
+
+        var previous = _settingsService.Settings.CapturePreviewTimeoutSeconds;
+        UpdateToastPreference(
+            "settings.capture-preview-timeout",
+            "Capture preview auto-close",
+            previous,
+            seconds,
+            value => _settingsService.Settings.CapturePreviewTimeoutSeconds = value,
+            SelectCapturePreviewTimeout);
+    }
+
+    private void SelectCapturePreviewTimeout(int seconds)
+    {
+        if (CapturePreviewTimeoutCombo is null) return;
+        CapturePreviewTimeoutCombo.SelectedIndex = seconds switch
+        {
+            0 => 0,
+            5 => 1,
+            10 => 2,
+            20 => 3,
+            30 => 4,
+            _ => 3
+        };
+    }
+
+    private void RefreshCapturePreviewTimeoutVisibility()
+    {
+        if (CapturePreviewTimeoutSection is null) return;
+        bool previewActive = _settingsService.Settings.ShowCapturePreview;
+        CapturePreviewTimeoutSection.Visibility = previewActive ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private void ToastDurationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded || _suppressToastPreferenceChange) return;

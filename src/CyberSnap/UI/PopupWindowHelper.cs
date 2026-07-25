@@ -19,6 +19,14 @@ internal static class PopupWindowHelper
     /// <summary>Clear any previously set hint point.</summary>
     public static void ClearMonitorHintPoint() => _monitorHintPoint = null;
 
+    /// <summary>Take and clear the current monitor hint, if any.</summary>
+    public static System.Drawing.Point? TakeMonitorHintPoint()
+    {
+        var pt = _monitorHintPoint;
+        _monitorHintPoint = null;
+        return pt;
+    }
+
     public static Screen[] GetSortedScreens()
     {
         // Sort screens: Primary first, then by X coordinate, then by Y.
@@ -70,11 +78,11 @@ internal static class PopupWindowHelper
     }
 
     /// <summary>
-    /// Centers a shown window on the monitor under the hint point / cursor using physical
-    /// pixels via SetWindowPos. Avoids WPF DIP rounding drift on mixed-DPI multi-monitor setups.
-    /// Consumes <see cref="SetMonitorHintPoint"/> if one was set.
+    /// Centers a shown window on the monitor under <paramref name="monitorPoint"/> (or the
+    /// static hint / cursor) using physical pixels via SetWindowPos. Avoids WPF DIP rounding
+    /// drift on mixed-DPI multi-monitor setups.
     /// </summary>
-    public static void CenterWindowOnPhysicalMonitor(Window window)
+    public static void CenterWindowOnPhysicalMonitor(Window window, System.Drawing.Point? monitorPoint = null)
     {
         var helper = new WindowInteropHelper(window);
         var hwnd = helper.Handle;
@@ -85,7 +93,7 @@ internal static class PopupWindowHelper
         if (!User32.GetWindowRect(hwnd, out var wr))
             return;
 
-        var anchor = _monitorHintPoint ?? System.Windows.Forms.Cursor.Position;
+        var anchor = monitorPoint ?? _monitorHintPoint ?? System.Windows.Forms.Cursor.Position;
         _monitorHintPoint = null;
 
         var screen = Screen.FromPoint(anchor);
@@ -110,6 +118,23 @@ internal static class PopupWindowHelper
             0,
             0,
             User32.SWP_NOSIZE | User32.SWP_NOZORDER | User32.SWP_NOACTIVATE);
+    }
+
+    /// <summary>
+    /// Centers <paramref name="window"/> on the work area of the screen containing
+    /// <paramref name="monitorPoint"/> using DIP coordinates.
+    /// </summary>
+    public static void CenterOnScreen(Window window, System.Drawing.Point monitorPoint)
+    {
+        var wa = ScreenWorkingAreaToDips(Screen.FromPoint(monitorPoint));
+        var width = window.ActualWidth > 0 ? window.ActualWidth
+            : (double.IsNaN(window.Width) ? 0 : window.Width);
+        var height = window.ActualHeight > 0 ? window.ActualHeight
+            : (double.IsNaN(window.Height) ? 0 : window.Height);
+        if (width <= 0 || height <= 0)
+            return;
+        window.Left = wa.Left + (wa.Width - width) / 2;
+        window.Top = wa.Top + (wa.Height - height) / 2;
     }
 
     public static void ApplyNoActivateChrome(Window window)

@@ -1404,6 +1404,47 @@
                                 </StackPanel>
                             </Grid>
                             <controls:AfterCaptureOutcomeEditor x:Name="AfterCaptureOutcomeEditor"/>
+                            <StackPanel x:Name="CapturePreviewTimeoutSection">
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,12,0,12"/>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}">
+                                        <TextBlock Text="&#xE916;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Services:LocalizationService.SourceText="Capture preview auto-close" Style="{StaticResource SettingTitle}"/>
+                                        <TextBlock Services:LocalizationService.SourceText="Set timeout before the capture preview window auto-closes." Style="{StaticResource SettingDescription}"/>
+                                    </StackPanel>
+                                    <ComboBox x:Name="CapturePreviewTimeoutCombo" Grid.Column="2" MinWidth="150"
+                                               VerticalAlignment="Center"
+                                               SelectionChanged="CapturePreviewTimeoutCombo_SelectionChanged">
+                                        <ComboBoxItem Services:LocalizationService.SourceContent="Don't close" Tag="0"
+                                                      ToolTip="Do not auto-close the capture preview window."
+                                                      AutomationProperties.Name="Don't close preview auto-close"
+                                                      AutomationProperties.HelpText="Do not auto-close the capture preview window."/>
+                                        <ComboBoxItem Services:LocalizationService.SourceContent="5 seconds" Tag="5"
+                                                      ToolTip="Auto-close preview window after 5 seconds."
+                                                      AutomationProperties.Name="5 seconds preview auto-close"
+                                                      AutomationProperties.HelpText="Auto-close preview window after 5 seconds."/>
+                                        <ComboBoxItem Services:LocalizationService.SourceContent="10 seconds" Tag="10"
+                                                      ToolTip="Auto-close preview window after 10 seconds."
+                                                      AutomationProperties.Name="10 seconds preview auto-close"
+                                                      AutomationProperties.HelpText="Auto-close preview window after 10 seconds."/>
+                                        <ComboBoxItem Services:LocalizationService.SourceContent="20 seconds" Tag="20"
+                                                      ToolTip="Auto-close preview window after 20 seconds."
+                                                      AutomationProperties.Name="20 seconds preview auto-close"
+                                                      AutomationProperties.HelpText="Auto-close preview window after 20 seconds."/>
+                                        <ComboBoxItem Services:LocalizationService.SourceContent="30 seconds" Tag="30"
+                                                      ToolTip="Auto-close preview window after 30 seconds."
+                                                      AutomationProperties.Name="30 seconds preview auto-close"
+                                                      AutomationProperties.HelpText="Auto-close preview window after 30 seconds."/>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
