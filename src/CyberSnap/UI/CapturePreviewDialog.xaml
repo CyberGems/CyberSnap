@@ -6,7 +6,7 @@
         Height="480" Width="680"
         MinHeight="380" MinWidth="650"
         ResizeMode="CanResize"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="Manual"
         Background="Transparent"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -57,10 +57,11 @@
             <DropShadowEffect BlurRadius="24" ShadowDepth="2" Opacity="0.4" Color="Black"/>
         </Border.Effect>
 
-        <Grid Margin="0,0,0,14">
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -113,7 +114,7 @@
             </Border>
 
             <!-- Optional actions bar -->
-            <StackPanel Grid.Row="3" Margin="14,12,14,0">
+            <StackPanel Grid.Row="3" Margin="14,12,14,14">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock x:Name="OptionalActionsHeaderLabel" Text="Optional actions" FontSize="11.5" FontWeight="SemiBold"
                                Foreground="{DynamicResource ThemeTextSecondaryBrush}" VerticalAlignment="Center"
@@ -172,10 +173,27 @@
 
             <TextBlock Grid.Row="4" x:Name="ViewerHintBadge"
                        Text="The system viewer opens when this window closes."
-                       Visibility="Collapsed" Margin="14,8,14,0" FontSize="11"
+                       Visibility="Collapsed" Margin="14,8,14,10" FontSize="11"
                        TextWrapping="Wrap" TextAlignment="Center"
                        Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                        ToolTip="The system viewer opens when this window closes."/>
+
+            <!-- Auto-close progress: BottomCenter toast style (shrinks toward center) -->
+            <Grid x:Name="ProgressHost" Grid.Row="5" Height="4" ClipToBounds="True" Visibility="Collapsed">
+                <Border x:Name="ProgressTrack" Background="Transparent" HorizontalAlignment="Stretch"/>
+                <Border x:Name="ProgressBar" HorizontalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                            <GradientStop Color="#FF00F2FF" Offset="0.0"/>
+                            <GradientStop Color="#FF7A00FF" Offset="0.5"/>
+                            <GradientStop Color="#FFFF00D0" Offset="1.0"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.RenderTransform>
+                        <ScaleTransform x:Name="ProgressScale" ScaleX="1" ScaleY="1"/>
+                    </Border.RenderTransform>
+                </Border>
+            </Grid>
         </Grid>
     </Border>
 </Window>

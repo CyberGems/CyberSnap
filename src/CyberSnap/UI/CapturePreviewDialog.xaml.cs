@@ -2,7 +2,10 @@ using System;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using CyberSnap.Helpers;
 using CyberSnap.Services;
 using CyberSnap.Capture;
@@ -13,23 +16,48 @@ namespace CyberSnap.UI
     {
         private readonly SettingsService _settingsService;
         private readonly Bitmap _capturedBitmap;
+        private readonly System.Drawing.Point _targetMonitorPoint;
         private bool _isPinned = false;
+        private bool _isHovered = false;
+        private bool _didCenterOnOpen;
         private AfterCaptureOutcomeState _lastOutcomeState;
+        private int _lastTimeoutSeconds;
+        private DispatcherTimer? _autoCloseTimer;
+        private double _autoCloseDurationSeconds;
 
         public RegionOverlayForm.ConfirmCommitAction SelectedAction { get; private set; } = RegionOverlayForm.ConfirmCommitAction.Default;
 
-        public CapturePreviewDialog(Bitmap bitmap, SettingsService settingsService)
+        public CapturePreviewDialog(
+            Bitmap bitmap,
+            SettingsService settingsService,
+            System.Drawing.Point? targetMonitorPoint = null)
         {
             _capturedBitmap = bitmap;
             _settingsService = settingsService;
+            // Own the capture-monitor anchor immediately. The static hint is easy to consume
+            // (toast / GetCurrentWorkArea) before our deferred center runs — that sent the
+            // dialog to the primary monitor when capturing on a secondary.
+            _targetMonitorPoint = targetMonitorPoint
+                ?? PopupWindowHelper.TakeMonitorHintPoint()
+                ?? System.Windows.Forms.Cursor.Position;
 
             InitializeComponent();
+            // Hide until post-layout physical centering runs. Centering at SourceInitialized /
+            // with Width alone is wrong at 150% DPI + UiScale: the HWND grows afterward and
+            // the window appears to jump right.
+            Opacity = 0;
             TitleBar.IsPinActive = _isPinned;
             Topmost = true; // Temporary topmost to force it to the foreground on launch
-            ContentRendered += (s, e) => Topmost = _isPinned;
+            ContentRendered += CapturePreviewDialog_ContentRendered;
             Activated += CapturePreviewDialog_Activated;
             SettingsService.SettingsChanged += SettingsService_SettingsChanged;
-            Closed += (s, e) => SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
+            Closed += (_, _) =>
+            {
+                SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
+                StopAutoCloseTimer(resetProgress: true);
+            };
+            MouseEnter += (_, _) => OnPreviewMouseEnter();
+            MouseLeave += (_, _) => OnPreviewMouseLeave();
 
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
@@ -58,6 +86,47 @@ namespace CyberSnap.UI
             UpdateContinueOrExitButton();
             UpdateOptionalActionsAvailability();
             _lastOutcomeState = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            _lastTimeoutSeconds = _settingsService.Settings.CapturePreviewTimeoutSeconds;
+            InitAutoCloseTimer();
+        }
+
+        private void CapturePreviewDialog_ContentRendered(object? sender, EventArgs e)
+        {
+            ContentRendered -= CapturePreviewDialog_ContentRendered;
+            Topmost = _isPinned;
+
+            // Defer until layout/DPI settle — SourceInitialized GetWindowRect is still short
+            // at 150% with AllowsTransparency + UiScale LayoutTransform.
+            Dispatcher.BeginInvoke(new Action(CenterOnOpenMonitor), DispatcherPriority.ContextIdle);
+        }
+
+        private void CenterOnOpenMonitor()
+        {
+            if (_didCenterOnOpen) return;
+            _didCenterOnOpen = true;
+
+            // Mixed-DPI (primary 125% / secondary 150%): only SetWindowPos in physical pixels.
+            // Setting WPF Left/Top in DIPs afterward pulls the window top-left on the
+            // non-primary monitor. First move may change DPI and grow the HWND; second
+            // pass recenters with the final physical size.
+            try
+            {
+                UpdateLayout();
+                PopupWindowHelper.CenterWindowOnPhysicalMonitor(this, _targetMonitorPoint);
+            }
+            catch { /* retry below */ }
+
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    UpdateLayout();
+                    PopupWindowHelper.CenterWindowOnPhysicalMonitor(this, _targetMonitorPoint);
+                }
+                catch { /* keep current position */ }
+
+                Opacity = 1;
+            }), DispatcherPriority.ApplicationIdle);
         }
 
         private void UpdateIcons()
@@ -99,12 +168,121 @@ namespace CyberSnap.UI
             if (!IsLoaded) return;
 
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
-            if (state == _lastOutcomeState) return;
+            int timeoutSeconds = _settingsService.Settings.CapturePreviewTimeoutSeconds;
+            if (state == _lastOutcomeState && timeoutSeconds == _lastTimeoutSeconds) return;
+
+            bool timeoutChanged = timeoutSeconds != _lastTimeoutSeconds;
             _lastOutcomeState = state;
+            _lastTimeoutSeconds = timeoutSeconds;
 
             PopulateAfterCapturePills();
             UpdateContinueOrExitButton();
             UpdateOptionalActionsAvailability();
+
+            if (timeoutChanged)
+                InitAutoCloseTimer();
+        }
+
+        private void InitAutoCloseTimer()
+        {
+            StopAutoCloseTimer(resetProgress: true);
+
+            int timeoutSec = _settingsService.Settings.CapturePreviewTimeoutSeconds;
+            if (timeoutSec <= 0 || _isPinned)
+            {
+                ProgressHost.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            _autoCloseDurationSeconds = timeoutSec;
+            ProgressHost.Visibility = Visibility.Visible;
+            ProgressBar.Visibility = Visibility.Visible;
+            ProgressScale.ScaleX = 1;
+
+            _autoCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_autoCloseDurationSeconds) };
+            _autoCloseTimer.Tick += (_, _) =>
+            {
+                StopAutoCloseTimer(resetProgress: false);
+                if (_isPinned || _isHovered)
+                    return;
+                PerformAutoClose();
+            };
+
+            if (_isHovered)
+                return;
+
+            StartProgressAnimation(_autoCloseDurationSeconds);
+            _autoCloseTimer.Start();
+        }
+
+        private void StartProgressAnimation(double remainingSeconds)
+        {
+            if (remainingSeconds <= 0) return;
+            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation { To = 0, Duration = Motion.Sec(remainingSeconds) });
+        }
+
+        private void PauseAutoCloseForHover()
+        {
+            if (_autoCloseTimer == null) return;
+
+            _autoCloseTimer.Stop();
+            double progress = Math.Clamp(ProgressScale.ScaleX, 0, 1);
+            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            ProgressScale.ScaleX = progress;
+        }
+
+        private void ResumeAutoCloseAfterHover()
+        {
+            if (_isPinned || _autoCloseTimer == null || _autoCloseDurationSeconds <= 0)
+                return;
+
+            double remaining = Math.Max(0.1, Math.Clamp(ProgressScale.ScaleX, 0, 1) * _autoCloseDurationSeconds);
+            _autoCloseTimer.Interval = TimeSpan.FromSeconds(remaining);
+            StartProgressAnimation(remaining);
+            _autoCloseTimer.Start();
+        }
+
+        private void StopAutoCloseTimer(bool resetProgress)
+        {
+            if (_autoCloseTimer != null)
+            {
+                _autoCloseTimer.Stop();
+                _autoCloseTimer = null;
+            }
+
+            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            if (resetProgress)
+                ProgressScale.ScaleX = 1;
+        }
+
+        private void OnPreviewMouseEnter()
+        {
+            _isHovered = true;
+            PauseAutoCloseForHover();
+        }
+
+        private void OnPreviewMouseLeave()
+        {
+            _isHovered = false;
+            if (_isPinned) return;
+            ResumeAutoCloseAfterHover();
+        }
+
+        private void PerformAutoClose()
+        {
+            // Same outcome as Continue / Exit (CancelBtn).
+            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            if (state.SystemViewer || state.Destination == AfterCaptureDestination.Editor)
+            {
+                SelectedAction = RegionOverlayForm.ConfirmCommitAction.Default;
+                DialogResult = true;
+            }
+            else
+            {
+                DialogResult = false;
+            }
+            Close();
         }
 
         private void EditAfterCaptureSettingsBtn_Click(object sender, RoutedEventArgs e)
@@ -266,6 +444,16 @@ namespace CyberSnap.UI
             _isPinned = !_isPinned;
             TitleBar.IsPinActive = _isPinned;
             Topmost = _isPinned;
+
+            if (_isPinned)
+            {
+                StopAutoCloseTimer(resetProgress: true);
+                ProgressHost.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                InitAutoCloseTimer();
+            }
         }
 
         private void SaveBtn_Click(object sender, RoutedEventArgs e)

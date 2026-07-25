@@ -218,6 +218,7 @@ public partial class SettingsWindow
                 : 0;
 
             AfterCaptureOutcomeEditor?.LoadFromSettings(s);
+            RefreshCapturePreviewTimeoutVisibility();
             ApplyAutoCopyControlsFromSettings(s);
 
             SaveToFileCheck.IsChecked = s.SaveToFile;
@@ -331,6 +332,8 @@ public partial class SettingsWindow
             RecordDesktopAudioCheck.IsChecked = s.RecordDesktopAudio;
             TryLoadSettingsSection("settings.populate-audio-devices", PopulateAudioDevices);
 
+            SelectCapturePreviewTimeout(s.CapturePreviewTimeoutSeconds);
+            RefreshCapturePreviewTimeoutVisibility();
             double dur = s.ToastDurationSeconds;
             SelectToastDuration(dur);
             double sysDur = s.SystemToastDurationSeconds;
