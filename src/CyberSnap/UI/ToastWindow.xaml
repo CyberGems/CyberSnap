@@ -208,7 +208,6 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <Border x:Name="ColorSwatch" Grid.Column="0" Width="28" Height="28" CornerRadius="8"
                             Margin="0,0,12,0" Visibility="Collapsed" VerticalAlignment="Center"
@@ -223,33 +222,36 @@
                         <TextBlock x:Name="TitleText" FontSize="12.75" FontWeight="SemiBold"
                                    FontFamily="Segoe UI Variable Text" TextWrapping="Wrap"
                                    TextAlignment="Center"
-                                   ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                    AutomationProperties.Name="Toast title"
                                    AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
                                    AutomationProperties.LiveSetting="Polite"/>
                         <TextBlock x:Name="BodyText" FontSize="11.5" Opacity="0.72" TextWrapping="Wrap"
                                    FontFamily="Segoe UI Variable Text" TextAlignment="Center"
                                    MaxWidth="292" Margin="0,2,0,0"
-                                   ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
                                    AutomationProperties.Name="Toast message"
                                    AutomationProperties.HelpText="{Binding Text, RelativeSource={RelativeSource Self}}"
                                    AutomationProperties.LiveSetting="Polite"/>
                     </StackPanel>
-                    <Border x:Name="TextCloseBtn" Grid.Column="3" Width="22" Height="22" CornerRadius="6"
-                            Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
-                            ToolTip="Close notification"
-                            AutomationProperties.Name="Close notification"
-                            AutomationProperties.HelpText="Close this notification."
-                            Cursor="Hand"
-                            Focusable="True"
-                            KeyDown="CloseBtn_KeyDown"
-                            VerticalAlignment="Top" Margin="10,-2,-4,0"
-                            Visibility="Collapsed">
-                        <Image x:Name="TextCloseIcon" Width="11" Height="11" Stretch="Uniform" Opacity="0.78"
-                               RenderOptions.BitmapScalingMode="HighQuality"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+
                 </Grid>
+
+                <!-- Top-right close button (always visible) -->
+                <Border x:Name="TextCloseBtn" Width="24" Height="24" CornerRadius="7"
+                        Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                        ToolTip="Close notification"
+                        AutomationProperties.Name="Close notification"
+                        AutomationProperties.HelpText="Close this notification."
+                        Cursor="Hand"
+                        Focusable="True"
+                        KeyDown="CloseBtn_KeyDown"
+                        Grid.RowSpan="3"
+                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Margin="0,7,7,0"
+                        Panel.ZIndex="10">
+                    <Image x:Name="TextCloseIcon" Width="10" Height="10" Stretch="Uniform" Opacity="0.65"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
             </Grid>
 
             <Grid x:Name="ProgressHost" Grid.Row="2" ClipToBounds="True">

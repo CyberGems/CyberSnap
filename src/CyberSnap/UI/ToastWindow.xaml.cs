@@ -655,14 +655,10 @@ public partial class ToastWindow : Window
         ActionsHost.Visibility = anyActionBtnVisible ? Visibility.Visible : Visibility.Collapsed;
         RefreshActionsPanelMetrics();
 
-        // Every text-only toast gets an X — Scan/Error/Color/Standard alike.
-        bool textCloseVisible = _previewBitmap is null &&
-                                Helpers.ToastButtonLayout.IsVisible(_buttonLayout, Helpers.ToastButtonKind.Close) &&
-                                TextContentPanel.Visibility == Visibility.Visible;
+        // Close button is always visible for all toast types.
         SetToastElementAccessibility(TextCloseBtn, LocalizationService.Translate("Close notification"), LocalizationService.Translate("Close this notification."));
-        TextCloseBtn.Visibility = textCloseVisible ? Visibility.Visible : Visibility.Collapsed;
-        if (textCloseVisible)
-            ApplyTextCloseVisual(active: false);
+        TextCloseBtn.Visibility = Visibility.Visible;
+        ApplyTextCloseVisual(active: false);
     }
 
     private void ApplyOverlayButton(System.Windows.Controls.Border button, Helpers.ToastButtonKind kind)
@@ -730,12 +726,10 @@ public partial class ToastWindow : Window
     private void RefreshToastContentAccessibility(ToastSpec spec)
     {
         var title = TitleText.Text ?? "";
-        TitleText.ToolTip = title;
         AutomationProperties.SetName(TitleText, "Toast title");
         AutomationProperties.SetHelpText(TitleText, title);
 
         var body = BodyText.Text ?? "";
-        BodyText.ToolTip = body;
         AutomationProperties.SetName(BodyText, "Toast message");
         AutomationProperties.SetHelpText(BodyText, body);
 
