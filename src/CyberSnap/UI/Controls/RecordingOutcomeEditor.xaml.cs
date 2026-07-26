@@ -5,9 +5,7 @@ using System.Windows.Media;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
-using Orientation = System.Windows.Controls.Orientation;
 using UserControl = System.Windows.Controls.UserControl;
-using WpfBrushes = System.Windows.Media.Brushes;
 using WpfFontFamily = System.Windows.Media.FontFamily;
 
 namespace CyberSnap.UI.Controls;
@@ -117,34 +115,31 @@ public partial class RecordingOutcomeEditor : UserControl
         bool canRemove = RecordingOutcomeModel.CanRemove(_state, pill);
         string label = LocalizationService.Translate(RecordingOutcomeModel.LabelKey(pill));
         string tip = LocalizationService.Translate(RecordingOutcomeModel.TooltipKey(pill, Kind));
+        string removeName = LocalizationService.Translate("Remove outcome step");
 
         var root = CreatePillChrome(isActive: true, tip);
-        var row = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center,
-            Height = PillContentHeight
-        };
-
-        row.Children.Add(new TextBlock
-        {
-            Text = label,
-            FontSize = PillFontSize,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, GlyphTextGap, 0)
-        });
-
         if (canRemove)
         {
-            var remove = CreateActionGlyph(
-                text: "\u00D7",
-                useIconFont: false,
-                automationName: LocalizationService.Translate("Remove outcome step"),
-                onClick: () => RemovePill(pill));
-            row.Children.Add(remove);
+            // Whole chip removes — same hit model as Available add chips.
+            root.Cursor = System.Windows.Input.Cursors.Hand;
+            System.Windows.Automation.AutomationProperties.SetName(root, removeName);
+            root.MouseLeftButtonDown += (_, e) =>
+            {
+                if (e.ChangedButton != MouseButton.Left) return;
+                e.Handled = true;
+                RemovePill(pill);
+            };
+            root.Child = BuildSplitPillContent(
+                label,
+                actionGlyph: "\u00D7",
+                actionOnLeadingEdge: false);
+        }
+        else
+        {
+            root.Padding = new Thickness(8, 3, 8, 3);
+            root.Child = CreatePillLabel(label);
         }
 
-        root.Child = row;
         return root;
     }
 
@@ -152,9 +147,11 @@ public partial class RecordingOutcomeEditor : UserControl
     {
         string label = LocalizationService.Translate(RecordingOutcomeModel.LabelKey(pill));
         string tip = LocalizationService.Translate(RecordingOutcomeModel.TooltipKey(pill, Kind));
+        string addName = LocalizationService.Translate("Add outcome step");
 
         var root = CreatePillChrome(isActive: false, tip);
         root.Cursor = System.Windows.Input.Cursors.Hand;
+        System.Windows.Automation.AutomationProperties.SetName(root, addName);
         root.MouseLeftButtonDown += (_, e) =>
         {
             if (e.ChangedButton != MouseButton.Left) return;
@@ -163,46 +160,28 @@ public partial class RecordingOutcomeEditor : UserControl
         };
         root.MouseEnter += (_, _) => root.Opacity = 1.0;
         root.MouseLeave += (_, _) => root.Opacity = AvailablePillOpacity;
-
-        var row = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center,
-            Height = PillContentHeight
-        };
-        var add = CreateActionGlyph(
-            text: "+",
-            useIconFont: false,
-            automationName: LocalizationService.Translate("Add outcome step"),
-            onClick: () => AddPill(pill));
-        add.Margin = new Thickness(0, 0, GlyphTextGap, 0);
-        row.Children.Add(add);
-        row.Children.Add(new TextBlock
-        {
-            Text = label,
-            FontSize = PillFontSize,
-            VerticalAlignment = VerticalAlignment.Center
-        });
-
-        root.Child = row;
+        root.Child = BuildSplitPillContent(
+            label,
+            actionGlyph: "+",
+            actionOnLeadingEdge: true);
         ToolTipService.SetToolTip(root, tip);
         return root;
     }
 
-    private const double PillContentHeight = 18;
+    // Match Settings ComboBox face (rounded rect), not stadium pills.
+    private const double PillCornerRadius = 6;
     private const double PillFontSize = 11.5;
-    private const double GlyphHitSize = 14;
-    private const double GlyphTextGap = 4;
+    private const double ActionSlotWidth = 22;
     private const double AvailablePillOpacity = 0.92;
 
     private static Border CreatePillChrome(bool isActive, string? toolTip)
     {
         var border = new Border
         {
-            CornerRadius = new CornerRadius(12),
-            Padding = isActive
-                ? new Thickness(8, 3, 4, 3)
-                : new Thickness(5, 3, 8, 3),
+            CornerRadius = new CornerRadius(PillCornerRadius),
+            // Section padding lives inside the split layout; chrome stays flush so
+            // the divider can run edge-to-edge like the example chip.
+            Padding = new Thickness(0),
             Margin = new Thickness(0, 0, 6, 6),
             MinHeight = 26,
             SnapsToDevicePixels = true,
@@ -228,55 +207,74 @@ public partial class RecordingOutcomeEditor : UserControl
         return border;
     }
 
+    /// <summary>
+    /// Two-zone chip: label | action (or action | label). Shape only — colors stay themed.
+    /// </summary>
+    private static Grid BuildSplitPillContent(string label, string actionGlyph, bool actionOnLeadingEdge)
+    {
+        var grid = new Grid { VerticalAlignment = VerticalAlignment.Stretch };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var labelCell = new Border
+        {
+            Padding = new Thickness(8, 3, 8, 3),
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Child = CreatePillLabel(label)
+        };
+
+        var actionCell = new Border
+        {
+            Width = ActionSlotWidth,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            BorderBrush = new SolidColorBrush(MediaColor(0x55, 0xFF, 0xFF, 0xFF)),
+            BorderThickness = actionOnLeadingEdge
+                ? new Thickness(0, 0, 1, 0)
+                : new Thickness(1, 0, 0, 0),
+            Child = CreateActionGlyph(actionGlyph)
+        };
+
+        if (actionOnLeadingEdge)
+        {
+            Grid.SetColumn(actionCell, 0);
+            Grid.SetColumn(labelCell, 1);
+        }
+        else
+        {
+            Grid.SetColumn(labelCell, 0);
+            Grid.SetColumn(actionCell, 1);
+        }
+
+        grid.Children.Add(labelCell);
+        grid.Children.Add(actionCell);
+        return grid;
+    }
+
+    private static TextBlock CreatePillLabel(string label) => new()
+    {
+        Text = label,
+        FontSize = PillFontSize,
+        VerticalAlignment = VerticalAlignment.Center,
+        IsHitTestVisible = false
+    };
+
     private static System.Windows.Media.Color MediaColor(byte a, byte r, byte g, byte b) =>
         System.Windows.Media.Color.FromArgb(a, r, g, b);
 
-    private static Border CreateActionGlyph(string text, bool useIconFont, string automationName, Action onClick)
+    /// <summary>Decorative × / + glyph — clicks are handled by the parent chip.</summary>
+    private static TextBlock CreateActionGlyph(string text)
     {
-        var glyph = new TextBlock
+        return new TextBlock
         {
             Text = text,
-            FontSize = useIconFont ? 8.5 : (text == "\u00D7" ? 13 : 12),
-            FontWeight = useIconFont ? FontWeights.Normal : FontWeights.SemiBold,
-            FontFamily = useIconFont
-                ? new WpfFontFamily("Segoe Fluent Icons, Segoe MDL2 Assets")
-                : new WpfFontFamily("Segoe UI Variable Text, Segoe UI"),
+            FontSize = text == "\u00D7" ? 13 : 12,
+            FontWeight = FontWeights.SemiBold,
+            FontFamily = new WpfFontFamily("Segoe UI Variable Text, Segoe UI"),
             HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = text == "\u00D7" ? new Thickness(0, -1, 0, 0) : new Thickness(0),
             IsHitTestVisible = false
         };
-
-        var idleBg = WpfBrushes.Transparent;
-        var hoverBg = new SolidColorBrush(MediaColor(0x33, 0xFF, 0xFF, 0xFF));
-
-        var hit = new Border
-        {
-            Width = GlyphHitSize,
-            Height = GlyphHitSize,
-            CornerRadius = new CornerRadius(GlyphHitSize / 2),
-            Background = idleBg,
-            Padding = new Thickness(0),
-            Margin = new Thickness(0),
-            Cursor = System.Windows.Input.Cursors.Hand,
-            SnapsToDevicePixels = true,
-            ClipToBounds = true,
-            ToolTip = automationName,
-            Child = glyph,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        System.Windows.Automation.AutomationProperties.SetName(hit, automationName);
-
-        hit.MouseEnter += (_, _) => hit.Background = hoverBg;
-        hit.MouseLeave += (_, _) => hit.Background = idleBg;
-        hit.MouseLeftButtonDown += (_, e) =>
-        {
-            if (e.ChangedButton != MouseButton.Left) return;
-            e.Handled = true;
-            onClick();
-        };
-
-        return hit;
     }
 
     private static System.Windows.Media.Brush TryBrush(string resourceKey, System.Windows.Media.Color fallback)
