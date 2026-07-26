@@ -73,16 +73,11 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         if (ActivePanel is null || AvailablePanel is null)
             return;
 
-        // Explicit translate: attached SourceText on nested UserControls can miss a
-        // parent ApplyTo pass depending on load order.
-        if (ActiveLabel != null)
-            ActiveLabel.Text = LocalizationService.Translate("Active outcome");
-        if (AvailableLabel != null)
-            AvailableLabel.Text = LocalizationService.Translate("Available outcome");
-
         ActivePanel.Children.Clear();
         AvailablePanel.Children.Clear();
 
+        int activeCount = 0;
+        int availableCount = 0;
         bool firstActive = true;
         foreach (var pill in AfterCaptureOutcomeModel.AllPills)
         {
@@ -92,12 +87,19 @@ public partial class AfterCaptureOutcomeEditor : UserControl
                     ActivePanel.Children.Add(BuildFlowArrow());
                 ActivePanel.Children.Add(BuildActivePill(pill));
                 firstActive = false;
+                activeCount++;
             }
             else
             {
                 AvailablePanel.Children.Add(BuildAvailablePill(pill));
+                availableCount++;
             }
         }
+
+        if (ActiveLabel != null)
+            ActiveLabel.Text = $"{LocalizationService.Translate("Active outcome")} ({activeCount})";
+        if (AvailableLabel != null)
+            AvailableLabel.Text = $"{LocalizationService.Translate("Available outcome")} ({availableCount})";
 
         if (firstActive)
         {

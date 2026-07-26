@@ -69,14 +69,11 @@ public partial class RecordingOutcomeEditor : UserControl
         if (ActivePanel is null || AvailablePanel is null)
             return;
 
-        if (ActiveLabel != null)
-            ActiveLabel.Text = LocalizationService.Translate("Active outcome");
-        if (AvailableLabel != null)
-            AvailableLabel.Text = LocalizationService.Translate("Available outcome");
-
         ActivePanel.Children.Clear();
         AvailablePanel.Children.Clear();
 
+        int activeCount = 0;
+        int availableCount = 0;
         bool firstActive = true;
         foreach (var pill in RecordingOutcomeModel.AllPills)
         {
@@ -86,12 +83,19 @@ public partial class RecordingOutcomeEditor : UserControl
                     ActivePanel.Children.Add(BuildFlowArrow());
                 ActivePanel.Children.Add(BuildActivePill(pill));
                 firstActive = false;
+                activeCount++;
             }
             else
             {
                 AvailablePanel.Children.Add(BuildAvailablePill(pill));
+                availableCount++;
             }
         }
+
+        if (ActiveLabel != null)
+            ActiveLabel.Text = $"{LocalizationService.Translate("Active outcome")} ({activeCount})";
+        if (AvailableLabel != null)
+            AvailableLabel.Text = $"{LocalizationService.Translate("Available outcome")} ({availableCount})";
 
         if (firstActive)
         {
