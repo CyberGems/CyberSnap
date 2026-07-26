@@ -273,7 +273,7 @@ public static class AfterCaptureOutcomeModel
         AfterCapturePillKind.Save => "Write the capture to the configured save folder.",
         AfterCapturePillKind.Preview => "Show the capture preview window after selection.",
         AfterCapturePillKind.Notification =>
-            "Show a compact status toast after capture (or status chips when Preview is on).",
+            "Show a compact status toast after capture (including after Preview closes).",
         AfterCapturePillKind.Editor => "Open the capture in the annotation editor.",
         AfterCapturePillKind.SystemViewer =>
             "Open the saved file in the system default viewer. Can be combined with the notification.",

@@ -151,8 +151,7 @@ public partial class ToastWindow : Window
             _isHovered = true;
             CancelDismissForHover();
             _timer.Stop();
-            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-            ProgressScale.ScaleX = ProgressScale.ScaleX;
+            BeginProgressRefillForHover();
             if (_spec.ShowOverlayButtons)
                 AnimateOverlayButtons(1, _isPinned ? 1 : 1);
         };
@@ -172,7 +171,7 @@ public partial class ToastWindow : Window
                 DismissAnimated();
                 return;
             }
-            RestartVisibleTimer(Math.Max(0.1, ProgressScale.ScaleX * _activeDurationSeconds));
+            RestartVisibleTimer(Math.Max(0.1, CaptureProgressScale() * _activeDurationSeconds));
         };
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         MouseMove += OnMouseMove;
@@ -1113,11 +1112,7 @@ public partial class ToastWindow : Window
     private double PauseToastAutoDismiss()
     {
         _timer.Stop();
-        var progress = Math.Clamp(ProgressScale.ScaleX, 0, 1);
-        var remaining = GetToastAutoDismissRemainingSeconds(progress, _activeDurationSeconds);
-        ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-        ProgressScale.ScaleX = progress;
-        return remaining;
+        return GetToastAutoDismissRemainingSeconds(CaptureProgressScale(), _activeDurationSeconds);
     }
 
     private void ResumeToastAutoDismiss(double remainingSeconds)
@@ -1127,12 +1122,45 @@ public partial class ToastWindow : Window
         ApplyToastOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
         RefreshOverlayButtonAccessibility(PinBtn, Helpers.ToastButtonKind.Pin);
         if (_isHovered)
+        {
+            BeginProgressRefillForHover();
             return;
+        }
 
         ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
-            new DoubleAnimation { To = 0, Duration = Motion.Sec(remainingSeconds) });
+            new DoubleAnimation { To = 0, Duration = Motion.Sec(remainingSeconds), FillBehavior = FillBehavior.HoldEnd });
         _timer.Interval = TimeSpan.FromSeconds(remainingSeconds);
         _timer.Start();
+    }
+
+    /// <summary>Capture animated ScaleX, then freeze it as the local value (avoids snap-to-base).</summary>
+    private double CaptureProgressScale()
+    {
+        double progress = Math.Clamp(ProgressScale.ScaleX, 0, 1);
+        ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        ProgressScale.ScaleX = progress;
+        return progress;
+    }
+
+    /// <summary>Refill the dismiss bar toward full at 3× the countdown rate while hovered.</summary>
+    private void BeginProgressRefillForHover()
+    {
+        if (_isPinned || _activeDurationSeconds <= 0)
+            return;
+
+        ProgressBar.Visibility = Visibility.Visible;
+        double current = CaptureProgressScale();
+        if (current >= 1)
+            return;
+
+        double refillSeconds = Math.Max(0.05, (1.0 - current) * _activeDurationSeconds / 3.0);
+        ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
+            new DoubleAnimation
+            {
+                To = 1,
+                Duration = Motion.Sec(refillSeconds),
+                FillBehavior = FillBehavior.HoldEnd
+            });
     }
 
     private static double GetToastAutoDismissRemainingSeconds(double progressScale, double durationSeconds) =>
@@ -1401,7 +1429,7 @@ public partial class ToastWindow : Window
         }
 
         ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
-            new DoubleAnimation { To = 0, Duration = Motion.Sec(_activeDurationSeconds) });
+            new DoubleAnimation { To = 0, Duration = Motion.Sec(_activeDurationSeconds), FillBehavior = FillBehavior.HoldEnd });
         _timer.Interval = TimeSpan.FromSeconds(_activeDurationSeconds);
         _timer.Start();
         ApplyToastOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
@@ -2148,9 +2176,10 @@ public partial class ToastWindow : Window
         _timer.Stop();
         _timer.Interval = TimeSpan.FromSeconds(seconds);
         ProgressBar.Visibility = Visibility.Visible;
+        ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
         ProgressScale.ScaleX = Math.Clamp(seconds / _activeDurationSeconds, 0, 1);
         ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
-            new DoubleAnimation { To = 0, Duration = Motion.Sec(seconds) });
+            new DoubleAnimation { To = 0, Duration = Motion.Sec(seconds), FillBehavior = FillBehavior.HoldEnd });
         _timer.Start();
     }
 

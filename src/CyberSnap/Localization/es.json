@@ -354,7 +354,7 @@
   "Outcome step: open in system viewer": "Abrir en el visor del sistema",
   "Outcome step: copy to clipboard": "Copiar al portapapeles",
   "Outcome step: share": "Compartir",
-  "Show a compact status toast after capture (or status chips when Preview is on).": "Mostrar una notificación emergente tras la captura",
+  "Show a compact status toast after capture (including after Preview closes).": "Mostrar una notificación de estado tras la captura (también al cerrar la Vista previa)",
   "Open the share flow after capture (off by default).": "Activar la opción configurada para compartir (subir a la nube y obtener enlace para compartir es la configuración por defecto)",
   "Already completed": "Ya completado",
   "Runs when you continue": "Se realiza al continuar",

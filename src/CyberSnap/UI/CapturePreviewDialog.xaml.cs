@@ -325,8 +325,8 @@ namespace CyberSnap.UI
             if (current >= 1)
                 return;
 
-            // Refill at 2× the countdown rate so the bar recovers quickly while hovered.
-            double refillSeconds = Math.Max(0.05, (1.0 - current) * _autoCloseDurationSeconds / 2.0);
+            // Refill at 3× the countdown rate so the bar recovers quickly while hovered.
+            double refillSeconds = Math.Max(0.05, (1.0 - current) * _autoCloseDurationSeconds / 3.0);
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
                 new DoubleAnimation
                 {
@@ -562,8 +562,9 @@ namespace CyberSnap.UI
                 if (!AfterCaptureOutcomeModel.IsActive(state, pill))
                     continue;
 
-                // Already inside the preview dialog — Preview / Notification are noise here.
-                if (pill is AfterCapturePillKind.Preview or AfterCapturePillKind.Notification)
+                // Already inside the preview dialog — Preview itself is noise here.
+                // Notification stays visible as pending (compact status toast after confirm).
+                if (pill is AfterCapturePillKind.Preview)
                     continue;
 
                 string iconId = pill switch
@@ -573,6 +574,7 @@ namespace CyberSnap.UI
                     AfterCapturePillKind.Editor => "draw",
                     AfterCapturePillKind.SystemViewer => "folder",
                     AfterCapturePillKind.Share => "share",
+                    AfterCapturePillKind.Notification => "info",
                     _ => "gear"
                 };
 

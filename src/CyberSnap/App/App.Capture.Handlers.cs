@@ -101,8 +101,9 @@ public partial class App
                     // Respect the After Capture Notification pill setting
                     var outcomeState = Helpers.AfterCaptureOutcomeModel.FromSettings(settings);
                     bool wantNotification = outcomeState.Destination == Helpers.AfterCaptureDestination.Notification;
-                    // When Preview was shown, status chips are the feedback — no summary toast after.
-                    bool showCompactToast = wantNotification && !settings.ShowCapturePreview;
+                    // Preview chips show in-dialog progress; the compact status toast still runs
+                    // after confirm when Notification is on (including after Preview closes).
+                    bool showCompactToast = wantNotification;
                     bool savedToDisk = !string.IsNullOrEmpty(persisted.FilePath) && File.Exists(persisted.FilePath);
 
                     if (openEditor)
@@ -313,7 +314,8 @@ public partial class App
 
     /// <summary>
     /// Compact status toast listing automatic steps completed when Notification is on
-    /// and Preview is off. Not a system-alert toast (master Notifications toggle still applies).
+    /// (including after Preview closes). Not a system-alert toast (master Notifications
+    /// toggle still applies). Not an action-overlay toast — those were replaced by Preview.
     /// </summary>
     private static void ShowDynamicAfterCaptureToast(
         bool saved,
