@@ -496,7 +496,7 @@ public sealed class SettingsService : IDisposable
 
     private static void NormalizeEnums(AppSettings settings)
     {
-        settings.AfterCapture = NormalizeEnum(settings.AfterCapture, AfterCaptureAction.PreviewAndCopy);
+        settings.AfterCapture = NormalizeEnum(settings.AfterCapture, AfterCaptureAction.CopyToClipboard);
         settings.CaptureImageFormat = NormalizeEnum(settings.CaptureImageFormat, CaptureImageFormat.Png);
         settings.LastCaptureMode = NormalizeEnum(settings.LastCaptureMode, CaptureMode.Rectangle);
         settings.DefaultCaptureMode = NormalizeEnum(settings.DefaultCaptureMode, CaptureMode.Rectangle);

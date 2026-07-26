@@ -1827,8 +1827,9 @@
                                                   AutomationProperties.HelpText="Save captures as uncompressed BMP files for maximum compatibility."/>
                                 </ComboBox>
                             </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid x:Name="JpegQualityPanel" Style="{StaticResource SettingRow}" Visibility="Collapsed">
+                            <StackPanel x:Name="JpegQualitySection" Visibility="Collapsed">
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid x:Name="JpegQualityPanel" Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
@@ -1870,7 +1871,8 @@
                                                   AutomationProperties.Name="60 JPG quality"
                                                   AutomationProperties.HelpText="Save JPG captures with heavy compression for tiny files."/>
                                 </ComboBox>
-                            </Grid>
+                                </Grid>
+                            </StackPanel>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>

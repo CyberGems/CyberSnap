@@ -143,6 +143,9 @@ public partial class App
                 bool recDesktop = !isGifFormat && s.RecordDesktopAudio;
                 Capture.SelectionSizeReadout.ShowDimensions = _settingsService!.Settings.ShowSelectionSize;
                 bool openTrimmerAtLaunch = isGifFormat ? s.OpenGifTrimmerAfterCapture : s.OpenVideoTrimmerAfterCapture;
+                bool wantRecordingNotification = isGifFormat
+                    ? s.ShowGifRecordingNotification
+                    : s.ShowVideoRecordingNotification;
                 // Always wire the GIF early-open callback; it re-checks settings so a mid-session
                 // bar toggle still works.
                 Action<string>? onGifEncodedForTrimmer = null;
@@ -161,7 +164,11 @@ public partial class App
                                     firstFrame: null,
                                     isGif: true,
                                     ephemeral: !persistRecording,
-                                    onFailure: () => { });
+                                    onFailure: () =>
+                                    {
+                                        if (wantRecordingNotification)
+                                            ShowRecordingToast(path, copiedToClipboard: null, isGif: true, ephemeral: !persistRecording);
+                                    });
                             });
                         }
                         catch (Exception ex)
@@ -236,21 +243,30 @@ public partial class App
                                         firstFrame,
                                         isGif: false,
                                         ephemeral: !persistRecording,
-                                        onFailure: () => ShowRecordingToast(path, copiedToClipboard, isGif: false, ephemeral: !persistRecording));
+                                        onFailure: () =>
+                                        {
+                                            if (wantRecordingNotification)
+                                                ShowRecordingToast(path, copiedToClipboard, isGif: false, ephemeral: !persistRecording);
+                                        });
                                     firstFrame = null;
                                 }
                                 catch (Exception ex)
                                 {
                                     AppDiagnostics.LogError("capture.auto-open-trimmer", ex);
                                     firstFrame?.Dispose();
-                                    ShowRecordingToast(path, copiedToClipboard, isGif: false, ephemeral: !persistRecording);
+                                    if (wantRecordingNotification)
+                                        ShowRecordingToast(path, copiedToClipboard, isGif: false, ephemeral: !persistRecording);
                                 }
                             }
+                        }
+                        else if (wantRecordingNotification)
+                        {
+                            firstFrame?.Dispose();
+                            ShowRecordingToast(path, copiedToClipboard, isGif, ephemeral: !persistRecording);
                         }
                         else
                         {
                             firstFrame?.Dispose();
-                            ShowRecordingToast(path, copiedToClipboard, isGif, ephemeral: !persistRecording);
                         }
 
                         ScheduleIdleMemoryTrim();

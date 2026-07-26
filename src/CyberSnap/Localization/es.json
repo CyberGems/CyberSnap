@@ -291,6 +291,8 @@
   "Choose what happens when an MP4 recording finishes. Add steps with + and remove them with ×.": "Elige qué ocurre al terminar una grabación MP4. Añade pasos con + y quítalos con ×.",
   "Choose what happens when a GIF recording finishes. Add steps with + and remove them with ×.": "Elige qué ocurre al terminar una grabación GIF. Añade pasos con + y quítalos con ×.",
   "Outcome step: open trimmer": "Abrir trimmer",
+  "Show a status toast when an MP4 recording finishes (or if the trimmer fails to open).": "Muestra un aviso al terminar una grabación MP4 (o si el trimmer no puede abrirse).",
+  "Show a status toast when a GIF recording finishes (or if the trimmer fails to open).": "Muestra un aviso al terminar una grabación GIF (o si el trimmer no puede abrirse).",
   "Write the recording to the configured save folder.": "Guarda la grabación en la carpeta configurada.",
   "Copy the image capture to the clipboard when it finishes.": "Copia la captura de imagen al portapapeles al finalizar.",
   "Copy the finished MP4 to the clipboard.": "Copia el MP4 terminado al portapapeles.",

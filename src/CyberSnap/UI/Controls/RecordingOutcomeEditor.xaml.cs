@@ -21,7 +21,7 @@ public partial class RecordingOutcomeEditor : UserControl
             typeof(RecordingOutcomeEditor),
             new PropertyMetadata(RecordingOutcomeKind.Video, OnKindChanged));
 
-    private RecordingOutcomeState _state = new(Save: true, Clipboard: false, OpenTrimmer: true);
+    private RecordingOutcomeState _state = new(Save: true, Notification: true, Clipboard: false, OpenTrimmer: true);
     private bool _suppress;
 
     public RecordingOutcomeEditor()
