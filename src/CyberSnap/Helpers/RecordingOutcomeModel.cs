@@ -131,11 +131,13 @@ public static class RecordingOutcomeModel
         };
     }
 
-    public static string LabelKey(RecordingOutcomePillKind pill) => pill switch
+    public static string LabelKey(RecordingOutcomePillKind pill, RecordingOutcomeKind kind) => pill switch
     {
-        RecordingOutcomePillKind.Save => "Outcome step: save file",
+        RecordingOutcomePillKind.Save => kind == RecordingOutcomeKind.Gif
+            ? "Outcome step: save gif"
+            : "Outcome step: save video",
         RecordingOutcomePillKind.Notification => "Outcome step: show notification",
-        RecordingOutcomePillKind.Clipboard => "Auto-copy",
+        RecordingOutcomePillKind.Clipboard => "Outcome step: copy to clipboard",
         RecordingOutcomePillKind.Trimmer => "Outcome step: open trimmer",
         _ => pill.ToString()
     };

@@ -153,7 +153,7 @@ public partial class RecordingOutcomeEditor : UserControl
     private FrameworkElement BuildActivePill(RecordingOutcomePillKind pill)
     {
         bool canRemove = RecordingOutcomeModel.CanRemove(_state, pill);
-        string label = LocalizationService.Translate(RecordingOutcomeModel.LabelKey(pill));
+        string label = LocalizationService.Translate(RecordingOutcomeModel.LabelKey(pill, Kind));
         string tip = LocalizationService.Translate(RecordingOutcomeModel.TooltipKey(pill, Kind));
         string removeName = LocalizationService.Translate("Remove outcome step");
 
@@ -205,7 +205,7 @@ public partial class RecordingOutcomeEditor : UserControl
 
     private FrameworkElement BuildAvailablePill(RecordingOutcomePillKind pill)
     {
-        string label = LocalizationService.Translate(RecordingOutcomeModel.LabelKey(pill));
+        string label = LocalizationService.Translate(RecordingOutcomeModel.LabelKey(pill, Kind));
         string tip = LocalizationService.Translate(RecordingOutcomeModel.TooltipKey(pill, Kind));
         string addName = LocalizationService.Translate("Add outcome step");
 

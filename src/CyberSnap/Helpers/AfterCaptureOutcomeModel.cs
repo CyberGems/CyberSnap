@@ -258,12 +258,12 @@ public static class AfterCaptureOutcomeModel
 
     public static string LabelKey(AfterCapturePillKind pill) => pill switch
     {
-        AfterCapturePillKind.Save => "Outcome step: save file",
+        AfterCapturePillKind.Save => "Outcome step: save image",
         AfterCapturePillKind.Preview => "Outcome step: preview",
         AfterCapturePillKind.Notification => "Outcome step: show notification",
         AfterCapturePillKind.Editor => "Outcome step: open editor",
         AfterCapturePillKind.SystemViewer => "Outcome step: open in system viewer",
-        AfterCapturePillKind.Clipboard => "Auto-copy",
+        AfterCapturePillKind.Clipboard => "Outcome step: copy to clipboard",
         AfterCapturePillKind.Share => "Outcome step: share",
         _ => pill.ToString()
     };
