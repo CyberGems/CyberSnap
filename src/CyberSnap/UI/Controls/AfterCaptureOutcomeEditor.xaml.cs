@@ -5,6 +5,7 @@ using System.Windows.Media;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
+using Orientation = System.Windows.Controls.Orientation;
 using UserControl = System.Windows.Controls.UserControl;
 using WpfFontFamily = System.Windows.Media.FontFamily;
 
@@ -78,15 +79,12 @@ public partial class AfterCaptureOutcomeEditor : UserControl
 
         int activeCount = 0;
         int availableCount = 0;
-        bool firstActive = true;
+        var activePills = new List<AfterCapturePillKind>();
         foreach (var pill in AfterCaptureOutcomeModel.AllPills)
         {
             if (AfterCaptureOutcomeModel.IsActive(_state, pill))
             {
-                if (!firstActive)
-                    ActivePanel.Children.Add(BuildFlowArrow());
-                ActivePanel.Children.Add(BuildActivePill(pill));
-                firstActive = false;
+                activePills.Add(pill);
                 activeCount++;
             }
             else
@@ -101,7 +99,7 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         if (AvailableLabel != null)
             AvailableLabel.Text = $"{LocalizationService.Translate("Available outcome")} ({availableCount})";
 
-        if (firstActive)
+        if (activePills.Count == 0)
         {
             ActivePanel.Children.Add(new TextBlock
             {
@@ -111,6 +109,21 @@ public partial class AfterCaptureOutcomeEditor : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(4, 2, 4, 2)
             });
+        }
+        else
+        {
+            // Source stays left; each wrap unit is "→ pill" so a new row never orphans an arrow.
+            var steps = new WrapPanel { Orientation = Orientation.Horizontal };
+            foreach (var pill in activePills)
+                steps.Children.Add(BuildFlowStep(BuildActivePill(pill)));
+
+            var source = BuildFlowSourceIcon();
+            DockPanel.SetDock(source, Dock.Left);
+
+            var dock = new DockPanel { LastChildFill = true };
+            dock.Children.Add(source);
+            dock.Children.Add(steps);
+            ActivePanel.Children.Add(dock);
         }
 
         if (AvailablePanel.Children.Count == 0)
@@ -126,6 +139,22 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         }
     }
 
+    /// <summary>Atomic wrap unit: incoming arrow + pill stay together across rows.</summary>
+    private static FrameworkElement BuildFlowStep(FrameworkElement pill)
+    {
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 6)
+        };
+        row.Children.Add(BuildFlowArrow());
+        // Pill owns trailing gap; clear its bottom margin so the unit controls row spacing.
+        pill.Margin = new Thickness(0);
+        row.Children.Add(pill);
+        return row;
+    }
+
     private FrameworkElement BuildActivePill(AfterCapturePillKind pill)
     {
         bool canRemove = AfterCaptureOutcomeModel.CanRemove(_state, pill);
@@ -134,8 +163,25 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         string removeName = LocalizationService.Translate("Remove outcome step");
 
         var root = CreatePillChrome(isActive: true, tip);
-        // Flow arrows own the gap between chips.
-        root.Margin = new Thickness(0, 0, 0, 6);
+        // Flow step unit owns vertical spacing when the strip wraps.
+        root.Margin = new Thickness(0);
+
+        // Active hover: brighten the filled chip (mirror of Available wash).
+        var idleBg = root.Background;
+        var idleBorder = root.BorderBrush;
+        var hoverBg = new SolidColorBrush(MediaColor(0x3A, 0x00, 0xE5, 0xCC));
+        var hoverBorder = TryBrush("ThemeAccentBrush", MediaColor(0xCC, 0x00, 0xE5, 0xCC));
+        root.MouseEnter += (_, _) =>
+        {
+            root.Background = hoverBg;
+            root.BorderBrush = hoverBorder;
+        };
+        root.MouseLeave += (_, _) =>
+        {
+            root.Background = idleBg;
+            root.BorderBrush = idleBorder;
+        };
+
         if (canRemove)
         {
             // Whole chip removes — same hit model as Available add chips.
@@ -211,6 +257,58 @@ public partial class AfterCaptureOutcomeEditor : UserControl
     private const double PillCornerRadius = 6;
     private const double PillFontSize = 11.5;
     private const double ActionSlotWidth = 22;
+    private const double FlowSourceIconSize = 24;
+    // Viewfinder (corner brackets + center dot) — same as capture toolbar rect glyph.
+    private const string FlowSourceIconId = "captureRect";
+
+    private static FrameworkElement BuildFlowSourceIcon()
+    {
+        var accent = Theme.Accent;
+        var color = System.Drawing.Color.FromArgb(accent.A, accent.R, accent.G, accent.B);
+        var source = FluentIcons.RenderWpf(FlowSourceIconId, color, (int)FlowSourceIconSize, active: true);
+        var image = new System.Windows.Controls.Image
+        {
+            Source = source,
+            Width = FlowSourceIconSize,
+            Height = FlowSourceIconSize,
+            Stretch = System.Windows.Media.Stretch.Uniform,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            IsHitTestVisible = false,
+            Opacity = 0.95
+        };
+
+        // Short uppercase caption so the lead-in reads as the starting event.
+        string caption = LocalizationService.Translate("Capture").ToUpperInvariant();
+        var label = new TextBlock
+        {
+            Text = caption,
+            FontSize = 8.5,
+            FontWeight = FontWeights.SemiBold,
+            Opacity = 0.55,
+            Margin = new Thickness(0, 2, 0, 0),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+            Foreground = TryBrush("ThemeTextSecondaryBrush", MediaColor(0xCC, 0xB0, 0xB8, 0xC0)),
+            IsHitTestVisible = false
+        };
+
+        var stack = new StackPanel
+        {
+            Orientation = Orientation.Vertical,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Center
+        };
+        stack.Children.Add(image);
+        stack.Children.Add(label);
+
+        return new Border
+        {
+            Child = stack,
+            Margin = new Thickness(4, 0, 2, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false,
+            ToolTip = LocalizationService.Translate("Screenshot")
+        };
+    }
 
     private static FrameworkElement BuildFlowArrow()
     {
@@ -235,7 +333,7 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         {
             Child = arrow,
             Padding = new Thickness(10, 0, 10, 0),
-            Margin = new Thickness(0, 0, 0, 6),
+            Margin = new Thickness(0),
             VerticalAlignment = VerticalAlignment.Center,
             IsHitTestVisible = false
         };
