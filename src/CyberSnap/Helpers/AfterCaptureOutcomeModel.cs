@@ -68,6 +68,22 @@ public static class AfterCaptureOutcomeModel
         AfterCapturePillKind.Share
     ];
 
+    /// <summary>
+    /// Display order for the outcome flow editor and capture-preview status list.
+    /// Preview leads when active — it is the confirm surface for image capture.
+    /// </summary>
+    public static int FlowDisplayOrder(AfterCapturePillKind pill) => pill switch
+    {
+        AfterCapturePillKind.Preview => 0,
+        AfterCapturePillKind.Save => 1,
+        AfterCapturePillKind.Clipboard => 2,
+        AfterCapturePillKind.Notification => 3,
+        AfterCapturePillKind.Editor => 4,
+        AfterCapturePillKind.SystemViewer => 5,
+        AfterCapturePillKind.Share => 6,
+        _ => 99
+    };
+
     public static AfterCaptureOutcomeState FromSettings(AppSettings settings)
     {
         var destOnly = AfterCapturePreferences.FromSettingsDestinationOnly(settings);
@@ -168,11 +184,16 @@ public static class AfterCaptureOutcomeModel
     /// <summary>
     /// Timing for pills shown inside the capture preview dialog.
     /// Clipboard (and Save when not asking for a file name) run before/as the dialog opens;
-    /// Editor / Viewer / Share wait for confirm.
+    /// Preview is Done because this dialog is the preview surface;
+    /// Editor / Viewer / Share / Notification wait for confirm.
     /// </summary>
     public static AfterCapturePillTiming GetPreviewTiming(AfterCapturePillKind pill, AppSettings? settings = null)
     {
         if (pill == AfterCapturePillKind.Clipboard)
+            return AfterCapturePillTiming.Done;
+
+        // Opening this dialog fulfills the Preview step.
+        if (pill == AfterCapturePillKind.Preview)
             return AfterCapturePillTiming.Done;
 
         // Save is immediate when the path is known up front (no Save-As prompt).
@@ -266,6 +287,20 @@ public static class AfterCaptureOutcomeModel
         AfterCapturePillKind.Clipboard => "Outcome step: copy to clipboard",
         AfterCapturePillKind.Share => "Outcome step: share",
         _ => pill.ToString()
+    };
+
+    /// <summary>Past-tense label once a pill has finished (preview status chips / toasts).</summary>
+    public static string DoneLabelKey(AfterCapturePillKind pill) => pill switch
+    {
+        AfterCapturePillKind.Save => "Image saved",
+        AfterCapturePillKind.Clipboard => "Copied to clipboard",
+        // Same wording as the action label — green check already signals completion.
+        AfterCapturePillKind.Preview => "Outcome step: preview",
+        AfterCapturePillKind.Notification => "Notification shown",
+        AfterCapturePillKind.Editor => "Opened in editor",
+        AfterCapturePillKind.SystemViewer => "Opened in system viewer",
+        AfterCapturePillKind.Share => "Shared",
+        _ => LabelKey(pill)
     };
 
     public static string TooltipKey(AfterCapturePillKind pill) => pill switch

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -80,7 +81,7 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         int activeCount = 0;
         int availableCount = 0;
         var activePills = new List<AfterCapturePillKind>();
-        foreach (var pill in AfterCaptureOutcomeModel.AllPills)
+        foreach (var pill in AfterCaptureOutcomeModel.AllPills.OrderBy(AfterCaptureOutcomeModel.FlowDisplayOrder))
         {
             if (AfterCaptureOutcomeModel.IsActive(_state, pill))
             {
