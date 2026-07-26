@@ -282,6 +282,9 @@ public sealed partial class RegionOverlayForm
         if (btn == PositionButtonIndex)
             return true;
 
+        if (ShowAnnotationChrome ? HitTestAnnotationDockGrip(location) : HitTestCaptureDockGrip(location))
+            return true;
+
         if (!_brandRect.IsEmpty && _brandRect.Contains(location) && !IsPointInBrandClickArea(location))
             return true;
 
@@ -299,8 +302,8 @@ public sealed partial class RegionOverlayForm
         if (!overDock)
             return null;
 
-        if ((ShowAnnotationChrome && !_annotationGripRect.IsEmpty && _annotationGripRect.Contains(location))
-            || (!ShowAnnotationChrome && !_captureGripRect.IsEmpty && _captureGripRect.Contains(location)))
+        if ((ShowAnnotationChrome && HitTestAnnotationDockGrip(location))
+            || (!ShowAnnotationChrome && HitTestCaptureDockGrip(location)))
         {
             return CursorFactory.GrabCursor;
         }
@@ -1305,6 +1308,7 @@ public sealed partial class RegionOverlayForm
         }
         _confirmWrapperShinePhase = 0f;
         _hoveredConfirmSizeReadout = false;
+        ResetConfirmModesExpanded(collapsed: true);
 
         // Annotation column FIRST, then destination pills. Laying out pills before CalcToolbar
         // used the capture-phase toolbar rect and shoved the dock toward the left of the monitor
@@ -1540,6 +1544,7 @@ public sealed partial class RegionOverlayForm
         _outsideReselectMoved = false;
         _confirmDocksHiddenForFrameManip = false;
         _confirmCustomOffset = Point.Empty;
+        ResetConfirmModesExpanded(collapsed: true);
         ResetConfirmPress();
         CloseAltToolPopup(invalidate: false);
         ClearConfirmSessionAnnotations();
@@ -1601,16 +1606,16 @@ public sealed partial class RegionOverlayForm
     {
         _confirmChromeKinds = new[]
         {
-            ConfirmChromeKind.ModeImage,
             ConfirmChromeKind.ModeOcr,
             ConfirmChromeKind.ModeVideo,
             ConfirmChromeKind.ModeGif,
             ConfirmChromeKind.ModeScroll,
             ConfirmChromeKind.ModeQr,
+            ConfirmChromeKind.ModeImage,
             ConfirmChromeKind.TogglePreview,
             ConfirmChromeKind.Retry,
-            ConfirmChromeKind.Done,
             ConfirmChromeKind.Cancel,
+            ConfirmChromeKind.Done,
             ConfirmChromeKind.More
         };
         _confirmChromeRects = new Rectangle[_confirmChromeKinds.Length];
@@ -2036,8 +2041,15 @@ public sealed partial class RegionOverlayForm
                 ConfirmAndCancelCapture();
                 break;
             case ConfirmChromeKind.Done:
-            case ConfirmChromeKind.ModeImage:
                 CommitConfirmedSelection(ConfirmCommitAction.Default);
+                break;
+            case ConfirmChromeKind.ModeImage:
+                // Image is the modes trigger: open when collapsed, close when expanded.
+                // Capture stays on Done / Enter / hotkey I — not on this pill.
+                if (!_confirmModesExpanded)
+                    ExpandConfirmModes();
+                else
+                    CollapseConfirmModes();
                 break;
             case ConfirmChromeKind.TogglePreview:
                 ToggleConfirmPreview();
@@ -2089,7 +2101,7 @@ public sealed partial class RegionOverlayForm
 
         ConfirmChromeKind? kind = keyCode switch
         {
-            Keys.I => ConfirmChromeKind.ModeImage,
+            Keys.I => ConfirmChromeKind.Done, // Image hotkey still captures; the Image pill only toggles modes
             Keys.O => ConfirmChromeKind.ModeOcr,
             Keys.V => ConfirmChromeKind.ModeVideo,
             Keys.G => ConfirmChromeKind.ModeGif,
@@ -2334,6 +2346,7 @@ public sealed partial class RegionOverlayForm
             _confirmChromeWrapperRect = Rectangle.Empty;
             _confirmChromeLayoutDirty = false;
             _confirmChromeLaidOutForRect = Rectangle.Empty;
+            _confirmChromeLaidOutExpandAmt = -1f;
             return;
         }
 
@@ -2341,33 +2354,41 @@ public sealed partial class RegionOverlayForm
         if (!_confirmChromeLayoutDirty
             && _confirmChromeLaidOutForRect == _confirmRect
             && _confirmChromeLaidOutWithLabels == _confirmPillShowLabels
+            && Math.Abs(_confirmChromeLaidOutExpandAmt - _confirmModesExpandAmt) < 0.0005f
             && _confirmChromeRects.Length == _confirmChromeKinds.Length)
             return;
 
         _confirmChromeLayoutDirty = false;
         _confirmChromeLaidOutForRect = _confirmRect;
         _confirmChromeLaidOutWithLabels = _confirmPillShowLabels;
+        _confirmChromeLaidOutExpandAmt = _confirmModesExpandAmt;
 
         int bh = UiChrome.ScaleInt(ConfirmButtonHeight);
         int gap = UiChrome.ScaleInt(ConfirmButtonGap);
         int groupGap = UiChrome.ScaleInt(ConfirmChromeGroupGap);
         var r = _confirmRect;
+        float expandAmt = Math.Clamp(_confirmModesExpandAmt, 0f, 1f);
 
+        int[] fullWidths = new int[_confirmChromeKinds.Length];
         int[] widths = new int[_confirmChromeKinds.Length];
-        int clusterW = 0;
         for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
-            widths[i] = MeasureConfirmChromeButtonWidth(_confirmChromeKinds[i], bh);
-            clusterW += widths[i];
-            if (i > 0)
-                clusterW += GapBeforeConfirmChromeIndex(i, gap, groupGap);
+            fullWidths[i] = MeasureConfirmChromeButtonWidth(_confirmChromeKinds[i], bh);
+            widths[i] = IsRetractableConfirmMode(_confirmChromeKinds[i])
+                ? (int)Math.Round(fullWidths[i] * expandAmt)
+                : fullWidths[i];
         }
 
-        int gripW = UiChrome.ScaleInt(8);
-        int gripGap = UiChrome.ScaleInt(4);
-        int gripLen = UiChrome.ScaleInt(16);
-        int gripToContentGap = UiChrome.ScaleInt(10);
-        clusterW += gripW + gripToContentGap;
+        int[] collapsedWidths = new int[_confirmChromeKinds.Length];
+        for (int i = 0; i < _confirmChromeKinds.Length; i++)
+            collapsedWidths[i] = IsRetractableConfirmMode(_confirmChromeKinds[i]) ? 0 : fullWidths[i];
+
+        int gripW = UiChrome.ScaleInt(12);
+        int gripLen = UiChrome.ScaleInt(22);
+        // Keep a clear gutter so the grip doesn't sit flush against Image (collapsed or expanded).
+        int gripToContentGap = UiChrome.ScaleInt(18);
+
+        int collapsedClusterW = MeasureConfirmChromeClusterWidth(collapsedWidths, gap, groupGap, gripW, gripToContentGap);
 
         int offset = UiChrome.ScaleInt(18);
         int margin = UiChrome.ScaleInt(10);
@@ -2401,11 +2422,12 @@ public sealed partial class RegionOverlayForm
 
         // Side fallback for short selections with no room below: park the pill strip beside
         // the frame on the side opposite the annotation column so it stays clear of it.
+        // Use the collapsed width for side fit so expanding modes grow left without flipping sides.
         int sideGap = UiChrome.ScaleInt(12);
-        int sideLeft = r.Left - sideGap - clusterW;
+        int sideLeft = r.Left - sideGap - collapsedClusterW;
         int sideRight = r.Right + sideGap;
         bool leftSideFits = sideLeft >= monitor.Left + margin;
-        bool rightSideFits = sideRight + clusterW <= monitor.Right - margin;
+        bool rightSideFits = sideRight + collapsedClusterW <= monitor.Right - margin;
         bool annotationRight = _annotationFrameDockSide == CaptureDockSide.Right;
         bool oppositeSideFits = annotationRight ? leftSideFits : rightSideFits;
 
@@ -2457,59 +2479,119 @@ public sealed partial class RegionOverlayForm
             if (_annotationFrameDockSide == CaptureDockSide.Right)
                 maxX = Math.Min(maxX, r.Right);
             else if (_annotationFrameDockSide == CaptureDockSide.Left)
-                minX = Math.Max(minX, r.Left - clusterW - Math.Max(UiChrome.ScaleInt(20), r.Width / 3));
+                minX = Math.Max(minX, r.Left - collapsedClusterW - Math.Max(UiChrome.ScaleInt(20), r.Width / 3));
         }
 
         if (maxX < minX)
             maxX = minX;
 
-        // Prefer the dock under the frame, near the release point, but always clamped to
-        // [minX, maxX] after escuadra limits (never jump to the far side of the monitor).
-        int anchorBtnW = widths[^1];
-        int clusterLeft;
-        if (sidePlacement)
+        // Anchor Image + actions using the collapsed strip so alternate modes grow to the left
+        // of Image without shoving Preview / Done / Cancel.
+        int imageIdx = IndexOfConfirmChrome(ConfirmChromeKind.ModeImage);
+        int anchorBtnW = imageIdx >= 0 ? fullWidths[imageIdx] : (widths.Length > 0 ? widths[^1] : bh);
+        int collapsedClusterLeft = ResolveConfirmChromeClusterLeft(
+            collapsedClusterW, anchorBtnW, r, anchorX, minX, maxX,
+            sidePlacement, insidePlacement, annotationRight, sideLeft, sideRight);
+
+        int imageLeftCollapsed = collapsedClusterLeft + gripW + gripToContentGap;
+        for (int i = 0; i < _confirmChromeKinds.Length; i++)
         {
-            // Park the pill strip beside the frame on the side opposite the annotation
-            // column so the destination pills stay clear of the tool column.
-            clusterLeft = annotationRight ? sideLeft : sideRight;
-        }
-        else if (insidePlacement)
-        {
-            clusterLeft = (int)Math.Round(anchorX - clusterW);
-        }
-        else
-        {
-            // Center the cluster under the anchor, with a slight bias so the primary (last) pill
-            // stays near the release point.
-            int anchorCenter = (int)Math.Round(anchorX - anchorBtnW / 2f);
-            clusterLeft = anchorCenter - (clusterW - anchorBtnW);
-            // Soft preference: keep as much of the dock under the frame as possible.
-            int frameCenterLeft = r.Left + (r.Width - clusterW) / 2;
-            // Blend toward frame center when the pure anchor would sit far outside the frame band.
-            if (clusterLeft + clusterW < r.Left || clusterLeft > r.Right)
-                clusterLeft = frameCenterLeft;
+            if (i == imageIdx) break;
+            if (collapsedWidths[i] <= 0) continue;
+            imageLeftCollapsed += collapsedWidths[i] + GapBeforeConfirmChromeIndex(i + 1, gap, groupGap, collapsedWidths);
         }
 
-        // Hard clamp last — this is what keeps right-side selections from parking the dock
-        // on the left of the monitor when maxX was temporarily wrong.
-        if (clusterW >= maxX - minX)
-            clusterLeft = minX;
-        else if (clusterLeft < minX)
-            clusterLeft = minX;
-        else if (clusterLeft + clusterW > maxX)
-            clusterLeft = maxX - clusterW;
-
+        // Place ModeImage (and everything to its right) at the collapsed Image X.
         if (_confirmChromeRects.Length != _confirmChromeKinds.Length)
             _confirmChromeRects = new Rectangle[_confirmChromeKinds.Length];
 
-        _confirmGripRect = new Rectangle(clusterLeft, y + (bh - gripLen) / 2, gripW, gripLen);
-
-        int x = clusterLeft + gripW + gripToContentGap;
-        for (int i = 0; i < _confirmChromeKinds.Length; i++)
+        if (imageIdx < 0)
         {
-            _confirmChromeRects[i] = new Rectangle(x, y, widths[i], bh);
-            if (i + 1 < _confirmChromeKinds.Length)
-                x += widths[i] + GapBeforeConfirmChromeIndex(i + 1, gap, groupGap);
+            // Fallback: pack left-to-right from collapsed cluster origin.
+            _confirmGripRect = new Rectangle(collapsedClusterLeft, y + (bh - gripLen) / 2, gripW, gripLen);
+            int xFallback = collapsedClusterLeft + gripW + gripToContentGap;
+            for (int i = 0; i < _confirmChromeKinds.Length; i++)
+            {
+                _confirmChromeRects[i] = widths[i] > 0
+                    ? new Rectangle(xFallback, y, widths[i], bh)
+                    : Rectangle.Empty;
+                if (i + 1 < _confirmChromeKinds.Length)
+                    xFallback += widths[i] + GapBeforeConfirmChromeIndex(i + 1, gap, groupGap, widths);
+            }
+        }
+        else
+        {
+            int x = imageLeftCollapsed;
+            for (int i = imageIdx; i < _confirmChromeKinds.Length; i++)
+            {
+                _confirmChromeRects[i] = widths[i] > 0
+                    ? new Rectangle(x, y, widths[i], bh)
+                    : Rectangle.Empty;
+                if (i + 1 < _confirmChromeKinds.Length)
+                    x += widths[i] + GapBeforeConfirmChromeIndex(i + 1, gap, groupGap, widths);
+            }
+
+            // Retractable modes grow to the left of Image.
+            int cursor = imageLeftCollapsed;
+            for (int i = imageIdx - 1; i >= 0; i--)
+            {
+                int g = GapBeforeConfirmChromeIndex(i + 1, gap, groupGap, widths);
+                if (widths[i] <= 0)
+                {
+                    _confirmChromeRects[i] = Rectangle.Empty;
+                    continue;
+                }
+                cursor -= g + widths[i];
+                _confirmChromeRects[i] = new Rectangle(cursor, y, widths[i], bh);
+            }
+
+            int contentLeft = cursor;
+            for (int i = 0; i < imageIdx; i++)
+            {
+                if (widths[i] > 0)
+                {
+                    contentLeft = _confirmChromeRects[i].Left;
+                    break;
+                }
+            }
+            if (imageIdx >= 0 && widths[imageIdx] > 0)
+                contentLeft = Math.Min(contentLeft, _confirmChromeRects[imageIdx].Left);
+
+            _confirmGripRect = new Rectangle(
+                contentLeft - gripToContentGap - gripW,
+                y + (bh - gripLen) / 2,
+                gripW,
+                gripLen);
+        }
+
+        // If expanding left pushed past the monitor, shift the whole strip right.
+        int leftmost = _confirmGripRect.Left;
+        for (int i = 0; i < _confirmChromeRects.Length; i++)
+        {
+            if (_confirmChromeRects[i].Width > 0)
+                leftmost = Math.Min(leftmost, _confirmChromeRects[i].Left);
+        }
+        int rightmost = leftmost;
+        for (int i = 0; i < _confirmChromeRects.Length; i++)
+        {
+            if (_confirmChromeRects[i].Width > 0)
+                rightmost = Math.Max(rightmost, _confirmChromeRects[i].Right);
+        }
+        rightmost = Math.Max(rightmost, _confirmGripRect.Right);
+
+        int shift = 0;
+        if (leftmost < minX)
+            shift = minX - leftmost;
+        else if (rightmost > maxX)
+            shift = maxX - rightmost;
+        if (shift != 0)
+        {
+            _confirmGripRect.Offset(shift, 0);
+            for (int i = 0; i < _confirmChromeRects.Length; i++)
+            {
+                if (_confirmChromeRects[i].Width > 0)
+                    _confirmChromeRects[i].Offset(shift, 0);
+            }
         }
 
         _confirmChromeSeparatorRect1 = Rectangle.Empty;
@@ -2517,32 +2599,8 @@ public sealed partial class RegionOverlayForm
 
         int sepW = Math.Max(1, UiChrome.ScaleInt(1));
         int sepH = Math.Max(UiChrome.ScaleInt(14), (int)(bh * 0.55f));
-
-        // Separator 1: Between ModeQr (index 5) and Done (index 6)
-        if (_confirmChromeRects.Length > 6)
-        {
-            var left = _confirmChromeRects[5];
-            var right = _confirmChromeRects[6];
-            int mid = (left.Right + right.Left) / 2;
-            _confirmChromeSeparatorRect1 = new Rectangle(
-                mid - sepW / 2,
-                y + (bh - sepH) / 2,
-                sepW,
-                sepH);
-        }
-
-        // Separator 2: Between Done (index 6) and TogglePreview (index 7)
-        if (_confirmChromeRects.Length > 7)
-        {
-            var left = _confirmChromeRects[6];
-            var right = _confirmChromeRects[7];
-            int mid = (left.Right + right.Left) / 2;
-            _confirmChromeSeparatorRect2 = new Rectangle(
-                mid - sepW / 2,
-                y + (bh - sepH) / 2,
-                sepW,
-                sepH);
-        }
+        PlaceConfirmChromeSeparator(ConfirmChromeKind.ModeImage, ConfirmChromeKind.TogglePreview, y, bh, sepW, sepH, ref _confirmChromeSeparatorRect1);
+        PlaceConfirmChromeSeparator(ConfirmChromeKind.TogglePreview, ConfirmChromeKind.Retry, y, bh, sepW, sepH, ref _confirmChromeSeparatorRect2);
 
         // Dock wrapper behind all pills so icon buttons stay readable on light/busy wallpapers.
         var pillUnion = Rectangle.Empty;
@@ -2577,6 +2635,91 @@ public sealed partial class RegionOverlayForm
             if (!_confirmChromeWrapperRect.IsEmpty)
                 _confirmChromeWrapperRect.Offset(_confirmCustomOffset);
         }
+    }
+
+    private int MeasureConfirmChromeClusterWidth(int[] widths, int gap, int groupGap, int gripW, int gripToContentGap)
+    {
+        int clusterW = gripW + gripToContentGap;
+        bool any = false;
+        for (int i = 0; i < _confirmChromeKinds.Length && i < widths.Length; i++)
+        {
+            if (widths[i] <= 0) continue;
+            if (any)
+                clusterW += GapBeforeConfirmChromeIndex(i, gap, groupGap, widths);
+            clusterW += widths[i];
+            any = true;
+        }
+        return clusterW;
+    }
+
+    private int ResolveConfirmChromeClusterLeft(
+        int clusterW,
+        int anchorBtnW,
+        Rectangle r,
+        float anchorX,
+        int minX,
+        int maxX,
+        bool sidePlacement,
+        bool insidePlacement,
+        bool annotationRight,
+        int sideLeft,
+        int sideRight)
+    {
+        int clusterLeft;
+        if (sidePlacement)
+        {
+            clusterLeft = annotationRight ? sideLeft : sideRight;
+        }
+        else if (insidePlacement)
+        {
+            clusterLeft = (int)Math.Round(anchorX - clusterW);
+        }
+        else
+        {
+            int anchorCenter = (int)Math.Round(anchorX - anchorBtnW / 2f);
+            clusterLeft = anchorCenter - (clusterW - anchorBtnW);
+            int frameCenterLeft = r.Left + (r.Width - clusterW) / 2;
+            if (clusterLeft + clusterW < r.Left || clusterLeft > r.Right)
+                clusterLeft = frameCenterLeft;
+        }
+
+        if (clusterW >= maxX - minX)
+            clusterLeft = minX;
+        else if (clusterLeft < minX)
+            clusterLeft = minX;
+        else if (clusterLeft + clusterW > maxX)
+            clusterLeft = maxX - clusterW;
+
+        return clusterLeft;
+    }
+
+    private void PlaceConfirmChromeSeparator(
+        ConfirmChromeKind leftKind,
+        ConfirmChromeKind rightKind,
+        int y,
+        int bh,
+        int sepW,
+        int sepH,
+        ref Rectangle dest)
+    {
+        int leftIdx = IndexOfConfirmChrome(leftKind);
+        int rightIdx = IndexOfConfirmChrome(rightKind);
+        if (leftIdx < 0 || rightIdx < 0
+            || leftIdx >= _confirmChromeRects.Length
+            || rightIdx >= _confirmChromeRects.Length)
+            return;
+
+        var left = _confirmChromeRects[leftIdx];
+        var right = _confirmChromeRects[rightIdx];
+        if (left.Width <= 0 || right.Width <= 0)
+            return;
+
+        int mid = (left.Right + right.Left) / 2;
+        dest = new Rectangle(
+            mid - sepW / 2,
+            y + (bh - sepH) / 2,
+            sepW,
+            sepH);
     }
 
     /// <summary>Mark confirm chrome for re-layout after move/resize or settings change.</summary>
@@ -2637,12 +2780,205 @@ public sealed partial class RegionOverlayForm
             _confirmShineTimer.Start();
     }
 
-    private int GapBeforeConfirmChromeIndex(int index, int gap, int groupGap)
+    private static bool IsRetractableConfirmMode(ConfirmChromeKind kind) => kind is
+        ConfirmChromeKind.ModeOcr or ConfirmChromeKind.ModeVideo or ConfirmChromeKind.ModeGif
+        or ConfirmChromeKind.ModeScroll or ConfirmChromeKind.ModeQr;
+
+    private static bool IsConfirmModesClusterKind(ConfirmChromeKind kind)
+        => kind == ConfirmChromeKind.ModeImage || IsRetractableConfirmMode(kind);
+
+    private void ResetConfirmModesExpanded(bool collapsed)
+    {
+        try { _confirmModesCollapseTimer.Stop(); } catch { }
+        try { _confirmModesExpandTimer.Stop(); } catch { }
+        _confirmModesExpanded = !collapsed;
+        _confirmModesExpandTarget = collapsed ? 0f : 1f;
+        _confirmModesExpandAmt = _confirmModesExpandTarget;
+        _confirmModesAnimFrom = _confirmModesExpandAmt;
+        _confirmChromeLayoutDirty = true;
+    }
+
+    private void ExpandConfirmModes()
+    {
+        try { _confirmModesCollapseTimer.Stop(); } catch { }
+        if (_confirmModesExpanded && _confirmModesExpandTarget >= 1f)
+            return;
+
+        _confirmModesExpanded = true;
+        SetConfirmModesExpandTarget(1f);
+    }
+
+    private void CollapseConfirmModes()
+    {
+        try { _confirmModesCollapseTimer.Stop(); } catch { }
+        if (!_confirmModesExpanded && _confirmModesExpandTarget <= 0f)
+            return;
+
+        _confirmModesExpanded = false;
+        SetConfirmModesExpandTarget(0f);
+    }
+
+    private void ScheduleConfirmModesCollapse()
+    {
+        if (!_confirmModesExpanded && _confirmModesExpandAmt <= 0.001f)
+            return;
+        if (_isDraggingConfirm)
+            return;
+        if (_confirmContextMenu?.Visible == true || _toolbarContextMenu?.Visible == true)
+            return;
+        if (_confirmModesCollapseTimer.Enabled)
+            return;
+        _confirmModesCollapseTimer.Stop();
+        _confirmModesCollapseTimer.Interval = ConfirmModesCollapseDelayMs;
+        _confirmModesCollapseTimer.Start();
+    }
+
+    private void CancelConfirmModesCollapse()
+    {
+        try { _confirmModesCollapseTimer.Stop(); } catch { }
+    }
+
+    private void SetConfirmModesExpandTarget(float target)
+    {
+        target = Math.Clamp(target, 0f, 1f);
+        // Already heading here — don't restart the in-flight animation from hover spam.
+        if (Math.Abs(_confirmModesExpandTarget - target) < 0.0005f)
+        {
+            if (Math.Abs(_confirmModesExpandAmt - target) < 0.0005f)
+                return;
+            if (_confirmModesExpandTimer.Enabled)
+                return;
+        }
+
+        _confirmModesExpandTarget = target;
+        if (UI.Motion.Disabled)
+        {
+            try { _confirmModesExpandTimer.Stop(); } catch { }
+            ApplyConfirmModesExpandAmt(target);
+            return;
+        }
+
+        _confirmModesAnimFrom = _confirmModesExpandAmt;
+        _confirmModesAnimStart = DateTime.UtcNow;
+        if (!_confirmModesExpandTimer.Enabled)
+            _confirmModesExpandTimer.Start();
+    }
+
+    private void ConfirmModesExpandTick()
+    {
+        if (!_isConfirmingSelection)
+        {
+            _confirmModesExpandTimer.Stop();
+            return;
+        }
+
+        float elapsed = (float)(DateTime.UtcNow - _confirmModesAnimStart).TotalMilliseconds;
+        float t = Math.Clamp(elapsed / ConfirmModesExpandAnimMs, 0f, 1f);
+        // Smoothstep for a snappy open/close without feeling linear.
+        float eased = t * t * (3f - 2f * t);
+        float amt = _confirmModesAnimFrom + (_confirmModesExpandTarget - _confirmModesAnimFrom) * eased;
+        ApplyConfirmModesExpandAmt(amt);
+
+        if (t >= 1f)
+        {
+            ApplyConfirmModesExpandAmt(_confirmModesExpandTarget);
+            _confirmModesExpandTimer.Stop();
+        }
+    }
+
+    private void ApplyConfirmModesExpandAmt(float amt)
+    {
+        amt = Math.Clamp(amt, 0f, 1f);
+        if (Math.Abs(_confirmModesExpandAmt - amt) < 0.0005f)
+            return;
+
+        var oldUnion = UnionConfirmChromeRects();
+        if (!_confirmChromeWrapperRect.IsEmpty)
+            oldUnion = oldUnion.IsEmpty
+                ? InflateForRepaint(_confirmChromeWrapperRect, ConfirmChromeInvalidatePad)
+                : Rectangle.Union(oldUnion, InflateForRepaint(_confirmChromeWrapperRect, ConfirmChromeInvalidatePad));
+        else if (!oldUnion.IsEmpty)
+            oldUnion = InflateForRepaint(oldUnion, ConfirmChromeInvalidatePad);
+
+        _confirmModesExpandAmt = amt;
+        _confirmChromeLayoutDirty = true;
+        LayoutConfirmChromeRects();
+
+        var newUnion = UnionConfirmChromeRects();
+        if (!_confirmChromeWrapperRect.IsEmpty)
+            newUnion = newUnion.IsEmpty
+                ? InflateForRepaint(_confirmChromeWrapperRect, ConfirmChromeInvalidatePad)
+                : Rectangle.Union(newUnion, InflateForRepaint(_confirmChromeWrapperRect, ConfirmChromeInvalidatePad));
+        else if (!newUnion.IsEmpty)
+            newUnion = InflateForRepaint(newUnion, ConfirmChromeInvalidatePad);
+
+        var dirty = Rectangle.Empty;
+        if (!oldUnion.IsEmpty) dirty = oldUnion;
+        if (!newUnion.IsEmpty)
+            dirty = dirty.IsEmpty ? newUnion : Rectangle.Union(dirty, newUnion);
+        if (!dirty.IsEmpty)
+            Invalidate(dirty);
+    }
+
+    /// <summary>
+    /// Expand alternate modes while the pointer is over Image / OCR…QR; collapse shortly after leaving that cluster.
+    /// Hovering (or dragging) the confirm dock grip keeps modes open so the strip doesn't collapse mid-drag.
+    /// </summary>
+    private void UpdateConfirmModesHover(Point p)
+    {
+        if (!_isConfirmingSelection || _confirmDocksHiddenForFrameManip)
+            return;
+
+        if (_confirmContextMenu?.Visible == true || _toolbarContextMenu?.Visible == true)
+        {
+            CancelConfirmModesCollapse();
+            return;
+        }
+
+        if (_isDraggingConfirm || HitTestConfirmDockGrip(p))
+        {
+            CancelConfirmModesCollapse();
+            return;
+        }
+
+        if (IsPointOverConfirmModesCluster(p))
+        {
+            CancelConfirmModesCollapse();
+            ExpandConfirmModes();
+        }
+        else
+        {
+            ScheduleConfirmModesCollapse();
+        }
+    }
+
+    private bool IsPointOverConfirmModesCluster(Point p)
+    {
+        LayoutConfirmChromeRects();
+        for (int i = 0; i < _confirmChromeKinds.Length && i < _confirmChromeRects.Length; i++)
+        {
+            if (!IsConfirmModesClusterKind(_confirmChromeKinds[i]))
+                continue;
+            var rect = _confirmChromeRects[i];
+            if (rect.Width > 0 && rect.Contains(p))
+                return true;
+        }
+        return false;
+    }
+
+    private int GapBeforeConfirmChromeIndex(int index, int gap, int groupGap, int[] widths)
     {
         if (index <= 0 || index >= _confirmChromeKinds.Length)
             return gap;
+        if (index >= widths.Length)
+            return gap;
 
-        if (index == 6 || index == 7)
+        // Skip gaps next to collapsed (zero-width) retractable modes.
+        if (widths[index] <= 0 || widths[index - 1] <= 0)
+            return 0;
+
+        var kind = _confirmChromeKinds[index];
+        if (kind == ConfirmChromeKind.TogglePreview || kind == ConfirmChromeKind.Retry)
             return groupGap;
 
         return gap;
@@ -2671,11 +3007,35 @@ public sealed partial class RegionOverlayForm
         LayoutConfirmChromeRects();
         for (int i = 0; i < _confirmChromeRects.Length; i++)
         {
-            if (_confirmChromeRects[i].Contains(p))
+            var rect = _confirmChromeRects[i];
+            if (rect.Width <= 0 || rect.Height <= 0)
+                continue;
+            if (rect.Contains(p))
                 return i;
         }
         return -1;
     }
+
+    /// <summary>Extra padding around painted grip dots so the drag affordance is easier to hit.</summary>
+    private static int DockGripHitInflate => UiChrome.ScaleInt(10);
+
+    private static Rectangle InflateDockGripHit(Rectangle grip)
+    {
+        if (grip.IsEmpty || grip.Width <= 0 || grip.Height <= 0)
+            return Rectangle.Empty;
+        var hit = grip;
+        hit.Inflate(DockGripHitInflate, DockGripHitInflate);
+        return hit;
+    }
+
+    private bool HitTestConfirmDockGrip(Point p)
+        => !_confirmGripRect.IsEmpty && InflateDockGripHit(_confirmGripRect).Contains(p);
+
+    private bool HitTestAnnotationDockGrip(Point p)
+        => !_annotationGripRect.IsEmpty && InflateDockGripHit(_annotationGripRect).Contains(p);
+
+    private bool HitTestCaptureDockGrip(Point p)
+        => !_captureGripRect.IsEmpty && InflateDockGripHit(_captureGripRect).Contains(p);
 
     private Rectangle GetToolbarAnchorClientBounds()
     {

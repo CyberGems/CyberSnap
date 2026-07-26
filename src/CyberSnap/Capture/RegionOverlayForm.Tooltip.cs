@@ -316,16 +316,23 @@ public sealed partial class RegionOverlayForm
         var kind = _confirmChromeKinds[_hoveredConfirmButton];
         bool isPrimary = _hoveredConfirmButton == IndexOfPrimaryConfirmAction();
         string hotkey = ConfirmChromeHotkeyHint(kind);
+        // Image toggles the modes strip — never imply a click captures (Done / Enter / I do).
+        if (kind == ConfirmChromeKind.ModeImage)
+            hotkey = "";
         string primaryHint = isPrimary
             ? "  (Enter · " + LocalizationService.Translate("double-click") + ")"
             : (string.IsNullOrEmpty(hotkey) ? "" : "  (" + hotkey + ")");
 
+        string title = kind == ConfirmChromeKind.ModeImage
+            ? LocalizationService.Translate("Capture modes")
+            : ConfirmChromeTitle(kind);
+
         string text = kind switch
         {
-            ConfirmChromeKind.Retry => ConfirmChromeTitle(kind) + "  (R)",
-            ConfirmChromeKind.Cancel => ConfirmChromeTitle(kind) + primaryHint,
-            ConfirmChromeKind.TogglePreview => ConfirmChromeTitle(kind) + primaryHint,
-            _ => ConfirmChromeTitle(kind) + primaryHint
+            ConfirmChromeKind.Retry => title + "  (R)",
+            ConfirmChromeKind.Cancel => title + primaryHint,
+            ConfirmChromeKind.TogglePreview => title + primaryHint,
+            _ => title + primaryHint
         };
 
         if (string.IsNullOrWhiteSpace(text))

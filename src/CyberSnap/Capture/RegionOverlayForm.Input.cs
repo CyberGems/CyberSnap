@@ -119,13 +119,14 @@ public sealed partial class RegionOverlayForm
                     return;
                 }
                 // Confirm grip handle: drag the confirm bar itself.
-                if (!_confirmGripRect.IsEmpty && _confirmGripRect.Contains(e.Location))
+                if (HitTestConfirmDockGrip(e.Location))
                 {
                     _isDraggingConfirm = true;
                     _confirmDragStartMouse = e.Location;
                     _confirmDragStartOffset = _confirmCustomOffset;
                     HideToolbarTooltip();
                     Cursor = CursorFactory.GrabbingCursor;
+                    CancelConfirmModesCollapse();
                     return;
                 }
                 // Permanent size pill (top-left) OR center move cross: dedicated drag handles for the capture frame.

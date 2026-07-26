@@ -86,9 +86,9 @@ public sealed partial class RegionOverlayForm : Form
     private enum ConfirmChromeKind { Cancel, Retry, Done, TogglePreview, ModeImage, ModeOcr, ModeVideo, ModeGif, ModeScroll, ModeQr, More }
     private ConfirmChromeKind[] _confirmChromeKinds =
     {
-        ConfirmChromeKind.ModeImage, ConfirmChromeKind.ModeOcr, ConfirmChromeKind.ModeVideo, ConfirmChromeKind.ModeGif,
-        ConfirmChromeKind.ModeScroll, ConfirmChromeKind.ModeQr,
-        ConfirmChromeKind.TogglePreview, ConfirmChromeKind.Retry, ConfirmChromeKind.Done, ConfirmChromeKind.Cancel, ConfirmChromeKind.More
+        ConfirmChromeKind.ModeOcr, ConfirmChromeKind.ModeVideo, ConfirmChromeKind.ModeGif,
+        ConfirmChromeKind.ModeScroll, ConfirmChromeKind.ModeQr, ConfirmChromeKind.ModeImage,
+        ConfirmChromeKind.TogglePreview, ConfirmChromeKind.Retry, ConfirmChromeKind.Cancel, ConfirmChromeKind.Done, ConfirmChromeKind.More
     };
     private Rectangle[] _confirmChromeRects = Array.Empty<Rectangle>();
     /// <summary>Thin divider between fixed Cancel/Retry and destination pills (empty when unused).</summary>
@@ -100,6 +100,16 @@ public sealed partial class RegionOverlayForm : Form
     private bool _confirmChromeLayoutDirty = true;
     private Rectangle _confirmChromeLaidOutForRect = Rectangle.Empty;
     private bool _confirmChromeLaidOutWithLabels;
+    private float _confirmChromeLaidOutExpandAmt = -1f;
+    /// <summary>Alternate modes (OCR…QR) are shown; Image stays as the always-visible trigger.</summary>
+    private bool _confirmModesExpanded;
+    /// <summary>0 = collapsed (Image only), 1 = full alternate-mode strip.</summary>
+    private float _confirmModesExpandAmt;
+    private float _confirmModesExpandTarget;
+    private float _confirmModesAnimFrom;
+    private DateTime _confirmModesAnimStart;
+    private const int ConfirmModesExpandAnimMs = 100;
+    private const int ConfirmModesCollapseDelayMs = 400;
     /// <summary>Traveling glint phase around the confirm dock wrapper (0..1).</summary>
     private float _confirmWrapperShinePhase;
 
@@ -255,6 +265,8 @@ public sealed partial class RegionOverlayForm : Form
     private readonly System.Windows.Forms.Timer _selectionPaintTimer;
     private readonly System.Windows.Forms.Timer _confirmPressTimer;
     private readonly System.Windows.Forms.Timer _confirmShineTimer;
+    private readonly System.Windows.Forms.Timer _confirmModesExpandTimer;
+    private readonly System.Windows.Forms.Timer _confirmModesCollapseTimer;
     private readonly System.Diagnostics.Stopwatch _selectionPaintStopwatch = System.Diagnostics.Stopwatch.StartNew();
     private bool _selectionPaintQueued;
     private DateTime _showTime;
@@ -627,6 +639,15 @@ public sealed partial class RegionOverlayForm : Form
         _confirmShineTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
         _confirmShineTimer.Tick += (_, _) => ConfirmShineTick();
 
+        _confirmModesExpandTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _confirmModesExpandTimer.Tick += (_, _) => ConfirmModesExpandTick();
+        _confirmModesCollapseTimer = new System.Windows.Forms.Timer { Interval = ConfirmModesCollapseDelayMs };
+        _confirmModesCollapseTimer.Tick += (_, _) =>
+        {
+            _confirmModesCollapseTimer.Stop();
+            CollapseConfirmModes();
+        };
+
         _currentOverlay = this;
     }
 
@@ -800,10 +821,10 @@ public sealed partial class RegionOverlayForm : Form
 
         int w, h;
         int brandWidth = 0;
-        int gripSize = UiChrome.ScaleInt(8);
+        int gripSize = UiChrome.ScaleInt(12);
         int gripGap = UiChrome.ScaleInt(4);
-        int gripLen = UiChrome.ScaleInt(16);
-        int gripToContentGap = UiChrome.ScaleInt(10);
+        int gripLen = UiChrome.ScaleInt(22);
+        int gripToContentGap = UiChrome.ScaleInt(14);
 
         if (IsVerticalDock)
         {
@@ -913,9 +934,9 @@ public sealed partial class RegionOverlayForm : Form
         int gapBrandToTools = UiChrome.ScaleInt(4);
         int gapToolsToActivator = buttonSpacing;
 
-        int gripH = UiChrome.ScaleInt(8);
+        int gripH = UiChrome.ScaleInt(12);
         int gripGap = UiChrome.ScaleInt(4);
-        int gripToContentGap = UiChrome.ScaleInt(10);
+        int gripToContentGap = UiChrome.ScaleInt(14);
 
         int w = pad * 2 + buttonSize;
         int h = pad + gripH + gripToContentGap + brandStripH + gapBrandToTools + toolsSpan + gapToolsToActivator + activatorH + pad;
@@ -975,7 +996,7 @@ public sealed partial class RegionOverlayForm : Form
         int colX = _toolbarRect.X + pad;
         int cy = _toolbarRect.Y + pad;
 
-        int gripW = UiChrome.ScaleInt(16);
+        int gripW = UiChrome.ScaleInt(22);
         _annotationGripRect = new Rectangle(_toolbarRect.X + (_toolbarRect.Width - gripW) / 2, cy, gripW, gripH);
         cy += gripH + gripToContentGap;
 
@@ -1129,6 +1150,7 @@ public sealed partial class RegionOverlayForm : Form
         _confirmDocksHiddenForFrameManip = true;
         _hoveredConfirmButton = -1;
         _confirmShineTimer.Stop();
+        ResetConfirmModesExpanded(collapsed: true);
 
         // Annotation dock first (layered), then clear destination pixels in the same tick.
         if (_toolbarForm is { IsDisposed: false })
@@ -2016,10 +2038,17 @@ public sealed partial class RegionOverlayForm : Form
         var menu = WindowsMenuRenderer.Create(showImages: true, minWidth: 260);
         menu.Font = UiChrome.ChromeFont(11.0f);
         _confirmContextMenu = menu;
+        CancelConfirmModesCollapse();
         menu.Closed += (_, _) =>
         {
             _lastContextMenuClosedTime = DateTime.UtcNow;
             _confirmContextMenu = null;
+            try
+            {
+                var client = PointToClient(System.Windows.Forms.Cursor.Position);
+                UpdateConfirmModesHover(client);
+            }
+            catch { }
         };
 
         var labelsItem = WindowsMenuRenderer.Item(
