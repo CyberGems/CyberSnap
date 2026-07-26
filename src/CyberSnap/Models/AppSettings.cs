@@ -344,7 +344,7 @@ public sealed class AppSettings
     public uint StandaloneScanHotkeyModifiers { get; set; }
     public uint StandaloneScanHotkeyKey { get; set; }
 
-    public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.PreviewAndCopy;
+    public AfterCaptureAction AfterCapture { get; set; } = AfterCaptureAction.CopyToClipboard;
     public bool OpenEditorAfterCapture { get; set; }
     /// <summary>
     /// When true, open the saved capture in the OS default image viewer after capture.
@@ -355,8 +355,14 @@ public sealed class AppSettings
     /// <summary>When true, open the trimmer after each MP4 recording.</summary>
     public bool OpenVideoTrimmerAfterCapture { get; set; } = true;
 
+    /// <summary>When true, show a completion toast for MP4 when the trimmer is not opened.</summary>
+    public bool ShowVideoRecordingNotification { get; set; } = true;
+
     /// <summary>When true, open the trimmer after each GIF recording.</summary>
     public bool OpenGifTrimmerAfterCapture { get; set; } = true;
+
+    /// <summary>When true, show a completion toast for GIF when the trimmer is not opened.</summary>
+    public bool ShowGifRecordingNotification { get; set; } = true;
     /// <summary>Last volume level used in the video trimmer (0.0–1.0).</summary>
     public double VideoTrimmerVolume { get; set; } = 1.0;
     /// <summary>When true, exported trimmer output excludes the audio track.</summary>

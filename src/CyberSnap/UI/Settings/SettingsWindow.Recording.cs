@@ -15,7 +15,7 @@ public partial class SettingsWindow
     private void UpdateCaptureFormatControls()
     {
         var isJpeg = (CaptureImageFormat)CaptureFormatCombo.SelectedIndex == CaptureImageFormat.Jpeg;
-        JpegQualityPanel.Visibility = isJpeg ? Visibility.Visible : Visibility.Collapsed;
+        JpegQualitySection.Visibility = isJpeg ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SaveHistoryCheck_Changed(object sender, RoutedEventArgs e)

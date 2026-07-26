@@ -241,6 +241,8 @@
   "Choose what happens when an MP4 recording finishes. Add steps with + and remove them with ×.": "Choose what happens when an MP4 recording finishes. Add steps with + and remove them with ×.",
   "Choose what happens when a GIF recording finishes. Add steps with + and remove them with ×.": "Choose what happens when a GIF recording finishes. Add steps with + and remove them with ×.",
   "Outcome step: open trimmer": "Open trimmer",
+  "Show a status toast when an MP4 recording finishes (or if the trimmer fails to open).": "Show a status toast when an MP4 recording finishes (or if the trimmer fails to open).",
+  "Show a status toast when a GIF recording finishes (or if the trimmer fails to open).": "Show a status toast when a GIF recording finishes (or if the trimmer fails to open).",
   "Write the recording to the configured save folder.": "Write the recording to the configured save folder.",
   "Copy the image capture to the clipboard when it finishes.": "Copy the image capture to the clipboard when it finishes.",
   "Copy the finished MP4 to the clipboard.": "Copy the finished MP4 to the clipboard.",

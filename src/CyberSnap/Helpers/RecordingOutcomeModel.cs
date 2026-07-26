@@ -12,17 +12,18 @@ public enum RecordingOutcomeKind
 public enum RecordingOutcomePillKind
 {
     Save,
+    Notification,
     Clipboard,
     Trimmer
 }
 
 /// <summary>
 /// Composable post-recording outcome for MP4 / GIF.
-/// Save is per-media (<see cref="AppSettings.SaveVideoToFile"/> / <see cref="AppSettings.SaveGifToFile"/>);
-/// Clipboard uses per-kind auto-copy; Trimmer is media-specific.
+/// Save / notification / clipboard / trimmer are all per-media.
 /// </summary>
 public readonly record struct RecordingOutcomeState(
     bool Save,
+    bool Notification,
     bool Clipboard,
     bool OpenTrimmer);
 
@@ -31,6 +32,7 @@ public static class RecordingOutcomeModel
     public static RecordingOutcomePillKind[] AllPills { get; } =
     [
         RecordingOutcomePillKind.Save,
+        RecordingOutcomePillKind.Notification,
         RecordingOutcomePillKind.Clipboard,
         RecordingOutcomePillKind.Trimmer
     ];
@@ -41,6 +43,10 @@ public static class RecordingOutcomeModel
             ? settings.SaveVideoToFile
             : settings.SaveGifToFile;
 
+        bool notification = kind == RecordingOutcomeKind.Video
+            ? settings.ShowVideoRecordingNotification
+            : settings.ShowGifRecordingNotification;
+
         bool clipboard = kind == RecordingOutcomeKind.Video
             ? AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Video)
             : AutoCopyPreferences.ShouldCopy(settings, AutoCopyKind.Gif);
@@ -49,7 +55,7 @@ public static class RecordingOutcomeModel
             ? settings.OpenVideoTrimmerAfterCapture
             : settings.OpenGifTrimmerAfterCapture;
 
-        return new RecordingOutcomeState(save, clipboard, trimmer);
+        return new RecordingOutcomeState(save, notification, clipboard, trimmer);
     }
 
     public static void ApplyToSettings(
@@ -58,17 +64,20 @@ public static class RecordingOutcomeModel
         RecordingOutcomeKind kind)
     {
         if (kind == RecordingOutcomeKind.Video)
+        {
             settings.SaveVideoToFile = state.Save;
+            settings.ShowVideoRecordingNotification = state.Notification;
+            settings.OpenVideoTrimmerAfterCapture = state.OpenTrimmer;
+        }
         else
+        {
             settings.SaveGifToFile = state.Save;
+            settings.ShowGifRecordingNotification = state.Notification;
+            settings.OpenGifTrimmerAfterCapture = state.OpenTrimmer;
+        }
 
         var copyKind = kind == RecordingOutcomeKind.Video ? AutoCopyKind.Video : AutoCopyKind.Gif;
         AutoCopyPreferences.SetKindEnabled(settings, copyKind, state.Clipboard);
-
-        if (kind == RecordingOutcomeKind.Video)
-            settings.OpenVideoTrimmerAfterCapture = state.OpenTrimmer;
-        else
-            settings.OpenGifTrimmerAfterCapture = state.OpenTrimmer;
     }
 
     /// <summary>
@@ -88,6 +97,7 @@ public static class RecordingOutcomeModel
         pill switch
         {
             RecordingOutcomePillKind.Save => state.Save,
+            RecordingOutcomePillKind.Notification => state.Notification,
             RecordingOutcomePillKind.Clipboard => state.Clipboard,
             RecordingOutcomePillKind.Trimmer => state.OpenTrimmer,
             _ => false
@@ -100,6 +110,7 @@ public static class RecordingOutcomeModel
         pill switch
         {
             RecordingOutcomePillKind.Save => state with { Save = true },
+            RecordingOutcomePillKind.Notification => state with { Notification = true },
             RecordingOutcomePillKind.Clipboard => state with { Clipboard = true },
             RecordingOutcomePillKind.Trimmer => state with { OpenTrimmer = true },
             _ => state
@@ -113,6 +124,7 @@ public static class RecordingOutcomeModel
         return pill switch
         {
             RecordingOutcomePillKind.Save => state with { Save = false },
+            RecordingOutcomePillKind.Notification => state with { Notification = false },
             RecordingOutcomePillKind.Clipboard => state with { Clipboard = false },
             RecordingOutcomePillKind.Trimmer => state with { OpenTrimmer = false },
             _ => state
@@ -122,6 +134,7 @@ public static class RecordingOutcomeModel
     public static string LabelKey(RecordingOutcomePillKind pill) => pill switch
     {
         RecordingOutcomePillKind.Save => "Outcome step: save file",
+        RecordingOutcomePillKind.Notification => "Outcome step: show notification",
         RecordingOutcomePillKind.Clipboard => "Auto-copy",
         RecordingOutcomePillKind.Trimmer => "Outcome step: open trimmer",
         _ => pill.ToString()
@@ -131,6 +144,9 @@ public static class RecordingOutcomeModel
         pill switch
         {
             RecordingOutcomePillKind.Save => "Write the recording to the configured save folder.",
+            RecordingOutcomePillKind.Notification => kind == RecordingOutcomeKind.Video
+                ? "Show a status toast when an MP4 recording finishes (or if the trimmer fails to open)."
+                : "Show a status toast when a GIF recording finishes (or if the trimmer fails to open).",
             RecordingOutcomePillKind.Clipboard => kind == RecordingOutcomeKind.Video
                 ? "Copy the finished MP4 to the clipboard."
                 : "Copy the finished GIF to the clipboard.",
