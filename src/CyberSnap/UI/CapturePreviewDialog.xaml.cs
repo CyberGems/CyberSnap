@@ -18,6 +18,8 @@ namespace CyberSnap.UI
     public partial class CapturePreviewDialog : Window
     {
         private const double SideBySideBreakpoint = 700;
+        /// <summary>Quick opacity fade for timer auto-close only (manual close stays instant).</summary>
+        private const int AutoCloseFadeMs = 280;
 
         private readonly SettingsService _settingsService;
         private readonly Bitmap _capturedBitmap;
@@ -26,6 +28,7 @@ namespace CyberSnap.UI
         private bool _isHovered = false;
         private bool _didCenterOnOpen;
         private bool _isSideBySide = true;
+        private bool _isClosing;
         private AfterCaptureOutcomeState _lastOutcomeState;
         private int _lastTimeoutSeconds;
         private DispatcherTimer? _autoCloseTimer;
@@ -322,8 +325,8 @@ namespace CyberSnap.UI
             if (current >= 1)
                 return;
 
-            // Same rate as countdown: refill the depleted portion over matching wall time.
-            double refillSeconds = Math.Max(0.05, (1.0 - current) * _autoCloseDurationSeconds);
+            // Refill at 2× the countdown rate so the bar recovers quickly while hovered.
+            double refillSeconds = Math.Max(0.05, (1.0 - current) * _autoCloseDurationSeconds / 2.0);
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
                 new DoubleAnimation
                 {
@@ -380,8 +383,32 @@ namespace CyberSnap.UI
 
         private void PerformAutoClose()
         {
-            // Same outcome as Continue / Done (CancelBtn).
-            CommitOrDismissFromPrimaryButton();
+            // Same outcome as Continue / Done, but fade out first (manual close stays instant).
+            // Do not set DialogResult until the fade completes — WPF closes ShowDialog on set.
+            if (_isClosing)
+                return;
+            _isClosing = true;
+
+            StopAutoCloseTimer(resetProgress: false);
+            ProgressHost.Visibility = Visibility.Collapsed;
+            IsHitTestVisible = false;
+
+            bool commit = ResolvePrimaryButtonCommit();
+            try
+            {
+                var fadeOut = Motion.To(0, AutoCloseFadeMs, Motion.SmoothInOut);
+                fadeOut.FillBehavior = FillBehavior.HoldEnd;
+                fadeOut.Completed += (_, _) =>
+                {
+                    BeginAnimation(OpacityProperty, null);
+                    DialogResult = commit;
+                };
+                BeginAnimation(OpacityProperty, fadeOut);
+            }
+            catch
+            {
+                DialogResult = commit;
+            }
         }
 
         /// <summary>
@@ -400,19 +427,24 @@ namespace CyberSnap.UI
             // deferred save/share/editor paths and compact toasts can finish.
             || state.Clipboard;
 
-        private void CommitOrDismissFromPrimaryButton()
+        /// <summary>Applies SelectedAction for the primary button; returns the DialogResult to set.</summary>
+        private bool ResolvePrimaryButtonCommit()
         {
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
             if (ShouldCommitDeferredOutcomes(state))
             {
                 SelectedAction = RegionOverlayForm.ConfirmCommitAction.Default;
-                DialogResult = true;
+                return true;
             }
-            else
-            {
-                DialogResult = false;
-            }
-            Close();
+            return false;
+        }
+
+        private void CommitOrDismissFromPrimaryButton()
+        {
+            if (_isClosing)
+                return;
+            _isClosing = true;
+            DialogResult = ResolvePrimaryButtonCommit();
         }
 
         private void EditAfterCaptureSettingsBtn_Click(object sender, RoutedEventArgs e)
@@ -719,8 +751,10 @@ namespace CyberSnap.UI
 
         private void TitleBar_CloseRequested(object sender, EventArgs e)
         {
+            if (_isClosing)
+                return;
+            _isClosing = true;
             DialogResult = false;
-            Close();
         }
 
         private void TitleBar_PinRequested(object sender, EventArgs e)
@@ -742,37 +776,47 @@ namespace CyberSnap.UI
 
         private void SaveBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (_isClosing)
+                return;
+            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Default;
             DialogResult = true;
-            Close();
         }
 
         private void CopyBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (_isClosing)
+                return;
+            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Copy;
             DialogResult = true;
-            Close();
         }
 
         private void EditBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (_isClosing)
+                return;
+            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Edit;
             DialogResult = true;
-            Close();
         }
 
         private void ShareBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (_isClosing)
+                return;
+            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.Share;
             DialogResult = true;
-            Close();
         }
 
         private void GalleryBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (_isClosing)
+                return;
+            _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.History;
             DialogResult = true;
-            Close();
         }
 
         private void CancelBtn_Click(object sender, RoutedEventArgs e)
@@ -784,8 +828,11 @@ namespace CyberSnap.UI
         {
             if (e.Key == Key.Escape)
             {
+                if (_isClosing)
+                    return;
+                _isClosing = true;
                 DialogResult = false;
-                Close();
+                e.Handled = true;
             }
         }
     }
