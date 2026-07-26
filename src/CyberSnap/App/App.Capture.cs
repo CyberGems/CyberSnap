@@ -719,7 +719,7 @@ public partial class App
                             // Save is immediate when the path is known (same timing as auto-copy).
                             string? earlySavePath = TrySaveCaptureFileEarly(cropped, settings);
 
-                            var dialog = new UI.CapturePreviewDialog(cropped, _settingsService, monitorPoint);
+                            var dialog = new UI.CapturePreviewDialog(cropped, _settingsService, monitorPoint, earlySavePath);
                             if (dialog.ShowDialog() == true)
                             {
                                 HandleCaptureResult(cropped, dialog.SelectedAction, earlySavePath);
