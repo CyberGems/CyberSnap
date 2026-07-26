@@ -1606,11 +1606,11 @@ public sealed partial class RegionOverlayForm
     {
         _confirmChromeKinds = new[]
         {
-            ConfirmChromeKind.ModeOcr,
-            ConfirmChromeKind.ModeVideo,
-            ConfirmChromeKind.ModeGif,
-            ConfirmChromeKind.ModeScroll,
             ConfirmChromeKind.ModeQr,
+            ConfirmChromeKind.ModeScroll,
+            ConfirmChromeKind.ModeGif,
+            ConfirmChromeKind.ModeVideo,
+            ConfirmChromeKind.ModeOcr,
             ConfirmChromeKind.ModeImage,
             ConfirmChromeKind.TogglePreview,
             ConfirmChromeKind.Retry,

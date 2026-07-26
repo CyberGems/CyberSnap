@@ -324,7 +324,7 @@ public sealed partial class RegionOverlayForm
             : (string.IsNullOrEmpty(hotkey) ? "" : "  (" + hotkey + ")");
 
         string title = kind == ConfirmChromeKind.ModeImage
-            ? LocalizationService.Translate("Capture modes")
+            ? LocalizationService.Translate("Image capture mode")
             : ConfirmChromeTitle(kind);
 
         string text = kind switch
