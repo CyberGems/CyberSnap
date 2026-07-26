@@ -1787,7 +1787,8 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Saving" Style="{StaticResource SectionLabel}" Margin="4,18,0,9"/>
+                    <TextBlock Text="Image output" Style="{StaticResource SectionLabel}" Margin="4,18,0,9"
+                               Services:LocalizationService.SourceText="Image output"/>
 
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
@@ -1798,141 +1799,19 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE74E;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Save screenshots to file" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Write captures to your configured folder." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="SaveToFileCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Write screenshots to the configured save folder"
-                                          AutomationProperties.Name="Save screenshots to file"
-                                          Checked="SaveToFileCheck_Changed" Unchecked="SaveToFileCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8AC;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Ask for file name every time" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Prompt before writing each saved capture." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="AskFileNameCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Prompt for a file name before each saved capture"
-                                          AutomationProperties.Name="Ask for file name every time"
-                                          Checked="AskFileNameCheck_Changed" Unchecked="AskFileNameCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8D2;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="File name pattern" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Use the buttons to build capture file names." Style="{StaticResource SettingDescription}"/>
-                                    <DockPanel Margin="0,8,0,0">
-                                        <Button x:Name="FileNameTemplateResetBtn" Content="↺"
-                                                DockPanel.Dock="Right" Margin="4,0,0,0"
-                                                Width="32" Height="32" Padding="0"
-                                                FontSize="14" FontWeight="Bold"
-                                                ToolTip="Reset to default pattern"
-                                                AutomationProperties.Name="Reset file name pattern to default"
-                                                Click="FileNameTemplateResetBtn_Click"/>
-                                        <TextBox x:Name="FileNameTemplateBox" MinWidth="145" MaxWidth="285"
-                                                 HorizontalAlignment="Stretch"
-                                                 HorizontalScrollBarVisibility="Auto"
-                                                 ToolTip="Use the buttons to build capture file names."
-                                                 AutomationProperties.Name="File name pattern"
-                                                 PreviewKeyDown="FileNameTemplateBox_PreviewKeyDown"
-                                                 TextChanged="FileNameTemplateBox_TextChanged"
-                                                 Background="{DynamicResource ThemeInputBackgroundBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                                 BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"/>
-                                    </DockPanel>
-                                    <WrapPanel x:Name="FileNameTokenPanel" Margin="0,8,0,-6"/>
-                                    <TextBlock x:Name="FileNameTemplatePreviewText" FontSize="11" Margin="0,6,0,0"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock x:Name="CaptureSavePreferenceStatusText"
-                                               Style="{StaticResource SettingsStatusText}"
-                                               Visibility="Collapsed"
-                                               Margin="0,6,0,0"/>
-                                </StackPanel>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Create monthly subfolders" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Organize captures into year-month folders." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <CheckBox x:Name="MonthlyFoldersCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          ToolTip="Organize captures into year-month folders"
-                                          AutomationProperties.Name="Create monthly subfolders"
-                                          Checked="MonthlyFoldersCheck_Changed" Unchecked="MonthlyFoldersCheck_Changed"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Save folder" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Choose where image captures are stored." Style="{StaticResource SettingDescription}"/>
-                                </StackPanel>
-                                <Button x:Name="BrowseSaveDirBtn" Content="Browse" Grid.Column="2" MinWidth="90"
-                                        VerticalAlignment="Center" ToolTip="Choose save folder"
-                                        Services:LocalizationService.SourceToolTip="Choose save folder"
-                                        AutomationProperties.Name="Choose save folder"
-                                        Cursor="Hand" Click="BrowseButton_Click"/>
-                            </Grid>
-                            <Grid x:Name="SaveDirPanel" Style="{StaticResource SettingRow}" Margin="34,6,0,0" Visibility="Collapsed">
-                                <TextBox x:Name="SaveDirBox" IsReadOnly="True"
-                                         MinWidth="145" MaxWidth="360" HorizontalAlignment="Stretch"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
-                                         AutomationProperties.Name="Current save folder"
-                                         Background="{DynamicResource ThemeInputBackgroundBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                         BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"/>
-                            </Grid>
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
                                     <TextBlock Text="&#xE8A5;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Default format" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Set the file type for image captures." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Default format" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Default format"/>
+                                    <TextBlock Text="Set the file type for image captures." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Set the file type for image captures."/>
                                 </StackPanel>
                                 <ComboBox x:Name="CaptureFormatCombo" Grid.Column="2" MinWidth="125"
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="Default format"
                                           ToolTip="Set the file type for image captures."
+                                          Services:LocalizationService.SourceToolTip="Set the file type for image captures."
                                           SelectionChanged="CaptureFormatCombo_SelectionChanged">
                                     <ComboBoxItem Content="PNG"
                                                   ToolTip="Save lossless images with transparency."
@@ -1959,13 +1838,16 @@
                                     <TextBlock Text="&#xE9D2;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="JPG quality" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Balance quality against file size." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="JPG quality" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="JPG quality"/>
+                                    <TextBlock Text="Balance quality against file size." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Balance quality against file size."/>
                                 </StackPanel>
                                 <ComboBox x:Name="JpegQualityCombo" Grid.Column="2" MinWidth="125"
                                           VerticalAlignment="Center"
                                           AutomationProperties.Name="JPG quality"
                                           ToolTip="Balance quality against file size."
+                                          Services:LocalizationService.SourceToolTip="Balance quality against file size."
                                           SelectionChanged="JpegQualityCombo_SelectionChanged">
                                     <ComboBoxItem Content="100 - Best" Tag="100"
                                                   ToolTip="Use maximum JPG quality."
@@ -2000,8 +1882,10 @@
                                     <TextBlock Text="&#xE740;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Max image size" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Resize oversized captures after saving." Style="{StaticResource SettingDescription}"/>
+                                    <TextBlock Text="Max image size" Style="{StaticResource SettingTitle}"
+                                               Services:LocalizationService.SourceText="Max image size"/>
+                                    <TextBlock Text="Resize oversized captures after saving." Style="{StaticResource SettingDescription}"
+                                               Services:LocalizationService.SourceText="Resize oversized captures after saving."/>
                                 </StackPanel>
                                 <ComboBox x:Name="CaptureSizeCombo" Grid.Column="2" MinWidth="125"
                                           VerticalAlignment="Center"
@@ -2868,7 +2752,161 @@
                                Visibility="Collapsed"
                                Margin="4,8,0,0"/>
 
+                    <TextBlock Text="Saving" Style="{StaticResource SectionLabel}" Margin="4,18,0,9"
+                               Services:LocalizationService.SourceText="Saving"/>
 
+                    <Border x:Name="SavingSettingsCard" Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock x:Name="SavingDisabledHint"
+                                       Text="Enable Save file under Capture → Behavior after captures to write captures to disk."
+                                       Services:LocalizationService.SourceText="Enable Save file under Capture → Behavior after captures to write captures to disk."
+                                       Style="{StaticResource SettingDescription}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,10"
+                                       Visibility="Collapsed"/>
+
+                            <StackPanel x:Name="SavingSettingsContent">
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}">
+                                        <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Save folder" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Save folder"/>
+                                        <TextBlock Text="Choose where image captures, videos, and GIFs are stored." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="Choose where image captures, videos, and GIFs are stored."/>
+                                    </StackPanel>
+                                    <Button x:Name="BrowseSaveDirBtn" Content="Browse" Grid.Column="2" MinWidth="90"
+                                            VerticalAlignment="Center" ToolTip="Choose save folder"
+                                            Services:LocalizationService.SourceToolTip="Choose save folder"
+                                            AutomationProperties.Name="Choose save folder"
+                                            Cursor="Hand" Click="BrowseButton_Click"/>
+                                </Grid>
+                                <Grid x:Name="SaveDirPanel" Style="{StaticResource SettingRow}" Margin="34,6,0,0">
+                                    <TextBox x:Name="SaveDirBox" IsReadOnly="True"
+                                             MinWidth="145" MaxWidth="360" HorizontalAlignment="Stretch"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                             AutomationProperties.Name="Current save folder"
+                                             Background="{DynamicResource ThemeInputBackgroundBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                             BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"/>
+                                </Grid>
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}">
+                                        <TextBlock Text="&#xE8B7;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Create monthly subfolders" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Create monthly subfolders"/>
+                                        <TextBlock Text="Organize captures into year-month folders." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="Organize captures into year-month folders."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="MonthlyFoldersCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                              ToolTip="Organize captures into year-month folders"
+                                              Services:LocalizationService.SourceToolTip="Organize captures into year-month folders"
+                                              AutomationProperties.Name="Create monthly subfolders"
+                                              Checked="MonthlyFoldersCheck_Changed" Unchecked="MonthlyFoldersCheck_Changed"/>
+                                </Grid>
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}">
+                                        <TextBlock Text="&#xE8D2;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="File name pattern" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="File name pattern"/>
+                                        <TextBlock Text="Choose a style or customize how capture files are named." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="Choose a style or customize how capture files are named."/>
+                                        <TextBlock x:Name="FileNameTemplatePreviewText" FontSize="11" Margin="0,8,0,0"
+                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                                        <ToggleButton x:Name="FileNameCustomizeToggle"
+                                                      Content="Customize…"
+                                                      Margin="0,8,0,0"
+                                                      Padding="10,4"
+                                                      HorizontalAlignment="Left"
+                                                      Cursor="Hand"
+                                                      ToolTip="Show or hide the pattern editor and tokens"
+                                                      Services:LocalizationService.SourceToolTip="Show or hide the pattern editor and tokens"
+                                                      AutomationProperties.Name="Customize file name pattern"
+                                                      Checked="FileNameCustomizeToggle_Changed"
+                                                      Unchecked="FileNameCustomizeToggle_Changed"/>
+                                        <StackPanel x:Name="FileNameCustomizePanel" Margin="0,8,0,0" Visibility="Collapsed">
+                                            <DockPanel>
+                                                <Button x:Name="FileNameTemplateResetBtn" Content="↺"
+                                                        DockPanel.Dock="Right" Margin="4,0,0,0"
+                                                        Width="32" Height="32" Padding="0"
+                                                        FontSize="14" FontWeight="Bold"
+                                                        ToolTip="Reset to default pattern"
+                                                        Services:LocalizationService.SourceToolTip="Reset to default pattern"
+                                                        AutomationProperties.Name="Reset file name pattern to default"
+                                                        Click="FileNameTemplateResetBtn_Click"/>
+                                                <TextBox x:Name="FileNameTemplateBox" MinWidth="145" MaxWidth="285"
+                                                         HorizontalAlignment="Stretch"
+                                                         HorizontalScrollBarVisibility="Auto"
+                                                         ToolTip="Use the buttons to build capture file names."
+                                                         Services:LocalizationService.SourceToolTip="Use the buttons to build capture file names."
+                                                         AutomationProperties.Name="File name pattern"
+                                                         PreviewKeyDown="FileNameTemplateBox_PreviewKeyDown"
+                                                         TextChanged="FileNameTemplateBox_TextChanged"
+                                                         Background="{DynamicResource ThemeInputBackgroundBrush}" Foreground="{DynamicResource ThemeTextPrimaryBrush}"
+                                                         BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1"/>
+                                            </DockPanel>
+                                            <WrapPanel x:Name="FileNameTokenPanel" Margin="0,8,0,-6"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <ComboBox x:Name="FileNamePresetCombo" Grid.Column="2" MinWidth="145"
+                                              VerticalAlignment="Center"
+                                              AutomationProperties.Name="File name pattern"
+                                              ToolTip="Choose a style or customize how capture files are named."
+                                              Services:LocalizationService.SourceToolTip="Choose a style or customize how capture files are named."
+                                              SelectionChanged="FileNamePresetCombo_SelectionChanged"/>
+                                </Grid>
+                                <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource SettingIconFrame}">
+                                        <TextBlock Text="&#xE8AC;" Style="{StaticResource SettingIconGlyph}"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Ask for file name every time" Style="{StaticResource SettingTitle}"
+                                                   Services:LocalizationService.SourceText="Ask for file name every time"/>
+                                        <TextBlock Text="Prompt before writing each saved capture." Style="{StaticResource SettingDescription}"
+                                                   Services:LocalizationService.SourceText="Prompt before writing each saved capture."/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="AskFileNameCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
+                                              ToolTip="Prompt for a file name before each saved capture"
+                                              Services:LocalizationService.SourceToolTip="Prompt for a file name before each saved capture"
+                                              AutomationProperties.Name="Ask for file name every time"
+                                              Checked="AskFileNameCheck_Changed" Unchecked="AskFileNameCheck_Changed"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <TextBlock x:Name="CaptureSavePreferenceStatusText"
+                                       Style="{StaticResource SettingsStatusText}"
+                                       Visibility="Collapsed"
+                                       Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
 
                     <TextBlock Services:LocalizationService.SourceText="Standalone tools" Text="Standalone tools" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">

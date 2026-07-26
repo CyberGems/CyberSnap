@@ -901,14 +901,18 @@ public partial class SettingsWindow
             "autocopyexcludeocr"        => AutoCopyExcludeOcrCheck,
             "autocopyexcluderecording"  => AutoCopyExcludeRecordingCheck,
             "autocopyexcludegif"        => AutoCopyExcludeGifCheck,
-            // General / Output
-            "savetofile"                => SaveToFileCheck,
+            // General / Saving (SaveToFile is toggled via Capture after-capture pill)
+            "savetofile"                => AfterCaptureOutcomeEditor,
             "savedirectory"             => SaveDirBox,
             "saveinmonthlyfolders"      => MonthlyFoldersCheck,
             "monthlyfolders"            => MonthlyFoldersCheck,
+            "askforfilenameonsave"      => AskFileNameCheck,
+            "askfilename"               => AskFileNameCheck,
             "captureimageformat"        => CaptureFormatCombo,
             "captureformat"             => CaptureFormatCombo,
-            "filenametemplate"          => FileNameTemplateBox,
+            "jpegquality"               => JpegQualityCombo,
+            "capturemaxlongedge"        => CaptureSizeCombo,
+            "filenametemplate"          => FileNamePresetCombo,
             // Standalone ruler
             "rulercaptureallscreens"    => RulerCaptureAllScreensCheck,
             "rulercontextmenuenabled"   => RulerContextMenuEnabledCheck,

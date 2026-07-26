@@ -221,8 +221,6 @@ public partial class SettingsWindow
             RefreshCapturePreviewTimeoutVisibility();
             ApplyAutoCopyControlsFromSettings(s);
 
-            SaveToFileCheck.IsChecked = s.SaveToFile;
-            UpdateSaveToFileState();
             AskFileNameCheck.IsChecked = s.AskForFileNameOnSave;
             CaptureFormatCombo.SelectedIndex = (int)s.CaptureImageFormat;
             JpegQualityCombo.SelectedIndex = s.JpegQuality switch
@@ -243,7 +241,7 @@ public partial class SettingsWindow
                 _ => 0
             };
             SetSaveDirectoryPath(s.SaveDirectory);
-            SaveDirPanel.Visibility = s.SaveToFile ? Visibility.Visible : Visibility.Collapsed;
+            SyncSavingSettingsFromSaveToFile();
             StartWithWindowsCheck.IsChecked = s.StartWithWindows;
             RulerCaptureAllScreensCheck.IsChecked = s.RulerCaptureAllScreens;
             RulerContextMenuEnabledCheck.IsChecked = s.RulerContextMenuEnabled;
@@ -592,6 +590,10 @@ public partial class SettingsWindow
         RefreshLanguageComboDisplay();
         PopulateToolToggles();
         PopulateSoundCustomizationPanel();
+        LoadFileNameTokenButtons();
+        LoadFileNameTemplate(_settingsService.Settings.FileNameTemplate);
+        UpdateFileNameTemplatePreview(_settingsService.Settings.FileNameTemplate);
+        SyncSavingSettingsFromSaveToFile();
         UpdateWindowTitle();
         RefreshAboutLocalization();
     }
