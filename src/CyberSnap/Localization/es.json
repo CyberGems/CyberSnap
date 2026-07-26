@@ -348,7 +348,6 @@
   "Actions already covered by automatic actions are listed above.": "Las acciones ya cubiertas arriba se omiten aquí.",
   "Buttons covered by an active automatic action are disabled.": "Los botones cubiertos por una acción automática activa quedan deshabilitados.",
   "Outcome step: preview": "Vista previa",
-  "Preview open": "Vista previa abierta",
   "Outcome tooltip: preview": "Muestra la ventana de vista previa tras la captura",
   "Outcome step: show notification": "Mostrar notificación",
   "Outcome step: open editor": "Abrir en Editor de Anotaciones",
