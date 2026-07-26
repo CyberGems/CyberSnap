@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,6 +28,7 @@ namespace CyberSnap.UI
         private readonly SettingsService _settingsService;
         private readonly Bitmap _capturedBitmap;
         private readonly System.Drawing.Point _targetMonitorPoint;
+        private readonly string? _savedFilePath;
         private bool _isPinned = false;
         private bool _isHovered = false;
         private bool _didCenterOnOpen;
@@ -75,10 +78,12 @@ namespace CyberSnap.UI
         public CapturePreviewDialog(
             Bitmap bitmap,
             SettingsService settingsService,
-            System.Drawing.Point? targetMonitorPoint = null)
+            System.Drawing.Point? targetMonitorPoint = null,
+            string? savedFilePath = null)
         {
             _capturedBitmap = bitmap;
             _settingsService = settingsService;
+            _savedFilePath = string.IsNullOrWhiteSpace(savedFilePath) ? null : savedFilePath;
             // Own the capture-monitor anchor immediately. The static hint is easy to consume
             // (toast / GetCurrentWorkArea) before our deferred center runs — that sent the
             // dialog to the primary monitor when capturing on a secondary.
@@ -585,6 +590,17 @@ namespace CyberSnap.UI
             };
 
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            if (CanOpenSavedFileInFolder())
+            {
+                var cPrimary = Theme.TextPrimary;
+                var folderIconColor = System.Drawing.Color.FromArgb(cPrimary.A, cPrimary.R, cPrimary.G, cPrimary.B);
+                menu.Items.Add(CreateMoreMenuItem(
+                    LocalizationService.Translate("Open in folder"),
+                    FluentIcons.RenderWpf("folder", folderIconColor, 14, active: true),
+                    OpenSavedFileInFolder,
+                    LocalizationService.Translate("Show this file in File Explorer.")));
+            }
+
             if (!state.Share)
             {
                 menu.Items.Add(CreateMoreMenuItem(
@@ -601,7 +617,39 @@ namespace CyberSnap.UI
             return menu;
         }
 
-        private MenuItem CreateMoreMenuItem(string label, ImageSource? icon, Action onClick)
+        private bool CanOpenSavedFileInFolder()
+        {
+            var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
+            return state.EffectiveSave
+                && !string.IsNullOrWhiteSpace(_savedFilePath)
+                && File.Exists(_savedFilePath);
+        }
+
+        private void OpenSavedFileInFolder()
+        {
+            if (!CanOpenSavedFileInFolder() || _savedFilePath is null)
+                return;
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{Path.GetFullPath(_savedFilePath)}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                ToastWindow.ShowError(
+                    "Open failed",
+                    "CyberSnap could not open the saved file location. The file is still saved; open it from History or try again.\n"
+                    + ex.Message,
+                    _savedFilePath);
+            }
+        }
+
+        private MenuItem CreateMoreMenuItem(string label, ImageSource? icon, Action onClick, string? toolTip = null)
         {
             var item = new MenuItem
             {
@@ -609,7 +657,8 @@ namespace CyberSnap.UI
                 Foreground = Theme.Brush(Theme.TextPrimary),
                 Background = System.Windows.Media.Brushes.Transparent,
                 Padding = new Thickness(10, 6, 14, 6),
-                FontSize = 12
+                FontSize = 12,
+                ToolTip = toolTip
             };
 
             if (icon != null)
