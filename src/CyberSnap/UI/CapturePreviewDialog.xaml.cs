@@ -20,6 +20,8 @@ namespace CyberSnap.UI
         private const double SideBySideBreakpoint = 700;
         /// <summary>Quick opacity fade for timer auto-close only (manual close stays instant).</summary>
         private const int AutoCloseFadeMs = 280;
+        private const int PillSimInitialDelayMs = 300;
+        private const int PillSimWorkMs = 1500;
 
         private readonly SettingsService _settingsService;
         private readonly Bitmap _capturedBitmap;
@@ -29,10 +31,40 @@ namespace CyberSnap.UI
         private bool _didCenterOnOpen;
         private bool _isSideBySide = true;
         private bool _isClosing;
+        private int _pillSimToken;
+        private List<AfterCapturePillChip>? _activePillChips;
+        private List<AfterCapturePillChip>? _pendingPillSimulation;
+        private readonly List<DispatcherTimer> _pillSimTimers = new();
         private AfterCaptureOutcomeState _lastOutcomeState;
         private int _lastTimeoutSeconds;
         private DispatcherTimer? _autoCloseTimer;
         private double _autoCloseDurationSeconds;
+
+        private static readonly System.Drawing.Color PillDoneGreen = System.Drawing.Color.FromArgb(255, 34, 197, 94);
+        private static readonly System.Drawing.Color PillPendingBlue = System.Drawing.Color.FromArgb(255, 0, 162, 255);
+
+        private enum PillVisualState
+        {
+            Pending,
+            Working,
+            Done
+        }
+
+        private sealed class AfterCapturePillChip
+        {
+            public required FrameworkElement Root { get; init; }
+            public required Border ChipBorder { get; init; }
+            public required System.Windows.Controls.Image LeadingIcon { get; init; }
+            public required TextBlock Label { get; init; }
+            public required System.Windows.Controls.Image StatusIcon { get; init; }
+            public required RotateTransform StatusRotation { get; init; }
+            public required string IconId { get; init; }
+            public required string ActionLabel { get; init; }
+            public required string DoneLabel { get; init; }
+            public required string PendingTooltip { get; init; }
+            public required string DoneTooltip { get; init; }
+            public required AfterCapturePillTiming FinalTiming { get; init; }
+        }
 
         public RegionOverlayForm.ConfirmCommitAction SelectedAction { get; private set; } = RegionOverlayForm.ConfirmCommitAction.Default;
 
@@ -63,6 +95,7 @@ namespace CyberSnap.UI
             Closed += (_, _) =>
             {
                 SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
+                CancelPillCompletionSimulation();
                 StopAutoCloseTimer(resetProgress: true);
             };
             MouseEnter += (_, _) => OnPreviewMouseEnter();
@@ -146,6 +179,8 @@ namespace CyberSnap.UI
                 catch { /* keep current position */ }
 
                 Opacity = 1;
+                // Start after the dialog is visible so the Preview-first sequence is fully seen.
+                BeginDeferredPillCompletionSimulation();
             }), DispatcherPriority.ApplicationIdle);
         }
 
@@ -539,7 +574,8 @@ namespace CyberSnap.UI
             PreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
 
             UpdateIcons();
-            PopulateAfterCapturePills();
+            // Pills are owned by PopulateAfterCapturePills (constructor / live settings).
+            // Rebuilding here would cancel an in-flight completion simulation.
             UpdateContinueOrExitButton();
             UpdateOptionalActionsAvailability();
         }
@@ -547,30 +583,24 @@ namespace CyberSnap.UI
         private void PopulateAfterCapturePills()
         {
             if (AfterCapturePillsPanel == null || _settingsService?.Settings == null) return;
+            CancelPillCompletionSimulation();
             AfterCapturePillsPanel.Children.Clear();
+            int simToken = _pillSimToken;
 
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
             var settings = _settingsService.Settings;
 
-            // Completed first, then pending — keeps the status column easy to scan.
-            var doneGreen = System.Drawing.Color.FromArgb(255, 34, 197, 94);
-            var pendingBlue = System.Drawing.Color.FromArgb(255, 0, 162, 255);
-
-            var rows = new List<(AfterCapturePillKind Pill, AfterCapturePillTiming Timing, string IconId, string LabelKey, string TooltipKey)>();
+            var rows = new List<(AfterCapturePillKind Pill, AfterCapturePillTiming Timing, string IconId)>();
             foreach (var pill in AfterCaptureOutcomeModel.AllPills)
             {
                 if (!AfterCaptureOutcomeModel.IsActive(state, pill))
-                    continue;
-
-                // Already inside the preview dialog — Preview itself is noise here.
-                // Notification stays visible as pending (compact status toast after confirm).
-                if (pill is AfterCapturePillKind.Preview)
                     continue;
 
                 string iconId = pill switch
                 {
                     AfterCapturePillKind.Save => "save",
                     AfterCapturePillKind.Clipboard => "copy",
+                    AfterCapturePillKind.Preview => "eye",
                     AfterCapturePillKind.Editor => "draw",
                     AfterCapturePillKind.SystemViewer => "folder",
                     AfterCapturePillKind.Share => "share",
@@ -578,40 +608,130 @@ namespace CyberSnap.UI
                     _ => "gear"
                 };
 
-                rows.Add((
-                    pill,
-                    AfterCaptureOutcomeModel.GetPreviewTiming(pill, settings),
-                    iconId,
-                    AfterCaptureOutcomeModel.LabelKey(pill),
-                    AfterCaptureOutcomeModel.TooltipKey(pill)));
+                rows.Add((pill, AfterCaptureOutcomeModel.GetPreviewTiming(pill, settings), iconId));
             }
 
-            foreach (var row in rows.OrderBy(r => r.Timing == AfterCapturePillTiming.Done ? 0 : 1))
+            // Preview first, then other actives. Preview is already fulfilled by this dialog —
+            // show it Done immediately (no pending/preloader). Other Done pills animate in.
+            var allChips = new List<AfterCapturePillChip>();
+            var chipsToSimulate = new List<AfterCapturePillChip>();
+            foreach (var row in rows.OrderBy(r => AfterCaptureOutcomeModel.FlowDisplayOrder(r.Pill)))
             {
-                var color = row.Timing == AfterCapturePillTiming.Done ? doneGreen : pendingBlue;
-                string label = LocalizationService.Translate(row.LabelKey);
-                string statusTip = row.Timing == AfterCapturePillTiming.Done
+                string actionLabel = LocalizationService.Translate(AfterCaptureOutcomeModel.LabelKey(row.Pill));
+                string doneLabel = LocalizationService.Translate(AfterCaptureOutcomeModel.DoneLabelKey(row.Pill));
+                string baseTip = LocalizationService.Translate(AfterCaptureOutcomeModel.TooltipKey(row.Pill));
+                string pendingTip = string.IsNullOrWhiteSpace(baseTip)
+                    ? LocalizationService.Translate("Runs when you continue")
+                    : $"{baseTip}\n{LocalizationService.Translate("Runs when you continue")}";
+                string doneTip = string.IsNullOrWhiteSpace(baseTip)
                     ? LocalizationService.Translate("Already completed")
-                    : LocalizationService.Translate("Runs when you continue");
-                string tooltip = LocalizationService.Translate(row.TooltipKey);
-                if (!string.IsNullOrWhiteSpace(tooltip))
-                    tooltip = $"{tooltip}\n{statusTip}";
-                else
-                    tooltip = statusTip;
+                    : $"{baseTip}\n{LocalizationService.Translate("Already completed")}";
 
-                AfterCapturePillsPanel.Children.Add(
-                    CreateAfterCapturePillChip(row.IconId, color, label, tooltip, row.Timing));
+                var chip = CreateAfterCapturePillChip(
+                    row.IconId,
+                    actionLabel,
+                    doneLabel,
+                    pendingTip,
+                    doneTip,
+                    row.Timing);
+                AfterCapturePillsPanel.Children.Add(chip.Root);
+                allChips.Add(chip);
+
+                if (row.Pill == AfterCapturePillKind.Preview)
+                {
+                    // Already inside the preview — mark complete with no simulation.
+                    ApplyPillVisualState(chip, PillVisualState.Done);
+                }
+                else if (row.Timing == AfterCapturePillTiming.Done)
+                {
+                    chipsToSimulate.Add(chip);
+                }
             }
 
+            _activePillChips = allChips;
             NoAutomaticActionsLabel.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            if (chipsToSimulate.Count == 0)
+            {
+                _pendingPillSimulation = null;
+                return;
+            }
+
+            if (Motion.Disabled)
+            {
+                foreach (var chip in chipsToSimulate)
+                    ApplyPillVisualState(chip, PillVisualState.Done);
+                _pendingPillSimulation = null;
+                return;
+            }
+
+            // Defer until the window is visible (Opacity=1 after centering). If already shown,
+            // start immediately so live-settings rebuilds still animate.
+            if (Opacity >= 1)
+                BeginPillCompletionSimulation(chipsToSimulate, simToken);
+            else
+                _pendingPillSimulation = chipsToSimulate;
         }
 
-        private FrameworkElement CreateAfterCapturePillChip(
+        private void BeginDeferredPillCompletionSimulation()
+        {
+            if (_pendingPillSimulation is not { Count: > 0 } chips)
+                return;
+
+            _pendingPillSimulation = null;
+            BeginPillCompletionSimulation(chips, _pillSimToken);
+        }
+
+        private void CancelPillCompletionSimulation()
+        {
+            _pillSimToken++;
+            _pendingPillSimulation = null;
+            foreach (var timer in _pillSimTimers)
+                timer.Stop();
+            _pillSimTimers.Clear();
+
+            if (_activePillChips == null)
+                return;
+
+            foreach (var chip in _activePillChips)
+                StopPillStatusSpin(chip);
+            _activePillChips = null;
+        }
+
+        private void BeginPillCompletionSimulation(IReadOnlyList<AfterCapturePillChip> chips, int simToken)
+        {
+            // One at a time: preloader → check, then the next chip — no overlapping spinners.
+            int delayMs = PillSimInitialDelayMs;
+            foreach (var chip in chips)
+            {
+                SchedulePillVisual(chip, PillVisualState.Working, delayMs, simToken);
+                SchedulePillVisual(chip, PillVisualState.Done, delayMs + PillSimWorkMs, simToken);
+                delayMs += PillSimWorkMs;
+            }
+        }
+
+        private void SchedulePillVisual(AfterCapturePillChip chip, PillVisualState visual, int delayMs, int simToken)
+        {
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(Math.Max(1, delayMs)) };
+            _pillSimTimers.Add(timer);
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                _pillSimTimers.Remove(timer);
+                if (simToken != _pillSimToken || _isClosing)
+                    return;
+                ApplyPillVisualState(chip, visual);
+            };
+            timer.Start();
+        }
+
+        private AfterCapturePillChip CreateAfterCapturePillChip(
             string iconId,
-            System.Drawing.Color color,
-            string label,
-            string tooltip,
-            AfterCapturePillTiming timing)
+            string actionLabel,
+            string doneLabel,
+            string pendingTooltip,
+            string doneTooltip,
+            AfterCapturePillTiming finalTiming)
         {
             // Row: [pill]  status — status glyph stays outside the chip.
             var row = new DockPanel
@@ -620,25 +740,15 @@ namespace CyberSnap.UI
                 LastChildFill = true
             };
 
-            // Status glyph matches pill family: green check (done) / blue arrow (pending = Listo).
-            var statusColor = timing == AfterCapturePillTiming.Done
-                ? System.Drawing.Color.FromArgb(255, 34, 197, 94)
-                : System.Drawing.Color.FromArgb(255, 0, 162, 255);
+            var statusRotation = new RotateTransform();
             var statusIcon = new System.Windows.Controls.Image
             {
                 Width = 12,
                 Height = 12,
                 Margin = new Thickness(8, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center,
-                Opacity = timing == AfterCapturePillTiming.Done ? 1.0 : 0.9,
-                Source = FluentIcons.RenderWpf(
-                    timing == AfterCapturePillTiming.Done ? "check" : "arrow",
-                    statusColor,
-                    12,
-                    active: true),
-                ToolTip = timing == AfterCapturePillTiming.Done
-                    ? LocalizationService.Translate("Already completed")
-                    : LocalizationService.Translate("Runs when you continue")
+                RenderTransform = statusRotation,
+                RenderTransformOrigin = new System.Windows.Point(0.5, 0.5)
             };
             DockPanel.SetDock(statusIcon, Dock.Right);
             row.Children.Add(statusIcon);
@@ -648,10 +758,7 @@ namespace CyberSnap.UI
                 CornerRadius = new CornerRadius(10),
                 Padding = new Thickness(8, 4, 10, 4),
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-                Background = Theme.Brush(System.Windows.Media.Color.FromArgb(22, color.R, color.G, color.B)),
-                BorderBrush = Theme.Brush(System.Windows.Media.Color.FromArgb(55, color.R, color.G, color.B)),
                 BorderThickness = new Thickness(1),
-                ToolTip = string.IsNullOrWhiteSpace(tooltip) ? null : tooltip,
                 SnapsToDevicePixels = true
             };
 
@@ -661,18 +768,16 @@ namespace CyberSnap.UI
                 VerticalAlignment = VerticalAlignment.Center
             };
 
-            var img = new System.Windows.Controls.Image
+            var leadingIcon = new System.Windows.Controls.Image
             {
                 Width = 11,
                 Height = 11,
                 Margin = new Thickness(0, 0, 5, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                Source = FluentIcons.RenderWpf(iconId, color, 11, active: true)
+                VerticalAlignment = VerticalAlignment.Center
             };
 
-            var txt = new TextBlock
+            var label = new TextBlock
             {
-                Text = label,
                 FontSize = 10.5,
                 FontWeight = FontWeights.Medium,
                 Foreground = Theme.Brush(Theme.TextPrimary),
@@ -680,11 +785,86 @@ namespace CyberSnap.UI
                 TextTrimming = TextTrimming.CharacterEllipsis
             };
 
-            stack.Children.Add(img);
-            stack.Children.Add(txt);
+            stack.Children.Add(leadingIcon);
+            stack.Children.Add(label);
             border.Child = stack;
             row.Children.Add(border);
-            return row;
+
+            var chip = new AfterCapturePillChip
+            {
+                Root = row,
+                ChipBorder = border,
+                LeadingIcon = leadingIcon,
+                Label = label,
+                StatusIcon = statusIcon,
+                StatusRotation = statusRotation,
+                IconId = iconId,
+                ActionLabel = actionLabel,
+                DoneLabel = doneLabel,
+                PendingTooltip = pendingTooltip,
+                DoneTooltip = doneTooltip,
+                FinalTiming = finalTiming
+            };
+
+            // Always start pending (blue); Done-timing chips animate to green afterward.
+            ApplyPillVisualState(chip, PillVisualState.Pending);
+            return chip;
+        }
+
+        private void ApplyPillVisualState(AfterCapturePillChip chip, PillVisualState visual)
+        {
+            StopPillStatusSpin(chip);
+
+            var accent = visual == PillVisualState.Done ? PillDoneGreen : PillPendingBlue;
+            chip.ChipBorder.Background = Theme.Brush(System.Windows.Media.Color.FromArgb(22, accent.R, accent.G, accent.B));
+            chip.ChipBorder.BorderBrush = Theme.Brush(System.Windows.Media.Color.FromArgb(55, accent.R, accent.G, accent.B));
+            chip.LeadingIcon.Source = FluentIcons.RenderWpf(chip.IconId, accent, 11, active: true);
+
+            switch (visual)
+            {
+                case PillVisualState.Working:
+                    chip.Label.Text = chip.ActionLabel;
+                    chip.ChipBorder.ToolTip = chip.PendingTooltip;
+                    chip.StatusIcon.Opacity = 0.95;
+                    chip.StatusIcon.Source = FluentIcons.RenderWpf("redo", accent, 12, active: true);
+                    chip.StatusIcon.ToolTip = chip.PendingTooltip;
+                    StartPillStatusSpin(chip);
+                    break;
+
+                case PillVisualState.Done:
+                    chip.Label.Text = chip.DoneLabel;
+                    chip.ChipBorder.ToolTip = chip.DoneTooltip;
+                    chip.StatusIcon.Opacity = 1.0;
+                    chip.StatusIcon.Source = FluentIcons.RenderWpf("check", accent, 12, active: true);
+                    chip.StatusIcon.ToolTip = LocalizationService.Translate("Already completed");
+                    break;
+
+                default:
+                    chip.Label.Text = chip.ActionLabel;
+                    chip.ChipBorder.ToolTip = chip.PendingTooltip;
+                    chip.StatusIcon.Opacity = 0.9;
+                    chip.StatusIcon.Source = FluentIcons.RenderWpf("arrow", accent, 12, active: true);
+                    chip.StatusIcon.ToolTip = LocalizationService.Translate("Runs when you continue");
+                    break;
+            }
+        }
+
+        private static void StartPillStatusSpin(AfterCapturePillChip chip)
+        {
+            var spin = new DoubleAnimation
+            {
+                From = 0,
+                To = 360,
+                Duration = Motion.Sec(0.85),
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            chip.StatusRotation.BeginAnimation(RotateTransform.AngleProperty, spin);
+        }
+
+        private static void StopPillStatusSpin(AfterCapturePillChip chip)
+        {
+            chip.StatusRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+            chip.StatusRotation.Angle = 0;
         }
 
         private void UpdateContinueOrExitButton()
