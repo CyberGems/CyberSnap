@@ -39,6 +39,10 @@ namespace CyberSnap.UI
         private int _lastTimeoutSeconds;
         private DispatcherTimer? _autoCloseTimer;
         private double _autoCloseDurationSeconds;
+        private bool _autoCloseCountdownStarted;
+        private int _autoCloseLayoutRetries;
+        private bool _pillSimRunning;
+        private int _pillSimsRemaining;
 
         private static readonly System.Drawing.Color PillDoneGreen = System.Drawing.Color.FromArgb(255, 34, 197, 94);
         private static readonly System.Drawing.Color PillPendingBlue = System.Drawing.Color.FromArgb(255, 0, 162, 255);
@@ -100,6 +104,7 @@ namespace CyberSnap.UI
             };
             MouseEnter += (_, _) => OnPreviewMouseEnter();
             MouseLeave += (_, _) => OnPreviewMouseLeave();
+            ProgressHost.SizeChanged += ProgressHost_SizeChanged;
 
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
@@ -119,7 +124,8 @@ namespace CyberSnap.UI
             UpdateOptionalActionsAvailability();
             _lastOutcomeState = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
             _lastTimeoutSeconds = _settingsService.Settings.CapturePreviewTimeoutSeconds;
-            InitAutoCloseTimer();
+            // Auto-close countdown starts when the dialog becomes visible (see CenterOnOpenMonitor).
+            // Starting here animates on a zero-width bar while Opacity=0 — first capture looked frozen.
             ApplyLayoutMode(force: true);
             SoundService.PlayPreviewSound();
         }
@@ -140,7 +146,7 @@ namespace CyberSnap.UI
             MoreText.Text = LocalizationService.Translate("More");
             MoreBtn.ToolTip = LocalizationService.Translate("More");
             NoAutomaticActionsLabel.Text = LocalizationService.Translate("None");
-            CancelText.Text = LocalizationService.Translate("Done");
+            UpdateContinueOrExitButton();
         }
 
         private void CapturePreviewDialog_ContentRendered(object? sender, EventArgs e)
@@ -179,7 +185,9 @@ namespace CyberSnap.UI
                 catch { /* keep current position */ }
 
                 Opacity = 1;
-                // Start after the dialog is visible so the Preview-first sequence is fully seen.
+                UpdateDoneButtonClip();
+                // Start after the dialog is visible and laid out so progress + pills animate correctly.
+                InitAutoCloseTimer();
                 BeginDeferredPillCompletionSimulation();
             }), DispatcherPriority.ApplicationIdle);
         }
@@ -249,16 +257,13 @@ namespace CyberSnap.UI
             GalleryIcon.Source = FluentIcons.RenderWpf("history", primaryIconColor, 14, active: true);
             MoreIcon.Source = FluentIcons.RenderWpf("more", primaryIconColor, 13, active: true);
             EditSettingsBtnIcon.Source = FluentIcons.RenderWpf("gear", secondaryIconColor, 14, active: true);
-            // List metaphor for the active-actions section (not a "done" check).
-            AfterCaptureHeaderIcon.Source = FluentIcons.RenderWpf("menu", secondaryIconColor, 13, active: true);
         }
 
         private System.Drawing.Color GetPrimaryButtonIconColor()
         {
-            // Cyan accent needs dark glyphs; light/gray accents need light glyphs.
-            if (Theme.IsDark && !Theme.IsGray)
-                return System.Drawing.Color.FromArgb(255, 11, 18, 32);
-            return System.Drawing.Color.FromArgb(255, 255, 255, 255);
+            // Quiet Done CTA uses primary text on a dark fill (gradient line carries the accent).
+            var c = Theme.TextPrimary;
+            return System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
         }
 
         private void CapturePreviewDialog_Activated(object? sender, EventArgs e)
@@ -312,6 +317,8 @@ namespace CyberSnap.UI
             ProgressBar.Visibility = Visibility.Visible;
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             ProgressScale.ScaleX = 1;
+            _autoCloseCountdownStarted = false;
+            _autoCloseLayoutRetries = 0;
 
             _autoCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_autoCloseDurationSeconds) };
             _autoCloseTimer.Tick += (_, _) =>
@@ -328,8 +335,69 @@ namespace CyberSnap.UI
                 return;
             }
 
+            // First open: ProgressHost often has ActualWidth=0 in this frame, so ScaleX
+            // animations never paint (timer still fires). Wait until layout has a real width.
+            RequestStartAutoCloseCountdown();
+        }
+
+        private void ProgressHost_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (e.NewSize.Width < 8)
+                return;
+            if (_autoCloseTimer == null || _autoCloseCountdownStarted || _isPinned || _isHovered || _isClosing)
+                return;
+            TryStartAutoCloseCountdown();
+        }
+
+        private void DoneButtonHost_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateDoneButtonClip();
+        }
+
+        /// <summary>
+        /// ClipToBounds alone is rectangular — without a rounded Clip the progress line
+        /// sticks out past the button's corner curves when ScaleX approaches 1 (hover refill).
+        /// </summary>
+        private void UpdateDoneButtonClip()
+        {
+            if (DoneButtonHost == null)
+                return;
+
+            double w = DoneButtonHost.ActualWidth;
+            double h = DoneButtonHost.ActualHeight;
+            if (w < 1 || h < 1)
+            {
+                DoneButtonHost.Clip = null;
+                return;
+            }
+
+            DoneButtonHost.Clip = new RectangleGeometry(new Rect(0, 0, w, h), 8, 8);
+        }
+
+        private void RequestStartAutoCloseCountdown()
+        {
+            Dispatcher.BeginInvoke(new Action(TryStartAutoCloseCountdown), DispatcherPriority.Loaded);
+        }
+
+        private void TryStartAutoCloseCountdown()
+        {
+            if (_autoCloseTimer == null || _autoCloseCountdownStarted || _isPinned || _isHovered || _isClosing)
+                return;
+            if (ProgressHost.Visibility != Visibility.Visible)
+                return;
+
+            ProgressHost.UpdateLayout();
+            if (ProgressHost.ActualWidth < 8)
+            {
+                if (_autoCloseLayoutRetries++ < 12)
+                    Dispatcher.BeginInvoke(new Action(TryStartAutoCloseCountdown), DispatcherPriority.ContextIdle);
+                return;
+            }
+
+            _autoCloseCountdownStarted = true;
             StartProgressCountdown(_autoCloseDurationSeconds);
-            _autoCloseTimer.Start();
+            if (!_autoCloseTimer.IsEnabled)
+                _autoCloseTimer.Start();
         }
 
         private double CaptureProgressScale()
@@ -346,6 +414,7 @@ namespace CyberSnap.UI
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
                 new DoubleAnimation
                 {
+                    From = Math.Clamp(ProgressScale.ScaleX, 0, 1),
                     To = 0,
                     Duration = Motion.Sec(remainingSeconds),
                     FillBehavior = FillBehavior.HoldEnd
@@ -375,6 +444,10 @@ namespace CyberSnap.UI
         {
             if (_autoCloseTimer == null || _isPinned) return;
 
+            // Countdown may still be waiting on first layout — start it so hover has a baseline.
+            if (!_autoCloseCountdownStarted)
+                TryStartAutoCloseCountdown();
+
             _autoCloseTimer.Stop();
             StartProgressRefill();
         }
@@ -386,6 +459,7 @@ namespace CyberSnap.UI
 
             double remaining = Math.Max(0.1, CaptureProgressScale() * _autoCloseDurationSeconds);
             _autoCloseTimer.Interval = TimeSpan.FromSeconds(remaining);
+            _autoCloseCountdownStarted = true;
             StartProgressCountdown(remaining);
             _autoCloseTimer.Start();
         }
@@ -398,6 +472,8 @@ namespace CyberSnap.UI
                 _autoCloseTimer = null;
             }
 
+            _autoCloseCountdownStarted = false;
+            _autoCloseLayoutRetries = 0;
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             if (resetProgress)
                 ProgressScale.ScaleX = 1;
@@ -564,6 +640,7 @@ namespace CyberSnap.UI
             Resources["ThemeInputBorderBrush"] = Theme.Brush(Theme.BorderSubtle);
             Resources["ThemeWindowBorderBrush"] = Theme.Brush(Theme.WindowBorder);
             Resources["ThemeAccentBrush"] = Theme.Brush(Theme.Accent);
+            Resources["ThemeAccentSubtleBrush"] = Theme.Brush(Theme.AccentSubtle);
             Resources["ThemeAccentHoverBrush"] = Theme.Brush(Theme.AccentHover);
             Resources["ThemeSeparatorBrush"] = Theme.Brush(Theme.Separator);
             Resources["ThemePrimaryButtonForegroundBrush"] = Theme.IsDark && !Theme.IsGray
@@ -572,6 +649,12 @@ namespace CyberSnap.UI
 
             CheckerboardHost.Background = Theme.CreateCheckerboardBrush();
             PreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
+            if (ProgressTrack != null)
+            {
+                ProgressTrack.Background = Theme.IsDark
+                    ? Theme.Brush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255))
+                    : Theme.Brush(System.Windows.Media.Color.FromArgb(36, 0, 0, 0));
+            }
 
             UpdateIcons();
             // Pills are owned by PopulateAfterCapturePills (constructor / live settings).
@@ -686,6 +769,8 @@ namespace CyberSnap.UI
         {
             _pillSimToken++;
             _pendingPillSimulation = null;
+            _pillSimRunning = false;
+            _pillSimsRemaining = 0;
             foreach (var timer in _pillSimTimers)
                 timer.Stop();
             _pillSimTimers.Clear();
@@ -701,16 +786,25 @@ namespace CyberSnap.UI
         private void BeginPillCompletionSimulation(IReadOnlyList<AfterCapturePillChip> chips, int simToken)
         {
             // One at a time: preloader → check, then the next chip — no overlapping spinners.
+            _pillSimRunning = true;
+            _pillSimsRemaining = chips.Count;
+            ApplyPrimaryButtonProcessingState();
+
             int delayMs = PillSimInitialDelayMs;
             foreach (var chip in chips)
             {
                 SchedulePillVisual(chip, PillVisualState.Working, delayMs, simToken);
-                SchedulePillVisual(chip, PillVisualState.Done, delayMs + PillSimWorkMs, simToken);
+                SchedulePillVisual(chip, PillVisualState.Done, delayMs + PillSimWorkMs, simToken, isSimCompletion: true);
                 delayMs += PillSimWorkMs;
             }
         }
 
-        private void SchedulePillVisual(AfterCapturePillChip chip, PillVisualState visual, int delayMs, int simToken)
+        private void SchedulePillVisual(
+            AfterCapturePillChip chip,
+            PillVisualState visual,
+            int delayMs,
+            int simToken,
+            bool isSimCompletion = false)
         {
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(Math.Max(1, delayMs)) };
             _pillSimTimers.Add(timer);
@@ -721,8 +815,32 @@ namespace CyberSnap.UI
                 if (simToken != _pillSimToken || _isClosing)
                     return;
                 ApplyPillVisualState(chip, visual);
+                if (isSimCompletion && visual == PillVisualState.Done)
+                    OnPillSimulationStepCompleted();
             };
             timer.Start();
+        }
+
+        private void OnPillSimulationStepCompleted()
+        {
+            if (!_pillSimRunning)
+                return;
+
+            _pillSimsRemaining = Math.Max(0, _pillSimsRemaining - 1);
+            if (_pillSimsRemaining > 0)
+                return;
+
+            _pillSimRunning = false;
+            UpdateContinueOrExitButton();
+        }
+
+        private void ApplyPrimaryButtonProcessingState()
+        {
+            CancelText.Text = LocalizationService.Translate("Processing");
+            CancelBtn.ToolTip = null;
+            var iconColor = GetPrimaryButtonIconColor();
+            CancelIcon.Source = FluentIcons.RenderWpf("redo", iconColor, 14, active: true);
+            CancelIcon.Visibility = Visibility.Visible;
         }
 
         private AfterCapturePillChip CreateAfterCapturePillChip(
@@ -869,6 +987,12 @@ namespace CyberSnap.UI
 
         private void UpdateContinueOrExitButton()
         {
+            if (_pillSimRunning)
+            {
+                ApplyPrimaryButtonProcessingState();
+                return;
+            }
+
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
             bool viewerOn = state.SystemViewer;
             bool editorOn = state.Destination == AfterCaptureDestination.Editor;

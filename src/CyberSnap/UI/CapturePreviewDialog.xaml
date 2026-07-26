@@ -68,13 +68,14 @@
             <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="MinHeight" Value="38"/>
             <Setter Property="MinWidth" Value="120"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryButtonForegroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <!-- Quiet fill so the countdown gradient is the accent, not a neon block. -->
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -90,7 +91,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.92"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter Property="RenderTransform">
@@ -118,7 +120,6 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <controls:CyberSnapTitleBar x:Name="TitleBar" Grid.Row="0"
@@ -176,16 +177,12 @@
                                     <Image x:Name="EditSettingsBtnIcon" Width="14" Height="14"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image x:Name="AfterCaptureHeaderIcon" Width="13" Height="13"
-                                           Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="AfterCaptureHeaderLabel"
-                                               Text="Active actions:"
-                                               FontSize="11.5" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                                               VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
+                                <TextBlock x:Name="AfterCaptureHeaderLabel"
+                                           Text="Active actions:"
+                                           FontSize="11.5" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
                             </DockPanel>
 
                             <StackPanel x:Name="AfterCapturePillsPanel" Orientation="Vertical"/>
@@ -250,16 +247,45 @@
                             <Image x:Name="GalleryIcon" Width="0" Height="0" Visibility="Collapsed"/>
                         </StackPanel>
 
-                        <!-- Primary CTA + hint -->
+                        <!-- Primary CTA + auto-close progress flush to button bottom (toast-style). -->
                         <StackPanel Grid.Row="2" Margin="0,14,0,0">
-                            <Button x:Name="CancelBtn" Click="CancelBtn_Click"
-                                    Style="{StaticResource PreviewPrimaryButton}"
-                                    HorizontalAlignment="Stretch">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
-                                </StackPanel>
-                            </Button>
+                            <Border x:Name="DoneButtonHost"
+                                    CornerRadius="8"
+                                    ClipToBounds="True"
+                                    SizeChanged="DoneButtonHost_SizeChanged">
+                                <Grid>
+                                    <Button x:Name="CancelBtn" Click="CancelBtn_Click"
+                                            Style="{StaticResource PreviewPrimaryButton}"
+                                            HorizontalAlignment="Stretch">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Grid x:Name="ProgressHost"
+                                          Height="2.5"
+                                          VerticalAlignment="Bottom"
+                                          IsHitTestVisible="False"
+                                          Visibility="Collapsed">
+                                        <Border x:Name="ProgressTrack" HorizontalAlignment="Stretch"/>
+                                        <Border x:Name="ProgressBar"
+                                                HorizontalAlignment="Stretch"
+                                                RenderTransformOrigin="0.5,0.5">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                                    <GradientStop Color="#FF00F2FF" Offset="0.0"/>
+                                                    <GradientStop Color="#FF7A00FF" Offset="0.5"/>
+                                                    <GradientStop Color="#FFFF00D0" Offset="1.0"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <Border.RenderTransform>
+                                                <ScaleTransform x:Name="ProgressScale" ScaleX="1" ScaleY="1"/>
+                                            </Border.RenderTransform>
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Border>
 
                             <TextBlock x:Name="ViewerHintBadge"
                                        Text=""
@@ -272,23 +298,6 @@
                                        Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                         </StackPanel>
                     </Grid>
-                </Border>
-            </Grid>
-
-            <!-- Auto-close progress: BottomCenter toast style (shrinks toward center) -->
-            <Grid x:Name="ProgressHost" Grid.Row="2" Height="4" ClipToBounds="True" Visibility="Collapsed">
-                <Border x:Name="ProgressTrack" Background="Transparent" HorizontalAlignment="Stretch"/>
-                <Border x:Name="ProgressBar" HorizontalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                            <GradientStop Color="#FF00F2FF" Offset="0.0"/>
-                            <GradientStop Color="#FF7A00FF" Offset="0.5"/>
-                            <GradientStop Color="#FFFF00D0" Offset="1.0"/>
-                        </LinearGradientBrush>
-                    </Border.Background>
-                    <Border.RenderTransform>
-                        <ScaleTransform x:Name="ProgressScale" ScaleX="1" ScaleY="1"/>
-                    </Border.RenderTransform>
                 </Border>
             </Grid>
         </Grid>
