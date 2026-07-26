@@ -10,20 +10,15 @@ public static class SettingsSchemaCatalog
             "Core save behavior, startup, and default capture behavior.",
             [
                 new SettingsSectionDefinition(
-                    "output",
-                    "Output",
-                    "How captures are saved by default.",
+                    "saving",
+                    "Saving",
+                    "Where captures are stored and how files are named. Enable Save file under Capture to write to disk.",
                     [
-                        new SettingDefinition("save_to_file", "Save screenshots to file", SettingsValueKind.Toggle, "Store captures in the configured save folder.", "SaveToFile"),
-                        new SettingDefinition("save_directory", "Save directory", SettingsValueKind.Folder, "Default output folder for screenshots.", "SaveDirectory"),
+                        new SettingDefinition("save_to_file", "Save file", SettingsValueKind.Toggle, "Write captures to the configured save folder. Controlled from Capture → Behavior after captures.", "SaveToFile"),
+                        new SettingDefinition("save_directory", "Save folder", SettingsValueKind.Folder, "Default output folder for screenshots.", "SaveDirectory"),
                         new SettingDefinition("monthly_folders", "Create monthly subfolders", SettingsValueKind.Toggle, "Store captures under yyyy-MM folders inside the save directory.", "SaveInMonthlyFolders"),
-                        new SettingDefinition("capture_format", "Image format", SettingsValueKind.Choice, "Default file format for new screenshots.", "CaptureImageFormat",
-                        [
-                            new("png", "PNG"),
-                            new("jpeg", "JPEG"),
-                            new("bmp", "BMP"),
-                        ]),
-                        new SettingDefinition("filename_template", "File name template", SettingsValueKind.Text, "Pattern used when naming new captures.", "FileNameTemplate"),
+                        new SettingDefinition("filename_template", "File name pattern", SettingsValueKind.Text, "Pattern used when naming new captures.", "FileNameTemplate"),
+                        new SettingDefinition("ask_file_name", "Ask for file name every time", SettingsValueKind.Toggle, "Prompt for a file name before each saved capture.", "AskForFileNameOnSave"),
                     ]),
                 new SettingsSectionDefinition(
                     "startup",
@@ -67,6 +62,20 @@ public static class SettingsSchemaCatalog
                         new SettingDefinition("magnifier", "Show capture magnifier", SettingsValueKind.Toggle, "Display a zoomed preview near the cursor.", "ShowCaptureMagnifier"),
                         new SettingDefinition("detect_windows", "Detect windows", SettingsValueKind.Toggle, "Offer window-aware selection and detection behavior.", "DetectWindows"),
                         new SettingDefinition("dock_side", "Toolbar Position", SettingsValueKind.Choice, "Choose a position for the capture toolbar.", "CaptureDockSide"),
+                    ]),
+                new SettingsSectionDefinition(
+                    "image_output",
+                    "Image output",
+                    "File format, quality, and size for image captures.",
+                    [
+                        new SettingDefinition("capture_format", "Default format", SettingsValueKind.Choice, "Default file format for new screenshots.", "CaptureImageFormat",
+                        [
+                            new("png", "PNG"),
+                            new("jpeg", "JPEG"),
+                            new("bmp", "BMP"),
+                        ]),
+                        new SettingDefinition("jpeg_quality", "JPG quality", SettingsValueKind.Number, "JPEG compression quality for image captures.", "JpegQuality"),
+                        new SettingDefinition("capture_max_long_edge", "Max image size", SettingsValueKind.Number, "Resize oversized captures so the longest edge stays within this limit.", "CaptureMaxLongEdge"),
                     ]),
                 new SettingsSectionDefinition(
                     "screenshot_style",

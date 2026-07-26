@@ -337,14 +337,13 @@ public partial class SettingsWindow : Window
             {
                 AfterCaptureOutcomeEditor.LoadFromSettings(_settingsService.Settings);
                 // If rollback, restore settings snapshot already in _settingsService from setValue(previous).
-                SyncSaveToFileCheckFromSettings();
+                SyncSavingSettingsFromSaveToFile();
                 RefreshCapturePreviewTimeoutVisibility();
                 RefreshEditorPreviewState();
             },
             value =>
             {
-                SyncSaveToFileCheckFromSettings();
-                UpdateSaveToFileState();
+                SyncSavingSettingsFromSaveToFile();
                 RefreshCapturePreviewTimeoutVisibility();
                 SettingsService.PublishAutoCopyState(_settingsService.Settings);
                 ((App)Application.Current).SyncWidgetAutoCopyToggle();
@@ -352,25 +351,25 @@ public partial class SettingsWindow : Window
             });
     }
 
-    private void SyncSaveToFileCheckFromSettings()
+    /// <summary>
+    /// Reflects SaveToFile (controlled by the Capture "Save file" pill) onto the
+    /// General Saving section: dim controls and show a short enable hint when off.
+    /// </summary>
+    private void SyncSavingSettingsFromSaveToFile()
     {
-        _suppressCaptureSavePreferenceChange = true;
-        try
-        {
-            SaveToFileCheck.IsChecked = _settingsService.Settings.SaveToFile;
-            SaveDirPanel.Visibility = _settingsService.Settings.SaveToFile ? Visibility.Visible : Visibility.Collapsed;
-        }
-        finally
-        {
-            _suppressCaptureSavePreferenceChange = false;
-        }
+        if (SavingSettingsContent is null || SavingDisabledHint is null)
+            return;
+
+        var saveEnabled = _settingsService.Settings.SaveToFile;
+        SavingSettingsContent.Opacity = saveEnabled ? 1.0 : 0.48;
+        SavingDisabledHint.Visibility = saveEnabled ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void RefreshAfterCaptureOutcomeEditor()
     {
         if (AfterCaptureOutcomeEditor is null) return;
         AfterCaptureOutcomeEditor.LoadFromSettings(_settingsService.Settings);
-        UpdateSaveToFileState();
+        SyncSavingSettingsFromSaveToFile();
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>
@@ -431,52 +430,6 @@ public partial class SettingsWindow : Window
             () => CenterAspectRatioCombo.SelectedIndex = selectedIndex);
     }
 
-    private void SaveToFileCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
-
-        var previous = _settingsService.Settings.SaveToFile;
-        var selected = SaveToFileCheck.IsChecked == true;
-        UpdateCaptureSavePreference(
-            "settings.save-to-file",
-            "Save screenshots",
-            previous,
-            selected,
-            value =>
-            {
-                _settingsService.Settings.SaveToFile = value;
-            },
-            value =>
-            {
-                SaveToFileCheck.IsChecked = _settingsService.Settings.SaveToFile;
-                var wasVisible = SaveDirPanel.Visibility == Visibility.Visible;
-                var showDir = _settingsService.Settings.SaveToFile;
-                SaveDirPanel.Visibility = showDir ? Visibility.Visible : Visibility.Collapsed;
-                if (showDir && !wasVisible)
-                    AnimateHighlight(SaveDirPanel);
-                RefreshAfterCaptureOutcomeEditor();
-            },
-            () =>
-            {
-                _suppressCaptureSavePreferenceChange = true;
-                try { SaveToFileCheck.IsChecked = _settingsService.Settings.SaveToFile; }
-                finally { _suppressCaptureSavePreferenceChange = false; }
-                SaveDirPanel.Visibility = _settingsService.Settings.SaveToFile
-                    ? Visibility.Visible
-                    : Visibility.Collapsed;
-                RefreshAfterCaptureOutcomeEditor();
-            });
-    }
-
-    private void UpdateSaveToFileState()
-    {
-        // Saving is optional for every outcome. The toggle is always enabled;
-        // destinations that need a file (editor: in-memory; system viewer: temp)
-        // no longer lock it here.
-        SaveToFileCheck.IsEnabled = true;
-        SaveToFileCheck.Opacity = 1.0;
-    }
-
     private void AskFileNameCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
@@ -494,9 +447,117 @@ public partial class SettingsWindow : Window
 
     private void LoadFileNameTemplate(string currentTemplate)
     {
-        FileNameTemplateBox.Text = currentTemplate;
-        UpdateFileNameTemplatePreview(currentTemplate);
-        FileNameTemplateResetBtn.ToolTip = LocalizationService.Translate("Reset to default pattern");
+        _suppressCaptureSavePreferenceChange = true;
+        try
+        {
+            FileNameTemplateBox.Text = currentTemplate;
+            UpdateFileNameTemplatePreview(currentTemplate);
+            FileNameTemplateResetBtn.ToolTip = LocalizationService.Translate("Reset to default pattern");
+            PopulateFileNamePresetCombo(currentTemplate);
+        }
+        finally
+        {
+            _suppressCaptureSavePreferenceChange = false;
+        }
+    }
+
+    private void PopulateFileNamePresetCombo(string currentTemplate)
+    {
+        if (FileNamePresetCombo is null)
+            return;
+
+        var lang = _settingsService.Settings.InterfaceLanguage;
+        FileNamePresetCombo.Items.Clear();
+
+        var matchedIndex = -1;
+        for (var i = 0; i < Helpers.FileNameTemplate.NamedPresets.Length; i++)
+        {
+            var (labelKey, template) = Helpers.FileNameTemplate.NamedPresets[i];
+            FileNamePresetCombo.Items.Add(new ComboBoxItem
+            {
+                Content = LocalizationService.Translate(lang, labelKey),
+                Tag = template,
+                ToolTip = Helpers.FileNameTemplate.FormatExample(template) + ".png"
+            });
+            if (string.Equals(template, currentTemplate, StringComparison.Ordinal))
+                matchedIndex = i;
+        }
+
+        FileNamePresetCombo.Items.Add(new ComboBoxItem
+        {
+            Content = LocalizationService.Translate(lang, "Custom"),
+            Tag = "",
+            ToolTip = LocalizationService.Translate(lang, "Edit the pattern with tokens below.")
+        });
+
+        FileNamePresetCombo.SelectedIndex = matchedIndex >= 0
+            ? matchedIndex
+            : FileNamePresetCombo.Items.Count - 1;
+    }
+
+    private void FileNamePresetCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
+        if (FileNamePresetCombo.SelectedItem is not ComboBoxItem { Tag: string template })
+            return;
+
+        // "Custom" keeps the current editor text; open customize so the user can edit.
+        if (string.IsNullOrEmpty(template))
+        {
+            if (FileNameCustomizeToggle.IsChecked != true)
+                FileNameCustomizeToggle.IsChecked = true;
+            return;
+        }
+
+        if (!string.Equals(FileNameTemplateBox.Text, template, StringComparison.Ordinal))
+            FileNameTemplateBox.Text = template;
+    }
+
+    private void FileNameCustomizeToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (FileNameCustomizePanel is null || FileNameCustomizeToggle is null)
+            return;
+
+        var expanded = FileNameCustomizeToggle.IsChecked == true;
+        FileNameCustomizePanel.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+        if (expanded)
+            FileNameTemplateBox.Focus();
+    }
+
+    private void SyncFileNamePresetSelectionFromTemplate(string template)
+    {
+        if (FileNamePresetCombo is null)
+            return;
+
+        var matchedIndex = -1;
+        for (var i = 0; i < FileNamePresetCombo.Items.Count; i++)
+        {
+            if (FileNamePresetCombo.Items[i] is ComboBoxItem { Tag: string tag }
+                && !string.IsNullOrEmpty(tag)
+                && string.Equals(tag, template, StringComparison.Ordinal))
+            {
+                matchedIndex = i;
+                break;
+            }
+        }
+
+        var targetIndex = matchedIndex >= 0
+            ? matchedIndex
+            : FileNamePresetCombo.Items.Count - 1;
+
+        if (FileNamePresetCombo.SelectedIndex == targetIndex)
+            return;
+
+        var previousSuppress = _suppressCaptureSavePreferenceChange;
+        _suppressCaptureSavePreferenceChange = true;
+        try
+        {
+            FileNamePresetCombo.SelectedIndex = targetIndex;
+        }
+        finally
+        {
+            _suppressCaptureSavePreferenceChange = previousSuppress;
+        }
     }
 
     private void SetSaveDirectoryPath(string path)
@@ -526,8 +587,13 @@ public partial class SettingsWindow : Window
             {
                 FileNameTemplateBox.Text = value;
                 UpdateFileNameTemplatePreview(value);
+                SyncFileNamePresetSelectionFromTemplate(value);
             },
-            () => UpdateFileNameTemplatePreview(template));
+            () =>
+            {
+                UpdateFileNameTemplatePreview(template);
+                SyncFileNamePresetSelectionFromTemplate(template);
+            });
     }
 
     private void UpdateCaptureSavePreference<T>(
@@ -593,11 +659,14 @@ public partial class SettingsWindow : Window
         SetCaptureSavePreferenceStatus($"{label} change was not saved. Previous setting restored.");
         ToastWindow.ShowError(
             $"{label} failed",
-            $"The previous capture setting was restored. Check Config -> Capture and try again.\n{ex.Message}");
+            $"{LocalizationService.Translate("The previous setting was restored. Check Config and try again.")}\n{ex.Message}");
     }
 
     private void SetCaptureSavePreferenceStatus(string message)
     {
+        if (CaptureSavePreferenceStatusText is null)
+            return;
+
         CaptureSavePreferenceStatusText.Text = message;
         CaptureSavePreferenceStatusText.Visibility = string.IsNullOrWhiteSpace(message)
             ? Visibility.Collapsed

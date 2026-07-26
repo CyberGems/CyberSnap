@@ -52,12 +52,22 @@ public static class FileNameTemplate
         return result;
     }
 
+    /// <summary>Common patterns offered in Settings (label key, template).</summary>
+    public static readonly (string LabelKey, string Template)[] NamedPresets =
+    [
+        ("Date and time", DefaultTemplate),
+        ("Date, time and size", "{year}-{month}-{day}_{hour}-{min}-{sec}_{w}x{h}"),
+        ("Date, time and random", "CyberSnap_{year}-{month}-{day}_{hour}-{min}-{sec}_{rand}"),
+    ];
+
     public static readonly string[] Presets =
-    {
-        "CyberSnap_{year}-{month}-{day}_{hour}-{min}_{rand}",
+    [
+        DefaultTemplate,
+        "{year}-{month}-{day}_{hour}-{min}-{sec}_{w}x{h}",
         "CyberSnap_{year}-{month}-{day}_{hour}-{min}-{sec}_{rand}",
+        "CyberSnap_{year}-{month}-{day}_{hour}-{min}_{rand}",
         "CyberSnap_{year}.{month}.{day}_{hour}.{min}.{sec}_{rand}",
-    };
+    ];
 
     private static string NormalizeLegacyPlaceholders(string template)
     {
