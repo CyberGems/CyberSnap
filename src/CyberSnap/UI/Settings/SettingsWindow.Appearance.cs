@@ -294,10 +294,8 @@ public partial class SettingsWindow
             PopulateSoundCustomizationPanel();
             ShowCaptureWidgetCheck.IsChecked = s.ShowCaptureWidget;
             WidgetCaptureCursorCheck.IsChecked = s.ShowCursor;
-            if (VideoEnableEditorCheck != null)
-                VideoEnableEditorCheck.IsChecked = s.OpenVideoTrimmerAfterCapture;
-            if (GifEnableEditorCheck != null)
-                GifEnableEditorCheck.IsChecked = s.OpenGifTrimmerAfterCapture;
+            VideoOutcomeEditor?.LoadFromSettings(s);
+            GifOutcomeEditor?.LoadFromSettings(s);
             WidgetDockEdgeCombo.SelectedIndex = (int)s.WidgetDockEdge;
             SelectWidgetHoverDelay(s.WidgetHoverDelayMs);
             PopulateWidgetMonitors();
@@ -324,8 +322,6 @@ public partial class SettingsWindow
                 VideoShowCursorCheck.IsChecked = s.VideoShowCursor;
             if (GifShowCursorCheck != null)
                 GifShowCursorCheck.IsChecked = s.GifShowCursor;
-            if (AutoCopyExcludeGifCheck != null)
-                AutoCopyExcludeGifCheck.IsChecked = s.AutoCopyExcludeGif;
             RecordMicCheck.IsChecked = s.RecordMicrophone;
             RecordDesktopAudioCheck.IsChecked = s.RecordDesktopAudio;
             TryLoadSettingsSection("settings.populate-audio-devices", PopulateAudioDevices);
@@ -594,6 +590,9 @@ public partial class SettingsWindow
         LoadFileNameTemplate(_settingsService.Settings.FileNameTemplate);
         UpdateFileNameTemplatePreview(_settingsService.Settings.FileNameTemplate);
         SyncSavingSettingsFromSaveToFile();
+        AfterCaptureOutcomeEditor?.RefreshLocalization();
+        VideoOutcomeEditor?.RefreshLocalization();
+        GifOutcomeEditor?.RefreshLocalization();
         UpdateWindowTitle();
         RefreshAboutLocalization();
     }

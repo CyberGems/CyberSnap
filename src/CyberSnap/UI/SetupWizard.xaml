@@ -801,10 +801,10 @@
                                            Foreground="{DynamicResource WizFg}"
                                            Margin="0,0,0,4"
                                            Services:LocalizationService.SourceText="After capture"/>
-                                <TextBlock Text="Choose what happens when a capture finishes. Add steps with + and remove them with ×."
+                                <TextBlock Text="Choose what happens when you confirm an image capture. Add steps with + and remove them with ×."
                                            FontSize="11" Foreground="{DynamicResource WizFgMuted}"
                                            Margin="0,0,0,12" TextWrapping="Wrap" Opacity="0.9"
-                                           Services:LocalizationService.SourceText="Choose what happens when a capture finishes. Add steps with + and remove them with ×."/>
+                                           Services:LocalizationService.SourceText="Choose what happens when you confirm an image capture. Add steps with + and remove them with ×."/>
                                 <controls:AfterCaptureOutcomeEditor x:Name="WizAfterCaptureOutcomeEditor"/>
                             </StackPanel>
                         </Border>

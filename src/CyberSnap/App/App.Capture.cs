@@ -116,8 +116,8 @@ public partial class App
                 var (selectionScreenshot, bounds) = ScreenCapture.CaptureAllScreens(showCursor);
 
                 string ext = isGifFormat ? ".gif" : ".mp4";
-                // Respect SaveToFile: permanent folder vs session temp (deleted after toast/trimmer).
-                bool persistRecording = s.SaveToFile;
+                // Per-media save: permanent folder vs session temp (deleted after toast/trimmer).
+                bool persistRecording = isGifFormat ? s.SaveGifToFile : s.SaveVideoToFile;
                 string savePath;
                 if (persistRecording)
                 {
@@ -193,7 +193,7 @@ public partial class App
                         if (!(openTrimmer && isGif))
                             _trayIcon?.UpdateRecordingState(false);
 
-                        // Gallery only indexes permanently saved recordings (SaveToFile).
+                        // Gallery only indexes permanently saved recordings.
                         if (persistRecording && s.SaveHistory)
                         {
                             try
@@ -311,7 +311,7 @@ public partial class App
     /// <param name="copiedToClipboard">
     /// true = copied, false = copy attempted and failed, null = auto-copy skipped for recordings.
     /// </param>
-    /// <param name="ephemeral">When true, recording is temp (SaveToFile off); toast deletes it on dismiss.</param>
+    /// <param name="ephemeral">When true, recording is temp (per-media save off); toast deletes it on dismiss.</param>
     private void ShowRecordingToast(string path, bool? copiedToClipboard, bool isGif, bool ephemeral = false)
     {
         string body = copiedToClipboard switch

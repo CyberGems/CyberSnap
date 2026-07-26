@@ -591,27 +591,6 @@ public partial class SettingsWindow
             value => GifShowCursorCheck.IsChecked = value);
     }
 
-    private void GifEnableEditorCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
-
-        var previous = _settingsService.Settings.OpenGifTrimmerAfterCapture;
-        var selected = GifEnableEditorCheck.IsChecked == true;
-        UpdateGeneralPreference(
-            "settings.open-gif-trimmer-after-capture",
-            "Open trimmer after GIF",
-            previous,
-            selected,
-            value => _settingsService.Settings.OpenGifTrimmerAfterCapture = value,
-            value =>
-            {
-                if (GifEnableEditorCheck != null)
-                    GifEnableEditorCheck.IsChecked = value;
-            });
-
-        RefreshEditorPreviewState();
-    }
-
     private void PopulateAudioDevices()
     {
         MicDeviceCombo.Items.Clear();

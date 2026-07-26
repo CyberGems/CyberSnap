@@ -467,7 +467,20 @@ public sealed class AppSettings
     /// <summary>Most recently selected colors in the color picker. Hex format. Capped to 12 entries.</summary>
     public List<string> RecentColors { get; set; } = new();
 
+    /// <summary>Persist image captures to the configured save folder.</summary>
     public bool SaveToFile { get; set; } = true;
+
+    /// <summary>Persist MP4 recordings to the configured save folder.</summary>
+    public bool SaveVideoToFile { get; set; } = true;
+
+    /// <summary>Persist GIF recordings to the configured save folder.</summary>
+    public bool SaveGifToFile { get; set; } = true;
+
+    /// <summary>
+    /// 0 = seed <see cref="SaveVideoToFile"/> / <see cref="SaveGifToFile"/> from <see cref="SaveToFile"/> once.
+    /// </summary>
+    public int SaveMediaSettingsSchemaVersion { get; set; }
+
     public bool AskForFileNameOnSave { get; set; }
     public string FileNameTemplate { get; set; } = Helpers.FileNameTemplate.DefaultTemplate;
     public CaptureImageFormat CaptureImageFormat { get; set; } = CaptureImageFormat.Png;

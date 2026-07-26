@@ -1088,46 +1088,6 @@ public partial class SettingsWindow
             });
     }
 
-    private void AutoCopyExcludeRecordingCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressRecordingPreferenceChange || _suppressAutoCopyPreferenceChange) return;
-
-        var previous = _settingsService.Settings.AutoCopyExcludeRecording;
-        var selected = AutoCopyExcludeRecordingCheck.IsChecked == true;
-        UpdateRecordingPreference(
-            "settings.auto-copy-exclude-recording",
-            "Don't auto-copy video",
-            previous,
-            selected,
-            value => AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Video, value),
-            value => AutoCopyExcludeRecordingCheck.IsChecked = value,
-            value =>
-            {
-                SettingsService.PublishAutoCopyState(_settingsService.Settings);
-                ((App)Application.Current).SyncWidgetAutoCopyToggle();
-            });
-    }
-
-    private void AutoCopyExcludeGifCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressRecordingPreferenceChange || _suppressAutoCopyPreferenceChange) return;
-
-        var previous = _settingsService.Settings.AutoCopyExcludeGif;
-        var selected = AutoCopyExcludeGifCheck.IsChecked == true;
-        UpdateRecordingPreference(
-            "settings.auto-copy-exclude-gif",
-            "Don't auto-copy GIF",
-            previous,
-            selected,
-            value => AutoCopyPreferences.SetExcluded(_settingsService.Settings, AutoCopyKind.Gif, value),
-            value => AutoCopyExcludeGifCheck.IsChecked = value,
-            value =>
-            {
-                SettingsService.PublishAutoCopyState(_settingsService.Settings);
-                ((App)Application.Current).SyncWidgetAutoCopyToggle();
-            });
-    }
-
     public void RefreshAutoCopyChecks()
     {
         if (!Dispatcher.CheckAccess())
@@ -1184,12 +1144,10 @@ public partial class SettingsWindow
                 AutoCopyExcludeImagesCheck.IsChecked = s.AutoCopyExcludeImages;
             if (AutoCopyExcludeOcrCheck != null)
                 AutoCopyExcludeOcrCheck.IsChecked = s.AutoCopyExcludeOcr;
-            if (AutoCopyExcludeRecordingCheck != null)
-                AutoCopyExcludeRecordingCheck.IsChecked = s.AutoCopyExcludeRecording;
-            if (AutoCopyExcludeGifCheck != null)
-                AutoCopyExcludeGifCheck.IsChecked = s.AutoCopyExcludeGif;
             UpdateAutoCopyExcludeEnabledState();
             AfterCaptureOutcomeEditor?.LoadFromSettings(s);
+            VideoOutcomeEditor?.LoadFromSettings(s);
+            GifOutcomeEditor?.LoadFromSettings(s);
         }
         finally
         {
@@ -1219,8 +1177,6 @@ public partial class SettingsWindow
 
         Apply(AutoCopyExcludeImagesRow, AutoCopyExcludeImagesCheck);
         Apply(AutoCopyExcludeOcrRow, AutoCopyExcludeOcrCheck);
-        Apply(AutoCopyExcludeRecordingRow, AutoCopyExcludeRecordingCheck);
-        Apply(AutoCopyExcludeGifRow, AutoCopyExcludeGifCheck);
     }
 
     private void WidgetCaptureCursorCheck_Changed(object sender, RoutedEventArgs e)
@@ -1243,26 +1199,6 @@ public partial class SettingsWindow
                 SyncRecordingShowCursorChecks(value);
             },
             value => ((App)Application.Current).SyncWidgetCaptureCursorToggle());
-    }
-
-    private void VideoEnableEditorCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressGeneralPreferenceChange) return;
-
-        var previous = _settingsService.Settings.OpenVideoTrimmerAfterCapture;
-        var selected = VideoEnableEditorCheck.IsChecked == true;
-        UpdateGeneralPreference(
-            "settings.open-video-trimmer-after-capture",
-            "Open trimmer after video",
-            previous,
-            selected,
-            value => _settingsService.Settings.OpenVideoTrimmerAfterCapture = value,
-            value => {
-                if (VideoEnableEditorCheck != null)
-                    VideoEnableEditorCheck.IsChecked = value;
-            });
-
-        RefreshEditorPreviewState();
     }
 
     // Pulls Capture-tab + Widget "Capture cursor" checkboxes into sync after the widget toggle changes.
@@ -1308,19 +1244,10 @@ public partial class SettingsWindow
         }
     }
 
-    /// <summary>Keeps Video/GIF "open trimmer" checkboxes in sync (Notifications designer / recording bars).</summary>
+    /// <summary>Keeps Video/GIF after-recording outcome editors in sync (recording bars / external toggles).</summary>
     public void RefreshEnableEditorCheck()
     {
-        _suppressGeneralPreferenceChange = true;
-        try
-        {
-            if (VideoEnableEditorCheck != null)
-                VideoEnableEditorCheck.IsChecked = _settingsService.Settings.OpenVideoTrimmerAfterCapture;
-            if (GifEnableEditorCheck != null)
-                GifEnableEditorCheck.IsChecked = _settingsService.Settings.OpenGifTrimmerAfterCapture;
-        }
-        finally { _suppressGeneralPreferenceChange = false; }
-
+        RefreshRecordingOutcomeEditors();
         RefreshEditorPreviewState();
     }
 
