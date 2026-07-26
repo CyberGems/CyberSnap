@@ -304,7 +304,7 @@
   "Outcome step: open in system viewer": "Open in system viewer",
   "Outcome step: copy to clipboard": "Copy to clipboard",
   "Outcome step: share": "Share",
-  "Show a compact status toast after capture (or status chips when Preview is on).": "Show a popup notification after capture",
+  "Show a compact status toast after capture (including after Preview closes).": "Show a popup notification after capture (including after Preview closes)",
   "Open the share flow after capture (off by default).": "Enable the configured share option (upload to the cloud and get a share link is the default)",
   "Already completed": "Already completed",
   "Runs when you continue": "Runs when you continue",
