@@ -86,8 +86,8 @@ public sealed partial class RegionOverlayForm : Form
     private enum ConfirmChromeKind { Cancel, Retry, Done, TogglePreview, ModeImage, ModeOcr, ModeVideo, ModeGif, ModeScroll, ModeQr, More }
     private ConfirmChromeKind[] _confirmChromeKinds =
     {
-        ConfirmChromeKind.ModeOcr, ConfirmChromeKind.ModeVideo, ConfirmChromeKind.ModeGif,
-        ConfirmChromeKind.ModeScroll, ConfirmChromeKind.ModeQr, ConfirmChromeKind.ModeImage,
+        ConfirmChromeKind.ModeQr, ConfirmChromeKind.ModeScroll, ConfirmChromeKind.ModeGif,
+        ConfirmChromeKind.ModeVideo, ConfirmChromeKind.ModeOcr, ConfirmChromeKind.ModeImage,
         ConfirmChromeKind.TogglePreview, ConfirmChromeKind.Retry, ConfirmChromeKind.Cancel, ConfirmChromeKind.Done, ConfirmChromeKind.More
     };
     private Rectangle[] _confirmChromeRects = Array.Empty<Rectangle>();
