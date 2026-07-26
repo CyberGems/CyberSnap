@@ -18,7 +18,7 @@
                 CornerRadius="8"
                 Padding="8,8"
                 MinHeight="44">
-            <WrapPanel x:Name="ActivePanel" Orientation="Horizontal"/>
+            <Grid x:Name="ActivePanel"/>
         </Border>
 
         <TextBlock x:Name="AvailableLabel"
@@ -26,7 +26,7 @@
                    FontSize="11"
                    FontWeight="SemiBold"
                    Opacity="0.75"
-                   Margin="0,12,0,6"
+                   Margin="0,18,0,6"
                    Services:LocalizationService.SourceText="Available outcome"
                    Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
         <Border Background="{DynamicResource ThemeInputBackgroundBrush}"
