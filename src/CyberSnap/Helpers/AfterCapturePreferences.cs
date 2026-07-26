@@ -116,7 +116,7 @@ public static class AfterCapturePreferences
             || preference.OpenSystemViewer
             || preference.WindowIndex == 3;
         if (willSave)
-            parts.Add(translate("Outcome step: save file"));
+            parts.Add(translate("Outcome step: save image"));
 
         string? actionKey = preference.WindowIndex switch
         {
