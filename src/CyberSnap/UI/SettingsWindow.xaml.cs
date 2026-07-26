@@ -8,6 +8,7 @@ using CaptureMode = CyberSnap.Models.CaptureMode;
 using CyberSnap.Helpers;
 using CyberSnap.Models;
 using CyberSnap.Services;
+using CyberSnap.UI.Controls;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
 
@@ -80,9 +81,17 @@ public partial class SettingsWindow : Window
         {
             AfterCaptureOutcomeEditor?.RefreshLocalization();
             AfterCaptureOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
+            VideoOutcomeEditor?.RefreshLocalization();
+            VideoOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
+            GifOutcomeEditor?.RefreshLocalization();
+            GifOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
         };
         if (AfterCaptureOutcomeEditor != null)
             AfterCaptureOutcomeEditor.OutcomeChanged += AfterCaptureOutcomeEditor_OutcomeChanged;
+        if (VideoOutcomeEditor != null)
+            VideoOutcomeEditor.OutcomeChanged += VideoOutcomeEditor_OutcomeChanged;
+        if (GifOutcomeEditor != null)
+            GifOutcomeEditor.OutcomeChanged += GifOutcomeEditor_OutcomeChanged;
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
         SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopyToClipboardChanged;
         SettingsService.AutoCopyToClipboardChanged += OnAutoCopyToClipboardChanged;
@@ -337,13 +346,16 @@ public partial class SettingsWindow : Window
             {
                 AfterCaptureOutcomeEditor.LoadFromSettings(_settingsService.Settings);
                 // If rollback, restore settings snapshot already in _settingsService from setValue(previous).
-                SyncSavingSettingsFromSaveToFile();
+                SyncSavingSettingsAvailability();
+                // Auto-copy master can affect video/GIF clipboard pills.
+                RefreshRecordingOutcomeEditors();
                 RefreshCapturePreviewTimeoutVisibility();
                 RefreshEditorPreviewState();
             },
             value =>
             {
-                SyncSavingSettingsFromSaveToFile();
+                SyncSavingSettingsAvailability();
+                RefreshRecordingOutcomeEditors();
                 RefreshCapturePreviewTimeoutVisibility();
                 SettingsService.PublishAutoCopyState(_settingsService.Settings);
                 ((App)Application.Current).SyncWidgetAutoCopyToggle();
@@ -351,25 +363,75 @@ public partial class SettingsWindow : Window
             });
     }
 
+    private void VideoOutcomeEditor_OutcomeChanged() =>
+        PersistRecordingOutcomeEditor(VideoOutcomeEditor, "settings.video-outcome", "After video");
+
+    private void GifOutcomeEditor_OutcomeChanged() =>
+        PersistRecordingOutcomeEditor(GifOutcomeEditor, "settings.gif-outcome", "After GIF");
+
+    private void PersistRecordingOutcomeEditor(
+        RecordingOutcomeEditor? editor,
+        string diagnosticKey,
+        string label)
+    {
+        if (!IsLoaded || _suppressRecordingPreferenceChange || editor is null) return;
+
+        var previous = RecordingOutcomeModel.FromSettings(_settingsService.Settings, editor.Kind);
+        var selected = editor.State;
+
+        UpdateRecordingPreference(
+            diagnosticKey,
+            label,
+            previous,
+            selected,
+            value => RecordingOutcomeModel.ApplyToSettings(value, _settingsService.Settings, editor.Kind),
+            _ => editor.LoadFromSettings(_settingsService.Settings),
+            _ =>
+            {
+                SyncSavingSettingsAvailability();
+                // Clipboard may turn the auto-copy master on — refresh image pills.
+                AfterCaptureOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
+                SettingsService.PublishAutoCopyState(_settingsService.Settings);
+                ((App)Application.Current).SyncWidgetAutoCopyToggle();
+                RefreshEditorPreviewState();
+            });
+    }
+
+    private void RefreshRecordingOutcomeEditors()
+    {
+        _suppressRecordingPreferenceChange = true;
+        try
+        {
+            VideoOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
+            GifOutcomeEditor?.LoadFromSettings(_settingsService.Settings);
+        }
+        finally
+        {
+            _suppressRecordingPreferenceChange = false;
+        }
+    }
+
     /// <summary>
-    /// Reflects SaveToFile (controlled by the Capture "Save file" pill) onto the
-    /// General Saving section: dim controls and show a short enable hint when off.
+    /// Dims General Saving when no media type is set to persist to disk.
     /// </summary>
-    private void SyncSavingSettingsFromSaveToFile()
+    private void SyncSavingSettingsAvailability()
     {
         if (SavingSettingsContent is null || SavingDisabledHint is null)
             return;
 
-        var saveEnabled = _settingsService.Settings.SaveToFile;
-        SavingSettingsContent.Opacity = saveEnabled ? 1.0 : 0.48;
-        SavingDisabledHint.Visibility = saveEnabled ? Visibility.Collapsed : Visibility.Visible;
+        var s = _settingsService.Settings;
+        var anySave = s.SaveToFile || s.SaveVideoToFile || s.SaveGifToFile;
+        SavingSettingsContent.Opacity = anySave ? 1.0 : 0.48;
+        SavingDisabledHint.Visibility = anySave ? Visibility.Collapsed : Visibility.Visible;
     }
+
+    private void SyncSavingSettingsFromSaveToFile() => SyncSavingSettingsAvailability();
 
     private void RefreshAfterCaptureOutcomeEditor()
     {
         if (AfterCaptureOutcomeEditor is null) return;
         AfterCaptureOutcomeEditor.LoadFromSettings(_settingsService.Settings);
-        SyncSavingSettingsFromSaveToFile();
+        SyncSavingSettingsAvailability();
     }
 
     private static AfterCaptureAction NormalizeAfterCaptureAction(AfterCaptureAction action) =>

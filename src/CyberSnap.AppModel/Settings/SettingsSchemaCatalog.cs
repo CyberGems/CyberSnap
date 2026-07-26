@@ -14,7 +14,9 @@ public static class SettingsSchemaCatalog
                     "Saving",
                     "Where captures are stored and how files are named. Enable Save file under Capture to write to disk.",
                     [
-                        new SettingDefinition("save_to_file", "Save file", SettingsValueKind.Toggle, "Write captures to the configured save folder. Controlled from Capture → Behavior after captures.", "SaveToFile"),
+                        new SettingDefinition("save_to_file", "Save file (images)", SettingsValueKind.Toggle, "Write image captures to the configured save folder.", "SaveToFile"),
+                        new SettingDefinition("save_video_to_file", "Save file (video)", SettingsValueKind.Toggle, "Write MP4 recordings to the configured save folder.", "SaveVideoToFile"),
+                        new SettingDefinition("save_gif_to_file", "Save file (GIF)", SettingsValueKind.Toggle, "Write GIF recordings to the configured save folder.", "SaveGifToFile"),
                         new SettingDefinition("save_directory", "Save folder", SettingsValueKind.Folder, "Default output folder for screenshots.", "SaveDirectory"),
                         new SettingDefinition("monthly_folders", "Create monthly subfolders", SettingsValueKind.Toggle, "Store captures under yyyy-MM folders inside the save directory.", "SaveInMonthlyFolders"),
                         new SettingDefinition("filename_template", "File name pattern", SettingsValueKind.Text, "Pattern used when naming new captures.", "FileNameTemplate"),
@@ -29,15 +31,13 @@ public static class SettingsSchemaCatalog
                     ]),
                 new SettingsSectionDefinition(
                     "behavior_after_captures",
-                    "Behavior after captures",
-                    "Where captures open and whether results are auto-copied to the clipboard.",
+                    "After capture",
+                    "What happens when an image capture is confirmed.",
                     [
-                        new SettingDefinition("after_capture", "After capture behavior", SettingsValueKind.Choice, "Default post-capture destination window.", "AfterCapture"),
-                        new SettingDefinition("auto_copy", "Auto-copy results", SettingsValueKind.Toggle, "Copy captures, OCR text, and recordings to the clipboard when they finish.", "AutoCopyToClipboard"),
+                        new SettingDefinition("after_capture", "When finished", SettingsValueKind.Choice, "Steps that run after an image capture is confirmed.", "AfterCapture"),
+                        new SettingDefinition("auto_copy", "Auto-copy results", SettingsValueKind.Toggle, "Master switch for copying results to the clipboard.", "AutoCopyToClipboard"),
                         new SettingDefinition("auto_copy_exclude_images", "Don't auto-copy screenshots", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy image captures.", "AutoCopyExcludeImages"),
                         new SettingDefinition("auto_copy_exclude_ocr", "Don't auto-copy OCR text", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy OCR text.", "AutoCopyExcludeOcr"),
-                        new SettingDefinition("auto_copy_exclude_recording", "Don't auto-copy video", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy MP4 files.", "AutoCopyExcludeRecording"),
-                        new SettingDefinition("auto_copy_exclude_gif", "Don't auto-copy GIF", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy GIF files.", "AutoCopyExcludeGif"),
                     ]),
                 new SettingsSectionDefinition(
                     "standalone_ruler",
@@ -95,25 +95,25 @@ public static class SettingsSchemaCatalog
                 new SettingsSectionDefinition(
                     "video_recording_mp4",
                     "Video recording (MP4)",
-                    "Resolution, FPS, cursor, trimmer, auto-copy, and audio for MP4.",
+                    "Resolution, FPS, cursor, after-recording steps, and audio for MP4.",
                     [
                         new SettingDefinition("recording_quality", "Quality", SettingsValueKind.Choice, "Maximum resolution for MP4 recordings.", "RecordingQuality"),
                         new SettingDefinition("recording_fps", "Video FPS", SettingsValueKind.Number, "Frames per second for MP4 recordings.", "RecordingFps"),
                         new SettingDefinition("video_show_cursor", "Show cursor in video", SettingsValueKind.Toggle, "Include the mouse pointer in MP4 recordings.", "VideoShowCursor"),
                         new SettingDefinition("open_video_trimmer", "Open trimmer after video", SettingsValueKind.Toggle, "Open the video trimmer when an MP4 recording finishes.", "OpenVideoTrimmerAfterCapture"),
-                        new SettingDefinition("auto_copy_exclude_recording", "Don't auto-copy video", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy MP4 files.", "AutoCopyExcludeRecording"),
+                        new SettingDefinition("auto_copy_exclude_recording", "Auto-copy video", SettingsValueKind.Toggle, "Copy the finished MP4 to the clipboard.", "AutoCopyExcludeRecording"),
                         new SettingDefinition("record_microphone", "Record microphone", SettingsValueKind.Toggle, "Capture microphone input during MP4 recordings.", "RecordMicrophone"),
                         new SettingDefinition("record_desktop_audio", "Record desktop audio", SettingsValueKind.Toggle, "Capture system audio during MP4 recordings.", "RecordDesktopAudio"),
                     ]),
                 new SettingsSectionDefinition(
                     "gif_recording",
                     "GIF recording",
-                    "FPS, cursor, trimmer, and auto-copy for GIF.",
+                    "FPS, cursor, and after-recording steps for GIF.",
                     [
                         new SettingDefinition("gif_fps", "GIF FPS", SettingsValueKind.Number, "Frames per second for GIF recordings (15 or 30).", "GifFps"),
                         new SettingDefinition("gif_show_cursor", "Show cursor in GIF", SettingsValueKind.Toggle, "Include the mouse pointer in GIF recordings.", "GifShowCursor"),
                         new SettingDefinition("open_gif_trimmer", "Open trimmer after GIF", SettingsValueKind.Toggle, "Open the trimmer when a GIF recording finishes.", "OpenGifTrimmerAfterCapture"),
-                        new SettingDefinition("auto_copy_exclude_gif", "Don't auto-copy GIF", SettingsValueKind.Toggle, "When global Auto-copy is on, still don't copy GIF files.", "AutoCopyExcludeGif"),
+                        new SettingDefinition("auto_copy_exclude_gif", "Auto-copy GIF", SettingsValueKind.Toggle, "Copy the finished GIF to the clipboard.", "AutoCopyExcludeGif"),
                     ]),
             ]),
         new(

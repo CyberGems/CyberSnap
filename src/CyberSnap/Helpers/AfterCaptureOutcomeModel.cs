@@ -277,7 +277,7 @@ public static class AfterCaptureOutcomeModel
         AfterCapturePillKind.Editor => "Open the capture in the annotation editor.",
         AfterCapturePillKind.SystemViewer =>
             "Open the saved file in the system default viewer. Can be combined with the notification.",
-        AfterCapturePillKind.Clipboard => "Copy captures, OCR text, and recordings to the clipboard when they finish.",
+        AfterCapturePillKind.Clipboard => "Copy the image capture to the clipboard when it finishes.",
         AfterCapturePillKind.Share => "Open the share flow after capture (off by default).",
         _ => ""
     };

@@ -481,6 +481,7 @@ public sealed class SettingsService : IDisposable
         NormalizeToastButtonLayout(settings.ToastButtons);
         Helpers.AutoCopyPreferences.MigrateIfNeeded(settings);
         Helpers.AfterCapturePreferences.MigrateSystemViewerFlagIfNeeded(settings);
+        Helpers.RecordingOutcomeModel.MigrateSaveMediaIfNeeded(settings);
 
         // If the primary capture hotkey was never set (e.g. old settings file predating the
         // property default), restore the factory default: Alt+Shift+A.
