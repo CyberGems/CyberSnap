@@ -284,10 +284,14 @@ public sealed partial class RegionOverlayForm
                 int btnHit = ch >= 0 ? -1 : HitTestConfirmButton(e.Location);
                 bool sizePillHover = ch < 0 && btnHit < 0 && HitTestConfirmSizeReadout(e.Location);
                 bool gripHover = ch < 0 && btnHit < 0 && !sizePillHover
-                    && ((ShowAnnotationChrome && !_annotationGripRect.IsEmpty && _annotationGripRect.Contains(e.Location))
-                        || (!_confirmGripRect.IsEmpty && _confirmGripRect.Contains(e.Location)));
+                    && ((ShowAnnotationChrome && HitTestAnnotationDockGrip(e.Location))
+                        || HitTestConfirmDockGrip(e.Location));
                 bool centerGripHover = ch < 0 && btnHit < 0 && !sizePillHover && !gripHover
                     && !_centerMoveGripRect.IsEmpty && _centerMoveGripRect.Contains(e.Location);
+
+                // Modes strip: hover Image / OCR…QR expands; leaving that cluster schedules collapse.
+                // Grip hover (or an in-progress confirm-dock drag) keeps the strip open.
+                UpdateConfirmModesHover(e.Location);
 
                 if (sizePillHover != _hoveredConfirmSizeReadout)
                 {
@@ -1146,6 +1150,7 @@ public sealed partial class RegionOverlayForm
         {
             _isDraggingConfirm = false;
             Cursor = CursorFactory.GrabCursor;
+            UpdateConfirmModesHover(e.Location);
             return;
         }
 
@@ -1470,6 +1475,8 @@ public sealed partial class RegionOverlayForm
                 _hoveredTextBtn = -1;
                 HideToolbarTooltip();
             }
+            if (_isConfirmingSelection)
+                ScheduleConfirmModesCollapse();
             CloseCaptureMagnifier();
             _autoDetectTimer.Stop();
             ClearCrosshairGuides();
