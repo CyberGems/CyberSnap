@@ -83,15 +83,23 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         ActivePanel.Children.Clear();
         AvailablePanel.Children.Clear();
 
+        bool firstActive = true;
         foreach (var pill in AfterCaptureOutcomeModel.AllPills)
         {
             if (AfterCaptureOutcomeModel.IsActive(_state, pill))
+            {
+                if (!firstActive)
+                    ActivePanel.Children.Add(BuildFlowArrow());
                 ActivePanel.Children.Add(BuildActivePill(pill));
+                firstActive = false;
+            }
             else
+            {
                 AvailablePanel.Children.Add(BuildAvailablePill(pill));
+            }
         }
 
-        if (ActivePanel.Children.Count == 0)
+        if (firstActive)
         {
             ActivePanel.Children.Add(new TextBlock
             {
@@ -124,6 +132,8 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         string removeName = LocalizationService.Translate("Remove outcome step");
 
         var root = CreatePillChrome(isActive: true, tip);
+        // Flow arrows own the gap between chips.
+        root.Margin = new Thickness(0, 0, 0, 6);
         if (canRemove)
         {
             // Whole chip removes — same hit model as Available add chips.
@@ -139,12 +149,13 @@ public partial class AfterCaptureOutcomeEditor : UserControl
             root.Child = BuildSplitPillContent(
                 label,
                 actionGlyph: "\u00D7",
-                actionOnLeadingEdge: false);
+                actionOnLeadingEdge: false,
+                muted: false);
         }
         else
         {
             root.Padding = new Thickness(8, 3, 8, 3);
-            root.Child = CreatePillLabel(label);
+            root.Child = CreatePillLabel(label, muted: false);
         }
 
         return root;
@@ -167,12 +178,28 @@ public partial class AfterCaptureOutcomeEditor : UserControl
             e.Handled = true;
             AddPill(pill);
         };
-        root.MouseEnter += (_, _) => root.Opacity = 1.0;
-        root.MouseLeave += (_, _) => root.Opacity = AvailablePillOpacity;
+
+        // Ghost idle → light accent wash on hover so candidates stay distinct from Active.
+        var idleBg = root.Background;
+        var idleBorder = root.BorderBrush;
+        var hoverBg = new SolidColorBrush(MediaColor(0x14, 0x00, 0xE5, 0xCC));
+        var hoverBorder = TryBrush("ThemeAccentBrush", MediaColor(0x55, 0x00, 0xE5, 0xCC));
+        root.MouseEnter += (_, _) =>
+        {
+            root.Background = hoverBg;
+            root.BorderBrush = hoverBorder;
+        };
+        root.MouseLeave += (_, _) =>
+        {
+            root.Background = idleBg;
+            root.BorderBrush = idleBorder;
+        };
+
         root.Child = BuildSplitPillContent(
             label,
             actionGlyph: "+",
-            actionOnLeadingEdge: true);
+            actionOnLeadingEdge: true,
+            muted: true);
         System.Windows.Controls.ToolTipService.SetToolTip(root, tip);
         return root;
     }
@@ -182,8 +209,35 @@ public partial class AfterCaptureOutcomeEditor : UserControl
     private const double PillCornerRadius = 6;
     private const double PillFontSize = 11.5;
     private const double ActionSlotWidth = 22;
-    // Available stays fully legible; only a mild opacity drop + quieter fill.
-    private const double AvailablePillOpacity = 0.92;
+
+    private static FrameworkElement BuildFlowArrow()
+    {
+        // Crisp shaft + head (not a washed-out text glyph) with breathing room to chip borders.
+        var arrow = new System.Windows.Shapes.Path
+        {
+            Data = Geometry.Parse("M 0,5 L 9,5 M 5.5,1.5 L 10,5 L 5.5,8.5"),
+            Stroke = TryBrush("ThemeTextPrimaryBrush", MediaColor(0xEE, 0xE8, 0xEC, 0xF0)),
+            StrokeThickness = 1.6,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
+            Width = 11,
+            Height = 10,
+            Stretch = Stretch.None,
+            Opacity = 0.72,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false
+        };
+
+        return new Border
+        {
+            Child = arrow,
+            Padding = new Thickness(10, 0, 10, 0),
+            Margin = new Thickness(0, 0, 0, 6),
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false
+        };
+    }
 
     private static Border CreatePillChrome(bool isActive, string? toolTip)
     {
@@ -205,24 +259,22 @@ public partial class AfterCaptureOutcomeEditor : UserControl
             border.Background = TryBrush("ThemeTabActiveBrush", MediaColor(0x28, 0x00, 0xE5, 0xCC));
             border.BorderBrush = TryBrush("ThemeAccentBrush", MediaColor(0x88, 0x00, 0xE5, 0xCC));
             border.BorderThickness = new Thickness(1);
-            border.Opacity = 1.0;
         }
         else
         {
-            // Read as "ready to add", not disabled: solid fill + clear accent edge.
-            border.Background = new SolidColorBrush(MediaColor(0x1A, 0x00, 0xE5, 0xCC));
-            border.BorderBrush = TryBrush("ThemeAccentBrush", MediaColor(0x66, 0x00, 0xE5, 0xCC));
+            // Ghost outline with a touch more presence so chips don't vanish into the tray.
+            border.Background = new SolidColorBrush(MediaColor(0x10, 0xFF, 0xFF, 0xFF));
+            border.BorderBrush = TryBrush("ThemeTextSecondaryBrush", MediaColor(0x77, 0xC0, 0xC8, 0xD0));
             border.BorderThickness = new Thickness(1);
-            border.Opacity = AvailablePillOpacity;
         }
 
         return border;
     }
 
     /// <summary>
-    /// Two-zone chip: label | action (or action | label). Shape only — colors stay themed.
+    /// Two-zone chip: label | action (or action | label).
     /// </summary>
-    private static Grid BuildSplitPillContent(string label, string actionGlyph, bool actionOnLeadingEdge)
+    private static Grid BuildSplitPillContent(string label, string actionGlyph, bool actionOnLeadingEdge, bool muted)
     {
         var grid = new Grid { VerticalAlignment = VerticalAlignment.Stretch };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -232,18 +284,20 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         {
             Padding = new Thickness(8, 3, 8, 3),
             VerticalAlignment = VerticalAlignment.Stretch,
-            Child = CreatePillLabel(label)
+            Child = CreatePillLabel(label, muted)
         };
 
         var actionCell = new Border
         {
             Width = ActionSlotWidth,
             VerticalAlignment = VerticalAlignment.Stretch,
-            BorderBrush = new SolidColorBrush(MediaColor(0x55, 0xFF, 0xFF, 0xFF)),
+            BorderBrush = muted
+                ? TryBrush("ThemeTextSecondaryBrush", MediaColor(0x66, 0xC0, 0xC8, 0xD0))
+                : new SolidColorBrush(MediaColor(0x55, 0xFF, 0xFF, 0xFF)),
             BorderThickness = actionOnLeadingEdge
                 ? new Thickness(0, 0, 1, 0)
                 : new Thickness(1, 0, 0, 0),
-            Child = CreateActionGlyph(actionGlyph)
+            Child = CreateActionGlyph(actionGlyph, muted)
         };
 
         if (actionOnLeadingEdge)
@@ -262,21 +316,31 @@ public partial class AfterCaptureOutcomeEditor : UserControl
         return grid;
     }
 
-    private static TextBlock CreatePillLabel(string label) => new()
+    private static TextBlock CreatePillLabel(string label, bool muted)
     {
-        Text = label,
-        FontSize = PillFontSize,
-        VerticalAlignment = VerticalAlignment.Center,
-        IsHitTestVisible = false
-    };
+        var tb = new TextBlock
+        {
+            Text = label,
+            FontSize = PillFontSize,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false
+        };
+        if (muted)
+        {
+            // Brighter than pure secondary so Available stays readable in the dark tray.
+            tb.Foreground = TryBrush("ThemeTextPrimaryBrush", MediaColor(0xEE, 0xE8, 0xEC, 0xF0));
+            tb.Opacity = 0.78;
+        }
+        return tb;
+    }
 
     private static System.Windows.Media.Color MediaColor(byte a, byte r, byte g, byte b) =>
         System.Windows.Media.Color.FromArgb(a, r, g, b);
 
     /// <summary>Decorative × / + glyph — clicks are handled by the parent chip.</summary>
-    private static TextBlock CreateActionGlyph(string text)
+    private static TextBlock CreateActionGlyph(string text, bool muted)
     {
-        return new TextBlock
+        var glyph = new TextBlock
         {
             Text = text,
             // × needs a touch more size than + to match optical weight.
@@ -289,6 +353,12 @@ public partial class AfterCaptureOutcomeEditor : UserControl
             Margin = text == "\u00D7" ? new Thickness(0, -1, 0, 0) : new Thickness(0),
             IsHitTestVisible = false
         };
+        if (muted)
+        {
+            glyph.Foreground = TryBrush("ThemeTextPrimaryBrush", MediaColor(0xEE, 0xE8, 0xEC, 0xF0));
+            glyph.Opacity = 0.78;
+        }
+        return glyph;
     }
 
     private static System.Windows.Media.Brush TryBrush(string resourceKey, System.Windows.Media.Color fallback)
