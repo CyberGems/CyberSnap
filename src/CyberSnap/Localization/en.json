@@ -298,7 +298,6 @@
   "Actions already covered by automatic actions are listed above.": "Actions already covered above are omitted here.",
   "Buttons covered by an active automatic action are disabled.": "Buttons covered by an active automatic action are disabled.",
   "Outcome step: preview": "Preview",
-  "Preview open": "Preview open",
   "Outcome tooltip: preview": "Show the capture preview window after selection",
   "Outcome step: show notification": "Show notification",
   "Outcome step: open editor": "Open in Annotations Editor",
