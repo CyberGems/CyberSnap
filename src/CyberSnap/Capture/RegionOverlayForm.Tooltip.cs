@@ -9,6 +9,27 @@ namespace CyberSnap.Capture;
 
 public sealed partial class RegionOverlayForm
 {
+    /// <summary>
+    /// Vertical annotation/capture columns: tip beside the button so it never covers neighbors.
+    /// Horizontal docks keep above/below.
+    /// </summary>
+    private ToolTipPlacement GetToolbarToolTipPlacement()
+    {
+        if (ShowAnnotationChrome)
+        {
+            return _annotationFrameDockSide == CaptureDockSide.Right
+                ? ToolTipPlacement.Left
+                : ToolTipPlacement.Right;
+        }
+
+        if (IsVerticalDock)
+        {
+            return IsRightDock ? ToolTipPlacement.Left : ToolTipPlacement.Right;
+        }
+
+        return IsBottomDock ? ToolTipPlacement.Above : ToolTipPlacement.Below;
+    }
+
     private void ShowToolbarTooltip()
     {
         if (_toolbarContextMenu != null && _toolbarContextMenu.Visible)
@@ -22,6 +43,8 @@ public sealed partial class RegionOverlayForm
             HideToolbarTooltip();
             return;
         }
+
+        var placement = GetToolbarToolTipPlacement();
 
         if (_hoveredAltSlotIndex >= 0 && _altCapturePopupOpen && _hoveredAltSlotIndex < _altPopupSlots.Count)
         {
@@ -45,7 +68,7 @@ public sealed partial class RegionOverlayForm
                     _virtualBounds.Y + slot.Y,
                     slot.Width,
                     slot.Height);
-                _toolbarToolTip.ShowNear(this, label, altAnchorScreen, IsBottomDock);
+                _toolbarToolTip.ShowNear(this, label, altAnchorScreen, placement);
                 _tooltipVisible = true;
                 _tooltipShowTime = DateTime.UtcNow;
             }
@@ -72,7 +95,7 @@ public sealed partial class RegionOverlayForm
                 _virtualBounds.Y + brandLocal.Y,
                 Math.Max(1, brandLocal.Width),
                 Math.Max(1, brandLocal.Height));
-            _toolbarToolTip.ShowNear(this, brandText, brandAnchor, IsBottomDock);
+            _toolbarToolTip.ShowNear(this, brandText, brandAnchor, placement);
             _tooltipVisible = true;
             _tooltipShowTime = DateTime.UtcNow;
             return;
@@ -93,7 +116,7 @@ public sealed partial class RegionOverlayForm
                 _virtualBounds.Y + _brandRect.Y,
                 Math.Max(1, _brandRect.Width),
                 Math.Max(1, _brandRect.Height));
-            _toolbarToolTip.ShowNear(this, dragText, dragAnchor, IsBottomDock);
+            _toolbarToolTip.ShowNear(this, dragText, dragAnchor, placement);
             _tooltipVisible = true;
             _tooltipShowTime = DateTime.UtcNow;
             return;
@@ -114,7 +137,7 @@ public sealed partial class RegionOverlayForm
                 _virtualBounds.Y + _menuActivatorRect.Y,
                 _menuActivatorRect.Width,
                 _menuActivatorRect.Height);
-            _toolbarToolTip.ShowNear(this, activatorText, activatorAnchor, IsBottomDock);
+            _toolbarToolTip.ShowNear(this, activatorText, activatorAnchor, placement);
             _tooltipVisible = true;
             _tooltipShowTime = DateTime.UtcNow;
             return;
@@ -151,7 +174,7 @@ public sealed partial class RegionOverlayForm
             _virtualBounds.Y + anchor.Y,
             anchor.Width,
             anchor.Height);
-        _toolbarToolTip.ShowNear(this, text, anchorScreen, IsBottomDock);
+        _toolbarToolTip.ShowNear(this, text, anchorScreen, placement);
         _tooltipVisible = true;
         _tooltipShowTime = DateTime.UtcNow;
     }
@@ -212,7 +235,13 @@ public sealed partial class RegionOverlayForm
             int flyoutIdx = button - (CloseButtonIndex + 1);
             if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length)
             {
-                var text = BuildToolTooltip(_flyoutTools[flyoutIdx], settings, includeHideHint: true);
+                // Annotation column: keep tips compact (title + hotkey / hold hint) so
+                // side-placed bubbles stay readable without drowning the bar.
+                var text = BuildToolTooltip(
+                    _flyoutTools[flyoutIdx],
+                    settings,
+                    includeHideHint: !ShowAnnotationChrome,
+                    includeUsageHint: !ShowAnnotationChrome);
                 if (IsAnnotationMergeButton(button)
                     && _annotationMergeAltsByButton.TryGetValue(button, out var alts)
                     && alts.Length > 0)
@@ -227,7 +256,11 @@ public sealed partial class RegionOverlayForm
         return _toolbarLabels[button];
     }
 
-    private static string BuildToolTooltip(ToolDef tool, AppSettings? settings, bool includeHideHint)
+    private static string BuildToolTooltip(
+        ToolDef tool,
+        AppSettings? settings,
+        bool includeHideHint,
+        bool includeUsageHint = true)
     {
         var title = tool.Id == "ocr"
             ? LocalizationService.Translate("Extract text (OCR)")
@@ -237,8 +270,13 @@ public sealed partial class RegionOverlayForm
         if (hotkey.key != 0)
             title += $"  ({HotkeyFormatter.Format(hotkey.mod, hotkey.key)})";
 
-        var usage = GetToolUsageHint(tool);
-        var text = string.IsNullOrEmpty(usage) ? title : title + "\n" + usage;
+        var text = title;
+        if (includeUsageHint)
+        {
+            var usage = GetToolUsageHint(tool);
+            if (!string.IsNullOrEmpty(usage))
+                text += "\n" + usage;
+        }
 
         if (includeHideHint)
             text += "\n" + LocalizationService.Translate("Right-click to hide");
@@ -296,7 +334,7 @@ public sealed partial class RegionOverlayForm
 
     private void ShowConfirmTooltip()
     {
-        if (!_isConfirmingSelection || _hoveredConfirmButton < 0 
+        if (!_isConfirmingSelection || _hoveredConfirmButton < 0
             || (_confirmContextMenu != null && _confirmContextMenu.Visible)
             || (_toolbarContextMenu != null && _toolbarContextMenu.Visible))
         {
@@ -350,7 +388,8 @@ public sealed partial class RegionOverlayForm
             anchor.Width,
             anchor.Height);
 
-        _toolbarToolTip.ShowNear(this, text, anchorScreen, IsBottomDock);
+        // Confirm dock is horizontal under the frame — keep tips above the pills.
+        _toolbarToolTip.ShowNear(this, text, anchorScreen, ToolTipPlacement.Above);
         _tooltipVisible = true;
         _tooltipShowTime = DateTime.UtcNow;
     }

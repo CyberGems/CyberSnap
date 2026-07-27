@@ -113,6 +113,26 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>Traveling glint phase around the confirm dock wrapper (0..1).</summary>
     private float _confirmWrapperShinePhase;
 
+    /// <summary>Annotation column: secondary tools collapse above the sticky cluster.</summary>
+    private bool _annotationToolsExpanded;
+    private float _annotationToolsExpandAmt;
+    private float _annotationToolsExpandTarget;
+    private float _annotationToolsAnimFrom;
+    private DateTime _annotationToolsAnimStart;
+    private const int AnnotationToolsExpandAnimMs = 160;
+    private const int AnnotationToolsCollapseDelayMs = 400;
+    /// <summary>Last drawing tool shown in the sticky trigger slot (never select/eraser).</summary>
+    private string? _annotationDrawingToolId;
+    /// <summary>Growing clip window for retractable tools above the sticky cluster.</summary>
+    private Rectangle _annotationRetractRevealRect = Rectangle.Empty;
+    /// <summary>
+    /// Stable host rect (full expanded height, bottom-flush). ToolbarForm keeps this size so
+    /// expand/collapse only repaints — resizing the layered HWND caused DPI ghost trails.
+    /// </summary>
+    private Rectangle _annotationToolbarHostRect = Rectangle.Empty;
+    /// <summary>After picking a retractable tool, ignore hover-expand until the pointer leaves the cluster.</summary>
+    private bool _annotationToolsSuppressHoverExpand;
+
     /// <summary>
     /// Effective dock for chrome paint / alt-popup direction. Annotation confirm dock is always
     /// a vertical column on the left or right of the capture frame (not the screen edge).
@@ -267,6 +287,8 @@ public sealed partial class RegionOverlayForm : Form
     private readonly System.Windows.Forms.Timer _confirmShineTimer;
     private readonly System.Windows.Forms.Timer _confirmModesExpandTimer;
     private readonly System.Windows.Forms.Timer _confirmModesCollapseTimer;
+    private readonly System.Windows.Forms.Timer _annotationToolsExpandTimer;
+    private readonly System.Windows.Forms.Timer _annotationToolsCollapseTimer;
     private readonly System.Diagnostics.Stopwatch _selectionPaintStopwatch = System.Diagnostics.Stopwatch.StartNew();
     private bool _selectionPaintQueued;
     private DateTime _showTime;
@@ -648,6 +670,15 @@ public sealed partial class RegionOverlayForm : Form
             CollapseConfirmModes();
         };
 
+        _annotationToolsExpandTimer = new System.Windows.Forms.Timer { Interval = UiChrome.FrameIntervalMs };
+        _annotationToolsExpandTimer.Tick += (_, _) => AnnotationToolsExpandTick();
+        _annotationToolsCollapseTimer = new System.Windows.Forms.Timer { Interval = AnnotationToolsCollapseDelayMs };
+        _annotationToolsCollapseTimer.Tick += (_, _) =>
+        {
+            _annotationToolsCollapseTimer.Stop();
+            CollapseAnnotationTools();
+        };
+
         _currentOverlay = this;
     }
 
@@ -862,6 +893,8 @@ public sealed partial class RegionOverlayForm : Form
         _toolbarButtons[ColorButtonIndex] = Rectangle.Empty;
 
         _annotationGripRect = Rectangle.Empty;
+        _annotationToolbarHostRect = Rectangle.Empty;
+        _annotationRetractRevealRect = Rectangle.Empty;
 
         if (IsVerticalDock)
         {
@@ -917,44 +950,93 @@ public sealed partial class RegionOverlayForm : Form
     /// <summary>
     /// Confirm-phase dock: vertical annotation column anchored to the capture frame
     /// (prefer right edge, flip to left when there is no room). No Position/Close.
+    /// Collapsed: grip, logo, active tool (trigger), color, stroke, eraser, select, ⋯.
+    /// Expanded: remaining tools grow upward above the sticky cluster (bottom-flush / escuadra).
     /// </summary>
     private void CalcAnnotationOnlyToolbar(Rectangle screenBounds, int pad, int buttonSize, int buttonSpacing)
     {
-        var annotSepIndices = GetAnnotationGroupSepFlyoutIndices();
-        int annotSepCount = annotSepIndices.Count;
-        // Gaps: annotation group seps + before stroke/color. Position/Close are omitted.
-        int sepCount = annotSepCount + 1;
-        int buttonCount = _flyoutTools.Length + 2; // annot + stroke + color
-
         int activatorW = buttonSize;
         int activatorH = UiChrome.ScaleInt(14);
-        int toolsSpan = GetToolbarPrimarySpan(buttonCount, sepCount, buttonSize, buttonSpacing, 0);
-        // Logo strip above the first tool (compact; no horizontal brand text).
         int brandStripH = UiChrome.ScaleInt(22);
         int gapBrandToTools = UiChrome.ScaleInt(4);
         int gapToolsToActivator = buttonSpacing;
 
         int gripH = UiChrome.ScaleInt(12);
-        int gripGap = UiChrome.ScaleInt(4);
         int gripToContentGap = UiChrome.ScaleInt(14);
 
+        float expandAmt = Math.Clamp(_annotationToolsExpandAmt, 0f, 1f);
+        int triggerIdx = GetAnnotationTriggerFlyoutIndex();
+        bool triggerActive = triggerIdx >= 0
+            && !string.IsNullOrEmpty(_activeToolId)
+            && string.Equals(_flyoutTools[triggerIdx].Id, _activeToolId, StringComparison.OrdinalIgnoreCase);
+        // Active selection chrome reads tighter against the brand; keep inactive spacing as-is.
+        int gapBrandToActiveTrigger = triggerActive ? UiChrome.ScaleInt(8) : 0;
+
+        // Measure sticky + retractable spans so the column can grow upward from the frame bottom.
+        // GroupGap around the painted separators: trigger | color/stroke | eraser/select.
+        int stickySpan = 0;
+        if (triggerIdx >= 0)
+            stickySpan += buttonSize;
+        if (triggerIdx >= 0)
+            stickySpan += GroupGap;
+        stickySpan += buttonSize; // color
+        stickySpan += buttonSpacing;
+        stickySpan += buttonSize; // stroke
+        stickySpan += GroupGap;
+        int pinnedUtilityCount = 0;
+        for (int i = 0; i < _flyoutTools.Length; i++)
+        {
+            if (i == triggerIdx)
+                continue;
+            if (!IsPinnedAnnotationUtility(_flyoutTools[i].Id))
+                continue;
+            if (pinnedUtilityCount > 0)
+                stickySpan += buttonSpacing;
+            stickySpan += buttonSize;
+            pinnedUtilityCount++;
+        }
+
+        // Full retractable content height (icons stay full-size; the column height lerps).
+        int fullRetractContent = 0;
+        int retractCount = 0;
+        for (int i = _flyoutTools.Length - 1; i >= 0; i--)
+        {
+            if (!IsRetractableAnnotationFlyoutIndex(i, triggerIdx))
+                continue;
+            if (retractCount > 0)
+                fullRetractContent += buttonSpacing;
+            fullRetractContent += buttonSize;
+            retractCount++;
+        }
+
+        int retractSpan = (int)Math.Round(fullRetractContent * expandAmt);
+        int retractToStickyGap = (fullRetractContent > 0 && stickySpan > 0 && expandAmt > 0.001f)
+            ? (int)Math.Round(GroupGap * expandAmt)
+            : 0;
+
+        // Extra air only when the trigger sits directly under the brand (collapsed).
+        int brandToTriggerExtra = retractSpan <= 0 ? gapBrandToActiveTrigger : 0;
+        int toolsSpan = retractSpan + retractToStickyGap + stickySpan + brandToTriggerExtra;
         int w = pad * 2 + buttonSize;
         int h = pad + gripH + gripToContentGap + brandStripH + gapBrandToTools + toolsSpan + gapToolsToActivator + activatorH + pad;
 
         AllocateToolbarButtonMetadata();
 
-        // Capture tools + chrome buttons not on this dock.
         for (int i = 0; i < _mainBarTools.Length; i++)
             _toolbarButtons[i] = Rectangle.Empty;
         _toolbarButtons[PositionButtonIndex] = Rectangle.Empty;
         _toolbarButtons[CloseButtonIndex] = Rectangle.Empty;
+        _toolbarButtons[ColorButtonIndex] = Rectangle.Empty;
+        _toolbarButtons[StrokeWidthButtonIndex] = Rectangle.Empty;
+        int drawingStartIdx = _mainBarTools.Length + 4;
+        for (int i = 0; i < _flyoutTools.Length; i++)
+            _toolbarButtons[drawingStartIdx + i] = Rectangle.Empty;
 
         int frameGap = UiChrome.ScaleInt(10);
         var frame = _confirmRect;
         if (frame.Width <= 0 || frame.Height <= 0)
             frame = screenBounds;
 
-        // Prefer the selection monitor so the column stays on the same display as the crop.
         var clampBounds = !_selectionMonitorClientBounds.IsEmpty
             ? _selectionMonitorClientBounds
             : GetMonitorClientBoundsAtClientPoint(new Point(frame.X + frame.Width / 2, frame.Y + frame.Height / 2));
@@ -962,9 +1044,6 @@ public sealed partial class RegionOverlayForm : Form
             clampBounds = new Rectangle(0, 0, Math.Max(1, ClientSize.Width), Math.Max(1, ClientSize.Height));
 
         int edgePad = UiChrome.ScaleInt(4);
-        // Escuadra: bottom-align with the capture frame so the annotation column and the
-        // destination pills meet at the bottom corner (L-shape), not hanging past the frame.
-        int y = frame.Bottom - h;
         int xRight = frame.Right + frameGap;
         int xLeft = frame.Left - frameGap - w;
 
@@ -974,25 +1053,28 @@ public sealed partial class RegionOverlayForm : Form
         if (fitsRight || (!fitsLeft && xRight >= clampBounds.Left))
         {
             _annotationFrameDockSide = CaptureDockSide.Right;
-            _toolbarRect = new Rectangle(xRight, y, w, h);
+            _toolbarRect = new Rectangle(xRight, 0, w, h);
         }
         else
         {
             _annotationFrameDockSide = CaptureDockSide.Left;
-            _toolbarRect = new Rectangle(xLeft, y, w, h);
+            _toolbarRect = new Rectangle(xLeft, 0, w, h);
         }
 
-        // Keep the whole column on the clamp monitor; bottom-flush with the frame (escuadra).
+        // Escuadra: keep the bottom of the column flush with the frame; expand grows upward.
         int maxX = Math.Max(clampBounds.Left + edgePad, clampBounds.Right - w - edgePad);
-        int maxY = Math.Max(clampBounds.Top + edgePad, clampBounds.Bottom - h - edgePad);
         int preferredX = _toolbarRect.X + _toolbarCustomOffset.X;
-        int preferredY = frame.Bottom - h + _toolbarCustomOffset.Y;
+        int preferredBottom = frame.Bottom + _toolbarCustomOffset.Y;
+        int preferredY = preferredBottom - h;
+        int minY = clampBounds.Top + edgePad;
+        int maxY = Math.Max(minY, clampBounds.Bottom - h - edgePad);
         _toolbarRect.X = Math.Clamp(preferredX, clampBounds.Left + edgePad, maxX);
-        _toolbarRect.Y = Math.Clamp(preferredY, clampBounds.Top + edgePad, maxY);
+        _toolbarRect.Y = Math.Clamp(preferredY, minY, maxY);
+        _toolbarRect.Width = w;
+        _toolbarRect.Height = h;
 
         _captureGripRect = Rectangle.Empty;
 
-        int drawingStartIdx = _mainBarTools.Length + 4;
         int colX = _toolbarRect.X + pad;
         int cy = _toolbarRect.Y + pad;
 
@@ -1003,47 +1085,175 @@ public sealed partial class RegionOverlayForm : Form
         _brandRect = new Rectangle(colX, cy, buttonSize, brandStripH);
         cy += brandStripH + gapBrandToTools;
 
-        // Color + stroke width belong with the shape tools that consume them, so they render
-        // directly above the rectangle (rectShape) button. Fall back to the top of the column
-        // when the rectangle tool isn't enabled on the bar.
-        int rectToolFlyoutIdx = -1;
-        for (int i = 0; i < _flyoutTools.Length; i++)
+        // Retractable tools: full-size icons packed against the sticky cluster.
+        // Reveal window grows upward; paint clips tools outside it (avoids pop-in glitches).
+        int retractAreaTop = cy;
+        _annotationRetractRevealRect = retractSpan > 0
+            ? new Rectangle(colX, retractAreaTop, buttonSize, retractSpan)
+            : Rectangle.Empty;
+
+        if (fullRetractContent > 0 && expandAmt > 0.001f)
         {
-            if (string.Equals(_flyoutTools[i].Id, "rectShape", StringComparison.OrdinalIgnoreCase))
+            int placeY = retractAreaTop + retractSpan - fullRetractContent;
+            bool anyRetractPlaced = false;
+            for (int i = _flyoutTools.Length - 1; i >= 0; i--)
             {
-                rectToolFlyoutIdx = i;
-                break;
+                if (!IsRetractableAnnotationFlyoutIndex(i, triggerIdx))
+                    continue;
+                if (anyRetractPlaced)
+                    placeY += buttonSpacing;
+                _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, placeY, buttonSize, buttonSize);
+                placeY += buttonSize;
+                anyRetractPlaced = true;
             }
         }
 
-        void PlaceColorAndStroke()
+        cy = retractAreaTop + retractSpan;
+        if (retractSpan > 0 && stickySpan > 0)
+            cy += retractToStickyGap;
+
+        // Sticky: drawing-tool trigger → color → stroke → eraser → select (utilities never move)
+        if (triggerIdx >= 0)
         {
-            _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
-            cy += buttonSize + buttonSpacing;
-            _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
-            cy += buttonSize + buttonSpacing;
+            cy += brandToTriggerExtra;
+            _toolbarButtons[drawingStartIdx + triggerIdx] = new Rectangle(colX, cy, buttonSize, buttonSize);
+            cy += buttonSize + GroupGap;
         }
 
-        if (rectToolFlyoutIdx < 0)
-            PlaceColorAndStroke();
+        _toolbarButtons[ColorButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+        cy += buttonSize + buttonSpacing;
+        _toolbarButtons[StrokeWidthButtonIndex] = new Rectangle(colX, cy, buttonSize, buttonSize);
+        cy += buttonSize + GroupGap;
 
-        // Reversed layout: last tool (emoji) sits near the top, first tool (pick) ends up at the
-        // bottom of the column. Group separators sit between the same tool pairs.
-        for (int i = _flyoutTools.Length - 1; i >= 0; i--)
+        void PlacePinnedUtility(string id)
         {
-            if (i == rectToolFlyoutIdx)
-                PlaceColorAndStroke();
-
-            _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
-            cy += buttonSize + buttonSpacing;
-            // A separator originally sat after tool (i-1); in reverse it falls between i and i-1.
-            if (annotSepIndices.Contains(i - 1))
-                cy += GroupGap;
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                if (!string.Equals(_flyoutTools[i].Id, id, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                _toolbarButtons[drawingStartIdx + i] = new Rectangle(colX, cy, buttonSize, buttonSize);
+                cy += buttonSize + buttonSpacing;
+                return;
+            }
         }
 
-        // ⋮ at the bottom of the column (full button width hit target, compact glyph height).
+        PlacePinnedUtility("eraser");
+        PlacePinnedUtility("select");
+
         int actY = Math.Min(cy, _toolbarRect.Bottom - pad - activatorH);
         _menuActivatorRect = new Rectangle(colX, actY, activatorW, activatorH);
+
+        // Host covers the fully expanded column (bottom-aligned). Form bounds stay put while
+        // _toolbarRect / reveal clip animate or snap — avoids layered-window ghosting at 150% DPI.
+        int fullToolsSpan = fullRetractContent
+            + ((fullRetractContent > 0 && stickySpan > 0) ? GroupGap : 0)
+            + stickySpan;
+        int fullH = pad + gripH + gripToContentGap + brandStripH + gapBrandToTools
+            + fullToolsSpan + gapToolsToActivator + activatorH + pad;
+        int hostBottom = frame.Bottom + _toolbarCustomOffset.Y;
+        int hostY = hostBottom - fullH;
+        int hostMinY = clampBounds.Top + edgePad;
+        int hostMaxY = Math.Max(hostMinY, clampBounds.Bottom - fullH - edgePad);
+        _annotationToolbarHostRect = new Rectangle(
+            _toolbarRect.X,
+            Math.Clamp(hostY, hostMinY, hostMaxY),
+            w,
+            fullH);
+    }
+
+    private static bool IsPinnedAnnotationUtility(string toolId) =>
+        string.Equals(toolId, "select", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(toolId, "eraser", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Sticky trigger is always a drawing tool (Arrow by default). Select/Eraser stay fixed below.
+    /// </summary>
+    private int GetAnnotationTriggerFlyoutIndex()
+    {
+        if (_flyoutTools.Length == 0)
+            return -1;
+
+        string? preferred = _annotationDrawingToolId;
+        if (string.IsNullOrEmpty(preferred)
+            && !string.IsNullOrEmpty(_activeToolId)
+            && !IsPinnedAnnotationUtility(_activeToolId))
+        {
+            preferred = _activeToolId;
+        }
+
+        if (!string.IsNullOrEmpty(preferred))
+        {
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                if (string.Equals(_flyoutTools[i].Id, preferred, StringComparison.OrdinalIgnoreCase))
+                    return i;
+            }
+        }
+
+        for (int i = 0; i < _flyoutTools.Length; i++)
+        {
+            if (string.Equals(_flyoutTools[i].Id, "arrow", StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+
+        for (int i = 0; i < _flyoutTools.Length; i++)
+        {
+            if (!IsPinnedAnnotationUtility(_flyoutTools[i].Id))
+                return i;
+        }
+
+        return -1;
+    }
+
+    private void RememberAnnotationDrawingToolId(string? toolId)
+    {
+        if (string.IsNullOrEmpty(toolId) || IsPinnedAnnotationUtility(toolId))
+            return;
+        _annotationDrawingToolId = toolId;
+    }
+
+    private bool IsRetractableAnnotationFlyoutIndex(int flyoutIdx, int triggerIdx)
+    {
+        if (flyoutIdx < 0 || flyoutIdx >= _flyoutTools.Length)
+            return false;
+        if (flyoutIdx == triggerIdx)
+            return false;
+        if (IsPinnedAnnotationUtility(_flyoutTools[flyoutIdx].Id))
+            return false;
+        return true;
+    }
+
+    private bool IsAnnotationToolsTriggerButton(int buttonIndex)
+    {
+        if (!ShowAnnotationChrome || buttonIndex < CloseButtonIndex + 1)
+            return false;
+        int flyoutIdx = buttonIndex - (CloseButtonIndex + 1);
+        return flyoutIdx == GetAnnotationTriggerFlyoutIndex();
+    }
+
+    private bool IsRetractableAnnotationToolbarButton(int buttonIndex)
+    {
+        if (!ShowAnnotationChrome || buttonIndex < CloseButtonIndex + 1)
+            return false;
+        int flyoutIdx = buttonIndex - (CloseButtonIndex + 1);
+        return IsRetractableAnnotationFlyoutIndex(flyoutIdx, GetAnnotationTriggerFlyoutIndex());
+    }
+
+    private int CountVisibleAnnotationToolbarButtons()
+    {
+        int n = 0;
+        if (ColorButtonIndex < _toolbarButtons.Length && _toolbarButtons[ColorButtonIndex].Width > 0)
+            n++;
+        if (StrokeWidthButtonIndex < _toolbarButtons.Length && _toolbarButtons[StrokeWidthButtonIndex].Width > 0)
+            n++;
+        int start = _mainBarTools.Length + 4;
+        for (int i = 0; i < _flyoutTools.Length; i++)
+        {
+            int idx = start + i;
+            if (idx < _toolbarButtons.Length && _toolbarButtons[idx].Width > 0)
+                n++;
+        }
+        return n;
     }
 
     /// <summary>Monitor Bounds (full display) containing a client point, in overlay client coords.</summary>
@@ -1151,6 +1361,7 @@ public sealed partial class RegionOverlayForm : Form
         _hoveredConfirmButton = -1;
         _confirmShineTimer.Stop();
         ResetConfirmModesExpanded(collapsed: true);
+        ResetAnnotationToolsExpanded(collapsed: true);
 
         // Annotation dock first (layered), then clear destination pixels in the same tick.
         if (_toolbarForm is { IsDisposed: false })
@@ -1472,9 +1683,11 @@ public sealed partial class RegionOverlayForm : Form
 
     private HashSet<int> GetAnnotationGroupSepFlyoutIndices()
     {
-        // Separators after edit tools and after shape tools (ids may be merge primaries).
+        // Separators after markup tools and after shape tools (ids may be merge primaries).
+        // Highlight/Blur sit with Text (Editor layout), not with sticky Select/Eraser — otherwise
+        // Highlight ends up alone between the two separators.
         var groups = new[] {
-            new[] { "select", "eraser", "highlight", "blur" },
+            new[] { "text", "highlight", "blur" },
             new[] { "rectShape", "circleShape" }
         };
         var seps = new HashSet<int>();
@@ -1736,6 +1949,12 @@ public sealed partial class RegionOverlayForm : Form
 
         SetTool(targetTool);
         // SetTool → RefreshToolbar rebuilds merge primaries so the chosen tool becomes the slot.
+        if (ShowAnnotationChrome
+            && !IsPinnedAnnotationUtility(toolId)
+            && _annotationToolsExpandAmt > 0.01f)
+        {
+            CollapseAnnotationToolsAfterToolPick();
+        }
         CloseAltToolPopup();
     }
 

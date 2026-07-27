@@ -281,10 +281,27 @@ public sealed partial class RegionOverlayForm
                 int flyoutIdx = btn - (CloseButtonIndex + 1);
                 if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length && _flyoutTools[flyoutIdx].Mode.HasValue)
                 {
+                    if (ShowAnnotationChrome && IsAnnotationToolsTriggerButton(btn)
+                        && string.Equals(_flyoutTools[flyoutIdx].Id, _activeToolId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Expansion is hover-only. Click on the active trigger only starts
+                        // merge hold-to-switch (if any) — never toggles the strip.
+                        if (IsAnnotationMergeButton(btn))
+                            BeginMergedButtonHold(btn);
+                        return;
+                    }
+
+                    bool wasRetractable = ShowAnnotationChrome
+                        && IsRetractableAnnotationFlyoutIndex(flyoutIdx, GetAnnotationTriggerFlyoutIndex());
+
                     if (IsAnnotationMergeButton(btn))
                         BeginMergedButtonHold(btn);
                     else
+                    {
                         SetTool(_flyoutTools[flyoutIdx]);
+                        if (wasRetractable)
+                            CollapseAnnotationToolsAfterToolPick();
+                    }
                 }
             }
             return;

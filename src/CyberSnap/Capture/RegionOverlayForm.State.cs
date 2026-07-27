@@ -161,7 +161,12 @@ public sealed partial class RegionOverlayForm
         // The inline text chrome (text frame + formatting toolbar) is painted on the
         // overlay itself. Including it here made ToolbarForm jump/resize to cover
         // mid-screen text every time typing started — a visible glitch.
-        Add(InflateIfNeeded(_toolbarRect, Helpers.UiChrome.ScaleInt(12)));
+        // Annotation confirm dock: use the stable expanded host so expand/collapse
+        // does not resize the layered HWND (ghost trails at high DPI).
+        if (ShowAnnotationChrome && !_annotationToolbarHostRect.IsEmpty)
+            Add(InflateIfNeeded(_annotationToolbarHostRect, Helpers.UiChrome.ScaleInt(12)));
+        else
+            Add(InflateIfNeeded(_toolbarRect, Helpers.UiChrome.ScaleInt(12)));
         Add(InflateIfNeeded(GetColorPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
         Add(InflateIfNeeded(GetEmojiPickerBounds(), Helpers.UiChrome.ScaleInt(12)));
         // Font picker is painted on ToolbarForm near the text; expand only while open.
@@ -1309,6 +1314,7 @@ public sealed partial class RegionOverlayForm
         _confirmWrapperShinePhase = 0f;
         _hoveredConfirmSizeReadout = false;
         ResetConfirmModesExpanded(collapsed: true);
+        ResetAnnotationToolsExpanded(collapsed: true);
 
         // Annotation column FIRST, then destination pills. Laying out pills before CalcToolbar
         // used the capture-phase toolbar rect and shoved the dock toward the left of the monitor
@@ -1321,6 +1327,9 @@ public sealed partial class RegionOverlayForm
         MarkToolbarRenderDirty();
         PresentAnnotationToolbarNow();
         EnsureToolbarReady();
+
+        // If nothing was restored, land on Arrow so the sticky trigger is a drawing tool.
+        EnsureDefaultAnnotationTool();
 
         // Wrapper shine runs while confirming so the dock stays findable on busy wallpapers.
         if (!UI.Motion.Disabled) _confirmShineTimer.Start();
@@ -1341,6 +1350,240 @@ public sealed partial class RegionOverlayForm
             LayoutConfirmChromeRects();
             Invalidate();
         }
+    }
+
+    /// <summary>
+    /// If confirm mode has no annotation tool selected yet, activate Arrow (or the first drawing tool)
+    /// so the sticky trigger slot is meaningful.
+    /// </summary>
+    private void EnsureDefaultAnnotationTool()
+    {
+        if (!_isConfirmingSelection || !ShowAnnotationChrome)
+            return;
+
+        // Already have a drawing-tool trigger identity.
+        if (!string.IsNullOrEmpty(_annotationDrawingToolId)
+            && _flyoutTools.Any(t => string.Equals(t.Id, _annotationDrawingToolId, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        if (!string.IsNullOrEmpty(_activeToolId)
+            && !IsPinnedAnnotationUtility(_activeToolId)
+            && _flyoutTools.Any(t => string.Equals(t.Id, _activeToolId, StringComparison.OrdinalIgnoreCase)))
+        {
+            RememberAnnotationDrawingToolId(_activeToolId);
+            return;
+        }
+
+        var preferred = _flyoutTools.FirstOrDefault(t =>
+                string.Equals(t.Id, "arrow", StringComparison.OrdinalIgnoreCase))
+            ?? _flyoutTools.FirstOrDefault(t =>
+                string.Equals(t.Id, "line", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(t.Id, "draw", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(t.Id, "text", StringComparison.OrdinalIgnoreCase))
+            ?? _flyoutTools.FirstOrDefault(t => !IsPinnedAnnotationUtility(t.Id));
+
+        if (preferred?.Mode is not null)
+        {
+            // Don't steal focus from select/eraser — only seed the sticky drawing trigger.
+            if (string.IsNullOrEmpty(_activeToolId) || IsPinnedAnnotationUtility(_activeToolId!)
+                || !_flyoutTools.Any(t => string.Equals(t.Id, _activeToolId, StringComparison.OrdinalIgnoreCase)))
+            {
+                SetTool(preferred, showHelpBanner: false);
+            }
+            RememberAnnotationDrawingToolId(preferred.Id);
+        }
+    }
+
+    private void ResetAnnotationToolsExpanded(bool collapsed)
+    {
+        try { _annotationToolsCollapseTimer.Stop(); } catch { }
+        try { _annotationToolsExpandTimer.Stop(); } catch { }
+        _annotationToolsSuppressHoverExpand = false;
+        _annotationToolsExpanded = !collapsed;
+        _annotationToolsExpandTarget = collapsed ? 0f : 1f;
+        _annotationToolsExpandAmt = _annotationToolsExpandTarget;
+        _annotationToolsAnimFrom = _annotationToolsExpandAmt;
+    }
+
+    private void ExpandAnnotationTools()
+    {
+        if (!ShowAnnotationChrome)
+            return;
+        try { _annotationToolsCollapseTimer.Stop(); } catch { }
+        if (_annotationToolsExpanded && _annotationToolsExpandAmt >= 0.999f)
+            return;
+        _annotationToolsSuppressHoverExpand = false;
+        _annotationToolsExpanded = true;
+        SetAnnotationToolsExpandTarget(1f);
+    }
+
+    private void CollapseAnnotationTools()
+    {
+        try { _annotationToolsCollapseTimer.Stop(); } catch { }
+        if (!_annotationToolsExpanded && _annotationToolsExpandAmt <= 0.001f)
+            return;
+        _annotationToolsExpanded = false;
+        SetAnnotationToolsExpandTarget(0f);
+    }
+
+    /// <summary>
+    /// Snap-collapse after choosing a secondary tool so it doesn't look like the tool vanished
+    /// from the open strip (it moves into the sticky trigger slot).
+    /// </summary>
+    private void CollapseAnnotationToolsAfterToolPick()
+    {
+        try { _annotationToolsCollapseTimer.Stop(); } catch { }
+        try { _annotationToolsExpandTimer.Stop(); } catch { }
+        _annotationToolsSuppressHoverExpand = true;
+        _annotationToolsExpanded = false;
+        _annotationToolsExpandTarget = 0f;
+        ApplyAnnotationToolsExpandAmt(0f);
+    }
+
+    private void ScheduleAnnotationToolsCollapse()
+    {
+        if (!_annotationToolsExpanded && _annotationToolsExpandAmt <= 0.001f)
+            return;
+        if (_isDraggingToolbar || _colorPickerOpen || _altCapturePopupOpen)
+            return;
+        if (_confirmContextMenu?.Visible == true || _toolbarContextMenu?.Visible == true)
+            return;
+        if (_annotationToolsCollapseTimer.Enabled)
+            return;
+        _annotationToolsCollapseTimer.Stop();
+        _annotationToolsCollapseTimer.Interval = AnnotationToolsCollapseDelayMs;
+        _annotationToolsCollapseTimer.Start();
+    }
+
+    private void CancelAnnotationToolsCollapse()
+    {
+        try { _annotationToolsCollapseTimer.Stop(); } catch { }
+    }
+
+    private void SetAnnotationToolsExpandTarget(float target)
+    {
+        // Snap only — animating layered HWND size/content caused duplicate ghost bars at 150% DPI.
+        target = Math.Clamp(target, 0f, 1f);
+        try { _annotationToolsExpandTimer.Stop(); } catch { }
+        _annotationToolsExpandTarget = target;
+        ApplyAnnotationToolsExpandAmt(target);
+    }
+
+    private void AnnotationToolsExpandTick()
+    {
+        // Animation disabled (see SetAnnotationToolsExpandTarget); keep tick harmless.
+        _annotationToolsExpandTimer.Stop();
+    }
+
+    private void ApplyAnnotationToolsExpandAmt(float amt)
+    {
+        amt = Math.Clamp(amt, 0f, 1f);
+        if (Math.Abs(_annotationToolsExpandAmt - amt) < 0.0005f)
+            return;
+
+        _annotationToolsExpandAmt = amt;
+        if (_isConfirmingSelection && ShowAnnotationChrome)
+        {
+            int pad = UiChrome.ScaledToolbarInnerPadding;
+            int buttonSize = UiChrome.ScaledToolbarButtonSize;
+            int buttonSpacing = UiChrome.ScaledToolbarButtonSpacing;
+            Rectangle screenBounds = _toolbarAnchorArea.IsEmpty ? _virtualBounds : _toolbarAnchorArea;
+            CalcAnnotationOnlyToolbar(screenBounds, pad, buttonSize, buttonSpacing);
+            PositionToolbarForm();
+            MarkToolbarRenderDirty();
+            _toolbarForm?.UpdateSurface();
+        }
+    }
+
+    /// <summary>
+    /// Expand only from the drawing-tool trigger (or while over revealed retractable tools).
+    /// Color / stroke / eraser / select do not open the strip. Grip and brand do not open it
+    /// either, but they sustain an already-open strip so drag / logo click stay usable.
+    /// </summary>
+    private void UpdateAnnotationToolsHover(Point p)
+    {
+        if (!_isConfirmingSelection || !ShowAnnotationChrome || _confirmDocksHiddenForFrameManip)
+            return;
+
+        if (_colorPickerOpen || _altCapturePopupOpen
+            || _confirmContextMenu?.Visible == true
+            || _toolbarContextMenu?.Visible == true
+            || _isDraggingToolbar)
+        {
+            CancelAnnotationToolsCollapse();
+            return;
+        }
+
+        // Grip / logo / brand strip: keep expanded while interacting (same idea as confirm grip).
+        if (HitTestAnnotationDockGrip(p)
+            || IsPointInBrandClickArea(p)
+            || (!_brandRect.IsEmpty && _brandRect.Contains(p)))
+        {
+            CancelAnnotationToolsCollapse();
+            return;
+        }
+
+        bool overCluster = IsPointOverAnnotationToolsCluster(p);
+        if (_annotationToolsSuppressHoverExpand)
+        {
+            if (!overCluster)
+                _annotationToolsSuppressHoverExpand = false;
+            else
+            {
+                // Stay collapsed until the pointer leaves the trigger/strip area.
+                CancelAnnotationToolsCollapse();
+                return;
+            }
+        }
+
+        if (overCluster)
+        {
+            CancelAnnotationToolsCollapse();
+            ExpandAnnotationTools();
+        }
+        else
+        {
+            ScheduleAnnotationToolsCollapse();
+        }
+    }
+
+    private bool IsPointOverAnnotationToolsCluster(Point p)
+    {
+        int triggerIdx = GetAnnotationTriggerFlyoutIndex();
+        if (triggerIdx >= 0)
+        {
+            int btn = _mainBarTools.Length + 4 + triggerIdx;
+            if (btn >= 0 && btn < _toolbarButtons.Length
+                && _toolbarButtons[btn].Width > 0
+                && _toolbarButtons[btn].Contains(p))
+                return true;
+        }
+
+        // Keep open while moving through the revealed strip / picking a secondary tool.
+        if (_annotationToolsExpandAmt > 0.02f)
+        {
+            if (!_annotationRetractRevealRect.IsEmpty && _annotationRetractRevealRect.Contains(p))
+                return true;
+
+            int start = _mainBarTools.Length + 4;
+            for (int i = 0; i < _flyoutTools.Length; i++)
+            {
+                if (!IsRetractableAnnotationFlyoutIndex(i, triggerIdx))
+                    continue;
+                int btn = start + i;
+                if (btn >= _toolbarButtons.Length)
+                    continue;
+                var r = _toolbarButtons[btn];
+                if (r.Width <= 0)
+                    continue;
+                if (!_annotationRetractRevealRect.IsEmpty && !r.IntersectsWith(_annotationRetractRevealRect))
+                    continue;
+                if (r.Contains(p))
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -1371,6 +1614,7 @@ public sealed partial class RegionOverlayForm
             return;
 
         SetTool(tool, showHelpBanner: false);
+        RememberAnnotationDrawingToolId(tool.Id);
     }
 
     private bool HasConfirmAnnotations() => _undoStack.Count > 0;
@@ -1545,6 +1789,7 @@ public sealed partial class RegionOverlayForm
         _confirmDocksHiddenForFrameManip = false;
         _confirmCustomOffset = Point.Empty;
         ResetConfirmModesExpanded(collapsed: true);
+        ResetAnnotationToolsExpanded(collapsed: true);
         ResetConfirmPress();
         CloseAltToolPopup(invalidate: false);
         ClearConfirmSessionAnnotations();

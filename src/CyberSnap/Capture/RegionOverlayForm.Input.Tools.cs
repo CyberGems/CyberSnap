@@ -292,6 +292,7 @@ public sealed partial class RegionOverlayForm
                 // Modes strip: hover Image / OCR…QR expands; leaving that cluster schedules collapse.
                 // Grip hover (or an in-progress confirm-dock drag) keeps the strip open.
                 UpdateConfirmModesHover(e.Location);
+                UpdateAnnotationToolsHover(e.Location);
 
                 if (sizePillHover != _hoveredConfirmSizeReadout)
                 {
@@ -1213,7 +1214,19 @@ public sealed partial class RegionOverlayForm
                     if (flyoutIdx >= 0 && flyoutIdx < _flyoutTools.Length
                         && _flyoutTools[flyoutIdx].Mode.HasValue)
                     {
-                        SetTool(_flyoutTools[flyoutIdx]);
+                        if (ShowAnnotationChrome && IsAnnotationToolsTriggerButton(heldBtn)
+                            && string.Equals(_flyoutTools[flyoutIdx].Id, _activeToolId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Hover owns expand/collapse; short click on active trigger is a no-op.
+                        }
+                        else
+                        {
+                            bool wasRetractable = ShowAnnotationChrome
+                                && IsRetractableAnnotationFlyoutIndex(flyoutIdx, GetAnnotationTriggerFlyoutIndex());
+                            SetTool(_flyoutTools[flyoutIdx]);
+                            if (wasRetractable)
+                                CollapseAnnotationToolsAfterToolPick();
+                        }
                     }
                 }
 
@@ -1476,7 +1489,10 @@ public sealed partial class RegionOverlayForm
                 HideToolbarTooltip();
             }
             if (_isConfirmingSelection)
+            {
                 ScheduleConfirmModesCollapse();
+                ScheduleAnnotationToolsCollapse();
+            }
             CloseCaptureMagnifier();
             _autoDetectTimer.Stop();
             ClearCrosshairGuides();
