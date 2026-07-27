@@ -622,6 +622,10 @@ public sealed partial class RegionOverlayForm
             _confirmModesExpandTimer.Dispose();
             _confirmModesCollapseTimer.Stop();
             _confirmModesCollapseTimer.Dispose();
+            _annotationToolsExpandTimer.Stop();
+            _annotationToolsExpandTimer.Dispose();
+            _annotationToolsCollapseTimer.Stop();
+            _annotationToolsCollapseTimer.Dispose();
             _hoverHoldTimer?.Stop();
             _hoverHoldTimer?.Dispose();
             _magGfx.Dispose();

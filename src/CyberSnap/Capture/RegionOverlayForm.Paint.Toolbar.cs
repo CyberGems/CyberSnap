@@ -202,7 +202,12 @@ public sealed partial class RegionOverlayForm
         else
         {
             int tier1Width = ShowAnnotationChrome
-                ? GetToolbarPrimarySpan(_flyoutTools.Length + 2, GetAnnotationGroupSepFlyoutIndices().Count + 1, buttonSize, buttonSpacing, 0)
+                ? GetToolbarPrimarySpan(
+                    Math.Max(3, CountVisibleAnnotationToolbarButtons()),
+                    1,
+                    buttonSize,
+                    buttonSpacing,
+                    0)
                 : GetToolbarPrimarySpan(_mainBarTools.Length + 2, 1, buttonSize, buttonSpacing, 0);
             bool canShowText = ShowAnnotationChrome
                 || _mainBarTools.Length >= 6;
@@ -323,60 +328,87 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            var tier2Seps = GetAnnotationGroupSepFlyoutIndices();
-            int flyoutStartIdx = _mainBarTools.Length + 4;
-            foreach (int flyoutIdx in tier2Seps)
+            // Annotation dock: sticky trigger/color/stroke/eraser/select + retractable strip.
+            // Dividers only between buttons that are actual Y-neighbors (never flyout-index midpoints
+            // across the sticky/retractable split — that put lines over tools like Flecha).
+            void AddMidY(Rectangle above, Rectangle below)
             {
-                // Reversed column: the group boundary that was "after tool sep" now sits between
-                // tool sep+1 (above) and tool sep (below). Draw the divider at their midpoint.
-                int belowIdx = flyoutStartIdx + flyoutIdx;
-                int aboveIdx = belowIdx + 1;
-                if (aboveIdx < _toolbarButtons.Length
-                    && _toolbarButtons[belowIdx].Width > 0
-                    && _toolbarButtons[aboveIdx].Width > 0)
+                if (above.Width <= 0 || below.Width <= 0) return;
+                int gap = below.Y - above.Bottom;
+                if (gap < 0 || gap > GroupGap + UiChrome.ScaleInt(4))
+                    return; // not visually adjacent
+                dividerPositions.Add((above.Bottom + below.Y) / 2);
+            }
+
+            int flyoutStartIdx = _mainBarTools.Length + 4;
+            int triggerIdx = GetAnnotationTriggerFlyoutIndex();
+
+            // Sticky separators: trigger | color/stroke | eraser/select
+            if (triggerIdx >= 0
+                && ColorButtonIndex < _toolbarButtons.Length
+                && _toolbarButtons[ColorButtonIndex].Width > 0)
+            {
+                AddMidY(_toolbarButtons[flyoutStartIdx + triggerIdx], _toolbarButtons[ColorButtonIndex]);
+            }
+
+            if (StrokeWidthButtonIndex < _toolbarButtons.Length
+                && _toolbarButtons[StrokeWidthButtonIndex].Width > 0)
+            {
+                for (int i = 0; i < _flyoutTools.Length; i++)
                 {
-                    int p = IsVerticalDock
-                        ? (_toolbarButtons[aboveIdx].Bottom + _toolbarButtons[belowIdx].Y) / 2
-                        : (_toolbarButtons[aboveIdx].Right + _toolbarButtons[belowIdx].X) / 2;
-                    dividerPositions.Add(p);
+                    if (!string.Equals(_flyoutTools[i].Id, "eraser", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    AddMidY(_toolbarButtons[StrokeWidthButtonIndex], _toolbarButtons[flyoutStartIdx + i]);
+                    break;
                 }
             }
 
-            // Divider framing the color/stroke pair, which now sits directly above the
-            // rectShape ("cuadro") tool. Draw a line above the color button to separate the
-            // styling controls from the non-color tools stacked above them.
-            if (StrokeWidthButtonIndex < _toolbarButtons.Length
-                && ColorButtonIndex < _toolbarButtons.Length
-                && _toolbarButtons[ColorButtonIndex].Width > 0
-                && _toolbarButtons[StrokeWidthButtonIndex].Width > 0)
+            // Retractable strip: same placement order as layout (high flyout index → top).
+            // Sep indices mark "after tool N" in flyout order; when sticky tools are pulled out,
+            // find the visual neighbors that still sandwich that boundary.
+            var tier2Seps = GetAnnotationGroupSepFlyoutIndices();
+            var retractOrdered = new List<int>();
+            for (int i = _flyoutTools.Length - 1; i >= 0; i--)
             {
-                // Color is placed first (top of the pair), stroke second. Find the button
-                // directly above the color button to anchor the divider midpoint.
-                var colorBtn = _toolbarButtons[ColorButtonIndex];
-                Rectangle? above = null;
-                for (int i = 0; i < _toolbarButtons.Length; i++)
+                if (!IsRetractableAnnotationFlyoutIndex(i, triggerIdx))
+                    continue;
+                int btnIdx = flyoutStartIdx + i;
+                if (btnIdx >= _toolbarButtons.Length || _toolbarButtons[btnIdx].Width <= 0)
+                    continue;
+                if (!_annotationRetractRevealRect.IsEmpty
+                    && !_toolbarButtons[btnIdx].IntersectsWith(_annotationRetractRevealRect))
+                    continue;
+                retractOrdered.Add(i);
+            }
+
+            for (int k = 0; k < retractOrdered.Count - 1; k++)
+            {
+                int aboveFly = retractOrdered[k];
+                int belowFly = retractOrdered[k + 1];
+                int lo = Math.Min(aboveFly, belowFly);
+                int hi = Math.Max(aboveFly, belowFly);
+                bool needSep = false;
+                for (int s = lo; s < hi; s++)
                 {
-                    if (i == ColorButtonIndex || i == StrokeWidthButtonIndex) continue;
-                    var rb = _toolbarButtons[i];
-                    if (rb.Width <= 0) continue;
-                    if (IsVerticalDock)
-                    {
-                        if (rb.Bottom <= colorBtn.Y && (above == null || rb.Bottom > above.Value.Bottom))
-                            above = rb;
-                    }
-                    else
-                    {
-                        if (rb.Right <= colorBtn.X && (above == null || rb.Right > above.Value.Right))
-                            above = rb;
-                    }
+                    if (!tier2Seps.Contains(s))
+                        continue;
+                    needSep = true;
+                    break;
                 }
-                if (above != null)
-                {
-                    int p = IsVerticalDock
-                        ? (above.Value.Bottom + colorBtn.Y) / 2
-                        : (above.Value.Right + colorBtn.X) / 2;
-                    dividerPositions.Add(p);
-                }
+                if (!needSep)
+                    continue;
+                AddMidY(
+                    _toolbarButtons[flyoutStartIdx + aboveFly],
+                    _toolbarButtons[flyoutStartIdx + belowFly]);
+            }
+
+            // Group break between retractable strip and sticky trigger.
+            if (triggerIdx >= 0 && retractOrdered.Count > 0)
+            {
+                int bottomRetract = retractOrdered[^1];
+                AddMidY(
+                    _toolbarButtons[flyoutStartIdx + bottomRetract],
+                    _toolbarButtons[flyoutStartIdx + triggerIdx]);
             }
         }
 
@@ -401,11 +433,25 @@ public sealed partial class RegionOverlayForm
         int drawingStartIdx = _mainBarTools.Length + 4;
 
         // 4. Draw all buttons
+        var previousClip = g.Clip;
+        bool clipRetract = ShowAnnotationChrome && !_annotationRetractRevealRect.IsEmpty;
         for (int i = 0; i < BtnCount; i++)
         {
             var btn = _toolbarButtons[i];
             if (btn.Width <= 0 || btn.Height <= 0)
                 continue;
+
+            if (IsRetractableAnnotationToolbarButton(i))
+            {
+                if (!clipRetract || !btn.IntersectsWith(_annotationRetractRevealRect))
+                    continue;
+                g.SetClip(Rectangle.Intersect(_annotationRetractRevealRect, Rectangle.Round(g.ClipBounds)), CombineMode.Replace);
+            }
+            else if (clipRetract)
+            {
+                g.Clip = previousClip;
+            }
+
             bool active = _toolbarModes[i] is { } && string.Equals(_toolbarToolIds[i], _activeToolId, StringComparison.OrdinalIgnoreCase);
             bool hover = _hoveredButton == i;
             bool isTier2 = i >= drawingStartIdx;
@@ -503,6 +549,8 @@ public sealed partial class RegionOverlayForm
             if (IsMergedHoldButton(i))
                 PaintCaptureHoldHint(g, btn, tierAccent, buttonIndex: i);
         }
+
+        g.Clip = previousClip;
 
         // Draw menu activator (⋮). Soft accent pulse while the quick-start guide is open.
         // Pulse phase 0→1→0 over ~1.1s; driven by StartMenuActivatorPulse → UpdateToolbarSurfaceOnly.

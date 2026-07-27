@@ -6,11 +6,20 @@ using CyberSnap.Native;
 
 namespace CyberSnap.Helpers;
 
+public enum ToolTipPlacement
+{
+    Above,
+    Below,
+    Left,
+    Right
+}
+
 public sealed class WindowsToolTip : Form
 {
     private const int MaxWidth = 360;
     private const int PadX = 10;
     private const int PadY = 6;
+    private const int AnchorGap = 8;
     private readonly Font _font = UiChrome.ChromeFont(8.5f);
     private string _text = "";
 
@@ -83,6 +92,9 @@ public sealed class WindowsToolTip : Form
     }
 
     public void ShowNear(IWin32Window owner, string text, Rectangle anchorScreenBounds, bool above)
+        => ShowNear(owner, text, anchorScreenBounds, above ? ToolTipPlacement.Above : ToolTipPlacement.Below);
+
+    public void ShowNear(IWin32Window owner, string text, Rectangle anchorScreenBounds, ToolTipPlacement placement)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -103,14 +115,44 @@ public sealed class WindowsToolTip : Form
         int width = Math.Min(MaxWidth, Math.Max(1, preferred.Width + PadX * 2));
         int height = Math.Max(1, preferred.Height + PadY * 2);
 
-        int x = anchorScreenBounds.Left + (anchorScreenBounds.Width - width) / 2;
-        int y = above
-            ? anchorScreenBounds.Top - height - 8
-            : anchorScreenBounds.Bottom + 8;
+        int x;
+        int y;
+        switch (placement)
+        {
+            case ToolTipPlacement.Left:
+                x = anchorScreenBounds.Left - width - AnchorGap;
+                y = anchorScreenBounds.Top + (anchorScreenBounds.Height - height) / 2;
+                break;
+            case ToolTipPlacement.Right:
+                x = anchorScreenBounds.Right + AnchorGap;
+                y = anchorScreenBounds.Top + (anchorScreenBounds.Height - height) / 2;
+                break;
+            case ToolTipPlacement.Below:
+                x = anchorScreenBounds.Left + (anchorScreenBounds.Width - width) / 2;
+                y = anchorScreenBounds.Bottom + AnchorGap;
+                break;
+            default: // Above
+                x = anchorScreenBounds.Left + (anchorScreenBounds.Width - width) / 2;
+                y = anchorScreenBounds.Top - height - AnchorGap;
+                break;
+        }
 
         var screen = Screen.FromRectangle(anchorScreenBounds).WorkingArea;
         x = Math.Clamp(x, screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - width - 4));
         y = Math.Clamp(y, screen.Top + 4, Math.Max(screen.Top + 4, screen.Bottom - height - 4));
+
+        // If a side placement was clamped back over the column, flip to the other side.
+        if (placement is ToolTipPlacement.Left or ToolTipPlacement.Right)
+        {
+            var tip = new Rectangle(x, y, width, height);
+            if (tip.IntersectsWith(Rectangle.Inflate(anchorScreenBounds, 2, 2)))
+            {
+                x = placement == ToolTipPlacement.Left
+                    ? anchorScreenBounds.Right + AnchorGap
+                    : anchorScreenBounds.Left - width - AnchorGap;
+                x = Math.Clamp(x, screen.Left + 4, Math.Max(screen.Left + 4, screen.Right - width - 4));
+            }
+        }
 
         Bounds = new Rectangle(x, y, width, height);
         Region?.Dispose();

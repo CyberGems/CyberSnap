@@ -918,16 +918,16 @@ public sealed record ToolDef(string Id, string Label, char Icon, CaptureMode? Mo
         new("select",      "Pick",                 '\uE1E3', CaptureMode.Move,        1),
         new("eraser",      "Eraser",       '\uE28E', CaptureMode.Eraser,      1),
         new("text",        "Text",         '\uE197', CaptureMode.Text,        1),
+        new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1),
+        new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1),
         new("arrow",       "Arrow",        '\uE051', CaptureMode.Arrow,       1),
         new("line",        "Line",         '\uE11F', CaptureMode.Line,        1),
         new("draw",        "FreeHand",     '\uE70F', CaptureMode.Draw,        1),
         new("curvedArrow", "Curved Arrow", '\uE146', CaptureMode.CurvedArrow, 1),
         new("circleShape", "Circle",       '\uE07A', CaptureMode.CircleShape, 1),
         new("rectShape",   "Rectangle",    '\uE16A', CaptureMode.RectShape,   1),
-        new("highlight",   "Highlight",    '\uE0F7', CaptureMode.Highlight,   1),
         new("step",        "Steps",       '\uE1D0', CaptureMode.StepNumber,  1),
         new("magnifier",   "Magnifier",    '\uE721', CaptureMode.Magnifier,   1),
-        new("blur",        "Blur",         '\uE5A0', CaptureMode.Blur,        1),
         new("emoji",       "Emoji",        '\uE167', CaptureMode.Emoji,       1),
     };
 

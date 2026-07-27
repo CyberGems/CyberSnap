@@ -41,7 +41,19 @@ public sealed partial class RegionOverlayForm
             return -1;
 
         for (int i = 0; i < _toolbarButtons.Length; i++)
-            if (_toolbarButtons[i].Contains(p)) return i;
+        {
+            var btn = _toolbarButtons[i];
+            if (btn.Width <= 0 || btn.Height <= 0 || !btn.Contains(p))
+                continue;
+
+            // Retractable tools outside the reveal window are not hittable (clipped visually).
+            if (IsRetractableAnnotationToolbarButton(i)
+                && (_annotationRetractRevealRect.IsEmpty
+                    || !btn.IntersectsWith(_annotationRetractRevealRect)))
+                continue;
+
+            return i;
+        }
         return -1;
     }
 
@@ -172,6 +184,8 @@ public sealed partial class RegionOverlayForm
 
         _mode = m;
         _activeToolId = toolId ?? _visibleTools.FirstOrDefault(t => t.Mode == m)?.Id;
+        if (ToolDef.IsAnnotationTool(m))
+            RememberAnnotationDrawingToolId(_activeToolId);
 
         // Remember annotation tools so the next confirm session can restore them.
         // Skip placement tools — restoring Magnifier auto-selected a live ghost that looked
