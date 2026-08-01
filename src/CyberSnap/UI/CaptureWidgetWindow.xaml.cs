@@ -1128,6 +1128,14 @@ public partial class CaptureWidgetWindow : Window
         };
         menu.Items.Add(settingsItem);
 
+        var aboutItem = Helpers.WindowsMenuRenderer.Item(LocalizationService.Translate("About CyberSnap"), iconId: "info");
+        aboutItem.Click += (s, ev) =>
+        {
+            CollapseWidget();
+            ((App)System.Windows.Application.Current).ShowAbout();
+        };
+        menu.Items.Add(aboutItem);
+
         Helpers.WindowsMenuRenderer.NormalizeItemWidths(menu, minWidth: 240);
 
         ShowThemedMenu(menu);

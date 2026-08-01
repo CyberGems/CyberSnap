@@ -202,19 +202,35 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Items.Add(new Separator());
 
+            // Setup wizard
+            var wizardItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Setup wizard"),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Re-run the setup wizard")
+            };
+            wizardItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => settingsWin.RunSetupWizard());
+            };
+            menu.Items.Add(wizardItem);
+
             // About CyberSnap
             var aboutItem = new MenuItem
             {
                 Header = LocalizationService.Translate("About CyberSnap"),
                 Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("info", titleIcon, 16), Width = 16, Height = 16 },
-                ToolTip = LocalizationService.Translate("Open the About section in Configuration")
+                ToolTip = LocalizationService.Translate("Open About CyberSnap")
             };
             aboutItem.Click += (_, _) =>
             {
                 menu.IsOpen = false;
                 _ = ((App)Application.Current).Dispatcher.BeginInvoke(
                     System.Windows.Threading.DispatcherPriority.Background,
-                    () => ((App)Application.Current).ShowSettings("about"));
+                    () => ((App)Application.Current).ShowAbout());
             };
             menu.Items.Add(aboutItem);
 
@@ -288,12 +304,87 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(configItem);
 
+            var aboutItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("About CyberSnap"),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("info", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Open About CyberSnap")
+            };
+            aboutItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowAbout());
+            };
+            menu.Items.Add(aboutItem);
+
             ActionBtn.ContextMenu = menu;
+        }
+        else if (OwnerWindow is AboutWindow)
+        {
+            AnnotationBtn.Visibility = Visibility.Collapsed;
+            ActionBtn.Visibility = Visibility.Collapsed;
+            BurgerBtn.Visibility = Visibility.Collapsed;
+        }
+        else if (OwnerWindow is not null)
+        {
+            // OCR / Trimmer / Capture Preview / other chrome windows: About + Configuration
+            AnnotationBtn.Visibility = Visibility.Collapsed;
+            ActionBtn.Visibility = Visibility.Collapsed;
+
+            BurgerBtn.Visibility = Visibility.Visible;
+            BurgerBtn.ToolTip = LocalizationService.Translate("Menu");
+
+            var menu = new ContextMenu();
+            menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
+
+            var configItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Configuration..."),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("gear", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Open the full Configuration window")
+            };
+            configItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowSettings());
+            };
+            menu.Items.Add(configItem);
+
+            var aboutItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("About CyberSnap"),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("info", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Open About CyberSnap")
+            };
+            aboutItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowAbout());
+            };
+            menu.Items.Add(aboutItem);
+
+            menu.Opened += (_, _) =>
+            {
+                System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, false);
+            };
+            menu.Closed += (_, _) =>
+            {
+                System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
+            };
+
+            BurgerBtn.ContextMenu = menu;
         }
         else
         {
             AnnotationBtn.Visibility = Visibility.Collapsed;
             ActionBtn.Visibility = Visibility.Collapsed;
+            BurgerBtn.Visibility = Visibility.Collapsed;
         }
     }
 

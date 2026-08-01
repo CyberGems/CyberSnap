@@ -23,6 +23,7 @@ public partial class App : Application
     private readonly object _historyGate = new();
     private TrayIcon? _trayIcon;
     private SettingsWindow? _settingsWindow;
+    private AboutWindow? _aboutWindow;
     private CaptureWidgetWindow? _widgetWindow;
     private DispatcherTimer? _idleTrimTimer;
     private int _isCapturing;
@@ -33,6 +34,7 @@ public partial class App : Application
     private bool _historyMaintenanceScheduled;
     private int _historyIndexRefreshScheduled;
     private int _settingsWindowOpening;
+    private int _aboutWindowOpening;
     private int _settingsHiddenForCapture;
     private int _idleTrimInProgress;
     private DateTime _lastIdleTrimUtc = DateTime.MinValue;

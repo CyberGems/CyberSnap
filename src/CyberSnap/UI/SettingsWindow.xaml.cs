@@ -16,7 +16,6 @@ namespace CyberSnap.UI;
 
 public partial class SettingsWindow : Window
 {
-    private const int UpdateActionCooldownMs = 900;
     private const int LocalEngineProjectOpenCooldownMs = 900;
     private static readonly (string Token, string Label)[] FileNameTokens =
     [
@@ -1063,12 +1062,41 @@ public partial class SettingsWindow : Window
             },
             () => CaptureSizeCombo.SelectedIndex = selectedIndex);
     }
-    private void GithubButton_Click(object sender, RoutedEventArgs e)
+    private void SettingsAboutFooter_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/CyberGems/CyberSnap") { UseShellExecute = true }); } catch { }
+        e.Handled = true;
+        ((App)Application.Current).ShowAbout();
     }
 
-    private void RunWizardBtn_Click(object sender, RoutedEventArgs e)
+    private void SettingsAboutFooter_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (SettingsFooterVersionText != null)
+        {
+            SettingsFooterVersionText.Opacity = 1;
+            SettingsFooterVersionText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
+        }
+        if (SettingsFooterCopyrightText != null)
+        {
+            SettingsFooterCopyrightText.Opacity = 0.85;
+            SettingsFooterCopyrightText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
+        }
+    }
+
+    private void SettingsAboutFooter_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (SettingsFooterVersionText != null)
+        {
+            SettingsFooterVersionText.Opacity = 0.75;
+            SettingsFooterVersionText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextSecondaryBrush");
+        }
+        if (SettingsFooterCopyrightText != null)
+        {
+            SettingsFooterCopyrightText.Opacity = 0.55;
+            SettingsFooterCopyrightText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextSecondaryBrush");
+        }
+    }
+
+    public void RunSetupWizard()
     {
         var wizard = new SetupWizard(_settingsService);
         wizard.Owner = this;
@@ -1077,96 +1105,6 @@ public partial class SettingsWindow : Window
         // Reload all settings panels so any changes made in the wizard are reflected live
         LoadSettings();
         ((App)Application.Current).RegisterHotkeys(showReadyNotification: false);
-    }
-
-    private async void UpdateCheckButton_Click(object sender, RoutedEventArgs e)
-    {
-        var result = await UpdateService.CheckForUpdatesAsync();
-        if (result.IsUpdateAvailable)
-        {
-            var msg = $"{result.StatusMessage}\n\nCurrent: {result.CurrentVersion}\nLatest: {result.LatestVersionLabel}\n\nDownload and install now?";
-            var choice = ThemedConfirmDialog.Confirm(this,
-                LocalizationService.Translate("Update available"),
-                msg,
-                LocalizationService.Translate("Download"),
-                LocalizationService.Translate("Later"),
-                danger: false);
-            if (choice)
-            {
-                await StartUpdateDownloadAsync(result);
-            }
-        }
-        else
-        {
-            ThemedConfirmDialog.Alert(this,
-                LocalizationService.Translate("Check for Updates"),
-                result.StatusMessage,
-                error: false);
-        }
-    }
-
-    public async Task StartUpdateDownloadAsync(UpdateCheckResult result)
-    {
-        AboutTab.IsChecked = true;
-        TabChanged(AboutTab, new RoutedEventArgs());
-
-        UpdateProgressPanel.Visibility = Visibility.Visible;
-        UpdateBtn.IsEnabled = false;
-        GithubBtn.IsEnabled = false;
-
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var updatesFolder = Path.Combine(appData, "CyberSnap", "Updates");
-        var filename = result.AssetName ?? $"cybersnap_setup_{UpdateService.GetRuntimeChannel()}.exe";
-        var installerPath = Path.Combine(updatesFolder, filename);
-
-        var progress = new Progress<double>(val =>
-        {
-            UpdateProgressBar.Value = val;
-            UpdateProgressText.Text = string.Format(LocalizationService.Translate("Downloading update ({0:F1}%)..."), val);
-        });
-
-        try
-        {
-            UpdateProgressBar.Value = 0;
-            UpdateProgressText.Text = LocalizationService.Translate("Downloading update (0.0%)...");
-
-            if (string.IsNullOrEmpty(result.DownloadUrl))
-            {
-                throw new Exception("Direct download link is not available for this release.");
-            }
-
-            await UpdateService.DownloadUpdateAsync(result.DownloadUrl, installerPath, progress);
-
-            UpdateProgressText.Text = LocalizationService.Translate("Download completed. Launching installer...");
-
-            ThemedConfirmDialog.Alert(this,
-                LocalizationService.Translate("Download Complete"),
-                LocalizationService.Translate("The update has been successfully downloaded. CyberSnap will now close to continue the installation."),
-                error: false);
-
-            UpdateService.LaunchInstallerAndExit(installerPath);
-        }
-        catch (Exception ex)
-        {
-            UpdateProgressPanel.Visibility = Visibility.Collapsed;
-            UpdateBtn.IsEnabled = true;
-            GithubBtn.IsEnabled = true;
-
-            var errorChoice = ThemedConfirmDialog.Confirm(this,
-                LocalizationService.Translate("Download Failed"),
-                string.Format(LocalizationService.Translate("Failed to download update automatically:\n{0}\n\nWould you like to open the GitHub release page instead?"), ex.Message),
-                LocalizationService.Translate("Open Browser"),
-                LocalizationService.Translate("Cancel"),
-                danger: false);
-            if (errorChoice)
-            {
-                try
-                {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(result.ReleaseUrl) { UseShellExecute = true });
-                }
-                catch { }
-            }
-        }
     }
 
     private void OpenWinSettingsBtn_Click(object sender, RoutedEventArgs e)

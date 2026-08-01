@@ -142,7 +142,6 @@ public partial class SettingsWindow
             [HotkeysTab] = "\uE765", // Hotkeys
             [HistoryTab] = "\uEB9F", // History
             [AchievementsTab] = "\uE735", // Achievements (star)
-            [AboutTab] = "\uE946" // About
         };
 
         foreach (var kvp in iconMap)
@@ -263,7 +262,6 @@ public partial class SettingsWindow
             ShowSelectionSizeCheck.IsChecked = s.ShowSelectionSize;
             ConfirmRegionCheck.IsChecked = s.ConfirmRegionBeforeCapture;
             OverlayAllMonitorsCheck.IsChecked = s.OverlayCaptureAllMonitors;
-            AutoCheckUpdateCheck.IsChecked = s.AutoCheckForUpdates;
             ShowToolNumberBadgesCheck.IsChecked = s.ShowToolNumberBadges;
             MonthlyFoldersCheck.IsChecked = s.SaveInMonthlyFolders;
             LoadFileNameTemplate(s.FileNameTemplate);
@@ -337,7 +335,7 @@ public partial class SettingsWindow
             ToastFadeDurationCombo.SelectedIndex = fadeDurIdx;
             LoadToastButtonLayoutDesigner();
 
-            AboutVersionText.Text = $"Version {UpdateService.GetCurrentVersionLabel()}";
+            RefreshSettingsFooterVersion();
 
             TryLoadSettingsSection("settings.populate-tool-toggles", PopulateToolToggles);
             TryLoadSettingsSection("settings.update-capture-format-controls", UpdateCaptureFormatControls);
@@ -580,9 +578,6 @@ public partial class SettingsWindow
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
         // Re-apply the default theme tooltip after ApplyTo re-translates it from SourceToolTip.
         ThemeDarkRadio?.ApplyDefaultTooltip();
-        // Second pass on AboutPanel specifically — ensures SourceText/SourceToolTip/SourceContent
-        // are processed even if the first pass missed them (e.g., due to template timing).
-        LocalizationService.ApplyTo(AboutPanel, _settingsService.Settings.InterfaceLanguage);
         RefreshLanguageComboDisplay();
         PopulateToolToggles();
         PopulateSoundCustomizationPanel();
@@ -594,34 +589,15 @@ public partial class SettingsWindow
         VideoOutcomeEditor?.RefreshLocalization();
         GifOutcomeEditor?.RefreshLocalization();
         UpdateWindowTitle();
-        RefreshAboutLocalization();
+        RefreshSettingsFooterVersion();
     }
 
-    /// <summary>Explicitly translates all About tab texts, tooltips, and button labels.</summary>
-    private void RefreshAboutLocalization()
+    private void RefreshSettingsFooterVersion()
     {
-        try
-        {
-            AboutDescriptionText.Text = LocalizationService.Translate("CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. Built with performance in mind, it combines rapid image capture with advanced features like local OCR, instant translation, and comprehensive gallery management.");
-            AboutUpdatesSectionLabel.Text = LocalizationService.Translate("Updates & Maintenance");
-            AboutAutoUpdateTitle.Text = LocalizationService.Translate("Check for updates on startup");
-            AboutAutoUpdateDesc.Text = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
-            AutoCheckUpdateCheck.ToolTip = LocalizationService.Translate("Automatically check for new versions when CyberSnap starts.");
-            AboutUpdateTitle.Text = LocalizationService.Translate("Check for updates");
-            AboutUpdateDesc.Text = LocalizationService.Translate("Check for the latest version and download updates directly.");
-            UpdateBtn.Content = LocalizationService.Translate("Check Now");
-            UpdateBtn.ToolTip = LocalizationService.Translate("Check for the latest version");
-            UpdateProgressText.Text = LocalizationService.Translate("Downloading update...");
-            AboutResourcesSectionLabel.Text = LocalizationService.Translate("Resources");
-            AboutRepoTitle.Text = LocalizationService.Translate("Project Repository");
-            AboutRepoDesc.Text = LocalizationService.Translate("View the source code on GitHub, report issues, and contribute.");
-            GithubBtn.Content = LocalizationService.Translate("View GitHub");
-            GithubBtn.ToolTip = LocalizationService.Translate("View the source code on GitHub");
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogError("settings.about-localization", ex);
-        }
+        var label = UpdateService.GetCurrentVersionLabel();
+        var display = label.StartsWith('v') ? label[1..] : label;
+        if (SettingsFooterVersionText != null)
+            SettingsFooterVersionText.Text = $"CyberSnap {display}";
     }
 
     private void UpdateWindowTitle()
@@ -694,6 +670,9 @@ public partial class SettingsWindow
                         if (w is HistoryWindow hw && hw.IsLoaded)
                             hw.ApplyThemeColors();
 
+                        if (w is AboutWindow aw && aw.IsLoaded)
+                            aw.ApplyThemeColors();
+
                         if (w is CaptureWidgetWindow cww && cww.IsLoaded)
                             cww.RefreshLayout();
 
@@ -750,7 +729,6 @@ public partial class SettingsWindow
             HistoryPanel.Visibility = Visibility.Collapsed;
             UploadsPanel.Visibility = Visibility.Collapsed;
             AchievementsPanel.Visibility = Visibility.Collapsed;
-            AboutPanel.Visibility = Visibility.Collapsed;
             SearchResultsPanel.Visibility = Visibility.Visible;
 
             PageTitleText.Text = LocalizationService.Translate("Search Results");
@@ -770,7 +748,6 @@ public partial class SettingsWindow
             HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             UploadsPanel.Visibility = UploadsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             AchievementsPanel.Visibility = AchievementsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            AboutPanel.Visibility = AboutTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             SearchResultsPanel.Visibility = Visibility.Collapsed;
 
             PageTitleText.Text = LocalizationService.Translate(GetSelectedSettingsPageTitle());
@@ -846,7 +823,6 @@ public partial class SettingsWindow
         if (HistoryTab.IsChecked == true) return "Gallery";
         if (UploadsTab.IsChecked == true) return "Uploads";
         if (AchievementsTab.IsChecked == true) return "Achievements";
-        if (AboutTab.IsChecked == true) return "About";
         return "General";
     }
 

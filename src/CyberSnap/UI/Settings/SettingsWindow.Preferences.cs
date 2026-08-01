@@ -281,21 +281,6 @@ public partial class SettingsWindow
             () => ((App)Application.Current).SyncWidgetCaptureCursorToggle());
     }
 
-    private void AutoCheckUpdateCheck_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
-
-        var previous = _settingsService.Settings.AutoCheckForUpdates;
-        var selected = AutoCheckUpdateCheck.IsChecked == true;
-        UpdateCaptureSavePreference(
-            "settings.auto-check-updates",
-            "Auto check for updates",
-            previous,
-            selected,
-            value => _settingsService.Settings.AutoCheckForUpdates = value,
-            value => AutoCheckUpdateCheck.IsChecked = value);
-    }
-
     private void AnnotationStrokeShadowCheck_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;

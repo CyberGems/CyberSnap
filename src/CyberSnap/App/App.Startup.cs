@@ -194,6 +194,7 @@ public partial class App
         _trayIcon.OnScrollCapture += OnScrollCaptureHotkeyPressed;
         _trayIcon.OnAnnotationEditor += () => UI.Editor.EditorForm.ShowEditorEmptyOrPrompt();
         _trayIcon.OnSettings += () => ShowSettings();
+        _trayIcon.OnAbout += () => ShowAbout();
         _trayIcon.OnHistory += () => ShowHistory();
         _trayIcon.OnQuit += () => Shutdown();
     }

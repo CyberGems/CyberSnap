@@ -1616,7 +1616,7 @@ public partial class ToastWindow : Window
                     var result = app.LatestUpdateResult;
                     if (result != null)
                     {
-                        app.ShowSettingsAndDownloadUpdate(result);
+                        app.ShowAboutAndDownloadUpdate(result);
                     }
                 });
                 return;

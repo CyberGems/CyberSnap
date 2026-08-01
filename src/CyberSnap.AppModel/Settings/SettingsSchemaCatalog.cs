@@ -218,20 +218,5 @@ public static class SettingsSchemaCatalog
             "Local runtime-backed media workflows.",
             [
             ]),
-        new(
-            "about",
-            "About",
-            "App status, maintenance, and migration utilities.",
-            [
-                new SettingsSectionDefinition(
-                    "maintenance",
-                    "Maintenance",
-                    "App-level diagnostics and maintenance actions.",
-                    [
-                        new SettingDefinition("check_updates", "Check for updates", SettingsValueKind.Action, "Run an immediate update check."),
-                        new SettingDefinition("export_settings", "Export settings", SettingsValueKind.Action, "Export the current settings payload."),
-                        new SettingDefinition("reset_settings", "Reset settings", SettingsValueKind.Action, "Restore default settings."),
-                    ]),
-            ]),
     ];
 }
