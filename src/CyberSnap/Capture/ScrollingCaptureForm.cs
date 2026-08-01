@@ -309,6 +309,9 @@ public sealed partial class ScrollingCaptureForm : Form
 
         if (_state == State.Selecting)
         {
+            if (!_isDragging)
+                _hintBanner?.DismissIfHovered(e.Location);
+
             if (_isDragging)
             {
                 var oldSelection = _selection;

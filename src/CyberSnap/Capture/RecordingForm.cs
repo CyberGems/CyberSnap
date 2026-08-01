@@ -353,9 +353,9 @@ public sealed partial class RecordingForm : Form
 
         if (_state == State.Selecting)
         {
-            // Don't revive while dragging — Dismiss on mouse-down must stick until the selection ends.
-            if (!_isDragging && _banner != null && _banner.ContainsCursor(e.Location))
-                _banner.Revive();
+            // Hover clears the hint so it does not block the capture surface.
+            if (!_isDragging)
+                _banner?.DismissIfHovered(e.Location);
 
             if (_isDragging)
             {

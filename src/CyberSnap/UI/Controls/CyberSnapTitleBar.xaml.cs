@@ -105,7 +105,7 @@ public partial class CyberSnapTitleBar : UserControl
     public void RefreshIcons()
     {
         TitleLogo.Source = OwnerWindow?.Icon ?? ThemedLogo.Square(18);
-        var titleIcon = System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+        var titleIcon = TitleBarIconColor;
         MinimizeIcon.Source = Helpers.FluentIcons.RenderWpf("minimize", titleIcon, 18);
 
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
@@ -113,7 +113,9 @@ public partial class CyberSnapTitleBar : UserControl
         MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, titleIcon, 18);
         MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
 
-        CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", titleIcon, 18);
+        // If the pointer is still over Close, keep the high-contrast hover glyph.
+        var closeIconColor = CloseBtn.IsMouseOver ? TitleBarCloseHoverIconColor : titleIcon;
+        CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", closeIconColor, 18);
         // Hamburger burger menu icon
         BurgerIcon.Source = RenderHamburgerIcon(titleIcon, 18);
         // "Open editor" shortcut \u2014 the Fluent "Compose" icon (shared with the tray/widget menus)
@@ -434,14 +436,28 @@ public partial class CyberSnapTitleBar : UserControl
         if (sender is not Border border)
             return;
 
-        border.Background = Theme.Brush(ReferenceEquals(border, CloseBtn) ? Theme.DangerHover : Theme.AccentHover);
+        var isClose = ReferenceEquals(border, CloseBtn);
+        border.Background = Theme.Brush(isClose ? Theme.DangerHover : Theme.AccentHover);
+        // Red hover wash washes out the muted gray X — switch to white for contrast.
+        if (isClose)
+            CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", TitleBarCloseHoverIconColor, 18);
     }
 
     private void TitleBtn_MouseLeave(object sender, MouseEventArgs e)
     {
-        if (sender is Border border)
-            border.Background = System.Windows.Media.Brushes.Transparent;
+        if (sender is not Border border)
+            return;
+
+        border.Background = System.Windows.Media.Brushes.Transparent;
+        if (ReferenceEquals(border, CloseBtn))
+            CloseIcon.Source = Helpers.FluentIcons.RenderWpf("close", TitleBarIconColor, 18);
     }
+
+    private static System.Drawing.Color TitleBarIconColor =>
+        System.Drawing.Color.FromArgb(210, Theme.TextSecondary.R, Theme.TextSecondary.G, Theme.TextSecondary.B);
+
+    private static System.Drawing.Color TitleBarCloseHoverIconColor =>
+        System.Drawing.Color.FromArgb(255, 255, 255, 255);
 
     private void BurgerBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {

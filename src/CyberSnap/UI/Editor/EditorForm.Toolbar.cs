@@ -2809,15 +2809,40 @@ internal sealed class EditorChromeButton : EditorButtonBase
         SetStyle(ControlStyles.StandardDoubleClick, false);
     }
 
+    private bool IsClose => string.Equals(IconId, "close", StringComparison.Ordinal);
+
     protected override Color DefaultTransparentBackColor => EditorColors.TitleBar;
 
     protected override Color IdleFill => Color.Transparent;
 
+    protected override Color ResolveFill(bool active)
+    {
+        // Match WPF CyberSnapTitleBar close hover (Theme.DangerHover).
+        if (Enabled && IsClose && (_hover || _pressed))
+        {
+            var danger = Theme.DangerHover;
+            var a = _pressed ? (byte)Math.Min(255, danger.A + 30) : danger.A;
+            return Color.FromArgb(a, danger.R, danger.G, danger.B);
+        }
+
+        return base.ResolveFill(active);
+    }
+
     protected override Color ResolveBorder(bool active)
     {
+        if (Enabled && IsClose && (_hover || _pressed))
+            return Color.Transparent;
         if (active || _hover)
             return base.ResolveBorder(active);
         return Color.Transparent;
+    }
+
+    protected override Color ResolveContent(bool active)
+    {
+        // White X on the red wash — same contrast fix as the WPF title bar.
+        if (Enabled && IsClose && (_hover || _pressed))
+            return Color.White;
+        return base.ResolveContent(active);
     }
 
     protected override void PaintContent(Graphics g, Rectangle rect, Color contentColor, bool active)
@@ -2835,7 +2860,7 @@ internal sealed class EditorChromeButton : EditorButtonBase
 internal abstract class EditorButtonBase : Button
 {
     protected bool _hover;
-    private bool _pressed;
+    protected bool _pressed;
     private bool _selected;
     private string _iconId = "";
 
@@ -2957,7 +2982,7 @@ internal abstract class EditorButtonBase : Button
         Invalidate();
     }
 
-    private Color ResolveFill(bool active)
+    protected virtual Color ResolveFill(bool active)
     {
         if (!Enabled)
             return EditorColors.IsDark ? Color.FromArgb(16, 18, 28) : Color.FromArgb(235, 237, 244);
@@ -2996,7 +3021,7 @@ internal abstract class EditorButtonBase : Button
         return EditorColors.IsDark ? EditorColors.BorderSubtle : Color.FromArgb(180, 204, 214, 226);
     }
 
-    private Color ResolveContent(bool active)
+    protected virtual Color ResolveContent(bool active)
     {
         if (!Enabled)
             return EditorColors.IsDark ? Color.FromArgb(88, 105, 128) : Color.FromArgb(160, 168, 180);

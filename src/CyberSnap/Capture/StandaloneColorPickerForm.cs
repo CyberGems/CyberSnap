@@ -146,8 +146,7 @@ public sealed class StandaloneColorPickerForm : Form
     {
         _cursorPos = e.Location;
 
-        if (_banner.ContainsCursor(_cursorPos))
-            _banner.Revive();
+        _banner.DismissIfHovered(_cursorPos);
 
         UpdateMagnifierAtCursor();
         base.OnMouseMove(e);

@@ -11,14 +11,15 @@ public readonly record struct BannerSegment(string Text, Color? Color = null);
 
 /// <summary>
 /// Reusable animated instruction banner for standalone tool forms (e.g. ruler, color picker).
-/// Renders a centered pill-shaped banner that fades in, holds while hovered, then fades out.
+/// Renders a centered pill-shaped banner that fades in, holds briefly, then fades out.
+/// Hovering the pill dismisses it immediately so it does not block the capture area.
 ///
 /// Theme-aware: Dark (CyberSnap cyan), Light (blue on pale card), Grayscale (silver on charcoal).
 ///
 /// Usage:
 ///   _banner = new StandaloneToolBanner("Your instructions here", workingArea, Bounds);
 ///   // In OnPaint:   _banner.Render(g);
-///   // In OnMouseMove: check _banner.ContainsCursor(e.Location)
+///   // In OnMouseMove: _banner.DismissIfHovered(e.Location);
 ///   // Dispose when form closes.
 /// </summary>
 public sealed class StandaloneToolBanner : IDisposable
@@ -226,6 +227,17 @@ public sealed class StandaloneToolBanner : IDisposable
     /// <summary>Whether the given client-space cursor position is over the banner.</summary>
     public bool ContainsCursor(Point cursorPos) => _bannerRect.Contains(cursorPos);
 
+    /// <summary>
+    /// If the cursor is over a still-visible banner, fade it out quickly so the hint
+    /// does not obstruct the capture / tool surface. Safe to call every mouse-move.
+    /// </summary>
+    public void DismissIfHovered(Point cursorPos)
+    {
+        if (!IsVisible || !ContainsCursor(cursorPos))
+            return;
+        Dismiss();
+    }
+
     /// <summary>Call on every OnPaint to render the banner on top of the form.</summary>
     public void Render(Graphics g)
     {
@@ -359,8 +371,9 @@ public sealed class StandaloneToolBanner : IDisposable
         }
     }
 
-    /// <summary>Reset to fully visible (e.g. when cursor re-enters the banner during fade-out,
-    /// or when the user clicks without completing a drag selection).</summary>
+    /// <summary>Reset to fully visible (e.g. when the user clicks without completing a drag
+    /// selection). Prefer <see cref="DismissIfHovered"/> on mouse-move — hovering should
+    /// clear the hint, not keep it up.</summary>
     public void Revive()
     {
         _fadeOutStep = AutoFadeOutStep;
