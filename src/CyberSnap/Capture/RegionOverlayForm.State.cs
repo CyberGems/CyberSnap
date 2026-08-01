@@ -257,15 +257,25 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Tight click region around the logo icon and "CyberSnap" text label (+ 3px margin for accessibility)
-    /// that opens the Quick Start Guide.
+    /// Tight click region around the logo icon (+ wordmark on horizontal docks) that opens
+    /// the Quick Start Guide.
     /// </summary>
     private bool IsPointInBrandClickArea(Point location)
     {
         if (_logoRect.IsEmpty)
             return false;
 
-        // Bounding box of the visual brand logo icon + text label (approx 68px wide)
+        // Vertical docks are icon-only — hit the logo (and compact brand strip if present).
+        if (IsVerticalDock)
+        {
+            var hit = _logoRect;
+            hit.Inflate(3, 3);
+            if (hit.Contains(location))
+                return true;
+            return !_brandRect.IsEmpty && _brandRect.Contains(location);
+        }
+
+        // Horizontal: logo icon + "CyberSnap" text label (~68px wide) + 3px margin.
         int brandWidth = Helpers.UiChrome.ScaleInt(68);
         var contentRect = new Rectangle(
             _logoRect.X - 3,
@@ -277,16 +287,12 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Area of the toolbar reserved for dragging: the position move button OR the empty space
+    /// Area of the toolbar reserved for dragging: the grip OR the empty space
     /// around the branding strip (excluding the clickable brand logo/text itself).
     /// Gaps between tool buttons are NOT drag handles.
     /// </summary>
     private bool IsPointInToolbarDragArea(Point location)
     {
-        int btn = GetToolbarButtonAt(location);
-        if (btn == PositionButtonIndex)
-            return true;
-
         if (ShowAnnotationChrome ? HitTestAnnotationDockGrip(location) : HitTestCaptureDockGrip(location))
             return true;
 
@@ -298,7 +304,7 @@ public sealed partial class RegionOverlayForm
 
     /// <summary>
     /// Cursor over the capture/confirm dock: <see cref="CursorFactory.GrabCursor"/> on designated drag surfaces
-    /// (Move button, empty branding area); <see cref="Cursors.Hand"/> on clickable controls including brand;
+    /// (grip, empty branding area); <see cref="Cursors.Hand"/> on clickable controls including brand;
     /// <see cref="Cursors.Default"/> on all dead/background surfaces.
     /// </summary>
     private Cursor? TryGetToolbarHoverCursor(Point location)
@@ -1552,7 +1558,7 @@ public sealed partial class RegionOverlayForm
         int triggerIdx = GetAnnotationTriggerFlyoutIndex();
         if (triggerIdx >= 0)
         {
-            int btn = _mainBarTools.Length + 4 + triggerIdx;
+            int btn = FlyoutStartIndex + triggerIdx;
             if (btn >= 0 && btn < _toolbarButtons.Length
                 && _toolbarButtons[btn].Width > 0
                 && _toolbarButtons[btn].Contains(p))
@@ -1565,7 +1571,7 @@ public sealed partial class RegionOverlayForm
             if (!_annotationRetractRevealRect.IsEmpty && _annotationRetractRevealRect.Contains(p))
                 return true;
 
-            int start = _mainBarTools.Length + 4;
+            int start = FlyoutStartIndex;
             for (int i = 0; i < _flyoutTools.Length; i++)
             {
                 if (!IsRetractableAnnotationFlyoutIndex(i, triggerIdx))
@@ -1721,6 +1727,33 @@ public sealed partial class RegionOverlayForm
         MarkCommittedAnnotationsDirty();
     }
 
+    /// <summary>
+    /// Cursor over the confirm modes dock face — same rules as the capture toolbar:
+    /// Hand on pills; SizeAll (move cross) on grip and dead chrome / padding.
+    /// </summary>
+    private Cursor? TryGetConfirmChromeHoverCursor(Point location)
+    {
+        if (_confirmChromeWrapperRect.IsEmpty || !_confirmChromeWrapperRect.Contains(location))
+            return null;
+
+        if (HitTestConfirmButton(location) >= 0)
+            return Cursors.Hand;
+
+        // Grip, size pill, separators, and padding are all drag surfaces.
+        return CursorFactory.GrabCursor;
+    }
+
+    /// <summary>True when the pointer is on modes-dock chrome that should drag the dock
+    /// (wrapper face excluding action pills).</summary>
+    private bool IsPointInConfirmDockDragArea(Point location)
+    {
+        if (_confirmChromeWrapperRect.IsEmpty || !_confirmChromeWrapperRect.Contains(location))
+            return false;
+        if (HitTestConfirmButton(location) >= 0)
+            return false;
+        return true;
+    }
+
     /// <summary>True when the point is in the dimmed exterior (not frame, docks, or size pill).</summary>
     private bool IsOutsideLockedCaptureFrame(Point p)
     {
@@ -1733,6 +1766,9 @@ public sealed partial class RegionOverlayForm
         if (HitTestConfirmButton(p) >= 0)
             return false;
         if (HitTestConfirmSizeReadout(p))
+            return false;
+        // Modes dock face (including padding) is chrome — not the dimmed exterior.
+        if (!_confirmChromeWrapperRect.IsEmpty && _confirmChromeWrapperRect.Contains(p))
             return false;
         if (_toolbarRect.Width > 0 && _toolbarRect.Contains(p))
             return false;
@@ -2460,9 +2496,8 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Confirm chrome animation:
-    /// - Wrapper always gets a slow traveling shine (keeps the dock visible on busy desktops).
-    /// - Individual pills only shine while THAT pill is hovered — never a group dim/shine.
+    /// Confirm chrome animation: individual pills only shine while THAT pill is hovered —
+    /// never a group dim/shine. (Wrapper chrome matches the capture dock — no traveling shine.)
     /// </summary>
     private void ConfirmShineTick()
     {
@@ -2472,7 +2507,6 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        // Dock wrapper: perpetual slow lap (~4s, 20% slower than original 3.2s).
         _confirmWrapperShinePhase += (float)(UiChrome.FrameIntervalMs / 4000.0);
         if (_confirmWrapperShinePhase >= 1f) _confirmWrapperShinePhase -= 1f;
 

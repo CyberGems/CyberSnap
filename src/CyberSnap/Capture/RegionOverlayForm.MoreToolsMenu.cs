@@ -158,7 +158,6 @@ public sealed partial class RegionOverlayForm
         bool isHideable = buttonIndex >= 0 &&
                           buttonIndex != ColorButtonIndex &&
                           buttonIndex != StrokeWidthButtonIndex &&
-                          buttonIndex != PositionButtonIndex &&
                           buttonIndex != CloseButtonIndex;
 
         if (isHideable)
@@ -215,11 +214,6 @@ public sealed partial class RegionOverlayForm
             {
                 systemButtonName = LocalizationService.Translate("Active drawing and text color");
                 systemIconId = "picker";
-            }
-            else if (buttonIndex == PositionButtonIndex)
-            {
-                systemButtonName = LocalizationService.Translate("Toolbar Position");
-                systemIconId = "position";
             }
             else if (buttonIndex == CloseButtonIndex)
             {
@@ -349,6 +343,11 @@ public sealed partial class RegionOverlayForm
             _toolbarContextMenu?.Close();
         };
         menu.Items.Add(confirmExitItem);
+
+        // Toolbar dock — flat radio section (no nested submenu: multi-monitor DPI).
+        // Only relevant on the capture bar (annotation confirm dock uses frame sides).
+        if (!ShowAnnotationChrome)
+            AddToolbarDockMenuSection(menu);
 
         // Help banners toggle
         AddMenuSeparatorIfNeeded(menu);
@@ -513,5 +512,42 @@ public sealed partial class RegionOverlayForm
             SetEnabledTools(enabled);
             RefreshToolbar();
         }
+    }
+
+    /// <summary>
+    /// Flat radio list for capture-bar edge dock. Nested ToolStrip submenus are avoided
+    /// on multi-monitor mixed-DPI setups (same reason as the hidden-tools section).
+    /// </summary>
+    private void AddToolbarDockMenuSection(ContextMenuStrip menu)
+    {
+        AddMenuSeparatorIfNeeded(menu);
+
+        var header = WindowsMenuRenderer.Item(
+            LocalizationService.Translate("Toolbar dock"),
+            iconId: null,
+            iconSize: 24);
+        header.Enabled = false;
+        menu.Items.Add(header);
+
+        AddDockSideMenuItem(menu, CaptureDockSide.Top, "Top");
+        AddDockSideMenuItem(menu, CaptureDockSide.Bottom, "Bottom");
+        AddDockSideMenuItem(menu, CaptureDockSide.Left, "Left");
+        AddDockSideMenuItem(menu, CaptureDockSide.Right, "Right");
+    }
+
+    private void AddDockSideMenuItem(ContextMenuStrip menu, CaptureDockSide side, string labelKey)
+    {
+        bool active = CaptureDockSide == side;
+        var item = WindowsMenuRenderer.Item(
+            LocalizationService.Translate(labelKey),
+            iconId: active ? "check" : null,
+            iconSize: 24);
+        item.Padding = new Padding(24, 0, 0, 0);
+        item.Click += (_, _) =>
+        {
+            _toolbarContextMenu?.Close();
+            SetCaptureDockSide(side);
+        };
+        menu.Items.Add(item);
     }
 }

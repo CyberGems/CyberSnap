@@ -507,14 +507,14 @@ public partial class SettingsWindow
         if (!IsLoaded || _suppressCaptureSavePreferenceChange) return;
 
         var previous = _settingsService.Settings.CaptureDockSide;
-        var selected = (CaptureDockSide)Math.Clamp(CaptureDockSideCombo.SelectedIndex, 0, 1);
+        var selected = (CaptureDockSide)Math.Clamp(CaptureDockSideCombo.SelectedIndex, 0, 3);
         UpdateCaptureSavePreference(
             "settings.capture-dock-side",
-            "Toolbar Position",
+            "Toolbar dock",
             previous,
             selected,
             value => _settingsService.Settings.CaptureDockSide = value,
-            value => CaptureDockSideCombo.SelectedIndex = (int)value);
+            value => CaptureDockSideCombo.SelectedIndex = Math.Clamp((int)value, 0, 3));
     }
 
     private void ScrollingCaptureModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)

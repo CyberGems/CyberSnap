@@ -129,6 +129,18 @@ public sealed partial class RegionOverlayForm
                     CancelConfirmModesCollapse();
                     return;
                 }
+                // Dead modes-dock chrome (padding / separators): same drag as the grip —
+                // mirrors capture-bar dead-zone dragging.
+                if (IsPointInConfirmDockDragArea(e.Location))
+                {
+                    _isDraggingConfirm = true;
+                    _confirmDragStartMouse = e.Location;
+                    _confirmDragStartOffset = _confirmCustomOffset;
+                    HideToolbarTooltip();
+                    Cursor = CursorFactory.GrabbingCursor;
+                    CancelConfirmModesCollapse();
+                    return;
+                }
                 // Permanent size pill (top-left) OR center move cross: dedicated drag handles for the capture frame.
                 if (HitTestConfirmSizeReadout(e.Location) || (!_centerMoveGripRect.IsEmpty && _centerMoveGripRect.Contains(e.Location)))
                 {
@@ -250,18 +262,6 @@ public sealed partial class RegionOverlayForm
                     return;
                 }
                 ToggleColorPicker();
-                return;
-            }
-            if (btn == PositionButtonIndex
-                && btn < _toolbarButtons.Length
-                && _toolbarButtons[btn].Width > 0)
-            {
-                _isDraggingToolbar = true;
-                _toolbarDragStartMouse = e.Location;
-                _toolbarDragStartOffset = _toolbarCustomOffset;
-                _hasMovedToolbarByDrag = false;
-                HideToolbarTooltip();
-                Cursor = CursorFactory.GrabbingCursor;
                 return;
             }
             if (btn < _mainBarTools.Length)

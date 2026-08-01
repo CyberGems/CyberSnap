@@ -193,13 +193,6 @@ public sealed partial class RegionOverlayForm
                 + LocalizationService.Translate("Discard the selection and close without saving");
         }
 
-        if (button == PositionButtonIndex)
-        {
-            return LocalizationService.Translate("Toolbar Position")
-                + "\n"
-                + LocalizationService.Translate("Move the bar to the opposite edge, or drag to position freely");
-        }
-
         if (button == StrokeWidthButtonIndex)
         {
             return string.Format(LocalizationService.Translate("Width: {0} points"), (int)_strokeWidth)

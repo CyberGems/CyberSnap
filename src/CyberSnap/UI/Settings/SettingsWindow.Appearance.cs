@@ -268,7 +268,7 @@ public partial class SettingsWindow
             SelectToastPositionUi(s.ToastPosition);
             PopulateToastMonitorOptions();
             SelectToastMonitor(s.ToastMonitorIndex);
-            CaptureDockSideCombo.SelectedIndex = (int)s.CaptureDockSide;
+            CaptureDockSideCombo.SelectedIndex = Math.Clamp((int)s.CaptureDockSide, 0, 3);
             ScrollingCaptureModeCombo.SelectedIndex = s.ScrollingCaptureMode switch
             {
                 ScrollingCaptureMode.AssistAutoscroll => 1,

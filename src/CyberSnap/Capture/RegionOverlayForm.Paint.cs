@@ -441,22 +441,18 @@ public sealed partial class RegionOverlayForm
         }
     }
 
-    /// <summary>Opaque dock behind the confirm pills, with a slow traveling border shine for visibility.</summary>
+    /// <summary>Opaque dock behind the confirm pills — same chrome language as the capture toolbar.</summary>
     private void DrawConfirmChromeWrapper(Graphics g)
     {
         if (_confirmChromeWrapperRect.IsEmpty)
             return;
 
-        float corner = UiChrome.ScaleFloat(16f);
+        float corner = UiChrome.ScaledToolbarCornerRadius;
         var bounds = _confirmChromeWrapperRect;
         var face = new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+        var rect = Rectangle.Round(face);
 
-        // Soft drop shadow — keep it tight so it stays inside the invalidate pad.
-        using (var shadowPath = WindowsDockRenderer.RoundedRect(
-                   new RectangleF(bounds.X, bounds.Y + UiChrome.ScaleFloat(2f), bounds.Width, bounds.Height),
-                   corner))
-        using (var shadowBrush = new SolidBrush(Color.FromArgb(UiChrome.IsDark ? 110 : 55, 0, 0, 0)))
-            g.FillPath(shadowBrush, shadowPath);
+        WindowsDockRenderer.PaintShadow(g, rect, corner);
 
         using var path = WindowsDockRenderer.RoundedRect(face, corner);
 
@@ -464,24 +460,35 @@ public sealed partial class RegionOverlayForm
         using (var brush = new SolidBrush(UiChrome.SurfaceTier1))
             g.FillPath(brush, path);
 
-        Color border = UiChrome.IsDark
-            ? Color.FromArgb(100, 255, 255, 255)
-            : Color.FromArgb(80, 0, 0, 0);
-        using (var pen = new Pen(border, UiChrome.ScaleFloat(1f)))
+        // Premium accent outline (matches PaintToolbar).
+        using (var pen = new Pen(Color.FromArgb(UiChrome.IsDark ? 80 : 50, UiChrome.AccentColor), 1f))
             g.DrawPath(pen, path);
 
-        // Subtle accent ring so the dock never disappears into a busy screenshot.
-        // Uses UiChrome.AccentColor to match the annotation toolbar's docked-edge neon accent.
-        Color accent = UiChrome.AccentColor;
-        using (var accentPen = new Pen(Color.FromArgb(UiChrome.IsDark ? 70 : 55, accent), UiChrome.ScaleFloat(1.25f)))
-            g.DrawPath(accentPen, path);
-
-        // Traveling shine on the wrapper only (not on every button).
-        if (!UI.Motion.Disabled && _confirmShineTimer.Enabled)
+        // Neon accent along the bottom edge — same treatment as a bottom-docked capture bar.
+        using (var edgePath = BuildDockedEdgePath(rect, corner, CaptureDockSide.Bottom))
         {
-            Color glow = accent;
-            Color core = ConfirmChromeShineCore(accent);
-            DrawBorderShine(g, face, corner, _confirmWrapperShinePhase, glow, core, 0.85f, thicknessScale: 0.75f);
+            if (edgePath != null)
+            {
+                var accent = UiChrome.AccentColor;
+                var fade = Color.FromArgb(0, accent);
+                PointF p0 = new PointF(rect.X, rect.Y);
+                PointF p1 = new PointF(rect.Right, rect.Y);
+                using (var brush = new LinearGradientBrush(p0, p1, accent, accent))
+                {
+                    brush.InterpolationColors = new ColorBlend
+                    {
+                        Colors = new[] { fade, accent, accent, fade },
+                        Positions = new[] { 0f, 0.10f, 0.90f, 1f },
+                    };
+                    using (var pen = new Pen(brush, 2f)
+                    {
+                        StartCap = LineCap.Round,
+                        EndCap = LineCap.Round,
+                        LineJoin = LineJoin.Round,
+                    })
+                        g.DrawPath(pen, edgePath);
+                }
+            }
         }
 
         if (!_confirmGripRect.IsEmpty)
@@ -489,12 +496,6 @@ public sealed partial class RegionOverlayForm
             DrawToolbarGripDots(g, _confirmGripRect, UiChrome.AccentColor);
         }
     }
-
-    private static Color ConfirmChromeShineCore(Color accent)
-        => Color.FromArgb(
-            Math.Min(255, accent.R + 55),
-            Math.Min(255, accent.G + 55),
-            Math.Min(255, accent.B + 40));
 
     /// <summary>
     /// Draws a 3D rounded-rectangle confirm/cancel action button: a solid colored face
