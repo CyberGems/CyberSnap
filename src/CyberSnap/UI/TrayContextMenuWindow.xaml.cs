@@ -186,7 +186,7 @@ public partial class TrayContextMenuWindow : Window
         }
         else
         {
-            VideoRecordText.Text = T("Record") + " MP4";
+            VideoRecordText.Text = T("Record");
             VideoRecordBtn.ToolTip = T("Record the screen as an MP4 video");
             VideoRecordBtn.ClearValue(ForegroundProperty);
             GifRecordBtn.IsEnabled = true;
