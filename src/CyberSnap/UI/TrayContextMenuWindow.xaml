@@ -210,19 +210,19 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- Screen Recorder (MP4) — paired with Area as the primary capture/record row -->
+                    <Button x:Name="VideoRecordBtn" Style="{StaticResource GridButtonStyle}" Click="VideoRecord_Click">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image x:Name="VideoRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
+                            <TextBlock x:Name="VideoRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                     <!-- Scroll Capture -->
                     <Button x:Name="ScrollCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="ScrollCapture_Click">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Image x:Name="ScrollCaptureIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
                             <TextBlock x:Name="ScrollCaptureText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- Screen Recorder (MP4) -->
-                    <Button x:Name="VideoRecordBtn" Style="{StaticResource GridButtonStyle}" Click="VideoRecord_Click">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image x:Name="VideoRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                            <TextBlock x:Name="VideoRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
