@@ -16,8 +16,10 @@ namespace CyberSnap.UI;
 
 public partial class CaptureWidgetWindow : Window
 {
-    private readonly AppSettings _settings;
     private readonly SettingsService _settingsService;
+    // Always read the live settings instance — App.Capture may replace
+    // SettingsService.Settings with a fresh clone after each capture.
+    private AppSettings _settings => _settingsService.Settings;
     private readonly DispatcherTimer _hoverDelayTimer;
     private readonly DispatcherTimer _collapseTimer;
     private readonly DispatcherTimer _postDragGraceTimer;
@@ -58,7 +60,6 @@ public partial class CaptureWidgetWindow : Window
     public CaptureWidgetWindow(SettingsService settingsService)
     {
         _settingsService = settingsService;
-        _settings = settingsService.Settings;
         InitializeComponent();
         SizeToContent = SizeToContent.Manual;
 
@@ -754,6 +755,11 @@ public partial class CaptureWidgetWindow : Window
         if (_isExpanded) return;
         _isExpanded = true;
 
+        // Re-sync toggles from live settings (SettingsService.Settings may have been
+        // replaced while the peek was collapsed).
+        UpdateCaptureCursorState();
+        UpdateAutoCopyState();
+
         MainPanelBorder.Cursor = System.Windows.Input.Cursors.Arrow;
         MainPanelBorder.Visibility = Visibility.Visible;
         UpdateGripVisibility();
@@ -1359,6 +1365,7 @@ public partial class CaptureWidgetWindow : Window
 
         _settings.SetCaptureCursorForAll(CaptureCursorToggle.IsChecked == true);
         _settingsService.Save();
+        _settingsService.FlushPendingWrites();
         ((App)System.Windows.Application.Current).SyncSettingsShowCursorCheck();
     }
 
@@ -1370,6 +1377,7 @@ public partial class CaptureWidgetWindow : Window
         AutoCopyPreferences.SetMaster(_settings, enabled);
         AutoCopyPreferences.SyncAfterCaptureCopyBits(_settings);
         _settingsService.Save();
+        _settingsService.FlushPendingWrites();
         SettingsService.PublishAutoCopyState(_settings);
         ((App)System.Windows.Application.Current).SyncSettingsAutoCopyChecks();
     }

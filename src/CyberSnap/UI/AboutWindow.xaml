@@ -319,6 +319,28 @@
                            MouseLeave="AboutFooterCopyright_MouseLeave"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="AboutFooterWebsiteBtn"
+                            Style="{StaticResource AboutFooterIconButton}"
+                            ToolTip="Visit CyberGems website"
+                            Services:LocalizationService.SourceToolTip="Visit CyberGems website"
+                            MouseLeftButtonUp="AboutFooterWebsite_Click"
+                            MouseEnter="AboutFooterIcon_MouseEnter"
+                            MouseLeave="AboutFooterIcon_MouseLeave">
+                        <Viewbox Width="14" Height="14" Stretch="Uniform">
+                            <!-- Open-external (box + arrow) — clearer “website” cue than a filled globe -->
+                            <Canvas x:Name="AboutFooterWebsiteIconCanvas" Width="20" Height="20">
+                                <Path x:Name="AboutFooterWebsiteBox"
+                                      Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5"
+                                      StrokeLineJoin="Round" Fill="Transparent"
+                                      Data="M4.5 7.5V15.5A1.5 1.5 0 0 0 6 17h8.5A1.5 1.5 0 0 0 16 15.5V12"/>
+                                <Path x:Name="AboutFooterWebsiteArrow"
+                                      Stroke="{DynamicResource ThemeMutedBrush}" StrokeThickness="1.5"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Fill="Transparent"
+                                      Data="M10.5 3.5H16.5V9.5M16.2 3.8L9 11"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Border>
                     <Border x:Name="AboutFooterGithubBtn"
                             Style="{StaticResource AboutFooterIconButton}"
                             ToolTip="View project on GitHub"

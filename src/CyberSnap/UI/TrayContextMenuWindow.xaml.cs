@@ -158,35 +158,36 @@ public partial class TrayContextMenuWindow : Window
         AnnotationsText.Text = T("Editor");
         GalleryText.Text = T("Gallery");
         
-        // Tooltips (complete localized names for context)
-        AreaCaptureBtn.ToolTip = T("Area capture");
-        ScrollCaptureBtn.ToolTip = T("Scrolling capture");
-        OcrBtn.ToolTip = T("Text extraction (OCR)");
-        QrBtn.ToolTip = T("QR & Barcodes");
-        ColorPickerBtn.ToolTip = T("Color picker");
-        RulerBtn.ToolTip = T("Ruler");
-        AnnotationsBtn.ToolTip = T("Open Annotation Editor");
-        GalleryBtn.ToolTip = T("Open Capture Gallery");
-        VideoRecordBtn.ToolTip = T("Screen recorder (MP4)");
-        GifRecordBtn.ToolTip = T("Screen recorder (GIF)");
+        // Tooltips — short action descriptions (labels stay compact on the tiles).
+        AreaCaptureBtn.ToolTip = T("Capture a rectangular region of the screen");
+        ScrollCaptureBtn.ToolTip = T("Capture a long scrolling page or window");
+        OcrBtn.ToolTip = T("Extract text from a region of the screen");
+        QrBtn.ToolTip = T("Scan QR codes and barcodes on screen");
+        ColorPickerBtn.ToolTip = T("Capture a color sample from the screen");
+        RulerBtn.ToolTip = T("Measure distances on the screen");
+        AnnotationsBtn.ToolTip = T("Open the annotations editor");
+        GalleryBtn.ToolTip = T("Browse and manage your captures");
+        GifRecordBtn.ToolTip = T("Record the screen as an animated GIF");
         
         // Compact labels for the half-width row; full names live in tooltips.
         SettingsText.Text = T("Settings");
-        SettingsBtn.ToolTip = T("Open Configuration window");
+        SettingsBtn.ToolTip = T("Open CyberSnap settings");
         ExitText.Text = T("Exit");
-        ExitBtn.ToolTip = T("Exit CyberSnap");
+        ExitBtn.ToolTip = T("Quit CyberSnap");
 
         // Determine recording state and localize record button
         bool isRecording = Capture.RecordingForm.Current != null;
         if (isRecording)
         {
             VideoRecordText.Text = T("Stop recording");
+            VideoRecordBtn.ToolTip = T("Stop the current screen recording");
             VideoRecordBtn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(239, 68, 68));
             GifRecordBtn.IsEnabled = false;
         }
         else
         {
             VideoRecordText.Text = T("Record") + " MP4";
+            VideoRecordBtn.ToolTip = T("Record the screen as an MP4 video");
             VideoRecordBtn.ClearValue(ForegroundProperty);
             GifRecordBtn.IsEnabled = true;
             GifRecordText.Text = T("Record") + " GIF";
@@ -196,10 +197,12 @@ public partial class TrayContextMenuWindow : Window
     private void LoadIcons()
     {
         var fgColor = Theme.TextPrimary;
+        // Primary capture matches the widget: accent cyan so it reads as the default action.
+        var accentColor = Theme.Accent;
 
         AppLogoImage.Source = ThemedLogo.Square(16);
 
-        AreaCaptureIcon.Source = GetIcon("captureRect", fgColor, 32);
+        AreaCaptureIcon.Source = GetIcon("captureRect", accentColor, 32);
         ScrollCaptureIcon.Source = GetIcon("scrollCapture", fgColor, 32);
         OcrIcon.Source = GetIcon("ocr", fgColor, 32);
         QrIcon.Source = GetIcon("scan", fgColor, 32);
@@ -326,6 +329,7 @@ public partial class TrayContextMenuWindow : Window
 
     private void AboutHeader_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        System.Windows.Controls.ToolTipService.SetIsEnabled(AboutHeaderBtn, true);
         AboutHeaderBtn.Background = Theme.Brush(Theme.TabHoverBg);
         TitleTextBlock.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
         AppLogoImage.Opacity = 1;
@@ -336,6 +340,22 @@ public partial class TrayContextMenuWindow : Window
         AboutHeaderBtn.Background = System.Windows.Media.Brushes.Transparent;
         TitleTextBlock.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextSecondaryBrush");
         AppLogoImage.Opacity = 0.75;
+        DismissAboutHeaderToolTip();
+    }
+
+    private void TrayCloseBtn_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        DismissAboutHeaderToolTip();
+    }
+
+    private void DismissAboutHeaderToolTip()
+    {
+        // Force-hide sticky WPF tooltips when moving onto the adjacent close button.
+        if (AboutHeaderBtn.ToolTip is System.Windows.Controls.ToolTip tip)
+            tip.IsOpen = false;
+
+        System.Windows.Controls.ToolTipService.SetIsEnabled(AboutHeaderBtn, false);
+        System.Windows.Controls.ToolTipService.SetIsEnabled(AboutHeaderBtn, true);
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)

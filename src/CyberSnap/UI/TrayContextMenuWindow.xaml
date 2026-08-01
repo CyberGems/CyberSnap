@@ -142,6 +142,7 @@
                 </Grid.ColumnDefinitions>
                 <Border x:Name="AboutHeaderBtn"
                         Grid.Column="0"
+                        HorizontalAlignment="Left"
                         Background="Transparent"
                         CornerRadius="6"
                         Padding="4,2"
@@ -149,6 +150,8 @@
                         VerticalAlignment="Center"
                         ToolTip="Open About CyberSnap"
                         Services:LocalizationService.SourceToolTip="Open About CyberSnap"
+                        ToolTipService.InitialShowDelay="400"
+                        ToolTipService.BetweenShowDelay="0"
                         MouseLeftButtonUp="AboutHeader_Click"
                         MouseEnter="AboutHeader_MouseEnter"
                         MouseLeave="AboutHeader_MouseLeave">
@@ -161,7 +164,8 @@
                                    Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
-                <Button Grid.Column="1"
+                <Button x:Name="TrayCloseBtn"
+                        Grid.Column="1"
                         Width="24"
                         Height="24"
                         Background="Transparent"
@@ -169,6 +173,7 @@
                         Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                         Cursor="Hand"
                         Click="CloseButton_Click"
+                        MouseEnter="TrayCloseBtn_MouseEnter"
                         Focusable="False">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">

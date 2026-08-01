@@ -316,8 +316,40 @@ public partial class SettingsWindow
             {
                 ToastWindow.SetPosition(value);
                 PreviewWindow.SetPosition(value);
+                // Live preview at the new corner/edge (same idea as CyberPaste).
+                ShowToastPositionPreview(value);
             },
             value => SelectToastPositionUi(value));
+    }
+
+    private static void ShowToastPositionPreview(ToastPosition position)
+    {
+        try
+        {
+            var label = position switch
+            {
+                ToastPosition.TopLeft => LocalizationService.Translate("Top Left"),
+                ToastPosition.TopCenter => LocalizationService.Translate("Top Center"),
+                ToastPosition.TopRight => LocalizationService.Translate("Top Right"),
+                ToastPosition.Left => LocalizationService.Translate("Center Left"),
+                ToastPosition.Right => LocalizationService.Translate("Center Right"),
+                ToastPosition.BottomLeft => LocalizationService.Translate("Bottom Left"),
+                ToastPosition.BottomCenter => LocalizationService.Translate("Bottom Center"),
+                ToastPosition.BottomRight => LocalizationService.Translate("Bottom Right"),
+                _ => position.ToString()
+            };
+
+            ToastWindow.Show(ToastSpec.Standard(
+                LocalizationService.Translate("Toast position updated"),
+                label) with
+            {
+                SuppressSound = true
+            });
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogError("settings.toast-position-preview", ex);
+        }
     }
 
     private void SelectToastPositionUi(ToastPosition position)
