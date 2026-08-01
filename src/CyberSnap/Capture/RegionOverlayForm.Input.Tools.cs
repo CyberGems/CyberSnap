@@ -86,6 +86,10 @@ public sealed partial class RegionOverlayForm
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
+        // Hovering the help banner dismisses it so it does not block capture.
+        if (!_isDraggingToolbar && !_isDraggingConfirm && !_isSelecting)
+            _banner?.DismissIfHovered(e.Location);
+
         if (_isDraggingToolbar)
         {
             if (_tooltipVisible)

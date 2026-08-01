@@ -314,10 +314,11 @@ public partial class App
 
     /// <summary>
     /// Compact status toast listing automatic steps completed when Notification is on
-    /// (including after Preview closes). Not a system-alert toast (master Notifications
-    /// toggle still applies). Not an action-overlay toast — those were replaced by Preview.
+    /// (including after Preview closes). Body follows after-capture pill flow order and
+    /// DoneLabelKey wording. Preview / Notification are omitted (preview already ran;
+    /// this toast is the notification).
     /// </summary>
-    private static void ShowDynamicAfterCaptureToast(
+    private void ShowDynamicAfterCaptureToast(
         bool saved,
         bool copied,
         bool copyWanted,
@@ -326,31 +327,38 @@ public partial class App
         bool openedViewer,
         string? filePath)
     {
-        var parts = new List<string>();
-        if (saved)
-            parts.Add(LocalizationService.Translate("Saved"));
-        if (copyWanted)
-        {
-            parts.Add(copied
-                ? LocalizationService.Translate("Copied to clipboard")
-                : LocalizationService.Translate("Clipboard copy failed"));
-        }
-        if (shared)
-            parts.Add(LocalizationService.Translate("Shared"));
-        if (openedEditor)
-            parts.Add(LocalizationService.Translate("Opened in editor"));
-        if (openedViewer)
-            parts.Add(LocalizationService.Translate("Opened in system viewer"));
+        var state = Helpers.AfterCaptureOutcomeModel.FromSettings(_settingsService!.Settings);
+        var parts = new List<(int Order, string Text)>();
 
-        string title = LocalizationService.Translate("Screenshot ready");
-        string body = parts.Count > 0
-            ? string.Join(" · ", parts)
-            : "";
+        void TryAdd(Helpers.AfterCapturePillKind pill, bool completed, string? textOverride = null)
+        {
+            if (!completed)
+                return;
+
+            parts.Add((
+                Helpers.AfterCaptureOutcomeModel.FlowDisplayOrder(pill),
+                textOverride
+                    ?? LocalizationService.Translate(Helpers.AfterCaptureOutcomeModel.DoneLabelKey(pill))));
+        }
+
+        // Save only when the Save pill is configured (a file may also exist as a share side-effect).
+        TryAdd(Helpers.AfterCapturePillKind.Save, saved && state.Save);
+        // Clipboard / Editor / Viewer / Share: list what this capture actually completed
+        // (configured pills or confirm-mode one-shots).
+        TryAdd(
+            Helpers.AfterCapturePillKind.Clipboard,
+            copyWanted,
+            copied ? null : LocalizationService.Translate("Clipboard copy failed"));
+        TryAdd(Helpers.AfterCapturePillKind.Share, shared);
+        TryAdd(Helpers.AfterCapturePillKind.Editor, openedEditor);
+        TryAdd(Helpers.AfterCapturePillKind.SystemViewer, openedViewer);
+
+        parts.Sort((a, b) => a.Order.CompareTo(b.Order));
 
         ToastWindow.Show(new ToastSpec
         {
-            Title = title,
-            Body = body,
+            Title = LocalizationService.Translate("Capture processed"),
+            Body = parts.Count > 0 ? string.Join(" · ", parts.Select(p => p.Text)) : "",
             FilePath = filePath,
             PlayCaptureSound = true,
             IsSystemMessage = false

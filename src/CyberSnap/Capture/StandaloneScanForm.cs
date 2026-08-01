@@ -142,8 +142,8 @@ public sealed class StandaloneScanForm : Form
         _cursorPos = e.Location;
 
         // Don't revive while dragging — the banner was dismissed on mouse-down on purpose.
-        if (!_isDragging && _banner.ContainsCursor(_cursorPos))
-            _banner.Revive();
+        if (!_isDragging)
+            _banner.DismissIfHovered(_cursorPos);
 
         if (_isDragging)
         {

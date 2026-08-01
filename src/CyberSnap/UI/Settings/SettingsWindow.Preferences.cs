@@ -1476,7 +1476,7 @@ public partial class SettingsWindow
             // Brief system alert — same family as "Video recorded" / encoding wait.
             // Plays SoundEvent.System (customizable in Sounds) unless muted.
             ToastWindow.Show(ToastSpec.Standard(
-                LocalizationService.Translate("Screenshot ready"),
+                LocalizationService.Translate("Capture processed"),
                 LocalizationService.Translate("Copied to clipboard")));
         }
         catch (Exception ex)

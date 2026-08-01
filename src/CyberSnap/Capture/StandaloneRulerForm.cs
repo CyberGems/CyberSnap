@@ -179,8 +179,8 @@ public sealed class StandaloneRulerForm : Form
     }
 
     // ── Banner animation (delegated to StandaloneToolBanner) ──
-    // The banner timer is self-contained; we just need to revive it on hover
-    // and trigger repaints via Invalidate. See StandaloneToolBanner.Revive().
+    // The banner timer is self-contained; mouse-move calls DismissIfHovered so the
+    // hint clears when it would otherwise block the tool surface.
 
     // ── Keyboard ──
 
@@ -288,8 +288,8 @@ public sealed class StandaloneRulerForm : Form
         _cursorPos = e.Location;
 
         // Revive only when idle — never while measuring/editing so the pill stays out of the way.
-        if (!_isDragging && _editState == EditState.None && _banner.ContainsCursor(_cursorPos))
-            _banner.Revive();
+        if (!_isDragging && _editState == EditState.None)
+            _banner.DismissIfHovered(_cursorPos);
 
         if (_isDragging)
         {
