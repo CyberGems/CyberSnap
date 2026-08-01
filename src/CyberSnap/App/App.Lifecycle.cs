@@ -23,6 +23,12 @@ public partial class App
 
     public void ShowSettings(string? navigateTo = null)
     {
+        if (navigateTo == "about")
+        {
+            ShowAbout();
+            return;
+        }
+
         if (_settingsWindow is { IsVisible: true })
         {
             _settingsWindow.Activate();
@@ -91,22 +97,99 @@ public partial class App
         });
     }
 
-    public void ShowSettingsAndDownloadUpdate(UpdateCheckResult result)
+    public void ShowAbout()
     {
-        ShowSettings();
+        if (_aboutWindow is { IsVisible: true })
+        {
+            _aboutWindow.Activate();
+            _aboutWindow.Topmost = true;
+            _aboutWindow.Topmost = false;
+            _aboutWindow.Focus();
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _aboutWindowOpening, 1, 0) != 0)
+            return;
+
+        _ = Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                if (_aboutWindow is { IsVisible: true })
+                {
+                    _aboutWindow.Activate();
+                    return;
+                }
+
+                ShowAboutWindow();
+            }
+            catch (Exception ex)
+            {
+                _aboutWindow = null;
+                ShowAboutOpenFailed(ex);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _aboutWindowOpening, 0);
+            }
+        }, DispatcherPriority.Background);
+    }
+
+    public void ShowAboutAndDownloadUpdate(UpdateCheckResult result)
+    {
+        ShowAbout();
         _ = Dispatcher.BeginInvoke(async () =>
         {
             for (int i = 0; i < 20; i++)
             {
-                if (_settingsWindow is { IsVisible: true })
+                if (_aboutWindow is { IsVisible: true })
                     break;
                 await Task.Delay(100);
             }
-            if (_settingsWindow != null)
-            {
-                await _settingsWindow.StartUpdateDownloadAsync(result);
-            }
+            if (_aboutWindow != null)
+                await _aboutWindow.StartUpdateDownloadAsync(result);
         }, DispatcherPriority.Background);
+    }
+
+    private void ShowAboutWindow()
+    {
+        var win = new AboutWindow(_settingsService!);
+
+        var activeEditor = UI.Editor.EditorForm.ActiveInstance;
+        if (activeEditor != null)
+        {
+            var helper = new System.Windows.Interop.WindowInteropHelper(win)
+            {
+                Owner = activeEditor.Handle
+            };
+        }
+
+        win.Closed += (_, _) =>
+        {
+            _aboutWindow = null;
+            Dispatcher.BeginInvoke(() => ScheduleIdleMemoryTrim(), DispatcherPriority.Background);
+        };
+        _aboutWindow = win;
+        win.Show();
+        win.Activate();
+        win.Topmost = true;
+        win.Topmost = false;
+        win.Focus();
+    }
+
+    private static void ShowAboutOpenFailed(Exception ex)
+    {
+        AppDiagnostics.LogError("lifecycle.show-about", ex);
+        try
+        {
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Error"),
+                $"{LocalizationService.Translate("CyberSnap was unable to launch About")}\n{ex.Message}");
+        }
+        catch (Exception toastEx)
+        {
+            AppDiagnostics.LogError("lifecycle.show-about.toast", toastEx);
+        }
     }
 
     private static void NavigateSettingsTo(SettingsWindow win, string? navigateTo)
@@ -121,8 +204,6 @@ public partial class App
             win.NavigateToGallerySettings();
         else if (navigateTo is "uploads" or "upload")
             win.NavigateToUploadsSettings();
-        else if (navigateTo == "about")
-            win.NavigateToAboutSettings();
         else if (navigateTo is "capture-confirm-pills" or "confirm-pills" or "confirm-destinations")
             win.NavigateToCaptureConfirmPills();
     }
@@ -160,6 +241,7 @@ public partial class App
         {
             _trayIcon?.RefreshLocalization();
             _widgetWindow?.RefreshLocalization();
+            _aboutWindow?.RefreshLocalization();
             UI.Editor.EditorForm.ActiveInstance?.RefreshLocalization();
         };
         win.HotkeyChanged += hotkeyHandler;

@@ -186,7 +186,6 @@ public partial class SettingsWindow
             (HistoryPanel,    "history",       "Gallery"),
             (UploadsPanel,    "uploads",       "Uploads"),
             (AchievementsPanel, "achievements", "Achievements"),
-            (AboutPanel,      "about",         "About"),
         };
 
         _panelMap.Clear();
@@ -361,7 +360,7 @@ public partial class SettingsWindow
         {
             SettingsPanel, SoundsPanel, WidgetPanel, ToastPanel,
             CapturePanel, EditorPanel, RecordingPanel, OcrPanel,
-            HotkeysPanel, HistoryPanel, UploadsPanel, AchievementsPanel, AboutPanel
+            HotkeysPanel, HistoryPanel, UploadsPanel, AchievementsPanel
         };
 
         var originalVisibility = new Visibility[allPanels.Length];
@@ -702,18 +701,6 @@ public partial class SettingsWindow
         }
     }
 
-    public void NavigateToAboutSettings()
-    {
-        try
-        {
-            SelectSettingsTab("about");
-        }
-        catch (Exception ex)
-        {
-            AppDiagnostics.LogWarning("settings.about-navigate", $"Navigation failed: {ex.Message}");
-        }
-    }
-
     /// <summary>Open the Uploads tab. Used by Share menu "Upload settings…".</summary>
     public void NavigateToUploadsSettings()
     {
@@ -743,8 +730,6 @@ public partial class SettingsWindow
             ["uploads"]       = UploadsTab,
             ["upload"]        = UploadsTab,
             ["achievements"]  = AchievementsTab,
-            ["runtimes"]      = AboutTab,
-            ["about"]         = AboutTab,
             ["editor"]        = EditorTab,
         };
 

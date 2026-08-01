@@ -1103,6 +1103,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <controls:CyberSnapTitleBar x:Name="SettingsTitleBar" Grid.Row="0"
@@ -1155,8 +1156,6 @@
                             Opacity="0.7" IsHitTestVisible="False"/>
 
                     <RadioButton x:Name="AchievementsTab" Content="Achievements" Tag="Achievements" GroupName="Main"
-                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    <RadioButton x:Name="AboutTab" Content="About" Tag="About" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
                 </StackPanel>
             </Border>
@@ -5146,161 +5145,40 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- About -->
-            <ScrollViewer x:Name="AboutPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
-                <StackPanel>
-                    <!-- Hero: branding left + description stretched to the same right edge as the cards below. -->
-                    <Grid Margin="0,4,0,32">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*" MinWidth="200"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Width="80" Height="80" CornerRadius="20" Background="{DynamicResource ThemeCardBrush}"
-                                    BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1.5">
-                                <Image Width="52" Height="52" Stretch="Uniform"
-                                       Source="pack://application:,,,/Assets/CyberSnap_square.png"
-                                       RenderOptions.BitmapScalingMode="HighQuality"/>
-                            </Border>
-                            <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="CyberSnap" FontSize="32" FontWeight="Bold" FontFamily="Segoe UI Variable Display"
-                                           Foreground="{DynamicResource ThemeTextPrimaryBrush}"/>
-                                <TextBlock x:Name="AboutVersionText" FontSize="14" Opacity="0.5" Margin="0,4,0,0"/>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Border Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Stretch"
-                                Background="{DynamicResource ThemeCardBrush}"
-                                BorderBrush="{DynamicResource ThemeInputBorderBrush}"
-                                BorderThickness="1" CornerRadius="12" Padding="22,18"
-                                Margin="36,0,0,0">
-                            <TextBlock x:Name="AboutDescriptionText"
-                                       FontSize="13"
-                                       FontFamily="Segoe UI Variable Text"
-                                       Foreground="{DynamicResource ThemeTextPrimaryBrush}"
-                                       Opacity="0.78"
-                                       LineHeight="24"
-                                       LineStackingStrategy="BlockLineHeight"
-                                       TextWrapping="Wrap"
-                                       TextOptions.TextFormattingMode="Display"
-                                       Services:LocalizationService.SourceText="CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows. Built with performance in mind, it combines rapid image capture with advanced features like local OCR, instant translation, and comprehensive gallery management.">
-                                CyberSnap is a professional-grade screen capture and productivity suite designed for seamless workflows.
-                                Built with performance in mind, it combines rapid image capture with advanced features like
-                                local OCR, instant translation, and comprehensive gallery management.
-                            </TextBlock>
-                        </Border>
-                    </Grid>
-
-                    <TextBlock x:Name="AboutUpdatesSectionLabel" Text="Updates &amp; Maintenance" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Updates &amp; Maintenance"/>
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE777;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock x:Name="AboutAutoUpdateTitle" Text="Check for updates on startup" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Check for updates on startup"/>
-                                    <TextBlock x:Name="AboutAutoUpdateDesc" Text="Automatically check for new versions when CyberSnap starts." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Automatically check for new versions when CyberSnap starts."/>
-                                </StackPanel>
-                                <CheckBox x:Name="AutoCheckUpdateCheck" Grid.Column="2" Content="" FontSize="13" VerticalAlignment="Center"
-                                          AutomationProperties.Name="Check for updates on startup"
-                                          ToolTip="Automatically check for new versions when CyberSnap starts."
-                                          Services:LocalizationService.SourceToolTip="Automatically check for new versions when CyberSnap starts."
-                                          Checked="AutoCheckUpdateCheck_Changed" Unchecked="AutoCheckUpdateCheck_Changed"/>
-                            </Grid>
-                            
-                            <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
-                            
-                            <Grid Style="{StaticResource SettingRow}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE896;" Style="{StaticResource SettingIconGlyph}"/>
-                                </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                    <TextBlock x:Name="AboutUpdateTitle" Text="Check for updates" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Check for updates"/>
-                                    <TextBlock x:Name="AboutUpdateDesc" Text="Check for the latest version and download updates directly." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="Check for the latest version and download updates directly."/>
-                                </StackPanel>
-                                <Button x:Name="UpdateBtn" Content="Check Now" Grid.Column="2" MinWidth="108"
-                                        Services:LocalizationService.SourceContent="Check Now"
-                                        VerticalAlignment="Center" Click="UpdateCheckButton_Click" Cursor="Hand"
-                                        ToolTip="Check for the latest version"
-                                        Services:LocalizationService.SourceToolTip="Check for the latest version"
-                                        AutomationProperties.Name="Check for Updates"/>
-                            </Grid>
-
-                            <StackPanel x:Name="UpdateProgressPanel" Visibility="Collapsed" Margin="38,8,0,8">
-                                <TextBlock x:Name="UpdateProgressText" Text="Downloading update..." Style="{StaticResource SettingsProgressText}" Margin="0,0,0,6" Services:LocalizationService.SourceText="Downloading update..."/>
-                                <ProgressBar x:Name="UpdateProgressBar" Height="4" Minimum="0" Maximum="100" Value="0" Foreground="{DynamicResource ThemeAccentBrush}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="Setup" Style="{StaticResource SectionLabel}" Margin="0,16,0,6"
-                               Services:LocalizationService.SourceText="Setup"/>
-                    <Border Style="{StaticResource Card}">
-                        <Grid Style="{StaticResource SettingRow}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}">
-                                <TextBlock Text="&#xE70F;" Style="{StaticResource SettingIconGlyph}"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <TextBlock Text="Setup wizard" Style="{StaticResource SettingTitle}"
-                                           Services:LocalizationService.SourceText="Setup wizard"/>
-                                <TextBlock Text="Re-run the setup wizard to review or change your initial configuration."
-                                           Style="{StaticResource SettingDescription}"
-                                           Services:LocalizationService.SourceText="Re-run the setup wizard to review or change your initial configuration."/>
-                            </StackPanel>
-                            <Button x:Name="RunWizardBtn" Content="Open wizard" Grid.Column="2" MinWidth="108"
-                                    Services:LocalizationService.SourceContent="Open wizard"
-                                    VerticalAlignment="Center" Click="RunWizardBtn_Click" Cursor="Hand"
-                                    ToolTip="Re-run the setup wizard"
-                                    Services:LocalizationService.SourceToolTip="Re-run the setup wizard"
-                                    AutomationProperties.Name="Open setup wizard"/>
-                        </Grid>
-                    </Border>
-
-                    <TextBlock x:Name="AboutResourcesSectionLabel" Text="Resources" Style="{StaticResource SectionLabel}" Margin="0,16,0,6" Services:LocalizationService.SourceText="Resources"/>
-                    <Border Style="{StaticResource Card}">
-                        <Grid Style="{StaticResource SettingRow}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Style="{StaticResource SettingIconFrame}">
-                                <TextBlock Text="&#xE71B;" Style="{StaticResource SettingIconGlyph}"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <TextBlock x:Name="AboutRepoTitle" Text="Project Repository" Style="{StaticResource SettingTitle}" Services:LocalizationService.SourceText="Project Repository"/>
-                                <TextBlock x:Name="AboutRepoDesc" Text="View the source code on GitHub, report issues, and contribute." Style="{StaticResource SettingDescription}" Services:LocalizationService.SourceText="View the source code on GitHub, report issues, and contribute."/>
-                            </StackPanel>
-                            <Button x:Name="GithubBtn" Content="View GitHub" Grid.Column="2" MinWidth="108"
-                                    Services:LocalizationService.SourceContent="View GitHub"
-                                    VerticalAlignment="Center" Click="GithubButton_Click" Cursor="Hand"
-                                    ToolTip="View the source code on GitHub"
-                                    Services:LocalizationService.SourceToolTip="View the source code on GitHub"
-                                    AutomationProperties.Name="Project Repository"/>
-                        </Grid>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-
             </Grid>
         </Grid>
+
+        <!-- Footer: version opens About -->
+        <Border Grid.Row="2"
+                BorderBrush="{DynamicResource ThemeSeparatorBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="12,10,12,12"
+                Background="{DynamicResource ThemePanelBackgroundBrush}">
+            <StackPanel x:Name="SettingsAboutFooter"
+                        HorizontalAlignment="Center"
+                        Cursor="Hand"
+                        Background="Transparent"
+                        ToolTip="Open About CyberSnap"
+                        Services:LocalizationService.SourceToolTip="Open About CyberSnap"
+                        MouseLeftButtonUp="SettingsAboutFooter_Click"
+                        MouseEnter="SettingsAboutFooter_MouseEnter"
+                        MouseLeave="SettingsAboutFooter_MouseLeave">
+                <TextBlock x:Name="SettingsFooterVersionText"
+                           FontSize="11"
+                           FontFamily="Segoe UI Variable Text"
+                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                           HorizontalAlignment="Center"
+                           Opacity="0.75"/>
+                <TextBlock x:Name="SettingsFooterCopyrightText"
+                           Text="© 2026 CyberGems"
+                           FontSize="11"
+                           FontFamily="Segoe UI Variable Text"
+                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                           HorizontalAlignment="Center"
+                           Opacity="0.55"
+                           Margin="0,2,0,0"/>
+            </StackPanel>
+        </Border>
     </Grid>
     </Border>
     </Border>

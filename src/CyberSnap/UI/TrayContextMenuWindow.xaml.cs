@@ -146,6 +146,7 @@ public partial class TrayContextMenuWindow : Window
     private void LoadLocalizedLabels()
     {
         TitleTextBlock.Text = $"CyberSnap  {UpdateService.GetCurrentVersionLabel()}";
+        AboutHeaderBtn.ToolTip = T("Open About CyberSnap");
 
         // Shorter labels for buttons
         AreaCaptureText.Text = T("Area");
@@ -314,6 +315,27 @@ public partial class TrayContextMenuWindow : Window
     {
         CloseMenu();
         _trayIcon.TriggerSettings();
+    }
+
+    private void AboutHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        CloseMenu();
+        _trayIcon.TriggerAbout();
+    }
+
+    private void AboutHeader_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        AboutHeaderBtn.Background = Theme.Brush(Theme.TabHoverBg);
+        TitleTextBlock.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextPrimaryBrush");
+        AppLogoImage.Opacity = 1;
+    }
+
+    private void AboutHeader_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        AboutHeaderBtn.Background = System.Windows.Media.Brushes.Transparent;
+        TitleTextBlock.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeTextSecondaryBrush");
+        AppLogoImage.Opacity = 0.75;
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)
