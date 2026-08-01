@@ -147,11 +147,10 @@ public sealed partial class RegionOverlayForm
 
         if (IsVerticalDock)
         {
-            // Draw logo icon at the top of Column 1 (centered)
+            // Icon-only brand strip for Left/Right docks (no rotated wordmark).
             float lx = _toolbarRect.X + pad + (buttonSize - logoSz) / 2f;
             float ly = _toolbarRect.Y + pad + UiChrome.ScaleInt(6);
-            // Annotation frame dock: keep logo inside the compact brand strip (no rotated wordmark).
-            if (ShowAnnotationChrome && !_brandRect.IsEmpty)
+            if (!_brandRect.IsEmpty)
             {
                 logoSz = Math.Min(logoSz + UiChrome.ScaleInt(2), Math.Max(8, _brandRect.Height - UiChrome.ScaleInt(4)));
                 lx = _brandRect.X + (_brandRect.Width - logoSz) / 2f;
@@ -175,29 +174,6 @@ public sealed partial class RegionOverlayForm
             {
                 FluentIcons.DrawIcon(g, "scan", new RectangleF(lx, ly, logoSz, logoSz), Color.FromArgb((int)(opacity * 255), UiChrome.SurfaceTextPrimary), 0f);
             }
-
-            // Rotated wordmark only on screen-edge vertical docks (capture phase) — annotation
-            // column is too narrow/tall for it without covering tools.
-            if (!ShowAnnotationChrome)
-            {
-                using (var brandFont = UiChrome.ChromeFont(5.2f, FontStyle.Bold))
-                using (var textBrush = new SolidBrush(Color.FromArgb((int)(textOpacity * 255), UiChrome.SurfaceTextPrimary)))
-                {
-                    var state = g.Save();
-                    g.TranslateTransform(_toolbarRect.X + pad + buttonSize / 2f, ly + logoSz + UiChrome.ScaleInt(8));
-                    g.RotateTransform(90);
-
-                    var sf = new StringFormat
-                    {
-                        Alignment = StringAlignment.Near,
-                        LineAlignment = StringAlignment.Center,
-                        FormatFlags = StringFormatFlags.NoWrap
-                    };
-
-                    g.DrawString("CyberSnap", brandFont, textBrush, 0f, 0f, sf);
-                    g.Restore(state);
-                }
-            }
         }
         else
         {
@@ -208,7 +184,7 @@ public sealed partial class RegionOverlayForm
                     buttonSize,
                     buttonSpacing,
                     0)
-                : GetToolbarPrimarySpan(_mainBarTools.Length + 2, 1, buttonSize, buttonSpacing, 0);
+                : GetToolbarPrimarySpan(_mainBarTools.Length + 1, 1, buttonSize, buttonSpacing, 0);
             bool canShowText = ShowAnnotationChrome
                 || _mainBarTools.Length >= 6;
 
@@ -311,17 +287,17 @@ public sealed partial class RegionOverlayForm
                 dividerPositions.Add(p);
             }
 
-            // Divider before Position button (after last main bar tool)
-            if (_mainBarTools.Length > 0 && PositionButtonIndex < _toolbarButtons.Length)
+            // Divider before Close button (after last main bar tool)
+            if (_mainBarTools.Length > 0 && CloseButtonIndex < _toolbarButtons.Length)
             {
                 int lastIdx = _mainBarTools.Length - 1;
                 var lastBtn = _toolbarButtons[lastIdx];
-                var posBtn = _toolbarButtons[PositionButtonIndex];
-                if (lastBtn.Width > 0 && posBtn.Width > 0)
+                var closeBtn = _toolbarButtons[CloseButtonIndex];
+                if (lastBtn.Width > 0 && closeBtn.Width > 0)
                 {
                     int p = IsVerticalDock
-                        ? (lastBtn.Bottom + posBtn.Y) / 2
-                        : (lastBtn.Right + posBtn.X) / 2;
+                        ? (lastBtn.Bottom + closeBtn.Y) / 2
+                        : (lastBtn.Right + closeBtn.X) / 2;
                     dividerPositions.Add(p);
                 }
             }
@@ -340,7 +316,7 @@ public sealed partial class RegionOverlayForm
                 dividerPositions.Add((above.Bottom + below.Y) / 2);
             }
 
-            int flyoutStartIdx = _mainBarTools.Length + 4;
+            int flyoutStartIdx = FlyoutStartIndex;
             int triggerIdx = GetAnnotationTriggerFlyoutIndex();
 
             // Sticky separators: trigger | color/stroke | eraser/select
@@ -430,7 +406,7 @@ public sealed partial class RegionOverlayForm
 
 
 
-        int drawingStartIdx = _mainBarTools.Length + 4;
+        int drawingStartIdx = FlyoutStartIndex;
 
         // 4. Draw all buttons
         var previousClip = g.Clip;
@@ -524,15 +500,6 @@ public sealed partial class RegionOverlayForm
                 WindowsDockRenderer.PaintButton(g, btn, active: false, hovered: hover, accent: danger);
                 int ca = hover ? 255 : 165;
                 DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ca, danger.R, danger.G, danger.B), active: false, flipHorizontal: true);
-                continue;
-            }
-
-            // Position (Move bar): slightly muted so it stays with Close as chrome.
-            if (i == PositionButtonIndex)
-            {
-                WindowsDockRenderer.PaintButton(g, btn, active: false, hovered: hover, accent: tierAccent);
-                int pa = hover ? 210 : 120;
-                DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(pa, UiChrome.SurfaceTextPrimary), active: false);
                 continue;
             }
 

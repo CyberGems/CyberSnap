@@ -298,6 +298,28 @@ public sealed partial class RegionOverlayForm
                 UpdateConfirmModesHover(e.Location);
                 UpdateAnnotationToolsHover(e.Location);
 
+                // Modes-dock chrome (padding / separators / grip): SizeAll + drag, like capture bar.
+                // Action pills keep Hand via the btnHit branch below.
+                var modesDockCursor = TryGetConfirmChromeHoverCursor(e.Location);
+                if (modesDockCursor is not null
+                    && ch < 0
+                    && btnHit < 0
+                    && !sizePillHover
+                    && !centerGripHover
+                    && modesDockCursor != Cursors.Hand)
+                {
+                    if (!Cursor.Equals(modesDockCursor))
+                        Cursor = modesDockCursor;
+                    if (_hoveredConfirmButton != prevHoveredConfirm)
+                    {
+                        OnConfirmHoverChanged(prevHoveredConfirm);
+                        HideToolbarTooltip();
+                        _tooltipDismissed = false;
+                        _hoverButtonStartTime = DateTime.UtcNow;
+                    }
+                    return;
+                }
+
                 if (sizePillHover != _hoveredConfirmSizeReadout)
                 {
                     _hoveredConfirmSizeReadout = sizePillHover;
@@ -1162,14 +1184,6 @@ public sealed partial class RegionOverlayForm
         if (_isDraggingToolbar)
         {
             _isDraggingToolbar = false;
-            if (!_hasMovedToolbarByDrag)
-            {
-                int btnHit = GetToolbarButtonAt(e.Location);
-                if (btnHit == PositionButtonIndex)
-                {
-                    ToggleToolbarPosition();
-                }
-            }
             Cursor = CursorFactory.GrabCursor;
             return;
         }
