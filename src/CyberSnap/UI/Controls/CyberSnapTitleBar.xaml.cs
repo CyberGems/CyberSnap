@@ -120,6 +120,11 @@ public partial class CyberSnapTitleBar : UserControl
         AnnotationIcon.Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 18);
         AnnotationIcon.Opacity = 1.0;
 
+        // About is a compact info window — no maximize (same idea as Toast / widget chrome).
+        MaximizeBtn.Visibility = OwnerWindow is AboutWindow
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
         RefreshPinIcon();
 
         InitializeActionBtn(titleIcon);
@@ -150,28 +155,10 @@ public partial class CyberSnapTitleBar : UserControl
             var menu = new ContextMenu();
             menu.SetResourceReference(ContextMenu.StyleProperty, "HistoryActionsMenuStyle");
 
-            // Focus the always-visible settings search bar
-            var searchItem = new MenuItem
-            {
-                Header = LocalizationService.Translate("Search settings"),
-                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("search", titleIcon, 16), Width = 16, Height = 16 },
-                ToolTip = LocalizationService.Translate("Search settings (Ctrl+F)")
-            };
-            searchItem.Click += (_, _) =>
-            {
-                menu.IsOpen = false;
-                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
-                    System.Windows.Threading.DispatcherPriority.Background,
-                    () => settingsWin.FocusSearchBox());
-            };
-            menu.Items.Add(searchItem);
-
-            menu.Items.Add(new Separator());
-
             // Editor shortcut
             var editorItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Editor..."),
+                Header = LocalizationService.Translate("Annotations Editor"),
                 Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("compose", titleIcon, 16), Width = 16, Height = 16 },
                 ToolTip = LocalizationService.Translate("Open the post-capture editor for annotations.")
             };
@@ -187,7 +174,7 @@ public partial class CyberSnapTitleBar : UserControl
             // Gallery shortcut
             var galleryItem = new MenuItem
             {
-                Header = LocalizationService.Translate("Gallery..."),
+                Header = LocalizationService.Translate("Capture Gallery"),
                 Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("history", titleIcon, 16), Width = 16, Height = 16 },
                 ToolTip = LocalizationService.Translate("Open the Capture Gallery")
             };
@@ -397,7 +384,8 @@ public partial class CyberSnapTitleBar : UserControl
 
         if (e.ClickCount == 2)
         {
-            ToggleMaximize();
+            if (OwnerWindow is not AboutWindow)
+                ToggleMaximize();
             return;
         }
 
@@ -419,7 +407,7 @@ public partial class CyberSnapTitleBar : UserControl
 
     private void ToggleMaximize()
     {
-        if (OwnerWindow is not { } window)
+        if (OwnerWindow is not { } window || window is AboutWindow)
             return;
 
         window.WindowState = window.WindowState == WindowState.Maximized

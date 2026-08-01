@@ -160,6 +160,7 @@ public partial class AboutWindow : Window
             UpdateProgressText.Text = LocalizationService.Translate("Downloading update...");
             AboutTitleBar.Title = LocalizationService.Translate("About");
             AboutFooterCopyright.ToolTip = LocalizationService.Translate("Visit CyberGems website");
+            AboutFooterWebsiteBtn.ToolTip = LocalizationService.Translate("Visit CyberGems website");
             AboutFooterGithubBtn.ToolTip = LocalizationService.Translate("View project on GitHub");
             AboutFooterIssuesBtn.ToolTip = LocalizationService.Translate("Report a bug or open an issue");
             AboutFooterReleasesBtn.ToolTip = LocalizationService.Translate("View releases and changelogs");
@@ -309,7 +310,12 @@ public partial class AboutWindow : Window
     private void SetFooterIconAccent(Border border, bool primary)
     {
         var brushKey = primary ? "ThemeTextPrimaryBrush" : "ThemeMutedBrush";
-        if (border == AboutFooterGithubBtn)
+        if (border == AboutFooterWebsiteBtn)
+        {
+            AboutFooterWebsiteBox.SetResourceReference(Shape.StrokeProperty, brushKey);
+            AboutFooterWebsiteArrow.SetResourceReference(Shape.StrokeProperty, brushKey);
+        }
+        else if (border == AboutFooterGithubBtn)
         {
             AboutFooterGithubIcon.SetResourceReference(Shape.FillProperty, brushKey);
         }
@@ -328,9 +334,11 @@ public partial class AboutWindow : Window
     private void ResetFooterVisuals()
     {
         AboutFooterCopyright.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "ThemeMutedBrush");
+        AboutFooterWebsiteBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterGithubBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterIssuesBtn.Background = System.Windows.Media.Brushes.Transparent;
         AboutFooterReleasesBtn.Background = System.Windows.Media.Brushes.Transparent;
+        SetFooterIconAccent(AboutFooterWebsiteBtn, primary: false);
         SetFooterIconAccent(AboutFooterGithubBtn, primary: false);
         SetFooterIconAccent(AboutFooterIssuesBtn, primary: false);
         SetFooterIconAccent(AboutFooterReleasesBtn, primary: false);
@@ -338,10 +346,12 @@ public partial class AboutWindow : Window
 
     private void SetFooterIconsEnabled(bool enabled)
     {
+        AboutFooterWebsiteBtn.IsEnabled = enabled;
         AboutFooterGithubBtn.IsEnabled = enabled;
         AboutFooterIssuesBtn.IsEnabled = enabled;
         AboutFooterReleasesBtn.IsEnabled = enabled;
         AboutFooterCopyright.IsEnabled = enabled;
+        AboutFooterWebsiteBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterGithubBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterIssuesBtn.Opacity = enabled ? 1 : 0.45;
         AboutFooterReleasesBtn.Opacity = enabled ? 1 : 0.45;

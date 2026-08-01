@@ -626,7 +626,7 @@ public sealed class AppSettings
     public double SettingsWindowLeft { get; set; } = -1;
     public double SettingsWindowTop { get; set; } = -1;
     public double SettingsWindowWidth { get; set; } = 960;
-    public double SettingsWindowHeight { get; set; } = 680;
+    public double SettingsWindowHeight { get; set; } = 780;
     public int SettingsWindowState { get; set; } = 0; // 0 = Normal, 2 = Maximized (WPF WindowState)
 
     // Video recording (MP4)

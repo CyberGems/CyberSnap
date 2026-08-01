@@ -265,6 +265,10 @@ public sealed class SettingsService : IDisposable
 
     public void Load()
     {
+        // Flush any debounced write first so a reload cannot overwrite an
+        // in-memory change that has not hit disk yet (e.g. widget toggles).
+        FlushPendingWrites();
+
         if (!File.Exists(_settingsPath))
             TryMigrateLegacyPortableSettings();
 
