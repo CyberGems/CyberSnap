@@ -107,8 +107,10 @@ namespace CyberSnap.UI
                 CancelPillCompletionSimulation();
                 StopAutoCloseTimer(resetProgress: true);
             };
-            MouseEnter += (_, _) => OnPreviewMouseEnter();
-            MouseLeave += (_, _) => OnPreviewMouseLeave();
+            // Pause the auto-close countdown only while the pointer is over the actions
+            // column — hovering the image preview no longer holds the dialog open.
+            ActionsPanel.MouseEnter += (_, _) => OnActionsPanelMouseEnter();
+            ActionsPanel.MouseLeave += (_, _) => OnActionsPanelMouseLeave();
             ProgressHost.SizeChanged += ProgressHost_SizeChanged;
 
             CyberSnapWindowChrome.Apply(this);
@@ -484,13 +486,13 @@ namespace CyberSnap.UI
                 ProgressScale.ScaleX = 1;
         }
 
-        private void OnPreviewMouseEnter()
+        private void OnActionsPanelMouseEnter()
         {
             _isHovered = true;
             BeginProgressRefillForHover();
         }
 
-        private void OnPreviewMouseLeave()
+        private void OnActionsPanelMouseLeave()
         {
             _isHovered = false;
             if (_isPinned) return;
