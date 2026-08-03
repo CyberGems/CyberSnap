@@ -116,7 +116,6 @@ namespace CyberSnap.UI
             // column — hovering the image preview no longer holds the dialog open.
             ActionsPanel.MouseEnter += (_, _) => OnActionsPanelMouseEnter();
             ActionsPanel.MouseLeave += (_, _) => OnActionsPanelMouseLeave();
-            ProgressHost.SizeChanged += ProgressHost_SizeChanged;
 
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
@@ -328,9 +327,9 @@ namespace CyberSnap.UI
             _autoCloseDurationSeconds = timeoutSec;
             ProgressHost.Visibility = Visibility.Visible;
             UpdateDoneCountdownText(timeoutSec);
-            ProgressBar.Visibility = Visibility.Visible;
-            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-            ProgressScale.ScaleX = 1;
+            // Start with the full outline visible, then let the countdown shrink it.
+            ProgressHost.SetValue(OutlineFractionProperty, 1.0);
+            ProgressHost.BeginAnimation(OutlineFractionProperty, null);
             _autoCloseCountdownStarted = false;
             _autoCloseLayoutRetries = 0;
 
@@ -369,29 +368,27 @@ namespace CyberSnap.UI
                 return;
             }
 
-            // First open: ProgressHost often has ActualWidth=0 in this frame, so ScaleX
-            // animations never paint (timer still fires). Wait until layout has a real width.
+            // First open: DoneButtonHost often has ActualWidth=0 in this frame, so outline
+        // animations never paint (timer still fires). Wait until layout has a real width.
             RequestStartAutoCloseCountdown();
-        }
-
-        private void ProgressHost_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (e.NewSize.Width < 8)
-                return;
-            if (_autoCloseTimer == null || _autoCloseCountdownStarted || _isPinned || _isHovered || _isClosing)
-                return;
-            TryStartAutoCloseCountdown();
         }
 
         private void DoneButtonHost_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             UpdateDoneButtonClip();
+            // Keep the outline stroke matching the button bounds.
+            ProgressHost.Width = e.NewSize.Width;
+            ProgressHost.Height = e.NewSize.Height;
+
+            if (e.NewSize.Width < 8) return;
+            if (_autoCloseTimer == null || _autoCloseCountdownStarted || _isPinned || _isHovered || _isClosing)
+                return;
+            TryStartAutoCloseCountdown();
         }
 
-        /// <summary>
-        /// ClipToBounds alone is rectangular — without a rounded Clip the progress line
-        /// sticks out past the button's corner curves when ScaleX approaches 1 (hover refill).
-        /// </summary>
+        /// <summary>DoneButtonHost keeps ClipToBounds only as a fallback: the rounded
+        /// outline stroke is drawn by ProgressHost (a Rectangle), not by a bar under
+        /// the button's corner curve.</summary>
         private void UpdateDoneButtonClip()
         {
             if (DoneButtonHost == null)
@@ -436,21 +433,53 @@ namespace CyberSnap.UI
                 _autoCloseTimer.Start();
         }
 
-        private double CaptureProgressScale()
+        /// <summary>Perimeter of the Done button host — the track the progress stroke follows.</summary>
+        private static double PerimeterOf(double width, double height)
         {
-            double progress = Math.Clamp(ProgressScale.ScaleX, 0, 1);
-            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-            ProgressScale.ScaleX = progress;
-            return progress;
+            if (width <= 0 || height <= 0) return 0;
+            return 2.0 * (width + height);
         }
+
+        /// <summary>
+        /// Attached property driving the outline's visible stroke fraction (1→0).
+        /// Animating this on the Shape itself is legal WPF; the change-notification
+        /// projects the scalar onto StrokeDashArray so the visible edge shortens.
+        /// </summary>
+        public static readonly DependencyProperty OutlineFractionProperty =
+            DependencyProperty.RegisterAttached("OutlineFraction", typeof(double), typeof(CapturePreviewDialog),
+                new PropertyMetadata(1.0, OnOutlineFractionChanged));
+
+        private static void OnOutlineFractionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is not System.Windows.Shapes.Rectangle rect) return;
+            double fraction = Math.Clamp((double)e.NewValue, 0, 1);
+            double perimeter = PerimeterOf(rect.ActualWidth, rect.ActualHeight);
+            if (perimeter <= 0) return;
+            rect.StrokeDashArray = new DoubleCollection { fraction * perimeter, perimeter };
+        }
+
+        private double CurrentOutlineFraction()
+        {
+            double fraction = Math.Clamp((double)ProgressHost.GetValue(OutlineFractionProperty), 0, 1);
+            ProgressHost.BeginAnimation(OutlineFractionProperty, null);
+            return fraction;
+        }
+
+        private void SetOutlineFraction(double value)
+        {
+            ProgressHost.SetValue(OutlineFractionProperty, Math.Clamp(value, 0, 1));
+            ProgressHost.BeginAnimation(OutlineFractionProperty, null); // Cancel any running animation immediately.
+        }
+
+        private double CaptureProgressScale() => CurrentOutlineFraction();
 
         private void StartProgressCountdown(double remainingSeconds)
         {
             if (remainingSeconds <= 0) return;
-            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
+            ProgressHost.BeginAnimation(OutlineFractionProperty,
                 new DoubleAnimation
                 {
-                    From = Math.Clamp(ProgressScale.ScaleX, 0, 1),
+                    From = Math.Clamp(CurrentOutlineFraction(), 0, 1),
                     To = 0,
                     Duration = Motion.Sec(remainingSeconds),
                     FillBehavior = FillBehavior.HoldEnd
@@ -461,15 +490,16 @@ namespace CyberSnap.UI
         {
             if (_autoCloseDurationSeconds <= 0) return;
 
-            double current = CaptureProgressScale();
+            double current = CurrentOutlineFraction();
             if (current >= 1)
                 return;
 
-            // Refill at 6× the countdown rate so the bar recovers briskly while hovered.
+            // Refill at 6× the countdown rate so the outline recovers briskly while hovered.
             double refillSeconds = Math.Max(0.04, (1.0 - current) * _autoCloseDurationSeconds / 6.0);
-            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
+            ProgressHost.BeginAnimation(OutlineFractionProperty,
                 new DoubleAnimation
                 {
+                    From = current,
                     To = 1,
                     Duration = Motion.Sec(refillSeconds),
                     FillBehavior = FillBehavior.HoldEnd
@@ -493,7 +523,7 @@ namespace CyberSnap.UI
             if (_isPinned || _autoCloseTimer == null || _autoCloseDurationSeconds <= 0)
                 return;
 
-            double remaining = Math.Max(0.1, CaptureProgressScale() * _autoCloseDurationSeconds);
+            double remaining = Math.Max(0.1, CurrentOutlineFraction() * _autoCloseDurationSeconds);
             _autoCloseCountdownStarted = true;
             StartProgressCountdown(remaining);
             _countdownRemainingSeconds = remaining;
@@ -513,9 +543,9 @@ namespace CyberSnap.UI
             _autoCloseLayoutRetries = 0;
             _countdownRemainingSeconds = 0;
             _countdownClosingPhase = false;
-            ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            ProgressHost.BeginAnimation(OutlineFractionProperty, null);
             if (resetProgress)
-                ProgressScale.ScaleX = 1;
+                SetOutlineFraction(1);
         }
 
         private void ArmCountdownRefreshTick()
@@ -529,12 +559,15 @@ namespace CyberSnap.UI
         {
             _lastCountdownSecondText = timeoutSeconds;
             AutoCloseCountdownText.Text = timeoutSeconds.ToString();
-            FadeInDoneCountdownText();
+            // Always show (no fade) when the value is first committed — the user
+            // should see the full seconds remaining immediately on open.
+            AutoCloseCountdownText.Visibility = Visibility.Visible;
+            AutoCloseCountdownText.Opacity = 1.0;
         }
 
         private void ShowDoneCountdownSeconds(double remainingSeconds)
         {
-            if (!_isPinned && _autoCloseTimer != null)
+            if (!_isPinned && _autoCloseTimer != null && AutoCloseCountdownText.Visibility != Visibility.Visible)
                 FadeInDoneCountdownText();
 
             int second = Math.Max(1, (int)Math.Ceiling(remainingSeconds));
@@ -545,10 +578,9 @@ namespace CyberSnap.UI
 
         private void FadeInDoneCountdownText()
         {
-            // Bump the epoch so any in-flight fade-out Can't retroactively hide us.
+            // Bump the epoch so any in-flight fade-out can't retroactively hide us.
             _countdownFadeEpoch++;
-            if (AutoCloseCountdownText.Visibility == Visibility.Visible
-                && AutoCloseCountdownText.Opacity >= 0.999)
+            if (AutoCloseCountdownText.Visibility == Visibility.Visible)
                 return;
 
             AutoCloseCountdownText.Visibility = Visibility.Visible;
@@ -812,12 +844,7 @@ namespace CyberSnap.UI
 
             CheckerboardHost.Background = Theme.CreateCheckerboardBrush();
             PreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
-            if (ProgressTrack != null)
-            {
-                ProgressTrack.Background = Theme.IsDark
-                    ? Theme.Brush(System.Windows.Media.Color.FromArgb(40, 255, 255, 255))
-                    : Theme.Brush(System.Windows.Media.Color.FromArgb(36, 0, 0, 0));
-            }
+            // Outline stroke carries the accent — no track to theme.
 
             UpdateIcons();
             // Pills are owned by PopulateAfterCapturePills (constructor / live settings).
