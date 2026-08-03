@@ -259,14 +259,18 @@
                                             Style="{StaticResource PreviewPrimaryButton}"
                                             HorizontalAlignment="Stretch">
                                         <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                 <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center"/>
                                                 <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
                                             </StackPanel>
-                                            <!-- Auto-close countdown numeral: inside the button, right-aligned against
-                                                 the padding, before the countdown line at the bottom edge. -->
+                                            <!-- Countdown numeral docked right, inside the button's safe padding area. -->
                                             <TextBlock x:Name="AutoCloseCountdownText"
-                                                       Margin="0,0,3,0"
+                                                       Grid.Column="1"
+                                                       Margin="0,0,14,0"
                                                        VerticalAlignment="Center"
                                                        HorizontalAlignment="Right"
                                                        FontSize="10.5"
