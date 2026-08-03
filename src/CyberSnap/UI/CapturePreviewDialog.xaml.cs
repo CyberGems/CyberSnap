@@ -426,11 +426,15 @@ namespace CyberSnap.UI
             }
 
             _autoCloseCountdownStarted = true;
-            StartProgressCountdown(_autoCloseDurationSeconds);
-            _countdownRemainingSeconds = _autoCloseDurationSeconds;
-            ArmCountdownRefreshTick();
-            if (!_autoCloseTimer.IsEnabled)
-                _autoCloseTimer.Start();
+            // Start the outline animation at Loaded priority so WPF has a real layout pass
+            // before the animation clock ticks. Starting at BackgroundPriority lets the
+            // renderer emit frames on a zero-size Visual and skip the countdown entirely.
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                StartProgressCountdown(_autoCloseDurationSeconds);
+                _countdownRemainingSeconds = _autoCloseDurationSeconds;
+                ArmCountdownRefreshTick();
+            }), DispatcherPriority.Loaded);
         }
 
         /// <summary>Perimeter of the Done button host — the track the progress stroke follows.</summary>
@@ -476,14 +480,15 @@ namespace CyberSnap.UI
         private void StartProgressCountdown(double remainingSeconds)
         {
             if (remainingSeconds <= 0) return;
-            ProgressHost.BeginAnimation(OutlineFractionProperty,
-                new DoubleAnimation
-                {
-                    From = Math.Clamp(CurrentOutlineFraction(), 0, 1),
-                    To = 0,
-                    Duration = Motion.Sec(remainingSeconds),
-                    FillBehavior = FillBehavior.HoldEnd
-                });
+            var animation = new DoubleAnimation
+            {
+                From = Math.Clamp(CurrentOutlineFraction(), 0, 1),
+                To = 0,
+                Duration = Motion.Sec(remainingSeconds),
+                FillBehavior = FillBehavior.HoldEnd
+            };
+            animation.Completed += (_, _) => { if (!_isPinned) _countdownClosingPhase = true; };
+            ProgressHost.BeginAnimation(OutlineFractionProperty, animation);
         }
 
         private void StartProgressRefill()
