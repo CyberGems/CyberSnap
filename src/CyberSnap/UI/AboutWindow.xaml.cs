@@ -240,7 +240,10 @@ public partial class AboutWindow : Window
         var result = await UpdateService.CheckForUpdatesAsync();
         if (result.IsUpdateAvailable)
         {
-            var msg = $"{result.StatusMessage}\n\nCurrent: {result.CurrentVersion}\nLatest: {result.LatestVersionLabel}\n\nDownload and install now?";
+            var currentLabel = LocalizationService.Translate("Current:");
+            var latestLabel = LocalizationService.Translate("Latest:");
+            var promptMessage = LocalizationService.Translate("Download and install now?");
+            var msg = $"{result.StatusMessage}\n\n{currentLabel} {result.CurrentVersion}\n{latestLabel} {result.LatestVersionLabel}\n\n{promptMessage}";
             var choice = ThemedConfirmDialog.Confirm(this,
                 LocalizationService.Translate("Update available"),
                 msg,

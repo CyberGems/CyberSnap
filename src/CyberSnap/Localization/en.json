@@ -2040,5 +2040,8 @@
   "Capture Preview": "Capture Preview",
   "Resolutions...": "Resolutions...",
   "Aspect ratios...": "Aspect ratios...",
-  "Confirm screenshot": "Confirm screenshot"
+  "Confirm screenshot": "Confirm screenshot",
+  "Current:": "Current:",
+  "Latest:": "Latest:",
+  "Download and install now?": "Download and install now?"
 }

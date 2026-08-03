@@ -146,7 +146,21 @@ public partial class TrayContextMenuWindow : Window
     private void LoadLocalizedLabels()
     {
         TitleTextBlock.Text = $"CyberSnap  {UpdateService.GetCurrentVersionLabel()}";
-        AboutHeaderBtn.ToolTip = T("Open About CyberSnap");
+        
+        var app = Application.Current as App;
+        bool updateAvailable = app?.LatestUpdateResult?.IsUpdateAvailable ?? false;
+        if (updateAvailable)
+        {
+            UpdateLed.Visibility = Visibility.Visible;
+            UpdateLed.ToolTip = T("Update available");
+            AboutHeaderBtn.ToolTip = $"{T("Open About CyberSnap")} ({T("Update available")})";
+        }
+        else
+        {
+            UpdateLed.Visibility = Visibility.Collapsed;
+            UpdateLed.ToolTip = null;
+            AboutHeaderBtn.ToolTip = T("Open About CyberSnap");
+        }
 
         // Shorter labels for buttons
         AreaCaptureText.Text = T("Area");
