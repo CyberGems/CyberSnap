@@ -1728,8 +1728,9 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Cursor over the confirm modes dock face — same rules as the capture toolbar:
-    /// Hand on pills; SizeAll (move cross) on grip and dead chrome / padding.
+    /// Cursor over the confirm modes dock face:
+    /// Hand on pills, SizeAll on the grip, Default on dead chrome / padding
+    /// (dead chrome remains draggable on mouse-down).
     /// </summary>
     private Cursor? TryGetConfirmChromeHoverCursor(Point location)
     {
@@ -1739,8 +1740,11 @@ public sealed partial class RegionOverlayForm
         if (HitTestConfirmButton(location) >= 0)
             return Cursors.Hand;
 
-        // Grip, size pill, separators, and padding are all drag surfaces.
-        return CursorFactory.GrabCursor;
+        if (HitTestConfirmDockGrip(location))
+            return CursorFactory.GrabCursor;
+
+        // Padding / separators: normal arrow; drag still starts on mouse-down.
+        return Cursors.Default;
     }
 
     /// <summary>True when the pointer is on modes-dock chrome that should drag the dock
