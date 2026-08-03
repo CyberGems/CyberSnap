@@ -264,17 +264,18 @@
                                         </StackPanel>
                                     </Button>
 
-                                    <!-- Auto-close countdown — quiet overlay on the button's top-right corner. -->
-                                            <TextBlock x:Name="AutoCloseCountdownText"
-                                                       Margin="0,4,10,0"
-                                                       VerticalAlignment="Top"
-                                                       HorizontalAlignment="Right"
-                                                       FontSize="10"
-                                                       FontWeight="SemiBold"
-                                                       Opacity="0.4"
-                                                       Foreground="#FFFFFFFF"
-                                                       Visibility="Collapsed"
-                                                       IsHitTestVisible="False"/>
+                                    <!-- Auto-close countdown — quiet overlay on the button's top-right corner.
+                                         Opacity stays at 1 so fade animations drive it explicitly;
+                                         a 40%-alpha white Foreground carries the resting dimness. -->
+                                    <TextBlock x:Name="AutoCloseCountdownText"
+                                               Margin="0,4,10,0"
+                                               VerticalAlignment="Top"
+                                               HorizontalAlignment="Right"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="#66FFFFFF"
+                                               Visibility="Collapsed"
+                                               IsHitTestVisible="False"/>
 
                                     <Grid x:Name="ProgressHost"
                                           Height="2.5"

@@ -22,8 +22,7 @@ namespace CyberSnap.UI
         private const double SideBySideBreakpoint = 700;
         /// <summary>Quick opacity fade for timer auto-close only (manual close stays instant).</summary>
         private const int AutoCloseFadeMs = 280;
-        private const int CountdownFadeMs = 160;
-        private const double CountdownIdleOpacity = 0.4;
+        private const int CountdownFadeMs = 200;
         private const int PillSimInitialDelayMs = 300;
         private const int PillSimWorkMs = 1500;
 
@@ -49,6 +48,7 @@ namespace CyberSnap.UI
         private int _lastCountdownSecondText = -1;
         private double _countdownRemainingSeconds;
         private bool _countdownClosingPhase;
+        private int _countdownFadeEpoch;
         private bool _pillSimRunning;
         private int _pillSimsRemaining;
 
@@ -545,16 +545,17 @@ namespace CyberSnap.UI
 
         private void FadeInDoneCountdownText()
         {
+            // Bump the epoch so any in-flight fade-out Can't retroactively hide us.
+            _countdownFadeEpoch++;
             if (AutoCloseCountdownText.Visibility == Visibility.Visible
-                && AutoCloseCountdownText.Opacity >= CountdownIdleOpacity - 0.001)
+                && AutoCloseCountdownText.Opacity >= 0.999)
                 return;
 
             AutoCloseCountdownText.Visibility = Visibility.Visible;
-            // Animate from 0 -> resting opacity explicitly. Absent From, the previous
-            // fade-out Completed handler had already reset Opacity, so the animation
-            // ran from idle to idle and looked like a hard cut.
-            var fadeIn = Motion.To(CountdownIdleOpacity, CountdownFadeMs);
-            fadeIn.From = 0;
+            var fadeIn = new DoubleAnimation(AutoCloseCountdownText.Opacity, 1.0, Motion.Ms(CountdownFadeMs))
+            {
+                EasingFunction = Motion.Ease(Motion.SmoothOut)
+            };
             AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, fadeIn);
         }
 
@@ -563,29 +564,29 @@ namespace CyberSnap.UI
             if (AutoCloseCountdownText.Visibility != Visibility.Visible)
                 return;
 
-            var fade = Motion.To(0, CountdownFadeMs);
+            int epoch = ++_countdownFadeEpoch;
+            var fade = new DoubleAnimation(AutoCloseCountdownText.Opacity, 0.0, Motion.Ms(CountdownFadeMs))
+            {
+                EasingFunction = Motion.Ease(Motion.SmoothIn)
+            };
             fade.Completed += (_, _) =>
             {
+                // Ignore this completion if a newer fade-in already re-showed the numeral.
+                if (epoch != _countdownFadeEpoch)
+                    return;
                 AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
                 AutoCloseCountdownText.Visibility = Visibility.Collapsed;
-                AutoCloseCountdownText.Opacity = CountdownIdleOpacity;
-                AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
+                AutoCloseCountdownText.Opacity = 1.0;
             };
             AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
-        private void HideDoneCountdownText(bool withFade = true)
+        private void HideDoneCountdownText()
         {
-            if (withFade && AutoCloseCountdownText.Visibility == Visibility.Visible)
-            {
-                FadeOutDoneCountdownText();
-            }
-            else
-            {
-                AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
-                AutoCloseCountdownText.Visibility = Visibility.Collapsed;
-                AutoCloseCountdownText.Opacity = CountdownIdleOpacity;
-            }
+            _countdownFadeEpoch++;
+            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
+            AutoCloseCountdownText.Visibility = Visibility.Collapsed;
+            AutoCloseCountdownText.Opacity = 1.0;
             _lastCountdownSecondText = -1;
         }
 
@@ -1119,8 +1120,8 @@ namespace CyberSnap.UI
                 default:
                     chip.Label.Text = chip.ActionLabel;
                     chip.ChipBorder.ToolTip = chip.PendingTooltip;
-                    chip.StatusIcon.Opacity = 0.9;
-                    chip.StatusIcon.Source = FluentIcons.RenderWpf("arrow", accent, 15, active: true);
+                    chip.StatusIcon.Opacity = 0.95;
+                    chip.StatusIcon.Source = RenderDoubleChevron(accent, 15);
                     chip.StatusIcon.ToolTip = LocalizationService.Translate("Runs when you continue");
                     break;
             }
@@ -1182,6 +1183,34 @@ namespace CyberSnap.UI
             });
         }
 
+        /// <summary>Pending action marker: right-facing double chevron, clearly distinct from the single arrow.</summary>
+        private static BitmapSource RenderDoubleChevron(System.Drawing.Color color, int pixelSize)
+        {
+            var brush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B));
+            brush.Freeze();
+
+            return RenderVector(pixelSize, ctx =>
+            {
+                // Two right-facing strokes: (8,5)->(12,10)->(8,15) and (4,5)->(8,10)->(4,15).
+                var doubleChevron = new PathGeometry();
+                foreach (double x in new[] { 7.5, 3.5 })
+                {
+                    var f = new PathFigure { StartPoint = new System.Windows.Point(x, 5), IsClosed = false };
+                    f.Segments.Add(new LineSegment(new System.Windows.Point(x + 4, 10), true));
+                    f.Segments.Add(new LineSegment(new System.Windows.Point(x, 15), true));
+                    doubleChevron.Figures.Add(f);
+                }
+                doubleChevron.Freeze();
+
+                ctx.DrawGeometry(null, new System.Windows.Media.Pen(brush, 1.9)
+                {
+                    StartLineCap = PenLineCap.Round,
+                    EndLineCap = PenLineCap.Round,
+                    LineJoin = PenLineJoin.Round
+                }, doubleChevron);
+            });
+        }
+
         /// <summary>Draws 20x20-viewbox vector content and rasterizes it at the requested pixel size.</summary>
         private static BitmapSource RenderVector(int pixelSize, Action<DrawingContext> draw)
         {
@@ -1230,8 +1259,8 @@ namespace CyberSnap.UI
             bool continuesToSurface = viewerOn || editorOn;
             var iconColor = GetPrimaryButtonIconColor();
 
-            // Same arrow as pending chips: confirm runs the remaining deferred actions.
-            CancelIcon.Source = FluentIcons.RenderWpf("arrow", iconColor, 14, active: true);
+            // Same pending marker as action pills: confirm runs the remaining deferred actions.
+            CancelIcon.Source = RenderDoubleChevron(iconColor, 15);
             CancelIcon.Visibility = Visibility.Visible;
 
             if (continuesToSurface)
