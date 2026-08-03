@@ -550,7 +550,12 @@ namespace CyberSnap.UI
                 return;
 
             AutoCloseCountdownText.Visibility = Visibility.Visible;
-            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, Motion.To(CountdownIdleOpacity, CountdownFadeMs));
+            // Animate from 0 -> resting opacity explicitly. Absent From, the previous
+            // fade-out Completed handler had already reset Opacity, so the animation
+            // ran from idle to idle and looked like a hard cut.
+            var fadeIn = Motion.To(CountdownIdleOpacity, CountdownFadeMs);
+            fadeIn.From = 0;
+            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, fadeIn);
         }
 
         private void FadeOutDoneCountdownText()
@@ -564,15 +569,23 @@ namespace CyberSnap.UI
                 AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
                 AutoCloseCountdownText.Visibility = Visibility.Collapsed;
                 AutoCloseCountdownText.Opacity = CountdownIdleOpacity;
+                AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
             };
             AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
-        private void HideDoneCountdownText()
+        private void HideDoneCountdownText(bool withFade = true)
         {
-            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
-            AutoCloseCountdownText.Visibility = Visibility.Collapsed;
-            AutoCloseCountdownText.Opacity = CountdownIdleOpacity;
+            if (withFade && AutoCloseCountdownText.Visibility == Visibility.Visible)
+            {
+                FadeOutDoneCountdownText();
+            }
+            else
+            {
+                AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
+                AutoCloseCountdownText.Visibility = Visibility.Collapsed;
+                AutoCloseCountdownText.Opacity = CountdownIdleOpacity;
+            }
             _lastCountdownSecondText = -1;
         }
 
@@ -999,16 +1012,16 @@ namespace CyberSnap.UI
             // Row: [pill]  status — status glyph stays outside the chip.
             var row = new DockPanel
             {
-                Margin = new Thickness(0, 0, 0, 6),
+                Margin = new Thickness(0, 0, 0, 8),
                 LastChildFill = true
             };
 
             var statusRotation = new RotateTransform();
             var statusIcon = new System.Windows.Controls.Image
             {
-                Width = 12,
-                Height = 12,
-                Margin = new Thickness(8, 0, 0, 0),
+                Width = 15,
+                Height = 15,
+                Margin = new Thickness(9, 0, 1, 0),
                 VerticalAlignment = VerticalAlignment.Center,
                 RenderTransform = statusRotation,
                 RenderTransformOrigin = new System.Windows.Point(0.5, 0.5)
@@ -1018,8 +1031,8 @@ namespace CyberSnap.UI
 
             var border = new Border
             {
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(8, 4, 10, 4),
+                CornerRadius = new CornerRadius(12),
+                Padding = new Thickness(10, 6, 12, 6),
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
                 BorderThickness = new Thickness(1),
                 SnapsToDevicePixels = true
@@ -1028,20 +1041,21 @@ namespace CyberSnap.UI
             var stack = new StackPanel
             {
                 Orientation = System.Windows.Controls.Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                MinHeight = 18
             };
 
             var leadingIcon = new System.Windows.Controls.Image
             {
-                Width = 11,
-                Height = 11,
-                Margin = new Thickness(0, 0, 5, 0),
+                Width = 13,
+                Height = 13,
+                Margin = new Thickness(0, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Center
             };
 
             var label = new TextBlock
             {
-                FontSize = 10.5,
+                FontSize = 11.5,
                 FontWeight = FontWeights.Medium,
                 Foreground = Theme.Brush(Theme.TextPrimary),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -1081,15 +1095,15 @@ namespace CyberSnap.UI
             var accent = visual == PillVisualState.Done ? PillDoneGreen : PillPendingBlue;
             chip.ChipBorder.Background = Theme.Brush(System.Windows.Media.Color.FromArgb(22, accent.R, accent.G, accent.B));
             chip.ChipBorder.BorderBrush = Theme.Brush(System.Windows.Media.Color.FromArgb(55, accent.R, accent.G, accent.B));
-            chip.LeadingIcon.Source = FluentIcons.RenderWpf(chip.IconId, accent, 11, active: true);
+            chip.LeadingIcon.Source = FluentIcons.RenderWpf(chip.IconId, accent, 13, active: true);
 
             switch (visual)
             {
                 case PillVisualState.Working:
                     chip.Label.Text = chip.ActionLabel;
                     chip.ChipBorder.ToolTip = chip.PendingTooltip;
-                    chip.StatusIcon.Opacity = 0.95;
-                    chip.StatusIcon.Source = FluentIcons.RenderWpf("redo", accent, 12, active: true);
+                    chip.StatusIcon.Opacity = 1.0;
+                    chip.StatusIcon.Source = RenderSpinnerRing(accent, 15);
                     chip.StatusIcon.ToolTip = chip.PendingTooltip;
                     StartPillStatusSpin(chip);
                     break;
@@ -1098,7 +1112,7 @@ namespace CyberSnap.UI
                     chip.Label.Text = chip.DoneLabel;
                     chip.ChipBorder.ToolTip = chip.DoneTooltip;
                     chip.StatusIcon.Opacity = 1.0;
-                    chip.StatusIcon.Source = FluentIcons.RenderWpf("check", accent, 12, active: true);
+                    chip.StatusIcon.Source = RenderCheckBadge(accent, 15);
                     chip.StatusIcon.ToolTip = LocalizationService.Translate("Already completed");
                     break;
 
@@ -1106,10 +1120,82 @@ namespace CyberSnap.UI
                     chip.Label.Text = chip.ActionLabel;
                     chip.ChipBorder.ToolTip = chip.PendingTooltip;
                     chip.StatusIcon.Opacity = 0.9;
-                    chip.StatusIcon.Source = FluentIcons.RenderWpf("arrow", accent, 12, active: true);
+                    chip.StatusIcon.Source = FluentIcons.RenderWpf("arrow", accent, 15, active: true);
                     chip.StatusIcon.ToolTip = LocalizationService.Translate("Runs when you continue");
                     break;
             }
+        }
+
+        /// <summary>Indeterminate progress ring: 3/4 circle arc with a gap and round caps that spins via StatusRotation.</summary>
+        private static BitmapSource RenderSpinnerRing(System.Drawing.Color color, int pixelSize)
+        {
+            var brush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B));
+            brush.Freeze();
+
+            return RenderVector(pixelSize, ctx =>
+            {
+                // Sweep 270° so the gap reads as the classic indeterminate spinner.
+                var figure = new PathFigure { StartPoint = new System.Windows.Point(10, 2.4), IsClosed = false };
+                figure.Segments.Add(new ArcSegment(
+                    new System.Windows.Point(10, 17.6),
+                    new System.Windows.Size(7.6, 7.6),
+                    0,
+                    isLargeArc: true,
+                    SweepDirection.Clockwise,
+                    isStroked: true));
+                var geometry = new PathGeometry(new[] { figure });
+                geometry.Freeze();
+
+                ctx.DrawGeometry(null, new System.Windows.Media.Pen(brush, 2.4)
+                {
+                    StartLineCap = PenLineCap.Round,
+                    EndLineCap = PenLineCap.Round,
+                    LineJoin = PenLineJoin.Round
+                }, geometry);
+            });
+        }
+
+        /// <summary>Completed badge: circular disc with a centered check inside (Fluent-style).</summary>
+        private static BitmapSource RenderCheckBadge(System.Drawing.Color color, int pixelSize)
+        {
+            var accentBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B));
+            accentBrush.Freeze();
+
+            return RenderVector(pixelSize, ctx =>
+            {
+                ctx.DrawEllipse(accentBrush, null, new System.Windows.Point(10, 10), 9, 9);
+
+                // Check mark: two-segment stroke (6.8,10.4 -> 9.4,13 -> 13.4,7.4).
+                var check = new PathGeometry();
+                var f = new PathFigure { StartPoint = new System.Windows.Point(6.8, 10.4), IsClosed = false };
+                f.Segments.Add(new LineSegment(new System.Windows.Point(9.4, 13), true));
+                f.Segments.Add(new LineSegment(new System.Windows.Point(13.4, 7.4), true));
+                check.Figures.Add(f);
+                check.Freeze();
+
+                ctx.DrawGeometry(null, new System.Windows.Media.Pen(System.Windows.Media.Brushes.White, 1.9)
+                {
+                    StartLineCap = PenLineCap.Round,
+                    EndLineCap = PenLineCap.Round,
+                    LineJoin = PenLineJoin.Round
+                }, check);
+            });
+        }
+
+        /// <summary>Draws 20x20-viewbox vector content and rasterizes it at the requested pixel size.</summary>
+        private static BitmapSource RenderVector(int pixelSize, Action<DrawingContext> draw)
+        {
+            var dv = new DrawingVisual();
+            using (var ctx = dv.RenderOpen())
+            {
+                ctx.PushTransform(new ScaleTransform(pixelSize / 20.0, pixelSize / 20.0));
+                draw(ctx);
+            }
+
+            var rtb = new RenderTargetBitmap(pixelSize, pixelSize, 96, 96, PixelFormats.Pbgra32);
+            rtb.Render(dv);
+            rtb.Freeze();
+            return rtb;
         }
 
         private static void StartPillStatusSpin(AfterCapturePillChip chip)
