@@ -162,6 +162,17 @@
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                        <Ellipse x:Name="UpdateLed"
+                                 Width="8"
+                                 Height="8"
+                                 Fill="#22C55E"
+                                 Margin="6,0,0,0"
+                                 VerticalAlignment="Center"
+                                 Visibility="Collapsed">
+                            <Ellipse.Effect>
+                                <DropShadowEffect BlurRadius="6" Color="#22C55E" ShadowDepth="0" Opacity="0.8"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
                     </StackPanel>
                 </Border>
                 <Button x:Name="TrayCloseBtn"
