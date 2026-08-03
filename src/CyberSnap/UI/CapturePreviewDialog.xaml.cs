@@ -22,6 +22,8 @@ namespace CyberSnap.UI
         private const double SideBySideBreakpoint = 700;
         /// <summary>Quick opacity fade for timer auto-close only (manual close stays instant).</summary>
         private const int AutoCloseFadeMs = 280;
+        private const int CountdownFadeMs = 160;
+        private const double CountdownIdleOpacity = 0.4;
         private const int PillSimInitialDelayMs = 300;
         private const int PillSimWorkMs = 1500;
 
@@ -46,6 +48,7 @@ namespace CyberSnap.UI
         private int _autoCloseLayoutRetries;
         private int _lastCountdownSecondText = -1;
         private double _countdownRemainingSeconds;
+        private bool _countdownClosingPhase;
         private bool _pillSimRunning;
         private int _pillSimsRemaining;
 
@@ -334,26 +337,30 @@ namespace CyberSnap.UI
             _autoCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_autoCloseDurationSeconds) };
             _autoCloseTimer.Tick += (_, _) =>
             {
-                // Fast refresh ticks keep the Done-button numeral in sync; the disable
-                // trick runs on the same timer so the close hand-off needs no extra state.
-                if (_autoCloseTimer is { Interval.TotalSeconds: < 0.05 })
+                // Two phases on one timer:
+                //  · running (Interval = 40 ms): drive the Done-button numeral down; on
+                //    expiry, switch to the closing phase instead of firing immediately
+                //    (DispatcherTimer ignores Interval changes until the next Start()).
+                //  · closing (Interval = 1 ms): the very next tick performs the auto-close.
+                if (_countdownClosingPhase)
                 {
-                    double remaining = Math.Max(0.1, _countdownRemainingSeconds - 0.04);
-                    _countdownRemainingSeconds = remaining;
-                    ShowDoneCountdownSeconds(remaining);
-                    if (remaining <= 0.11)
-                    {
-                        _autoCloseTimer.Stop();
-                        _autoCloseTimer.Interval = TimeSpan.FromSeconds(0.04);
-                        _autoCloseTimer.Start();
-                    }
+                    StopAutoCloseTimer(resetProgress: false);
+                    if (_isPinned || _isHovered)
+                        return;
+                    PerformAutoClose();
                     return;
                 }
 
-                StopAutoCloseTimer(resetProgress: false);
-                if (_isPinned || _isHovered)
-                    return;
-                PerformAutoClose();
+                double remaining = Math.Max(0.1, _countdownRemainingSeconds - 0.04);
+                _countdownRemainingSeconds = remaining;
+                ShowDoneCountdownSeconds(remaining);
+                if (remaining <= 0.11)
+                {
+                    _countdownClosingPhase = true;
+                    _autoCloseTimer.Stop();
+                    _autoCloseTimer.Interval = TimeSpan.FromMilliseconds(1);
+                    _autoCloseTimer.Start();
+                }
             };
 
             if (_isHovered)
@@ -458,8 +465,8 @@ namespace CyberSnap.UI
             if (current >= 1)
                 return;
 
-            // Refill at 3× the countdown rate so the bar recovers quickly while hovered.
-            double refillSeconds = Math.Max(0.05, (1.0 - current) * _autoCloseDurationSeconds / 3.0);
+            // Refill at 6× the countdown rate so the bar recovers briskly while hovered.
+            double refillSeconds = Math.Max(0.04, (1.0 - current) * _autoCloseDurationSeconds / 6.0);
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty,
                 new DoubleAnimation
                 {
@@ -505,6 +512,7 @@ namespace CyberSnap.UI
             _autoCloseCountdownStarted = false;
             _autoCloseLayoutRetries = 0;
             _countdownRemainingSeconds = 0;
+            _countdownClosingPhase = false;
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             if (resetProgress)
                 ProgressScale.ScaleX = 1;
@@ -521,13 +529,13 @@ namespace CyberSnap.UI
         {
             _lastCountdownSecondText = timeoutSeconds;
             AutoCloseCountdownText.Text = timeoutSeconds.ToString();
-            AutoCloseCountdownText.Visibility = Visibility.Visible;
+            FadeInDoneCountdownText();
         }
 
         private void ShowDoneCountdownSeconds(double remainingSeconds)
         {
             if (!_isPinned && _autoCloseTimer != null)
-                AutoCloseCountdownText.Visibility = Visibility.Visible;
+                FadeInDoneCountdownText();
 
             int second = Math.Max(1, (int)Math.Ceiling(remainingSeconds));
             if (second == _lastCountdownSecondText) return;
@@ -535,9 +543,36 @@ namespace CyberSnap.UI
             AutoCloseCountdownText.Text = second.ToString();
         }
 
+        private void FadeInDoneCountdownText()
+        {
+            if (AutoCloseCountdownText.Visibility == Visibility.Visible
+                && AutoCloseCountdownText.Opacity >= CountdownIdleOpacity - 0.001)
+                return;
+
+            AutoCloseCountdownText.Visibility = Visibility.Visible;
+            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, Motion.To(CountdownIdleOpacity, CountdownFadeMs));
+        }
+
+        private void FadeOutDoneCountdownText()
+        {
+            if (AutoCloseCountdownText.Visibility != Visibility.Visible)
+                return;
+
+            var fade = Motion.To(0, CountdownFadeMs);
+            fade.Completed += (_, _) =>
+            {
+                AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
+                AutoCloseCountdownText.Visibility = Visibility.Collapsed;
+                AutoCloseCountdownText.Opacity = CountdownIdleOpacity;
+            };
+            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+
         private void HideDoneCountdownText()
         {
+            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
             AutoCloseCountdownText.Visibility = Visibility.Collapsed;
+            AutoCloseCountdownText.Opacity = CountdownIdleOpacity;
             _lastCountdownSecondText = -1;
         }
 
@@ -547,7 +582,7 @@ namespace CyberSnap.UI
             BeginProgressRefillForHover();
             // Hide the numeral while paused — it only reads while actively counting down.
             if (!_isPinned && _autoCloseTimer != null)
-                AutoCloseCountdownText.Visibility = Visibility.Collapsed;
+                FadeOutDoneCountdownText();
         }
 
         private void OnActionsPanelMouseLeave()

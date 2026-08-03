@@ -71,10 +71,11 @@
             <Setter Property="MinHeight" Value="38"/>
             <Setter Property="MinWidth" Value="120"/>
             <Setter Property="Padding" Value="16,10"/>
-            <!-- Quiet fill so the countdown gradient is the accent, not a neon block. -->
-            <Setter Property="Background" Value="{DynamicResource ThemeInputBackgroundBrush}"/>
+            <!-- Same translucent fill/hover as the optional actions so the whole column
+                 reads as one button family; the progress line carries the accent. -->
+            <Setter Property="Background" Value="#0AFFFFFF"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ThemeInputBorderBrush}"/>
+            <Setter Property="BorderBrush" Value="#15FFFFFF"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
             <Setter Property="Template">
@@ -91,8 +92,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeAccentSubtleBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentHoverBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#15FFFFFF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#30FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter Property="RenderTransform">
@@ -264,15 +265,16 @@
                                     </Button>
 
                                     <!-- Auto-close countdown — quiet overlay on the button's top-right corner. -->
-                                    <TextBlock x:Name="AutoCloseCountdownText"
-                                               Margin="0,5,9,0"
-                                               VerticalAlignment="Top"
-                                               HorizontalAlignment="Right"
-                                               FontSize="10"
-                                               FontWeight="SemiBold"
-                                               Visibility="Collapsed"
-                                               IsHitTestVisible="False"
-                                               Foreground="#80FFFFFF"/>
+                                            <TextBlock x:Name="AutoCloseCountdownText"
+                                                       Margin="0,4,10,0"
+                                                       VerticalAlignment="Top"
+                                                       HorizontalAlignment="Right"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"
+                                                       Opacity="0.4"
+                                                       Foreground="#FFFFFFFF"
+                                                       Visibility="Collapsed"
+                                                       IsHitTestVisible="False"/>
 
                                     <Grid x:Name="ProgressHost"
                                           Height="2.5"
