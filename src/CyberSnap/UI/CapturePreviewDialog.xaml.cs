@@ -23,8 +23,8 @@ namespace CyberSnap.UI
         /// <summary>Quick opacity fade for timer auto-close only (manual close stays instant).</summary>
         private const int AutoCloseFadeMs = 280;
         private const int CountdownFadeMs = 200;
-        private const int PillSimInitialDelayMs = 300;
-        private const int PillSimWorkMs = 1500;
+        private const int PillSimInitialDelayMs = 200;
+        private const int PillSimWorkMs = 1000;
 
         private readonly SettingsService _settingsService;
         private readonly Bitmap _capturedBitmap;
@@ -41,19 +41,16 @@ namespace CyberSnap.UI
         private readonly List<DispatcherTimer> _pillSimTimers = new();
         private AfterCaptureOutcomeState _lastOutcomeState;
         private int _lastTimeoutSeconds;
-        private DispatcherTimer? _autoCloseTimer;
         private double _autoCloseDurationSeconds;
-        private bool _autoCloseCountdownStarted;
-        private int _autoCloseLayoutRetries;
+        private bool _autoCloseArmed;
         private int _lastCountdownSecondText = -1;
-        private double _countdownRemainingSeconds;
-        private bool _countdownClosingPhase;
-        private int _countdownFadeEpoch;
+        private int _countdownEpoch;
         private bool _pillSimRunning;
         private int _pillSimsRemaining;
 
         private static readonly System.Drawing.Color PillDoneGreen = System.Drawing.Color.FromArgb(255, 34, 197, 94);
         private static readonly System.Drawing.Color PillPendingBlue = System.Drawing.Color.FromArgb(255, 0, 162, 255);
+        private static readonly System.Drawing.Color DeleteAccentRed = System.Drawing.Color.FromArgb(255, 239, 83, 80);
 
         private enum PillVisualState
         {
@@ -110,12 +107,15 @@ namespace CyberSnap.UI
             {
                 SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
                 CancelPillCompletionSimulation();
-                StopAutoCloseTimer(resetProgress: true);
+                StopAutoCloseCountdown(resetProgress: true);
             };
             // Pause the auto-close countdown only while the pointer is over the actions
             // column — hovering the image preview no longer holds the dialog open.
             ActionsPanel.MouseEnter += (_, _) => OnActionsPanelMouseEnter();
             ActionsPanel.MouseLeave += (_, _) => OnActionsPanelMouseLeave();
+            // Hovering "Processing" fast-forwards the pill simulation to its final state,
+            // so the user about to click never has to wait out the choreography.
+            CancelBtn.MouseEnter += (_, _) => FinishPillSimulationImmediately();
 
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
@@ -154,6 +154,11 @@ namespace CyberSnap.UI
             SaveText.Text = LocalizationService.Translate("Save");
             CopyText.Text = LocalizationService.Translate("Copy");
             EditText.Text = LocalizationService.Translate("Edit");
+            PrintText.Text = LocalizationService.Translate("Print");
+            PrintBtn.ToolTip = LocalizationService.Translate("Print this capture.");
+            DeleteText.Text = LocalizationService.Translate("Delete capture");
+            DeleteBtn.ToolTip = LocalizationService.Translate(
+                "The saved file will be permanently deleted from disk and removed from the Gallery.");
             MoreText.Text = LocalizationService.Translate("More");
             MoreBtn.ToolTip = LocalizationService.Translate("More");
             NoAutomaticActionsLabel.Text = LocalizationService.Translate("None");
@@ -196,10 +201,10 @@ namespace CyberSnap.UI
                 catch { /* keep current position */ }
 
                 Opacity = 1;
-                UpdateDoneButtonClip();
-                // Start after the dialog is visible and laid out so progress + pills animate correctly.
-                InitAutoCloseTimer();
+                // Pills first: if a completion simulation starts, the countdown waits for it
+                // (InitAutoCloseCountdown no-ops while _pillSimRunning and is re-run on finish).
                 BeginDeferredPillCompletionSimulation();
+                InitAutoCloseCountdown();
             }), DispatcherPriority.ApplicationIdle);
         }
 
@@ -264,6 +269,8 @@ namespace CyberSnap.UI
             SaveIcon.Source = FluentIcons.RenderWpf("save", primaryIconColor, 13, active: true);
             CopyIcon.Source = FluentIcons.RenderWpf("copy", primaryIconColor, 13, active: true);
             EditIcon.Source = FluentIcons.RenderWpf("draw", primaryIconColor, 13, active: true);
+            PrintIcon.Source = FluentIcons.RenderWpf("print", primaryIconColor, 13, active: true);
+            DeleteIcon.Source = FluentIcons.RenderWpf("trash", DeleteAccentRed, 13, active: true);
             ShareIcon.Source = FluentIcons.RenderWpf("share", primaryIconColor, 14, active: true);
             GalleryIcon.Source = FluentIcons.RenderWpf("history", primaryIconColor, 14, active: true);
             MoreIcon.Source = FluentIcons.RenderWpf("more", primaryIconColor, 13, active: true);
@@ -309,325 +316,201 @@ namespace CyberSnap.UI
             UpdateOptionalActionsAvailability();
 
             if (timeoutChanged)
-                InitAutoCloseTimer();
+                InitAutoCloseCountdown();
         }
 
-        private void InitAutoCloseTimer()
+        private void InitAutoCloseCountdown()
         {
-            StopAutoCloseTimer(resetProgress: true);
+            StopAutoCloseCountdown(resetProgress: true);
 
             int timeoutSec = _settingsService.Settings.CapturePreviewTimeoutSeconds;
-            if (timeoutSec <= 0 || _isPinned)
+            // While the pill simulation runs, the button reads "Processing" — a visible
+            // countdown would contradict it. OnPillSimulationStepCompleted re-arms us.
+            if (timeoutSec <= 0 || _isPinned || _pillSimRunning)
             {
-                ProgressHost.Visibility = Visibility.Collapsed;
-                HideDoneCountdownText();
+                CountdownRingHost.Visibility = Visibility.Collapsed;
+                ResetCountdownRingVisual();
                 return;
             }
 
             _autoCloseDurationSeconds = timeoutSec;
-            ProgressHost.Visibility = Visibility.Visible;
+            _autoCloseArmed = true;
+            CountdownRingHost.Visibility = Visibility.Visible;
+            CountdownRingHost.BeginAnimation(OpacityProperty, null);
+            CountdownRingHost.Opacity = _isHovered ? 0.0 : 1.0;
             UpdateDoneCountdownText(timeoutSec);
-            // Start with the full outline visible, then let the countdown shrink it.
-            ProgressHost.SetValue(OutlineFractionProperty, 1.0);
-            ProgressHost.BeginAnimation(OutlineFractionProperty, null);
-            _autoCloseCountdownStarted = false;
-            _autoCloseLayoutRetries = 0;
-
-            _autoCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_autoCloseDurationSeconds) };
-            _autoCloseTimer.Tick += (_, _) =>
-            {
-                // Two phases on one timer:
-                //  · running (Interval = 40 ms): drive the Done-button numeral down; on
-                //    expiry, switch to the closing phase instead of firing immediately
-                //    (DispatcherTimer ignores Interval changes until the next Start()).
-                //  · closing (Interval = 1 ms): the very next tick performs the auto-close.
-                if (_countdownClosingPhase)
-                {
-                    StopAutoCloseTimer(resetProgress: false);
-                    if (_isPinned || _isHovered)
-                        return;
-                    PerformAutoClose();
-                    return;
-                }
-
-                double remaining = Math.Max(0.1, _countdownRemainingSeconds - 0.04);
-                _countdownRemainingSeconds = remaining;
-                ShowDoneCountdownSeconds(remaining);
-                if (remaining <= 0.11)
-                {
-                    _countdownClosingPhase = true;
-                    _autoCloseTimer.Stop();
-                    _autoCloseTimer.Interval = TimeSpan.FromMilliseconds(1);
-                    _autoCloseTimer.Start();
-                }
-            };
+            UpdateCountdownRingArc(1.0);
 
             if (_isHovered)
             {
-                // Stay armed; refill stays full while the pointer remains inside.
+                // Pointer already inside the actions column: stay full, start on mouse leave.
                 return;
             }
 
-            // First open: DoneButtonHost often has ActualWidth=0 in this frame, so outline
-        // animations never paint (timer still fires). Wait until layout has a real width.
-            RequestStartAutoCloseCountdown();
+            StartCountdownAnimation();
         }
 
-        private void DoneButtonHost_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            UpdateDoneButtonClip();
-            // Keep the outline stroke matching the button bounds.
-            ProgressHost.Width = e.NewSize.Width;
-            ProgressHost.Height = e.NewSize.Height;
-
-            if (e.NewSize.Width < 8) return;
-            if (_autoCloseTimer == null || _autoCloseCountdownStarted || _isPinned || _isHovered || _isClosing)
-                return;
-            TryStartAutoCloseCountdown();
-        }
-
-        /// <summary>DoneButtonHost keeps ClipToBounds only as a fallback: the rounded
-        /// outline stroke is drawn by ProgressHost (a Rectangle), not by a bar under
-        /// the button's corner curve.</summary>
-        private void UpdateDoneButtonClip()
-        {
-            if (DoneButtonHost == null)
-                return;
-
-            double w = DoneButtonHost.ActualWidth;
-            double h = DoneButtonHost.ActualHeight;
-            if (w < 1 || h < 1)
-            {
-                DoneButtonHost.Clip = null;
-                return;
-            }
-
-            DoneButtonHost.Clip = new RectangleGeometry(new Rect(0, 0, w, h), 8, 8);
-        }
-
-        private void RequestStartAutoCloseCountdown()
-        {
-            Dispatcher.BeginInvoke(new Action(TryStartAutoCloseCountdown), DispatcherPriority.Loaded);
-        }
-
-        private void TryStartAutoCloseCountdown()
-        {
-            if (_autoCloseTimer == null || _autoCloseCountdownStarted || _isPinned || _isHovered || _isClosing)
-                return;
-            if (ProgressHost.Visibility != Visibility.Visible)
-                return;
-
-            ProgressHost.UpdateLayout();
-            if (ProgressHost.ActualWidth < 8)
-            {
-                if (_autoCloseLayoutRetries++ < 12)
-                    Dispatcher.BeginInvoke(new Action(TryStartAutoCloseCountdown), DispatcherPriority.ContextIdle);
-                return;
-            }
-
-            _autoCloseCountdownStarted = true;
-            // Start the outline animation at Loaded priority so WPF has a real layout pass
-            // before the animation clock ticks. Starting at BackgroundPriority lets the
-            // renderer emit frames on a zero-size Visual and skip the countdown entirely.
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                StartProgressCountdown(_autoCloseDurationSeconds);
-                _countdownRemainingSeconds = _autoCloseDurationSeconds;
-                ArmCountdownRefreshTick();
-            }), DispatcherPriority.Loaded);
-        }
-
-        /// <summary>Perimeter of the Done button host — the track the progress stroke follows.</summary>
-        private static double PerimeterOf(double width, double height)
-        {
-            if (width <= 0 || height <= 0) return 0;
-            return 2.0 * (width + height);
-        }
+        private const double CountdownRingSize = 20.0;
+        private const double CountdownRingStrokeThickness = 2.0;
 
         /// <summary>
-        /// Attached property driving the outline's visible stroke fraction (1→0).
-        /// Animating this on the Shape itself is legal WPF; the change-notification
-        /// projects the scalar onto StrokeDashArray so the visible edge shortens.
+        /// Fraction of auto-close time remaining (1→0). A single DoubleAnimation on this
+        /// property is the countdown clock: the change callback redraws the ring arc and
+        /// the seconds numeral, and Completed fires the auto-close. No DispatcherTimer,
+        /// so the numeral can never drift from the visual.
         /// </summary>
-        public static readonly DependencyProperty OutlineFractionProperty =
-            DependencyProperty.RegisterAttached("OutlineFraction", typeof(double), typeof(CapturePreviewDialog),
-                new PropertyMetadata(1.0, OnOutlineFractionChanged));
+        public static readonly DependencyProperty CountdownFractionProperty =
+            DependencyProperty.Register(nameof(CountdownFraction), typeof(double), typeof(CapturePreviewDialog),
+                new PropertyMetadata(1.0, (d, e) => ((CapturePreviewDialog)d).OnCountdownFractionChanged((double)e.NewValue)));
 
-        private static void OnOutlineFractionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        public double CountdownFraction
         {
-            if (d is not System.Windows.Shapes.Rectangle rect) return;
-            double fraction = Math.Clamp((double)e.NewValue, 0, 1);
-            double perimeter = PerimeterOf(rect.ActualWidth, rect.ActualHeight);
-            if (perimeter <= 0) return;
-            rect.StrokeDashArray = new DoubleCollection { fraction * perimeter, perimeter };
+            get => (double)GetValue(CountdownFractionProperty);
+            set => SetValue(CountdownFractionProperty, value);
         }
 
-        private double CurrentOutlineFraction()
+        private void OnCountdownFractionChanged(double fraction)
         {
-            double fraction = Math.Clamp((double)ProgressHost.GetValue(OutlineFractionProperty), 0, 1);
-            ProgressHost.BeginAnimation(OutlineFractionProperty, null);
-            return fraction;
+            fraction = Math.Clamp(fraction, 0, 1);
+            UpdateCountdownRingArc(fraction);
+            if (_autoCloseArmed && _autoCloseDurationSeconds > 0)
+                ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
         }
 
-        private void SetOutlineFraction(double value)
+        private void StartCountdownAnimation()
         {
-            ProgressHost.SetValue(OutlineFractionProperty, Math.Clamp(value, 0, 1));
-            ProgressHost.BeginAnimation(OutlineFractionProperty, null); // Cancel any running animation immediately.
-        }
-
-        private double CaptureProgressScale() => CurrentOutlineFraction();
-
-        private void StartProgressCountdown(double remainingSeconds)
-        {
-            if (remainingSeconds <= 0) return;
-            var animation = new DoubleAnimation
-            {
-                From = Math.Clamp(CurrentOutlineFraction(), 0, 1),
-                To = 0,
-                Duration = Motion.Sec(remainingSeconds),
-                FillBehavior = FillBehavior.HoldEnd
-            };
-            animation.Completed += (_, _) => { if (!_isPinned) _countdownClosingPhase = true; };
-            ProgressHost.BeginAnimation(OutlineFractionProperty, animation);
-        }
-
-        private void StartProgressRefill()
-        {
-            if (_autoCloseDurationSeconds <= 0) return;
-
-            double current = CurrentOutlineFraction();
-            if (current >= 1)
+            if (_autoCloseDurationSeconds <= 0)
                 return;
 
-            // Refill at 6× the countdown rate so the outline recovers briskly while hovered.
-            double refillSeconds = Math.Max(0.04, (1.0 - current) * _autoCloseDurationSeconds / 6.0);
-            ProgressHost.BeginAnimation(OutlineFractionProperty,
-                new DoubleAnimation
-                {
-                    From = current,
-                    To = 1,
-                    Duration = Motion.Sec(refillSeconds),
-                    FillBehavior = FillBehavior.HoldEnd
-                });
+            int epoch = ++_countdownEpoch;
+
+            // Deliberately not Motion.Sec: the countdown is functional timing, not a
+            // decorative transition. With reduced motion (Motion.Disabled → zero-duration
+            // animations) the dialog must still stay open the configured seconds.
+            var animation = new DoubleAnimation(1.0, 0.0, TimeSpan.FromSeconds(_autoCloseDurationSeconds))
+            {
+                FillBehavior = FillBehavior.HoldEnd
+            };
+            animation.Completed += (_, _) =>
+            {
+                // BeginAnimation(prop, null) detaches a running animation from the property,
+                // but its clock still completes on the ORIGINAL schedule and raises Completed.
+                // The epoch guard makes those stale clocks harmless (hover/stop bumps it).
+                if (epoch != _countdownEpoch)
+                    return;
+                if (!_autoCloseArmed || _isClosing || _isPinned || _isHovered)
+                    return;
+                PerformAutoClose();
+            };
+            BeginAnimation(CountdownFractionProperty, animation);
+        }
+
+        /// <summary>Redraws the ring arc. The remaining arc always ends at 12 o'clock and the
+        /// gap grows clockwise from the top as time runs out (skip-ad style ring). Geometry is
+        /// computed from fixed constants, so it never depends on layout having run.</summary>
+        private void UpdateCountdownRingArc(double fraction)
+        {
+            fraction = Math.Clamp(fraction, 0, 1);
+            double radius = (CountdownRingSize - CountdownRingStrokeThickness) / 2.0;
+            var center = new System.Windows.Point(CountdownRingSize / 2.0, CountdownRingSize / 2.0);
+
+            if (fraction <= 0.001)
+            {
+                CountdownRingArc.Data = null;
+                return;
+            }
+
+            if (fraction >= 0.999)
+            {
+                // ArcSegment cannot express a full 360° sweep; use the ellipse directly.
+                var full = new EllipseGeometry(center, radius, radius);
+                full.Freeze();
+                CountdownRingArc.Data = full;
+                return;
+            }
+
+            // Angle measured clockwise from 12 o'clock.
+            double startAngle = (1.0 - fraction) * 2.0 * Math.PI;
+            var start = new System.Windows.Point(
+                center.X + radius * Math.Sin(startAngle),
+                center.Y - radius * Math.Cos(startAngle));
+            var end = new System.Windows.Point(center.X, center.Y - radius);
+
+            var figure = new PathFigure { StartPoint = start, IsClosed = false, IsFilled = false };
+            figure.Segments.Add(new ArcSegment(
+                end,
+                new System.Windows.Size(radius, radius),
+                0,
+                isLargeArc: fraction > 0.5,
+                SweepDirection.Clockwise,
+                isStroked: true));
+            var geometry = new PathGeometry(new[] { figure });
+            geometry.Freeze();
+            CountdownRingArc.Data = geometry;
         }
 
         private void BeginProgressRefillForHover()
         {
-            if (_autoCloseTimer == null || _isPinned) return;
+            if (!_autoCloseArmed || _isPinned)
+                return;
 
-            // Countdown may still be waiting on first layout — start it so hover has a baseline.
-            if (!_autoCloseCountdownStarted)
-                TryStartAutoCloseCountdown();
-
-            _autoCloseTimer.Stop();
-            StartProgressRefill();
+            // Invalidate the running clock first — its Completed would otherwise still
+            // fire on the old schedule and close the dialog despite the visual reset.
+            _countdownEpoch++;
+            // Pause: removing the animation snaps the fraction back to its base value (1.0),
+            // so the ring pops to full — hovering re-grants the full timeout.
+            BeginAnimation(CountdownFractionProperty, null);
         }
 
         private void ResumeAutoCloseAfterHover()
         {
-            if (_isPinned || _autoCloseTimer == null || _autoCloseDurationSeconds <= 0)
+            if (_isPinned || !_autoCloseArmed || _autoCloseDurationSeconds <= 0)
                 return;
 
-            double remaining = Math.Max(0.1, CurrentOutlineFraction() * _autoCloseDurationSeconds);
-            _autoCloseCountdownStarted = true;
-            StartProgressCountdown(remaining);
-            _countdownRemainingSeconds = remaining;
-            ShowDoneCountdownSeconds(remaining);
-            ArmCountdownRefreshTick();
+            ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
+            FadeCountdownRing(1.0);
+            StartCountdownAnimation();
         }
 
-        private void StopAutoCloseTimer(bool resetProgress)
+        private void StopAutoCloseCountdown(bool resetProgress)
         {
-            if (_autoCloseTimer != null)
-            {
-                _autoCloseTimer.Stop();
-                _autoCloseTimer = null;
-            }
-
-            _autoCloseCountdownStarted = false;
-            _autoCloseLayoutRetries = 0;
-            _countdownRemainingSeconds = 0;
-            _countdownClosingPhase = false;
-            ProgressHost.BeginAnimation(OutlineFractionProperty, null);
+            _countdownEpoch++;
+            _autoCloseArmed = false;
+            BeginAnimation(CountdownFractionProperty, null);
             if (resetProgress)
-                SetOutlineFraction(1);
-        }
-
-        private void ArmCountdownRefreshTick()
-        {
-            if (_autoCloseTimer == null) return;
-            _autoCloseTimer.Interval = TimeSpan.FromSeconds(0.04);
-            _autoCloseTimer.Start();
+                UpdateCountdownRingArc(1.0);
         }
 
         private void UpdateDoneCountdownText(int timeoutSeconds)
         {
             _lastCountdownSecondText = timeoutSeconds;
             AutoCloseCountdownText.Text = timeoutSeconds.ToString();
-            // Always show (no fade) when the value is first committed — the user
-            // should see the full seconds remaining immediately on open.
-            AutoCloseCountdownText.Visibility = Visibility.Visible;
-            AutoCloseCountdownText.Opacity = 1.0;
         }
 
         private void ShowDoneCountdownSeconds(double remainingSeconds)
         {
-            if (!_isPinned && _autoCloseTimer != null && AutoCloseCountdownText.Visibility != Visibility.Visible)
-                FadeInDoneCountdownText();
-
             int second = Math.Max(1, (int)Math.Ceiling(remainingSeconds));
             if (second == _lastCountdownSecondText) return;
             _lastCountdownSecondText = second;
             AutoCloseCountdownText.Text = second.ToString();
         }
 
-        private void FadeInDoneCountdownText()
+        /// <summary>Fades the whole countdown ring (arc + numeral) in or out. Only Opacity
+        /// is animated — the host keeps its layout slot, so the button text never shifts.
+        /// Animating from the current value makes rapid hover enter/leave reverse smoothly.</summary>
+        private void FadeCountdownRing(double targetOpacity)
         {
-            // Bump the epoch so any in-flight fade-out can't retroactively hide us.
-            _countdownFadeEpoch++;
-            if (AutoCloseCountdownText.Visibility == Visibility.Visible)
-                return;
-
-            AutoCloseCountdownText.Visibility = Visibility.Visible;
-            // Always fade in from 0: restarting from a mid-flight fade-out opacity
-            // (e.g. 0.75) crossed the visibility threshold before the animation
-            // even ran, making the transition read as an instant snap.
-            AutoCloseCountdownText.Opacity = 0;
-            var fadeIn = new DoubleAnimation(0, 1.0, Motion.Ms(CountdownFadeMs))
+            var fade = new DoubleAnimation(targetOpacity, Motion.Ms(CountdownFadeMs))
             {
-                EasingFunction = Motion.Ease(Motion.SmoothOut)
+                EasingFunction = Motion.Ease(targetOpacity > 0 ? Motion.SmoothOut : Motion.SmoothIn)
             };
-            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
-        private void FadeOutDoneCountdownText()
+        private void ResetCountdownRingVisual()
         {
-            if (AutoCloseCountdownText.Visibility != Visibility.Visible)
-                return;
-
-            int epoch = ++_countdownFadeEpoch;
-            var fade = new DoubleAnimation(AutoCloseCountdownText.Opacity, 0.0, Motion.Ms(CountdownFadeMs))
-            {
-                EasingFunction = Motion.Ease(Motion.SmoothIn)
-            };
-            fade.Completed += (_, _) =>
-            {
-                // Ignore this completion if a newer fade-in already re-showed the numeral.
-                if (epoch != _countdownFadeEpoch)
-                    return;
-                AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
-                AutoCloseCountdownText.Visibility = Visibility.Collapsed;
-                AutoCloseCountdownText.Opacity = 1.0;
-            };
-            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, fade);
-        }
-
-        private void HideDoneCountdownText()
-        {
-            _countdownFadeEpoch++;
-            AutoCloseCountdownText.BeginAnimation(UIElement.OpacityProperty, null);
-            AutoCloseCountdownText.Visibility = Visibility.Collapsed;
-            AutoCloseCountdownText.Opacity = 1.0;
+            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
+            CountdownRingHost.Opacity = 1.0;
             _lastCountdownSecondText = -1;
         }
 
@@ -635,9 +518,9 @@ namespace CyberSnap.UI
         {
             _isHovered = true;
             BeginProgressRefillForHover();
-            // Hide the numeral while paused — it only reads while actively counting down.
-            if (!_isPinned && _autoCloseTimer != null)
-                FadeOutDoneCountdownText();
+            // Hide the whole ring while paused — it only reads while actively counting down.
+            if (!_isPinned && _autoCloseArmed)
+                FadeCountdownRing(0.0);
         }
 
         private void OnActionsPanelMouseLeave()
@@ -655,9 +538,9 @@ namespace CyberSnap.UI
                 return;
             _isClosing = true;
 
-            StopAutoCloseTimer(resetProgress: false);
-            ProgressHost.Visibility = Visibility.Collapsed;
-            HideDoneCountdownText();
+            StopAutoCloseCountdown(resetProgress: false);
+            CountdownRingHost.Visibility = Visibility.Collapsed;
+            ResetCountdownRingVisual();
             IsHitTestVisible = false;
 
             bool commit = ResolvePrimaryButtonCommit();
@@ -776,6 +659,9 @@ namespace CyberSnap.UI
                 && File.Exists(_savedFilePath);
         }
 
+        private bool CanDeleteSavedCapture() =>
+            !string.IsNullOrWhiteSpace(_savedFilePath) && File.Exists(_savedFilePath);
+
         private void OpenSavedFileInFolder()
         {
             if (!CanOpenSavedFileInFolder() || _savedFilePath is null)
@@ -849,7 +735,7 @@ namespace CyberSnap.UI
 
             CheckerboardHost.Background = Theme.CreateCheckerboardBrush();
             PreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
-            // Outline stroke carries the accent — no track to theme.
+            // Countdown ring brushes bind to DynamicResource theme brushes set above.
 
             UpdateIcons();
             // Pills are owned by PopulateAfterCapturePills (constructor / live settings).
@@ -983,6 +869,9 @@ namespace CyberSnap.UI
             // One at a time: preloader → check, then the next chip — no overlapping spinners.
             _pillSimRunning = true;
             _pillSimsRemaining = chips.Count;
+            // No auto-close while "Processing": the countdown starts when the simulation ends.
+            StopAutoCloseCountdown(resetProgress: true);
+            CountdownRingHost.Visibility = Visibility.Collapsed;
             ApplyPrimaryButtonProcessingState();
 
             int delayMs = PillSimInitialDelayMs;
@@ -1027,6 +916,37 @@ namespace CyberSnap.UI
 
             _pillSimRunning = false;
             UpdateContinueOrExitButton();
+            // Everything settled and the button reads "Done"/"Continue" — now the
+            // auto-close countdown can start without contradicting "Processing".
+            InitAutoCloseCountdown();
+        }
+
+        /// <summary>Fast-forwards the pill simulation to its final state (all Done-timing
+        /// chips checked) and starts the auto-close countdown. Hovering the primary button
+        /// while it reads "Processing" triggers this.</summary>
+        private void FinishPillSimulationImmediately()
+        {
+            if (!_pillSimRunning || _isClosing)
+                return;
+
+            _pillSimToken++; // Invalidate every scheduled visual step.
+            foreach (var timer in _pillSimTimers)
+                timer.Stop();
+            _pillSimTimers.Clear();
+            _pillSimRunning = false;
+            _pillSimsRemaining = 0;
+
+            if (_activePillChips != null)
+            {
+                foreach (var chip in _activePillChips)
+                {
+                    if (chip.FinalTiming == AfterCapturePillTiming.Done)
+                        ApplyPillVisualState(chip, PillVisualState.Done);
+                }
+            }
+
+            UpdateContinueOrExitButton();
+            InitAutoCloseCountdown();
         }
 
         private void ApplyPrimaryButtonProcessingState()
@@ -1338,10 +1258,15 @@ namespace CyberSnap.UI
             CopyBtn.IsEnabled = !copyAuto;
             EditBtn.IsEnabled = !editAuto;
 
+            // Delete only makes sense once the capture actually exists on disk.
+            DeleteBtn.Visibility = CanDeleteSavedCapture() ? Visibility.Visible : Visibility.Collapsed;
+
             bool anyOptionalVisible =
                 SaveBtn.Visibility == Visibility.Visible
                 || CopyBtn.Visibility == Visibility.Visible
                 || EditBtn.Visibility == Visibility.Visible
+                || PrintBtn.Visibility == Visibility.Visible
+                || DeleteBtn.Visibility == Visibility.Visible
                 || MoreBtn.Visibility == Visibility.Visible;
 
             OptionalActionsSection.Visibility = anyOptionalVisible ? Visibility.Visible : Visibility.Collapsed;
@@ -1367,13 +1292,13 @@ namespace CyberSnap.UI
 
             if (_isPinned)
             {
-                StopAutoCloseTimer(resetProgress: true);
-                ProgressHost.Visibility = Visibility.Collapsed;
-                HideDoneCountdownText();
+                StopAutoCloseCountdown(resetProgress: true);
+                CountdownRingHost.Visibility = Visibility.Collapsed;
+                ResetCountdownRingVisual();
             }
             else
             {
-                InitAutoCloseTimer();
+                InitAutoCloseCountdown();
             }
         }
 
@@ -1420,6 +1345,85 @@ namespace CyberSnap.UI
             _isClosing = true;
             SelectedAction = RegionOverlayForm.ConfirmCommitAction.History;
             DialogResult = true;
+        }
+
+        private void PrintBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isClosing)
+                return;
+
+            // Hold the auto-close while the system print dialog is up; a fresh
+            // countdown re-arms afterwards (InitAutoCloseCountdown handles pin/hover).
+            StopAutoCloseCountdown(resetProgress: true);
+            CountdownRingHost.Visibility = Visibility.Collapsed;
+
+            try
+            {
+                var printDialog = new System.Windows.Controls.PrintDialog();
+                if (printDialog.ShowDialog() == true && PreviewImage.Source is BitmapSource source)
+                {
+                    var visual = new DrawingVisual();
+                    using (var ctx = visual.RenderOpen())
+                    {
+                        double areaW = printDialog.PrintableAreaWidth;
+                        double areaH = printDialog.PrintableAreaHeight;
+                        // Shrink to fit the printable area, never upscale small captures.
+                        double scale = Math.Min(1.0, Math.Min(areaW / source.Width, areaH / source.Height));
+                        double w = source.Width * scale;
+                        double h = source.Height * scale;
+                        ctx.DrawImage(source, new Rect((areaW - w) / 2.0, (areaH - h) / 2.0, w, h));
+                    }
+                    printDialog.PrintVisual(visual, "CyberSnap");
+                }
+            }
+            catch (Exception ex)
+            {
+                ToastWindow.ShowError(LocalizationService.Translate("Print failed"), ex.Message);
+            }
+            finally
+            {
+                if (!_isClosing)
+                    InitAutoCloseCountdown();
+            }
+        }
+
+        private void DeleteBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isClosing || !CanDeleteSavedCapture() || _savedFilePath is null)
+                return;
+
+            // Hold the auto-close while the confirmation is up.
+            StopAutoCloseCountdown(resetProgress: true);
+            CountdownRingHost.Visibility = Visibility.Collapsed;
+
+            bool confirmed = ThemedConfirmDialog.Confirm(
+                this,
+                LocalizationService.Translate("Delete capture?"),
+                LocalizationService.Translate(
+                    "The saved file will be permanently deleted from disk and removed from the Gallery.")
+                    + "\n\n" + _savedFilePath,
+                LocalizationService.Translate("Delete"),
+                LocalizationService.Translate("Cancel"));
+
+            if (!confirmed)
+            {
+                InitAutoCloseCountdown();
+                return;
+            }
+
+            if (!HistoryService.TryDeleteSavedCapture(_savedFilePath))
+            {
+                ToastWindow.ShowError(LocalizationService.Translate("Delete failed"), _savedFilePath);
+                UpdateOptionalActionsAvailability();
+                InitAutoCloseCountdown();
+                return;
+            }
+
+            ToastWindow.Show(LocalizationService.Translate("Capture deleted"));
+            // Discard: close without committing so deferred outcomes (save/share/viewer)
+            // don't run against the file we just removed.
+            _isClosing = true;
+            DialogResult = false;
         }
 
         private void CancelBtn_Click(object sender, RoutedEventArgs e)
