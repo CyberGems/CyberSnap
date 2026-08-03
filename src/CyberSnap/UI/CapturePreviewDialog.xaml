@@ -196,8 +196,10 @@
                                        Foreground="{DynamicResource ThemeMutedBrush}"/>
                         </StackPanel>
 
-                        <!-- You can also -->
-                        <StackPanel x:Name="OptionalActionsSection" Grid.Row="1" Margin="0,16,0,0">
+                        <!-- You can also — anchored to the bottom, right above the primary CTA,
+                             so the breathing room stays under the pills instead of mid-card. -->
+                        <StackPanel x:Name="OptionalActionsSection" Grid.Row="1" Margin="0,16,0,0"
+                                    VerticalAlignment="Bottom">
                             <TextBlock x:Name="OptionalActionsHeaderLabel"
                                        Text="You can also:"
                                        FontSize="11.5" FontWeight="SemiBold"
@@ -230,6 +232,14 @@
                                         <TextBlock x:Name="EditText" Text="Edit" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
+                                <Button x:Name="PrintBtn" Click="PrintBtn_Click"
+                                        Style="{StaticResource PreviewActionButton}"
+                                        Margin="0,0,6,6">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Image x:Name="PrintIcon" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="PrintText" Text="Print" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button x:Name="MoreBtn" Click="MoreBtn_Click"
                                         Style="{StaticResource PreviewActionButton}"
                                         Margin="0,0,6,6"
@@ -237,6 +247,15 @@
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <Image x:Name="MoreIcon" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                         <TextBlock x:Name="MoreText" Text="More" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="DeleteBtn" Click="DeleteBtn_Click"
+                                        Style="{StaticResource PreviewActionButton}"
+                                        Margin="0,0,6,6"
+                                        Visibility="Collapsed">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Image x:Name="DeleteIcon" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="DeleteText" Text="Delete capture" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
                             </WrapPanel>
@@ -248,54 +267,45 @@
                             <Image x:Name="GalleryIcon" Width="0" Height="0" Visibility="Collapsed"/>
                         </StackPanel>
 
-                        <!-- Primary CTA + auto-close progress flush to button bottom (toast-style). -->
+                        <!-- Primary CTA + auto-close countdown ring docked right (skip-ad style). -->
                         <StackPanel Grid.Row="2" Margin="0,14,0,0">
-                            <Border x:Name="DoneButtonHost"
-                                    CornerRadius="8"
-                                    ClipToBounds="True"
-                                    SizeChanged="DoneButtonHost_SizeChanged">
+                            <Button x:Name="CancelBtn" Click="CancelBtn_Click"
+                                    Style="{StaticResource PreviewPrimaryButton}"
+                                    HorizontalAlignment="Stretch">
                                 <Grid>
-                                    <Button x:Name="CancelBtn" Click="CancelBtn_Click"
-                                            Style="{StaticResource PreviewPrimaryButton}"
-                                            HorizontalAlignment="Stretch">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                                <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
-                                            </StackPanel>
-                                            <!-- Countdown numeral docked right, inside the button's safe padding area. -->
-                                            <TextBlock x:Name="AutoCloseCountdownText"
-                                                       Grid.Column="1"
-                                                       Margin="0,0,14,0"
-                                                       VerticalAlignment="Center"
-                                                       HorizontalAlignment="Right"
-                                                       FontSize="10.5"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="#99FFFFFF"
-                                                       Visibility="Collapsed"
-                                                       IsHitTestVisible="False"/>
-                                        </Grid>
-                                    </Button>
-
-                                    <!-- Auto-close countdown traces the button's outline, shortening along
-                                         its bottom edge as time runs out. -->
-                                    <Rectangle x:Name="ProgressHost"
-                                               RadiusX="7" RadiusY="7"
-                                               Stroke="#FF00F2FF"
-                                               StrokeThickness="2"
-                                               StrokeDashCap="Round"
-                                               Visibility="Collapsed"
-                                               IsHitTestVisible="False">
-                                        <Rectangle.Effect>
-                                            <BlurEffect Radius="1"/>
-                                        </Rectangle.Effect>
-                                    </Rectangle>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    <!-- Countdown ring around the seconds numeral: the accent arc depletes
+                                         clockwise from 12 o'clock as the auto-close timeout runs out. -->
+                                    <Grid x:Name="CountdownRingHost"
+                                          Grid.Column="1"
+                                          Width="20" Height="20"
+                                          Margin="8,0,0,0"
+                                          VerticalAlignment="Center"
+                                          Visibility="Collapsed"
+                                          IsHitTestVisible="False">
+                                        <Ellipse Stroke="{DynamicResource ThemeInputBorderBrush}"
+                                                 StrokeThickness="2"/>
+                                        <Path x:Name="CountdownRingArc"
+                                              Stroke="{DynamicResource ThemeAccentBrush}"
+                                              StrokeThickness="2"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"/>
+                                        <TextBlock x:Name="AutoCloseCountdownText"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="9"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
+                                    </Grid>
                                 </Grid>
-                            </Border>
+                            </Button>
 
                             <TextBlock x:Name="ViewerHintBadge"
                                        Text=""
