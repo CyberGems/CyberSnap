@@ -44,6 +44,8 @@ namespace CyberSnap.UI
         private double _autoCloseDurationSeconds;
         private bool _autoCloseCountdownStarted;
         private int _autoCloseLayoutRetries;
+        private int _lastCountdownSecondText = -1;
+        private double _countdownRemainingSeconds;
         private bool _pillSimRunning;
         private int _pillSimsRemaining;
 
@@ -316,11 +318,13 @@ namespace CyberSnap.UI
             if (timeoutSec <= 0 || _isPinned)
             {
                 ProgressHost.Visibility = Visibility.Collapsed;
+                HideDoneCountdownText();
                 return;
             }
 
             _autoCloseDurationSeconds = timeoutSec;
             ProgressHost.Visibility = Visibility.Visible;
+            UpdateDoneCountdownText(timeoutSec);
             ProgressBar.Visibility = Visibility.Visible;
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             ProgressScale.ScaleX = 1;
@@ -330,6 +334,22 @@ namespace CyberSnap.UI
             _autoCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_autoCloseDurationSeconds) };
             _autoCloseTimer.Tick += (_, _) =>
             {
+                // Fast refresh ticks keep the Done-button numeral in sync; the disable
+                // trick runs on the same timer so the close hand-off needs no extra state.
+                if (_autoCloseTimer is { Interval.TotalSeconds: < 0.05 })
+                {
+                    double remaining = Math.Max(0.1, _countdownRemainingSeconds - 0.04);
+                    _countdownRemainingSeconds = remaining;
+                    ShowDoneCountdownSeconds(remaining);
+                    if (remaining <= 0.11)
+                    {
+                        _autoCloseTimer.Stop();
+                        _autoCloseTimer.Interval = TimeSpan.FromSeconds(0.04);
+                        _autoCloseTimer.Start();
+                    }
+                    return;
+                }
+
                 StopAutoCloseTimer(resetProgress: false);
                 if (_isPinned || _isHovered)
                     return;
@@ -403,6 +423,8 @@ namespace CyberSnap.UI
 
             _autoCloseCountdownStarted = true;
             StartProgressCountdown(_autoCloseDurationSeconds);
+            _countdownRemainingSeconds = _autoCloseDurationSeconds;
+            ArmCountdownRefreshTick();
             if (!_autoCloseTimer.IsEnabled)
                 _autoCloseTimer.Start();
         }
@@ -465,10 +487,11 @@ namespace CyberSnap.UI
                 return;
 
             double remaining = Math.Max(0.1, CaptureProgressScale() * _autoCloseDurationSeconds);
-            _autoCloseTimer.Interval = TimeSpan.FromSeconds(remaining);
             _autoCloseCountdownStarted = true;
             StartProgressCountdown(remaining);
-            _autoCloseTimer.Start();
+            _countdownRemainingSeconds = remaining;
+            ShowDoneCountdownSeconds(remaining);
+            ArmCountdownRefreshTick();
         }
 
         private void StopAutoCloseTimer(bool resetProgress)
@@ -481,9 +504,39 @@ namespace CyberSnap.UI
 
             _autoCloseCountdownStarted = false;
             _autoCloseLayoutRetries = 0;
+            _countdownRemainingSeconds = 0;
             ProgressScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             if (resetProgress)
                 ProgressScale.ScaleX = 1;
+        }
+
+        private void ArmCountdownRefreshTick()
+        {
+            if (_autoCloseTimer == null) return;
+            _autoCloseTimer.Interval = TimeSpan.FromSeconds(0.04);
+            _autoCloseTimer.Start();
+        }
+
+        private void UpdateDoneCountdownText(int timeoutSeconds)
+        {
+            _lastCountdownSecondText = timeoutSeconds;
+            AutoCloseCountdownText.Text = timeoutSeconds.ToString();
+            AutoCloseCountdownText.Visibility = Visibility.Visible;
+            AutoCloseCountdownText.Foreground = Theme.Brush(Theme.TextSecondary);
+        }
+
+        private void ShowDoneCountdownSeconds(double remainingSeconds)
+        {
+            int second = Math.Max(1, (int)Math.Ceiling(remainingSeconds));
+            if (second == _lastCountdownSecondText) return;
+            _lastCountdownSecondText = second;
+            AutoCloseCountdownText.Text = second.ToString();
+        }
+
+        private void HideDoneCountdownText()
+        {
+            AutoCloseCountdownText.Visibility = Visibility.Collapsed;
+            _lastCountdownSecondText = -1;
         }
 
         private void OnActionsPanelMouseEnter()
@@ -509,6 +562,7 @@ namespace CyberSnap.UI
 
             StopAutoCloseTimer(resetProgress: false);
             ProgressHost.Visibility = Visibility.Collapsed;
+            HideDoneCountdownText();
             IsHitTestVisible = false;
 
             bool commit = ResolvePrimaryButtonCommit();
@@ -1124,6 +1178,7 @@ namespace CyberSnap.UI
             {
                 StopAutoCloseTimer(resetProgress: true);
                 ProgressHost.Visibility = Visibility.Collapsed;
+                HideDoneCountdownText();
             }
             else
             {
