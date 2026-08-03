@@ -272,7 +272,7 @@
                                                FontWeight="SemiBold"
                                                Visibility="Collapsed"
                                                IsHitTestVisible="False"
-                                               Foreground="#99FFFFFF"/>
+                                               Foreground="#80FFFFFF"/>
 
                                     <Grid x:Name="ProgressHost"
                                           Height="2.5"

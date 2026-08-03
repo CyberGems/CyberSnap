@@ -526,6 +526,9 @@ namespace CyberSnap.UI
 
         private void ShowDoneCountdownSeconds(double remainingSeconds)
         {
+            if (!_isPinned && _autoCloseTimer != null)
+                AutoCloseCountdownText.Visibility = Visibility.Visible;
+
             int second = Math.Max(1, (int)Math.Ceiling(remainingSeconds));
             if (second == _lastCountdownSecondText) return;
             _lastCountdownSecondText = second;
@@ -542,6 +545,9 @@ namespace CyberSnap.UI
         {
             _isHovered = true;
             BeginProgressRefillForHover();
+            // Hide the numeral while paused — it only reads while actively counting down.
+            if (!_isPinned && _autoCloseTimer != null)
+                AutoCloseCountdownText.Visibility = Visibility.Collapsed;
         }
 
         private void OnActionsPanelMouseLeave()
