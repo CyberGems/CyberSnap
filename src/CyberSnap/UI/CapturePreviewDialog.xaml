@@ -277,27 +277,19 @@
                                         </Grid>
                                     </Button>
 
-                                    <Grid x:Name="ProgressHost"
-                                          Height="3.5"
-                                          VerticalAlignment="Bottom"
-                                          IsHitTestVisible="False"
-                                          Visibility="Collapsed">
-                                        <Border x:Name="ProgressTrack" HorizontalAlignment="Stretch"/>
-                                        <Border x:Name="ProgressBar"
-                                                HorizontalAlignment="Stretch"
-                                                RenderTransformOrigin="0.5,0.5">
-                                            <Border.Background>
-                                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                                    <GradientStop Color="#FF00F2FF" Offset="0.0"/>
-                                                    <GradientStop Color="#FF7A00FF" Offset="0.5"/>
-                                                    <GradientStop Color="#FFFF00D0" Offset="1.0"/>
-                                                </LinearGradientBrush>
-                                            </Border.Background>
-                                            <Border.RenderTransform>
-                                                <ScaleTransform x:Name="ProgressScale" ScaleX="1" ScaleY="1"/>
-                                            </Border.RenderTransform>
-                                        </Border>
-                                    </Grid>
+                                    <!-- Auto-close countdown traces the button's outline, shortening along
+                                         its bottom edge as time runs out. -->
+                                    <Rectangle x:Name="ProgressHost"
+                                               RadiusX="7" RadiusY="7"
+                                               Stroke="#FF00F2FF"
+                                               StrokeThickness="2"
+                                               StrokeDashCap="Round"
+                                               Visibility="Collapsed"
+                                               IsHitTestVisible="False">
+                                        <Rectangle.Effect>
+                                            <BlurEffect Radius="1"/>
+                                        </Rectangle.Effect>
+                                    </Rectangle>
                                 </Grid>
                             </Border>
 
