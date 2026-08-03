@@ -258,27 +258,27 @@
                                     <Button x:Name="CancelBtn" Click="CancelBtn_Click"
                                             Style="{StaticResource PreviewPrimaryButton}"
                                             HorizontalAlignment="Stretch">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                            <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
-                                        </StackPanel>
+                                        <Grid>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                            <!-- Auto-close countdown numeral: inside the button, right-aligned against
+                                                 the padding, before the countdown line at the bottom edge. -->
+                                            <TextBlock x:Name="AutoCloseCountdownText"
+                                                       Margin="0,0,3,0"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Right"
+                                                       FontSize="10.5"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#99FFFFFF"
+                                                       Visibility="Collapsed"
+                                                       IsHitTestVisible="False"/>
+                                        </Grid>
                                     </Button>
 
-                                    <!-- Auto-close countdown — quiet overlay on the button's top-right corner.
-                                         Opacity stays at 1 so fade animations drive it explicitly;
-                                         a 40%-alpha white Foreground carries the resting dimness. -->
-                                    <TextBlock x:Name="AutoCloseCountdownText"
-                                               Margin="0,4,10,0"
-                                               VerticalAlignment="Top"
-                                               HorizontalAlignment="Right"
-                                               FontSize="10"
-                                               FontWeight="SemiBold"
-                                               Foreground="#66FFFFFF"
-                                               Visibility="Collapsed"
-                                               IsHitTestVisible="False"/>
-
                                     <Grid x:Name="ProgressHost"
-                                          Height="2.5"
+                                          Height="3.5"
                                           VerticalAlignment="Bottom"
                                           IsHitTestVisible="False"
                                           Visibility="Collapsed">

@@ -552,7 +552,11 @@ namespace CyberSnap.UI
                 return;
 
             AutoCloseCountdownText.Visibility = Visibility.Visible;
-            var fadeIn = new DoubleAnimation(AutoCloseCountdownText.Opacity, 1.0, Motion.Ms(CountdownFadeMs))
+            // Always fade in from 0: restarting from a mid-flight fade-out opacity
+            // (e.g. 0.75) crossed the visibility threshold before the animation
+            // even ran, making the transition read as an instant snap.
+            AutoCloseCountdownText.Opacity = 0;
+            var fadeIn = new DoubleAnimation(0, 1.0, Motion.Ms(CountdownFadeMs))
             {
                 EasingFunction = Motion.Ease(Motion.SmoothOut)
             };
