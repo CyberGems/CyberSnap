@@ -522,7 +522,6 @@ namespace CyberSnap.UI
             _lastCountdownSecondText = timeoutSeconds;
             AutoCloseCountdownText.Text = timeoutSeconds.ToString();
             AutoCloseCountdownText.Visibility = Visibility.Visible;
-            AutoCloseCountdownText.Foreground = Theme.Brush(Theme.TextSecondary);
         }
 
         private void ShowDoneCountdownSeconds(double remainingSeconds)
