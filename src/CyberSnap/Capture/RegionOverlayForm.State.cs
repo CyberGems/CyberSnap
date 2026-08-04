@@ -2252,7 +2252,7 @@ public sealed partial class RegionOverlayForm
                 LocalizationService.Translate("This will discard the annotations on this capture."),
                 LocalizationService.Translate("Confirm cancellation"),
                 LocalizationService.Translate("Continue selection"),
-                iconId: "signOut",
+                iconId: "question",
                 danger: true);
             if (!ok)
                 return;
