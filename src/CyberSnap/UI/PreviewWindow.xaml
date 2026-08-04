@@ -51,9 +51,9 @@
                             KeyDown="CloseBtn_KeyDown"
                             HorizontalAlignment="Right" VerticalAlignment="Top"
                             Margin="0,6,6,0" Opacity="0"
-                            ToolTip="Close preview"
+                            ToolTip="Close preview (Esc)"
                             AutomationProperties.Name="Close preview"
-                            AutomationProperties.HelpText="Close this preview.">
+                            AutomationProperties.HelpText="Close this preview (Esc).">
                         <Image x:Name="CloseIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -66,9 +66,9 @@
                             KeyDown="PinBtn_KeyDown"
                             HorizontalAlignment="Left" VerticalAlignment="Bottom"
                             Margin="6,0,0,6" Opacity="0"
-                            ToolTip="Pin preview"
+                            ToolTip="Pin preview (P)"
                             AutomationProperties.Name="Pin preview"
-                            AutomationProperties.HelpText="Keep this preview open.">
+                            AutomationProperties.HelpText="Keep this preview open (P).">
                         <Image x:Name="PinIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -81,9 +81,9 @@
                             KeyDown="SaveBtn_KeyDown"
                             HorizontalAlignment="Right" VerticalAlignment="Bottom"
                             Margin="0,0,6,6" Opacity="0"
-                            ToolTip="Save preview"
+                            ToolTip="Save preview (Ctrl+S)"
                             AutomationProperties.Name="Save preview"
-                            AutomationProperties.HelpText="Save this preview image.">
+                            AutomationProperties.HelpText="Save this preview image (Ctrl+S).">
                         <Image x:Name="SaveIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -96,9 +96,9 @@
                             KeyDown="EditBtn_KeyDown"
                             HorizontalAlignment="Right" VerticalAlignment="Top"
                             Margin="0,6,42,0" Opacity="0"
-                            ToolTip="Edit preview"
+                            ToolTip="Edit preview (Ctrl+E)"
                             AutomationProperties.Name="Edit preview"
-                            AutomationProperties.HelpText="Open the post-capture editor.">
+                            AutomationProperties.HelpText="Open the post-capture editor (Ctrl+E).">
                         <Image x:Name="EditIcon" Width="16" Height="16" Stretch="Uniform" Opacity="1"
                                RenderOptions.BitmapScalingMode="HighQuality"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
