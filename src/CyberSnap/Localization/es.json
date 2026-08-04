@@ -1135,6 +1135,8 @@
   "Zoom to fit": "Ajustar zoom",
   "Reset zoom": "Restablecer zoom",
   "Fit to window": "Ajustar a ventana",
+  "Actual size": "Tamaño real",
+  "Click for actual size (100%)": "Clic para tamaño real (100%)",
   "Undo": "Deshacer",
   "Redo": "Rehacer",
   "Copy failed": "Error al copiar",
