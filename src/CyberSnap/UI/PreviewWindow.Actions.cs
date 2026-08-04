@@ -432,6 +432,153 @@ public partial class PreviewWindow
 
     private void ClosePreview() => AnimateDismiss();
 
+    // ── Window-wide hotkeys ─────────────────────────────────────────────────
+    //
+    // Esc           → close preview
+    // P             → pin / unpin
+    // Ctrl+S        → save
+    // Ctrl+E        → open editor
+    // Ctrl+C        → copy image to clipboard
+    // Ctrl+P        → print
+    //
+    // All shortcuts are also surfaced as discreet hints on each button tooltip
+    // (see ApplyLocalizedButtonLabels in PreviewWindow.xaml.cs) so discovery
+    // happens on hover without cluttering the UI.
+
+    protected override void OnKeyDown(WpfKeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Handled)
+            return;
+
+        var mods = Keyboard.Modifiers;
+        bool ctrlOnly = mods == ModifierKeys.Control;
+
+        if (e.Key == WpfKey.Escape && mods == ModifierKeys.None)
+        {
+            e.Handled = true;
+            ClosePreview();
+            return;
+        }
+
+        if (e.Key == WpfKey.P && mods == ModifierKeys.None)
+        {
+            e.Handled = true;
+            TogglePinned();
+            return;
+        }
+
+        if (ctrlOnly)
+        {
+            switch (e.Key)
+            {
+                case WpfKey.S:
+                    e.Handled = true;
+                    SavePreview();
+                    return;
+                case WpfKey.E:
+                    e.Handled = true;
+                    OpenEditor();
+                    return;
+                case WpfKey.C:
+                    e.Handled = true;
+                    CopyImageToClipboard();
+                    return;
+                case WpfKey.P:
+                    e.Handled = true;
+                    PrintPreview();
+                    return;
+            }
+        }
+    }
+
+    private void CopyImageToClipboard()
+    {
+        if (_screenshot is not null)
+        {
+            try
+            {
+                ClipboardService.CopyToClipboard(_screenshot, _savedFilePath);
+                SetPreviewWindowStatusTooltip(LocalizationService.Translate("Copied to clipboard."));
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("preview.copy-clipboard", ex.Message, ex);
+                ToastWindow.ShowError(
+                    LocalizationService.Translate("Copy failed"),
+                    ex.Message,
+                    GetExistingPreviewFilePathOrNull());
+            }
+            return;
+        }
+
+        if (HasSavedPreviewFileOnDisk())
+        {
+            try
+            {
+                ClipboardService.CopyFileToClipboard(_savedFilePath!);
+                SetPreviewWindowStatusTooltip(LocalizationService.Translate("File copied to clipboard."));
+            }
+            catch (Exception ex)
+            {
+                AppDiagnostics.LogWarning("preview.copy-file-clipboard", ex.Message, ex);
+                ToastWindow.ShowError(
+                    LocalizationService.Translate("Copy failed"),
+                    ex.Message,
+                    GetExistingPreviewFilePathOrNull());
+            }
+            return;
+        }
+
+        SetPreviewWindowStatusTooltip(LocalizationService.Translate("Nothing available to copy."));
+    }
+
+    private void PrintPreview()
+    {
+        // Pause auto-dismiss while the system print dialog is up; user wants to act.
+        var remainingAutoDismissSeconds = PausePreviewAutoDismiss();
+
+        try
+        {
+            BitmapSource? source = ThumbnailImage.Source as BitmapSource;
+            if (source is null)
+            {
+                SetPreviewWindowStatusTooltip(LocalizationService.Translate("Nothing available to print."));
+                return;
+            }
+
+            var printDialog = new System.Windows.Controls.PrintDialog();
+            if (printDialog.ShowDialog() == true)
+            {
+                var visual = new DrawingVisual();
+                using (var ctx = visual.RenderOpen())
+                {
+                    double areaW = printDialog.PrintableAreaWidth;
+                    double areaH = printDialog.PrintableAreaHeight;
+                    // Shrink to fit the printable area, never upscale small captures.
+                    double scale = Math.Min(1.0, Math.Min(areaW / source.Width, areaH / source.Height));
+                    double w = source.Width * scale;
+                    double h = source.Height * scale;
+                    ctx.DrawImage(source, new Rect((areaW - w) / 2.0, (areaH - h) / 2.0, w, h));
+                }
+                printDialog.PrintVisual(visual, "CyberSnap");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogWarning("preview.print", ex.Message, ex);
+            ToastWindow.ShowError(
+                LocalizationService.Translate("Print failed"),
+                ex.Message,
+                GetExistingPreviewFilePathOrNull());
+        }
+        finally
+        {
+            if (!_isFading)
+                ResumePreviewAutoDismiss(remainingAutoDismissSeconds);
+        }
+    }
+
     private void TogglePinned()
     {
         _isPinned = !_isPinned;
@@ -439,7 +586,7 @@ public partial class PreviewWindow
         {
             _fadeTimer.Stop();
             ApplyOverlayButtonVisual(PinBtn, PinIcon, "pin", active: true);
-            RefreshPreviewOverlayButtonAccessibility(PinBtn, "Unpin preview", "Allow this preview to dismiss automatically.");
+            RefreshPreviewOverlayButtonAccessibility(PinBtn, LocalizationService.Translate("Unpin preview"), WithPreviewHotkey(LocalizationService.Translate("Allow this preview to dismiss automatically."), "P"));
             PinBtn.Opacity = 1;
             // Stop and hide progress bar
             ProgressScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
@@ -448,7 +595,7 @@ public partial class PreviewWindow
         else
         {
             ApplyOverlayButtonVisual(PinBtn, PinIcon, "pin", active: false);
-            RefreshPreviewOverlayButtonAccessibility(PinBtn, "Pin preview", "Keep this preview open.");
+            RefreshPreviewOverlayButtonAccessibility(PinBtn, LocalizationService.Translate("Pin preview"), WithPreviewHotkey(LocalizationService.Translate("Keep this preview open."), "P"));
             ProgressBar.Visibility = System.Windows.Visibility.Visible;
             ProgressScale.ScaleX = 1;
             if (_isHovered)
@@ -531,7 +678,7 @@ public partial class PreviewWindow
             {
                 _isSavingPreview = false;
                 SaveBtn.IsEnabled = true;
-                RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", GetSaveHelpText());
+                RefreshPreviewOverlayButtonAccessibility(SaveBtn, LocalizationService.Translate("Save preview"), WithPreviewHotkey(GetSaveHelpText(), "Ctrl+S"));
                 ResumePreviewAutoDismiss(remainingAutoDismissSeconds);
             }
         }
@@ -637,7 +784,7 @@ public partial class PreviewWindow
         _isSavingPreview = false;
         _mouseIsDown = false;
         SaveBtn.IsEnabled = true;
-        RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", GetSaveHelpText());
+        RefreshPreviewOverlayButtonAccessibility(SaveBtn, LocalizationService.Translate("Save preview"), WithPreviewHotkey(GetSaveHelpText(), "Ctrl+S"));
     }
 
     private string GetSaveHelpText()

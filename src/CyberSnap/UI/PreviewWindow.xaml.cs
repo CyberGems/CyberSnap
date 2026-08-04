@@ -175,13 +175,32 @@ public partial class PreviewWindow : Window
         RefreshPreviewWindowTooltip();
         var previewName = _isVideo ? "Video preview" : (_isGif ? "GIF preview" : "Screenshot preview");
         SetPreviewElementAccessibility(ThumbnailImage, previewName, BuildPreviewImageHelpText());
-        RefreshPreviewOverlayButtonAccessibility(CloseBtn, "Close preview", "Close this preview.");
-        RefreshPreviewOverlayButtonAccessibility(PinBtn,
-            _isPinned ? "Unpin preview" : "Pin preview",
-            _isPinned ? "Allow this preview to dismiss automatically." : "Keep this preview open.");
-        RefreshPreviewOverlayButtonAccessibility(SaveBtn, "Save preview", GetSaveHelpText());
-        RefreshPreviewOverlayButtonAccessibility(EditBtn, "Edit preview", "Open the post-capture editor.");
+        RefreshPreviewOverlayButtonAccessibility(
+            CloseBtn,
+            T("Close preview"),
+            WithPreviewHotkey(T("Close this preview."), "Esc"));
+        RefreshPreviewOverlayButtonAccessibility(
+            PinBtn,
+            T(_isPinned ? "Unpin preview" : "Pin preview"),
+            WithPreviewHotkey(
+                T(_isPinned ? "Allow this preview to dismiss automatically." : "Keep this preview open."),
+                "P"));
+        RefreshPreviewOverlayButtonAccessibility(
+            SaveBtn,
+            T("Save preview"),
+            WithPreviewHotkey(GetSaveHelpText(), "Ctrl+S"));
+        RefreshPreviewOverlayButtonAccessibility(
+            EditBtn,
+            T("Edit preview"),
+            WithPreviewHotkey(T("Open the post-capture editor."), "Ctrl+E"));
     }
+
+    // Adds a discreet "(<shortcut>)" suffix to a tooltip body so hotkey discovery
+    // happens on hover without cluttering the label text itself.
+    private static string WithPreviewHotkey(string helpText, string shortcut)
+        => string.IsNullOrWhiteSpace(helpText) ? $"({shortcut})" : $"{helpText} ({shortcut})";
+
+    private static string T(string text) => LocalizationService.Translate(text);
 
     private void RefreshPreviewWindowTooltip()
     {
