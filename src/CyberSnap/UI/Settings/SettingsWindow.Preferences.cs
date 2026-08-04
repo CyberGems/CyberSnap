@@ -315,7 +315,6 @@ public partial class SettingsWindow
             value =>
             {
                 ToastWindow.SetPosition(value);
-                PreviewWindow.SetPosition(value);
                 // Live preview at the new corner/edge (same idea as CyberPaste).
                 ShowToastPositionPreview(value);
             },
