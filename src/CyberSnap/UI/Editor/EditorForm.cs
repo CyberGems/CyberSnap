@@ -19,7 +19,7 @@ namespace CyberSnap.UI.Editor;
 /// Dedicated post-capture editor window. Hosts an <see cref="AnnotationCanvas"/>
 /// with a left-side toolbar and a bottom status bar. The capture flow can either
 /// open this directly after a screenshot (when the setting is enabled) or surface
-/// it via the PreviewWindow "Edit" button.
+/// it via the CapturePreviewDialog "Edit" button.
 /// </summary>
 public sealed partial class EditorForm : Form, IMessageFilter
 {

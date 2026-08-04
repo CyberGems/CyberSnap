@@ -177,7 +177,7 @@ namespace CyberSnap.UI
             CopyText.Text = LocalizationService.Translate("Copy");
             EditText.Text = LocalizationService.Translate("Edit");
             PrintText.Text = LocalizationService.Translate("Print");
-            PrintBtn.ToolTip = LocalizationService.Translate("Print this capture.");
+            PrintBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Print this capture."), "Ctrl+P");
             DeleteText.Text = LocalizationService.Translate("Delete capture");
             DeleteBtn.ToolTip = LocalizationService.Translate(
                 "The saved file will be permanently deleted from disk and removed from the Gallery.");
@@ -186,10 +186,22 @@ namespace CyberSnap.UI
             NoAutomaticActionsLabel.Text = LocalizationService.Translate("None");
             ZoomOutBtn.ToolTip = LocalizationService.Translate("Zoom out");
             ZoomInBtn.ToolTip = LocalizationService.Translate("Zoom in");
-            ZoomFitBtn.ToolTip = LocalizationService.Translate("Fit to window");
-            ZoomLevelText.ToolTip = LocalizationService.Translate("Click for actual size (100%)");
+            ZoomFitBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Fit to window"), "Ctrl+0");
+            ZoomLevelText.ToolTip = WithHotkeyHint(LocalizationService.Translate("Click for actual size (100%)"), "Ctrl+1");
+
+            // Optional-action tooltips: previously Edit/Copy/Save had none, so hovering
+            // them gave no feedback. Each also carries its hotkey as a discreet suffix.
+            SaveBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Save a copy of the image"), "Ctrl+S");
+            CopyBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Copy to clipboard"), "Ctrl+C");
+            EditBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Open in the editor"), "Ctrl+E");
+
             UpdateContinueOrExitButton();
         }
+
+        // Suffix "(<shortcut>)" appended to a translated tooltip body so hotkeys are
+        // discoverable on hover without taking up label space.
+        private static string WithHotkeyHint(string text, string shortcut)
+            => string.IsNullOrWhiteSpace(text) ? $"({shortcut})" : $"{text} ({shortcut})";
 
         private void CapturePreviewDialog_ContentRendered(object? sender, EventArgs e)
         {
@@ -1584,13 +1596,13 @@ namespace CyberSnap.UI
                     ViewerHintBadge.Text = LocalizationService.Translate("The system viewer opens when this window closes.");
                 }
                 ViewerHintBadge.Visibility = Visibility.Visible;
-                CancelBtn.ToolTip = ViewerHintBadge.Text;
+                CancelBtn.ToolTip = WithHotkeyHint(ViewerHintBadge.Text, "Esc");
             }
             else
             {
                 CancelText.Text = LocalizationService.Translate("Done");
                 ViewerHintBadge.Visibility = Visibility.Collapsed;
-                CancelBtn.ToolTip = null;
+                CancelBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Close this preview."), "Esc");
             }
         }
 
@@ -1637,7 +1649,9 @@ namespace CyberSnap.UI
             DialogResult = false;
         }
 
-        private void TitleBar_PinRequested(object sender, EventArgs e)
+        private void TitleBar_PinRequested(object sender, EventArgs e) => TogglePinned();
+
+        private void TogglePinned()
         {
             CancelAutoCloseOnInteraction();
 
@@ -1804,27 +1818,72 @@ namespace CyberSnap.UI
                 return;
             }
 
-            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            var mods = Keyboard.Modifiers;
+
+            // Plain keys (no modifier) ─────────────────────────────────────
+            if (mods == ModifierKeys.None)
+            {
+                if (e.Key == Key.P)                     // P — pin / unpin
+                {
+                    TogglePinned();
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            // Ctrl+... ──────────────────────────────────────────────────────
+            if (mods == ModifierKeys.Control)
             {
                 if (e.Key == Key.Add || e.Key == Key.OemPlus)
                 {
                     ZoomInBtn_Click(ZoomInBtn, new RoutedEventArgs());
                     e.Handled = true;
+                    return;
                 }
-                else if (e.Key == Key.Subtract || e.Key == Key.OemMinus)
+                if (e.Key == Key.Subtract || e.Key == Key.OemMinus)
                 {
                     ZoomOutBtn_Click(ZoomOutBtn, new RoutedEventArgs());
                     e.Handled = true;
+                    return;
                 }
-                else if (e.Key == Key.D0 || e.Key == Key.NumPad0)
+                if (e.Key == Key.D0 || e.Key == Key.NumPad0)
                 {
                     ZoomToFitWindow();
                     e.Handled = true;
+                    return;
                 }
-                else if (e.Key == Key.D1 || e.Key == Key.NumPad1)
+                if (e.Key == Key.D1 || e.Key == Key.NumPad1)
                 {
                     ZoomActualSize();
                     e.Handled = true;
+                    return;
+                }
+
+                // Action shortcuts — same handlers the optional-action buttons call,
+                // so enabled/disabled state is respected automatically.
+                if (e.Key == Key.S && SaveBtn.IsEnabled && SaveBtn.IsVisible)         // Ctrl+S — save
+                {
+                    SaveBtn_Click(SaveBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+                if (e.Key == Key.E && EditBtn.IsEnabled && EditBtn.IsVisible)         // Ctrl+E — edit
+                {
+                    EditBtn_Click(EditBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+                if (e.Key == Key.C && CopyBtn.IsEnabled && CopyBtn.IsVisible)         // Ctrl+C — copy to clipboard
+                {
+                    CopyBtn_Click(CopyBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+                if (e.Key == Key.P && PrintBtn.IsEnabled && PrintBtn.IsVisible)       // Ctrl+P — print
+                {
+                    PrintBtn_Click(PrintBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
                 }
             }
         }
