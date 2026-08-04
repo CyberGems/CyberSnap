@@ -48,6 +48,19 @@ namespace CyberSnap.UI
         private bool _pillSimRunning;
         private int _pillSimsRemaining;
 
+        // ── Zoom & pan state ────────────────────────────────────────────
+        private const double ZoomMin = 0.1;
+        private const double ZoomMax = 8.0;
+        private const double ZoomStep = 1.2;
+        private double _currentZoom = 1.0;
+        private bool _zoomToFit = true;
+        private bool _isPanning;
+        private System.Windows.Point _panStart;
+        private double _panStartHorizontalOffset;
+        private double _panStartVerticalOffset;
+        private bool _zoomPointerInside;
+        private DispatcherTimer? _zoomHideTimer;
+
         private static readonly System.Drawing.Color PillDoneGreen = System.Drawing.Color.FromArgb(255, 34, 197, 94);
         private static readonly System.Drawing.Color PillPendingBlue = System.Drawing.Color.FromArgb(255, 0, 162, 255);
         private static readonly System.Drawing.Color DeleteAccentRed = System.Drawing.Color.FromArgb(255, 239, 83, 80);
@@ -108,6 +121,8 @@ namespace CyberSnap.UI
                 SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
                 CancelPillCompletionSimulation();
                 StopAutoCloseCountdown(resetProgress: true);
+                CancelZoomHideTimer();
+                StopPrimaryButtonSpin();
             };
             // Pause the auto-close countdown only while the pointer is over the actions
             // column — hovering the image preview no longer holds the dialog open.
@@ -130,6 +145,13 @@ namespace CyberSnap.UI
             UpdateIcons();
 
             PreviewImage.Source = BitmapPerf.ToBitmapSource(bitmap);
+            ApplyZoom();
+            ZoomViewport.SizeChanged += (_, _) =>
+            {
+                // Stretch="Uniform" letterboxes; force re-measure so the canvas stays centered
+                // and the zoom-controls stay anchored correctly after a window resize.
+                ApplyZoom();
+            };
             PopulateAfterCapturePills();
             UpdateContinueOrExitButton();
             UpdateOptionalActionsAvailability();
@@ -162,6 +184,10 @@ namespace CyberSnap.UI
             MoreText.Text = LocalizationService.Translate("More");
             MoreBtn.ToolTip = LocalizationService.Translate("More");
             NoAutomaticActionsLabel.Text = LocalizationService.Translate("None");
+            ZoomOutBtn.ToolTip = LocalizationService.Translate("Zoom out");
+            ZoomInBtn.ToolTip = LocalizationService.Translate("Zoom in");
+            ZoomFitBtn.ToolTip = LocalizationService.Translate("Fit to window");
+            ZoomLevelText.ToolTip = LocalizationService.Translate("Click for actual size (100%)");
             UpdateContinueOrExitButton();
         }
 
@@ -275,6 +301,9 @@ namespace CyberSnap.UI
             GalleryIcon.Source = FluentIcons.RenderWpf("history", primaryIconColor, 14, active: true);
             MoreIcon.Source = FluentIcons.RenderWpf("more", primaryIconColor, 13, active: true);
             EditSettingsBtnIcon.Source = FluentIcons.RenderWpf("gear", secondaryIconColor, 14, active: true);
+            ZoomOutIcon.Source = FluentIcons.RenderWpf("zoomOut", secondaryIconColor, 12, active: true);
+            ZoomInIcon.Source = FluentIcons.RenderWpf("zoomIn", secondaryIconColor, 12, active: true);
+            ZoomFitIcon.Source = FluentIcons.RenderWpf("zoomFit", secondaryIconColor, 12, active: true);
         }
 
         private System.Drawing.Color GetPrimaryButtonIconColor()
@@ -284,9 +313,17 @@ namespace CyberSnap.UI
             return System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
         }
 
+        /// <summary>Secondary/accent color used by the pills for their pending spinner.
+        /// Matches the tone of the chips so the "Processing" button loader matches them.</summary>
+        private System.Drawing.Color GetPrimaryButtonSpinnerColor()
+            => System.Drawing.Color.FromArgb(255, 0, 162, 255);
+
         private void CapturePreviewDialog_Activated(object? sender, EventArgs e)
         {
             RefreshLiveSettings();
+            // Re-arm countdown only when the pointer is NOT over the actions column.
+            if (_autoCloseArmed && !_isPinned && !_isHovered && !_pillSimRunning)
+                ResumeAutoCloseAfterHover();
         }
 
         private void SettingsService_SettingsChanged()
@@ -599,6 +636,7 @@ namespace CyberSnap.UI
 
         private void EditAfterCaptureSettingsBtn_Click(object sender, RoutedEventArgs e)
         {
+            CancelAutoCloseOnInteraction();
             if (Application.Current is App app)
             {
                 app.ShowSettings("confirm-pills");
@@ -607,6 +645,7 @@ namespace CyberSnap.UI
 
         private void MoreBtn_Click(object sender, RoutedEventArgs e)
         {
+            CancelAutoCloseOnInteraction();
             var menu = BuildMoreMenu();
             menu.PlacementTarget = MoreBtn;
             menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
@@ -666,6 +705,8 @@ namespace CyberSnap.UI
         {
             if (!CanOpenSavedFileInFolder() || _savedFilePath is null)
                 return;
+
+            CancelAutoCloseOnInteraction();
 
             try
             {
@@ -953,9 +994,39 @@ namespace CyberSnap.UI
         {
             CancelText.Text = LocalizationService.Translate("Processing");
             CancelBtn.ToolTip = null;
-            var iconColor = GetPrimaryButtonIconColor();
-            CancelIcon.Source = FluentIcons.RenderWpf("redo", iconColor, 14, active: true);
+
+            // Reuse the pills' spinner ring (blue, 0/162/255) and make it spin,
+            // so the Processing state reads identically to a running pill.
+            var accent = GetPrimaryButtonSpinnerColor();
+            CancelIcon.Source = RenderSpinnerRing(accent, 14);
             CancelIcon.Visibility = Visibility.Visible;
+            StartPrimaryButtonSpin();
+        }
+
+        private void StartPrimaryButtonSpin()
+        {
+            var rotation = new System.Windows.Media.RotateTransform();
+            CancelIcon.RenderTransform = rotation;
+            CancelIcon.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+
+            var spin = new DoubleAnimation
+            {
+                From = 0,
+                To = 360,
+                Duration = Motion.Sec(0.85),
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            rotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, spin);
+        }
+
+        private void StopPrimaryButtonSpin()
+        {
+            if (CancelIcon.RenderTransform is System.Windows.Media.RotateTransform rotation)
+            {
+                rotation.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, null);
+                rotation.Angle = 0;
+                CancelIcon.RenderTransform = null;
+            }
         }
 
         private AfterCapturePillChip CreateAfterCapturePillChip(
@@ -1201,6 +1272,286 @@ namespace CyberSnap.UI
             chip.StatusRotation.Angle = 0;
         }
 
+        // ── Zoom & pan implementation ───────────────────────────────────
+        private void ApplyZoom()
+        {
+            if (PreviewImage.Source is not BitmapSource bmp) return;
+
+            double availW = ZoomViewport.ViewportWidth;
+            double availH = ZoomViewport.ViewportHeight;
+            // Before first layout, ViewportWidth is 0 — bail and let the SizeChanged
+            // handler (hooked in the constructor) call ApplyZoom() again.
+            if (availW <= 0 || availH <= 0) return;
+
+            if (_zoomToFit)
+            {
+                // Letterboxed "fit": canvas fills the viewport, Uniform scale shrinks the image
+                // to the largest size that fits entirely. _currentZoom tracks the real scale
+                // factor relative to bitmap pixels (may exceed 1.0 for small captures).
+                ZoomCanvas.Width = availW;
+                ZoomCanvas.Height = availH;
+                PreviewImage.Width = availW;
+                PreviewImage.Height = availH;
+                _currentZoom = Math.Min(availW / bmp.Width, availH / bmp.Height);
+            }
+            else
+            {
+                // Absolute-size mode: the image is exactly _currentZoom × bitmap pixels.
+                // When it exceeds the viewport the ScrollViewer enables pan (scrollbars hidden).
+                double scaledW = _currentZoom * bmp.Width;
+                double scaledH = _currentZoom * bmp.Height;
+                ZoomCanvas.Width = Math.Max(availW, scaledW);
+                ZoomCanvas.Height = Math.Max(availH, scaledH);
+                PreviewImage.Width = scaledW;
+                PreviewImage.Height = scaledH;
+            }
+
+            UpdateZoomLevelText();
+            UpdateZoomCursor();
+            UpdateZoomControlsVisibility();
+        }
+
+        private void UpdateZoomLevelText()
+        {
+            ZoomLevelText.Text = $"{(_currentZoom * 100):0}%";
+        }
+
+        private void UpdateZoomCursor()
+        {
+            // Hand cursor only when panning is actually possible.
+            bool canPan = !_zoomToFit
+                && (ZoomViewport.ScrollableWidth > 1 || ZoomViewport.ScrollableHeight > 1);
+            if (!_isPanning)
+                ZoomViewport.Cursor = canPan ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow;
+        }
+
+        private void UpdateZoomControlsVisibility()
+        {
+            // Fade-in only when the pointer is inside the preview frame AND a bitmap is loaded;
+            // otherwise fade out. When the pointer leaves, wait a short delay so moving across
+            // the overlay itself doesn't cause flicker.
+            bool shouldShow = _zoomPointerInside && PreviewImage.Source is BitmapSource;
+            SetZoomOverlayVisibility(shouldShow);
+        }
+
+        private void SetZoomOverlayVisibility(bool visible)
+        {
+            double target = visible ? 1.0 : 0.0;
+            ZoomControlsOverlay.IsHitTestVisible = visible;
+            var fade = new DoubleAnimation(target, Motion.Ms(180))
+            {
+                EasingFunction = Motion.Ease(visible ? Motion.SmoothOut : Motion.SmoothIn)
+            };
+            ZoomControlsOverlay.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+
+        private void CancelZoomHideTimer()
+        {
+            if (_zoomHideTimer != null)
+            {
+                _zoomHideTimer.Stop();
+                _zoomHideTimer = null;
+            }
+        }
+
+        private void ScheduleZoomControlsHide()
+        {
+            CancelZoomHideTimer();
+            _zoomHideTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(200)
+            };
+            _zoomHideTimer.Tick += (_, _) =>
+            {
+                _zoomHideTimer!.Stop();
+                _zoomHideTimer = null;
+                SetZoomOverlayVisibility(false);
+            };
+            _zoomHideTimer.Start();
+        }
+
+        private void SetZoom(double newZoom)
+        {
+            newZoom = Math.Clamp(newZoom, ZoomMin, ZoomMax);
+            if (Math.Abs(_currentZoom - newZoom) < 0.001) return;
+
+            _currentZoom = newZoom;
+            _zoomToFit = false;
+            ApplyZoom();
+        }
+
+        /// <summary>Applies a new (non-fit) zoom level, keeping the image point under
+        /// <paramref name="viewportPos"/> visually stationary when possible.</summary>
+        private void ZoomToFixedPos(System.Windows.Point viewportPos, double newZoom)
+        {
+            if (PreviewImage.Source is not BitmapSource bmp) return;
+
+            newZoom = Math.Clamp(newZoom, ZoomMin, ZoomMax);
+
+            // Calculate rect of the displayed BitmapSource inside PreviewImage
+            // right now (Stretch="Uniform", so it always letterboxes).
+            double vpW = ZoomViewport.ViewportWidth;
+            double vpH = ZoomViewport.ViewportHeight;
+            if (vpW <= 0 || vpH <= 0) return;
+
+            double oldScale = Math.Min(PreviewImage.ActualWidth / bmp.Width, PreviewImage.ActualHeight / bmp.Height);
+            double contentW = bmp.Width * oldScale;
+            double contentH = bmp.Height * oldScale;
+            double padX = PreviewImage.ActualWidth > 0 ? Math.Max(0, (PreviewImage.ActualWidth - contentW) / 2) : 0;
+            double padY = PreviewImage.ActualHeight > 0 ? Math.Max(0, (PreviewImage.ActualHeight - contentH) / 2) : 0;
+
+            // Convert viewport position to ScrollViewer content coordinates.
+            var ptInSv = ZoomViewport.TranslatePoint(viewportPos, this);
+            double contentX = ZoomViewport.HorizontalOffset + ptInSv.X - ZoomCanvas.Margin.Left;
+            double contentY = ZoomViewport.VerticalOffset + ptInSv.Y - ZoomCanvas.Margin.Top;
+
+            // Clamp inside the displayed bitmap rect (ignoring letterbox padding).
+            double relX = Math.Clamp((contentX - padX) / contentW, 0, 1);
+            double relY = Math.Clamp((contentY - padY) / contentH, 0, 1);
+
+            double oldZoom = _currentZoom;
+            _currentZoom = newZoom;
+            _zoomToFit = false;
+            ApplyZoom();
+            ZoomViewport.UpdateLayout();
+
+            // When _zoomToFit is false, Stretch="Uniform" inside an exact-size
+            // (bitmap*zoom) PreviewImage fills the whole element: no padding.
+            if (Math.Abs(_currentZoom - oldZoom) < double.Epsilon)
+                return;
+
+            double newContentX = relX * (_currentZoom * bmp.Width);
+            double newContentY = relY * (_currentZoom * bmp.Height);
+            ZoomViewport.ScrollToHorizontalOffset(newContentX - ptInSv.X);
+            ZoomViewport.ScrollToVerticalOffset(newContentY - ptInSv.Y);
+
+            CancelAutoCloseOnInteraction();
+        }
+
+        private void ZoomToFitWindow()
+        {
+            _currentZoom = 1.0;
+            _zoomToFit = true;
+            ApplyZoom();
+            CancelAutoCloseOnInteraction();
+        }
+
+        private void ZoomActualSize()
+        {
+            _currentZoom = 1.0;
+            _zoomToFit = false;
+            ApplyZoom();
+            ZoomViewport.UpdateLayout();
+
+            // Center the 1:1 image in the viewport.
+            double offX = Math.Max(0, (ZoomViewport.ExtentWidth - ZoomViewport.ViewportWidth) / 2);
+            double offY = Math.Max(0, (ZoomViewport.ExtentHeight - ZoomViewport.ViewportHeight) / 2);
+            ZoomViewport.ScrollToHorizontalOffset(offX);
+            ZoomViewport.ScrollToVerticalOffset(offY);
+            CancelAutoCloseOnInteraction();
+        }
+
+        private void ZoomInBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ZoomToFixedPos(
+                new System.Windows.Point(ZoomViewport.ViewportWidth / 2, ZoomViewport.ViewportHeight / 2),
+                _currentZoom * ZoomStep);
+        }
+
+        private void ZoomOutBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ZoomToFixedPos(
+                new System.Windows.Point(ZoomViewport.ViewportWidth / 2, ZoomViewport.ViewportHeight / 2),
+                _currentZoom / ZoomStep);
+        }
+
+        private void ZoomFitBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ZoomToFitWindow();
+        }
+
+        private void ZoomLevelText_Click(object sender, MouseButtonEventArgs e)
+        {
+            ZoomActualSize();
+        }
+
+        /// <summary>Preview/tunneling handler: intercepts the wheel before the ScrollViewer can
+        /// consume it for vertical scrolling, and performs zoom instead.</summary>
+        private void ZoomViewport_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            var posInViewport = e.GetPosition(ZoomViewport);
+            double newZoom = e.Delta > 0
+                ? _currentZoom * ZoomStep
+                : _currentZoom / ZoomStep;
+            ZoomToFixedPos(posInViewport, newZoom);
+            e.Handled = true;
+        }
+
+        private void ZoomViewport_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Pan only when zoomed in past "fit" (i.e., image larger than viewport).
+            if (!_zoomToFit && _currentZoom > 0
+                && (ZoomViewport.ScrollableWidth > 1 || ZoomViewport.ScrollableHeight > 1))
+            {
+                _isPanning = true;
+                _panStart = e.GetPosition(ZoomViewport);
+                _panStartHorizontalOffset = ZoomViewport.HorizontalOffset;
+                _panStartVerticalOffset = ZoomViewport.VerticalOffset;
+                ZoomViewport.CaptureMouse();
+                ZoomViewport.Cursor = System.Windows.Input.Cursors.Hand;
+                e.Handled = true;
+            }
+        }
+
+        private void ZoomViewport_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isPanning)
+            {
+                _isPanning = false;
+                ZoomViewport.ReleaseMouseCapture();
+                UpdateZoomCursor();
+                e.Handled = true;
+            }
+        }
+
+        private void ZoomViewport_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (_isPanning && e.LeftButton == MouseButtonState.Pressed)
+            {
+                var pos = e.GetPosition(ZoomViewport);
+                double dx = _panStart.X - pos.X;
+                double dy = _panStart.Y - pos.Y;
+                ZoomViewport.ScrollToHorizontalOffset(_panStartHorizontalOffset + dx);
+                ZoomViewport.ScrollToVerticalOffset(_panStartVerticalOffset + dy);
+                CancelAutoCloseOnInteraction();
+                e.Handled = true;
+            }
+        }
+
+        private void ZoomViewport_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            _zoomPointerInside = true;
+            CancelZoomHideTimer();
+            UpdateZoomControlsVisibility();
+        }
+
+        private void ZoomViewport_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            _zoomPointerInside = false;
+            // Delay the fade-out so moving briefly toward the overlay doesn't flicker.
+            ScheduleZoomControlsHide();
+        }
+
+        /// <summary>Fully cancels the auto-close countdown after a user interaction
+        /// (zoom, pan, or any action button). Unlike the hover-over-actions-panel pause,
+        /// this stops the countdown entirely.</summary>
+        private void CancelAutoCloseOnInteraction()
+        {
+            StopAutoCloseCountdown(resetProgress: true);
+            CountdownRingHost.Visibility = Visibility.Collapsed;
+            ResetCountdownRingVisual();
+        }
+
         private void UpdateContinueOrExitButton()
         {
             if (_pillSimRunning)
@@ -1208,6 +1559,8 @@ namespace CyberSnap.UI
                 ApplyPrimaryButtonProcessingState();
                 return;
             }
+
+            StopPrimaryButtonSpin();
 
             var state = AfterCaptureOutcomeModel.FromSettings(_settingsService.Settings);
             bool viewerOn = state.SystemViewer;
@@ -1286,6 +1639,8 @@ namespace CyberSnap.UI
 
         private void TitleBar_PinRequested(object sender, EventArgs e)
         {
+            CancelAutoCloseOnInteraction();
+
             _isPinned = !_isPinned;
             TitleBar.IsPinActive = _isPinned;
             Topmost = _isPinned;
@@ -1352,6 +1707,9 @@ namespace CyberSnap.UI
             if (_isClosing)
                 return;
 
+            // Interaction cancels the auto-close: printing means the user wants to act.
+            CancelAutoCloseOnInteraction();
+
             // Hold the auto-close while the system print dialog is up; a fresh
             // countdown re-arms afterwards (InitAutoCloseCountdown handles pin/hover).
             StopAutoCloseCountdown(resetProgress: true);
@@ -1391,6 +1749,9 @@ namespace CyberSnap.UI
         {
             if (_isClosing || !CanDeleteSavedCapture() || _savedFilePath is null)
                 return;
+
+            // Interaction cancels the auto-close while the confirmation is up.
+            CancelAutoCloseOnInteraction();
 
             // Hold the auto-close while the confirmation is up.
             StopAutoCloseCountdown(resetProgress: true);
@@ -1440,6 +1801,31 @@ namespace CyberSnap.UI
                 _isClosing = true;
                 DialogResult = false;
                 e.Handled = true;
+                return;
+            }
+
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                if (e.Key == Key.Add || e.Key == Key.OemPlus)
+                {
+                    ZoomInBtn_Click(ZoomInBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.Subtract || e.Key == Key.OemMinus)
+                {
+                    ZoomOutBtn_Click(ZoomOutBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.D0 || e.Key == Key.NumPad0)
+                {
+                    ZoomToFitWindow();
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.D1 || e.Key == Key.NumPad1)
+                {
+                    ZoomActualSize();
+                    e.Handled = true;
+                }
             }
         }
     }

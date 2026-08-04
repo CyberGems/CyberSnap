@@ -907,6 +907,8 @@
   "Zoom to fit": "Zoom to fit",
   "Reset zoom": "Reset zoom",
   "Fit to window": "Fit to window",
+  "Actual size": "Actual size",
+  "Click for actual size (100%)": "Click for actual size (100%)",
   "Undo": "Undo",
   "Redo": "Redo",
   "Copy failed": "Copy failed",
