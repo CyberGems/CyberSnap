@@ -65,7 +65,7 @@ public partial class App
                 UpdateService.GetCurrentVersionLabel());
             // Suppress toast auto-sound: Standard is IsSystemMessage (would play System).
             // Startup has its own SoundEvent — same pattern as achievements / upload.
-            ToastWindow.Show(ToastSpec.Standard(title, body) with { SuppressSound = true });
+            ToastWindow.Show(ToastSpec.Standard(title, body) with { SuppressSound = true, IsWelcomeToast = true });
             SoundService.PlayStartupSound();
         }
     }

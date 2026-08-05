@@ -352,7 +352,15 @@ public partial class ToastWindow : Window
             ColorSwatch.Visibility = Visibility.Collapsed;
         }
 
-        if (spec.InlinePreviewBitmap is not null)
+        if (spec.IsWelcomeToast)
+        {
+            InlinePreviewHost.Visibility = Visibility.Visible;
+            InlinePreviewHost.Width = 44;
+            InlinePreviewHost.Height = 44;
+            InlinePreviewImage.Margin = new System.Windows.Thickness(4);
+            InlinePreviewImage.Source = ThemedLogo.Square(36);
+        }
+        else if (spec.InlinePreviewBitmap is not null)
         {
             _previewBitmap = spec.InlinePreviewBitmap;
             InlinePreviewHost.Visibility = Visibility.Visible;
