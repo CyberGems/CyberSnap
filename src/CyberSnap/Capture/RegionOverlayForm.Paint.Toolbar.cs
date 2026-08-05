@@ -516,7 +516,7 @@ public sealed partial class RegionOverlayForm
             // Hold-to-switch affordance on merged capture (rect ↔ center) and annotation groups.
             // Pass the icon's actual color so the chevron matches the glyph instead of the tier accent.
             if (IsMergedHoldButton(i))
-                PaintCaptureHoldHint(g, btn, drawColor, accentForRing: tierAccent, buttonIndex: i);
+                PaintCaptureHoldHint(g, btn, drawColor, buttonIndex: i);
         }
 
         g.Clip = previousClip;
@@ -691,14 +691,13 @@ public sealed partial class RegionOverlayForm
     }
 
     /// <summary>
-    /// Small chevron badge + hold-progress arc on a merged tool button so users
-    /// discover the long-press alternate mode (Area ↔ From Center, shape/stroke groups, …).
-    /// The chevron sits at the bottom-right and points outward along the button diagonal
-    /// suggesting "opens to that corner". Its color matches the icon glyph it sits on
-    /// (parameter <paramref name="chevronColor"/>), while <paramref name="accentForRing"/>
-    /// stays on the hold-progress ring to preserve the existing accent feedback.
+    /// Small chevron badge on a merged tool button so users discover the long-press alternate
+    /// mode (Area ↔ From Center, shape/stroke groups, …). The chevron sits at the bottom-right
+    /// and points outward along the button diagonal suggesting "opens to that corner". Its color
+    /// matches the icon glyph it sits on (<paramref name="chevronColor"/>) with reduced alpha so
+    /// it reads as a secondary affordance instead of competing with the icon itself.
     /// </summary>
-    private void PaintCaptureHoldHint(Graphics g, Rectangle btn, Color chevronColor, Color accentForRing, int buttonIndex)
+    private void PaintCaptureHoldHint(Graphics g, Rectangle btn, Color chevronColor, int buttonIndex)
     {
         bool holdingThis = _isMouseDownOnCaptureBtn
             && (_mergedHoldButtonIndex == buttonIndex
@@ -710,10 +709,14 @@ public sealed partial class RegionOverlayForm
 
         // Tiny bottom-right corner chevron pointing outward along the diagonal.
         // Stroke-based instead of fill-based so the open direction reads unambiguously.
+        // Alpha is intentionally LOWER than the icon glyph so the L reads as a
+        // secondary affordance instead of competing with the icon itself.
         float armLen = UiChrome.ScaleFloat(4.5f);
         float cx = btn.Right - UiChrome.ScaleFloat(7f);
         float cy = btn.Bottom - UiChrome.ScaleFloat(7f);
-        int chevA = holdingThis || popupForThis ? 230 : 170;
+        int chevA = holdingThis || popupForThis
+            ? 200
+            : (int)Math.Round(chevronColor.A * 0.55);
         using (var pen = new Pen(Color.FromArgb(chevA, chevronColor), UiChrome.ScaleFloat(1.3f))
         {
             StartCap = LineCap.Round,
@@ -724,24 +727,9 @@ public sealed partial class RegionOverlayForm
             g.DrawLine(pen, cx, cy, cx, cy - armLen);
         }
 
-        // Progress ring while holding toward the 300ms threshold.
-        if (holdingThis && _mouseDownStartTime != DateTime.MinValue)
-        {
-            float raw = (float)(DateTime.UtcNow - _mouseDownStartTime).TotalMilliseconds / 300f;
-            float t = Math.Clamp(raw, 0f, 1f);
-            if (t > 0.02f)
-            {
-                float pad = UiChrome.ScaleFloat(2.5f);
-                var ring = RectangleF.Inflate(btn, -pad, -pad);
-                using var pen = new Pen(Color.FromArgb((int)(80 + 140 * t), accentForRing), UiChrome.ScaleFloat(1.6f))
-                {
-                    StartCap = LineCap.Round,
-                    EndCap = LineCap.Round,
-                };
-                // Sweep from top, clockwise.
-                g.DrawArc(pen, ring, -90f, 360f * t);
-            }
-        }
+        // Hold-progress ring REMOVED: the circle animation made the long-press feel slow.
+        // The popup still appears at the 300ms threshold via the existing timer — we just
+        // don't draw the pulse around the button anymore.
     }
 
     /// <summary>
