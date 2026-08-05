@@ -193,7 +193,7 @@ namespace CyberSnap.UI
             // them gave no feedback. Each also carries its hotkey as a discreet suffix.
             SaveBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Save a copy of the image"), "Ctrl+S");
             CopyBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Copy to clipboard"), "Ctrl+C");
-            EditBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Open in the editor"), "Ctrl+E");
+            EditBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Open in the annotation editor"), "Ctrl+E");
 
             UpdateContinueOrExitButton();
         }
@@ -691,13 +691,15 @@ namespace CyberSnap.UI
                 menu.Items.Add(CreateMoreMenuItem(
                     LocalizationService.Translate("Share"),
                     ShareIcon.Source,
-                    () => ShareBtn_Click(ShareBtn, new RoutedEventArgs())));
+                    () => ShareBtn_Click(ShareBtn, new RoutedEventArgs()),
+                    LocalizationService.Translate("Share image in the cloud.")));
             }
 
             menu.Items.Add(CreateMoreMenuItem(
                 LocalizationService.Translate("Gallery"),
                 GalleryIcon.Source,
-                () => GalleryBtn_Click(GalleryBtn, new RoutedEventArgs())));
+                () => GalleryBtn_Click(GalleryBtn, new RoutedEventArgs()),
+                LocalizationService.Translate("Open the captures Gallery.")));
 
             return menu;
         }
