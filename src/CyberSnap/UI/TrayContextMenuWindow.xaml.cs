@@ -165,8 +165,8 @@ public partial class TrayContextMenuWindow : Window
         // Shorter labels for buttons
         AreaCaptureText.Text = T("Area");
         ScrollCaptureText.Text = "Scrolling";
-        OcrText.Text = T("Extract text");
-        QrText.Text = T("QR Codes");
+        OcrText.Text = T("OCR");
+        QrText.Text = T("QR");
         ColorPickerText.Text = T("Color");
         RulerText.Text = T("Ruler");
         AnnotationsText.Text = T("Editor");
@@ -217,11 +217,11 @@ public partial class TrayContextMenuWindow : Window
         AppLogoImage.Source = ThemedLogo.Square(16);
 
         AreaCaptureIcon.Source = GetIcon("captureRect", accentColor, 32);
-        ScrollCaptureIcon.Source = GetIcon("scrollCapture", fgColor, 32);
-        OcrIcon.Source = GetIcon("ocr", fgColor, 32);
-        QrIcon.Source = GetIcon("scan", fgColor, 32);
-        ColorPickerIcon.Source = GetIcon("picker", fgColor, 32);
-        RulerIcon.Source = GetIcon("ruler", fgColor, 32);
+        ScrollCaptureIcon.Source = GetIcon("scrollCapture", fgColor, 20);
+        OcrIcon.Source = GetIcon("ocr", fgColor, 20);
+        QrIcon.Source = GetIcon("scan", fgColor, 20);
+        ColorPickerIcon.Source = GetIcon("picker", fgColor, 20);
+        RulerIcon.Source = GetIcon("ruler", fgColor, 20);
         // Bottom row: larger assets for accessibility while keeping compact tile height.
         AnnotationsIcon.Source = GetIcon("compose", fgColor, 20);
         GalleryIcon.Source = GetIcon("history", fgColor, 20);
@@ -237,7 +237,7 @@ public partial class TrayContextMenuWindow : Window
         else
         {
             VideoRecordIcon.Source = GetIcon("record", fgColor, 32);
-            GifRecordIcon.Source = GetIcon("recordGif", fgColor, 32);
+            GifRecordIcon.Source = GetIcon("recordGif", fgColor, 20);
         }
     }
 
