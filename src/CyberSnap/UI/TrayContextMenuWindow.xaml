@@ -89,9 +89,10 @@
             </Setter>
         </Style>
 
-        <!-- Exit button style -->
+        <!-- Exit button style — only the hover/press state is danger-tinted;
+             Foreground matches the other bottom buttons so the label stays conventional. -->
         <Style x:Key="BottomDangerButtonStyle" TargetType="Button" BasedOn="{StaticResource BottomButtonStyle}">
-            <Setter Property="Foreground" Value="#EF4444"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
