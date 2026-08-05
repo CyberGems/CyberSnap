@@ -451,8 +451,8 @@ public sealed partial class RegionOverlayForm
                     pen.EndCap = LineCap.Round;
                     g.DrawLine(pen, lineX1, lineY, lineX2, lineY);
                 }
-                if (active)
-                    WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
+                // Active-state cue: button fill/border carried by PaintButton — the floating accent
+                // pill we used to draw under the icon read as chrome noise for little extra signal.
                 continue;
             }
 
@@ -487,8 +487,8 @@ public sealed partial class RegionOverlayForm
                 int glossAlpha = colorAlpha > 200 ? 100 : 70;
                 using (var hlBrush = new SolidBrush(Color.FromArgb(glossAlpha, 255, 255, 255)))
                     g.FillEllipse(hlBrush, hlX, hlY, hlW, hlH);
-                if (active)
-                    WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
+                // Active-state cue comes from PaintButton's border/fill — skipping the accent pill keeps
+                // the chrome lighter here too (see strokeWidth button above).
                 continue;
             }
 
@@ -509,8 +509,8 @@ public sealed partial class RegionOverlayForm
             var iconColor = active ? tierAccent : UiChrome.SurfaceTextPrimary;
             DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
 
-            if (active)
-                WindowsDockRenderer.PaintActiveIndicator(g, btn, tierAccent);
+            // Active-state cue lives in PaintButton's border/fill + icon tint — the floating accent
+            // pill was extra chrome noise for little extra signal.
 
             // Hold-to-switch affordance on merged capture (rect ↔ center) and annotation groups.
             if (IsMergedHoldButton(i))

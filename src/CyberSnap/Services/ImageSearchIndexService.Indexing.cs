@@ -22,7 +22,7 @@ public sealed partial class ImageSearchIndexService
         catch (Exception ex)
         {
             AppDiagnostics.LogError("image-search.indexing", ex);
-            SetStatus("Indexing failed. Existing search data is still available.");
+            SetStatus("Indexing failed. Existing search data is still available.", ImageSearchStatus.Failed);
         }
         finally
         {
@@ -95,12 +95,16 @@ public sealed partial class ImageSearchIndexService
 
         if (pending.Count == 0)
         {
-            SetStatus("Search index ready");
+            SetStatus("Search index ready", ImageSearchStatus.Ready);
             return;
         }
 
         int completedCount = Math.Max(0, totalCount - pending.Count);
-        SetStatus($"Indexing screenshots {completedCount}/{totalCount}");
+        SetStatus(
+            $"Indexing screenshots {completedCount}/{totalCount}",
+            ImageSearchStatus.IndexingInProgress,
+            completedCount,
+            totalCount);
 
         await Parallel.ForEachAsync(
             pending,
@@ -157,7 +161,11 @@ public sealed partial class ImageSearchIndexService
                 }
 
                 var currentCompleted = Interlocked.Increment(ref completedCount);
-                SetStatus($"Indexing screenshots {currentCompleted}/{totalCount}");
+                SetStatus(
+                    $"Indexing screenshots {currentCompleted}/{totalCount}",
+                    ImageSearchStatus.IndexingInProgress,
+                    currentCompleted,
+                    totalCount);
                 if (currentCompleted % 12 == 0 || currentCompleted == totalCount)
                 {
                     lock (_gate)
@@ -168,7 +176,14 @@ public sealed partial class ImageSearchIndexService
 
         lock (_gate)
             Persist_NoLock();
-        SetStatus($"Indexed {totalCount} screenshot{(totalCount == 1 ? "" : "s")}");
+        // Note: the human-readable localized "Indexed N screenshots" string is composed by the UI
+        // (HistoryWindow.UpdateImageSearchActionButtons) — the service only reports the category
+        // and numbers so i18n can swap the template without round-tripping Strings around.
+        SetStatus(
+            $"Indexed {totalCount} screenshot{(totalCount == 1 ? "" : "s")}",
+            ImageSearchStatus.Ready,
+            totalCount,
+            totalCount);
         NotifyChanged();
     }
 
@@ -308,9 +323,21 @@ public sealed partial class ImageSearchIndexService
     }
 
     private void SetStatus(string status)
+        => SetStatus(status, CategorizeDefault(status));
+
+    /// <summary>
+    /// Sets the user-visible status AND the culture-independent category so callers
+    /// watching for "are we indexing?" don't need to parse the (now localizable) string.
+    /// </summary>
+    private void SetStatus(string status, ImageSearchStatus category, int completed = 0, int total = 0)
     {
         lock (_gate)
+        {
             _statusText = status;
+            _statusCategory = category;
+            _statusCompleted = completed;
+            _statusTotal = total;
+        }
 
         var handlers = StatusChanged;
         if (handlers is null)
@@ -327,6 +354,20 @@ public sealed partial class ImageSearchIndexService
                 AppDiagnostics.LogError("image-search.status", ex);
             }
         }
+    }
+
+    /// <summary>Best-effort category for legacy SetStatus(string) callers — kept for
+    /// backward compat. Prefer the explicit overload when constructing new statuses.</summary>
+    private static ImageSearchStatus CategorizeDefault(string status)
+    {
+        if (status.StartsWith("Indexing screenshots", StringComparison.OrdinalIgnoreCase))
+            return ImageSearchStatus.IndexingInProgress;
+        if (status.StartsWith("Indexed ", StringComparison.OrdinalIgnoreCase) ||
+            status.Equals("Search index ready", StringComparison.OrdinalIgnoreCase))
+            return ImageSearchStatus.Ready;
+        if (status.StartsWith("Indexing failed", StringComparison.OrdinalIgnoreCase))
+            return ImageSearchStatus.Failed;
+        return ImageSearchStatus.Idle;
     }
 
     private static long TryGetFileLength(string filePath)
