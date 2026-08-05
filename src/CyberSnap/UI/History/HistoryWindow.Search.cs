@@ -390,10 +390,13 @@ public partial class HistoryWindow
             return;
         }
 
-        var status = _imageSearchIndexService.StatusText;
-        if (status.StartsWith("Indexing screenshots", StringComparison.OrdinalIgnoreCase))
+        var (statusCategory, statusCompleted, statusTotal) = _imageSearchIndexService.GetStatusSnapshot();
+        if (statusCategory == ImageSearchStatus.IndexingInProgress)
         {
-            HistorySearchStatusText.Text = status;
+            HistorySearchStatusText.Text = string.Format(
+                LocalizationService.Translate("Indexing screenshots {0}/{1}"),
+                statusCompleted,
+                statusTotal);
             return;
         }
 

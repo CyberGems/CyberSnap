@@ -18,8 +18,8 @@ public partial class HistoryWindow
             return;
 
         var isImages = HistoryCategoryCombo.SelectedIndex == 0;
-        var status = _imageSearchIndexService.StatusText;
-        var isIndexing = status.StartsWith("Indexing screenshots", StringComparison.OrdinalIgnoreCase);
+        var (statusCategory, statusCompleted, statusTotal) = _imageSearchIndexService.GetStatusSnapshot();
+        var isIndexing = statusCategory == ImageSearchStatus.IndexingInProgress;
 
         ReindexAllProgressBar.Visibility = isIndexing ? Visibility.Visible : Visibility.Collapsed;
 
@@ -32,16 +32,24 @@ public partial class HistoryWindow
         if (isIndexing)
         {
             ReindexAllProgressPanel.Visibility = Visibility.Visible;
-            ReindexAllBtn.Content = status;
+            // Localized here (not in the service) so the count updates immediately
+            // without rebuilding the entire pipeline — the X/Y numbers stay universal.
+            string statusText = string.Format(
+                LocalizationService.Translate("Indexing screenshots {0}/{1}"),
+                statusCompleted,
+                statusTotal);
+            ReindexAllBtn.Content = statusText;
             ReindexAllBtn.IsEnabled = false;
-            UpdateReindexAllButtonLabel(status, "Image search indexing is already running.");
+            UpdateReindexAllButtonLabel(statusText, LocalizationService.Translate("Image search indexing is already running."));
         }
         else if (total >= HistoryVirtualizationThreshold)
         {
             ReindexAllProgressPanel.Visibility = Visibility.Collapsed;
-            ReindexAllBtn.Content = "Refresh index";
+            ReindexAllBtn.Content = LocalizationService.Translate("Refresh index");
             ReindexAllBtn.IsEnabled = total > 0;
-            UpdateReindexAllButtonLabel("Refresh image search index", "Refresh the image search index for all screenshot history items.");
+            UpdateReindexAllButtonLabel(
+                LocalizationService.Translate("Refresh image search index"),
+                LocalizationService.Translate("Refresh the image search index for all screenshot history items."));
         }
         else
         {
@@ -49,16 +57,27 @@ public partial class HistoryWindow
             if (indexed < total)
             {
                 ReindexAllProgressPanel.Visibility = Visibility.Visible;
-                ReindexAllBtn.Content = $"Index {total - indexed} remaining";
+                ReindexAllBtn.Content = string.Format(
+                    LocalizationService.Translate("Index {0} remaining"),
+                    total - indexed);
                 ReindexAllBtn.IsEnabled = true;
-                UpdateReindexAllButtonLabel("Index remaining screenshots", $"Index {total - indexed} screenshots for History search.");
+                UpdateReindexAllButtonLabel(
+                    LocalizationService.Translate("Index remaining screenshots"),
+                    string.Format(
+                        LocalizationService.Translate("Index {0} screenshots for History search."),
+                        total - indexed));
             }
             else
             {
                 ReindexAllProgressPanel.Visibility = Visibility.Collapsed;
-                ReindexAllBtn.Content = $"{indexed}/{total} indexed";
+                ReindexAllBtn.Content = string.Format(
+                    LocalizationService.Translate("{0}/{1} indexed"),
+                    indexed,
+                    total);
                 ReindexAllBtn.IsEnabled = false;
-                UpdateReindexAllButtonLabel("Image search index complete", "All visible screenshot history items are indexed.");
+                UpdateReindexAllButtonLabel(
+                    LocalizationService.Translate("Image search index complete"),
+                    LocalizationService.Translate("All visible screenshot history items are indexed."));
             }
         }
     }
@@ -100,7 +119,8 @@ public partial class HistoryWindow
         }
         else
         {
-            var isIndexing = _imageSearchIndexService.StatusText.StartsWith("Indexing screenshots", StringComparison.OrdinalIgnoreCase);
+            var (statusCategory, _, _) = _imageSearchIndexService.GetStatusSnapshot();
+            var isIndexing = statusCategory == ImageSearchStatus.IndexingInProgress;
             placeholder = isIndexing
                 ? LocalizationService.Translate("Search... (indexing)")
                 : LocalizationService.Translate("Search...");

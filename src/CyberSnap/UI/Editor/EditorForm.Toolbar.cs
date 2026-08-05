@@ -2931,12 +2931,8 @@ internal abstract class EditorButtonBase : Button
             g.DrawPath(pen, path);
         }
 
-        if (IsSelected && Enabled)
-        {
-            using var strip = new SolidBrush(EditorColors.Accent);
-            using var stripPath = EditorPaint.RoundedRect(new Rectangle(5, 8, 3, Height - 16), 2);
-            g.FillPath(strip, stripPath);
-        }
+        // No accent side-strip here: the button's own border + content tint already mark it active.
+        // Drawing an extra bar snapped at x=5 made the chrome feel noisy for little signal.
 
         PaintContent(g, rect, content, active);
     }

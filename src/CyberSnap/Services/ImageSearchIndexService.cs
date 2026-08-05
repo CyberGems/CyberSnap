@@ -16,6 +16,19 @@ public enum ImageSearchOcrState
     Failed = 4
 }
 
+/// <summary>
+/// High-level status category reported by <see cref="ImageSearchIndexService"/> so UI
+/// does not have to parse <c>StatusText.StartsWith(...)</c> (culture-fragile once the
+/// status becomes localizable).
+/// </summary>
+public enum ImageSearchStatus
+{
+    Idle = 0,
+    IndexingInProgress = 1,
+    Ready = 2,
+    Failed = 3
+}
+
 public sealed class ImageSearchIndexRecord
 {
     public string FilePath { get; set; } = "";
@@ -286,6 +299,9 @@ public sealed partial class ImageSearchIndexService : IDisposable
     private bool _disposed;
     private int _version;
     private string _statusText = "Search index idle";
+    private ImageSearchStatus _statusCategory = ImageSearchStatus.Idle;
+    private int _statusCompleted;
+    private int _statusTotal;
     private Task? _syncLoopTask;
     private const int MaxSearchCacheEntries = 96;
 
@@ -296,6 +312,12 @@ public sealed partial class ImageSearchIndexService : IDisposable
 
     public int Version { get { lock (_gate) return _version; } }
     public string StatusText { get { lock (_gate) return _statusText; } }
+
+    /// <summary>Snapshot of the indexing state. UI uses this instead of parsing <see cref="StatusText"/>.</summary>
+    public (ImageSearchStatus Category, int Completed, int Total) GetStatusSnapshot()
+    {
+        lock (_gate) return (_statusCategory, _statusCompleted, _statusTotal);
+    }
 
     public void Load()
     {
@@ -321,7 +343,7 @@ public sealed partial class ImageSearchIndexService : IDisposable
             CleanupLegacySearchArtifacts_NoLock();
         }
 
-        SetStatus("Search index ready");
+        SetStatus("Search index ready", ImageSearchStatus.Ready);
     }
 
     public bool TryGetRecord(string filePath, out ImageSearchIndexRecord record)
@@ -398,7 +420,10 @@ public sealed partial class ImageSearchIndexService : IDisposable
 
         SetStatus(imageEntries.Count == 0
             ? "Search index ready"
-            : $"Indexing screenshots 0/{imageEntries.Count}");
+            : $"Indexing screenshots 0/{imageEntries.Count}",
+            imageEntries.Count == 0 ? ImageSearchStatus.Ready : ImageSearchStatus.IndexingInProgress,
+            0,
+            imageEntries.Count);
         NotifyChanged();
         RequestSync(imageEntries, ocrLanguageTag);
     }
