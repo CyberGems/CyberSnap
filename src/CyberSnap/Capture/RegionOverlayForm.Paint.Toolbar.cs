@@ -507,14 +507,16 @@ public sealed partial class RegionOverlayForm
 
             int ia = active ? 255 : hover ? 240 : 200;
             var iconColor = active ? tierAccent : UiChrome.SurfaceTextPrimary;
-            DrawIcon(g, _toolbarIcons[i], btn, Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B), active);
+            var drawColor = Color.FromArgb(ia, iconColor.R, iconColor.G, iconColor.B);
+            DrawIcon(g, _toolbarIcons[i], btn, drawColor, active);
 
             // Active-state cue lives in PaintButton's border/fill + icon tint — the floating accent
             // pill was extra chrome noise for little extra signal.
 
             // Hold-to-switch affordance on merged capture (rect ↔ center) and annotation groups.
+            // Pass the icon's actual color so the chevron matches the glyph instead of the tier accent.
             if (IsMergedHoldButton(i))
-                PaintCaptureHoldHint(g, btn, tierAccent, buttonIndex: i);
+                PaintCaptureHoldHint(g, btn, drawColor, accentForRing: tierAccent, buttonIndex: i);
         }
 
         g.Clip = previousClip;
@@ -691,8 +693,12 @@ public sealed partial class RegionOverlayForm
     /// <summary>
     /// Small chevron badge + hold-progress arc on a merged tool button so users
     /// discover the long-press alternate mode (Area ↔ From Center, shape/stroke groups, …).
+    /// The chevron sits at the bottom-right and points outward along the button diagonal
+    /// suggesting "opens to that corner". Its color matches the icon glyph it sits on
+    /// (parameter <paramref name="chevronColor"/>), while <paramref name="accentForRing"/>
+    /// stays on the hold-progress ring to preserve the existing accent feedback.
     /// </summary>
-    private void PaintCaptureHoldHint(Graphics g, Rectangle btn, Color accent, int buttonIndex)
+    private void PaintCaptureHoldHint(Graphics g, Rectangle btn, Color chevronColor, Color accentForRing, int buttonIndex)
     {
         bool holdingThis = _isMouseDownOnCaptureBtn
             && (_mergedHoldButtonIndex == buttonIndex
@@ -702,19 +708,21 @@ public sealed partial class RegionOverlayForm
             && (_mergedHoldButtonIndex == buttonIndex
                 || (_mergedHoldButtonIndex < 0 && buttonIndex == _mergedCaptureButtonIndex));
 
-        // Tiny corner chevron (always visible on merged slots).
-        float s = UiChrome.ScaleFloat(3.2f);
+        // Tiny bottom-right corner chevron pointing outward along the diagonal.
+        // Stroke-based instead of fill-based so the open direction reads unambiguously.
+        float armLen = UiChrome.ScaleFloat(4.5f);
         float cx = btn.Right - UiChrome.ScaleFloat(7f);
         float cy = btn.Bottom - UiChrome.ScaleFloat(7f);
-        var chev = new[]
+        int chevA = holdingThis || popupForThis ? 230 : 170;
+        using (var pen = new Pen(Color.FromArgb(chevA, chevronColor), UiChrome.ScaleFloat(1.3f))
         {
-            new PointF(cx - s, cy - s * 0.35f),
-            new PointF(cx + s, cy - s * 0.35f),
-            new PointF(cx, cy + s * 0.75f),
-        };
-        int chevA = holdingThis || popupForThis ? 230 : 120;
-        using (var brush = new SolidBrush(Color.FromArgb(chevA, accent)))
-            g.FillPolygon(brush, chev);
+            StartCap = LineCap.Round,
+            EndCap = LineCap.Round,
+        })
+        {
+            g.DrawLine(pen, cx - armLen, cy, cx, cy);
+            g.DrawLine(pen, cx, cy, cx, cy - armLen);
+        }
 
         // Progress ring while holding toward the 300ms threshold.
         if (holdingThis && _mouseDownStartTime != DateTime.MinValue)
@@ -725,7 +733,7 @@ public sealed partial class RegionOverlayForm
             {
                 float pad = UiChrome.ScaleFloat(2.5f);
                 var ring = RectangleF.Inflate(btn, -pad, -pad);
-                using var pen = new Pen(Color.FromArgb((int)(80 + 140 * t), accent), UiChrome.ScaleFloat(1.6f))
+                using var pen = new Pen(Color.FromArgb((int)(80 + 140 * t), accentForRing), UiChrome.ScaleFloat(1.6f))
                 {
                     StartCap = LineCap.Round,
                     EndCap = LineCap.Round,
