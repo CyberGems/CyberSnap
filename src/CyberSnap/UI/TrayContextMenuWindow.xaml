@@ -17,17 +17,21 @@
         Deactivated="Window_Deactivated">
 
     <Window.Resources>
-        <!-- Grid button style -->
+        <!-- Editor-style tiles: chromeless at rest, but on hover they adopt the original
+             ThemeCardBrush fill the tile had at rest before the restyle, WITHOUT the accent
+             ring. Matches the Salir hover treatment the user asked us to mimic. -->
+
+        <!-- Large primary tile (Area / Grabar) -->
         <Style x:Key="GridButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="8,12"/>
-            <Setter Property="Margin" Value="4"/>
-            <Setter Property="Height" Value="88"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Height" Value="96"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -41,8 +45,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
@@ -53,17 +56,17 @@
             </Setter>
         </Style>
 
-        <!-- Bottom general button style (compact height; content icons/text sized in markup). -->
+        <!-- Compact secondary tile (icon + label in one row). Same chromeless rest, same hover feel. -->
         <Style x:Key="BottomButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="Margin" Value="4,2"/>
-            <Setter Property="Height" Value="42"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Height" Value="38"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -77,8 +80,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabHoverBrush}"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ThemeAccentBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeCardBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeTabActiveBrush}"/>
@@ -89,8 +91,9 @@
             </Setter>
         </Style>
 
-        <!-- Exit button style — only the hover/press state is danger-tinted;
-             Foreground matches the other bottom buttons so the label stays conventional. -->
+        <!-- Exit button style — chromeless at rest (icon is the only red element); hover/press
+             reclaim the original soft red wash (#15EF4444 / #25EF4444) the user already likes,
+             without any accent/danger border. -->
         <Style x:Key="BottomDangerButtonStyle" TargetType="Button" BasedOn="{StaticResource BottomButtonStyle}">
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
             <Setter Property="Template">
@@ -107,7 +110,6 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="#15EF4444"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#EF4444"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="#25EF4444"/>
@@ -213,6 +215,7 @@
 
             <!-- Grid Tools -->
             <StackPanel Grid.Row="1">
+                <!-- Primary row: Area + Video stay as large tiles (default actions) -->
                 <UniformGrid Columns="2">
                     <!-- Area Capture -->
                     <Button x:Name="AreaCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="AreaCapture_Click">
@@ -229,20 +232,33 @@
                             <TextBlock x:Name="VideoRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                </UniformGrid>
 
+                <!-- Secondary capture tools — compact tiles matching the bottom rows -->
+                <UniformGrid Columns="2">
                     <!-- Scroll Capture -->
-                    <Button x:Name="ScrollCaptureBtn" Style="{StaticResource GridButtonStyle}" Click="ScrollCapture_Click">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image x:Name="ScrollCaptureIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                            <TextBlock x:Name="ScrollCaptureText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <Button x:Name="ScrollCaptureBtn" Style="{StaticResource BottomButtonStyle}" Click="ScrollCapture_Click" Padding="8,8" Margin="4,2,2,2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image x:Name="ScrollCaptureIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="ScrollCaptureText"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
 
                     <!-- Screen Recorder (GIF) -->
-                    <Button x:Name="GifRecordBtn" Style="{StaticResource GridButtonStyle}" Click="GifRecord_Click">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image x:Name="GifRecordIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                            <TextBlock x:Name="GifRecordText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <Button x:Name="GifRecordBtn" Style="{StaticResource BottomButtonStyle}" Click="GifRecord_Click" Padding="8,8" Margin="2,2,4,2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image x:Name="GifRecordIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="GifRecordText"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
@@ -252,34 +268,54 @@
 
                 <UniformGrid Columns="2">
                     <!-- OCR -->
-                    <Button x:Name="OcrBtn" Style="{StaticResource GridButtonStyle}" Click="Ocr_Click">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image x:Name="OcrIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                            <TextBlock x:Name="OcrText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <Button x:Name="OcrBtn" Style="{StaticResource BottomButtonStyle}" Click="Ocr_Click" Padding="8,8" Margin="4,2,2,2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image x:Name="OcrIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="OcrText"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
 
                     <!-- QR & Barcodes -->
-                    <Button x:Name="QrBtn" Style="{StaticResource GridButtonStyle}" Click="QrScan_Click">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image x:Name="QrIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                            <TextBlock x:Name="QrText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <Button x:Name="QrBtn" Style="{StaticResource BottomButtonStyle}" Click="QrScan_Click" Padding="8,8" Margin="2,2,4,2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image x:Name="QrIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="QrText"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
 
                     <!-- Color Picker -->
-                    <Button x:Name="ColorPickerBtn" Style="{StaticResource GridButtonStyle}" Click="ColorPicker_Click">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image x:Name="ColorPickerIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                            <TextBlock x:Name="ColorPickerText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <Button x:Name="ColorPickerBtn" Style="{StaticResource BottomButtonStyle}" Click="ColorPicker_Click" Padding="8,8" Margin="4,2,2,2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image x:Name="ColorPickerIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="ColorPickerText"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
 
                     <!-- Ruler -->
-                    <Button x:Name="RulerBtn" Style="{StaticResource GridButtonStyle}" Click="Ruler_Click">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image x:Name="RulerIcon" Width="32" Height="32" Margin="0,0,0,8" HorizontalAlignment="Center" Stretch="Uniform"/>
-                            <TextBlock x:Name="RulerText" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <Button x:Name="RulerBtn" Style="{StaticResource BottomButtonStyle}" Click="Ruler_Click" Padding="8,8" Margin="2,2,4,2">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Image x:Name="RulerIcon" Width="20" Height="20" Margin="0,0,8,0" Stretch="Uniform" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="RulerText"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="92"/>
                         </StackPanel>
                     </Button>
                 </UniformGrid>
