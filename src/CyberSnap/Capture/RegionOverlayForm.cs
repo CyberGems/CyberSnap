@@ -118,7 +118,6 @@ public sealed partial class RegionOverlayForm : Form
     private float _annotationToolsExpandAmt;
     private float _annotationToolsExpandTarget;
     private float _annotationToolsAnimFrom;
-    private DateTime _annotationToolsAnimStart;
     private const int AnnotationToolsExpandAnimMs = 160;
     private const int AnnotationToolsCollapseDelayMs = 400;
     /// <summary>Last drawing tool shown in the sticky trigger slot (never select/eraser).</summary>
