@@ -161,13 +161,18 @@ internal sealed class ThemeCard : RadioButton
 
         _caption = new TextBlock
         {
-            Text = Caption,
+            Text = LocalizationService.Translate(Caption),
             TextAlignment = TextAlignment.Center,
             HorizontalAlignment = WpfHorizontalAlignment.Center,
             Margin = new Thickness(0, 8, 0, 0),
             FontFamily = new WpfFontFamily("Segoe UI Variable Text"),
             FontSize = 12.5
         };
+        // Keep the English source key cached so ApplyTo re-translates this caption
+        // whenever the interface language changes (Rebuild() recreates this TextBlock
+        // after ApplyLocalization has already run, so without the cached source the
+        // label would either stay English or get stuck on the previously selected one).
+        LocalizationService.SetSourceText(_caption, Caption);
 
         stack.Children.Add(cardHost);
         stack.Children.Add(_caption);
