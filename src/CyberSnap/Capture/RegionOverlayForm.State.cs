@@ -963,10 +963,15 @@ public sealed partial class RegionOverlayForm
         _ => a
     };
 
+    /// <summary>Public wrapper so <see cref="ToolbarForm"/> can skip bitmap repaints while an
+    /// annotation drag is in flight. Keeping the layered surface untouched mid-drag prevents the
+    /// "invisible mask" symptom where the dock's surface composited over the live preview.</summary>
+    internal bool IsAnnotationDragInProgress() => IsDraggingAnyAnnotation();
+
     private bool IsDraggingAnyAnnotation()
     {
-        return _isSelecting || _isCurvedArrowDragging || _isHighlighting || 
-               _isRectShapeDragging || _isCircleShapeDragging || _isBlurring || 
+        return _isSelecting || _isCurvedArrowDragging || _isHighlighting ||
+               _isRectShapeDragging || _isCircleShapeDragging || _isBlurring ||
                _isArrowDragging || _isLineDragging || _isRulerDragging;
     }
 
@@ -2510,6 +2515,12 @@ public sealed partial class RegionOverlayForm
             _confirmShineTimer.Stop();
             return;
         }
+
+        // Pause the shine animation while an annotation drag is in flight: each tick invalidates
+        // the chrome cluster, and that repaint can composite over (or kick a repaint of pixels
+        // that overlap) the live preview near the bottom/right edges of the selection.
+        if (IsDraggingAnyAnnotation())
+            return;
 
         _confirmWrapperShinePhase += (float)(UiChrome.FrameIntervalMs / 4000.0);
         if (_confirmWrapperShinePhase >= 1f) _confirmWrapperShinePhase -= 1f;

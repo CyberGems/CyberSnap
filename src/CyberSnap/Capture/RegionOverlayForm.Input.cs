@@ -770,17 +770,17 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Highlight:
                 HideToolbarForCaptureTool();
                 _isHighlighting = true;
-                _highlightStart = e.Location;
+                _highlightStart = ClampAnnotationEndPoint(e.Location);
                 break;
             case CaptureMode.RectShape:
                 HideToolbarForCaptureTool();
                 _isRectShapeDragging = true;
-                _shapeStart = e.Location;
+                _shapeStart = ClampAnnotationEndPoint(e.Location);
                 break;
             case CaptureMode.CircleShape:
                 HideToolbarForCaptureTool();
                 _isCircleShapeDragging = true;
-                _shapeStart = e.Location;
+                _shapeStart = ClampAnnotationEndPoint(e.Location);
                 break;
             case CaptureMode.StepNumber:
                 HideToolbarForCaptureTool();
@@ -809,7 +809,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Line:
                 HideToolbarForCaptureTool();
                 _isLineDragging = true;
-                _lineStart = e.Location;
+                _lineStart = ClampAnnotationEndPoint(e.Location);
                 break;
             case CaptureMode.Ruler:
                 // Ruler is an annotation tool — don't hide the toolbar while measuring.
@@ -820,12 +820,12 @@ public sealed partial class RegionOverlayForm
                     Invalidate();
                 }
                 _isRulerDragging = true;
-                _rulerStart = e.Location;
+                _rulerStart = ClampAnnotationEndPoint(e.Location);
                 break;
             case CaptureMode.Arrow:
                 HideToolbarForCaptureTool();
                 _isArrowDragging = true;
-                _arrowStart = e.Location;
+                _arrowStart = ClampAnnotationEndPoint(e.Location);
                 break;
             case CaptureMode.CurvedArrow:
                 HideToolbarForCaptureTool();
@@ -835,7 +835,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Blur:
                 HideToolbarForCaptureTool();
                 _isBlurring = true;
-                _blurStart = e.Location;
+                _blurStart = ClampAnnotationEndPoint(e.Location);
                 break;
             case CaptureMode.Eraser:
                 HideToolbarForCaptureTool();
