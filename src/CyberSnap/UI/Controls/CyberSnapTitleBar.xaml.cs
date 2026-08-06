@@ -33,6 +33,13 @@ public partial class CyberSnapTitleBar : UserControl
             typeof(CyberSnapTitleBar),
             new PropertyMetadata(false, OnIsPinActiveChanged));
 
+    public static readonly DependencyProperty CloseToolTipProperty =
+        DependencyProperty.Register(
+            nameof(CloseToolTip),
+            typeof(string),
+            typeof(CyberSnapTitleBar),
+            new PropertyMetadata("Close"));
+
     public event EventHandler? CloseRequested;
     public event EventHandler? PinRequested;
 
@@ -89,6 +96,12 @@ public partial class CyberSnapTitleBar : UserControl
     {
         get => (bool)GetValue(IsPinActiveProperty);
         set => SetValue(IsPinActiveProperty, value);
+    }
+
+    public string CloseToolTip
+    {
+        get => (string)GetValue(CloseToolTipProperty);
+        set => SetValue(CloseToolTipProperty, value);
     }
 
     private static void OnShowPinButtonChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -343,6 +356,20 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(configItem);
 
+            if (OwnerWindow is CapturePreviewDialog previewWindow)
+            {
+                var autoCloseToggle = new MenuItem
+                {
+                    Header = LocalizationService.Translate("Capture preview auto-close"),
+                    IsCheckable = true,
+                    ToolTip = LocalizationService.Translate("The preview window auto-closes when the timer expires.")
+                };
+                autoCloseToggle.Checked += (_, _) => previewWindow.SetAutoCloseEnabled(true);
+                autoCloseToggle.Unchecked += (_, _) => previewWindow.SetAutoCloseEnabled(false);
+                menu.Opened += (_, _) => autoCloseToggle.IsChecked = previewWindow.IsAutoCloseEnabled;
+                menu.Items.Add(autoCloseToggle);
+            }
+
             var aboutItem = new MenuItem
             {
                 Header = LocalizationService.Translate("About CyberSnap"),
@@ -464,6 +491,12 @@ public partial class CyberSnapTitleBar : UserControl
         e.Handled = true;
         if (BurgerBtn.ContextMenu is { } menu)
         {
+            if (menu.IsOpen)
+            {
+                menu.IsOpen = false;
+                return;
+            }
+
             menu.PlacementTarget = BurgerBtn;
             menu.IsOpen = true;
         }
@@ -489,6 +522,12 @@ public partial class CyberSnapTitleBar : UserControl
         {
             if (ActionBtn.ContextMenu is { } menu)
             {
+                if (menu.IsOpen)
+                {
+                    menu.IsOpen = false;
+                    return;
+                }
+
                 menu.PlacementTarget = ActionBtn;
                 menu.IsOpen = true;
             }

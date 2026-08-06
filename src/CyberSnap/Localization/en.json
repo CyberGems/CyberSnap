@@ -1240,6 +1240,8 @@
   "The {0} corner is full (2 buttons max). Remove a button first.": "The {0} corner is full (2 buttons max). Remove a button first.",
   "Close preview": "Close preview",
   "Close this preview.": "Close this preview.",
+  "Close this preview and continue with pending actions.": "Close this preview and continue with pending actions.",
+  "Cancel and discard pending actions.": "Cancel and discard pending actions.",
   "Pin preview": "Pin preview",
   "Keep this preview open.": "Keep this preview open.",
   "Unpin preview": "Unpin preview",
