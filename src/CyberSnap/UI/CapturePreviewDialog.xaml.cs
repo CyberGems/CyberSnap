@@ -29,6 +29,11 @@ namespace CyberSnap.UI
         private const int CountdownFadeMs = 220;
         /// <summary>Dimmed opacity while the cursor is moving (refill in progress).</summary>
         private const double CountdownMotionOpacity = 0.42;
+        /// <summary>Resting opacity for the Done CTA accent hairline (quiet, not shouty).</summary>
+        private const double CtaBorderOpacityRest = 0.22;
+        /// <summary>Peak opacity for the Done-border breathe — wide enough to read, still soft.</summary>
+        private const double CtaBorderOpacityPeak = 0.58;
+        private const double CtaBorderBreatheSeconds = 2.6;
         private const int PillSimInitialDelayMs = 200;
         private const int PillSimWorkMs = 1000;
 
@@ -40,6 +45,8 @@ namespace CyberSnap.UI
         /// <summary>True while the countdown is paused because the cursor is moving over the window.</summary>
         private bool _countdownPausedForMotion;
         private DispatcherTimer? _cursorIdleTimer;
+        private SolidColorBrush? _ctaBorderBrush;
+        private bool _ctaBorderPulseActive;
         private bool _didCenterOnOpen;
         private bool _isSideBySide = true;
         private bool _isClosing;
@@ -146,6 +153,7 @@ namespace CyberSnap.UI
                 CancelCursorIdleTimer();
                 CancelZoomHideTimer();
                 StopPrimaryButtonSpin();
+                StopCtaBorderPulse();
             };
             // Pause auto-close only while the cursor is moving over this window; when it
             // stops (or leaves), the countdown resumes from the preserved remaining time.
@@ -405,6 +413,7 @@ namespace CyberSnap.UI
                 // No timer for this session — collapse so the Done button doesn't reserve space.
                 SetCountdownRingShown(false, keepLayoutSlot: false);
                 ResetCountdownRingVisual();
+                StopCtaBorderPulse();
                 return;
             }
 
@@ -416,6 +425,7 @@ namespace CyberSnap.UI
             EnsureCountdownRingVisible();
             UpdateDoneCountdownText(timeoutSec);
             UpdateCountdownRingArc(1.0);
+            StartCtaBorderPulse();
 
             StartCountdownAnimation();
         }
@@ -585,6 +595,7 @@ namespace CyberSnap.UI
             _autoCloseArmed = false;
             _countdownPausedForMotion = false;
             CancelCursorIdleTimer();
+            StopCtaBorderPulse();
             BeginAnimation(CountdownFractionProperty, null);
             if (resetProgress)
                 UpdateCountdownRingArc(1.0);
@@ -915,6 +926,20 @@ namespace CyberSnap.UI
                 ? Theme.Brush(System.Windows.Media.Color.FromRgb(11, 18, 32))
                 : Theme.Brush(System.Windows.Media.Colors.White);
 
+            // Live (unfrozen) accent hairline on the button only — ResourceDictionary freezes
+            // Freezables, and animating a frozen brush crashes before the dialog can show.
+            bool wasPulsing = _ctaBorderPulseActive;
+            StopCtaBorderPulse(resetOpacity: false);
+            var accent = Theme.Accent;
+            Resources["ThemePrimaryCtaBorderBrush"] = Theme.Brush(
+                System.Windows.Media.Color.FromArgb(
+                    (byte)Math.Clamp((int)(CtaBorderOpacityRest * 255), 0, 255),
+                    accent.R, accent.G, accent.B));
+            _ctaBorderBrush = new SolidColorBrush(accent) { Opacity = CtaBorderOpacityRest };
+            CancelBtn.BorderBrush = _ctaBorderBrush;
+            if (wasPulsing || _autoCloseArmed)
+                StartCtaBorderPulse();
+
             CheckerboardHost.Background = Theme.CreateCheckerboardBrush();
             PreviewFrame.Background = Theme.Brush(Theme.BgSecondary);
             // Countdown ring brushes bind to DynamicResource theme brushes set above.
@@ -924,6 +949,50 @@ namespace CyberSnap.UI
             // Rebuilding here would cancel an in-flight completion simulation.
             UpdateContinueOrExitButton();
             UpdateOptionalActionsAvailability();
+        }
+
+        /// <summary>
+        /// Cheap "life" on the Done CTA: one looping Opacity animation on the accent
+        /// SolidColorBrush. No DropShadow, no extra visuals — GPU cost is negligible.
+        /// </summary>
+        private void StartCtaBorderPulse()
+        {
+            if (_ctaBorderBrush is null)
+                return;
+
+            if (Motion.Disabled)
+            {
+                _ctaBorderBrush.BeginAnimation(SolidColorBrush.OpacityProperty, null);
+                _ctaBorderBrush.Opacity = CtaBorderOpacityRest;
+                _ctaBorderPulseActive = false;
+                return;
+            }
+
+            var breathe = new DoubleAnimation(
+                CtaBorderOpacityRest,
+                CtaBorderOpacityPeak,
+                TimeSpan.FromSeconds(CtaBorderBreatheSeconds))
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = Motion.Ease(Motion.SmoothInOut)
+            };
+            _ctaBorderBrush.BeginAnimation(SolidColorBrush.OpacityProperty, breathe);
+            _ctaBorderPulseActive = true;
+        }
+
+        private void StopCtaBorderPulse(bool resetOpacity = true)
+        {
+            if (_ctaBorderBrush is null)
+            {
+                _ctaBorderPulseActive = false;
+                return;
+            }
+
+            _ctaBorderBrush.BeginAnimation(SolidColorBrush.OpacityProperty, null);
+            if (resetOpacity)
+                _ctaBorderBrush.Opacity = CtaBorderOpacityRest;
+            _ctaBorderPulseActive = false;
         }
 
         private void PopulateAfterCapturePills()
