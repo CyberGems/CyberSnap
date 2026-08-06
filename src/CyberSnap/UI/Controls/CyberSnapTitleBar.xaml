@@ -107,7 +107,7 @@
                         MouseLeftButtonDown="CloseBtn_MouseLeftButtonDown"
                         MouseEnter="TitleBtn_MouseEnter"
                         MouseLeave="TitleBtn_MouseLeave"
-                        ToolTip="Close">
+                        ToolTip="{Binding CloseToolTip, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}">
                     <Image x:Name="CloseIcon" Style="{StaticResource CyberSnapTitleButtonIcon}"/>
                 </Border>
             </StackPanel>

@@ -1518,6 +1518,8 @@
   "The {0} corner is full (2 buttons max). Remove a button first.": "La esquina {0} está llena (máx. 2 botones). Quita un botón primero.",
   "Close preview": "Cerrar vista previa",
   "Close this preview.": "Cerrar esta vista previa.",
+  "Close this preview and continue with pending actions.": "Cerrar esta vista previa y continuar con las acciones pendientes.",
+  "Cancel and discard pending actions.": "Cancelar y descartar las acciones pendientes.",
   "Pin preview": "Fijar vista previa",
   "Keep this preview open.": "Mantener esta vista previa abierta.",
   "Unpin preview": "Desfijar vista previa",

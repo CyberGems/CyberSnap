@@ -90,6 +90,20 @@ namespace CyberSnap.UI
 
         public RegionOverlayForm.ConfirmCommitAction SelectedAction { get; private set; } = RegionOverlayForm.ConfirmCommitAction.Default;
 
+        public bool IsAutoCloseEnabled =>
+            _settingsService.Settings.CapturePreviewTimeoutSeconds > 0;
+
+        public void SetAutoCloseEnabled(bool enabled)
+        {
+            int current = _settingsService.Settings.CapturePreviewTimeoutSeconds;
+            int next = enabled ? (current > 0 ? current : 20) : 0;
+            if (current == next)
+                return;
+
+            _settingsService.Settings.CapturePreviewTimeoutSeconds = next;
+            _settingsService.Save();
+        }
+
         public CapturePreviewDialog(
             Bitmap bitmap,
             SettingsService settingsService,
@@ -174,6 +188,9 @@ namespace CyberSnap.UI
             var lang = _settingsService.Settings.InterfaceLanguage;
             Helpers.WindowTitles.ApplyTaskbar(this, Helpers.WindowTitles.Preview, lang);
             TitleBar.Title = LocalizationService.Translate("Capture Preview");
+            TitleBar.CloseToolTip = WithHotkeyHint(
+                LocalizationService.Translate("Cancel and discard pending actions."),
+                "Esc");
             AfterCaptureHeaderLabel.Text = LocalizationService.Translate("Active actions:");
             OptionalActionsHeaderLabel.Text = LocalizationService.Translate("You can also:");
             OptionalActionsHeaderLabel.ToolTip =
@@ -425,9 +442,13 @@ namespace CyberSnap.UI
                 ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
         }
 
-        private void StartCountdownAnimation()
+        private void StartCountdownAnimation(double startFraction = 1.0)
         {
             if (_autoCloseDurationSeconds <= 0)
+                return;
+
+            startFraction = Math.Clamp(startFraction, 0, 1);
+            if (startFraction <= 0)
                 return;
 
             int epoch = ++_countdownEpoch;
@@ -435,7 +456,10 @@ namespace CyberSnap.UI
             // Deliberately not Motion.Sec: the countdown is functional timing, not a
             // decorative transition. With reduced motion (Motion.Disabled → zero-duration
             // animations) the dialog must still stay open the configured seconds.
-            var animation = new DoubleAnimation(1.0, 0.0, TimeSpan.FromSeconds(_autoCloseDurationSeconds))
+            var animation = new DoubleAnimation(
+                startFraction,
+                0.0,
+                TimeSpan.FromSeconds(_autoCloseDurationSeconds * startFraction))
             {
                 FillBehavior = FillBehavior.HoldEnd
             };
@@ -497,17 +521,20 @@ namespace CyberSnap.UI
             CountdownRingArc.Data = geometry;
         }
 
-        private void BeginProgressRefillForHover()
+        private void PauseAutoCloseForHover()
         {
             if (!_autoCloseArmed || _isPinned)
                 return;
 
-            // Invalidate the running clock first — its Completed would otherwise still
-            // fire on the old schedule and close the dialog despite the visual reset.
+            // Preserve the currently displayed fraction before detaching the animation.
+            // Removing an animation otherwise restores the property's base value (1.0),
+            // which makes the ring briefly jump back to the full timeout on hover.
             _countdownEpoch++;
-            // Pause: removing the animation snaps the fraction back to its base value (1.0),
-            // so the ring pops to full — hovering re-grants the full timeout.
+            double fraction = Math.Clamp(CountdownFraction, 0, 1);
             BeginAnimation(CountdownFractionProperty, null);
+            SetCurrentValue(CountdownFractionProperty, fraction);
+            UpdateCountdownRingArc(fraction);
+            ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
         }
 
         private void ResumeAutoCloseAfterHover()
@@ -515,9 +542,10 @@ namespace CyberSnap.UI
             if (_isPinned || !_autoCloseArmed || _autoCloseDurationSeconds <= 0)
                 return;
 
-            ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
+            double fraction = Math.Clamp(CountdownFraction, 0, 1);
+            ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
             FadeCountdownRing(1.0);
-            StartCountdownAnimation();
+            StartCountdownAnimation(fraction);
         }
 
         private void StopAutoCloseCountdown(bool resetProgress)
@@ -565,8 +593,8 @@ namespace CyberSnap.UI
         private void OnActionsPanelMouseEnter()
         {
             _isHovered = true;
-            BeginProgressRefillForHover();
-            // Hide the whole ring while paused — it only reads while actively counting down.
+            PauseAutoCloseForHover();
+            // Hide the whole ring while paused — preserve its current value until it returns.
             if (!_isPinned && _autoCloseArmed)
                 FadeCountdownRing(0.0);
         }
@@ -1594,13 +1622,17 @@ namespace CyberSnap.UI
                     ViewerHintBadge.Text = LocalizationService.Translate("The system viewer opens when this window closes.");
                 }
                 ViewerHintBadge.Visibility = Visibility.Visible;
-                CancelBtn.ToolTip = WithHotkeyHint(ViewerHintBadge.Text, "Esc");
+                CancelBtn.ToolTip = WithHotkeyHint(
+                    LocalizationService.Translate("Close this preview and continue with pending actions."),
+                    "Enter");
             }
             else
             {
                 CancelText.Text = LocalizationService.Translate("Done");
                 ViewerHintBadge.Visibility = Visibility.Collapsed;
-                CancelBtn.ToolTip = WithHotkeyHint(LocalizationService.Translate("Close this preview."), "Esc");
+                CancelBtn.ToolTip = WithHotkeyHint(
+                    LocalizationService.Translate("Close this preview and continue with pending actions."),
+                    "Enter");
             }
         }
 
@@ -1821,6 +1853,13 @@ namespace CyberSnap.UI
             // Plain keys (no modifier) ─────────────────────────────────────
             if (mods == ModifierKeys.None)
             {
+                if (e.Key == Key.Enter)
+                {
+                    CancelBtn_Click(CancelBtn, new RoutedEventArgs());
+                    e.Handled = true;
+                    return;
+                }
+
                 if (e.Key == Key.P)                     // P — pin / unpin
                 {
                     TogglePinned();
