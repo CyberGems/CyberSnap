@@ -23,6 +23,8 @@ namespace CyberSnap.UI
         /// <summary>Quick opacity fade for timer auto-close only (manual close stays instant).</summary>
         private const int AutoCloseFadeMs = 280;
         private const int CountdownFadeMs = 200;
+        /// <summary>Resume auto-close after the pointer stops moving over the window.</summary>
+        private const int CursorIdleResumeMs = 650;
         private const int PillSimInitialDelayMs = 200;
         private const int PillSimWorkMs = 1000;
 
@@ -31,7 +33,9 @@ namespace CyberSnap.UI
         private readonly System.Drawing.Point _targetMonitorPoint;
         private readonly string? _savedFilePath;
         private bool _isPinned = false;
-        private bool _isHovered = false;
+        /// <summary>True while the countdown is paused because the cursor is moving over the window.</summary>
+        private bool _countdownPausedForMotion;
+        private DispatcherTimer? _cursorIdleTimer;
         private bool _didCenterOnOpen;
         private bool _isSideBySide = true;
         private bool _isClosing;
@@ -135,13 +139,14 @@ namespace CyberSnap.UI
                 SettingsService.SettingsChanged -= SettingsService_SettingsChanged;
                 CancelPillCompletionSimulation();
                 StopAutoCloseCountdown(resetProgress: true);
+                CancelCursorIdleTimer();
                 CancelZoomHideTimer();
                 StopPrimaryButtonSpin();
             };
-            // Pause the auto-close countdown only while the pointer is over the actions
-            // column — hovering the image preview no longer holds the dialog open.
-            ActionsPanel.MouseEnter += (_, _) => OnActionsPanelMouseEnter();
-            ActionsPanel.MouseLeave += (_, _) => OnActionsPanelMouseLeave();
+            // Pause auto-close only while the cursor is moving over this window; when it
+            // stops (or leaves), the countdown resumes from the preserved remaining time.
+            PreviewMouseMove += (_, _) => OnWindowCursorMoved();
+            MouseLeave += (_, _) => OnWindowCursorLeft();
             // Hovering "Processing" fast-forwards the pill simulation to its final state,
             // so the user about to click never has to wait out the choreography.
             CancelBtn.MouseEnter += (_, _) => FinishPillSimulationImmediately();
@@ -349,9 +354,9 @@ namespace CyberSnap.UI
         private void CapturePreviewDialog_Activated(object? sender, EventArgs e)
         {
             RefreshLiveSettings();
-            // Re-arm countdown only when the pointer is NOT over the actions column.
-            if (_autoCloseArmed && !_isPinned && !_isHovered && !_pillSimRunning)
-                ResumeAutoCloseAfterHover();
+            // Re-arm countdown only when motion-pause is not holding it.
+            if (_autoCloseArmed && !_isPinned && !_countdownPausedForMotion && !_pillSimRunning)
+                ResumeAutoCloseAfterCursorIdle();
         }
 
         private void SettingsService_SettingsChanged()
@@ -400,17 +405,13 @@ namespace CyberSnap.UI
 
             _autoCloseDurationSeconds = timeoutSec;
             _autoCloseArmed = true;
+            _countdownPausedForMotion = false;
+            CancelCursorIdleTimer();
             CountdownRingHost.Visibility = Visibility.Visible;
             CountdownRingHost.BeginAnimation(OpacityProperty, null);
-            CountdownRingHost.Opacity = _isHovered ? 0.0 : 1.0;
+            CountdownRingHost.Opacity = 1.0;
             UpdateDoneCountdownText(timeoutSec);
             UpdateCountdownRingArc(1.0);
-
-            if (_isHovered)
-            {
-                // Pointer already inside the actions column: stay full, start on mouse leave.
-                return;
-            }
 
             StartCountdownAnimation();
         }
@@ -470,7 +471,7 @@ namespace CyberSnap.UI
                 // The epoch guard makes those stale clocks harmless (hover/stop bumps it).
                 if (epoch != _countdownEpoch)
                     return;
-                if (!_autoCloseArmed || _isClosing || _isPinned || _isHovered)
+                if (!_autoCloseArmed || _isClosing || _isPinned || _countdownPausedForMotion)
                     return;
                 PerformAutoClose();
             };
@@ -521,14 +522,14 @@ namespace CyberSnap.UI
             CountdownRingArc.Data = geometry;
         }
 
-        private void PauseAutoCloseForHover()
+        private void PauseAutoCloseForCursorMotion()
         {
             if (!_autoCloseArmed || _isPinned)
                 return;
 
             // Preserve the currently displayed fraction before detaching the animation.
             // Removing an animation otherwise restores the property's base value (1.0),
-            // which makes the ring briefly jump back to the full timeout on hover.
+            // which makes the ring briefly jump back to the full timeout on pause.
             _countdownEpoch++;
             double fraction = Math.Clamp(CountdownFraction, 0, 1);
             BeginAnimation(CountdownFractionProperty, null);
@@ -537,7 +538,7 @@ namespace CyberSnap.UI
             ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
         }
 
-        private void ResumeAutoCloseAfterHover()
+        private void ResumeAutoCloseAfterCursorIdle()
         {
             if (_isPinned || !_autoCloseArmed || _autoCloseDurationSeconds <= 0)
                 return;
@@ -552,6 +553,8 @@ namespace CyberSnap.UI
         {
             _countdownEpoch++;
             _autoCloseArmed = false;
+            _countdownPausedForMotion = false;
+            CancelCursorIdleTimer();
             BeginAnimation(CountdownFractionProperty, null);
             if (resetProgress)
                 UpdateCountdownRingArc(1.0);
@@ -590,20 +593,65 @@ namespace CyberSnap.UI
             _lastCountdownSecondText = -1;
         }
 
-        private void OnActionsPanelMouseEnter()
+        private void OnWindowCursorMoved()
         {
-            _isHovered = true;
-            PauseAutoCloseForHover();
-            // Hide the whole ring while paused — preserve its current value until it returns.
-            if (!_isPinned && _autoCloseArmed)
+            if (!_autoCloseArmed || _isPinned || _isClosing || _pillSimRunning)
+                return;
+
+            if (!_countdownPausedForMotion)
+            {
+                _countdownPausedForMotion = true;
+                PauseAutoCloseForCursorMotion();
+                // Hide the ring while paused — preserve its current value until motion stops.
                 FadeCountdownRing(0.0);
+            }
+
+            ScheduleCursorIdleResume();
         }
 
-        private void OnActionsPanelMouseLeave()
+        private void OnWindowCursorLeft()
         {
-            _isHovered = false;
+            if (!_countdownPausedForMotion)
+            {
+                CancelCursorIdleTimer();
+                return;
+            }
+
+            // Cursor left the window: treat as idle and resume the remaining countdown.
+            CancelCursorIdleTimer();
+            _countdownPausedForMotion = false;
             if (_isPinned) return;
-            ResumeAutoCloseAfterHover();
+            ResumeAutoCloseAfterCursorIdle();
+        }
+
+        private void ScheduleCursorIdleResume()
+        {
+            if (_cursorIdleTimer == null)
+            {
+                _cursorIdleTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(CursorIdleResumeMs)
+                };
+                _cursorIdleTimer.Tick += (_, _) =>
+                {
+                    _cursorIdleTimer!.Stop();
+                    if (!_countdownPausedForMotion || _isClosing || _isPinned || !_autoCloseArmed)
+                        return;
+                    _countdownPausedForMotion = false;
+                    ResumeAutoCloseAfterCursorIdle();
+                };
+            }
+
+            _cursorIdleTimer.Stop();
+            _cursorIdleTimer.Interval = TimeSpan.FromMilliseconds(CursorIdleResumeMs);
+            _cursorIdleTimer.Start();
+        }
+
+        private void CancelCursorIdleTimer()
+        {
+            if (_cursorIdleTimer == null)
+                return;
+            _cursorIdleTimer.Stop();
         }
 
         private void PerformAutoClose()
@@ -1583,8 +1631,8 @@ namespace CyberSnap.UI
         }
 
         /// <summary>Fully cancels the auto-close countdown after a user interaction
-        /// (zoom, pan, or any action button). Unlike the hover-over-actions-panel pause,
-        /// this stops the countdown entirely.</summary>
+        /// (zoom, pan, or any action button). Unlike the cursor-motion pause,
+        /// this stops the countdown entirely and hides the ring.</summary>
         private void CancelAutoCloseOnInteraction()
         {
             StopAutoCloseCountdown(resetProgress: true);
