@@ -148,9 +148,15 @@ namespace CyberSnap.UI
             ApplyZoom();
             ZoomViewport.SizeChanged += (_, _) =>
             {
-                // Stretch="Uniform" letterboxes; force re-measure so the canvas stays centered
-                // and the zoom-controls stay anchored correctly after a window resize.
+                // Recalculate after the viewport changes so fit mode tracks the available canvas.
                 ApplyZoom();
+            };
+            Loaded += (_, _) =>
+            {
+                // The first SizeChanged can occur before the preview is fully arranged (and
+                // before ApplyLayoutMode has moved the actions panel). Run one final fit pass
+                // after WPF completes the initial layout.
+                Dispatcher.BeginInvoke(new Action(ApplyZoom), DispatcherPriority.ContextIdle);
             };
             PopulateAfterCapturePills();
             UpdateContinueOrExitButton();
@@ -318,13 +324,6 @@ namespace CyberSnap.UI
             ZoomFitIcon.Source = FluentIcons.RenderWpf("zoomFit", secondaryIconColor, 12, active: true);
         }
 
-        private System.Drawing.Color GetPrimaryButtonIconColor()
-        {
-            // Quiet Done CTA uses primary text on a dark fill (gradient line carries the accent).
-            var c = Theme.TextPrimary;
-            return System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
-        }
-
         /// <summary>Secondary/accent color used by the pills for their pending spinner.
         /// Matches the tone of the chips so the "Processing" button loader matches them.</summary>
         private System.Drawing.Color GetPrimaryButtonSpinnerColor()
@@ -399,8 +398,8 @@ namespace CyberSnap.UI
             StartCountdownAnimation();
         }
 
-        private const double CountdownRingSize = 20.0;
-        private const double CountdownRingStrokeThickness = 2.0;
+        private const double CountdownRingSize = 24.0;
+        private const double CountdownRingStrokeThickness = 2.2;
 
         /// <summary>
         /// Fraction of auto-close time remaining (1→0). A single DoubleAnimation on this
@@ -1299,14 +1298,13 @@ namespace CyberSnap.UI
 
             if (_zoomToFit)
             {
-                // Letterboxed "fit": canvas fills the viewport, Uniform scale shrinks the image
-                // to the largest size that fits entirely. _currentZoom tracks the real scale
-                // factor relative to bitmap pixels (may exceed 1.0 for small captures).
+                // Fit large images to the viewport, but never upscale small captures.
+                // The canvas still fills the viewport so the image remains centered.
                 ZoomCanvas.Width = availW;
                 ZoomCanvas.Height = availH;
-                PreviewImage.Width = availW;
-                PreviewImage.Height = availH;
-                _currentZoom = Math.Min(availW / bmp.Width, availH / bmp.Height);
+                _currentZoom = Math.Min(1.0, Math.Min(availW / bmp.Width, availH / bmp.Height));
+                PreviewImage.Width = bmp.Width * _currentZoom;
+                PreviewImage.Height = bmp.Height * _currentZoom;
             }
             else
             {
@@ -1580,10 +1578,8 @@ namespace CyberSnap.UI
             bool viewerOn = state.SystemViewer;
             bool editorOn = state.Destination == AfterCaptureDestination.Editor;
             bool continuesToSurface = viewerOn || editorOn;
-            var iconColor = GetPrimaryButtonIconColor();
-
             // Same pending marker as action pills: confirm runs the remaining deferred actions.
-            CancelIcon.Source = RenderDoubleChevron(iconColor, 15);
+            CancelIcon.Source = RenderDoubleChevron(PillPendingBlue, 15);
             CancelIcon.Visibility = Visibility.Visible;
 
             if (continuesToSurface)
