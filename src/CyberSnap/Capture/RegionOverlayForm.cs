@@ -120,6 +120,10 @@ public sealed partial class RegionOverlayForm : Form
     private float _annotationToolsAnimFrom;
     private const int AnnotationToolsExpandAnimMs = 160;
     private const int AnnotationToolsCollapseDelayMs = 400;
+    /// <summary>Delay before the annotation tools strip / confirm modes strip auto-expand
+    /// from hover over the trigger. Long enough that crossing the trigger by accident (e.g.
+    /// while dragging a shape over a nearby edge) doesn't pop the strip under the cursor.</summary>
+    private const int ExpandHoverDelayMs = 220;
     /// <summary>Last drawing tool shown in the sticky trigger slot (never select/eraser).</summary>
     private string? _annotationDrawingToolId;
     /// <summary>Growing clip window for retractable tools above the sticky cluster.</summary>
@@ -288,6 +292,11 @@ public sealed partial class RegionOverlayForm : Form
     private readonly System.Windows.Forms.Timer _confirmModesCollapseTimer;
     private readonly System.Windows.Forms.Timer _annotationToolsExpandTimer;
     private readonly System.Windows.Forms.Timer _annotationToolsCollapseTimer;
+    /// <summary>One-shot timer that delays the auto-expand of the annotation tools strip so a
+    /// casual pass over the trigger doesn't pop it open — only a sustained hover does.</summary>
+    private readonly System.Windows.Forms.Timer _annotationToolsHoverDelayTimer;
+    /// <summary>Same idea for the confirm modes strip (image/OCR/QR… toggle cluster).</summary>
+    private readonly System.Windows.Forms.Timer _confirmModesHoverDelayTimer;
     private readonly System.Diagnostics.Stopwatch _selectionPaintStopwatch = System.Diagnostics.Stopwatch.StartNew();
     private bool _selectionPaintQueued;
     private DateTime _showTime;
@@ -676,6 +685,18 @@ public sealed partial class RegionOverlayForm : Form
         {
             _annotationToolsCollapseTimer.Stop();
             CollapseAnnotationTools();
+        };
+        _annotationToolsHoverDelayTimer = new System.Windows.Forms.Timer { Interval = ExpandHoverDelayMs };
+        _annotationToolsHoverDelayTimer.Tick += (_, _) =>
+        {
+            _annotationToolsHoverDelayTimer.Stop();
+            ExpandAnnotationTools();
+        };
+        _confirmModesHoverDelayTimer = new System.Windows.Forms.Timer { Interval = ExpandHoverDelayMs };
+        _confirmModesHoverDelayTimer.Tick += (_, _) =>
+        {
+            _confirmModesHoverDelayTimer.Stop();
+            ExpandConfirmModes();
         };
 
         _currentOverlay = this;

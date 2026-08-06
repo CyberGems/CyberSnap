@@ -1550,10 +1550,21 @@ public sealed partial class RegionOverlayForm
         if (overCluster)
         {
             CancelAnnotationToolsCollapse();
-            ExpandAnnotationTools();
+            // Defer the actual expand by ExpandHoverDelayMs so a quick pass through the
+            // trigger doesn't pop the strip immediately. Only a sustained hover triggers it.
+            if (!_annotationToolsExpanded)
+            {
+                try
+                {
+                    _annotationToolsHoverDelayTimer.Stop();
+                    _annotationToolsHoverDelayTimer.Start();
+                }
+                catch { }
+            }
         }
         else
         {
+            try { _annotationToolsHoverDelayTimer.Stop(); } catch { }
             ScheduleAnnotationToolsCollapse();
         }
     }
@@ -2036,11 +2047,10 @@ public sealed partial class RegionOverlayForm
     {
         if (kind == ConfirmChromeKind.TogglePreview)
         {
-            int iconW = UiChrome.ScaleInt(16);
+            // Toggle-only pill (eye icon was removed): the track + symmetric padding.
             int trackWidth = UiChrome.ScaleInt(34);
-            int toggleGap = UiChrome.ScaleInt(8);
             int togglePadX = UiChrome.ScaleInt(12);
-            return togglePadX + iconW + toggleGap + trackWidth + togglePadX;
+            return togglePadX + trackWidth + togglePadX;
         }
 
         if (ConfirmChromeIsIconOnly(kind))
@@ -3238,10 +3248,21 @@ public sealed partial class RegionOverlayForm
         if (IsPointOverConfirmModesCluster(p))
         {
             CancelConfirmModesCollapse();
-            ExpandConfirmModes();
+            // Defer the actual expand by ExpandHoverDelayMs so a quick pass through the
+            // cluster doesn't pop the strip immediately. Only a sustained hover triggers it.
+            if (!_confirmModesExpanded)
+            {
+                try
+                {
+                    _confirmModesHoverDelayTimer.Stop();
+                    _confirmModesHoverDelayTimer.Start();
+                }
+                catch { }
+            }
         }
         else
         {
+            try { _confirmModesHoverDelayTimer.Stop(); } catch { }
             ScheduleConfirmModesCollapse();
         }
     }

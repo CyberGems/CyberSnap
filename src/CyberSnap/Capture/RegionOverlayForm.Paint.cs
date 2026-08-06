@@ -1424,18 +1424,13 @@ public sealed partial class RegionOverlayForm
                 g.FillPath(brush, path);
         }
 
-        int iconW = UiChrome.ScaleInt(16);
-        int trackW = UiChrome.ScaleInt(34);
+        int iconW = 0;                           // Eye icon removed — the toggle already
+        int trackW = UiChrome.ScaleInt(34);      // communicates preview-on/off by itself.
         int trackH = UiChrome.ScaleInt(18);
-        int gap = UiChrome.ScaleInt(8);
+        int gap = 0;
 
         float groupW = iconW + gap + trackW;
         float startX = face.X + (face.Width - groupW) / 2f;
-
-        float iconY = face.Y + (face.Height - iconW) / 2f;
-        Color baseIconColor = UiChrome.SurfaceTextPrimary;
-        Color iconColor = Color.FromArgb((int)(255 * (0.25f + 0.75f * opacity)), baseIconColor);
-        FluentIcons.DrawIcon(g, "eye", new RectangleF(startX, iconY, iconW, iconW), iconColor, iconInset: 0f);
 
         float trackX = startX + iconW + gap;
         float trackY = face.Y + (face.Height - trackH) / 2f;
