@@ -109,7 +109,7 @@ public sealed partial class RegionOverlayForm : Form
     private float _confirmModesAnimFrom;
     private DateTime _confirmModesAnimStart;
     private const int ConfirmModesExpandAnimMs = 100;
-    private const int ConfirmModesCollapseDelayMs = 400;
+    private const int ConfirmModesCollapseDelayMs = 550;
     /// <summary>Traveling glint phase around the confirm dock wrapper (0..1).</summary>
     private float _confirmWrapperShinePhase;
 
@@ -119,7 +119,7 @@ public sealed partial class RegionOverlayForm : Form
     private float _annotationToolsExpandTarget;
     private float _annotationToolsAnimFrom;
     private const int AnnotationToolsExpandAnimMs = 160;
-    private const int AnnotationToolsCollapseDelayMs = 400;
+    private const int AnnotationToolsCollapseDelayMs = 550;
     /// <summary>Delay before the annotation tools strip / confirm modes strip auto-expand
     /// from hover over the trigger. Long enough that crossing the trigger by accident (e.g.
     /// while dragging a shape over a nearby edge) doesn't pop the strip under the cursor.</summary>
@@ -2193,6 +2193,24 @@ public sealed partial class RegionOverlayForm : Form
                     HideToolbarTooltip();
                 }
             }
+        }
+
+        // 1b. Merged-button sub-buttons deploy on sustained hover (no click needed).
+        // Mirrors the long-press path (300 ms) but listens to the existing hover timestamp —
+        // the user simply rests the cursor on the merged toggle and the alternates come out.
+        if (!_altCapturePopupOpen
+            && !_isMouseDownOnCaptureBtn
+            && _hoveredButton >= 0
+            && IsMergedHoldButton(_hoveredButton)
+            && _hoverButtonStartTime != DateTime.MinValue
+            && (DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= ExpandHoverDelayMs)
+        {
+            _mergedHoldButtonIndex = _hoveredButton;
+            _altCapturePopupOpen = true;
+            EnsureAltPopupSlotsLaidOut();
+            PositionToolbarForm();
+            HideToolbarTooltip();
+            changed = true;
         }
 
         // 2. Tooltip delay and auto-hide check

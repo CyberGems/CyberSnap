@@ -1581,6 +1581,14 @@ public sealed partial class RegionOverlayForm
                 return true;
         }
 
+        // Hovering the bar's full background tab area (not just a button) also keeps the
+        // strip expanded: once the user slides from a button onto the adjacent chrome, the
+        // strip was collapsing prematurely. Now the entire host rect sustains the open state.
+        if (!_toolbarRect.IsEmpty && _toolbarRect.Contains(p))
+            return true;
+        if (!_annotationToolbarHostRect.IsEmpty && _annotationToolbarHostRect.Contains(p))
+            return true;
+
         // Keep open while moving through the revealed strip / picking a secondary tool.
         if (_annotationToolsExpandAmt > 0.02f)
         {
@@ -3278,6 +3286,13 @@ public sealed partial class RegionOverlayForm
             if (rect.Width > 0 && rect.Contains(p))
                 return true;
         }
+
+        // Same affordance as the annotation toolbar: hovering any pixel inside the dock's
+        // wrapper background keeps the cluster open instead of collapsing it the moment the
+        // pointer slips off a specific pill.
+        if (!_confirmChromeWrapperRect.IsEmpty && _confirmChromeWrapperRect.Contains(p))
+            return true;
+
         return false;
     }
 
