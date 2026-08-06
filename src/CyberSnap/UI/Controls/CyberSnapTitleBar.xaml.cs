@@ -44,6 +44,13 @@ public partial class CyberSnapTitleBar : UserControl
     public event EventHandler? PinRequested;
 
     private Window? _subscribedWindow;
+    /// <summary>
+    /// When a ContextMenu closes from an outside click, WPF closes it before our
+    /// button handler runs. Without this cooldown the same click reopens the menu,
+    /// and PlacementMode.MousePoint (the default) can park it at screen (0,0) under
+    /// mixed/150% DPI + AllowsTransparency windows.
+    /// </summary>
+    private DateTime _contextMenuClosedAt = DateTime.MinValue;
 
     public CyberSnapTitleBar()
     {
@@ -243,6 +250,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             menu.Closed += (_, _) =>
             {
+                RecordContextMenuClosed();
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
             };
 
@@ -321,6 +329,8 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(aboutItem);
 
+            menu.Closed += (_, _) => RecordContextMenuClosed();
+
             ActionBtn.ContextMenu = menu;
         }
         else if (OwnerWindow is AboutWindow)
@@ -391,6 +401,7 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Closed += (_, _) =>
             {
+                RecordContextMenuClosed();
                 System.Windows.Controls.ToolTipService.SetIsEnabled(BurgerBtn, true);
             };
 
@@ -402,6 +413,36 @@ public partial class CyberSnapTitleBar : UserControl
             ActionBtn.Visibility = Visibility.Collapsed;
             BurgerBtn.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private void RecordContextMenuClosed()
+    {
+        _contextMenuClosedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Opens/closes a title-bar ContextMenu without the reopen-at-(0,0) glitch under DPI scaling.
+    /// </summary>
+    private void ToggleContextMenu(ContextMenu? menu, FrameworkElement target)
+    {
+        if (menu is null)
+            return;
+
+        if (menu.IsOpen)
+        {
+            menu.IsOpen = false;
+            return;
+        }
+
+        // The outside-click that closed the menu reaches this handler next; treat it as a toggle-off.
+        if ((DateTime.UtcNow - _contextMenuClosedAt).TotalMilliseconds < 250)
+            return;
+
+        menu.PlacementTarget = target;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.HorizontalOffset = 0;
+        menu.VerticalOffset = 2;
+        menu.IsOpen = true;
     }
 
     private Window? OwnerWindow => Window.GetWindow(this);
@@ -488,18 +529,14 @@ public partial class CyberSnapTitleBar : UserControl
 
     private void BurgerBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // Swallow mouse-down so the title bar doesn't start a DragMove under the button.
         e.Handled = true;
-        if (BurgerBtn.ContextMenu is { } menu)
-        {
-            if (menu.IsOpen)
-            {
-                menu.IsOpen = false;
-                return;
-            }
+    }
 
-            menu.PlacementTarget = BurgerBtn;
-            menu.IsOpen = true;
-        }
+    private void BurgerBtn_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        ToggleContextMenu(BurgerBtn.ContextMenu, BurgerBtn);
     }
 
     private void AnnotationBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -513,25 +550,19 @@ public partial class CyberSnapTitleBar : UserControl
 
     private void ActionBtn_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // Swallow mouse-down so History's burger click doesn't start a window drag.
         e.Handled = true;
         if (OwnerWindow is SettingsWindow)
         {
             ((App)Application.Current).ShowHistory();
         }
-        else if (OwnerWindow is HistoryWindow)
-        {
-            if (ActionBtn.ContextMenu is { } menu)
-            {
-                if (menu.IsOpen)
-                {
-                    menu.IsOpen = false;
-                    return;
-                }
+    }
 
-                menu.PlacementTarget = ActionBtn;
-                menu.IsOpen = true;
-            }
-        }
+    private void ActionBtn_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (OwnerWindow is HistoryWindow)
+            ToggleContextMenu(ActionBtn.ContextMenu, ActionBtn);
     }
 
     private static void ToggleSetting(string propertyName, bool value)

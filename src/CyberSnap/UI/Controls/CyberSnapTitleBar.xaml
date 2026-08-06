@@ -55,7 +55,9 @@
                         VerticalAlignment="Top">
                 <Border x:Name="BurgerBtn"
                         Style="{StaticResource CyberSnapTitleButton}"
+                        ContextMenuService.IsEnabled="False"
                         MouseLeftButtonDown="BurgerBtn_MouseLeftButtonDown"
+                        MouseLeftButtonUp="BurgerBtn_MouseLeftButtonUp"
                         MouseEnter="TitleBtn_MouseEnter"
                         MouseLeave="TitleBtn_MouseLeave"
                         Visibility="Collapsed">
@@ -71,7 +73,9 @@
                 </Border>
                 <Border x:Name="ActionBtn"
                         Style="{StaticResource CyberSnapTitleButton}"
+                        ContextMenuService.IsEnabled="False"
                         MouseLeftButtonDown="ActionBtn_MouseLeftButtonDown"
+                        MouseLeftButtonUp="ActionBtn_MouseLeftButtonUp"
                         MouseEnter="TitleBtn_MouseEnter"
                         MouseLeave="TitleBtn_MouseLeave"
                         Visibility="Collapsed">
