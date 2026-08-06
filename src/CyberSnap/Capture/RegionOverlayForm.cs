@@ -1295,6 +1295,25 @@ public sealed partial class RegionOverlayForm : Form
     }
 
     /// <summary>
+    /// When the user is annotating inside the confirmed selection frame, keep the annotation
+    /// endpoint inside that rect. Both the live preview and the commit go through this so the
+    /// final shape matches what they saw during the drag (previously the preview could cross
+    /// the edge when the dock/toolbar sat near it, and on mouse-up the shape "snapped" to the
+    /// out-of-frame point — a confusing inconsistency).
+    /// </summary>
+    private Point ClampAnnotationEndPoint(Point p)
+    {
+        if (!_isConfirmingSelection)
+            return p;
+        var r = _confirmRect;
+        if (r.Width <= 0 || r.Height <= 0)
+            return p;
+        int maxX = Math.Max(r.Left, r.Right - 1);
+        int maxY = Math.Max(r.Top, r.Bottom - 1);
+        return new Point(Math.Clamp(p.X, r.Left, maxX), Math.Clamp(p.Y, r.Top, maxY));
+    }
+
+    /// <summary>
     /// Keeps a rectangle fully inside the selection monitor (shrinks if larger than the monitor).
     /// Used for live selection, confirm move, and confirm resize.
     /// </summary>

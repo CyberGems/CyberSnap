@@ -68,6 +68,14 @@ public sealed class ToolbarForm : Form
 
     public void UpdateSurface()
     {
+        // While the user is actively drawing an annotation, the layered toolbar's bitmap must
+        // stay untouched: a repaint mid-drag could composite stale pixels over the live preview
+        // (the "invisible mask" users see at the bottom edge when the action/annotation dock
+        // sits near the selection). The next MarkToolbarRenderDirty + UpdateSurface after the
+        // drag ends will pick up the new state and repaint normally.
+        if (_owner.IsAnnotationDragInProgress())
+            return;
+
         var sz = Size;
         if (sz.Width <= 0 || sz.Height <= 0) return;
 

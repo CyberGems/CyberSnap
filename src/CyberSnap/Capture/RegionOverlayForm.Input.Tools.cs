@@ -135,7 +135,7 @@ public sealed partial class RegionOverlayForm
         if (_isConfirmingSelection)
         {
             _prevCursorPos = _lastCursorPos;
-            _lastCursorPos = e.Location;
+            _lastCursorPos = ClampAnnotationEndPoint(e.Location);
 
             // Never keep the capture magnifier alive over confirm chrome or while resizing/moving.
             if (_captureMagnifierForm is { Visible: true })
@@ -268,7 +268,10 @@ public sealed partial class RegionOverlayForm
             {
                 // 3. Confirm-mode hover takes priority
                 int prevHoveredConfirm = _hoveredConfirmButton;
-                _hoveredConfirmButton = -1;
+                // While an annotation drag is in flight, the pill-hover reset also triggers a
+                // chrome repaint — hold the previous state so the live preview isn't overdrawn.
+                if (!IsDraggingAnyAnnotation())
+                    _hoveredConfirmButton = -1;
 
                 bool insideFrame = _confirmRect.Contains(e.Location);
                 bool shouldShow = insideFrame
@@ -344,7 +347,13 @@ public sealed partial class RegionOverlayForm
                 else if (btnHit >= 0)
                 {
                     confirmTarget = Cursors.Hand;
-                    _hoveredConfirmButton = btnHit;
+                    // During an in-flight annotation drag (arrow, line, shapes...) the pill
+                    // hover state must NOT change: each transition forces a chrome repaint
+                    // whose opaque SourceCopy pass overwrites the live preview where their
+                    // bounds intersect (the "ghost zone" near the dock). The hover will be
+                    // picked up on the next non-drag mouse-move event anyway.
+                    if (!IsDraggingAnyAnnotation())
+                        _hoveredConfirmButton = btnHit;
                 }
                 else if (sizePillHover)
                 {
@@ -882,7 +891,11 @@ public sealed partial class RegionOverlayForm
             _prevCursorPos = _lastCursorPos;
             var prevCursor = _lastCursorPos;
             oldCursor = prevCursor == Point.Empty ? e.Location : prevCursor;
-            _lastCursorPos = e.Location;
+            // While annotating inside a confirmed selection, the live cursor position is clamped
+            // to the selection rect so the preview and the eventual committed shape stay inside
+            // the frame — matches what the user sees at the edge and avoids crossing into the
+            // dock/toolbar zone near the bottom/right borders.
+            _lastCursorPos = ClampAnnotationEndPoint(e.Location);
         }
 
         if (_mode == CaptureMode.ColorPicker)
@@ -1321,21 +1334,21 @@ public sealed partial class RegionOverlayForm
         {
             case CaptureMode.Highlight when _isHighlighting:
                 _isHighlighting = false;
-                var hlRect = NormRect(_highlightStart, e.Location);
+                var hlRect = NormRect(_highlightStart, ClampAnnotationEndPoint(e.Location));
                 if (hlRect.Width > 2 && hlRect.Height > 2)
                     AddAnnotation(new HighlightAnnotation(hlRect, DefaultHighlightColor));
                 Invalidate(InflateForRepaint(hlRect));
                 break;
             case CaptureMode.RectShape when _isRectShapeDragging:
                 _isRectShapeDragging = false;
-                var rectShape = GetShapeRect(e.Location);
+                var rectShape = GetShapeRect(ClampAnnotationEndPoint(e.Location));
                 if (rectShape.Width > 2 && rectShape.Height > 2)
                     AddAnnotation(new RectShapeAnnotation(rectShape, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(rectShape));
                 break;
             case CaptureMode.CircleShape when _isCircleShapeDragging:
                 _isCircleShapeDragging = false;
-                var circleShape = GetShapeRect(e.Location);
+                var circleShape = GetShapeRect(ClampAnnotationEndPoint(e.Location));
                 if (circleShape.Width > 2 && circleShape.Height > 2)
                     AddAnnotation(new CircleShapeAnnotation(circleShape, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(circleShape));
@@ -1362,16 +1375,16 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Line when _isLineDragging:
                 _isLineDragging = false;
-                var lineEnd = GetConstrainedLineEnd(_lineStart, e.Location);
+                var lineEnd = GetConstrainedLineEnd(_lineStart, ClampAnnotationEndPoint(e.Location));
                 float ldx = lineEnd.X - _lineStart.X;
                 float ldy = lineEnd.Y - _lineStart.Y;
-                if (MathF.Sqrt(ldx * ldx + ldy * ldy) > 5)
+                if (Math.Abs(ldx) > 4 || Math.Abs(ldy) > 4)
                     AddAnnotation(new LineAnnotation(_lineStart, lineEnd, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(RectFromPoints(_lineStart, lineEnd, 1)));
                 break;
             case CaptureMode.Ruler when _isRulerDragging:
                 _isRulerDragging = false;
-                var rulerEnd = GetRulerEnd(e.Location);
+                var rulerEnd = GetRulerEnd(ClampAnnotationEndPoint(e.Location));
                 float rdx = rulerEnd.X - _rulerStart.X;
                 float rdy = rulerEnd.Y - _rulerStart.Y;
                 if (MathF.Sqrt(rdx * rdx + rdy * rdy) > 3)
@@ -1381,10 +1394,10 @@ public sealed partial class RegionOverlayForm
                 break;
             case CaptureMode.Arrow when _isArrowDragging:
                 _isArrowDragging = false;
-                var end = GetConstrainedLineEnd(_arrowStart, e.Location);
+                var end = GetConstrainedLineEnd(_arrowStart, ClampAnnotationEndPoint(e.Location));
                 float dx = end.X - _arrowStart.X;
                 float dy = end.Y - _arrowStart.Y;
-                if (MathF.Sqrt(dx * dx + dy * dy) > 5)
+                if (Math.Abs(dx) > 4 || Math.Abs(dy) > 4)
                     AddAnnotation(new ArrowAnnotation(_arrowStart, end, _toolColor, _strokeWidth));
                 Invalidate(InflateForRepaint(RectFromPoints(_arrowStart, end, 1)));
                 break;

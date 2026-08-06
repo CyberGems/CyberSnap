@@ -106,6 +106,30 @@ public sealed partial class RegionOverlayForm
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
+        // If confirmation mode is active, repaint the chrome cluster's opaque base BEFORE any
+        // annotation previews / cursor tooltips / move handles are drawn. Historically this ran
+        // later (right before the pill draw) which made it paint OVER any shape preview, move
+        // handle frame, or cursor tooltip whose pixels fell inside the +36 px invalidate pad —
+        // the "invisible mask" bug near the bottom of the selection. Running it here makes the
+        // live-annotation / handle / cursor layers always composite ON TOP of the chrome base.
+        //
+        // BUT even with this ordering, the SourceCopy repaint still erases whatever the live
+        // preview painted *this frame* if the preview's bounding box intersects the chrome pad.
+        // (Dragging an arrow horizontally near the dock produces a flicker where the preview
+        // appears "cut out" until mouse-up.) Skip the repaint entirely during any active drawing
+        // drag: the commit re-invalidates on mouse-up and the wrapper repaints cleanly then.
+        if (_isConfirmingSelection)
+        {
+            bool frameManipulating = _confirmDocksHiddenForFrameManip
+                || _isConfirmDragging
+                || _confirmHandleDragIndex >= 0;
+            if (!frameManipulating && !IsDraggingAnyAnnotation())
+            {
+                LayoutConfirmChromeRects();
+                EnsureConfirmChromeOpaqueBase(g, clip, committed);
+            }
+        }
+
         // Live tool previews (active drawing in progress)
         PaintAnnotations(g);
 
@@ -250,9 +274,10 @@ public sealed partial class RegionOverlayForm
             if (!frameManipulating)
             {
                 LayoutConfirmChromeRects();
-                // Soft wrapper/glow must sit on a freshly painted opaque base for the full chrome
-                // region. Partial clips of low-alpha rings were leaving trails after the wrapper shipped.
-                EnsureConfirmChromeOpaqueBase(g, clip, committed);
+                // NOTE: EnsureConfirmChromeOpaqueBase is intentionally NOT called here anymore.
+                // It already ran BEFORE the live-preview / handle / cursor sections so those
+                // layers always land on top of the chrome base. Calling it here again would
+                // re-occlude them under the inflated chrome area.
 
                 DrawConfirmChromeWrapper(g);
                 using (var btnFont = CreateConfirmButtonFont())
@@ -387,6 +412,10 @@ public sealed partial class RegionOverlayForm
         if (union.IsEmpty)
             return;
 
+        // Always use the full pad — this paint now runs BEFORE any annotation preview, cursor
+        // tooltip, or move handle, so it can safely claim its full invalidation area without
+        // overpainting live content. The earlier "skip pad while dragging" trick became
+        // unnecessary once we reordered this pass ahead of the preview layers.
         var area = InflateForRepaint(union, ConfirmChromeInvalidatePad);
         if (!area.IntersectsWith(clip))
             return;
