@@ -22,9 +22,10 @@ namespace CyberSnap.UI
         private const double SideBySideBreakpoint = 700;
         /// <summary>Quick opacity fade for timer auto-close only (manual close stays instant).</summary>
         private const int AutoCloseFadeMs = 280;
-        private const int CountdownFadeMs = 200;
         /// <summary>Resume auto-close after the pointer stops moving over the window.</summary>
         private const int CursorIdleResumeMs = 650;
+        /// <summary>How long the ring takes to refill to the full timeout while the cursor moves.</summary>
+        private const int CountdownRefillMs = 360;
         private const int PillSimInitialDelayMs = 200;
         private const int PillSimWorkMs = 1000;
 
@@ -522,20 +523,41 @@ namespace CyberSnap.UI
             CountdownRingArc.Data = geometry;
         }
 
-        private void PauseAutoCloseForCursorMotion()
+        private void BeginCountdownRefill()
         {
-            if (!_autoCloseArmed || _isPinned)
+            if (!_autoCloseArmed || _isPinned || _autoCloseDurationSeconds <= 0)
                 return;
 
-            // Preserve the currently displayed fraction before detaching the animation.
-            // Removing an animation otherwise restores the property's base value (1.0),
-            // which makes the ring briefly jump back to the full timeout on pause.
+            // Stop the depleting clock and animate back up to a full timeout grant.
             _countdownEpoch++;
-            double fraction = Math.Clamp(CountdownFraction, 0, 1);
+            double from = Math.Clamp(CountdownFraction, 0, 1);
             BeginAnimation(CountdownFractionProperty, null);
-            SetCurrentValue(CountdownFractionProperty, fraction);
-            UpdateCountdownRingArc(fraction);
-            ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
+            SetCurrentValue(CountdownFractionProperty, from);
+
+            if (from >= 0.999)
+            {
+                SetCurrentValue(CountdownFractionProperty, 1.0);
+                UpdateCountdownRingArc(1.0);
+                ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
+                return;
+            }
+
+            int epoch = ++_countdownEpoch;
+            var refill = new DoubleAnimation(from, 1.0, TimeSpan.FromMilliseconds(CountdownRefillMs))
+            {
+                EasingFunction = Motion.Ease(Motion.SmoothOut),
+                FillBehavior = FillBehavior.HoldEnd
+            };
+            refill.Completed += (_, _) =>
+            {
+                if (epoch != _countdownEpoch)
+                    return;
+                BeginAnimation(CountdownFractionProperty, null);
+                SetCurrentValue(CountdownFractionProperty, 1.0);
+                UpdateCountdownRingArc(1.0);
+                ShowDoneCountdownSeconds(_autoCloseDurationSeconds);
+            };
+            BeginAnimation(CountdownFractionProperty, refill);
         }
 
         private void ResumeAutoCloseAfterCursorIdle()
@@ -543,9 +565,14 @@ namespace CyberSnap.UI
             if (_isPinned || !_autoCloseArmed || _autoCloseDurationSeconds <= 0)
                 return;
 
+            // Capture the live fraction (may be mid-refill) before switching to deplete.
+            _countdownEpoch++;
             double fraction = Math.Clamp(CountdownFraction, 0, 1);
+            BeginAnimation(CountdownFractionProperty, null);
+            SetCurrentValue(CountdownFractionProperty, fraction);
+            UpdateCountdownRingArc(fraction);
             ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
-            FadeCountdownRing(1.0);
+            EnsureCountdownRingVisible();
             StartCountdownAnimation(fraction);
         }
 
@@ -574,22 +601,15 @@ namespace CyberSnap.UI
             AutoCloseCountdownText.Text = second.ToString();
         }
 
-        /// <summary>Fades the whole countdown ring (arc + numeral) in or out. Only Opacity
-        /// is animated — the host keeps its layout slot, so the button text never shifts.
-        /// Animating from the current value makes rapid hover enter/leave reverse smoothly.</summary>
-        private void FadeCountdownRing(double targetOpacity)
+        private void EnsureCountdownRingVisible()
         {
-            var fade = new DoubleAnimation(targetOpacity, Motion.Ms(CountdownFadeMs))
-            {
-                EasingFunction = Motion.Ease(targetOpacity > 0 ? Motion.SmoothOut : Motion.SmoothIn)
-            };
-            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, fade);
+            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
+            CountdownRingHost.Opacity = 1.0;
         }
 
         private void ResetCountdownRingVisual()
         {
-            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
-            CountdownRingHost.Opacity = 1.0;
+            EnsureCountdownRingVisible();
             _lastCountdownSecondText = -1;
         }
 
@@ -601,9 +621,8 @@ namespace CyberSnap.UI
             if (!_countdownPausedForMotion)
             {
                 _countdownPausedForMotion = true;
-                PauseAutoCloseForCursorMotion();
-                // Hide the ring while paused — preserve its current value until motion stops.
-                FadeCountdownRing(0.0);
+                // Keep the ring visible and animate a refill back to the full timeout.
+                BeginCountdownRefill();
             }
 
             ScheduleCursorIdleResume();
@@ -617,7 +636,7 @@ namespace CyberSnap.UI
                 return;
             }
 
-            // Cursor left the window: treat as idle and resume the remaining countdown.
+            // Cursor left the window: treat as idle and resume the (refilled) countdown.
             CancelCursorIdleTimer();
             _countdownPausedForMotion = false;
             if (_isPinned) return;
