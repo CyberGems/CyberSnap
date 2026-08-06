@@ -2195,13 +2195,41 @@ public sealed partial class RegionOverlayForm : Form
             }
         }
 
-        // 1b. Merged-button sub-buttons deploy on sustained hover (no click needed).
-        // Mirrors the long-press path (300 ms) but listens to the existing hover timestamp —
-        // the user simply rests the cursor on the merged toggle and the alternates come out.
+        // 1b. Merged-button sub-buttons deploy on sustained hover (no click needed) and
+        // *follow* the cursor — sliding onto a different merged button closes the current
+        // popup and opens the one under the pointer after the same hover delay. Sliding off
+        // the merged cluster entirely closes whatever was open so the affordance doesn't
+        // linger while the user is busy elsewhere on the canvas.
+        bool onMerged = !_isMouseDownOnCaptureBtn
+            && _hoveredButton >= 0
+            && IsMergedHoldButton(_hoveredButton);
+
+        if (_altCapturePopupOpen)
+        {
+            // Pointer left the open button's cluster → close unless it's still hovering an
+            // alt-slot (the revealed popup itself); closing while hovered over an alt slot
+            // would kill the picker the user is browsing.
+            bool inPopup = _hoveredAltCaptureBtn || _hoveredAltSlotIndex >= 0;
+            bool onOpenSource = _mergedHoldButtonIndex >= 0 && _hoveredButton == _mergedHoldButtonIndex;
+            bool onOtherMerged = onMerged && _hoveredButton != _mergedHoldButtonIndex;
+
+            if (onOtherMerged)
+            {
+                // Switch source: close the current popup; the fresh-hover branch below will
+                // open the new owner's alternates once the delay elapses on the new pill.
+                CloseAltToolPopup(invalidate: false);
+                changed = true;
+            }
+            else if (!inPopup && !onOpenSource && !onMerged)
+            {
+                CloseAltToolPopup(invalidate: false);
+                changed = true;
+            }
+        }
+
         if (!_altCapturePopupOpen
             && !_isMouseDownOnCaptureBtn
-            && _hoveredButton >= 0
-            && IsMergedHoldButton(_hoveredButton)
+            && onMerged
             && _hoverButtonStartTime != DateTime.MinValue
             && (DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= ExpandHoverDelayMs)
         {
