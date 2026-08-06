@@ -346,7 +346,7 @@
                         <Button x:Name="CancelBtn" Click="CancelBtn_Click"
                                 Style="{StaticResource PreviewPrimaryButton}"
                                 HorizontalAlignment="Stretch">
-                            <Grid HorizontalAlignment="Stretch">
+                            <Grid HorizontalAlignment="Stretch" MinHeight="24">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>

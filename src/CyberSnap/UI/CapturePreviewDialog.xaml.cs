@@ -26,6 +26,9 @@ namespace CyberSnap.UI
         private const int CursorIdleResumeMs = 650;
         /// <summary>How long the ring takes to refill to the full timeout while the cursor moves.</summary>
         private const int CountdownRefillMs = 360;
+        private const int CountdownFadeMs = 220;
+        /// <summary>Dimmed opacity while the cursor is moving (refill in progress).</summary>
+        private const double CountdownMotionOpacity = 0.42;
         private const int PillSimInitialDelayMs = 200;
         private const int PillSimWorkMs = 1000;
 
@@ -399,7 +402,8 @@ namespace CyberSnap.UI
             // countdown would contradict it. OnPillSimulationStepCompleted re-arms us.
             if (timeoutSec <= 0 || _isPinned || _pillSimRunning)
             {
-                CountdownRingHost.Visibility = Visibility.Collapsed;
+                // No timer for this session — collapse so the Done button doesn't reserve space.
+                SetCountdownRingShown(false, keepLayoutSlot: false);
                 ResetCountdownRingVisual();
                 return;
             }
@@ -408,9 +412,8 @@ namespace CyberSnap.UI
             _autoCloseArmed = true;
             _countdownPausedForMotion = false;
             CancelCursorIdleTimer();
-            CountdownRingHost.Visibility = Visibility.Visible;
-            CountdownRingHost.BeginAnimation(OpacityProperty, null);
-            CountdownRingHost.Opacity = 1.0;
+            SetCountdownRingShown(true, keepLayoutSlot: true);
+            EnsureCountdownRingVisible();
             UpdateDoneCountdownText(timeoutSec);
             UpdateCountdownRingArc(1.0);
 
@@ -572,7 +575,7 @@ namespace CyberSnap.UI
             SetCurrentValue(CountdownFractionProperty, fraction);
             UpdateCountdownRingArc(fraction);
             ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
-            EnsureCountdownRingVisible();
+            FadeCountdownRing(1.0);
             StartCountdownAnimation(fraction);
         }
 
@@ -607,6 +610,35 @@ namespace CyberSnap.UI
             CountdownRingHost.Opacity = 1.0;
         }
 
+        /// <summary>Fades the countdown ring opacity. Layout slot is preserved.</summary>
+        private void FadeCountdownRing(double targetOpacity)
+        {
+            var fade = new DoubleAnimation(targetOpacity, Motion.Ms(CountdownFadeMs))
+            {
+                EasingFunction = Motion.Ease(targetOpacity > CountdownMotionOpacity
+                    ? Motion.SmoothOut
+                    : Motion.SmoothIn)
+            };
+            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+
+        /// <summary>
+        /// Shows or hides the countdown ring. When <paramref name="keepLayoutSlot"/> is true,
+        /// uses Hidden (not Collapsed) so the Done button does not jump when the ring dismisses.
+        /// </summary>
+        private void SetCountdownRingShown(bool shown, bool keepLayoutSlot)
+        {
+            if (shown)
+            {
+                CountdownRingHost.Visibility = Visibility.Visible;
+                return;
+            }
+
+            CountdownRingHost.BeginAnimation(UIElement.OpacityProperty, null);
+            CountdownRingHost.Opacity = keepLayoutSlot ? 0.0 : 1.0;
+            CountdownRingHost.Visibility = keepLayoutSlot ? Visibility.Hidden : Visibility.Collapsed;
+        }
+
         private void ResetCountdownRingVisual()
         {
             EnsureCountdownRingVisible();
@@ -621,8 +653,9 @@ namespace CyberSnap.UI
             if (!_countdownPausedForMotion)
             {
                 _countdownPausedForMotion = true;
-                // Keep the ring visible and animate a refill back to the full timeout.
+                // Soften the ring while motion pauses the clock and refills to full timeout.
                 BeginCountdownRefill();
+                FadeCountdownRing(CountdownMotionOpacity);
             }
 
             ScheduleCursorIdleResume();
@@ -682,7 +715,7 @@ namespace CyberSnap.UI
             _isClosing = true;
 
             StopAutoCloseCountdown(resetProgress: false);
-            CountdownRingHost.Visibility = Visibility.Collapsed;
+            SetCountdownRingShown(false, keepLayoutSlot: true);
             ResetCountdownRingVisual();
             IsHitTestVisible = false;
 
@@ -1020,7 +1053,7 @@ namespace CyberSnap.UI
             _pillSimsRemaining = chips.Count;
             // No auto-close while "Processing": the countdown starts when the simulation ends.
             StopAutoCloseCountdown(resetProgress: true);
-            CountdownRingHost.Visibility = Visibility.Collapsed;
+            SetCountdownRingShown(false, keepLayoutSlot: CountdownRingHost.Visibility != Visibility.Collapsed);
             ApplyPrimaryButtonProcessingState();
 
             int delayMs = PillSimInitialDelayMs;
@@ -1655,7 +1688,8 @@ namespace CyberSnap.UI
         private void CancelAutoCloseOnInteraction()
         {
             StopAutoCloseCountdown(resetProgress: true);
-            CountdownRingHost.Visibility = Visibility.Collapsed;
+            // Hidden (not Collapsed): keep the layout slot so Done/Continue doesn't jump.
+            SetCountdownRingShown(false, keepLayoutSlot: true);
             ResetCountdownRingVisual();
         }
 
@@ -1759,7 +1793,7 @@ namespace CyberSnap.UI
             if (_isPinned)
             {
                 StopAutoCloseCountdown(resetProgress: true);
-                CountdownRingHost.Visibility = Visibility.Collapsed;
+                SetCountdownRingShown(false, keepLayoutSlot: true);
                 ResetCountdownRingVisual();
             }
             else
@@ -1824,7 +1858,7 @@ namespace CyberSnap.UI
             // Hold the auto-close while the system print dialog is up; a fresh
             // countdown re-arms afterwards (InitAutoCloseCountdown handles pin/hover).
             StopAutoCloseCountdown(resetProgress: true);
-            CountdownRingHost.Visibility = Visibility.Collapsed;
+            SetCountdownRingShown(false, keepLayoutSlot: true);
 
             try
             {
@@ -1866,7 +1900,7 @@ namespace CyberSnap.UI
 
             // Hold the auto-close while the confirmation is up.
             StopAutoCloseCountdown(resetProgress: true);
-            CountdownRingHost.Visibility = Visibility.Collapsed;
+            SetCountdownRingShown(false, keepLayoutSlot: true);
 
             bool confirmed = ThemedConfirmDialog.Confirm(
                 this,
