@@ -88,7 +88,7 @@
                                 CornerRadius="8"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -159,7 +159,8 @@
                                       PanningMode="None"
                                       Focusable="False">
                             <Grid x:Name="ZoomCanvas" Background="Transparent">
-                                <Image x:Name="PreviewImage" Stretch="Uniform" Margin="0"
+                                <Image x:Name="PreviewImage" Stretch="Uniform"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0"
                                        RenderOptions.BitmapScalingMode="HighQuality"/>
                             </Grid>
                         </ScrollViewer>
@@ -345,25 +346,33 @@
                         <Button x:Name="CancelBtn" Click="CancelBtn_Click"
                                 Style="{StaticResource PreviewPrimaryButton}"
                                 HorizontalAlignment="Stretch">
-                            <DockPanel LastChildFill="False" HorizontalAlignment="Center">
-                                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Image x:Name="CancelIcon" Width="14" Height="14" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center" FontSize="12.5" FontWeight="SemiBold"/>
+                            <Grid HorizontalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center"
+                                               FontSize="12.5" FontWeight="SemiBold"/>
+                                    <Image x:Name="CancelIcon" Width="14" Height="14" Margin="7,0,0,0"
+                                           VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <!-- Countdown ring around the seconds numeral: the accent arc depletes
                                      clockwise from 12 o'clock as the auto-close timeout runs out. -->
                                 <Grid x:Name="CountdownRingHost"
-                                      DockPanel.Dock="Right"
-                                      Width="20" Height="20"
-                                      Margin="8,0,0,0"
-                                      VerticalAlignment="Center"
+                                      Grid.Column="2"
+                                      Width="24" Height="24"
+                                      Margin="10,0,0,0"
+                                      HorizontalAlignment="Right" VerticalAlignment="Center"
                                       Visibility="Collapsed"
                                       IsHitTestVisible="False">
                                     <Ellipse Stroke="{DynamicResource ThemeInputBorderBrush}"
-                                             StrokeThickness="2"/>
+                                             StrokeThickness="2.2"/>
                                     <Path x:Name="CountdownRingArc"
-                                          Stroke="{DynamicResource ThemeAccentBrush}"
-                                          StrokeThickness="2"
+                                          Stroke="{DynamicResource ThemeTextSecondaryBrush}"
+                                          StrokeThickness="2.2"
                                           StrokeStartLineCap="Round"
                                           StrokeEndLineCap="Round"/>
                                     <TextBlock x:Name="AutoCloseCountdownText"
@@ -373,7 +382,7 @@
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource ThemeTextSecondaryBrush}"/>
                                 </Grid>
-                            </DockPanel>
+                            </Grid>
                         </Button>
 
                             <TextBlock x:Name="ViewerHintBadge"
