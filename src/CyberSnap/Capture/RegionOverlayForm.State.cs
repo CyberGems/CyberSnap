@@ -1572,26 +1572,34 @@ public sealed partial class RegionOverlayForm
     private bool IsPointOverAnnotationToolsCluster(Point p)
     {
         int triggerIdx = GetAnnotationTriggerFlyoutIndex();
+        bool onTrigger = false;
         if (triggerIdx >= 0)
         {
             int btn = FlyoutStartIndex + triggerIdx;
             if (btn >= 0 && btn < _toolbarButtons.Length
                 && _toolbarButtons[btn].Width > 0
                 && _toolbarButtons[btn].Contains(p))
-                return true;
+                onTrigger = true;
         }
 
-        // Hovering the bar's full background tab area (not just a button) also keeps the
-        // strip expanded: once the user slides from a button onto the adjacent chrome, the
-        // strip was collapsing prematurely. Now the entire host rect sustains the open state.
-        if (!_toolbarRect.IsEmpty && _toolbarRect.Contains(p))
-            return true;
-        if (!_annotationToolbarHostRect.IsEmpty && _annotationToolbarHostRect.Contains(p))
+        // Trigger semantics: only the trigger button can EXPAND a collapsed strip. The full bar
+        // background *sustains* an already-open strip so sliding off the last pill doesn't snap
+        // it shut. Separate checks prevent the "hover the bar opens the strip" surprise.
+        if (onTrigger)
             return true;
 
-        // Keep open while moving through the revealed strip / picking a secondary tool.
-        if (_annotationToolsExpandAmt > 0.02f)
+        // Background-only sustain: pointer is on the bar's chrome — keep an open strip open,
+        // but do not start the open animation from a cold state.
+        bool onBar =
+            (!_toolbarRect.IsEmpty && _toolbarRect.Contains(p))
+            || (!_annotationToolbarHostRect.IsEmpty && _annotationToolbarHostRect.Contains(p));
+
+        if (_annotationToolsExpanded || _annotationToolsExpandAmt > 0.02f)
         {
+            if (onBar)
+                return true;
+
+            // Keep open while moving through the revealed strip / picking a secondary tool.
             if (!_annotationRetractRevealRect.IsEmpty && _annotationRetractRevealRect.Contains(p))
                 return true;
 
@@ -3288,9 +3296,11 @@ public sealed partial class RegionOverlayForm
         }
 
         // Same affordance as the annotation toolbar: hovering any pixel inside the dock's
-        // wrapper background keeps the cluster open instead of collapsing it the moment the
-        // pointer slips off a specific pill.
-        if (!_confirmChromeWrapperRect.IsEmpty && _confirmChromeWrapperRect.Contains(p))
+        // wrapper background keeps an already-open cluster open, but the wrapper alone does
+        // NOT expand a collapsed one. Otherwise a casual cross of the dock looks "auto-open".
+        if ((_confirmModesExpanded || _confirmModesExpandAmt > 0.02f)
+            && !_confirmChromeWrapperRect.IsEmpty
+            && _confirmChromeWrapperRect.Contains(p))
             return true;
 
         return false;
