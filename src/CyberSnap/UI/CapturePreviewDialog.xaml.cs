@@ -344,18 +344,30 @@ namespace CyberSnap.UI
             var cSecondary = Theme.TextSecondary;
             var secondaryIconColor = System.Drawing.Color.FromArgb(cSecondary.A, cSecondary.R, cSecondary.G, cSecondary.B);
 
-            SaveIcon.Source = FluentIcons.RenderWpf("save", primaryIconColor, 13, active: true);
-            CopyIcon.Source = FluentIcons.RenderWpf("copy", primaryIconColor, 13, active: true);
-            EditIcon.Source = FluentIcons.RenderWpf("draw", primaryIconColor, 13, active: true);
-            PrintIcon.Source = FluentIcons.RenderWpf("print", primaryIconColor, 13, active: true);
-            DeleteIcon.Source = FluentIcons.RenderWpf("trash", DeleteAccentRed, 13, active: true);
-            ShareIcon.Source = FluentIcons.RenderWpf("share", primaryIconColor, 14, active: true);
-            GalleryIcon.Source = FluentIcons.RenderWpf("history", primaryIconColor, 14, active: true);
-            MoreIcon.Source = FluentIcons.RenderWpf("more", primaryIconColor, 13, active: true);
-            EditSettingsBtnIcon.Source = FluentIcons.RenderWpf("gear", secondaryIconColor, 14, active: true);
-            ZoomOutIcon.Source = FluentIcons.RenderWpf("zoomOut", secondaryIconColor, 12, active: true);
-            ZoomInIcon.Source = FluentIcons.RenderWpf("zoomIn", secondaryIconColor, 12, active: true);
-            ZoomFitIcon.Source = FluentIcons.RenderWpf("zoomFit", secondaryIconColor, 12, active: true);
+            // Render at 2× display DIPs so 150% DPI + UiScale LayoutTransform stay sharp
+            // (same pattern as Settings achievements / crisp toolbar glyphs).
+            SetPreviewIcon(SaveIcon, "save", primaryIconColor, 13);
+            SetPreviewIcon(CopyIcon, "copy", primaryIconColor, 13);
+            SetPreviewIcon(EditIcon, "draw", primaryIconColor, 13);
+            SetPreviewIcon(PrintIcon, "print", primaryIconColor, 13);
+            SetPreviewIcon(DeleteIcon, "trash", DeleteAccentRed, 13);
+            SetPreviewIcon(ShareIcon, "share", primaryIconColor, 14);
+            SetPreviewIcon(GalleryIcon, "history", primaryIconColor, 14);
+            SetPreviewIcon(MoreIcon, "more", primaryIconColor, 13);
+            SetPreviewIcon(EditSettingsBtnIcon, "gear", secondaryIconColor, 14);
+            SetPreviewIcon(ZoomOutIcon, "zoomOut", secondaryIconColor, 12);
+            SetPreviewIcon(ZoomInIcon, "zoomIn", secondaryIconColor, 12);
+            SetPreviewIcon(ZoomFitIcon, "zoomFit", secondaryIconColor, 12);
+        }
+
+        private static void SetPreviewIcon(
+            System.Windows.Controls.Image image,
+            string iconId,
+            System.Drawing.Color color,
+            int displayDip)
+        {
+            image.Source = FluentIcons.RenderWpf(iconId, color, displayDip * 2, active: true);
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
         }
 
         /// <summary>Secondary/accent color used by the pills for their pending spinner.
@@ -819,7 +831,7 @@ namespace CyberSnap.UI
                 var folderIconColor = System.Drawing.Color.FromArgb(cPrimary.A, cPrimary.R, cPrimary.G, cPrimary.B);
                 menu.Items.Add(CreateMoreMenuItem(
                     LocalizationService.Translate("Open in folder"),
-                    FluentIcons.RenderWpf("folder", folderIconColor, 14, active: true),
+                    FluentIcons.RenderWpf("folder", folderIconColor, 28, active: true),
                     OpenSavedFileInFolder,
                     LocalizationService.Translate("Show this file in File Explorer.")));
             }
@@ -893,12 +905,14 @@ namespace CyberSnap.UI
 
             if (icon != null)
             {
-                item.Icon = new System.Windows.Controls.Image
+                var iconImage = new System.Windows.Controls.Image
                 {
                     Source = icon,
                     Width = 14,
                     Height = 14
                 };
+                RenderOptions.SetBitmapScalingMode(iconImage, BitmapScalingMode.HighQuality);
+                item.Icon = iconImage;
             }
 
             item.Click += (_, _) => onClick();
@@ -1290,6 +1304,7 @@ namespace CyberSnap.UI
                 Margin = new Thickness(0, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Center
             };
+            RenderOptions.SetBitmapScalingMode(leadingIcon, BitmapScalingMode.HighQuality);
 
             var label = new TextBlock
             {
@@ -1333,7 +1348,7 @@ namespace CyberSnap.UI
             var accent = visual == PillVisualState.Done ? PillDoneGreen : PillPendingBlue;
             chip.ChipBorder.Background = Theme.Brush(System.Windows.Media.Color.FromArgb(22, accent.R, accent.G, accent.B));
             chip.ChipBorder.BorderBrush = Theme.Brush(System.Windows.Media.Color.FromArgb(55, accent.R, accent.G, accent.B));
-            chip.LeadingIcon.Source = FluentIcons.RenderWpf(chip.IconId, accent, 13, active: true);
+            chip.LeadingIcon.Source = FluentIcons.RenderWpf(chip.IconId, accent, 26, active: true);
 
             switch (visual)
             {

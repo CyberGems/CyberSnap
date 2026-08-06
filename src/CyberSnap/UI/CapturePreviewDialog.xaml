@@ -285,7 +285,9 @@
                                         Style="{StaticResource PreviewActionButton}"
                                         Margin="0,0,6,6">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="SaveIcon" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <Image x:Name="SaveIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
                                         <TextBlock x:Name="SaveText" Text="Save" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
@@ -293,7 +295,9 @@
                                         Style="{StaticResource PreviewActionButton}"
                                         Margin="0,0,6,6">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="CopyIcon" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <Image x:Name="CopyIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
                                         <TextBlock x:Name="CopyText" Text="Copy" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
@@ -301,7 +305,9 @@
                                         Style="{StaticResource PreviewActionButton}"
                                         Margin="0,0,6,6">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="EditIcon" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <Image x:Name="EditIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
                                         <TextBlock x:Name="EditText" Text="Edit" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
@@ -309,7 +315,9 @@
                                         Style="{StaticResource PreviewActionButton}"
                                         Margin="0,0,6,6">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="PrintIcon" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <Image x:Name="PrintIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
                                         <TextBlock x:Name="PrintText" Text="Print" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
@@ -318,7 +326,9 @@
                                         Margin="0,0,6,6"
                                         ToolTip="More">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="MoreIcon" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <Image x:Name="MoreIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
                                         <TextBlock x:Name="MoreText" Text="More" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
@@ -327,7 +337,9 @@
                                         Margin="0,0,6,6"
                                         Visibility="Collapsed">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Image x:Name="DeleteIcon" Width="13" Height="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <Image x:Name="DeleteIcon" Width="13" Height="13" Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"/>
                                         <TextBlock x:Name="DeleteText" Text="Delete capture" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Button>
