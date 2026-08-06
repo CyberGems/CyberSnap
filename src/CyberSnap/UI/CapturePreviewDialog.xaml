@@ -27,6 +27,7 @@
         <SolidColorBrush x:Key="ThemeAccentHoverBrush" Color="#40FFFFFF"/>
         <SolidColorBrush x:Key="ThemeSeparatorBrush" Color="#0CFFFFFF"/>
         <SolidColorBrush x:Key="ThemePrimaryButtonForegroundBrush" Color="#FF0B1220"/>
+        <SolidColorBrush x:Key="ThemePrimaryCtaBorderBrush" Color="#3800FFFF"/>
 
         <Style x:Key="PreviewActionButton" TargetType="Button" BasedOn="{StaticResource ChromeButtonBase}">
             <Setter Property="Background" Value="#0AFFFFFF"/>
@@ -71,11 +72,10 @@
             <Setter Property="MinHeight" Value="38"/>
             <Setter Property="MinWidth" Value="120"/>
             <Setter Property="Padding" Value="16,10"/>
-            <!-- Same translucent fill/hover as the optional actions so the whole column
-                 reads as one button family; the progress line carries the accent. -->
+            <!-- Quiet fill; accent hairline (applied in code) carries the CTA hierarchy. -->
             <Setter Property="Background" Value="#0AFFFFFF"/>
             <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="#15FFFFFF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemePrimaryCtaBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
             <Setter Property="Template">
@@ -93,7 +93,6 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="#15FFFFFF"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#30FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter Property="RenderTransform">
