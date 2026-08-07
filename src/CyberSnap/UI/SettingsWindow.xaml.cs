@@ -191,26 +191,36 @@ public partial class SettingsWindow : Window
         // which is the primary and drifts on mixed-DPI setups).
         var wa = PopupWindowHelper.ScreenWorkingAreaToDips(
             System.Windows.Forms.Screen.FromPoint(_openMonitorPoint));
+        // Width stays at 80% so a restored window still reads as non-maximized.
+        // Height may use nearly the full work area: LayoutTransform (UiScale) grows the
+        // sidebar without growing the frame, and a tight 80% cap on high-DPI secondaries
+        // was clipping Uploads/Achievements with no way to reach them.
+        const double screenMargin = 24d;
         double maxW = Math.Max(MinWidth, wa.Width * 0.80);
-        double maxH = Math.Max(MinHeight, wa.Height * 0.80);
+        double maxH = Math.Max(MinHeight, wa.Height - screenMargin);
 
-        if (settings.SettingsWindowLeft != -1)
-        {
-            // Restore the last size only. Position is always recentered on open via
-            // CenterOnOpenMonitor (physical pixels) so mixed-DPI never corners the window.
-            // One-time bump: older default (780) clipped the last sidebar tab (Uploads /
-            // Achievements), especially with UI scale above 100%. Leave custom sizes alone.
-            double restoredH = settings.SettingsWindowHeight;
-            if (Math.Abs(restoredH - 780) < 0.5)
-                restoredH = 840;
-            Width = Math.Min(settings.SettingsWindowWidth, maxW);
-            Height = Math.Min(restoredH, maxH);
-        }
-        else
-        {
-            if (Width > maxW) Width = maxW;
-            if (Height > maxH) Height = maxH;
-        }
+        const double defaultH = 840;
+        double restoredH = settings.SettingsWindowLeft != -1
+            ? settings.SettingsWindowHeight
+            : Height;
+        if (Math.Abs(restoredH - 780) < 0.5)
+            restoredH = defaultH;
+        // Prior mixed-DPI opens could persist an over-shrunk height; prefer the default floor.
+        if (restoredH + 0.5 < defaultH)
+            restoredH = defaultH;
+
+        // Content uses LayoutTransform without scaling the HWND — ask for a taller frame
+        // when UiScale > 1 and the monitor allows it (label 110% → factor 1.2).
+        double scale = Math.Max(1.0, UiScale.Current);
+        double comfortableH = defaultH * scale;
+        double desiredH = Math.Max(restoredH, comfortableH);
+
+        double restoredW = settings.SettingsWindowLeft != -1
+            ? settings.SettingsWindowWidth
+            : Width;
+
+        Width = Math.Min(restoredW, maxW);
+        Height = Math.Min(desiredH, maxH);
 
         // Defer Maximize until after physical centering so WM_GETMINMAXINFO uses the
         // correct monitor after the DPI-aware move.
@@ -344,6 +354,7 @@ public partial class SettingsWindow : Window
 
         const double screenMargin = 12d;
         var maxWidth = Math.Max(MinWidth, wa.Width - screenMargin * 2);
+        // Match LoadWindowBounds: allow nearly full height so scaled nav can fit.
         var maxHeight = Math.Max(MinHeight, wa.Height - screenMargin * 2);
         MinWidth = Math.Min(MinWidth, maxWidth);
         MinHeight = Math.Min(MinHeight, maxHeight);
