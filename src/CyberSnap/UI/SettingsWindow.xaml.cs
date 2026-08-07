@@ -136,8 +136,13 @@ public partial class SettingsWindow : Window
             var wa = SystemParameters.WorkArea;
             double maxW = Math.Max(MinWidth, wa.Width * 0.80);
             double maxH = Math.Max(MinHeight, wa.Height * 0.80);
+            // One-time bump: older default (780) clipped the last sidebar tab (Uploads /
+            // Achievements), especially with UI scale above 100%. Leave custom sizes alone.
+            double restoredH = settings.SettingsWindowHeight;
+            if (Math.Abs(restoredH - 780) < 0.5)
+                restoredH = 840;
             this.Width = Math.Min(settings.SettingsWindowWidth, maxW);
-            this.Height = Math.Min(settings.SettingsWindowHeight, maxH);
+            this.Height = Math.Min(restoredH, maxH);
         }
 
         // Always center on the monitor under the cursor before clamping into the work area.

@@ -5,7 +5,7 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:Services="clr-namespace:CyberSnap.Services"
         Title="Configuration"
-        Height="780" Width="960"
+        Height="840" Width="960"
         MinHeight="560" MinWidth="860"
         ResizeMode="CanResize"
         WindowStartupLocation="Manual"
