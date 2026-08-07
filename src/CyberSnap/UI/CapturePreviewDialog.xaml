@@ -367,8 +367,14 @@
                                             HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock x:Name="CancelText" Text="Done" VerticalAlignment="Center"
                                                FontSize="12.5" FontWeight="SemiBold"/>
-                                    <Image x:Name="CancelIcon" Width="14" Height="14" Margin="7,0,0,0"
-                                           VerticalAlignment="Center"/>
+                                    <!-- Host owns the invite slide so spinner RotateTransform on CancelIcon stays independent. -->
+                                    <Grid x:Name="CancelIconHost" Margin="7,0,0,0" VerticalAlignment="Center">
+                                        <Grid.RenderTransform>
+                                            <TranslateTransform x:Name="CancelIconSlide"/>
+                                        </Grid.RenderTransform>
+                                        <Image x:Name="CancelIcon" Width="14" Height="14"
+                                               RenderTransformOrigin="0.5,0.5"/>
+                                    </Grid>
                                 </StackPanel>
                                 <!-- Countdown ring around the seconds numeral: the accent arc depletes
                                      clockwise from 12 o'clock as the auto-close timeout runs out. -->
