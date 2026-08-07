@@ -352,23 +352,24 @@ public sealed partial class RegionOverlayForm
             SelectionFrameRenderer.DrawRectangle(g, _confirmRect, fill: false);
             SelectionFrameRenderer.DrawConfirmHandles(g, GetConfirmHandleRects());
 
-            // Permanent top-left size chip (also the frame drag handle).
-            // Mid-drag: keep the cached hit-rect (offset with the frame); draw from selection geometry.
+            // Permanent size chip + gear (frame drag handle cluster).
+            // Mid-drag: paint the cached cluster (offset with the frame) — never re-layout
+            // with avoidRects=null, which desyncs size vs gear and leaves ghosts on both sides.
             if (!frameManipulating)
                 RefreshConfirmSizeReadoutRect();
-            SelectionSizeReadout.DrawConfirmDragPill(
-                g,
-                _confirmRect,
-                _readoutFont,
-                ClientRectangle,
-                avoidRects: frameManipulating ? null : GetConfirmReadoutAvoidRects(),
-                hovered: _hoveredConfirmSizeReadout || _isConfirmDragging,
-                showGrip: true);
 
-            // Gear pill (options menu) — sits just right of the size chip. Visible across the
-            // same state as the size pill so the confirm chrome reads as one anchored cluster.
-            // The gear replaces the old "More" pill on the action dock so Confirm reaches
-            // the right edge with fewer pixels in between.
+            if (!_confirmSizeReadoutChipRect.IsEmpty || !_confirmSizeReadoutGripRect.IsEmpty)
+            {
+                SelectionSizeReadout.DrawConfirmDragPillCached(
+                    g,
+                    _confirmSizeReadoutChipRect,
+                    _confirmSizeReadoutGripRect,
+                    _confirmRect.Width,
+                    _confirmRect.Height,
+                    _readoutFont,
+                    hovered: _hoveredConfirmSizeReadout || _isConfirmDragging);
+            }
+
             if (!_confirmOptionsPillRect.IsEmpty)
             {
                 bool gearActive = _toolbarContextMenu?.Visible == true;

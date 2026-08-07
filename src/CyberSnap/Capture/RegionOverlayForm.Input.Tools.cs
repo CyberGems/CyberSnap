@@ -225,9 +225,13 @@ public sealed partial class RegionOverlayForm
                     // Same lightweight path as move: freeze docks, only repaint the hole/frame.
                     var oldRect = _confirmRect;
                     var oldPill = _confirmSizeReadoutRect;
+                    var oldGear = _confirmOptionsPillRect;
                     _confirmRect = nb;
                     RefreshConfirmSizeReadoutRect();
-                    InvalidateConfirmHoleMove(oldRect, _confirmRect, oldPill, _confirmSizeReadoutRect);
+                    InvalidateConfirmHoleMove(
+                        oldRect, _confirmRect,
+                        oldPill, _confirmSizeReadoutRect,
+                        oldGear, _confirmOptionsPillRect);
                 }
                 return;
             }

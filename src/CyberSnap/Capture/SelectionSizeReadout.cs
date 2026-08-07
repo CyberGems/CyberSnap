@@ -96,8 +96,9 @@ internal static class SelectionSizeReadout
     }
 
     /// <summary>
-    /// Confirm-mode size chip: above the frame, left-aligned (top-left outside).
-    /// Falls back to interior top-left. Includes a left grip handle in the returned hit bounds.
+    /// Confirm-mode size chip: prefers outside top, left-aligned; flips to the right when the
+    /// left side collides with dock chrome (same idea as the gear). Falls back to interior
+    /// top-left / top-right before clamping.
     /// </summary>
     public static Rectangle GetConfirmDragPillBounds(
         Rectangle selection,
@@ -106,13 +107,10 @@ internal static class SelectionSizeReadout
         IReadOnlyList<Rectangle>? avoidRects = null,
         bool showGrip = true)
     {
-        if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2)
+        if (!TryGetConfirmDragPillLayout(selection, font, clientBounds, avoidRects, showGrip, out var pillRect, out var gripRect))
             return Rectangle.Empty;
 
-        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out var pillRect, out var gripRect, out _))
-            return Rectangle.Empty;
-
-        return showGrip ? Rectangle.Union(pillRect, gripRect) : pillRect;
+        return showGrip && !gripRect.IsEmpty ? Rectangle.Union(pillRect, gripRect) : pillRect;
     }
 
     public static Rectangle GetConfirmDragGripBounds(
@@ -122,14 +120,25 @@ internal static class SelectionSizeReadout
         IReadOnlyList<Rectangle>? avoidRects = null,
         bool showGrip = true)
     {
-        if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2 || !showGrip)
+        if (!showGrip)
             return Rectangle.Empty;
 
-        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out _, out var gripRect, out _))
+        if (!TryGetConfirmDragPillLayout(selection, font, clientBounds, avoidRects, showGrip, out _, out var gripRect))
             return Rectangle.Empty;
 
         return gripRect;
     }
+
+    /// <summary>Resolves chip + grip rects for the confirm size cluster (single layout pass).</summary>
+    public static bool TryGetConfirmDragPillLayout(
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects,
+        bool showGrip,
+        out Rectangle chipRect,
+        out Rectangle gripRect)
+        => TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out chipRect, out gripRect, out _);
 
     public static void DrawConfirmDragPill(
         Graphics g,
@@ -158,7 +167,48 @@ internal static class SelectionSizeReadout
         g.SmoothingMode = oldSmoothing;
     }
 
-    /// <summary>Width of the small square "gear" pill pinned to the right of the size chip
+    /// <summary>
+    /// Paints the confirm size cluster from cached rects (used mid-drag so size/gear stay synced).
+    /// </summary>
+    public static void DrawConfirmDragPillCached(
+        Graphics g,
+        Rectangle chipRect,
+        Rectangle gripRect,
+        int selectionWidth,
+        int selectionHeight,
+        Font font,
+        bool hovered = false)
+    {
+        if (!ShowDimensions)
+            return;
+        if (chipRect.IsEmpty && gripRect.IsEmpty)
+            return;
+
+        var oldSmoothing = g.SmoothingMode;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        int lineH = LineHeight(font);
+        int iconBox = IconBox(lineH);
+
+        if (!chipRect.IsEmpty)
+        {
+            var lines = new List<Seg[]>
+            {
+                new[]
+                {
+                    new Seg(Arrow.Horizontal, selectionWidth.ToString()),
+                    new Seg(Arrow.Vertical, selectionHeight.ToString())
+                }
+            };
+            DrawPill(g, new Pill { Lines = lines, Rect = chipRect }, font, lineH, iconBox, emphasize: false);
+        }
+
+        if (!gripRect.IsEmpty)
+            DrawDragGrip(g, gripRect, hovered);
+
+        g.SmoothingMode = oldSmoothing;
+    }
+
+    /// <summary>Width of the small square "gear" pill pinned beside the size chip
     /// in confirm mode. Contains the overflow/options menu trigger.</summary>
     public static int ConfirmOptionsWidth(Font font)
     {
@@ -167,34 +217,26 @@ internal static class SelectionSizeReadout
     }
 
     /// <summary>
-    /// Confirm-mode options pill: sits beside the drag grip + size chip, at the same top edge.
-    /// Prefers the right of the size chip; falls back to the left of the grip when the right
-    /// side would collide with dock chrome / shadow.
-    /// Returns the populated rect, or Rectangle.Empty if the layout couldn't fit.
+    /// Confirm-mode options pill beside an already-laid-out size chip + grip.
+    /// Prefers the right of the size chip; falls back to the left of the grip.
     /// </summary>
     public static Rectangle GetConfirmOptionsBounds(
-        Rectangle selection,
+        Rectangle chipRect,
+        Rectangle gripRect,
         Font font,
         Rectangle clientBounds,
-        IReadOnlyList<Rectangle>? avoidRects = null,
-        bool showGrip = true)
+        IReadOnlyList<Rectangle>? avoidRects = null)
     {
-        if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2)
-            return Rectangle.Empty;
-
-        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out var pillRect, out var gripRect, out _))
-            return Rectangle.Empty;
-
-        if (pillRect.Width <= 0)
+        if (!ShowDimensions || chipRect.Width <= 0)
             return Rectangle.Empty;
 
         int w = ConfirmOptionsWidth(font);
         int gap = UiChrome.ScaleInt(4);
-        int h = pillRect.Height;
-        int y = pillRect.Y;
+        int h = chipRect.Height;
+        int y = chipRect.Y;
 
-        var right = new Rectangle(pillRect.Right + gap, y, w, h);
-        int unitLeft = !gripRect.IsEmpty ? gripRect.X : pillRect.X;
+        var right = new Rectangle(chipRect.Right + gap, y, w, h);
+        int unitLeft = !gripRect.IsEmpty ? gripRect.X : chipRect.X;
         var left = new Rectangle(unitLeft - gap - w, y, w, h);
 
         foreach (var candidate in new[] { right, left })
@@ -209,6 +251,22 @@ internal static class SelectionSizeReadout
         }
 
         return Rectangle.Empty;
+    }
+
+    /// <summary>
+    /// Legacy overload: lays out size first, then places the gear beside it.
+    /// </summary>
+    public static Rectangle GetConfirmOptionsBounds(
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects = null,
+        bool showGrip = true)
+    {
+        if (!TryGetConfirmDragPillLayout(selection, font, clientBounds, avoidRects, showGrip, out var chipRect, out var gripRect))
+            return Rectangle.Empty;
+
+        return GetConfirmOptionsBounds(chipRect, gripRect, font, clientBounds, avoidRects);
     }
 
     /// <summary>Paints the gear/options pill. No text — just the gear glyph centered.</summary>
@@ -266,7 +324,7 @@ internal static class SelectionSizeReadout
         gripRect = Rectangle.Empty;
         lines = new List<Seg[]>();
 
-        if (selection.Width <= 2 || selection.Height <= 2)
+        if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2)
             return false;
 
         int lineH = LineHeight(font);
@@ -280,53 +338,103 @@ internal static class SelectionSizeReadout
         int unitW = gripW + gripGap + size.Width;
         int unitH = Math.Max(size.Height, gripW); // grip is square-ish
 
-        // 1) Outside top edge, left-aligned (preferred: above the selection).
-        var unitTop = new Rectangle(
-            selection.Left,
-            selection.Top - EdgeGap - unitH,
-            unitW,
-            unitH);
+        // Prefer outside top; flip horizontally when the preferred side hits dock chrome
+        // (annotation bar / confirm dock shadow) instead of sliding under the bar.
+        var candidates = new[]
+        {
+            // 1) Outside top, left-aligned
+            new Rectangle(selection.Left, selection.Top - EdgeGap - unitH, unitW, unitH),
+            // 2) Outside top, right-aligned (flip)
+            new Rectangle(selection.Right - unitW, selection.Top - EdgeGap - unitH, unitW, unitH),
+            // 3) Interior top-left
+            new Rectangle(selection.Left + EdgeGap, selection.Top + EdgeGap, unitW, unitH),
+            // 4) Interior top-right
+            new Rectangle(selection.Right - EdgeGap - unitW, selection.Top + EdgeGap, unitW, unitH),
+        };
 
-        // 2) Interior top-left when the exterior clips the monitor or hits chrome.
-        var unitInterior = new Rectangle(
-            selection.Left + EdgeGap,
-            selection.Top + EdgeGap,
-            unitW,
-            unitH);
-
-        foreach (var unit in new[] { unitTop, unitInterior })
+        foreach (var unit in candidates)
         {
             if (!FitsInClient(unit, clientBounds))
                 continue;
             if (HitsObstacle(unit, avoidRects))
                 continue;
 
-            // Grip on the left of the size chip.
-            gripRect = new Rectangle(unit.X, unit.Y + (unit.Height - unitH) / 2, gripW, unitH);
-            // Center grip vertically in unit (unitH == grip height here).
-            gripRect = new Rectangle(unit.X, unit.Y, gripW, unitH);
-            pillRect = new Rectangle(
-                unit.X + gripW + gripGap,
-                unit.Y + (unitH - size.Height) / 2,
-                size.Width,
-                size.Height);
+            ApplyConfirmUnitLayout(unit, size, gripW, gripGap, out pillRect, out gripRect);
             return true;
         }
 
-        // Last resort: clamp interior unit into client / selection.
-        var clampedUnit = ClampToClient(unitInterior, clientBounds);
-        if (selection.Width > unitW + EdgeGap * 2 && selection.Height > unitH + EdgeGap * 2)
+        // Last resort: clamp an outside-top unit into the client, preferring the side with
+        // more free space from obstacles (still avoids burying under the annotation dock).
+        var fallbackLeft = new Rectangle(selection.Left, selection.Top - EdgeGap - unitH, unitW, unitH);
+        var fallbackRight = new Rectangle(selection.Right - unitW, selection.Top - EdgeGap - unitH, unitW, unitH);
+        var clampedLeft = ClampToClient(fallbackLeft, clientBounds);
+        var clampedRight = ClampToClient(fallbackRight, clientBounds);
+        var chosen = PickLeastConflictingUnit(clampedLeft, clampedRight, avoidRects);
+
+        if (selection.Width > unitW + EdgeGap * 2 && selection.Height > unitH + EdgeGap * 2
+            && chosen.Bottom > selection.Top)
         {
-            clampedUnit.X = Math.Clamp(clampedUnit.X, selection.Left + EdgeGap, selection.Right - unitW - EdgeGap);
-            clampedUnit.Y = Math.Clamp(clampedUnit.Y, selection.Top + EdgeGap, selection.Bottom - unitH - EdgeGap);
+            // Couldn't stay outside — park on the interior top edge, still flipped if needed.
+            var interiorLeft = new Rectangle(selection.Left + EdgeGap, selection.Top + EdgeGap, unitW, unitH);
+            var interiorRight = new Rectangle(selection.Right - EdgeGap - unitW, selection.Top + EdgeGap, unitW, unitH);
+            chosen = PickLeastConflictingUnit(
+                ClampToClient(interiorLeft, clientBounds),
+                ClampToClient(interiorRight, clientBounds),
+                avoidRects);
+            chosen.X = Math.Clamp(chosen.X, selection.Left + EdgeGap, selection.Right - unitW - EdgeGap);
+            chosen.Y = Math.Clamp(chosen.Y, selection.Top + EdgeGap, selection.Bottom - unitH - EdgeGap);
         }
-        gripRect = new Rectangle(clampedUnit.X, clampedUnit.Y, gripW, unitH);
+
+        ApplyConfirmUnitLayout(chosen, size, gripW, gripGap, out pillRect, out gripRect);
+        return true;
+    }
+
+    private static void ApplyConfirmUnitLayout(
+        Rectangle unit,
+        Size size,
+        int gripW,
+        int gripGap,
+        out Rectangle pillRect,
+        out Rectangle gripRect)
+    {
+        int unitH = unit.Height;
+        gripRect = gripW > 0
+            ? new Rectangle(unit.X, unit.Y, gripW, unitH)
+            : Rectangle.Empty;
         pillRect = new Rectangle(
-            clampedUnit.X + gripW + gripGap,
-            clampedUnit.Y + (unitH - size.Height) / 2,
+            unit.X + gripW + gripGap,
+            unit.Y + (unitH - size.Height) / 2,
             size.Width,
             size.Height);
-        return true;
+    }
+
+    private static Rectangle PickLeastConflictingUnit(
+        Rectangle a,
+        Rectangle b,
+        IReadOnlyList<Rectangle>? avoidRects)
+    {
+        int scoreA = ConflictScore(a, avoidRects);
+        int scoreB = ConflictScore(b, avoidRects);
+        return scoreB < scoreA ? b : a;
+    }
+
+    private static int ConflictScore(Rectangle unit, IReadOnlyList<Rectangle>? avoidRects)
+    {
+        if (avoidRects is null || avoidRects.Count == 0 || unit.Width <= 0 || unit.Height <= 0)
+            return 0;
+
+        int score = 0;
+        foreach (var raw in avoidRects)
+        {
+            if (raw.Width <= 0 || raw.Height <= 0)
+                continue;
+            var pad = raw;
+            pad.Inflate(ObstaclePad, ObstaclePad);
+            var hit = Rectangle.Intersect(unit, pad);
+            if (!hit.IsEmpty)
+                score += hit.Width * hit.Height;
+        }
+        return score;
     }
 
     private static void DrawDragGrip(Graphics g, Rectangle rect, bool hovered)

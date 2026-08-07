@@ -160,9 +160,11 @@ public sealed partial class RegionOverlayForm : Form
     /// </summary>
     private Rectangle _selectionMonitorClientBounds;
 
-    /// <summary>Confirm-mode permanent size pill + grip (drag handle) — above the frame, top-left.</summary>
+    /// <summary>Confirm-mode permanent size pill + grip (drag handle) — above the frame.</summary>
     private Rectangle _confirmSizeReadoutRect = Rectangle.Empty;
     private Rectangle _confirmSizeReadoutGripRect = Rectangle.Empty;
+    /// <summary>Text chip only (excludes grip) — used to paint from cache mid-drag.</summary>
+    private Rectangle _confirmSizeReadoutChipRect = Rectangle.Empty;
     private bool _hoveredConfirmSizeReadout;
     /// <summary>Gear pill (opens the confirm overflow menu) sitting beside the size chip.</summary>
     private Rectangle _confirmOptionsPillRect = Rectangle.Empty;
@@ -1375,19 +1377,31 @@ public sealed partial class RegionOverlayForm : Form
         int dx = newRect.X - oldRect.X;
         int dy = newRect.Y - oldRect.Y;
         var oldPill = _confirmSizeReadoutRect;
+        var oldGear = _confirmOptionsPillRect;
 
         _confirmRect = newRect;
 
-        // Size chip and center move grip follow the frame; docks are hidden for the whole gesture.
+        // Size chip, grip, gear, and center move grip follow the frame; docks are hidden
+        // for the whole gesture. Offset the cached cluster — never re-layout mid-drag
+        // (re-layout with avoidRects=null would paint size on one side and leave gear on the other).
         if (dx != 0 || dy != 0)
         {
             if (!_confirmSizeReadoutRect.IsEmpty)
                 _confirmSizeReadoutRect.Offset(dx, dy);
+            if (!_confirmSizeReadoutGripRect.IsEmpty)
+                _confirmSizeReadoutGripRect.Offset(dx, dy);
+            if (!_confirmSizeReadoutChipRect.IsEmpty)
+                _confirmSizeReadoutChipRect.Offset(dx, dy);
+            if (!_confirmOptionsPillRect.IsEmpty)
+                _confirmOptionsPillRect.Offset(dx, dy);
             if (!_centerMoveGripRect.IsEmpty)
                 _centerMoveGripRect.Offset(dx, dy);
         }
 
-        InvalidateConfirmHoleMove(oldRect, newRect, oldPill, _confirmSizeReadoutRect);
+        InvalidateConfirmHoleMove(
+            oldRect, newRect,
+            oldPill, _confirmSizeReadoutRect,
+            oldGear, _confirmOptionsPillRect);
     }
 
     /// <summary>
@@ -1483,6 +1497,10 @@ public sealed partial class RegionOverlayForm : Form
             dirty = dirty.IsEmpty
                 ? InflateForRepaint(_confirmSizeReadoutRect, UiChrome.ScaleInt(12))
                 : Rectangle.Union(dirty, InflateForRepaint(_confirmSizeReadoutRect, UiChrome.ScaleInt(12)));
+        if (!_confirmOptionsPillRect.IsEmpty)
+            dirty = dirty.IsEmpty
+                ? InflateForRepaint(_confirmOptionsPillRect, UiChrome.ScaleInt(12))
+                : Rectangle.Union(dirty, InflateForRepaint(_confirmOptionsPillRect, UiChrome.ScaleInt(12)));
         if (ShowAnnotationChrome && !_toolbarRect.IsEmpty)
             dirty = dirty.IsEmpty
                 ? InflateForRepaint(_toolbarRect, UiChrome.ScaleInt(20))
@@ -1499,13 +1517,15 @@ public sealed partial class RegionOverlayForm : Form
 
     /// <summary>
     /// Invalidates only the dim-hole strips that actually changed (XOR of old/new frames)
-    /// plus size-pill bounds — not the whole chrome dock. Matches pre-confirm selection fluidness.
+    /// plus size/gear cluster bounds — not the whole chrome dock.
     /// </summary>
     private void InvalidateConfirmHoleMove(
         Rectangle oldHole,
         Rectangle newHole,
         Rectangle oldSizePill,
-        Rectangle newSizePill)
+        Rectangle newSizePill,
+        Rectangle oldGearPill = default,
+        Rectangle newGearPill = default)
     {
         int pad = UiChrome.ScaleInt(22); // frame stroke + handles
         using var region = new Region();
@@ -1533,18 +1553,18 @@ public sealed partial class RegionOverlayForm : Form
             region.Union(xor);
         }
 
-        if (!oldSizePill.IsEmpty)
+        void UnionPill(Rectangle pill)
         {
-            var p = oldSizePill;
-            p.Inflate(UiChrome.ScaleInt(8), UiChrome.ScaleInt(8));
+            if (pill.IsEmpty) return;
+            var p = pill;
+            p.Inflate(UiChrome.ScaleInt(10), UiChrome.ScaleInt(10));
             region.Union(p);
         }
-        if (!newSizePill.IsEmpty)
-        {
-            var p = newSizePill;
-            p.Inflate(UiChrome.ScaleInt(8), UiChrome.ScaleInt(8));
-            region.Union(p);
-        }
+
+        UnionPill(oldSizePill);
+        UnionPill(newSizePill);
+        UnionPill(oldGearPill);
+        UnionPill(newGearPill);
 
         region.Intersect(ClientRectangle);
         Invalidate(region);
@@ -1650,6 +1670,7 @@ public sealed partial class RegionOverlayForm : Form
         {
             _confirmSizeReadoutRect = Rectangle.Empty;
             _confirmSizeReadoutGripRect = Rectangle.Empty;
+            _confirmSizeReadoutChipRect = Rectangle.Empty;
             _confirmOptionsPillRect = Rectangle.Empty;
             _hoveredConfirmOptionsPill = false;
             _confirmOptionsHoverStartUtc = DateTime.MinValue;
@@ -1662,27 +1683,37 @@ public sealed partial class RegionOverlayForm : Form
         // The drag grip on the size pill is always shown in confirm mode — it lets the user
         // reposition the frame regardless of whether any annotations have been drawn.
         const bool showGrip = true;
+        var avoid = GetConfirmReadoutAvoidRects();
 
-        _confirmSizeReadoutRect = SelectionSizeReadout.GetConfirmDragPillBounds(
-            _confirmRect,
-            _readoutFont,
-            ClientRectangle,
-            GetConfirmReadoutAvoidRects(),
-            showGrip);
+        if (!SelectionSizeReadout.TryGetConfirmDragPillLayout(
+                _confirmRect,
+                _readoutFont,
+                ClientRectangle,
+                avoid,
+                showGrip,
+                out var chipRect,
+                out var gripRect))
+        {
+            _confirmSizeReadoutRect = Rectangle.Empty;
+            _confirmSizeReadoutGripRect = Rectangle.Empty;
+            _confirmSizeReadoutChipRect = Rectangle.Empty;
+            _confirmOptionsPillRect = Rectangle.Empty;
+        }
+        else
+        {
+            _confirmSizeReadoutChipRect = chipRect;
+            _confirmSizeReadoutGripRect = gripRect;
+            _confirmSizeReadoutRect = showGrip && !gripRect.IsEmpty
+                ? Rectangle.Union(chipRect, gripRect)
+                : chipRect;
 
-        _confirmSizeReadoutGripRect = SelectionSizeReadout.GetConfirmDragGripBounds(
-            _confirmRect,
-            _readoutFont,
-            ClientRectangle,
-            GetConfirmReadoutAvoidRects(),
-            showGrip);
-
-        _confirmOptionsPillRect = SelectionSizeReadout.GetConfirmOptionsBounds(
-            _confirmRect,
-            _readoutFont,
-            ClientRectangle,
-            GetConfirmReadoutAvoidRects(),
-            showGrip);
+            _confirmOptionsPillRect = SelectionSizeReadout.GetConfirmOptionsBounds(
+                chipRect,
+                gripRect,
+                _readoutFont,
+                ClientRectangle,
+                avoid);
+        }
 
         // Center badge complements the grip: show it only when there are no annotations
         // (clean canvas) so it offers a large drag target in the middle of an empty selection.
