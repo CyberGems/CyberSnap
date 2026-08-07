@@ -365,6 +365,20 @@ public sealed partial class RegionOverlayForm
                 hovered: _hoveredConfirmSizeReadout || _isConfirmDragging,
                 showGrip: true);
 
+            // Gear pill (options menu) — sits just right of the size chip. Visible across the
+            // same state as the size pill so the confirm chrome reads as one anchored cluster.
+            // The gear replaces the old "More" pill on the action dock so Confirm reaches
+            // the right edge with fewer pixels in between.
+            if (!_confirmOptionsPillRect.IsEmpty)
+            {
+                bool gearActive = _confirmContextMenu?.Visible == true;
+                SelectionSizeReadout.DrawConfirmOptions(
+                    g,
+                    _confirmOptionsPillRect,
+                    hovered: _hoveredConfirmOptionsPill,
+                    active: gearActive);
+            }
+
             if (!HasConfirmAnnotations() && !_centerMoveGripRect.IsEmpty)
             {
                 DrawCenterMoveGrip(g);
