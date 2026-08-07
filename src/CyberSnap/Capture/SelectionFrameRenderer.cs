@@ -39,9 +39,9 @@ internal static class SelectionFrameRenderer
 
     /// <summary>
     /// Shared selection / auto-detect chrome.
-    /// Single solid accent stroke (no dual dash — the two dashes mixed poorly) plus a thin
-    /// dark understroke for contrast. HUD L-brackets scale with selection size so they stay
-    /// readable on full-window captures, not only on small regions.
+    /// Mid-edge accent stroke (segments stop before the corners) plus a thin dark understroke
+    /// for contrast. HUD L-brackets own the corners alone — no second glow bracket and no
+    /// thick rectangle miters sitting behind them.
     /// </summary>
     private static void DrawSelectionChrome(Graphics g, Rectangle rect, bool fill, bool provisional)
     {
@@ -74,55 +74,76 @@ internal static class SelectionFrameRenderer
         outline.Width = Math.Max(1, outline.Width - 1);
         outline.Height = Math.Max(1, outline.Height - 1);
 
-        // Soft ambient glow — tight, does not compete with the true edge.
-        var glowOutline = outline;
-        glowOutline.Inflate(Math.Max(1, (int)Math.Round(scale)), Math.Max(1, (int)Math.Round(scale)));
-        using (var glowPen = new Pen(Color.FromArgb(glowAlpha, accent), glowWidth))
-            g.DrawRectangle(glowPen, glowOutline);
+        // Soft ambient glow — mid-edge only so corners stay clean under the brackets.
+        float glowClear = Math.Max(cornerLen * 0.85f, cornerPenWidth);
+        using (var glowPen = new Pen(Color.FromArgb(glowAlpha, accent), glowWidth)
+        {
+            LineJoin = LineJoin.Miter,
+            StartCap = LineCap.Flat,
+            EndCap = LineCap.Flat
+        })
+            DrawEdgeSegments(g, outline.X, outline.Y, outline.Right, outline.Bottom, glowClear, glowPen);
 
         if (fill)
             g.FillRectangle(FillBrush, rect);
 
-        // Dark understroke (solid) for contrast on light and busy wallpapers — not a second dash.
-        using (var underPen = new Pen(Color.FromArgb(underAlpha, 0, 0, 0), edgeWidth + scale)
-        {
-            LineJoin = LineJoin.Miter
-        })
-            g.DrawRectangle(underPen, outline);
-
-        // Single clean accent edge (solid).
-        using (var edgePen = new Pen(Color.FromArgb(edgeAlpha, accent), edgeWidth)
-        {
-            LineJoin = LineJoin.Miter
-        })
-            g.DrawRectangle(edgePen, outline);
-
-        // The stroke centerline is exactly on 'outline' because DrawRectangle uses PenAlignment.Center by default
         float x0 = outline.X;
         float y0 = outline.Y;
         float x1 = outline.Right;
         float y1 = outline.Bottom;
 
-        Color bracketAccent = Color.FromArgb(0x00, 0xFF, 0xFF); // #00FFFF — matches the widget capture icon cyan
+        // Leave the corner zone to the L-brackets so thick edge pens never mint miter blobs
+        // (or a second "handle") behind the cyan corners.
+        float edgeClear = Math.Max(cornerLen * 0.92f, cornerPenWidth * 0.75f);
 
-        using (var cornerGlow = new Pen(Color.FromArgb(provisional ? 50 : 70, bracketAccent), cornerPenWidth + 3f * scale)
+        // Dark understroke for contrast on light/busy wallpapers.
+        using (var underPen = new Pen(Color.FromArgb(underAlpha, 0, 0, 0), edgeWidth + scale)
         {
             LineJoin = LineJoin.Miter,
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round
+            StartCap = LineCap.Flat,
+            EndCap = LineCap.Flat
         })
+            DrawEdgeSegments(g, x0, y0, x1, y1, edgeClear, underPen);
+
+        // Single clean accent edge (solid), mid-sides only.
+        using (var edgePen = new Pen(Color.FromArgb(edgeAlpha, accent), edgeWidth)
+        {
+            LineJoin = LineJoin.Miter,
+            StartCap = LineCap.Flat,
+            EndCap = LineCap.Flat
+        })
+            DrawEdgeSegments(g, x0, y0, x1, y1, edgeClear, edgePen);
+
+        Color bracketAccent = Color.FromArgb(0x00, 0xFF, 0xFF); // #00FFFF — matches the widget capture icon cyan
+
+        // One crisp bracket pass — no behind-glow L (that read as extra corner chrome).
         using (var cornerPen = new Pen(Color.FromArgb(edgeAlpha, bracketAccent), cornerPenWidth)
         {
             LineJoin = LineJoin.Miter,
-            StartCap = LineCap.Round,
-            EndCap = LineCap.Round
+            StartCap = LineCap.Flat,
+            EndCap = LineCap.Flat
         })
-        {
-            DrawCornerBrackets(g, x0, y0, x1, y1, cornerLen, cornerGlow);
             DrawCornerBrackets(g, x0, y0, x1, y1, cornerLen, cornerPen);
-        }
 
         g.SmoothingMode = oldSmoothing;
+    }
+
+    /// <summary>Four mid-edge strokes that stop short of the corners (brackets own those).</summary>
+    private static void DrawEdgeSegments(
+        Graphics g, float x0, float y0, float x1, float y1, float cornerClear, Pen pen)
+    {
+        float clear = Math.Min(cornerClear, Math.Max(0f, (x1 - x0) * 0.45f));
+        clear = Math.Min(clear, Math.Max(0f, (y1 - y0) * 0.45f));
+        if (x1 - x0 > clear * 2f + 1f)
+        {
+            g.DrawLine(pen, x0 + clear, y0, x1 - clear, y0);
+            g.DrawLine(pen, x0 + clear, y1, x1 - clear, y1);
+        }
+        if (y1 - y0 > clear * 2f + 1f)
+        {
+            g.DrawLine(pen, x0, y0 + clear, x0, y1 - clear);
+            g.DrawLine(pen, x1, y0 + clear, x1, y1 - clear);
+        }
     }
 
     private static void DrawCornerBrackets(Graphics g, float x0, float y0, float x1, float y1, float len, Pen pen)
