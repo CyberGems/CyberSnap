@@ -848,6 +848,21 @@ public sealed partial class RegionOverlayForm
             Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[hitIdx]), 40, 40));
     }
 
+    /// <summary>
+    /// Drops the move/draw-tool hover chrome immediately and dirties its bounds.
+    /// Call when a new annotation drag starts so the dashed box + move glyph cannot
+    /// linger (or ghost) over the live preview.
+    /// </summary>
+    private void ClearMoveHoverHighlight()
+    {
+        if (_moveHoverIndex < 0)
+            return;
+
+        if (_moveHoverIndex < _undoStack.Count)
+            Invalidate(Rectangle.Inflate(GetAnnotationBounds(_undoStack[_moveHoverIndex]), 40, 40));
+        _moveHoverIndex = -1;
+    }
+
     private int HitTestAnnotationSurface(Point p)
     {
         for (int i = _undoStack.Count - 1; i >= 0; i--)

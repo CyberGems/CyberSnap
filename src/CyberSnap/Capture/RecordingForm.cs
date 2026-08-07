@@ -652,18 +652,27 @@ public sealed partial class RecordingForm : Form
 
     internal static void DrawCornerBracketsLocal(Graphics g, float x0, float y0, float x1, float y1, float len, Pen pen)
     {
-        // Top-left
-        g.DrawLine(pen, x0, y0, x0 + len, y0);
-        g.DrawLine(pen, x0, y0, x0, y0 + len);
-        // Top-right
-        g.DrawLine(pen, x1, y0, x1 - len, y0);
-        g.DrawLine(pen, x1, y0, x1, y0 + len);
-        // Bottom-left
-        g.DrawLine(pen, x0, y1, x0 + len, y1);
-        g.DrawLine(pen, x0, y1, x0, y1 - len);
-        // Bottom-right
-        g.DrawLine(pen, x1, y1, x1 - len, y1);
-        g.DrawLine(pen, x1, y1, x1, y1 - len);
+        // Single polyline per corner so Flat/Miter pens don't leave a gap at the outer tip.
+        DrawBracketLLocal(g, pen, x0 + len, y0, x0, y0, x0, y0 + len);
+        DrawBracketLLocal(g, pen, x1 - len, y0, x1, y0, x1, y0 + len);
+        DrawBracketLLocal(g, pen, x0 + len, y1, x0, y1, x0, y1 - len);
+        DrawBracketLLocal(g, pen, x1 - len, y1, x1, y1, x1, y1 - len);
+    }
+
+    private static void DrawBracketLLocal(
+        Graphics g, Pen pen,
+        float armAx, float armAy,
+        float cornerX, float cornerY,
+        float armBx, float armBy)
+    {
+        using var path = new GraphicsPath();
+        path.AddLines(new[]
+        {
+            new PointF(armAx, armAy),
+            new PointF(cornerX, cornerY),
+            new PointF(armBx, armBy)
+        });
+        g.DrawPath(pen, path);
     }
 
     /// <summary>

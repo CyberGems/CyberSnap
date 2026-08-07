@@ -221,11 +221,13 @@ public sealed partial class AnnotationCanvas
         }
 
         // Move hover highlight (skip if item is part of multi-selection — it already has handles)
-        // Also skip the annotation currently being re-edited (live inline frame replaces it).
+        // Also skip the annotation currently being re-edited (live inline frame replaces it),
+        // and while a new draw drag is in progress (hover must not compete with the preview).
         if (_preSpaceTool == null && IsDrawingOrMoveTool(_activeTool) && _moveHoverIndex >= 0 && _moveHoverIndex < _annotations.Count
             && _moveHoverIndex != _selectedAnnotationIndex
             && _moveHoverIndex != _renderSkipAnnotationIndex
-            && !_multiSelectedIndices.Contains(_moveHoverIndex))
+            && !_multiSelectedIndices.Contains(_moveHoverIndex)
+            && !(_isDragging && !IsManipulatingExistingAnnotation))
         {
             var hovered = _annotations[_moveHoverIndex];
             var bounds = GetAnnotationBounds(hovered);
