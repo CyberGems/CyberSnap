@@ -576,6 +576,9 @@ public partial class SettingsWindow
     {
         LocalizationService.ApplyCurrentCulture(_settingsService.Settings.InterfaceLanguage);
         LocalizationService.ApplyTo(this, _settingsService.Settings.InterfaceLanguage);
+        // ApplyTo caches the already-translated title-bar tooltips as their source;
+        // re-apply them from the clean "Close"/"Minimize"/"Maximize" keys.
+        SettingsTitleBar?.RefreshTooltips();
         // Re-apply the default theme tooltip after ApplyTo re-translates it from SourceToolTip.
         ThemeDarkRadio?.ApplyDefaultTooltip();
         RefreshLanguageComboDisplay();

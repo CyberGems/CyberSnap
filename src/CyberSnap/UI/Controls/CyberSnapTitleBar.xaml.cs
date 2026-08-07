@@ -38,7 +38,7 @@ public partial class CyberSnapTitleBar : UserControl
             nameof(CloseToolTip),
             typeof(string),
             typeof(CyberSnapTitleBar),
-            new PropertyMetadata("Close"));
+            new PropertyMetadata(null, OnCloseToolTipChanged));
 
     public event EventHandler? CloseRequested;
     public event EventHandler? PinRequested;
@@ -117,6 +117,30 @@ public partial class CyberSnapTitleBar : UserControl
             tb.PinBtn.Visibility = (bool)e.NewValue ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private static void OnCloseToolTipChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is CyberSnapTitleBar tb && tb.CloseBtn != null)
+            tb.CloseBtn.ToolTip = ResolveCloseToolTip(tb);
+    }
+
+    private static string ResolveCloseToolTip(CyberSnapTitleBar tb) =>
+        !string.IsNullOrEmpty(tb.CloseToolTip)
+            ? Services.LocalizationService.Translate(tb.CloseToolTip)
+            : Services.LocalizationService.Translate("Close");
+
+    /// <summary>
+    /// Re-applies the localized title-bar button tooltips. Called by owner windows
+    /// after a language switch, since LocalizationService.ApplyTo caches the
+    /// already-translated tooltip strings as their translation source.
+    /// </summary>
+    public void RefreshTooltips()
+    {
+        bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
+        MinimizeBtn.ToolTip = Services.LocalizationService.Translate("Minimize");
+        MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
+        CloseBtn.ToolTip = ResolveCloseToolTip(this);
+    }
+
     private static void OnIsPinActiveChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         if (d is CyberSnapTitleBar tb) tb.RefreshPinIcon();
@@ -131,7 +155,7 @@ public partial class CyberSnapTitleBar : UserControl
         bool isMaximized = OwnerWindow?.WindowState == WindowState.Maximized;
         string maxIconId = isMaximized ? "restore" : "maximize";
         MaximizeIcon.Source = Helpers.FluentIcons.RenderWpf(maxIconId, titleIcon, 18);
-        MaximizeBtn.ToolTip = Services.LocalizationService.Translate(isMaximized ? "Restore" : "Maximize");
+        RefreshTooltips();
 
         // If the pointer is still over Close, keep the high-contrast hover glyph.
         var closeIconColor = CloseBtn.IsMouseOver ? TitleBarCloseHoverIconColor : titleIcon;
