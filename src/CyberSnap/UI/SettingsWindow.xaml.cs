@@ -48,6 +48,12 @@ public partial class SettingsWindow : Window
     private bool ImageIndexResetInProgress { get; set; }
     private bool _suppressStartWithWindowsChange;
     private WindowState _lastNonMinimizedState = WindowState.Normal;
+    // Mixed-DPI open: capture the trigger monitor before Show(), then center with
+    // SetWindowPos in physical pixels (same path as CapturePreviewDialog). DIP Left/Top
+    // after a DPI change pulls the window into a corner on non-primary 150% monitors.
+    private readonly System.Drawing.Point _openMonitorPoint;
+    private bool _didCenterOnOpen;
+    private bool _openMaximized;
 
     public event Action? HotkeyChanged;
     public event Action? LocalizationChanged;
@@ -57,7 +63,11 @@ public partial class SettingsWindow : Window
         _settingsService = settingsService;
         _historyService = historyService;
         _imageSearchIndexService = imageSearchIndexService;
+        _openMonitorPoint = System.Windows.Forms.Cursor.Position;
         InitializeComponent();
+        // Hide until post-layout physical centering finishes — avoids the visible jump
+        // when the HWND resizes after the first DPI-aware move to a 150% monitor.
+        Opacity = 0;
         CyberSnapWindowChrome.Apply(this);
         Theme.Refresh();
         Theme.ApplyTo(Application.Current.Resources);
@@ -67,7 +77,7 @@ public partial class SettingsWindow : Window
         InitializeSearch();
         UpdateWindowTitle();
         Loaded += (_, _) => ApplyMicaBackdrop();
-        Loaded += (_, _) => EnsureSettingsWindowFitsWorkArea();
+        ContentRendered += SettingsWindow_ContentRendered;
         StateChanged += (_, _) =>
         {
             SettingsTitleBar.RefreshIcons();
@@ -123,36 +133,88 @@ public partial class SettingsWindow : Window
         source?.AddHook(WndProc);
     }
 
+    private void SettingsWindow_ContentRendered(object? sender, EventArgs e)
+    {
+        ContentRendered -= SettingsWindow_ContentRendered;
+        // Defer until layout/DPI settle — SourceInitialized GetWindowRect is still short
+        // at 150% with AllowsTransparency + UiScale LayoutTransform.
+        Dispatcher.BeginInvoke(
+            new Action(CenterOnOpenMonitor),
+            System.Windows.Threading.DispatcherPriority.ContextIdle);
+    }
+
+    private void CenterOnOpenMonitor()
+    {
+        if (_didCenterOnOpen)
+            return;
+        _didCenterOnOpen = true;
+
+        // Mixed-DPI (e.g. primary 125% / secondary 150%): only SetWindowPos in physical
+        // pixels. Setting WPF Left/Top in DIPs afterward pulls the window into a corner
+        // on the non-primary monitor. First move may change DPI and grow the HWND; the
+        // second pass recenters with the final physical size.
+        try
+        {
+            UpdateLayout();
+            EnsureSettingsWindowSizeFitsWorkArea();
+            PopupWindowHelper.CenterWindowOnPhysicalMonitor(this, _openMonitorPoint);
+        }
+        catch
+        {
+            // Retry below.
+        }
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            try
+            {
+                UpdateLayout();
+                EnsureSettingsWindowSizeFitsWorkArea();
+                PopupWindowHelper.CenterWindowOnPhysicalMonitor(this, _openMonitorPoint);
+            }
+            catch
+            {
+                // Keep current position.
+            }
+
+            if (_openMaximized)
+                WindowState = WindowState.Maximized;
+
+            Opacity = 1;
+        }), System.Windows.Threading.DispatcherPriority.ContextIdle);
+    }
+
     private void LoadWindowBounds()
     {
         var settings = _settingsService.Settings;
+        // Cap against the trigger monitor's work area (not SystemParameters.WorkArea,
+        // which is the primary and drifts on mixed-DPI setups).
+        var wa = PopupWindowHelper.ScreenWorkingAreaToDips(
+            System.Windows.Forms.Screen.FromPoint(_openMonitorPoint));
+        double maxW = Math.Max(MinWidth, wa.Width * 0.80);
+        double maxH = Math.Max(MinHeight, wa.Height * 0.80);
+
         if (settings.SettingsWindowLeft != -1)
         {
-            // Restore the last size only. The position is intentionally NOT restored:
-            // the window always opens centered on the screen where the user triggered it,
-            // even if they moved it before closing last time.
-            // Cap the restored size at 80% of the work area so the restored window is
-            // visibly distinct from the maximized state.
-            var wa = SystemParameters.WorkArea;
-            double maxW = Math.Max(MinWidth, wa.Width * 0.80);
-            double maxH = Math.Max(MinHeight, wa.Height * 0.80);
+            // Restore the last size only. Position is always recentered on open via
+            // CenterOnOpenMonitor (physical pixels) so mixed-DPI never corners the window.
             // One-time bump: older default (780) clipped the last sidebar tab (Uploads /
             // Achievements), especially with UI scale above 100%. Leave custom sizes alone.
             double restoredH = settings.SettingsWindowHeight;
             if (Math.Abs(restoredH - 780) < 0.5)
                 restoredH = 840;
-            this.Width = Math.Min(settings.SettingsWindowWidth, maxW);
-            this.Height = Math.Min(restoredH, maxH);
+            Width = Math.Min(settings.SettingsWindowWidth, maxW);
+            Height = Math.Min(restoredH, maxH);
         }
-
-        // Always center on the monitor under the cursor before clamping into the work area.
-        PopupWindowHelper.CenterOnCurrentScreen(this);
-        EnsureSettingsWindowFitsWorkArea();
-
-        if (settings.SettingsWindowState == (int)WindowState.Maximized)
+        else
         {
-            WindowState = WindowState.Maximized;
+            if (Width > maxW) Width = maxW;
+            if (Height > maxH) Height = maxH;
         }
+
+        // Defer Maximize until after physical centering so WM_GETMINMAXINFO uses the
+        // correct monitor after the DPI-aware move.
+        _openMaximized = settings.SettingsWindowState == (int)WindowState.Maximized;
     }
 
     private void SaveWindowBounds()
@@ -270,41 +332,25 @@ public partial class SettingsWindow : Window
         Marshal.StructureToPtr(mmi, lParam, true);
     }
 
-    private void EnsureSettingsWindowFitsWorkArea()
+    /// <summary>
+    /// Caps Width/Height to the open monitor's work area. Intentionally does NOT set
+    /// WPF Left/Top — on mixed-DPI those DIP writes pull the window into a corner.
+    /// Position is handled exclusively by <see cref="CenterOnOpenMonitor"/>.
+    /// </summary>
+    private void EnsureSettingsWindowSizeFitsWorkArea()
     {
-        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-        var screen = hwnd != IntPtr.Zero
-            ? System.Windows.Forms.Screen.FromHandle(hwnd)
-            : System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position);
-
-        if (hwnd == IntPtr.Zero)
-        {
-             var workArea = SystemParameters.WorkArea;
-             if (Left + 100 > workArea.Right || Left + Width - 100 < workArea.Left ||
-                 Top + 50 > workArea.Bottom || Top < workArea.Top)
-             {
-                 Left = workArea.Left + (workArea.Width - Width) / 2;
-                 Top = workArea.Top + (workArea.Height - Height) / 2;
-             }
-             return;
-        }
-
-        // Use same DIP conversion as CenterOnCurrentScreen for consistency.
-        var wa = PopupWindowHelper.ScreenWorkingAreaToDips(screen);
+        var wa = PopupWindowHelper.ScreenWorkingAreaToDips(
+            System.Windows.Forms.Screen.FromPoint(_openMonitorPoint));
 
         const double screenMargin = 12d;
-        var maxWidth = wa.Width - screenMargin * 2;
+        var maxWidth = Math.Max(MinWidth, wa.Width - screenMargin * 2);
+        var maxHeight = Math.Max(MinHeight, wa.Height - screenMargin * 2);
         MinWidth = Math.Min(MinWidth, maxWidth);
+        MinHeight = Math.Min(MinHeight, maxHeight);
         if (Width > maxWidth)
             Width = maxWidth;
-
-        var minLeft = wa.Left + screenMargin;
-        var minTop = wa.Top + screenMargin;
-        var maxLeft = wa.Right - Width - screenMargin;
-        var maxTop = wa.Bottom - Height - screenMargin;
-
-        Left = Math.Min(Math.Max(Left, minLeft), Math.Max(minLeft, maxLeft));
-        Top = Math.Min(Math.Max(Top, minTop), Math.Max(minTop, maxTop));
+        if (Height > maxHeight)
+            Height = maxHeight;
     }
 
     private void BackgroundRuntimeJobService_Changed(string key)
