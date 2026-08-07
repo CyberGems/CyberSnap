@@ -141,7 +141,16 @@ public sealed partial class RegionOverlayForm
                     CancelConfirmModesCollapse();
                     return;
                 }
-                // Permanent size pill (top-left) OR center move cross: dedicated drag handles for the capture frame.
+                // Options gear pill (top edge, next to size readout): opens the confirm context
+                // menu on click. Handled BEFORE the drag branch so clicking it never starts a
+                // frame drag.
+                if (!_confirmOptionsPillRect.IsEmpty && _confirmOptionsPillRect.Contains(e.Location))
+                {
+                    ShowConfirmContextMenu(e.Location);
+                    return;
+                }
+                // Permanent size pill drag / center move crossbar drag.
+                // ⚠ This branch is only for right-button primary?
                 if (HitTestConfirmSizeReadout(e.Location) || (!_centerMoveGripRect.IsEmpty && _centerMoveGripRect.Contains(e.Location)))
                 {
                     BeginConfirmFrameDrag(e.Location);

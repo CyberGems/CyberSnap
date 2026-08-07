@@ -158,6 +158,90 @@ internal static class SelectionSizeReadout
         g.SmoothingMode = oldSmoothing;
     }
 
+    /// <summary>Width of the small square "gear" pill pinned to the right of the size chip
+    /// in confirm mode. Contains the overflow/options menu trigger.</summary>
+    public static int ConfirmOptionsWidth(Font font)
+    {
+        int lineH = LineHeight(font);
+        return Math.Max(UiChrome.ScaleInt(24), lineH + PadY * 2 + UiChrome.ScaleInt(6));
+    }
+
+    /// <summary>
+    /// Confirm-mode options pill: sits to the right of the drag grip + size chip, at the same
+    /// top edge as those (so the whole chrome row reads as a single unit).
+    /// Returns the populated rect, or Rectangle.Empty if the layout couldn't fit.
+    /// </summary>
+    public static Rectangle GetConfirmOptionsBounds(
+        Rectangle selection,
+        Font font,
+        Rectangle clientBounds,
+        IReadOnlyList<Rectangle>? avoidRects = null,
+        bool showGrip = true)
+    {
+        if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2)
+            return Rectangle.Empty;
+
+        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out var pillRect, out _, out _))
+            return Rectangle.Empty;
+
+        if (pillRect.Width <= 0)
+            return Rectangle.Empty;
+
+        int w = ConfirmOptionsWidth(font);
+        int gap = UiChrome.ScaleInt(4);
+        var r = new Rectangle(pillRect.Right + gap, pillRect.Y, w, pillRect.Height);
+
+        // Don't float off-screen or collide with reserved chrome — only one right-anchored
+        // placement exists (the size chip is left-anchored), so if it doesn't fit, hide it.
+        if (r.Right > clientBounds.Right || r.X < clientBounds.Left)
+            return Rectangle.Empty;
+        if (HitsObstacle(r, avoidRects))
+            return Rectangle.Empty;
+
+        return r;
+    }
+
+    /// <summary>Paints the gear/options pill. No text — just the gear glyph centered.</summary>
+    public static void DrawConfirmOptions(
+        Graphics g,
+        Rectangle rect,
+        bool hovered,
+        bool active = false)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0)
+            return;
+
+        var accent = UiChrome.AccentColor;
+        float radius = Radius;
+
+        using (var shadowPath = WindowsDockRenderer.RoundedRect(
+                   new RectangleF(rect.X, rect.Y + 1.5f, rect.Width, rect.Height), radius))
+        using (var shadowBrush = new SolidBrush(Color.FromArgb(hovered || active ? 100 : 70, 0, 0, 0)))
+            g.FillPath(shadowBrush, shadowPath);
+
+        using (var path = WindowsDockRenderer.RoundedRect(rect, radius))
+        {
+            int bgA = hovered || active ? 240 : 225;
+            using var bg = new SolidBrush(Color.FromArgb(bgA, 18, 18, 20));
+            g.FillPath(bg, path);
+            using var border = new Pen(
+                Color.FromArgb(hovered || active ? 220 : 150, accent),
+                hovered || active ? 1.4f : 1f);
+            g.DrawPath(border, path);
+        }
+
+        // Centered gear glyph.
+        int iconSz = Math.Min(rect.Width, rect.Height) - UiChrome.ScaleInt(6);
+        if (iconSz < 10) iconSz = 10;
+        var iconRect = new RectangleF(
+            rect.X + (rect.Width - iconSz) / 2f,
+            rect.Y + (rect.Height - iconSz) / 2f,
+            iconSz, iconSz);
+        int iconA = hovered || active ? 255 : 220;
+        using var iconColor = new SolidBrush(Color.FromArgb(iconA, 230, 240, 255));
+        FluentIcons.DrawIcon(g, "gear", iconRect, iconColor.Color, iconInset: 0f);
+    }
+
     private static bool TryLayoutConfirmDragPill(
         Rectangle selection,
         Font font,

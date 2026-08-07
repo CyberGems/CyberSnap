@@ -163,6 +163,11 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _confirmSizeReadoutRect = Rectangle.Empty;
     private Rectangle _confirmSizeReadoutGripRect = Rectangle.Empty;
     private bool _hoveredConfirmSizeReadout;
+    /// <summary>Gear pill (opens the confirm context menu) sitting just right of the size chip.</summary>
+    private Rectangle _confirmOptionsPillRect = Rectangle.Empty;
+    private bool _hoveredConfirmOptionsPill;
+    /// <summary>Time when the pointer entered the gear pill — drives the hover-deploy delay.</summary>
+    private DateTime _confirmOptionsHoverStartUtc = DateTime.MinValue;
     private Rectangle _centerMoveGripRect = Rectangle.Empty;
     private bool _hoveredCenterMoveGrip;
     private float _centerMoveGripOpacity = 0f;
@@ -1643,6 +1648,9 @@ public sealed partial class RegionOverlayForm : Form
         {
             _confirmSizeReadoutRect = Rectangle.Empty;
             _confirmSizeReadoutGripRect = Rectangle.Empty;
+            _confirmOptionsPillRect = Rectangle.Empty;
+            _hoveredConfirmOptionsPill = false;
+            _confirmOptionsHoverStartUtc = DateTime.MinValue;
             // Erase any glow ghost before clearing the field.
             InvalidateCenterGripArea(_centerMoveGripRect);
             _centerMoveGripRect = Rectangle.Empty;
@@ -1661,6 +1669,13 @@ public sealed partial class RegionOverlayForm : Form
             showGrip);
 
         _confirmSizeReadoutGripRect = SelectionSizeReadout.GetConfirmDragGripBounds(
+            _confirmRect,
+            _readoutFont,
+            ClientRectangle,
+            GetConfirmReadoutAvoidRects(),
+            showGrip);
+
+        _confirmOptionsPillRect = SelectionSizeReadout.GetConfirmOptionsBounds(
             _confirmRect,
             _readoutFont,
             ClientRectangle,
