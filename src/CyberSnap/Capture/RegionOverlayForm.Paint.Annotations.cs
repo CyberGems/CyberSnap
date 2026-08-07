@@ -19,61 +19,74 @@ public sealed partial class RegionOverlayForm
     {
         var cursorPoint = GetLiveAnnotationCursorPoint();
 
-        // Active tool previews
-        if (_mode == CaptureMode.Blur && _isBlurring)
+        // Active stroke previews: clip to the locked frame in confirm mode so round caps
+        // and soft shadows can't paint over the dim veil into the annotation-dock gap.
+        // (Arrow hides most of that overflow via shaft inset; Line does not.)
+        var strokeState = g.Save();
+        try
         {
-            var pr = NormRect(_blurStart, cursorPoint);
-            if (pr.Width > 2 && pr.Height > 2)
-                PaintBlurRect(g, pr);
-        }
-        if (_mode == CaptureMode.Highlight && _isHighlighting)
-        {
-            var pr = NormRect(_highlightStart, cursorPoint);
-            if (pr.Width > 1 && pr.Height > 1)
-                SketchRenderer.DrawHighlightRect(g, pr, DefaultHighlightColor);
-        }
-        if (_mode == CaptureMode.RectShape && _isRectShapeDragging)
-        {
-            var pr = GetShapeRect(cursorPoint);
-            if (pr.Width > 1 && pr.Height > 1)
-                SketchRenderer.DrawRectShape(g, pr, _toolColor, AnnotationStrokeShadow, _strokeWidth);
-        }
-        if (_mode == CaptureMode.CircleShape && _isCircleShapeDragging)
-        {
-            var pr = GetShapeRect(cursorPoint);
-            if (pr.Width > 1 && pr.Height > 1)
-                SketchRenderer.DrawCircleShape(g, pr, _toolColor, AnnotationStrokeShadow, _strokeWidth);
-        }
-        if (_mode == CaptureMode.Line && _isLineDragging)
-        {
-            var lineEnd = GetConstrainedLineEnd(_lineStart, cursorPoint);
-            SketchRenderer.DrawLine(g, _lineStart, lineEnd, _toolColor, _lineStart.GetHashCode(), AnnotationStrokeShadow, _strokeWidth);
-        }
-        if (_mode == CaptureMode.Ruler && _isRulerDragging)
-        {
-            var cur = GetRulerEnd(cursorPoint);
-            PaintRuler(g, _rulerStart, cur);
-        }
-        if (_mode == CaptureMode.Arrow && _isArrowDragging)
-        {
-            var arrowEnd = GetConstrainedLineEnd(_arrowStart, cursorPoint);
-            SketchRenderer.DrawArrow(g, _arrowStart, arrowEnd, _toolColor, _arrowStart.GetHashCode(), strokeShadow: AnnotationStrokeShadow, strokeWidth: _strokeWidth);
-        }
-        if (_mode == CaptureMode.CurvedArrow && _isCurvedArrowDragging && _currentCurvedArrow is { Count: >= 2 })
-            SketchRenderer.DrawCurvedArrow(g, _currentCurvedArrow, _toolColor, 42, AnnotationStrokeShadow, _strokeWidth);
-        if (_mode == CaptureMode.Draw && _isSelecting && _currentStroke is { Count: >= 1 })
-        {
-            if ((ModifierKeys & Keys.Shift) != 0)
+            if (_isConfirmingSelection && _confirmRect.Width > 2 && _confirmRect.Height > 2)
+                g.SetClip(_confirmRect, CombineMode.Intersect);
+
+            if (_mode == CaptureMode.Blur && _isBlurring)
             {
-                var start = _currentStroke[0];
-                var end = GetConstrainedDrawPoint(cursorPoint);
-                if (start != end)
-                    SketchRenderer.DrawLine(g, start, end, _toolColor, start.GetHashCode(), AnnotationStrokeShadow, _strokeWidth);
+                var pr = NormRect(_blurStart, cursorPoint);
+                if (pr.Width > 2 && pr.Height > 2)
+                    PaintBlurRect(g, pr);
             }
-            else if (_currentStroke.Count >= 2)
+            if (_mode == CaptureMode.Highlight && _isHighlighting)
             {
-                SketchRenderer.DrawFreehandStroke(g, _currentStroke, _toolColor, 6f, AnnotationStrokeShadow);
+                var pr = NormRect(_highlightStart, cursorPoint);
+                if (pr.Width > 1 && pr.Height > 1)
+                    SketchRenderer.DrawHighlightRect(g, pr, DefaultHighlightColor);
             }
+            if (_mode == CaptureMode.RectShape && _isRectShapeDragging)
+            {
+                var pr = GetShapeRect(cursorPoint);
+                if (pr.Width > 1 && pr.Height > 1)
+                    SketchRenderer.DrawRectShape(g, pr, _toolColor, AnnotationStrokeShadow, _strokeWidth);
+            }
+            if (_mode == CaptureMode.CircleShape && _isCircleShapeDragging)
+            {
+                var pr = GetShapeRect(cursorPoint);
+                if (pr.Width > 1 && pr.Height > 1)
+                    SketchRenderer.DrawCircleShape(g, pr, _toolColor, AnnotationStrokeShadow, _strokeWidth);
+            }
+            if (_mode == CaptureMode.Line && _isLineDragging)
+            {
+                var lineEnd = GetConstrainedLineEnd(_lineStart, cursorPoint);
+                SketchRenderer.DrawLine(g, _lineStart, lineEnd, _toolColor, _lineStart.GetHashCode(), AnnotationStrokeShadow, _strokeWidth);
+            }
+            if (_mode == CaptureMode.Ruler && _isRulerDragging)
+            {
+                var cur = GetRulerEnd(cursorPoint);
+                PaintRuler(g, _rulerStart, cur);
+            }
+            if (_mode == CaptureMode.Arrow && _isArrowDragging)
+            {
+                var arrowEnd = GetConstrainedLineEnd(_arrowStart, cursorPoint);
+                SketchRenderer.DrawArrow(g, _arrowStart, arrowEnd, _toolColor, _arrowStart.GetHashCode(), strokeShadow: AnnotationStrokeShadow, strokeWidth: _strokeWidth);
+            }
+            if (_mode == CaptureMode.CurvedArrow && _isCurvedArrowDragging && _currentCurvedArrow is { Count: >= 2 })
+                SketchRenderer.DrawCurvedArrow(g, _currentCurvedArrow, _toolColor, 42, AnnotationStrokeShadow, _strokeWidth);
+            if (_mode == CaptureMode.Draw && _isSelecting && _currentStroke is { Count: >= 1 })
+            {
+                if ((ModifierKeys & Keys.Shift) != 0)
+                {
+                    var start = _currentStroke[0];
+                    var end = GetConstrainedDrawPoint(cursorPoint);
+                    if (start != end)
+                        SketchRenderer.DrawLine(g, start, end, _toolColor, start.GetHashCode(), AnnotationStrokeShadow, _strokeWidth);
+                }
+                else if (_currentStroke.Count >= 2)
+                {
+                    SketchRenderer.DrawFreehandStroke(g, _currentStroke, _toolColor, 6f, AnnotationStrokeShadow);
+                }
+            }
+        }
+        finally
+        {
+            g.Restore(strokeState);
         }
 
         // Active text input (TextBox is off-screen for input, we paint visually here)
