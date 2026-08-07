@@ -1103,7 +1103,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <controls:CyberSnapTitleBar x:Name="SettingsTitleBar" Grid.Row="0"
@@ -1119,7 +1118,7 @@
 
             <!-- Sidebar navigation: scroll when UiScale / DPI shrinks the frame below the tab list. -->
             <Border Grid.Column="0" BorderBrush="{DynamicResource ThemeSeparatorBrush}" BorderThickness="0,0,1,0"
-                    Padding="10,14,8,18">
+                    Padding="10,14,8,40">
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               CanContentScroll="False"
@@ -1260,7 +1259,7 @@
 
 
             <!-- Hotkeys (unified hotkeys + reset toolbar) -->
-            <ScrollViewer x:Name="HotkeysPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
+            <ScrollViewer x:Name="HotkeysPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <CheckBox x:Name="ShowToolNumberBadgesCheck" Visibility="Collapsed"
                               Checked="ShowToolNumberBadgesCheck_Changed" Unchecked="ShowToolNumberBadgesCheck_Changed"/>
@@ -1375,7 +1374,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <ScrollViewer x:Name="CapturePanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
+            <ScrollViewer x:Name="CapturePanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <!-- Hidden legacy controls kept for code references / persistence / search -->
                     <ComboBox x:Name="ToastPreviewClickActionCombo" Visibility="Collapsed">
@@ -1978,7 +1977,7 @@
             </ScrollViewer>
 
             <!-- Recording: Video & GIF -->
-            <ScrollViewer x:Name="RecordingPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,18">
+            <ScrollViewer x:Name="RecordingPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,44">
                 <StackPanel>
                     <TextBlock Text="Video recording (MP4)" Style="{StaticResource SectionLabel}"
                                Services:LocalizationService.SourceText="Video recording (MP4)"/>
@@ -2245,7 +2244,7 @@
             </ScrollViewer>
 
             <!-- OCR & Translation -->
-            <ScrollViewer x:Name="OcrPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
+            <ScrollViewer x:Name="OcrPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -2516,7 +2515,7 @@
             <!-- About panel placeholder - content is below -->
 
             <!-- Search Results Panel -->
-            <ScrollViewer x:Name="SearchResultsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
+            <ScrollViewer x:Name="SearchResultsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel x:Name="SearchResultsStack">
                     <TextBlock Text="Edit matched settings directly. Changes are saved automatically." 
                                Style="{StaticResource SettingDescription}" 
@@ -2531,7 +2530,7 @@
             <!-- We need to close and reopen for the General section -->
             <!-- H-scroll Disabled so rows measure against a finite width (Auto would measure
                  infinitely and let fixed ThemeCards overflow under high UiScale LayoutTransform). -->
-            <ScrollViewer x:Name="SettingsPanel" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
+            <ScrollViewer x:Name="SettingsPanel" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <TextBlock Text="Interface" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
@@ -3024,7 +3023,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <ScrollViewer x:Name="SoundsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
+            <ScrollViewer x:Name="SoundsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <TextBlock Text="Sounds" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
@@ -3067,7 +3066,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <ScrollViewer x:Name="WidgetPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
+            <ScrollViewer x:Name="WidgetPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <TextBlock Text="Floating Widget" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
@@ -3242,7 +3241,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <ScrollViewer x:Name="ToastPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,18">
+            <ScrollViewer x:Name="ToastPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,56,18,44">
                 <StackPanel>
                     <!-- 1) Visibility: master + which notification families can appear -->
                     <TextBlock Services:LocalizationService.SourceText="Visibility" Style="{StaticResource SectionLabel}"/>
@@ -3636,7 +3635,7 @@
             </ScrollViewer>
 
             <!-- Editor -->
-            <ScrollViewer x:Name="EditorPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,18">
+            <ScrollViewer x:Name="EditorPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,44">
                 <StackPanel>
                     <TextBlock Text="Appearance" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
@@ -3974,7 +3973,7 @@
             </ScrollViewer>
 
             <!-- Gallery -->
-            <ScrollViewer x:Name="HistoryPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,18">
+            <ScrollViewer x:Name="HistoryPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,44">
                 <StackPanel>
                     <TextBlock Text="Storage &amp; Retention" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
@@ -4180,7 +4179,7 @@
             </ScrollViewer>
 
             <!-- Uploads / Share -->
-            <ScrollViewer x:Name="UploadsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,18">
+            <ScrollViewer x:Name="UploadsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="18,56,18,44">
                 <StackPanel>
                     <!-- Browser-style chip sub-tabs (persisted last selection) -->
                     <Border Background="{DynamicResource ThemeCardBrush}"
@@ -5119,7 +5118,7 @@
             </ScrollViewer>
 
             <!-- Achievements / Logros -->
-            <ScrollViewer x:Name="AchievementsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24,56,24,24">
+            <ScrollViewer x:Name="AchievementsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24,56,24,44">
                 <StackPanel HorizontalAlignment="Stretch">
                     <!-- Each section is a self-contained card (header inside) so nothing floats on the
                          bare panel. Cards use the lighter ThemeCardBrush; inner tiles use the darker
@@ -5162,15 +5161,25 @@
             </Grid>
         </Grid>
 
-        <!-- Footer: version opens About. Hairline only — keep branding tight under it
-             so the padding zone doesn't read as a second opaque bar. -->
-        <Border Grid.Row="2"
-                BorderBrush="{DynamicResource ThemeSeparatorBrush}"
-                BorderThickness="0,1,0,0"
-                Background="Transparent"
-                Padding="12,5,12,6">
+        <!-- Hairline + branding overlaid on the body. A reserved footer Grid row
+             painted a full-width band under the line (the "invasive bar"); overlay
+             keeps only the divider and the About hit-target. No Background so empty
+             space beside the branding still passes clicks through to content. -->
+        <Grid Grid.Row="1"
+              VerticalAlignment="Bottom"
+              Panel.ZIndex="200">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0"
+                    Height="1"
+                    Background="{DynamicResource ThemeSeparatorBrush}"
+                    IsHitTestVisible="False"/>
             <StackPanel x:Name="SettingsAboutFooter"
+                        Grid.Row="1"
                         HorizontalAlignment="Center"
+                        Margin="0,5,0,6"
                         Cursor="Hand"
                         Background="Transparent"
                         ToolTip="Open About CyberSnap"
@@ -5193,7 +5202,7 @@
                            Opacity="0.55"
                            Margin="0,1,0,0"/>
             </StackPanel>
-        </Border>
+        </Grid>
     </Grid>
     </Border>
     </Border>
