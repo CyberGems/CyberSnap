@@ -580,6 +580,7 @@ public sealed partial class AnnotationCanvas
         switch (_activeTool)
         {
             case CanvasTool.Draw:
+                ClearMoveHoverHighlight();
                 _currentStroke = new List<Point> { img };
                 _isDragging = true;
                 Invalidate();
@@ -590,6 +591,7 @@ public sealed partial class AnnotationCanvas
             case CanvasTool.Circle:
             case CanvasTool.Highlight:
             case CanvasTool.Blur:
+                ClearMoveHoverHighlight();
                 _dragStartImg = img;
                 _dragLastImg = img;
                 _isDragging = true;
@@ -599,6 +601,7 @@ public sealed partial class AnnotationCanvas
                 TryEraseAnnotationAt(img);
                 break;
             case CanvasTool.CurvedArrow:
+                ClearMoveHoverHighlight();
                 _currentStroke = new List<Point> { img };
                 _isDragging = true;
                 Invalidate();
@@ -1514,6 +1517,18 @@ public sealed partial class AnnotationCanvas
             Invalidate();
 
         UpdateCursor();
+    }
+
+    /// <summary>
+    /// Drops hover chrome immediately. Call when a new draw drag starts so another
+    /// object's dashed box / move glyph cannot linger over the live preview.
+    /// </summary>
+    private void ClearMoveHoverHighlight()
+    {
+        if (_moveHoverIndex < 0)
+            return;
+        _moveHoverIndex = -1;
+        Invalidate();
     }
 
     private void UpdateEraserHover(Point img)

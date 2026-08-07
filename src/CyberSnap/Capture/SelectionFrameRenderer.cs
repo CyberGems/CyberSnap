@@ -117,9 +117,12 @@ internal static class SelectionFrameRenderer
         Color bracketAccent = Color.FromArgb(0x00, 0xFF, 0xFF); // #00FFFF — matches the widget capture icon cyan
 
         // One crisp bracket pass — no behind-glow L (that read as extra corner chrome).
+        // Flat caps on two separate DrawLines leave a bite at the outer corner; a single
+        // polyline with Miter join keeps the escuadra sealed.
         using (var cornerPen = new Pen(Color.FromArgb(edgeAlpha, bracketAccent), cornerPenWidth)
         {
             LineJoin = LineJoin.Miter,
+            MiterLimit = 2.5f,
             StartCap = LineCap.Flat,
             EndCap = LineCap.Flat
         })
@@ -148,18 +151,27 @@ internal static class SelectionFrameRenderer
 
     private static void DrawCornerBrackets(Graphics g, float x0, float y0, float x1, float y1, float len, Pen pen)
     {
-        // Top-left
-        g.DrawLine(pen, x0, y0, x0 + len, y0);
-        g.DrawLine(pen, x0, y0, x0, y0 + len);
-        // Top-right
-        g.DrawLine(pen, x1, y0, x1 - len, y0);
-        g.DrawLine(pen, x1, y0, x1, y0 + len);
-        // Bottom-left
-        g.DrawLine(pen, x0, y1, x0 + len, y1);
-        g.DrawLine(pen, x0, y1, x0, y1 - len);
-        // Bottom-right
-        g.DrawLine(pen, x1, y1, x1 - len, y1);
-        g.DrawLine(pen, x1, y1, x1, y1 - len);
+        // Each L is one polyline through the outer corner so the join fills the escuadra tip.
+        DrawBracketL(g, pen, x0 + len, y0, x0, y0, x0, y0 + len); // top-left
+        DrawBracketL(g, pen, x1 - len, y0, x1, y0, x1, y0 + len); // top-right
+        DrawBracketL(g, pen, x0 + len, y1, x0, y1, x0, y1 - len); // bottom-left
+        DrawBracketL(g, pen, x1 - len, y1, x1, y1, x1, y1 - len); // bottom-right
+    }
+
+    private static void DrawBracketL(
+        Graphics g, Pen pen,
+        float armAx, float armAy,
+        float cornerX, float cornerY,
+        float armBx, float armBy)
+    {
+        using var path = new GraphicsPath();
+        path.AddLines(new[]
+        {
+            new PointF(armAx, armAy),
+            new PointF(cornerX, cornerY),
+            new PointF(armBx, armBy)
+        });
+        g.DrawPath(pen, path);
     }
 
     /// <summary>

@@ -725,6 +725,9 @@ public sealed partial class RegionOverlayForm
         // Any tool action (drag or click) dismisses the help banner so it never sits over the work.
         // Short animated fade with region-scoped invalidate; switch to HideToolBannerImmediate if glitchy.
         HideToolBanner();
+        // Starting a new draw/place must drop hover chrome immediately — otherwise the dashed
+        // box + move glyph stay on screen (or ghost) while the live preview paints elsewhere.
+        ClearMoveHoverHighlight();
         switch (_mode)
         {
             case CaptureMode.Rectangle:
