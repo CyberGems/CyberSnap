@@ -187,6 +187,7 @@ public sealed partial class RegionOverlayForm
             _lastContextMenuClosedTime = DateTime.UtcNow;
             _lastContextMenuBtnIndex = buttonIndex;
             _toolbarContextMenu = null;
+            _confirmOptionsMenuHoverSession = false;
         };
 
         // Compute hidden tools early — needed for header separators and Restore item below
@@ -389,13 +390,83 @@ public sealed partial class RegionOverlayForm
 
         var screenPoint = PointToScreen(clickLocation);
 
-        // When triggered from the menu activator (... button), anchor the menu at
-        // the right edge so it never covers the button — regardless of where inside
-        // the activator the user clicked.
-        if (buttonIndex == -1 && _menuActivatorRect.Contains(clickLocation))
-            screenPoint = PointToScreen(new Point(_menuActivatorRect.Right, _menuActivatorRect.Top));
+        // Anchor just outside the activator / confirm gear so the menu never covers the button.
+        if (buttonIndex == -1)
+        {
+            if (!_menuActivatorRect.IsEmpty && _menuActivatorRect.Contains(clickLocation))
+                screenPoint = PointToScreen(new Point(_menuActivatorRect.Right, _menuActivatorRect.Top));
+            else if (!_confirmOptionsPillRect.IsEmpty
+                     && (_confirmOptionsPillRect.Contains(clickLocation)
+                         || (clickLocation.X == _confirmOptionsPillRect.Right
+                             && clickLocation.Y == _confirmOptionsPillRect.Top)))
+                screenPoint = PointToScreen(new Point(_confirmOptionsPillRect.Right, _confirmOptionsPillRect.Top));
+        }
 
         menu.Show(screenPoint);
+    }
+
+    /// <summary>
+    /// Opens the shared overflow menu from the confirm-frame gear pill (same content as the
+    /// capture-bar ⋯ activator / former confirm-dock More button). Hover-owned: closes when
+    /// the pointer leaves both the gear and the menu.
+    /// </summary>
+    private void OpenConfirmOptionsMenu(Point clickLocation)
+    {
+        HideToolbarTooltip();
+        bool recentlyClosedMenu = (DateTime.UtcNow - _lastContextMenuClosedTime).TotalMilliseconds < 250;
+        if (recentlyClosedMenu && _lastContextMenuBtnIndex == -1)
+            return;
+
+        Point anchor = clickLocation;
+        if (!_confirmOptionsPillRect.IsEmpty)
+            anchor = new Point(_confirmOptionsPillRect.Right, _confirmOptionsPillRect.Top);
+
+        _confirmOptionsMenuHoverSession = true;
+        ShowToolbarContextMenu(-1, anchor);
+    }
+
+    /// <summary>
+    /// Gear overflow is hover-owned (like merged alt pills): dismiss when the pointer is
+    /// neither over the gear nor the open menu, with a short bridge so travel doesn't flicker.
+    /// </summary>
+    private void CloseConfirmOptionsMenuIfPointerLeft()
+    {
+        if (!_confirmOptionsMenuHoverSession)
+            return;
+
+        var menu = _toolbarContextMenu;
+        if (menu is not { Visible: true })
+        {
+            _confirmOptionsMenuHoverSession = false;
+            return;
+        }
+
+        Point screen;
+        try { screen = System.Windows.Forms.Cursor.Position; }
+        catch { return; }
+
+        bool overMenu = menu.Bounds.Contains(screen);
+        Point client;
+        try { client = PointToClient(screen); }
+        catch { return; }
+
+        bool overGear = !_confirmOptionsPillRect.IsEmpty && _confirmOptionsPillRect.Contains(client);
+        if (overMenu || overGear)
+            return;
+
+        // Grace pads so the short hop from gear → menu doesn't dismiss mid-travel.
+        if (!_confirmOptionsPillRect.IsEmpty)
+        {
+            var gearGrace = RectangleToScreen(_confirmOptionsPillRect);
+            gearGrace.Inflate(UiChrome.ScaleInt(18), UiChrome.ScaleInt(18));
+            var menuGrace = menu.Bounds;
+            menuGrace.Inflate(UiChrome.ScaleInt(10), UiChrome.ScaleInt(10));
+            if (gearGrace.Contains(screen) || menuGrace.Contains(screen))
+                return;
+        }
+
+        menu.Close();
+        _confirmOptionsMenuHoverSession = false;
     }
 
     private static void AddMenuSeparatorIfNeeded(ContextMenuStrip menu)

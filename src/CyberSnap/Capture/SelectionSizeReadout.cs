@@ -167,8 +167,9 @@ internal static class SelectionSizeReadout
     }
 
     /// <summary>
-    /// Confirm-mode options pill: sits to the right of the drag grip + size chip, at the same
-    /// top edge as those (so the whole chrome row reads as a single unit).
+    /// Confirm-mode options pill: sits beside the drag grip + size chip, at the same top edge.
+    /// Prefers the right of the size chip; falls back to the left of the grip when the right
+    /// side would collide with dock chrome / shadow.
     /// Returns the populated rect, or Rectangle.Empty if the layout couldn't fit.
     /// </summary>
     public static Rectangle GetConfirmOptionsBounds(
@@ -181,7 +182,7 @@ internal static class SelectionSizeReadout
         if (!ShowDimensions || selection.Width <= 2 || selection.Height <= 2)
             return Rectangle.Empty;
 
-        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out var pillRect, out _, out _))
+        if (!TryLayoutConfirmDragPill(selection, font, clientBounds, avoidRects, showGrip, out var pillRect, out var gripRect, out _))
             return Rectangle.Empty;
 
         if (pillRect.Width <= 0)
@@ -189,16 +190,25 @@ internal static class SelectionSizeReadout
 
         int w = ConfirmOptionsWidth(font);
         int gap = UiChrome.ScaleInt(4);
-        var r = new Rectangle(pillRect.Right + gap, pillRect.Y, w, pillRect.Height);
+        int h = pillRect.Height;
+        int y = pillRect.Y;
 
-        // Don't float off-screen or collide with reserved chrome — only one right-anchored
-        // placement exists (the size chip is left-anchored), so if it doesn't fit, hide it.
-        if (r.Right > clientBounds.Right || r.X < clientBounds.Left)
-            return Rectangle.Empty;
-        if (HitsObstacle(r, avoidRects))
-            return Rectangle.Empty;
+        var right = new Rectangle(pillRect.Right + gap, y, w, h);
+        int unitLeft = !gripRect.IsEmpty ? gripRect.X : pillRect.X;
+        var left = new Rectangle(unitLeft - gap - w, y, w, h);
 
-        return r;
+        foreach (var candidate in new[] { right, left })
+        {
+            if (candidate.Right > clientBounds.Right || candidate.X < clientBounds.Left)
+                continue;
+            if (candidate.Bottom > clientBounds.Bottom || candidate.Y < clientBounds.Top)
+                continue;
+            if (HitsObstacle(candidate, avoidRects))
+                continue;
+            return candidate;
+        }
+
+        return Rectangle.Empty;
     }
 
     /// <summary>Paints the gear/options pill. No text — just the gear glyph centered.</summary>

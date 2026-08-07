@@ -371,7 +371,7 @@ public sealed partial class RegionOverlayForm
             // the right edge with fewer pixels in between.
             if (!_confirmOptionsPillRect.IsEmpty)
             {
-                bool gearActive = _confirmContextMenu?.Visible == true;
+                bool gearActive = _toolbarContextMenu?.Visible == true;
                 SelectionSizeReadout.DrawConfirmOptions(
                     g,
                     _confirmOptionsPillRect,
@@ -627,19 +627,6 @@ public sealed partial class RegionOverlayForm
             : (kind == ConfirmChromeKind.Done ? Color.FromArgb(34, 197, 94) : UiChrome.SurfaceTextPrimary);
 
         float baseAlphaFactor = 0.25f + 0.75f * opacity;
-        if (kind == ConfirmChromeKind.More)
-        {
-            if (hover)
-            {
-                baseIconColor = UiChrome.AccentColor;
-                baseAlphaFactor = 1f;
-            }
-            else
-            {
-                baseAlphaFactor = UiChrome.IsDark ? 0.28f : 0.32f;
-            }
-        }
-
         Color iconColor = Color.FromArgb((int)(255 * baseAlphaFactor), baseIconColor);
 
         if (useFluent)

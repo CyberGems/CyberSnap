@@ -521,73 +521,73 @@ public sealed partial class RegionOverlayForm
 
         g.Clip = previousClip;
 
-        // Draw menu activator (⋮). Soft accent pulse while the quick-start guide is open.
-        // Pulse phase 0→1→0 over ~1.1s; driven by StartMenuActivatorPulse → UpdateToolbarSurfaceOnly.
-        float guidePulse = 0f;
-        if (_highlightMenuActivatorForGuide)
+        // Draw menu activator (⋮) — capture bar only. Confirm-phase overflow is the gear pill.
+        if (!_menuActivatorRect.IsEmpty)
         {
-            double secs = (DateTime.UtcNow - _menuActivatorPulseStart).TotalSeconds;
-            // 0..1..0 triangle-ish via absolute sine for a clear bright/dim beat.
-            guidePulse = Math.Abs((float)Math.Sin(secs * Math.PI * 2.0 / 1.1));
-        }
-
-        bool activatorHot = _hoveredMenuActivator || _highlightMenuActivatorForGuide;
-        if (activatorHot)
-        {
-            int fillA = _highlightMenuActivatorForGuide
-                ? (int)(50 + 90 * guidePulse)
-                : 30;
-            var glowRect = _highlightMenuActivatorForGuide
-                ? Rectangle.Inflate(_menuActivatorRect, UiChrome.ScaleInt(3), UiChrome.ScaleInt(3))
-                : _menuActivatorRect;
-            using (var path = WindowsDockRenderer.RoundedRect(glowRect, UiChrome.ScaleInt(4)))
-            using (var brush = new SolidBrush(Color.FromArgb(fillA, UiChrome.AccentColor)))
-                g.FillPath(brush, path);
-
+            // Soft accent pulse while the quick-start guide is open.
+            // Pulse phase 0→1→0 over ~1.1s; driven by StartMenuActivatorPulse → UpdateToolbarSurfaceOnly.
+            float guidePulse = 0f;
             if (_highlightMenuActivatorForGuide)
             {
-                int ringA = (int)(110 + 120 * guidePulse);
-                using var ring = new Pen(Color.FromArgb(ringA, UiChrome.AccentColor), 1.6f);
-                using var path = WindowsDockRenderer.RoundedRect(glowRect, UiChrome.ScaleInt(4));
-                g.DrawPath(ring, path);
+                double secs = (DateTime.UtcNow - _menuActivatorPulseStart).TotalSeconds;
+                // 0..1..0 triangle-ish via absolute sine for a clear bright/dim beat.
+                guidePulse = Math.Abs((float)Math.Sin(secs * Math.PI * 2.0 / 1.1));
             }
-        }
 
-        Color dotsColor;
-        if (_highlightMenuActivatorForGuide)
-        {
-            int a = (int)(200 + 55 * guidePulse);
-            dotsColor = Color.FromArgb(a, UiChrome.AccentColor);
-        }
-        else if (_hoveredMenuActivator)
-        {
-            dotsColor = UiChrome.AccentColor;
-        }
-        else
-        {
-            float baseAlpha = (UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f;
-            if (ShowAnnotationChrome)
+            bool activatorHot = _hoveredMenuActivator || _highlightMenuActivatorForGuide;
+            if (activatorHot)
             {
-                baseAlpha = UiChrome.IsDark ? 0.22f : 0.26f;
+                int fillA = _highlightMenuActivatorForGuide
+                    ? (int)(50 + 90 * guidePulse)
+                    : 30;
+                var glowRect = _highlightMenuActivatorForGuide
+                    ? Rectangle.Inflate(_menuActivatorRect, UiChrome.ScaleInt(3), UiChrome.ScaleInt(3))
+                    : _menuActivatorRect;
+                using (var path = WindowsDockRenderer.RoundedRect(glowRect, UiChrome.ScaleInt(4)))
+                using (var brush = new SolidBrush(Color.FromArgb(fillA, UiChrome.AccentColor)))
+                    g.FillPath(brush, path);
+
+                if (_highlightMenuActivatorForGuide)
+                {
+                    int ringA = (int)(110 + 120 * guidePulse);
+                    using var ring = new Pen(Color.FromArgb(ringA, UiChrome.AccentColor), 1.6f);
+                    using var path = WindowsDockRenderer.RoundedRect(glowRect, UiChrome.ScaleInt(4));
+                    g.DrawPath(ring, path);
+                }
             }
-            dotsColor = Color.FromArgb((int)(baseAlpha * 255), UiChrome.SurfaceTextPrimary);
-        }
 
-        // Kebab dots — orientation follows the activator's hit-target shape: the annotation
-        // column uses a wide/short target (horizontal ⋯), the capture bar a narrow/tall one
-        // (vertical ⋮). Drawing code is shared, so pick the axis from the rect.
-        float tcx = _menuActivatorRect.X + _menuActivatorRect.Width / 2f;
-        float tcy = _menuActivatorRect.Y + _menuActivatorRect.Height / 2f;
-        float dotR = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 1.7f : 1.45f);
-        float gap = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 5.6f : 5.2f);
-        bool horizontalDots = _menuActivatorRect.Width >= _menuActivatorRect.Height;
-        using (var brush = new SolidBrush(dotsColor))
-        {
-            for (int i = -1; i <= 1; i++)
+            Color dotsColor;
+            if (_highlightMenuActivatorForGuide)
             {
-                float cx = horizontalDots ? tcx + i * gap : tcx;
-                float cy = horizontalDots ? tcy : tcy + i * gap;
-                g.FillEllipse(brush, cx - dotR, cy - dotR, dotR * 2f, dotR * 2f);
+                int a = (int)(200 + 55 * guidePulse);
+                dotsColor = Color.FromArgb(a, UiChrome.AccentColor);
+            }
+            else if (_hoveredMenuActivator)
+            {
+                dotsColor = UiChrome.AccentColor;
+            }
+            else
+            {
+                float baseAlpha = (UiChrome.IsDark ? 0.35f : 0.40f) * 0.80f;
+                dotsColor = Color.FromArgb((int)(baseAlpha * 255), UiChrome.SurfaceTextPrimary);
+            }
+
+            // Kebab dots — orientation follows the activator's hit-target shape: capture
+            // horizontal dock uses a narrow/tall target (vertical ⋮); vertical dock uses a
+            // wide/short one (horizontal ⋯).
+            float tcx = _menuActivatorRect.X + _menuActivatorRect.Width / 2f;
+            float tcy = _menuActivatorRect.Y + _menuActivatorRect.Height / 2f;
+            float dotR = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 1.7f : 1.45f);
+            float gap = UiChrome.ScaleFloat(_highlightMenuActivatorForGuide ? 5.6f : 5.2f);
+            bool horizontalDots = _menuActivatorRect.Width >= _menuActivatorRect.Height;
+            using (var brush = new SolidBrush(dotsColor))
+            {
+                for (int i = -1; i <= 1; i++)
+                {
+                    float cx = horizontalDots ? tcx + i * gap : tcx;
+                    float cy = horizontalDots ? tcy : tcy + i * gap;
+                    g.FillEllipse(brush, cx - dotR, cy - dotR, dotR * 2f, dotR * 2f);
+                }
             }
         }
 
