@@ -82,13 +82,14 @@ public sealed partial class RegionOverlayForm : Form
     private readonly float[] _shineMain = new float[ConfirmShineSlots]; // primary comet intensity
     private readonly float[] _shineDup = new float[ConfirmShineSlots];  // duplicate comet intensity (hover)
 
-    // Confirm chrome: Cancel / Retry / modes (built in RebuildConfirmChrome)
-    private enum ConfirmChromeKind { Cancel, Retry, Done, TogglePreview, ModeImage, ModeOcr, ModeVideo, ModeGif, ModeScroll, ModeQr, More }
+    // Confirm chrome: Cancel / Retry / modes (built in RebuildConfirmChrome).
+    // Overflow / "More options" lives on the top-edge gear pill, not on this dock.
+    private enum ConfirmChromeKind { Cancel, Retry, Done, TogglePreview, ModeImage, ModeOcr, ModeVideo, ModeGif, ModeScroll, ModeQr }
     private ConfirmChromeKind[] _confirmChromeKinds =
     {
         ConfirmChromeKind.ModeQr, ConfirmChromeKind.ModeScroll, ConfirmChromeKind.ModeGif,
         ConfirmChromeKind.ModeVideo, ConfirmChromeKind.ModeOcr, ConfirmChromeKind.ModeImage,
-        ConfirmChromeKind.TogglePreview, ConfirmChromeKind.Retry, ConfirmChromeKind.Cancel, ConfirmChromeKind.Done, ConfirmChromeKind.More
+        ConfirmChromeKind.TogglePreview, ConfirmChromeKind.Retry, ConfirmChromeKind.Cancel, ConfirmChromeKind.Done
     };
     private Rectangle[] _confirmChromeRects = Array.Empty<Rectangle>();
     /// <summary>Thin divider between fixed Cancel/Retry and destination pills (empty when unused).</summary>
@@ -163,11 +164,13 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _confirmSizeReadoutRect = Rectangle.Empty;
     private Rectangle _confirmSizeReadoutGripRect = Rectangle.Empty;
     private bool _hoveredConfirmSizeReadout;
-    /// <summary>Gear pill (opens the confirm context menu) sitting just right of the size chip.</summary>
+    /// <summary>Gear pill (opens the confirm overflow menu) sitting beside the size chip.</summary>
     private Rectangle _confirmOptionsPillRect = Rectangle.Empty;
     private bool _hoveredConfirmOptionsPill;
     /// <summary>Time when the pointer entered the gear pill — drives the hover-deploy delay.</summary>
     private DateTime _confirmOptionsHoverStartUtc = DateTime.MinValue;
+    /// <summary>True while the overflow menu was opened from the confirm gear (closes on pointer leave).</summary>
+    private bool _confirmOptionsMenuHoverSession;
     private Rectangle _centerMoveGripRect = Rectangle.Empty;
     private bool _hoveredCenterMoveGrip;
     private float _centerMoveGripOpacity = 0f;
@@ -987,17 +990,15 @@ public sealed partial class RegionOverlayForm : Form
 
     /// <summary>
     /// Confirm-phase dock: vertical annotation column anchored to the capture frame
-    /// (prefer right edge, flip to left when there is no room). No Position/Close.
-    /// Collapsed: grip, logo, active tool (trigger), color, stroke, eraser, select, ⋯.
+    /// (prefer right edge, flip to left when there is no room). No Position/Close/⋯ —
+    /// overflow options live on the top-edge gear pill beside the size readout.
+    /// Collapsed: grip, logo, active tool (trigger), color, stroke, eraser, select.
     /// Expanded: remaining tools grow upward above the sticky cluster (bottom-flush / escuadra).
     /// </summary>
     private void CalcAnnotationOnlyToolbar(Rectangle screenBounds, int pad, int buttonSize, int buttonSpacing)
     {
-        int activatorW = buttonSize;
-        int activatorH = UiChrome.ScaleInt(14);
         int brandStripH = UiChrome.ScaleInt(22);
         int gapBrandToTools = UiChrome.ScaleInt(4);
-        int gapToolsToActivator = buttonSpacing;
 
         int gripH = UiChrome.ScaleInt(12);
         int gripToContentGap = UiChrome.ScaleInt(14);
@@ -1056,7 +1057,7 @@ public sealed partial class RegionOverlayForm : Form
         int brandToTriggerExtra = retractSpan <= 0 ? gapBrandToActiveTrigger : 0;
         int toolsSpan = retractSpan + retractToStickyGap + stickySpan + brandToTriggerExtra;
         int w = pad * 2 + buttonSize;
-        int h = pad + gripH + gripToContentGap + brandStripH + gapBrandToTools + toolsSpan + gapToolsToActivator + activatorH + pad;
+        int h = pad + gripH + gripToContentGap + brandStripH + gapBrandToTools + toolsSpan + pad;
 
         AllocateToolbarButtonMetadata();
 
@@ -1177,8 +1178,9 @@ public sealed partial class RegionOverlayForm : Form
         PlacePinnedUtility("eraser");
         PlacePinnedUtility("select");
 
-        int actY = Math.Min(cy, _toolbarRect.Bottom - pad - activatorH);
-        _menuActivatorRect = new Rectangle(colX, actY, activatorW, activatorH);
+        // Overflow menu moved to the confirm-frame gear pill — keep activator empty here
+        // so capture-phase CalcCaptureOnlyToolbar remains the only place that paints ⋯.
+        _menuActivatorRect = Rectangle.Empty;
 
         // Host covers the fully expanded column (bottom-aligned). Form bounds stay put while
         // _toolbarRect / reveal clip animate or snap — avoids layered-window ghosting at 150% DPI.
@@ -1186,7 +1188,7 @@ public sealed partial class RegionOverlayForm : Form
             + ((fullRetractContent > 0 && stickySpan > 0) ? GroupGap : 0)
             + stickySpan;
         int fullH = pad + gripH + gripToContentGap + brandStripH + gapBrandToTools
-            + fullToolsSpan + gapToolsToActivator + activatorH + pad;
+            + fullToolsSpan + pad;
         int hostBottom = frame.Bottom + _toolbarCustomOffset.Y;
         int hostY = hostBottom - fullH;
         int hostMinY = clampBounds.Top + edgePad;
@@ -2256,8 +2258,33 @@ public sealed partial class RegionOverlayForm : Form
             changed = true;
         }
 
+        // 1c. Confirm gear overflow: dismiss when the pointer leaves gear + menu
+        // (polled here too — ToolStripDropDown doesn't raise overlay MouseMove while over the menu).
+        if (_confirmOptionsMenuHoverSession)
+            CloseConfirmOptionsMenuIfPointerLeft();
+
         // 2. Tooltip delay and auto-hide check
-        if (_isConfirmingSelection && _hoveredConfirmButton >= 0)
+        if (_isConfirmingSelection && _hoveredConfirmOptionsPill)
+        {
+            if (!_tooltipVisible && !_tooltipDismissed)
+            {
+                if (_hoverButtonStartTime != DateTime.MinValue)
+                {
+                    if ((DateTime.UtcNow - _hoverButtonStartTime).TotalMilliseconds >= 450)
+                        ShowConfirmOptionsTooltip();
+                }
+                else
+                {
+                    _hoverButtonStartTime = DateTime.UtcNow;
+                }
+            }
+            else if (_tooltipVisible && _tooltipButton == 997)
+            {
+                if (_tooltipShowTime != DateTime.MinValue && (DateTime.UtcNow - _tooltipShowTime).TotalMilliseconds >= 5000)
+                    HideToolbarTooltip();
+            }
+        }
+        else if (_isConfirmingSelection && _hoveredConfirmButton >= 0)
         {
             if (!_tooltipVisible && !_tooltipDismissed)
             {

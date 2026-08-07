@@ -441,7 +441,14 @@ public sealed partial class RegionOverlayForm
         if (!_confirmChromeWrapperRect.IsEmpty)
             list.Add(_confirmChromeWrapperRect);
         if (ShowAnnotationChrome && _toolbarRect.Width > 0)
-            list.Add(_toolbarRect);
+        {
+            // PaintShadow bleeds ~6–10dip past the dock plate; the layered ToolbarForm composites
+            // that alpha on top of overlay chrome. Inflate so size/gear pills stay clear of it
+            // (without this, only the gear — further toward the dock — looks "eaten" by a ghost shadow).
+            var dockAvoid = _toolbarRect;
+            dockAvoid.Inflate(UiChrome.ScaleInt(16), UiChrome.ScaleInt(16));
+            list.Add(dockAvoid);
+        }
         return list.Count > 0 ? list : null;
     }
 
@@ -1932,8 +1939,7 @@ public sealed partial class RegionOverlayForm
             ConfirmChromeKind.TogglePreview,
             ConfirmChromeKind.Retry,
             ConfirmChromeKind.Cancel,
-            ConfirmChromeKind.Done,
-            ConfirmChromeKind.More
+            ConfirmChromeKind.Done
         };
         _confirmChromeRects = new Rectangle[_confirmChromeKinds.Length];
         _confirmChromeLayoutDirty = true;
@@ -1998,7 +2004,6 @@ public sealed partial class RegionOverlayForm
         ConfirmChromeKind.ModeGif => "recordGif",
         ConfirmChromeKind.ModeScroll => "scrollCapture",
         ConfirmChromeKind.ModeQr => "scan",
-        ConfirmChromeKind.More => "moreVertical",
         _ => null
     };
 
@@ -2014,7 +2019,6 @@ public sealed partial class RegionOverlayForm
         ConfirmChromeKind.ModeGif => "GIF",
         ConfirmChromeKind.ModeScroll => LocalizationService.Translate("Scroll"),
         ConfirmChromeKind.ModeQr => "QR",
-        ConfirmChromeKind.More => "",
         _ => ""
     };
 
@@ -2030,7 +2034,6 @@ public sealed partial class RegionOverlayForm
         ConfirmChromeKind.ModeGif => LocalizationService.Translate("Record GIF"),
         ConfirmChromeKind.ModeScroll => LocalizationService.Translate("Scrolling Capture"),
         ConfirmChromeKind.ModeQr => LocalizationService.Translate("Scan QR & Barcode"),
-        ConfirmChromeKind.More => LocalizationService.Translate("More options"),
         _ => kind.ToString()
     };
 
@@ -2046,13 +2049,12 @@ public sealed partial class RegionOverlayForm
         ConfirmChromeKind.ModeGif => "G",
         ConfirmChromeKind.ModeScroll => "S",
         ConfirmChromeKind.ModeQr => "Q",
-        ConfirmChromeKind.More => "",
         _ => ""
     };
 
     private bool ConfirmChromeIsIconOnly(ConfirmChromeKind kind)
     {
-        if (kind is ConfirmChromeKind.Cancel or ConfirmChromeKind.Retry or ConfirmChromeKind.More)
+        if (kind is ConfirmChromeKind.Cancel or ConfirmChromeKind.Retry)
             return true;
         if (kind == ConfirmChromeKind.TogglePreview)
             return false;
@@ -2384,19 +2386,6 @@ public sealed partial class RegionOverlayForm
                 break;
             case ConfirmChromeKind.ModeQr:
                 ScanRegionSelected?.Invoke(_confirmRect);
-                break;
-            case ConfirmChromeKind.More:
-                if (button >= 0 && button < _confirmChromeRects.Length)
-                {
-                    bool recentlyClosedMenu = (DateTime.UtcNow - _lastContextMenuClosedTime).TotalMilliseconds < 250;
-                    if (recentlyClosedMenu && _lastContextMenuBtnIndex == -1)
-                    {
-                        break;
-                    }
-                    var rect = _confirmChromeRects[button];
-                    var btnLocation = new Point(rect.Right, rect.Top);
-                    ShowToolbarContextMenu(-1, btnLocation);
-                }
                 break;
         }
     }

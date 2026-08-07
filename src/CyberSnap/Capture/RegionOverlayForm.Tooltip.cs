@@ -122,8 +122,8 @@ public sealed partial class RegionOverlayForm
             return;
         }
 
-        // Menu activator (⋮ more options)
-        if (_hoveredMenuActivator)
+        // Menu activator (⋮ more options) — capture bar only
+        if (_hoveredMenuActivator && !_menuActivatorRect.IsEmpty)
         {
             if (_tooltipButton == 998)
                 return;
@@ -383,6 +383,33 @@ public sealed partial class RegionOverlayForm
 
         // Confirm dock is horizontal under the frame — keep tips above the pills.
         _toolbarToolTip.ShowNear(this, text, anchorScreen, ToolTipPlacement.Above);
+        _tooltipVisible = true;
+        _tooltipShowTime = DateTime.UtcNow;
+    }
+
+    private void ShowConfirmOptionsTooltip()
+    {
+        if (!_isConfirmingSelection || !_hoveredConfirmOptionsPill || _confirmOptionsPillRect.IsEmpty
+            || (_confirmContextMenu != null && _confirmContextMenu.Visible)
+            || (_toolbarContextMenu != null && _toolbarContextMenu.Visible))
+        {
+            HideToolbarTooltip();
+            return;
+        }
+
+        if (_tooltipButton == 997)
+            return;
+
+        _tooltipButton = 997;
+        _toolbarToolTip ??= new WindowsToolTip();
+        var text = LocalizationService.Translate("More options")
+            + "\n" + LocalizationService.Translate("Hidden tools, preferences, and quick start guide");
+        var anchorScreen = new Rectangle(
+            _virtualBounds.X + _confirmOptionsPillRect.X,
+            _virtualBounds.Y + _confirmOptionsPillRect.Y,
+            _confirmOptionsPillRect.Width,
+            _confirmOptionsPillRect.Height);
+        _toolbarToolTip.ShowNear(this, text, anchorScreen, ToolTipPlacement.Below);
         _tooltipVisible = true;
         _tooltipShowTime = DateTime.UtcNow;
     }
