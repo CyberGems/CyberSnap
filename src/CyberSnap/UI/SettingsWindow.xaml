@@ -5162,13 +5162,13 @@
             </Grid>
         </Grid>
 
-        <!-- Footer: version opens About. Keep a hairline above branding so content
-             and footer don't blend; no opaque strip (that read as an empty bar). -->
+        <!-- Footer: version opens About. Hairline only — keep branding tight under it
+             so the padding zone doesn't read as a second opaque bar. -->
         <Border Grid.Row="2"
                 BorderBrush="{DynamicResource ThemeSeparatorBrush}"
                 BorderThickness="0,1,0,0"
                 Background="Transparent"
-                Padding="12,8,12,10">
+                Padding="12,5,12,6">
             <StackPanel x:Name="SettingsAboutFooter"
                         HorizontalAlignment="Center"
                         Cursor="Hand"
@@ -5191,7 +5191,7 @@
                            Foreground="{DynamicResource ThemeTextSecondaryBrush}"
                            HorizontalAlignment="Center"
                            Opacity="0.55"
-                           Margin="0,2,0,0"/>
+                           Margin="0,1,0,0"/>
             </StackPanel>
         </Border>
     </Grid>
