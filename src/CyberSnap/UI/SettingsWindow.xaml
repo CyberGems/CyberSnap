@@ -5162,11 +5162,13 @@
             </Grid>
         </Grid>
 
-        <!-- Footer: version opens About. No top hairline — it read as an empty bar
-             sitting on the settings content and fought the branding for attention. -->
+        <!-- Footer: version opens About. Keep a hairline above branding so content
+             and footer don't blend; no opaque strip (that read as an empty bar). -->
         <Border Grid.Row="2"
+                BorderBrush="{DynamicResource ThemeSeparatorBrush}"
+                BorderThickness="0,1,0,0"
                 Background="Transparent"
-                Padding="12,4,12,10">
+                Padding="12,8,12,10">
             <StackPanel x:Name="SettingsAboutFooter"
                         HorizontalAlignment="Center"
                         Cursor="Hand"
