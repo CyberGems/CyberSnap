@@ -1117,10 +1117,15 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Sidebar navigation -->
+            <!-- Sidebar navigation: scroll when UiScale / DPI shrinks the frame below the tab list. -->
             <Border Grid.Column="0" BorderBrush="{DynamicResource ThemeSeparatorBrush}" BorderThickness="0,0,1,0"
                     Padding="10,14,8,18">
-                <StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              CanContentScroll="False"
+                              Focusable="False"
+                              Padding="0,0,2,0">
+                    <StackPanel>
                     <RadioButton x:Name="SettingsTab" Content="General" Tag="General" GroupName="Main"
                                  IsChecked="True" Click="TabChanged" Style="{StaticResource NavItem}"/>
                     <RadioButton x:Name="CaptureTab" Content="Capture" Tag="Capture" GroupName="Main"
@@ -1157,7 +1162,8 @@
 
                     <RadioButton x:Name="AchievementsTab" Content="Achievements" Tag="Achievements" GroupName="Main"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-                </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
 
             <!-- Content area -->
