@@ -1877,6 +1877,8 @@ public sealed partial class RegionOverlayForm
         _selectionEnd = Point.Empty;
         _confirmSizeReadoutRect = Rectangle.Empty;
         _confirmSizeReadoutGripRect = Rectangle.Empty;
+        _confirmSizeReadoutChipRect = Rectangle.Empty;
+        _confirmOptionsPillRect = Rectangle.Empty;
         InvalidateCenterGripArea(_centerMoveGripRect);
         _centerMoveGripRect = Rectangle.Empty;
         // Retry = re-select area: put the original capture tool back (not the annotation tool
