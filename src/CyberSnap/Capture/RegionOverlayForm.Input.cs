@@ -815,7 +815,7 @@ public sealed partial class RegionOverlayForm
                 HideToolbarForCaptureTool();
                 Invalidate(GetCursorChipRect(e.Location));
                 _isSelecting = true;
-                _currentStroke = new List<Point> { e.Location };
+                _currentStroke = new List<Point> { ClampAnnotationEndPoint(e.Location) };
                 break;
             case CaptureMode.Line:
                 HideToolbarForCaptureTool();
@@ -841,7 +841,7 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.CurvedArrow:
                 HideToolbarForCaptureTool();
                 _isCurvedArrowDragging = true;
-                _currentCurvedArrow = new List<Point> { e.Location };
+                _currentCurvedArrow = new List<Point> { ClampAnnotationEndPoint(e.Location) };
                 break;
             case CaptureMode.Blur:
                 HideToolbarForCaptureTool();

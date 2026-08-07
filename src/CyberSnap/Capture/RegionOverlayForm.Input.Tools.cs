@@ -352,7 +352,10 @@ public sealed partial class RegionOverlayForm
                 // Modes-dock chrome: grip → SizeAll; dead padding → Default (still draggable).
                 // Action pills keep Hand via the btnHit branch below.
                 var modesDockCursor = TryGetConfirmChromeHoverCursor(e.Location);
-                if (modesDockCursor is not null
+                // Never abort mid-stroke for chrome hover — Line/Draw must keep receiving
+                // clamped moves when the pointer crosses the dock / frame-handle zones.
+                if (!IsDraggingAnyAnnotation()
+                    && modesDockCursor is not null
                     && ch < 0
                     && btnHit < 0
                     && !sizePillHover
@@ -403,7 +406,7 @@ public sealed partial class RegionOverlayForm
                     if (!IsDraggingAnyAnnotation())
                         _hoveredConfirmButton = btnHit;
                 }
-                else if (gearHover)
+                else if (gearHover && !IsDraggingAnyAnnotation())
                 {
                     confirmTarget = Cursors.Hand;
                     if (_hoveredConfirmButton >= 0)
@@ -416,7 +419,7 @@ public sealed partial class RegionOverlayForm
                         Cursor = confirmTarget;
                     return;
                 }
-                else if (sizePillHover)
+                else if (sizePillHover && !IsDraggingAnyAnnotation())
                 {
                     confirmTarget = CursorFactory.GrabCursor;
                     if (!Cursor.Equals(confirmTarget))
@@ -431,7 +434,7 @@ public sealed partial class RegionOverlayForm
                 {
                     confirmTarget = CursorFactory.GrabCursor;
                 }
-                else if (IsOutsideLockedCaptureFrame(e.Location))
+                else if (IsOutsideLockedCaptureFrame(e.Location) && !IsDraggingAnyAnnotation())
                 {
                     confirmTarget = HasConfirmAnnotations() ? Cursors.Default : CursorFactory.PrecisionCursor;
                     if (!Cursor.Equals(confirmTarget))
@@ -515,7 +518,8 @@ public sealed partial class RegionOverlayForm
                     return;
                 }
 
-                if (ch >= 0 || btnHit >= 0 || gripHover || centerGripHover)
+                if (!IsDraggingAnyAnnotation()
+                    && (ch >= 0 || btnHit >= 0 || gripHover || centerGripHover))
                 {
                     if (!Cursor.Equals(confirmTarget)) Cursor = confirmTarget;
 
@@ -1045,18 +1049,27 @@ public sealed partial class RegionOverlayForm
                     HideCaptureMagnifier();
                 break;
             case CaptureMode.Highlight when _isHighlighting:
-                InvalidateLivePreview(NormRect(_highlightStart, oldCursor), NormRect(_highlightStart, e.Location), 18);
+                InvalidateLivePreview(
+                    NormRect(_highlightStart, oldCursor),
+                    NormRect(_highlightStart, ClampAnnotationEndPoint(e.Location)),
+                    18);
                 break;
             case CaptureMode.RectShape when _isRectShapeDragging:
-                InvalidateLivePreview(GetShapeRect(oldCursor), GetShapeRect(e.Location), 18);
+                InvalidateLivePreview(
+                    GetShapeRect(oldCursor),
+                    GetShapeRect(ClampAnnotationEndPoint(e.Location)),
+                    18);
                 break;
             case CaptureMode.CircleShape when _isCircleShapeDragging:
-                InvalidateLivePreview(GetShapeRect(oldCursor), GetShapeRect(e.Location), 18);
+                InvalidateLivePreview(
+                    GetShapeRect(oldCursor),
+                    GetShapeRect(ClampAnnotationEndPoint(e.Location)),
+                    18);
                 break;
             case CaptureMode.Line when _isLineDragging:
             {
                 var oldEnd = GetConstrainedLineEnd(_lineStart, oldCursor);
-                var newEnd = GetConstrainedLineEnd(_lineStart, e.Location);
+                var newEnd = GetConstrainedLineEnd(_lineStart, ClampAnnotationEndPoint(e.Location));
                 InvalidateLivePreview(RectFromPoints(_lineStart, oldEnd, 1), RectFromPoints(_lineStart, newEnd, 1), 18);
                 break;
             }
@@ -1064,7 +1077,10 @@ public sealed partial class RegionOverlayForm
                 // Invalidate the precise paint extent (line + the label's *actual* rect) at both the
                 // old and new positions. Tight bounds clear the old label without ghosting, yet keep
                 // the per-frame repaint small so the overlay's dimming blend stays fluid while dragging.
-                InvalidateLivePreview(RulerRenderer.GetLivePreviewBounds(_rulerStart, GetRulerEnd(oldCursor), ClientRectangle), RulerRenderer.GetLivePreviewBounds(_rulerStart, GetRulerEnd(e.Location), ClientRectangle), 0);
+                InvalidateLivePreview(
+                    RulerRenderer.GetLivePreviewBounds(_rulerStart, GetRulerEnd(oldCursor), ClientRectangle),
+                    RulerRenderer.GetLivePreviewBounds(_rulerStart, GetRulerEnd(ClampAnnotationEndPoint(e.Location)), ClientRectangle),
+                    0);
                 // Force the small dirty region to paint now. The overlay's mouse-move handler is heavy
                 // (toolbar/hover bookkeeping) and floods the queue, starving low-priority WM_PAINT — the
                 // line then lags and catches up in jumps. A synchronous Update keeps it glued to the cursor.
@@ -1073,12 +1089,15 @@ public sealed partial class RegionOverlayForm
             case CaptureMode.Arrow when _isArrowDragging:
             {
                 var oldEnd = GetConstrainedLineEnd(_arrowStart, oldCursor);
-                var newEnd = GetConstrainedLineEnd(_arrowStart, e.Location);
+                var newEnd = GetConstrainedLineEnd(_arrowStart, ClampAnnotationEndPoint(e.Location));
                 InvalidateLivePreview(RectFromPoints(_arrowStart, oldEnd, 1), RectFromPoints(_arrowStart, newEnd, 1), 32);
                 break;
             }
             case CaptureMode.Blur when _isBlurring:
-                InvalidateLivePreview(NormRect(_blurStart, oldCursor), NormRect(_blurStart, e.Location), 18);
+                InvalidateLivePreview(
+                    NormRect(_blurStart, oldCursor),
+                    NormRect(_blurStart, ClampAnnotationEndPoint(e.Location)),
+                    18);
                 break;
             case CaptureMode.Emoji when _isPlacingEmoji:
                 InvalidateLivePreview(GetEmojiPreviewRect(oldCursor), GetEmojiPreviewRect(e.Location), 10);
@@ -1105,7 +1124,7 @@ public sealed partial class RegionOverlayForm
                     }
                     else
                     {
-                        _currentStroke.Add(e.Location);
+                        _currentStroke.Add(ClampAnnotationEndPoint(e.Location));
                     }
                     InvalidateLivePreview(oldDirty, GetDrawPreviewBounds(), 18);
                 }
@@ -1114,7 +1133,7 @@ public sealed partial class RegionOverlayForm
                 var oldCurveDirty = _currentCurvedArrow is { Count: > 0 }
                     ? BoundsOfPoints(_currentCurvedArrow, 16)
                     : Rectangle.Empty;
-                _currentCurvedArrow?.Add(e.Location);
+                _currentCurvedArrow?.Add(ClampAnnotationEndPoint(e.Location));
                 var newCurveDirty = _currentCurvedArrow is { Count: > 0 }
                     ? BoundsOfPoints(_currentCurvedArrow, 16)
                     : Rectangle.Empty;

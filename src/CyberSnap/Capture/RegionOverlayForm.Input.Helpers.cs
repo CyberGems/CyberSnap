@@ -398,22 +398,28 @@ public sealed partial class RegionOverlayForm
 
     private Point GetRulerEnd(Point current) => GetConstrainedLineEnd(_rulerStart, current);
 
-    private Point GetConstrainedLineEnd(Point start, Point current) =>
-        (ModifierKeys & Keys.Shift) != 0
+    private Point GetConstrainedLineEnd(Point start, Point current)
+    {
+        var end = (ModifierKeys & Keys.Shift) != 0
             ? LineSnapHelper.SnapEndTo45Degrees(start, current)
             : current;
+        // Shift snap can project past the locked frame; re-clamp so Line/Arrow/Ruler
+        // never commit or preview an endpoint into the annotation-dock gap.
+        return ClampAnnotationEndPoint(end);
+    }
 
     private Point GetConstrainedDrawPoint(Point current)
     {
         if ((ModifierKeys & Keys.Shift) == 0 || _currentStroke is not { Count: > 0 })
-            return current;
+            return ClampAnnotationEndPoint(current);
 
         var start = _currentStroke[0];
         int dx = current.X - start.X;
         int dy = current.Y - start.Y;
-        return Math.Abs(dx) >= Math.Abs(dy)
+        var end = Math.Abs(dx) >= Math.Abs(dy)
             ? new Point(current.X, start.Y)
             : new Point(start.X, current.Y);
+        return ClampAnnotationEndPoint(end);
     }
 
     private Rectangle GetShapeRect(Point current)
