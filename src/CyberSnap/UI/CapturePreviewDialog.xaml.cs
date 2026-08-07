@@ -34,6 +34,9 @@ namespace CyberSnap.UI
         /// <summary>Peak opacity for the Done-border breathe — wide enough to read, still soft.</summary>
         private const double CtaBorderOpacityPeak = 0.58;
         private const double CtaBorderBreatheSeconds = 2.6;
+        /// <summary>How far the Done chevron nudges right on hover (invite to proceed).</summary>
+        private const double ChevronInviteSlidePx = 7;
+        private const int ChevronInviteMs = 200;
         private const int PillSimInitialDelayMs = 200;
         private const int PillSimWorkMs = 1000;
 
@@ -47,6 +50,7 @@ namespace CyberSnap.UI
         private DispatcherTimer? _cursorIdleTimer;
         private SolidColorBrush? _ctaBorderBrush;
         private bool _ctaBorderPulseActive;
+        private bool _primaryButtonHovered;
         private bool _didCenterOnOpen;
         private bool _isSideBySide = true;
         private bool _isClosing;
@@ -159,9 +163,10 @@ namespace CyberSnap.UI
             // stops (or leaves), the countdown resumes from the preserved remaining time.
             PreviewMouseMove += (_, _) => OnWindowCursorMoved();
             MouseLeave += (_, _) => OnWindowCursorLeft();
-            // Hovering "Processing" fast-forwards the pill simulation to its final state,
-            // so the user about to click never has to wait out the choreography.
-            CancelBtn.MouseEnter += (_, _) => FinishPillSimulationImmediately();
+            // Hovering Done: hide the timer, nudge the chevron right, and (if still
+            // "Processing") fast-forward the pill simulation so the CTA is ready to click.
+            CancelBtn.MouseEnter += (_, _) => OnPrimaryButtonMouseEnter();
+            CancelBtn.MouseLeave += (_, _) => OnPrimaryButtonMouseLeave();
 
             CyberSnapWindowChrome.Apply(this);
             UiScale.Set(settingsService.Settings.UiScale);
@@ -366,7 +371,7 @@ namespace CyberSnap.UI
             System.Drawing.Color color,
             int displayDip)
         {
-            image.Source = FluentIcons.RenderWpf(iconId, color, displayDip * 2, active: true);
+            image.Source = FluentIcons.RenderWpf(iconId, color, displayDip * 2, active: false);
             RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
         }
 
@@ -434,7 +439,11 @@ namespace CyberSnap.UI
             _countdownPausedForMotion = false;
             CancelCursorIdleTimer();
             SetCountdownRingShown(true, keepLayoutSlot: true);
-            EnsureCountdownRingVisible();
+            // Hovering Done already: keep the ring slot but fade it out (invite UX).
+            if (_primaryButtonHovered)
+                FadeCountdownRing(0);
+            else
+                EnsureCountdownRingVisible();
             UpdateDoneCountdownText(timeoutSec);
             UpdateCountdownRingArc(1.0);
             StartCtaBorderPulse();
@@ -597,7 +606,7 @@ namespace CyberSnap.UI
             SetCurrentValue(CountdownFractionProperty, fraction);
             UpdateCountdownRingArc(fraction);
             ShowDoneCountdownSeconds(fraction * _autoCloseDurationSeconds);
-            FadeCountdownRing(1.0);
+            FadeCountdownRing(_primaryButtonHovered ? 0.0 : 1.0);
             StartCountdownAnimation(fraction);
         }
 
@@ -677,8 +686,9 @@ namespace CyberSnap.UI
             {
                 _countdownPausedForMotion = true;
                 // Soften the ring while motion pauses the clock and refills to full timeout.
+                // Stay fully hidden while Done is hovered (invite UX owns opacity).
                 BeginCountdownRefill();
-                FadeCountdownRing(CountdownMotionOpacity);
+                FadeCountdownRing(_primaryButtonHovered ? 0.0 : CountdownMotionOpacity);
             }
 
             ScheduleCursorIdleResume();
@@ -831,7 +841,7 @@ namespace CyberSnap.UI
                 var folderIconColor = System.Drawing.Color.FromArgb(cPrimary.A, cPrimary.R, cPrimary.G, cPrimary.B);
                 menu.Items.Add(CreateMoreMenuItem(
                     LocalizationService.Translate("Open in folder"),
-                    FluentIcons.RenderWpf("folder", folderIconColor, 28, active: true),
+                    FluentIcons.RenderWpf("folder", folderIconColor, 28, active: false),
                     OpenSavedFileInFolder,
                     LocalizationService.Translate("Show this file in File Explorer.")));
             }
@@ -1214,10 +1224,61 @@ namespace CyberSnap.UI
             InitAutoCloseCountdown();
         }
 
+        private void OnPrimaryButtonMouseEnter()
+        {
+            FinishPillSimulationImmediately();
+            SetPrimaryButtonInvite(true);
+        }
+
+        private void OnPrimaryButtonMouseLeave()
+        {
+            SetPrimaryButtonInvite(false);
+        }
+
+        /// <summary>
+        /// Done/Continue hover invite: hide the timer set and nudge the trailing chevron
+        /// further right — a soft cue to proceed.
+        /// </summary>
+        private void SetPrimaryButtonInvite(bool invite)
+        {
+            _primaryButtonHovered = invite;
+
+            if (_autoCloseArmed && CountdownRingHost.Visibility == Visibility.Visible)
+            {
+                if (invite)
+                    FadeCountdownRing(0);
+                else if (!_isClosing)
+                    FadeCountdownRing(_countdownPausedForMotion ? CountdownMotionOpacity : 1.0);
+            }
+
+            if (_pillSimRunning)
+                return;
+
+            AnimateChevronInvite(invite);
+        }
+
+        private void AnimateChevronInvite(bool invite)
+        {
+            double target = invite ? ChevronInviteSlidePx : 0;
+            var anim = new DoubleAnimation(target, Motion.Ms(ChevronInviteMs))
+            {
+                EasingFunction = Motion.Ease(invite ? Motion.SoftOut : Motion.SmoothInOut)
+            };
+            CancelIconSlide.BeginAnimation(TranslateTransform.XProperty, anim);
+        }
+
+        private void ResetChevronInviteSlide()
+        {
+            CancelIconSlide.BeginAnimation(TranslateTransform.XProperty, null);
+            CancelIconSlide.X = 0;
+        }
+
         private void ApplyPrimaryButtonProcessingState()
         {
             CancelText.Text = LocalizationService.Translate("Processing");
             CancelBtn.ToolTip = null;
+
+            ResetChevronInviteSlide();
 
             // Reuse the pills' spinner ring (blue, 0/162/255) and make it spin,
             // so the Processing state reads identically to a running pill.
@@ -1348,7 +1409,7 @@ namespace CyberSnap.UI
             var accent = visual == PillVisualState.Done ? PillDoneGreen : PillPendingBlue;
             chip.ChipBorder.Background = Theme.Brush(System.Windows.Media.Color.FromArgb(22, accent.R, accent.G, accent.B));
             chip.ChipBorder.BorderBrush = Theme.Brush(System.Windows.Media.Color.FromArgb(55, accent.R, accent.G, accent.B));
-            chip.LeadingIcon.Source = FluentIcons.RenderWpf(chip.IconId, accent, 26, active: true);
+            chip.LeadingIcon.Source = FluentIcons.RenderWpf(chip.IconId, accent, 26, active: false);
 
             switch (visual)
             {
@@ -1819,6 +1880,13 @@ namespace CyberSnap.UI
                     LocalizationService.Translate("Close this preview and continue with pending actions."),
                     "Enter");
             }
+
+            // Re-apply invite nudge if the cursor is already over Done (e.g. after
+            // fast-forwarding "Processing" → Done while still hovered).
+            if (_primaryButtonHovered)
+                AnimateChevronInvite(true);
+            else
+                ResetChevronInviteSlide();
         }
 
         private void UpdateOptionalActionsAvailability()
