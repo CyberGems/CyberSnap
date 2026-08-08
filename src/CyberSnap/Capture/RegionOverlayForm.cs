@@ -2560,19 +2560,22 @@ public sealed partial class RegionOverlayForm : Form
             var fsItem = WindowsMenuRenderer.Item(fsLabel, iconId: "captureRect", iconSize: 24);
             fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
             menu.Items.Add(fsItem);
-
-            var cancelLabel = LocalizationService.Translate("Cancel capture");
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
-            cancelItem.Click += (_, _) => Cancel();
-            menu.Items.Add(cancelItem);
         }
 
         menu.Items.Add(new ToolStripSeparator());
 
+        // Harmless "resume" action sits above the destructive one.
         var closeLabel = isSpanish ? "Continuar editando" : "Continue editing";
         var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "undo", iconSize: 24);
         closeItem.Click += (_, _) => menu.Close();
         menu.Items.Add(closeItem);
+
+        // Cancel goes last, under its own separator (clear of the safe default actions).
+        menu.Items.Add(new ToolStripSeparator());
+        var cancelCaptureLabel = LocalizationService.Translate("Cancel capture");
+        var cancelCaptureItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
+        cancelCaptureItem.Click += (_, _) => Cancel();
+        menu.Items.Add(cancelCaptureItem);
 
         WindowsMenuRenderer.NormalizeItemWidths(menu, 220, itemHeight: 46);
         menu.Show(PointToScreen(clickLocation));

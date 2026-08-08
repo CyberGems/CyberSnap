@@ -1121,6 +1121,8 @@ public partial class SettingsWindow : Window
 
     private void SettingsAboutFooter_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        if (SettingsFooterLogo != null)
+            SettingsFooterLogo.Opacity = 1;
         if (SettingsFooterVersionText != null)
         {
             SettingsFooterVersionText.Opacity = 1;
@@ -1135,6 +1137,8 @@ public partial class SettingsWindow : Window
 
     private void SettingsAboutFooter_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        if (SettingsFooterLogo != null)
+            SettingsFooterLogo.Opacity = 0.85;
         if (SettingsFooterVersionText != null)
         {
             SettingsFooterVersionText.Opacity = 0.75;

@@ -5160,12 +5160,22 @@
                         MouseLeftButtonUp="SettingsAboutFooter_Click"
                         MouseEnter="SettingsAboutFooter_MouseEnter"
                         MouseLeave="SettingsAboutFooter_MouseLeave">
-                <TextBlock x:Name="SettingsFooterVersionText"
-                           FontSize="11"
-                           FontFamily="Segoe UI Variable Text"
-                           Foreground="{DynamicResource ThemeTextSecondaryBrush}"
-                           HorizontalAlignment="Center"
-                           Opacity="0.75"/>
+                <!-- Brand mark inline before the name; sits on the same line as the version text. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Image x:Name="SettingsFooterLogo"
+                           Source="pack://application:,,,/Assets/CyberSnap_square.png"
+                           Width="14"
+                           Height="14"
+                           VerticalAlignment="Center"
+                           Margin="0,0,6,0"
+                           Opacity="0.85"/>
+                    <TextBlock x:Name="SettingsFooterVersionText"
+                               FontSize="11"
+                               FontFamily="Segoe UI Variable Text"
+                               Foreground="{DynamicResource ThemeTextSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               Opacity="0.75"/>
+                </StackPanel>
                 <TextBlock x:Name="SettingsFooterCopyrightText"
                            Text="© 2026 CyberGems"
                            FontSize="11"
