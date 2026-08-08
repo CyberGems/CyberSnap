@@ -75,3 +75,6 @@ services/cybersnap-share/config.php
 services/cybersnap-share/storage/files/
 services/cybersnap-share/storage/meta/
 services/cybersnap-share/storage/rate/
+
+## Temporary build artifacts (scratch compilation outputs)
+src/CyberSnap/.tmp-build/
