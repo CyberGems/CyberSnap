@@ -19,6 +19,7 @@ public partial class App
         _trayIcon?.Dispose();
         CloseWidgetWindow();
         _settingsWindow?.Close();
+        _achievementsWindow?.Close();
         try { CyberSnap.Capture.DxgiScreenCapture.ResetCache(); } catch (Exception ex) { AppDiagnostics.LogError("shutdown.reset-dxgi-cache", ex); }
         try { _mutex?.ReleaseMutex(); } catch (Exception ex) { AppDiagnostics.LogWarning("shutdown.release-mutex", ex.Message, ex); }
         try { _mutex?.Dispose(); } catch (Exception ex) { AppDiagnostics.LogError("shutdown.dispose-mutex", ex); }

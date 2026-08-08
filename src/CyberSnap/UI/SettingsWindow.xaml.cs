@@ -104,18 +104,7 @@ public partial class SettingsWindow : Window
         BackgroundRuntimeJobService.Changed += BackgroundRuntimeJobService_Changed;
         SettingsService.OcrAutoCopyToClipboardChanged += OnOcrAutoCopyToClipboardChanged;
         SettingsService.AutoCopyToClipboardChanged += OnAutoCopyToClipboardChanged;
-        Activated += (_, _) =>
-        {
-            ApplyThemeColors();
-            // Re-render the Achievements tab when the window regains focus so that
-            // any first-time flags set while the user was using a tool are reflected
-            // without requiring a tab switch.
-            if (AchievementsTab?.IsChecked == true)
-            {
-                RefreshAchievements();
-                RefreshMilestoneRail(reveal: true);
-            }
-        };
+        Activated += (_, _) => ApplyThemeColors();
         Closed += (_, _) =>
         {
             BackgroundRuntimeJobService.Changed -= BackgroundRuntimeJobService_Changed;

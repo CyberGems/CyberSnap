@@ -141,7 +141,6 @@ public partial class SettingsWindow
             [OcrTab] = "\uE8C8", // OCR
             [HotkeysTab] = "\uE765", // Hotkeys
             [HistoryTab] = "\uEB9F", // History
-            [AchievementsTab] = "\uE735", // Achievements (star)
         };
 
         foreach (var kvp in iconMap)
@@ -286,7 +285,6 @@ public partial class SettingsWindow
             NotificationsEnabledCheck.IsChecked = s.NotificationsEnabled;
             SystemNotificationsCheck.IsChecked = s.SystemNotificationsEnabled;
             CelebrationsCheck.IsChecked = s.CelebrationsEnabled;
-            RefreshMilestoneRail(reveal: false);
             UpdateNotificationsDependentState(s.NotificationsEnabled);
             MuteSoundsCheck.IsChecked = !s.MuteSounds; // activator: checked = all sounds on
             PopulateSoundCustomizationPanel();
@@ -731,7 +729,6 @@ public partial class SettingsWindow
             OcrPanel.Visibility = Visibility.Collapsed;
             HistoryPanel.Visibility = Visibility.Collapsed;
             UploadsPanel.Visibility = Visibility.Collapsed;
-            AchievementsPanel.Visibility = Visibility.Collapsed;
             SearchResultsPanel.Visibility = Visibility.Visible;
 
             PageTitleText.Text = LocalizationService.Translate("Search Results");
@@ -750,7 +747,6 @@ public partial class SettingsWindow
             OcrPanel.Visibility = OcrTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             HistoryPanel.Visibility = HistoryTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             UploadsPanel.Visibility = UploadsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-            AchievementsPanel.Visibility = AchievementsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             SearchResultsPanel.Visibility = Visibility.Collapsed;
 
             PageTitleText.Text = LocalizationService.Translate(GetSelectedSettingsPageTitle());
@@ -761,38 +757,17 @@ public partial class SettingsWindow
 
             if (UploadsTab.IsChecked == true)
                 LoadUploadsTab();
-
-            // Reveal the milestone rail + refresh stats/medals when the Achievements tab is shown,
-            // so a newly reached milestone gets its one-shot flourish at the moment the user sees it.
-            if (AchievementsTab.IsChecked == true)
-            {
-                RefreshAchievements();
-                RefreshMilestoneRail(reveal: true);
-            }
         }
     }
 
-    /// <summary>
-    /// Search chrome is hidden on Achievements (no settings to filter; bar fights the hero).
-    /// Collapses the header column so the page title can use the full width.
-    /// </summary>
     private void UpdateSettingsSearchChrome()
     {
-        var hide = !_isSearching && AchievementsTab.IsChecked == true;
-        SettingsSearchBar.Visibility = hide ? Visibility.Collapsed : Visibility.Visible;
+        SettingsSearchBar.Visibility = Visibility.Visible;
         if (SettingsSearchHeaderColumn is not null)
         {
-            if (hide)
-            {
-                SettingsSearchHeaderColumn.Width = new GridLength(0);
-                SettingsSearchHeaderColumn.MinWidth = 0;
-            }
-            else
-            {
-                SettingsSearchHeaderColumn.Width = new GridLength(0.28, GridUnitType.Star);
-                SettingsSearchHeaderColumn.MinWidth = 148;
-                SettingsSearchHeaderColumn.MaxWidth = 240;
-            }
+            SettingsSearchHeaderColumn.Width = new GridLength(0.28, GridUnitType.Star);
+            SettingsSearchHeaderColumn.MinWidth = 148;
+            SettingsSearchHeaderColumn.MaxWidth = 240;
         }
     }
 
@@ -825,7 +800,6 @@ public partial class SettingsWindow
         if (HotkeysTab.IsChecked == true) return "Hotkeys";
         if (HistoryTab.IsChecked == true) return "Gallery";
         if (UploadsTab.IsChecked == true) return "Uploads";
-        if (AchievementsTab.IsChecked == true) return "Achievements";
         return "General";
     }
 

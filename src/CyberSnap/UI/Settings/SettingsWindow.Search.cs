@@ -54,7 +54,7 @@ public partial class SettingsWindow
             ApplySettingsSearch();
         };
 
-        // Ctrl+F focuses search (except Achievements, where the bar is hidden);
+        // Ctrl+F focuses search;
         // Esc clears an active search
         PreviewKeyDown += (_, e) =>
         {
@@ -185,7 +185,6 @@ public partial class SettingsWindow
             (HotkeysPanel,    "hotkeys",       "Hotkeys"),
             (HistoryPanel,    "history",       "Gallery"),
             (UploadsPanel,    "uploads",       "Uploads"),
-            (AchievementsPanel, "achievements", "Achievements"),
         };
 
         _panelMap.Clear();
@@ -360,7 +359,7 @@ public partial class SettingsWindow
         {
             SettingsPanel, SoundsPanel, WidgetPanel, ToastPanel,
             CapturePanel, EditorPanel, RecordingPanel, OcrPanel,
-            HotkeysPanel, HistoryPanel, UploadsPanel, AchievementsPanel
+            HotkeysPanel, HistoryPanel, UploadsPanel
         };
 
         var originalVisibility = new Visibility[allPanels.Length];
@@ -729,7 +728,6 @@ public partial class SettingsWindow
             ["history"]       = HistoryTab,
             ["uploads"]       = UploadsTab,
             ["upload"]        = UploadsTab,
-            ["achievements"]  = AchievementsTab,
             ["editor"]        = EditorTab,
         };
 

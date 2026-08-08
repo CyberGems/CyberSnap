@@ -233,6 +233,22 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(galleryItem);
 
+            // Achievements / Logros
+            var achievementsItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Achievements"),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("trophy", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Open Achievements")
+            };
+            achievementsItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowAchievements());
+            };
+            menu.Items.Add(achievementsItem);
+
             menu.Items.Add(new Separator());
 
             // Setup wizard
@@ -338,6 +354,21 @@ public partial class CyberSnapTitleBar : UserControl
             };
             menu.Items.Add(configItem);
 
+            var achievementsItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Achievements"),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("trophy", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Open Achievements")
+            };
+            achievementsItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowAchievements());
+            };
+            menu.Items.Add(achievementsItem);
+
             var aboutItem = new MenuItem
             {
                 Header = LocalizationService.Translate("About CyberSnap"),
@@ -357,7 +388,7 @@ public partial class CyberSnapTitleBar : UserControl
 
             ActionBtn.ContextMenu = menu;
         }
-        else if (OwnerWindow is AboutWindow)
+        else if (OwnerWindow is AboutWindow or AchievementsWindow)
         {
             AnnotationBtn.Visibility = Visibility.Collapsed;
             ActionBtn.Visibility = Visibility.Collapsed;
@@ -389,6 +420,21 @@ public partial class CyberSnapTitleBar : UserControl
                     () => ((App)Application.Current).ShowSettings());
             };
             menu.Items.Add(configItem);
+
+            var achievementsItem = new MenuItem
+            {
+                Header = LocalizationService.Translate("Achievements"),
+                Icon = new System.Windows.Controls.Image { Source = Helpers.FluentIcons.RenderWpf("trophy", titleIcon, 16), Width = 16, Height = 16 },
+                ToolTip = LocalizationService.Translate("Open Achievements")
+            };
+            achievementsItem.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                _ = ((App)Application.Current).Dispatcher.BeginInvoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    () => ((App)Application.Current).ShowAchievements());
+            };
+            menu.Items.Add(achievementsItem);
 
             if (OwnerWindow is CapturePreviewDialog previewWindow)
             {
