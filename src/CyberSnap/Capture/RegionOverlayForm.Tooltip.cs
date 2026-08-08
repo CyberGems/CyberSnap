@@ -350,8 +350,10 @@ public sealed partial class RegionOverlayForm
         // Image toggles the modes strip — never imply a click captures (Done / Enter / I do).
         if (kind == ConfirmChromeKind.ModeImage)
             hotkey = "";
-        string primaryHint = isPrimary
-            ? "  (Enter · " + LocalizationService.Translate("double-click") + ")"
+
+        // Hint beside the primary pill: Done shows Enter; hover pills show their own hotkey.
+        string hint = isPrimary && string.IsNullOrEmpty(hotkey)
+            ? "  (Enter)"
             : (string.IsNullOrEmpty(hotkey) ? "" : "  (" + hotkey + ")");
 
         string title = kind == ConfirmChromeKind.ModeImage
@@ -361,9 +363,7 @@ public sealed partial class RegionOverlayForm
         string text = kind switch
         {
             ConfirmChromeKind.Retry => title + "  (R)",
-            ConfirmChromeKind.Cancel => title + primaryHint,
-            ConfirmChromeKind.TogglePreview => title + primaryHint,
-            _ => title + primaryHint
+            _ => title + hint
         };
 
         if (string.IsNullOrWhiteSpace(text))

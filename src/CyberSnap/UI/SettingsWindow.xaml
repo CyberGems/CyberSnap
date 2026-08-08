@@ -5164,11 +5164,14 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <Image x:Name="SettingsFooterLogo"
                            Source="pack://application:,,,/Assets/CyberSnap_square.png"
-                           Width="14"
-                           Height="14"
+                           Width="12"
+                           Height="12"
                            VerticalAlignment="Center"
-                           Margin="0,0,6,0"
-                           Opacity="0.85"/>
+                           Margin="0,0,5,0"
+                           Opacity="0.85"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           SnapsToDevicePixels="True"
+                           UseLayoutRounding="True"/>
                     <TextBlock x:Name="SettingsFooterVersionText"
                                FontSize="11"
                                FontFamily="Segoe UI Variable Text"
