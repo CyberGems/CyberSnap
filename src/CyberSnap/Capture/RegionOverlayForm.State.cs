@@ -2128,7 +2128,9 @@ public sealed partial class RegionOverlayForm
             int padX = (int)Math.Round(h * DoneLabelPadXFrac);
             int iconW = (int)Math.Round(h * DoneLabelIconFrac);
             int gap = (int)Math.Round(h * DoneLabelGapFrac);
-            return Math.Max(iconOnlySize + UiChrome.ScaleInt(28), padX + textSize.Width + gap + iconW + padX);
+            // No artificial floor: the padding-based width keeps label + check balanced, and any
+            // extra floor would otherwise land entirely on the right (visible as a wider gap).
+            return padX + textSize.Width + gap + iconW + padX;
         }
 
         int iconPart = Math.Max(UiChrome.ScaleInt(16), (int)(iconOnlySize * 0.52f));
