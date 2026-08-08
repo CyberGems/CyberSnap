@@ -320,15 +320,15 @@ public sealed partial class RegionOverlayForm
                     _confirmOptionsHoverStartUtc = DateTime.UtcNow;
                 }
 
-                // Suspended hover on the gear long enough → open the same overflow menu a
-                // click would open (matches merged capture/annotation hover-deploy).
+                // Suspended hover on the gear opens the overflow menu (faster than the
+                // merged-mode delay — this pill is deliberately hover-prioritized).
                 bool recentlyClosedOptions = (DateTime.UtcNow - _lastContextMenuClosedTime).TotalMilliseconds < 250;
                 if (gearHover
                     && !recentlyClosedOptions
                     && _toolbarContextMenu is null
                     && _confirmContextMenu is null
                     && _confirmOptionsHoverStartUtc != DateTime.MinValue
-                    && (DateTime.UtcNow - _confirmOptionsHoverStartUtc).TotalMilliseconds >= ExpandHoverDelayMs)
+                    && (DateTime.UtcNow - _confirmOptionsHoverStartUtc).TotalMilliseconds >= ConfirmGearHoverDelayMs)
                 {
                     _confirmOptionsHoverStartUtc = DateTime.MinValue;
                     OpenConfirmOptionsMenu(e.Location);
