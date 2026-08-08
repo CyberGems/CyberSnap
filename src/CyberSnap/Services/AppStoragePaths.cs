@@ -25,13 +25,13 @@ internal static class AppStoragePaths
         return Path.GetFullPath(SettingsPath);
     }
 
+    /// <summary>
+    /// Single unified storage location: always Roaming AppData, whether the app runs
+    /// installed, portable, or from a dev build. Prevents diverging settings/achievement
+    /// profiles when alternating between dev and installed copies.
+    /// </summary>
     internal static string ResolveStorageDirectory(string? runningDirectory, bool isInstalled)
-    {
-        if (isInstalled || string.IsNullOrWhiteSpace(runningDirectory))
-            return RoamingCyberSnapDirectory;
-
-        return Path.Combine(Path.GetFullPath(runningDirectory), "CyberSnap");
-    }
+        => RoamingCyberSnapDirectory;
 
     private static string GetStorageDirectory() =>
         ResolveStorageDirectory(InstallService.GetRunningAppDirectory(), InstallService.IsInstalled());

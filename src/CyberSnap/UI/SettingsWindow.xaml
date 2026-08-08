@@ -1153,16 +1153,8 @@
                     <RadioButton x:Name="UploadsTab" Content="Uploads" Tag="Uploads" GroupName="Main"
                                  Services:LocalizationService.SourceText="Uploads"
                                  Click="TabChanged" Style="{StaticResource NavItem}"/>
-
-                    <!-- Separator between tool sections and personal stats -->
-                    <Border Height="1" Margin="9,6,9,6"
-                            Background="{DynamicResource ThemeSeparatorBrush}"
-                            Opacity="0.7" IsHitTestVisible="False"/>
-
-                    <RadioButton x:Name="AchievementsTab" Content="Achievements" Tag="Achievements" GroupName="Main"
-                                 Click="TabChanged" Style="{StaticResource NavItem}"/>
-                    </StackPanel>
-                </ScrollViewer>
+                </StackPanel>
+            </ScrollViewer>
             </Border>
 
             <!-- Content area -->
@@ -1178,7 +1170,6 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <!-- Collapsed on Achievements via UpdateSettingsSearchChrome() -->
                             <ColumnDefinition x:Name="SettingsSearchHeaderColumn" Width="0.28*" MinWidth="148" MaxWidth="240"/>
                         </Grid.ColumnDefinitions>
 
@@ -1193,7 +1184,7 @@
                                    TextTrimming="CharacterEllipsis"
                                    IsHitTestVisible="False"/>
 
-                        <!-- ── Settings search bar (hidden on Achievements; Ctrl+F focuses) ── -->
+                        <!-- ── Settings search bar (Ctrl+F focuses) ── -->
                         <Border x:Name="SettingsSearchBar" Grid.Column="1"
                                 VerticalAlignment="Center"
                                 Background="{DynamicResource ThemeInputBackgroundBrush}"
@@ -2921,8 +2912,31 @@
 
                     <TextBlock Text="System" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource Card}">
+                        <Grid Style="{StaticResource SettingRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource SettingIconFrame}">
+                                <TextBlock Text="&#xE7E8;" Style="{StaticResource SettingIconGlyph}"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Launch on startup" Style="{StaticResource SettingTitle}"/>
+                                <TextBlock Text="Start CyberSnap automatically when Windows starts." Style="{StaticResource SettingDescription}"/>
+                            </StackPanel>
+                            <CheckBox x:Name="StartWithWindowsCheck" Grid.Column="2" Content="" FontSize="13"
+                                      AutomationProperties.Name="Launch on startup"
+                                      ToolTip="Start CyberSnap automatically when Windows starts."
+                                      VerticalAlignment="Center"
+                                      Checked="StartWithWindowsCheck_Changed" Unchecked="StartWithWindowsCheck_Changed"/>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Text="Data &amp; Storage" Style="{StaticResource SectionLabel}"/>
+                    <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <!-- Launch on startup -->
+                            <!-- Open data folder -->
                             <Grid Style="{StaticResource SettingRow}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -2930,17 +2944,17 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Border Style="{StaticResource SettingIconFrame}">
-                                    <TextBlock Text="&#xE7E8;" Style="{StaticResource SettingIconGlyph}"/>
+                                    <TextBlock Text="&#xE838;" Style="{StaticResource SettingIconGlyph}"/>
                                 </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Launch on startup" Style="{StaticResource SettingTitle}"/>
-                                    <TextBlock Text="Start CyberSnap automatically when Windows starts." Style="{StaticResource SettingDescription}"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                    <TextBlock Text="Open data folder" Style="{StaticResource SettingTitle}"/>
+                                    <TextBlock Text="Open the folder that stores your settings, achievements, and cache." Style="{StaticResource SettingDescription}"/>
                                 </StackPanel>
-                                <CheckBox x:Name="StartWithWindowsCheck" Grid.Column="2" Content="" FontSize="13"
-                                          AutomationProperties.Name="Launch on startup"
-                                          ToolTip="Start CyberSnap automatically when Windows starts."
-                                          VerticalAlignment="Center"
-                                          Checked="StartWithWindowsCheck_Changed" Unchecked="StartWithWindowsCheck_Changed"/>
+                                <Button x:Name="OpenDataFolderBtn" Grid.Column="2" Content="Open Folder" MinWidth="90"
+                                        VerticalAlignment="Center" Cursor="Hand"
+                                        ToolTip="Opens the folder containing settings, achievements, and cache in File Explorer."
+                                        AutomationProperties.Name="Open data folder"
+                                        Click="OpenDataFolderBtn_Click"/>
                             </Grid>
                             <Border Height="1" Background="{DynamicResource ThemeSeparatorBrush}" Margin="0,9,0,9"/>
                             <!-- Export settings -->
@@ -5114,47 +5128,6 @@
                         </StackPanel>
                     </Border>
                     </StackPanel>
-                </StackPanel>
-            </ScrollViewer>
-
-            <!-- Achievements / Logros -->
-            <ScrollViewer x:Name="AchievementsPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24,56,24,44">
-                <StackPanel HorizontalAlignment="Stretch">
-                    <!-- Each section is a self-contained card (header inside) so nothing floats on the
-                         bare panel. Cards use the lighter ThemeCardBrush; inner tiles use the darker
-                         ThemeInputBackgroundBrush for an inset hierarchy. Inner content (rail, stat
-                         cells, medal grid) is built in code-behind. -->
-
-                    <!-- Section label outside the first card (same pattern as other tabs). -->
-                    <TextBlock Text="Your progress" Style="{StaticResource SectionLabel}"
-                               Services:LocalizationService.SourceText="Your progress"/>
-
-                    <!-- Hero: animated milestone rail + stat chips (SettingsWindow.Celebrations.cs). -->
-                    <Border Padding="20,16,20,18" CornerRadius="12" Margin="0,0,0,16"
-                            Background="{DynamicResource ThemeCardBrush}"
-                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
-                        <Grid x:Name="MilestoneRailHost" Height="74"/>
-                    </Border>
-
-                    <!-- Statistics: 2×2 stat cells (SettingsWindow.Achievements.cs). -->
-                    <Border Padding="20,16,20,18" CornerRadius="12" Margin="0,0,0,16"
-                            Background="{DynamicResource ThemeCardBrush}"
-                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Services:LocalizationService.SourceText="Statistics" Style="{StaticResource SectionLabel}" Margin="0,0,0,12"/>
-                            <Grid x:Name="AchievementsStatsHost"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Medals: categories with sub-headers + tile grids (SettingsWindow.Achievements.cs). -->
-                    <Border Padding="20,16,20,18" CornerRadius="12"
-                            Background="{DynamicResource ThemeCardBrush}"
-                            BorderBrush="{DynamicResource ThemeInputBorderBrush}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Services:LocalizationService.SourceText="Medals" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
-                            <StackPanel x:Name="AchievementsMedalsHost"/>
-                        </StackPanel>
-                    </Border>
                 </StackPanel>
             </ScrollViewer>
 

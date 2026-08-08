@@ -29,6 +29,7 @@
   "Text extraction (OCR) ᐧ CyberSnap": "Text Extraction (OCR) ⋅ CyberSnap",
   "Configuration ᐧ CyberSnap": "Configuration ⋅ CyberSnap",
   "About ᐧ CyberSnap": "About ⋅ CyberSnap",
+  "Achievements ᐧ CyberSnap": "Achievements ⋅ CyberSnap",
   "Uploads": "Uploads",
   "About": "About",
   "CyberSnap is a professional screen capture suite for fast workflows — local OCR, instant translation, and a full gallery.": "CyberSnap is a professional screen capture suite for fast workflows — local OCR, instant translation, and a full gallery.",
@@ -1390,7 +1391,9 @@
   "Open wizard": "Open wizard",
   "Re-run the setup wizard": "Re-run the setup wizard",
   "Open the Capture Gallery": "Open the Capture Gallery",
+  "Open Achievements": "Open Achievements",
   "CyberSnap was unable to launch About": "CyberSnap was unable to launch About",
+  "CyberSnap was unable to open Achievements": "CyberSnap was unable to open Achievements",
   "Editor...": "Editor...",
   "Gallery...": "Gallery...",
   "Open the post-capture editor for annotations.": "Open the post-capture editor for annotations.",
@@ -2069,5 +2072,10 @@
   "Confirm screenshot": "Confirm screenshot",
   "Current:": "Current:",
   "Latest:": "Latest:",
-  "Download and install now?": "Download and install now?"
+  "Download and install now?": "Download and install now?",
+  "Data & Storage": "Data & Storage",
+  "Open data folder": "Open data folder",
+  "Open the folder that stores your settings, achievements, and cache.": "Open the folder that stores your settings, achievements, and cache.",
+  "Opens the folder containing settings, achievements, and cache in File Explorer.": "Opens the folder containing settings, achievements, and cache in File Explorer.",
+  "Open Folder": "Open Folder"
 }
