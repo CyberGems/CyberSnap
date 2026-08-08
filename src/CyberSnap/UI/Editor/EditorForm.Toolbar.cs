@@ -1772,7 +1772,7 @@ public sealed partial class EditorForm
         var transformSubmenu = BuildTransformSubmenu();
 
         var closeDocumentItem = WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Close document"), shortcut: "Ctrl+W", iconId: "signOutDoor", danger: true, dangerIconOnly: true);
+            LocalizationService.Translate("Close document"), shortcut: "Ctrl+W", iconId: "signOutLeave", danger: true, dangerIconOnly: true);
         closeDocumentItem.Click += (_, _) => DoCloseDocument();
 
         // ── Standard edit actions ──

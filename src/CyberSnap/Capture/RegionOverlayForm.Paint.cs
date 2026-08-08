@@ -548,7 +548,7 @@ public sealed partial class RegionOverlayForm
     /// outer glow that flares on hover. <paramref name="pressAmt"/> (0→1→0) sinks the face
     /// onto its base for the click "squash" animation.
     /// </summary>
-    private static void DrawConfirmActionPill(
+    private void DrawConfirmActionPill(
         Graphics g, Rectangle rect, Color baseColor, string label, Font font,
         bool hover, int iconType, float pressAmt, float shinePhase, float shineMain, float shineDup,
         float opacity, bool hasShine, string? fluentIconId = null, Color? accent = null,
@@ -587,8 +587,8 @@ public sealed partial class RegionOverlayForm
         }
         else
         {
-            iconSize = face.Height * (iconOnRight ? 0.92f : 0.58f);
-            float gap = face.Height * (iconOnRight ? 0.26f : 0.22f);
+            iconSize = face.Height * (iconOnRight ? DoneLabelIconFrac : 0.58f);
+            float gap = face.Height * (iconOnRight ? DoneLabelGapFrac : 0.22f);
 
             using var sf = new StringFormat(StringFormat.GenericTypographic)
             {
@@ -603,8 +603,13 @@ public sealed partial class RegionOverlayForm
             float textX;
             if (iconOnRight)
             {
-                // Done: the larger check rides at the pill's right edge; the label is centred
-                // within the remaining space so the pair reads balanced with the Cancel X.
+                // Done: label + larger check as a single centered group, equal left/right padding.
+                float padX = face.Height * DoneLabelPadXFrac;
+                float groupW = textSize.Width + gap + iconSize;
+                textX = face.X + (face.Width - groupW) / 2f;
+                bx = textX + textSize.Width + gap;
+                by = face.Y + (face.Height - iconSize) / 2f;
+
                 var fam0 = font.FontFamily;
                 float em0 = fam0.GetEmHeight(font.Style);
                 float ascent0 = fam0.GetCellAscent(font.Style);
@@ -612,11 +617,6 @@ public sealed partial class RegionOverlayForm
                 float capHeight0 = em0 * 0.72f; // Segoe UI cap height ≈ 0.72 em
                 float emPx0 = font.SizeInPoints * g.DpiY / 72f;
                 vNudge = ((ascent0 - capHeight0 - descent0) / em0) * emPx0 / 2f;
-
-                float rightPad = face.Height * 0.22f;
-                bx = face.Right - rightPad - iconSize;
-                by = face.Y + (face.Height - iconSize) / 2f;
-                textX = face.X + (bx - gap - face.X - textSize.Width) / 2f;
             }
             else
             {

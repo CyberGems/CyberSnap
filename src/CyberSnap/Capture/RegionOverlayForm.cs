@@ -102,6 +102,13 @@ public sealed partial class RegionOverlayForm : Form
     private Rectangle _confirmChromeWrapperRect = Rectangle.Empty;
     private bool _confirmPillShowLabels;
     private bool _confirmDoneShowLabel = true;
+
+    // Done pill label+check layout — single source of truth shared by the width measurer
+    // (State) and the layer (Paint), so the pair stays visually centered at any DPI.
+    private const float DoneLabelPadXFrac = 0.34f; // left/right padding, × confirm pill height
+    private const float DoneLabelIconFrac = 0.82f; // check glyph box, × confirm pill height
+    private const float DoneLabelGapFrac = 0.22f;  // gap between label and check
+
     private bool _confirmChromeLayoutDirty = true;
     private Rectangle _confirmChromeLaidOutForRect = Rectangle.Empty;
     private bool _confirmChromeLaidOutWithLabels;
@@ -2458,8 +2465,8 @@ public sealed partial class RegionOverlayForm : Form
         // Door-exit glyph (reddish icon, normal text) reads "leave this capture" better than a
         // power symbol; dangerIconOnly keeps the word from looking like an error.
         var cancelItem = WindowsMenuRenderer.Item(
-            LocalizationService.Translate("Cancel capture and exit"),
-            iconId: "signOutDoor",
+            LocalizationService.Translate("Cancel capture"),
+            iconId: "signOutLeave",
             danger: true,
             dangerIconOnly: true,
             iconSize: 24);
@@ -2493,14 +2500,14 @@ public sealed partial class RegionOverlayForm : Form
         if (_mode == CaptureMode.ScrollCapture)
         {
             var cancelLabel = isSpanish ? "Cancelar captura por desplazamiento" : "Cancel scroll capture";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutDoor", danger: true, dangerIconOnly: true, iconSize: 24);
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
         else if (_mode == CaptureMode.Ruler)
         {
             var cancelRulerLabel = isSpanish ? "Cancelar dibujo de reglas" : "Cancel ruler drawing";
-            var cancelRulerItem = WindowsMenuRenderer.Item(cancelRulerLabel, iconId: "signOutDoor", danger: true, dangerIconOnly: true, iconSize: 24);
+            var cancelRulerItem = WindowsMenuRenderer.Item(cancelRulerLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
             cancelRulerItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelRulerItem);
 
@@ -2511,15 +2518,15 @@ public sealed partial class RegionOverlayForm : Form
             fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
             menu.Items.Add(fsItem);
 
-            var cancelLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutDoor", danger: true, dangerIconOnly: true, iconSize: 24);
+            var cancelLabel = LocalizationService.Translate("Cancel capture");
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
         else if (_mode == CaptureMode.ColorPicker)
         {
             var cancelLabel = isSpanish ? "Cancelar selección de color" : "Cancel color picker";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutDoor", danger: true, dangerIconOnly: true, iconSize: 24);
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
@@ -2543,7 +2550,7 @@ public sealed partial class RegionOverlayForm : Form
             menu.Items.Add(new ToolStripSeparator());
 
             var cancelLabel = isSpanish ? "Cancelar extracción de texto" : "Cancel text extraction";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutDoor", danger: true, dangerIconOnly: true, iconSize: 24);
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
@@ -2554,8 +2561,8 @@ public sealed partial class RegionOverlayForm : Form
             fsItem.Click += (_, _) => RegionSelected?.Invoke(_virtualBounds);
             menu.Items.Add(fsItem);
 
-            var cancelLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
-            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutDoor", danger: true, dangerIconOnly: true, iconSize: 24);
+            var cancelLabel = LocalizationService.Translate("Cancel capture");
+            var cancelItem = WindowsMenuRenderer.Item(cancelLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
             cancelItem.Click += (_, _) => Cancel();
             menu.Items.Add(cancelItem);
         }
@@ -2563,7 +2570,7 @@ public sealed partial class RegionOverlayForm : Form
         menu.Items.Add(new ToolStripSeparator());
 
         var closeLabel = isSpanish ? "Continuar editando" : "Continue editing";
-        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "close", iconSize: 24);
+        var closeItem = WindowsMenuRenderer.Item(closeLabel, iconId: "undo", iconSize: 24);
         closeItem.Click += (_, _) => menu.Close();
         menu.Items.Add(closeItem);
 
@@ -2645,8 +2652,8 @@ public sealed partial class RegionOverlayForm : Form
             };
             menu.Items.Add(captureItem);
 
-            var cancelCaptureLabel = isSpanish ? "Cancelar captura y salir" : "Cancel capture and exit";
-            var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "signOutDoor", danger: true, dangerIconOnly: true, iconSize: 24);
+            var cancelCaptureLabel = LocalizationService.Translate("Cancel capture");
+            var cancelCapItem = WindowsMenuRenderer.Item(cancelCaptureLabel, iconId: "signOutLeave", danger: true, dangerIconOnly: true, iconSize: 24);
             cancelCapItem.Click += (s, e) => Cancel();
             menu.Items.Add(cancelCapItem);
         }
@@ -2655,7 +2662,7 @@ public sealed partial class RegionOverlayForm : Form
 
         // "Continue editing" reads as resuming the capture, not cancelling an action.
         var closeMenuLabel = isSpanish ? "Continuar editando" : "Continue editing";
-        var closeItem = WindowsMenuRenderer.Item(closeMenuLabel, iconId: "close", iconSize: 24);
+        var closeItem = WindowsMenuRenderer.Item(closeMenuLabel, iconId: "undo", iconSize: 24);
         closeItem.Click += (s, e) => menu.Close();
         menu.Items.Add(closeItem);
 
