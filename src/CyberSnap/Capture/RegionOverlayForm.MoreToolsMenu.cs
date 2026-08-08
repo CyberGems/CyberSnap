@@ -376,12 +376,15 @@ public sealed partial class RegionOverlayForm
         var bannersItem = WindowsMenuRenderer.Item(bannersText, iconId: bannersEnabled ? "check" : null, iconSize: 24);
         bannersItem.Click += (s, e) =>
         {
-            var svc = new Services.SettingsService(null);
-            svc.Load();
-            var newValue = !svc.Settings.ShowToolBanners;
-            svc.Settings.ShowToolBanners = newValue;
+            // Toggle the shared app settings instance (a throwaway svc re-loads from disk on
+            // dispose and can overwrite the very value we just wrote, so the toggle "sticks" but
+            // banners never come back). Keep the live master flag in sync.
+            var app = (App)Application.Current;
+            app.SettingsService.Load();
+            var newValue = !app.SettingsService.Settings.ShowToolBanners;
+            app.SettingsService.Settings.ShowToolBanners = newValue;
             StandaloneToolBanner.Enabled = newValue;
-            svc.Save();
+            app.SettingsService.Save();
 
             _toolbarContextMenu?.Close();
         };
